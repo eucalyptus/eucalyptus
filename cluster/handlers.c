@@ -3637,6 +3637,7 @@ int init_config(void) {
   if (tmpstr) free(tmpstr);
 
   tmpstr = configFileValue("CC_IMAGE_PROXY_PATH");
+  if (tmpstr) tmpstr = replace_string(&tmpstr, "$EUCALYPTUS", eucahome);
   if (tmpstr) {
     snprintf(proxyPath, MAX_PATH, "%s", tmpstr);
     free(tmpstr);
@@ -4638,6 +4639,7 @@ int image_cache(char *id, char *url) {
 	  exit(1);
 	}
 	rename(path, finalpath);
+	chmod(finalpath, 0600);
       }
       snprintf(path, MAX_PATH, "%s/data/%s.staging", config->proxyPath, id);
       snprintf(finalpath, MAX_PATH, "%s/data/%s", config->proxyPath, id);
@@ -4649,6 +4651,7 @@ int image_cache(char *id, char *url) {
 	  exit(1);
 	}
 	rename(path, finalpath);
+	chmod(finalpath, 0600);
       }
       exit(0);
     }

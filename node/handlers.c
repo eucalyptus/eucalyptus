@@ -465,7 +465,7 @@ monitoring_thread (void *arg)
                 // it's been long enough, we can forget the instance
                 if ((now - instance->terminationTime)>teardown_state_duration) {
                     remove_instance (&global_instances, instance);
-                    logprintfl (EUCAINFO, "[%] forgetting about instance\n", instance->instanceId);
+                    logprintfl (EUCAINFO, "[%s] forgetting about instance\n", instance->instanceId);
                     free_instance (&instance);
                     break;	// need to get out since the list changed
                 }
