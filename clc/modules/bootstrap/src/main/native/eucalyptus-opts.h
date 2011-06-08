@@ -43,7 +43,7 @@ struct eucalyptus_opts
   char * user_arg;	/**< @brief User to drop privs to after starting. (default='eucalyptus').  */
   char * user_orig;	/**< @brief User to drop privs to after starting. original value given at command line.  */
   const char *user_help; /**< @brief User to drop privs to after starting. help description.  */
-  char * home_arg;	/**< @brief Eucalyptus home directory. (default='/opt/grze_eee/').  */
+  char * home_arg;	/**< @brief Eucalyptus home directory. (default='/opt/eucalyptus/').  */
   char * home_orig;	/**< @brief Eucalyptus home directory. original value given at command line.  */
   const char *home_help; /**< @brief Eucalyptus home directory. help description.  */
   int initialize_flag;	/**< @brief Perform first-time setup.  This is run one time (only!) on the first cloud controller before the first time it is run. (default=off).  */
@@ -58,6 +58,8 @@ struct eucalyptus_opts
   unsigned int bootstrap_host_min; /**< @brief Host to be used for bootstrapping group membership.  Many can be provided.  Note this should only be necessary when UDP multicast is not available.'s minimum occurreces */
   unsigned int bootstrap_host_max; /**< @brief Host to be used for bootstrapping group membership.  Many can be provided.  Note this should only be necessary when UDP multicast is not available.'s maximum occurreces */
   const char *bootstrap_host_help; /**< @brief Host to be used for bootstrapping group membership.  Many can be provided.  Note this should only be necessary when UDP multicast is not available. help description.  */
+  int force_remote_bootstrap_flag;	/**< @brief Force the system to boot as a remote component. (default=off).  */
+  const char *force_remote_bootstrap_help; /**< @brief Force the system to boot as a remote component. help description.  */
   char ** define_arg;	/**< @brief Set system properties..  */
   char ** define_orig;	/**< @brief Set system properties. original value given at command line.  */
   unsigned int define_min; /**< @brief Set system properties.'s minimum occurreces */
@@ -67,7 +69,7 @@ struct eucalyptus_opts
   const char *fork_help; /**< @brief Fork and daemonize Eucalyptus. help description.  */
   int kill_flag;	/**< @brief Kill a daemonized Eucalyptus. (default=off).  */
   const char *kill_help; /**< @brief Kill a daemonized Eucalyptus. help description.  */
-  char * pidfile_arg;	/**< @brief Location for the pidfile. (default='/opt/grze_eee/var/run/eucalyptus-cloud.pid').  */
+  char * pidfile_arg;	/**< @brief Location for the pidfile. (default='/opt/eucalyptus/var/run/eucalyptus-cloud.pid').  */
   char * pidfile_orig;	/**< @brief Location for the pidfile. original value given at command line.  */
   const char *pidfile_help; /**< @brief Location for the pidfile. help description.  */
   char * log_level_arg;	/**< @brief Control the log level for console output. (default='INFO').  */
@@ -106,7 +108,7 @@ struct eucalyptus_opts
   const char *disable_storage_help; /**< @brief DEPRECATED DO NOT USE. IT DOES NOTHING. help description.  */
   int disable_vmwarebroker_flag;	/**< @brief DEPRECATED DO NOT USE. IT DOES NOTHING. (default=off).  */
   const char *disable_vmwarebroker_help; /**< @brief DEPRECATED DO NOT USE. IT DOES NOTHING. help description.  */
-  char * java_home_arg;	/**< @brief Alternative way to specify JAVA_HOME. (default='/usr/lib/jvm/java-6-openjdk/').  */
+  char * java_home_arg;	/**< @brief Alternative way to specify JAVA_HOME. (default='/opt/eucalyptus/packages/java/jdk1.6.0_16/').  */
   char * java_home_orig;	/**< @brief Alternative way to specify JAVA_HOME. original value given at command line.  */
   const char *java_home_help; /**< @brief Alternative way to specify JAVA_HOME. help description.  */
   char * jvm_name_arg;	/**< @brief Which JVM type to run (see jvm.cfg). (default='-server').  */
@@ -145,6 +147,7 @@ struct eucalyptus_opts
   unsigned int initialize_given ;	/**< @brief Whether initialize was given.  */
   unsigned int bind_addr_given ;	/**< @brief Whether bind-addr was given.  */
   unsigned int bootstrap_host_given ;	/**< @brief Whether bootstrap-host was given.  */
+  unsigned int force_remote_bootstrap_given ;	/**< @brief Whether force-remote-bootstrap was given.  */
   unsigned int define_given ;	/**< @brief Whether define was given.  */
   unsigned int fork_given ;	/**< @brief Whether fork was given.  */
   unsigned int kill_given ;	/**< @brief Whether kill was given.  */
