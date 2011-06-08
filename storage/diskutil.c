@@ -63,6 +63,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <string.h>
@@ -83,6 +84,8 @@ enum {
     DD,
     FILECMD,
     GRUB,
+    GRUB_SETUP,
+    GRUB_INSTALL,
     LOSETUP,
     MKDIR,
     MKEXT3,
@@ -103,6 +106,8 @@ static char * helpers [LASTHELPER] = {
     "dd",
     "file",
     "grub",
+    "grub-setup",
+    "grub-install",
     "losetup",
     "mkdir",
     "mkfs.ext3",
@@ -119,17 +124,40 @@ static char * helpers_path [LASTHELPER];
 static char * pruntf (boolean log_error, char *format, ...);
 static int initialized = 0;
 static sem * loop_sem = NULL; // semaphore held while attaching/detaching loopback devices
+static unsigned char grub_version = 0;
 
 int diskutil_init (void)
 {
     int ret = 0;
 
     if (!initialized) {
-        ret = verify_helpers (helpers, helpers_path, LASTHELPER);
+        bzero (helpers_path, sizeof (helpers_path));
+        int missing_handlers = verify_helpers (helpers, helpers_path, LASTHELPER);
+        if (helpers_path [GRUB])
+            grub_version = 1;
+        else
+            missing_handlers--;
+
+        if (helpers_path [GRUB_SETUP])
+            grub_version = 2; // two is better than one
+        else 
+            missing_handlers--;
+
+        if (grub_version == 0) {
+            logprintfl (EUCAERROR, "ERROR: cannot find either grub 1 or grub 2\n");
+            ret = 1;   
+        } else { // grub is OK, check on everything else
+            if (missing_handlers) {
+                logprintfl (EUCAERROR, "ERROR: missing a required handler\n");
+                ret = 1;
+            } else {
+                ret = 0;
+            }
+        }
         initialized = 1;
         loop_sem = sem_alloc (1, "mutex");
     }
-
+    
     return ret;
 }
 
@@ -494,6 +522,16 @@ int diskutil_write2file (const char * file, const char * str)
     return ret;
 }
 
+// diskutil_grub combines functionalities of diskutil_grub_files and diskutil_grub_mbr,
+// performing them one after another
+int diskutil_grub (const char * path, const char * mnt_pt, const int part, const char * kernel, const char * ramdisk)
+{
+    int ret = diskutil_grub_files (mnt_pt, part, kernel, ramdisk);
+    if (ret!=OK) return ret;
+    ret = diskutil_grub_mbr (path, part);
+    return ret;
+}
+
 int diskutil_grub_files (const char * mnt_pt, const int part, const char * kernel, const char * ramdisk)
 {
     int ret = OK;
@@ -509,12 +547,14 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
     }
     free (output);
 
-    output = pruntf (TRUE, "%s %s /boot/grub/*stage* %s/boot/grub", helpers_path[ROOTWRAP], helpers_path[CP], mnt_pt);
-    if (!output) {
-        logprintfl (EUCAINFO, "{%u} error: failed to copy stage files into grub directory\n");
-        return ERROR;
+    if (grub_version==1) {
+        output = pruntf (TRUE, "%s %s /boot/grub/*stage* %s/boot/grub", helpers_path[ROOTWRAP], helpers_path[CP], mnt_pt);
+        if (!output) {
+            logprintfl (EUCAINFO, "{%u} error: failed to copy stage files into grub directory\n");
+            return ERROR;
+        }
+        free (output);
     }
-    free (output);
 
     char * ptr = strrchr (kernel, '/');
     if (ptr) {
@@ -551,26 +591,48 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
     }
 
     char buf [1024];
-    snprintf (buf, sizeof (buf), "default=0\ntimeout=5\n\ntitle TheOS\nroot (hd0,%d)\nkernel /boot/%s root=/dev/sda1 ro\n", part, kfile);
-    if (ramdisk) {
-        char buf2 [1024];
-        snprintf (buf2, sizeof (buf2), "initrd /boot/%s\n", rfile);
-        strncat (buf, buf2, sizeof (buf));
-    }
-    char menu_lst_path [EUCA_MAX_PATH];
-    snprintf (menu_lst_path, sizeof (menu_lst_path), "%s/boot/grub/menu.lst", mnt_pt);
     char grub_conf_path [EUCA_MAX_PATH];
-    snprintf (grub_conf_path, sizeof (grub_conf_path), "%s/boot/grub/grub.conf", mnt_pt);
-
-    if (diskutil_write2file (menu_lst_path, buf)!=OK) {
-        ret = ERROR;
-        goto cleanup;
+    if (grub_version==1) {
+        char menu_lst_path [EUCA_MAX_PATH];
+        snprintf (menu_lst_path, sizeof (menu_lst_path),   "%s/boot/grub/menu.lst", mnt_pt);
+        snprintf (grub_conf_path, sizeof (grub_conf_path), "%s/boot/grub/grub.conf", mnt_pt);
+    
+        snprintf (buf, sizeof (buf), "default=0\n"
+                  "timeout=2\n\n"
+                  "title TheOS\n"
+                  "root (hd0,%d)\n"
+                  "kernel /boot/%s root=/dev/sda1 ro\n", part, kfile);
+        if (ramdisk) {
+            char buf2 [1024];
+            snprintf (buf2, sizeof (buf2), "initrd /boot/%s\n", rfile);
+            strncat (buf, buf2, sizeof (buf));
+        }    
+        if (diskutil_write2file (menu_lst_path, buf)!=OK) {
+            ret = ERROR;
+            goto cleanup;
+        }
+        
+    } else if (grub_version==2) {
+        snprintf (grub_conf_path, sizeof (grub_conf_path), "%s/boot/grub/grub.cfg", mnt_pt);
+        char initrd [1024] = "";
+        if (ramdisk) {
+            snprintf (initrd, sizeof (initrd), "  initrd /boot/%s\n", rfile);
+        }    
+        snprintf (buf, sizeof (buf), "set default=0\n"
+                  "set timeout=2\n"
+                  "insmod part_msdos\n"
+                  "insmod ext2\n"
+                  "set root='(hd0,msdos%d)'\n"
+                  "menuentry 'TheOS' --class os {\n"
+                  "  linux /boot/%s root=/dev/sda1 ro\n"
+                  "%s"
+                  "}\n", part, kfile, initrd);
     }
     if (diskutil_write2file (grub_conf_path, buf)!=OK) {
         ret = ERROR;
         goto cleanup;
     }
-
+    
  cleanup:        
     if(kfile) free(kfile);
     if(rfile) free(rfile);
@@ -580,26 +642,54 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
 
 int diskutil_grub_mbr (const char * path, const int part)
 {
+    assert (grub_version==1);
+    return diskutil_grub2_mbr (path, part, NULL);
+}
+
+int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
+{
     char cmd [1024];
     int rc = 1;
 
-    logprintfl (EUCAINFO, "{%u} installing grub in MBR\n", (unsigned int)pthread_self());
-    snprintf(cmd, sizeof (cmd), "%s --batch >/dev/null 2>&1", helpers_path[GRUB]);
-    logprintfl (EUCADEBUG, "{%u} running %s\n", (unsigned int)pthread_self(), cmd);
-    FILE * fp = popen (cmd, "w");
-    if (fp!=NULL) {
-        char s [EUCA_MAX_PATH];
-#define   _PR fprintf (fp, "%s", s); logprintfl (EUCADEBUG, "\t%s", s)
-        snprintf (s, sizeof (s), "device (hd0) %s\n", path); _PR;
-        snprintf (s, sizeof (s), "root (hd0,%d)\n", part);   _PR;
-        snprintf (s, sizeof (s), "setup (hd0)\n");           _PR;
-        snprintf (s, sizeof (s), "quit\n");                  _PR;
-        rc = pclose (fp);
+    if (grub_version!=1 && grub_version!=2) {
+        logprintfl (EUCAERROR, "{%u} internal error: invocation of diskutil_grub2_mbr without grub found\n");
+        return ERROR;
+    } else if (mnt_pt==NULL && grub_version!=1) {
+        logprintfl (EUCAERROR, "{%u} internal error: invocation of diskutil_grub2_mbr with grub 1\n");
+        return ERROR;
     }
+    
+    logprintfl (EUCAINFO, "{%u} installing grub in MBR\n", (unsigned int)pthread_self());
+    if (grub_version==1) {
+        snprintf(cmd, sizeof (cmd), "%s --batch >/dev/null 2>&1", helpers_path[GRUB]);
+        logprintfl (EUCADEBUG, "{%u} running %s\n", (unsigned int)pthread_self(), cmd);
+        FILE * fp = popen (cmd, "w");
+        if (fp!=NULL) {
+            char s [EUCA_MAX_PATH];
+#define _PR fprintf (fp, "%s", s); logprintfl (EUCADEBUG, "\t%s", s)
+            snprintf (s, sizeof (s), "device (hd0) %s\n", path); _PR;
+            snprintf (s, sizeof (s), "root (hd0,%d)\n", part);   _PR;
+            snprintf (s, sizeof (s), "setup (hd0)\n");           _PR;
+            snprintf (s, sizeof (s), "quit\n");                  _PR;
+            rc = pclose (fp);
+        }
+        if (rc)
+            logprintfl (EUCAERROR, "{%u} error: failed to run grub 1 on disk '%s': %s\n", (unsigned int)pthread_self(), path, strerror (errno));
 
-    if (rc==0) return OK;
-    logprintfl (EUCAERROR, "{%u} error: failed to run grub on disk '%s': %s\n", (unsigned int)pthread_self(), path, strerror (errno));
-    return ERROR;
+    } else if (grub_version==2) {
+        char * output = pruntf (TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s %s", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt, path);
+        if (!output) {
+            logprintfl (EUCAINFO, "{%u} error: failed to install grub 2 on disk '%s' mounted on '%s'\n", (unsigned int)pthread_self(), path, mnt_pt);
+        } else {
+            free (output);
+            rc = 0;
+        }
+    }
+    
+    if (rc==0) 
+        return OK;    
+    else
+        return ERROR;
 }
 
 int diskutil_ch (const char * path, const char * user, const int perms)

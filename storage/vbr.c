@@ -674,8 +674,34 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
     disk->diskNumber = p1->diskNumber;
     set_disk_dev (disk);
 
+    // map the partitions to the disk
+    if (blockblob_clone (a->bb, map, map_entries)==-1) {
+        logprintfl (EUCAERROR, "[%s] error: failed to clone partitions to created disk: %d %s\n", a->instanceId, blobstore_get_error(), blobstore_get_last_msg());
+        goto cleanup;
+    }
+
+    // create MBR
+    logprintfl (EUCAINFO, "[%s] creating MBR\n", a->instanceId);
+    if (diskutil_mbr (blockblob_get_dev (a->bb), "msdos") == ERROR) { // issues `parted mklabel`
+        logprintfl (EUCAERROR, "[%s] error: failed to add MBR to disk: %d %s\n", a->instanceId, blobstore_get_error(), blobstore_get_last_msg());
+        goto cleanup;
+    }
+
+    // add partition information to MBR
+    for (int i=1; i<map_entries; i++) { // map [0] is for the MBR
+        logprintfl (EUCAINFO, "[%s] adding partition %d to partition table\n", a->instanceId, i);
+        if (diskutil_part (blockblob_get_dev (a->bb),  // issues `parted mkpart`
+                           "primary", // TODO: make this work with more than 4 partitions
+                           NULL, // do not create file system
+                           map [i].first_block_dst, // first sector
+                           map [i].first_block_dst + map [i].len_blocks - 1) == ERROR) {
+            logprintfl (EUCAERROR, "[%s] error: failed to add partition %d to disk: %d %s\n", a->instanceId, i, blobstore_get_error(), blobstore_get_last_msg());
+            goto cleanup;
+        }
+    }
+
     //  make disk bootable if necessary
-    if (a->make_bootable) {
+    if (a->do_make_bootable) {
         boolean bootification_failed = 1;
 
         logprintfl (EUCAINFO, "[%s] making disk bootable\n", a->instanceId);
@@ -705,15 +731,15 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
             goto cleanup;
         }
         
-        // copy in kernel and ramdisk
+        // copy in kernel and ramdisk and run grub over the root partition and the MBR
         logprintfl (EUCAINFO, "[%s] making partition %d bootable\n", a->instanceId, root_part);
         logprintfl (EUCAINFO, "[%s] with kernel %s\n", a->instanceId, kernel_path);
         logprintfl (EUCAINFO, "[%s] and ramdisk %s\n", a->instanceId, ramdisk_path);
-        if (diskutil_grub_files (mnt_pt, root_part, kernel_path, ramdisk_path)!=OK) {
-            logprintfl (EUCAERROR, "[%s] error: failed to make partition bootable\n", a->instanceId, root_part);
+        if (diskutil_grub (blockblob_get_dev (a->bb), mnt_pt, root_part, kernel_path, ramdisk_path)!=OK) {
+            logprintfl (EUCAERROR, "[%s] error: failed to make disk bootable\n", a->instanceId, root_part);
             goto unmount;
         }
-
+        
         bootification_failed = 0;
         
     unmount:
@@ -730,37 +756,6 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
         
         if (bootification_failed)
             goto cleanup;
-    }
-
-    // map the partitions to the disk
-    if (blockblob_clone (a->bb, map, map_entries)==-1) {
-        logprintfl (EUCAERROR, "[%s] error: failed to clone partitions to created disk: %d %s\n", a->instanceId, blobstore_get_error(), blobstore_get_last_msg());
-        goto cleanup;
-    }
-
-    // create MBR
-    logprintfl (EUCAINFO, "[%s] creating MBR\n", a->instanceId);
-    if (diskutil_mbr (blockblob_get_dev (a->bb), "msdos") == ERROR) { // issues `parted mklabel`
-        logprintfl (EUCAERROR, "[%s] error: failed to add MBR to disk: %d %s\n", a->instanceId, blobstore_get_error(), blobstore_get_last_msg());
-        goto cleanup;
-    }
-
-    // add partition information to MBR
-    for (int i=1; i<map_entries; i++) { // map [0] is for the MBR
-        logprintfl (EUCAINFO, "[%s] adding partition %d to partition table\n", a->instanceId, i);
-        if (diskutil_part (blockblob_get_dev (a->bb),  // issues `parted mkpart`
-                           "primary", // TODO: make this work with more than 4 partitions
-                           NULL, // do not create file system
-                           map [i].first_block_dst, // first sector
-                           map [i].first_block_dst + map [i].len_blocks - 1) == ERROR) {
-            logprintfl (EUCAERROR, "[%s] error: failed to add partition %d to disk: %d %s\n", a->instanceId, i, blobstore_get_error(), blobstore_get_last_msg());
-            goto cleanup;
-        }
-    }
-
-    if (diskutil_grub_mbr (blockblob_get_dev (a->bb), root_part)!=OK) {
-        logprintfl (EUCAERROR, "[%s] error: failed to make disk bootable\n", a->instanceId, root_part);
-        goto cleanup;
     }
     
     ret = OK;
@@ -828,18 +823,21 @@ static int copy_creator (artifact * a)
             return ERROR;
         }
     }
-    
-    if (strlen (a->sshkey)) {
-        const char * dev = blockblob_get_dev (a->bb);
-        int injection_failed = 1;
 
+    const char * dev = blockblob_get_dev (a->bb);    
+
+    if (a->do_tune_fs) {
         // tune file system, which is needed to boot EMIs fscked long ago
         logprintfl (EUCAINFO, "[%s] tuning root file system on disk %d partition %d\n", a->instanceId, vbr->diskNumber, vbr->partitionNumber);
         if (diskutil_tune (dev) == ERROR) {
             logprintfl (EUCAERROR, "[%s] error: failed to tune root file system\n", a->instanceId);
-            goto error;
+            return ERROR;
         }
-        
+    }
+    
+    if (strlen (a->sshkey)) {
+
+        int injection_failed = 1;
         logprintfl (EUCAINFO, "[%s] injecting the ssh key\n", a->instanceId);
 
         // mount the partition
@@ -1026,7 +1024,7 @@ static void convert_id (const char * src, char * dst, unsigned int size)
     }
 }
 
-static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy, boolean must_be_file, const char * sshkey)
+static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean do_make_work_copy, boolean must_be_file, const char * sshkey)
 {
     artifact * a = NULL;
 
@@ -1105,7 +1103,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
 
     // allocate another artifact struct if a work copy is requested
     // or if an SSH key is supplied
-    if (a && (make_work_copy || sshkey)) {
+    if (a && (do_make_work_copy || sshkey)) {
 
         artifact * a2 = NULL;
         char art_id [48];
@@ -1136,10 +1134,12 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean make_work_copy
             }
         }
          
-        a2 = art_alloc (art_id, art_sig, a->size_bytes, !make_work_copy, must_be_file, copy_creator, vbr);
+        a2 = art_alloc (art_id, art_sig, a->size_bytes, !do_make_work_copy, must_be_file, copy_creator, vbr);
         if (a2) {
             if (sshkey)
                 strncpy (a2->sshkey, sshkey, sizeof (a2->sshkey)-1 );
+            if (vbr->type==NC_RESOURCE_IMAGE)
+                a2->do_tune_fs = TRUE;
             if (art_add_dep (a2, a) == OK) {
                 a = a2;
             } else {
@@ -1169,8 +1169,8 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
                 artifact * prereqs [], int num_prereqs, // prerequisites (kernel and ramdisk), if any
                 artifact * parts [], int num_parts, // OPTION A: partitions for constructing a 'raw' disk
                 artifact * emi_disk, // OPTION B: the artifact of the EMI that serves as a full disk
-                boolean make_bootable, // kernel injection is requested (not needed on KVM and Xen)
-                boolean make_work_copy, // generated disk should be a work copy
+                boolean do_make_bootable, // kernel injection is requested (not needed on KVM and Xen)
+                boolean do_make_work_copy, // generated disk should be a work copy
                 const char * sshkey) // ssh key to inject into 'keyed' disk
 {
     char art_sig [ART_SIG_MAX] = ""; 
@@ -1208,7 +1208,7 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
     
     // run through prerequisites (kernel and ramdisk), if any, adding up their signature
     // (this will not happen on KVM and Xen where injecting kernel is not necessary)
-    for (int i = 0; make_bootable && i<num_prereqs; i++) {
+    for (int i = 0; do_make_bootable && i<num_prereqs; i++) {
         artifact * p = prereqs [i];
         
         // construct signature for the disk, based on the sigs of underlying components
@@ -1226,7 +1226,7 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
     artifact * disk;
 
     if (emi_disk) { // we have a full disk
-        if (make_work_copy) { // allocate a work copy of it
+        if (do_make_work_copy) { // allocate a work copy of it
             disk_size_bytes = emi_disk->size_bytes;
             if ((strlen (art_sig) + strlen (emi_disk->sig)) >= sizeof (art_sig)) { // overflow
                 logprintfl (EUCAERROR, "[%s] error: internal buffers (ART_SIG_MAX) too small for signature\n", current_instanceId);
@@ -1247,12 +1247,12 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
         if (art_gen_id (art_id, sizeof(art_id), art_pref, art_sig) != OK) 
             return NULL;
         
-        disk = art_alloc (art_id, art_sig, disk_size_bytes, !make_work_copy, FALSE, disk_creator, vbr);
+        disk = art_alloc (art_id, art_sig, disk_size_bytes, !do_make_work_copy, FALSE, disk_creator, vbr);
         if (disk==NULL) {
             logprintfl (EUCAERROR, "[%s] error: failed to allocate an artifact for raw disk\n", disk->instanceId);
             return NULL;
         }
-        disk->make_bootable = make_bootable;
+        disk->do_make_bootable = do_make_bootable;
         
         // attach partitions as dependencies of the raw disk        
         for (int i = 0; i<num_parts; i++) {
@@ -1265,7 +1265,7 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
         }
     
         // optionally, attach prereqs as dependencies of the raw disk
-        for (int i = 0; make_bootable && i<num_prereqs; i++) {
+        for (int i = 0; do_make_bootable && i<num_prereqs; i++) {
             artifact * p = prereqs [i];
             if (art_add_dep (disk, p) != OK) {
                 logprintfl (EUCAERROR, "[%s] error: failed to add a prerequisite to an artifact\n", disk->instanceId);
@@ -1290,8 +1290,8 @@ void art_set_instanceId (const char * instanceId)
 artifact * // returns pointer to the root of artifact tree or NULL on error
 vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must free the tree)
                 virtualMachine * vm, // virtual machine containing the VBR
-                boolean make_bootable, // make the disk bootable by copying kernel and ramdisk into it and running grub
-                boolean make_work_copy, // ensure that all components that get modified at run time have work copies
+                boolean do_make_bootable, // make the disk bootable by copying kernel and ramdisk into it and running grub
+                boolean do_make_work_copy, // ensure that all components that get modified at run time have work copies
                 const char * sshkey, // key to inject into the root partition 
                 const char * instanceId) // ID of the instance (for logging purposes only)
 {
@@ -1324,14 +1324,14 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
     int total_prereq_arts = 0;
     for (int i=0; i<total_prereq_vbrs; i++) {
         virtualBootRecord * vbr = prereq_vbrs [i];
-        artifact * dep = art_alloc_vbr (vbr, make_work_copy, TRUE, NULL);
+        artifact * dep = art_alloc_vbr (vbr, do_make_work_copy, TRUE, NULL);
         if (dep == NULL) 
             goto free;
         prereq_arts [total_prereq_arts++] = dep;
         
         // if disk does not need to be bootable, we'll need 
         // kernel and ramdisk as a top-level dependencies
-        if (!make_bootable)
+        if (!do_make_bootable)
             if (art_add_dep (root, dep) != OK)
                 goto free;
     }
@@ -1365,8 +1365,8 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                                                         prereq_arts, total_prereq_arts, 
                                                         NULL, 0, 
                                                         disk_arts [k], 
-                                                        make_bootable, 
-                                                        make_work_copy, 
+                                                        do_make_bootable, 
+                                                        do_make_work_copy, 
                                                         use_sshkey);
                         if (disk_arts [k] == NULL) {
                             arts_free (disk_arts, EUCA_MAX_PARTITIONS);
@@ -1388,8 +1388,8 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                                                     total_prereq_arts, 
                                                     disk_arts + 1, partitions, 
                                                     NULL, 
-                                                    make_bootable, 
-                                                    make_work_copy,
+                                                    do_make_bootable, 
+                                                    do_make_work_copy,
                                                     use_sshkey);
                     if (disk_arts [0] == NULL) {
                         arts_free (disk_arts, EUCA_MAX_PARTITIONS);
