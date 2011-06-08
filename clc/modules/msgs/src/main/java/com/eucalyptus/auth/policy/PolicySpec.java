@@ -379,6 +379,8 @@ public class PolicySpec {
     EC2_RESOURCES.add( EC2_RESOURCE_SNAPSHOT );
     EC2_RESOURCES.add( EC2_RESOURCE_VMTYPE );
   }
+
+  public static final Pattern IPV4_ADDRESS_RANGE_PATTERN = Pattern.compile( "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})(?:-(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3}))?" );
   
   // S3 resource types
   public static final String S3_RESOURCE_BUCKET = "bucket";
