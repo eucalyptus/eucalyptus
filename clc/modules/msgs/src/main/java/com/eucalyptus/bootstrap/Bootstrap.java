@@ -75,6 +75,7 @@ import com.eucalyptus.component.id.Any;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.ws.EmpyreanService;
@@ -407,7 +408,7 @@ public class Bootstrap {
   }
   
   public static Boolean isCloudController( ) {
-    return Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) );//TODO:GRZE:URGENT NOW NOW NOW NOW
+    return !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) ) && SubDirectory.DB.getFile( ).list( ).length > 0;//TODO:GRZE:URGENT NOW NOW NOW NOW
   }
   
   private static List<String> bindAddrs = parseBindAddrs( );  
