@@ -522,9 +522,13 @@ doDetachVolume (	struct nc_state_t *nc,
         return ret;
 
     // find the instance record
-    sem_p (inst_sem); 
+    if (grab_inst_sem) {
+      sem_p (inst_sem); 
+    }
     instance = find_instance(&global_instances, instanceId);
-    sem_v (inst_sem);
+    if (grab_inst_sem) {
+      sem_v (inst_sem);
+    }
     if ( instance == NULL ) 
         return NOT_FOUND;
 
@@ -607,10 +611,14 @@ doDetachVolume (	struct nc_state_t *nc,
       }
     }
 
-    sem_p (inst_sem);
+    if (grab_inst_sem) {
+      sem_p (inst_sem);
+    }
     volume = free_volume (instance, volumeId, remoteDevReal, localDevReal);
     save_instance_struct (instance);
-    sem_v (inst_sem);
+    if (grab_inst_sem) {
+      sem_v (inst_sem);
+    }
     if ( volume == NULL ) {
       logprintfl (EUCAWARN, "DetachVolume(): Failed to free the volume record\n");
     }
