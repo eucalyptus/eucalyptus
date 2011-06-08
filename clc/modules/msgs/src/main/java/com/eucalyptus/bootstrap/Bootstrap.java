@@ -407,7 +407,7 @@ public class Bootstrap {
   }
   
   public static Boolean isCloudController( ) {
-    return true;//TODO:GRZE:URGENT NOW NOW NOW NOW
+    return Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) );//TODO:GRZE:URGENT NOW NOW NOW NOW
   }
   
   private static List<String> bindAddrs = parseBindAddrs( );  
