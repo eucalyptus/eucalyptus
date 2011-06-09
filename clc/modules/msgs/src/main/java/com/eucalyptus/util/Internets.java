@@ -247,7 +247,7 @@ public class Internets {
   }
   
   public static boolean testLocal( final InetAddress addr ) {
-    Assertions.assertNotNull( addr );
+    if( addr == null ) return true;
     try {
       Boolean result = addr.isAnyLocalAddress( );
       result |= Iterables.any( Collections.list( NetworkInterface.getNetworkInterfaces( ) ), new Predicate<NetworkInterface>( ) {
@@ -269,7 +269,7 @@ public class Internets {
   }
   
   public static boolean testLocal( String address ) {
-    Assertions.assertNotNull( address );
+    if( address == null ) return true;
     InetAddress addr;
     try {
       addr = InetAddress.getByName( address );
