@@ -393,6 +393,7 @@
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="required"/>
+    <value name="IsRecursive" field="isRecursive" usage="optional"/>
   </mapping>
   <mapping name="DeleteUserResponse" class="com.eucalyptus.auth.euare.DeleteUserResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
@@ -552,6 +553,7 @@
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="GroupName" field="groupName" usage="required"/>
+    <value name="IsRecursive" field="isRecursive" usage="optional"/>
   </mapping>
   <mapping name="DeleteGroupResponse" class="com.eucalyptus.auth.euare.DeleteGroupResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>

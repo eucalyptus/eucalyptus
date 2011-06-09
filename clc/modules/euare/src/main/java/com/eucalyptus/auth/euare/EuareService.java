@@ -1090,7 +1090,7 @@ public class EuareService {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete user by " + requestUser.getName( ) );
     }
     try {
-      account.deleteUser( request.getUserName( ), false, false );
+      account.deleteUser( request.getUserName( ), false, request.getIsRecursive( ) != null && request.getIsRecursive( ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
       if ( e instanceof AuthException && AuthException.USER_DELETE_CONFLICT.equals( e.getMessage( ) ) ) {
@@ -1452,7 +1452,7 @@ public class EuareService {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete group by " + requestUser.getName( ) );
     }
     try {
-      account.deleteGroup( request.getGroupName( ), false );
+      account.deleteGroup( request.getGroupName( ), request.getIsRecursive( ) != null && request.getIsRecursive( ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
       if ( e instanceof AuthException && AuthException.GROUP_DELETE_CONFLICT.equals( e.getMessage( ) ) ) {

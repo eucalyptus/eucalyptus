@@ -572,6 +572,7 @@ public class ListAccessKeysType extends EuareMessage {
 public class DeleteUserType extends EuareMessage {
   String delegateAccount;
   String userName;
+  Boolean isRecursive;
   public DeleteUserType() {  }
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_CREATELOGINPROFILE )
@@ -690,6 +691,7 @@ public class DeleteUserPolicyResponseType extends EuareMessage {
 public class DeleteGroupType extends EuareMessage {
   String delegateAccount;
   String groupName;
+  Boolean isRecursive;
   public DeleteGroupType() {  }
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPDATESIGNINGCERTIFICATE )
