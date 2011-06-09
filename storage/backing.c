@@ -527,7 +527,6 @@ static int create_disk (ncInstance * instance, virtualBootRecord * disk, virtual
     logprintfl (EUCAINFO, "[%s] composing a disk from supplied partitions...\n", instance->instanceId);
 
     int ret = ERROR;
-#define MBR_BLOCKS (62 + 4)
     disk->size = 512 * MBR_BLOCKS; 
     blockblob * pbbs [EUCA_MAX_PARTITIONS];
     blockmap map [EUCA_MAX_PARTITIONS] = { {BLOBSTORE_SNAPSHOT, BLOBSTORE_ZERO, {blob:NULL}, 0, 0, MBR_BLOCKS} }; // initially only MBR is in the map
