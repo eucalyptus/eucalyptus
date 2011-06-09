@@ -93,6 +93,7 @@ import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.empyrean.StopServiceResponseType;
 import com.eucalyptus.empyrean.StopServiceType;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -352,7 +353,9 @@ public class EmpyreanService {
         public boolean apply( ServiceConfiguration input ) {
           if ( listAll ) {
             return true;
-          } else if ( !input.getComponentId( ).hasDispatcher( ) && listInternal && input.isHostLocal( ) ) {
+          } else if ( !input.getComponentId( ).hasDispatcher( ) && listInternal && input.getPort( ) == -1
+              ? true
+                : Internets.testLocal( input.getHostName( ) ) ) {
             return true;
           } else if ( input.getComponentId( ).hasDispatcher( ) ) {
             return true;

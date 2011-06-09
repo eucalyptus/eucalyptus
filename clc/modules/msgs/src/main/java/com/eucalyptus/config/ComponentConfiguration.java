@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.config;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Collection;
@@ -103,7 +104,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   private Integer port;
   @Column( name = "config_component_service_path" )
   private String  servicePath;
-  
+
   public ComponentConfiguration( ) {
 
   }
@@ -127,6 +128,11 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   @Override
   public InetSocketAddress getSocketAddress( ) {
     return new InetSocketAddress( this.getHostName( ), this.getPort( ) );
+  }
+  
+  @Override
+  public InetAddress getInetAddress( ) {
+    return this.getSocketAddress( ).getAddress( );
   }
   
   @Override

@@ -241,7 +241,7 @@ public class Internets {
     try {
       ret = InetAddress.getByName( hostAddress );
     } catch ( UnknownHostException e1 ) {
-      throw Exceptions.fatal( "Failed to resolve address for host: " + maybeUrlMaybeHostname, e1 );
+      Exceptions.fatal( "Failed to resolve address for host: " + maybeUrlMaybeHostname, e1 );
     }
     return ret;
   }
@@ -263,7 +263,8 @@ public class Internets {
       } );
       return result;
     } catch ( Exception e ) {
-      return Exceptions.eat( e.getMessage( ), e );
+//      Exceptions.eat( e.getMessage( ), e );
+      return false;
     }
   }
   
@@ -274,7 +275,8 @@ public class Internets {
       addr = InetAddress.getByName( address );
       return testLocal( addr );
     } catch ( UnknownHostException e ) {
-      return Exceptions.eat( e.getMessage( ), e );
+      LOG.error( e.getMessage( ), e );
+      return false;
     }
   }
   

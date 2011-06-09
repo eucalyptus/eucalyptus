@@ -456,7 +456,7 @@ public class Component implements HasName<Component> {
   
   public Service lookupRegisteredService( final ServiceConfiguration config ) throws ServiceRegistrationException, NoSuchElementException {
     Service service = null;
-    if ( ( config.isVmLocal( ) || Internets.testLocal( config.getHostName( ) ) ) && !this.serviceRegistry.hasLocalService( ) ) {
+    if ( ( config.isVmLocal( ) || config.isHostLocal( ) ) && !this.serviceRegistry.hasLocalService( ) ) {
       service = this.serviceRegistry.register( config );
     } else if ( this.serviceRegistry.hasService( config ) ) {
       service = this.serviceRegistry.lookup( config );
@@ -599,13 +599,13 @@ public class Component implements HasName<Component> {
      */
     Service register( ServiceConfiguration config ) throws ServiceRegistrationException {
       Service service = Services.newServiceInstance( config );
-      if ( config.isVmLocal( ) || Internets.testLocal( config.getHostName( ) ) ) {
+      if ( config.isVmLocal( ) || config.isHostLocal( ) ) {
         this.localService.set( service );
       }
       this.services.put( config, service );
       EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_REGISTERED,
                           Component.this.getName( ),
-                          service.getServiceConfiguration( ).isVmLocal( )
+                          ( config.isVmLocal( ) || config.isHostLocal( ) )
                             ? "local"
                             : "remote",
                           config.getName( ), config.getUri( ) ).info( );

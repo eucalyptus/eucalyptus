@@ -73,9 +73,12 @@ import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
 import com.eucalyptus.context.ServiceContextManager;
+import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.empyrean.EnableServiceType;
+import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.async.CheckedListenableFuture;
@@ -302,7 +305,7 @@ public class ServiceTransitions {
                               EventType.COMPONENT_SERVICE_ENABLE,
                               parent.getFullName( ).toString( ),
                               parent.toString( ) ).info( );
-        if ( parent.isVmLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+        if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
           try {
             if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
               parent.lookupComponent( ).getBootstrapper( ).check( );
@@ -320,9 +323,22 @@ public class ServiceTransitions {
           }
         } else {
           try {
-//            if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
-//              parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
-//            }
+            AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new EnableServiceType( ) );
+            try {
+              parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
+            } catch ( Exception ex ) {
+              LOG.error( ex , ex );
+            }
+            transitionCallback.fire( );
+          } catch ( Throwable ex ) {
+            LOG.error( ex , ex );
+            if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
+              transitionCallback.fireException( ex );
+            } else {
+              transitionCallback.fire( );
+            }
+          }
+          try {
             parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
             transitionCallback.fire( );//TODO:GRZE: this is not complete.
           } catch ( Throwable ex ) {
@@ -338,7 +354,7 @@ public class ServiceTransitions {
     CHECK {
       @Override
       public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
-        if ( parent.isVmLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+        if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
           try {
             if ( State.LOADED.ordinal( ) < parent.lookupComponent( ).getState( ).ordinal( ) ) {
               parent.lookupComponent( ).getBootstrapper( ).check( );
@@ -375,7 +391,7 @@ public class ServiceTransitions {
                            EventType.COMPONENT_SERVICE_DISABLE,
                            parent.getFullName( ).toString( ),
                            parent.toString( ) ).info( );
-        if ( parent.isVmLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+        if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
           try {
             parent.lookupComponent( ).getBootstrapper( ).disable( );
             parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
@@ -408,7 +424,7 @@ public class ServiceTransitions {
                               EventType.COMPONENT_SERVICE_START,
                               parent.getFullName( ).toString( ),
                               parent.toString( ) ).info( );
-        if ( parent.isVmLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+        if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
           try {
             parent.lookupComponent( ).getBootstrapper( ).start( );
             if ( parent.lookupComponent( ).hasLocalService( ) ) {
@@ -424,9 +440,15 @@ public class ServiceTransitions {
           }
         } else {
           try {
-            parent.lookupComponent( ).getBuilder( ).fireStart( parent );
-            transitionCallback.fire( );//TODO:GRZE: this is not complete.
+            AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new StartServiceType( ) );
+            try {
+              parent.lookupComponent( ).getBuilder( ).fireStart( parent );
+            } catch ( Exception ex ) {
+              LOG.error( ex , ex );
+            }
+            transitionCallback.fire( );
           } catch ( Throwable ex ) {
+            LOG.error( ex , ex );
             if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
               transitionCallback.fireException( ex );
             } else {
@@ -462,7 +484,7 @@ public class ServiceTransitions {
                            EventType.COMPONENT_SERVICE_STOP,
                            parent.getFullName( ).toString( ),
                            parent.toString( ) ).debug( );
-        if ( parent.isVmLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+        if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
           try {
             parent.lookupComponent( ).getBootstrapper( ).stop( );
             parent.lookupComponent( ).getBuilder( ).fireStop( parent );
@@ -491,7 +513,7 @@ public class ServiceTransitions {
     DESTROY {
       @Override
       public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
-        if ( parent.isVmLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+        if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
           try {
             parent.lookupComponent( ).getBootstrapper( ).destroy( );
             transitionCallback.fire( );
@@ -590,7 +612,7 @@ public class ServiceTransitions {
     SERVICE_CONTEXT_RESTART {
       @Override
       public void fire( ServiceConfiguration parent ) {
-        if ( parent.isVmLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+        if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
           ServiceContextManager.restartSync( );
         }
       }
@@ -598,7 +620,7 @@ public class ServiceTransitions {
     PIPELINES_ADD {
       @Override
       public void fire( ServiceConfiguration parent ) {
-        if ( parent.isVmLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+        if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
           PipelineRegistry.getInstance( ).enable( parent.getComponentId( ) );
         }
       }
@@ -606,7 +628,7 @@ public class ServiceTransitions {
     PIPELINES_REMOVE {
       @Override
       public void fire( ServiceConfiguration parent ) {
-        if ( parent.isVmLocal( ) || Internets.testLocal( parent.getHostName( ) ) ) {
+        if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
           PipelineRegistry.getInstance( ).disable( parent.getComponentId( ) );
         }
       }
