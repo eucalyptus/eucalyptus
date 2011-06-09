@@ -119,7 +119,7 @@ public class Protocols {
                                                                   } catch ( UnknownHostException ex ) {
                                                                     LOG.error( ex , ex );
                                                                   }
-                                                                   protocol.setBindToAllInterfaces( true );
+//                                                                   protocol.setBindToAllInterfaces( true );
                                                                    protocol.setDiscardIncompatiblePackets( true );
                                                                    protocol.setMaxBundleSize( 60000 );
                                                                    protocol.setMaxBundleTimeout( 30 );
