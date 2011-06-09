@@ -73,8 +73,11 @@ import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
 import com.eucalyptus.context.ServiceContextManager;
+import com.eucalyptus.empyrean.DescribeServicesResponseType;
+import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.EnableServiceType;
+import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -87,6 +90,7 @@ import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.ws.util.PipelineRegistry;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 
 public class ServiceTransitions {
   static Logger LOG = Logger.getLogger( ServiceTransitions.class );
@@ -327,11 +331,11 @@ public class ServiceTransitions {
             try {
               parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
             } catch ( Exception ex ) {
-              LOG.error( ex , ex );
+              LOG.error( ex, ex );
             }
             transitionCallback.fire( );
           } catch ( Throwable ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
             if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
               transitionCallback.fireException( ex );
             } else {
@@ -353,7 +357,7 @@ public class ServiceTransitions {
     },
     CHECK {
       @Override
-      public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
+      public void leave( final ServiceConfiguration parent, Completion transitionCallback ) {
         if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
           try {
             if ( State.LOADED.ordinal( ) < parent.lookupComponent( ).getState( ).ordinal( ) ) {
@@ -372,8 +376,16 @@ public class ServiceTransitions {
           }
         } else {
           try {
-            parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
-            transitionCallback.fire( );//TODO:GRZE: this is not complete.
+            DescribeServicesResponseType response = AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ),
+                                                                            new DescribeServicesType( ) );
+            Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>() {
+
+              @Override
+              public boolean apply( ServiceStatusType arg0 ) {
+                return parent.getName( ).equals( arg0.getServiceId( ).getName( ) );
+              }} );
+            //TODO:GRZE:RELEASE this is where extra remote state checks happen.
+            transitionCallback.fire( );
           } catch ( Throwable ex ) {
             if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
               transitionCallback.fireException( ex );
@@ -405,9 +417,15 @@ public class ServiceTransitions {
           }
         } else {
           try {
-            parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
-            transitionCallback.fire( );//TODO:GRZE: this is not complete.
+            AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new StartServiceType( ) );
+            try {
+              parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
+            }
+            transitionCallback.fire( );
           } catch ( Throwable ex ) {
+            LOG.error( ex, ex );
             if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
               transitionCallback.fireException( ex );
             } else {
@@ -444,11 +462,11 @@ public class ServiceTransitions {
             try {
               parent.lookupComponent( ).getBuilder( ).fireStart( parent );
             } catch ( Exception ex ) {
-              LOG.error( ex , ex );
+              LOG.error( ex, ex );
             }
             transitionCallback.fire( );
           } catch ( Throwable ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
             if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
               transitionCallback.fireException( ex );
             } else {
@@ -498,9 +516,15 @@ public class ServiceTransitions {
           }
         } else {
           try {
-            parent.lookupComponent( ).getBuilder( ).fireStop( parent );
-            transitionCallback.fire( );//TODO:GRZE: this is not complete.
+            AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new StartServiceType( ) );
+            try {
+              parent.lookupComponent( ).getBuilder( ).fireStop( parent );
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
+            }
+            transitionCallback.fire( );
           } catch ( Throwable ex ) {
+            LOG.error( ex, ex );
             if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
               transitionCallback.fireException( ex );
             } else {
