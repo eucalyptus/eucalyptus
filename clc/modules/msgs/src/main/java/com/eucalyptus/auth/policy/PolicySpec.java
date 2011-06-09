@@ -50,11 +50,13 @@ public class PolicySpec {
   // IAM actions, based on API version 2010-05-08
   public static final String IAM_ADDUSERTOGROUP = "addusertogroup";
   public static final String IAM_CREATEACCESSKEY = "createaccesskey";
+  public static final String IAM_CREATEACCOUNTALIAS = "createaccountalias";
   public static final String IAM_CREATEGROUP = "creategroup";
   public static final String IAM_CREATELOGINPROFILE = "createloginprofile";
   public static final String IAM_CREATEUSER = "createuser";
   public static final String IAM_DEACTIVATEMFADEVICE = "deactivatemfadevice";
   public static final String IAM_DELETEACCESSKEY = "deleteaccesskey";
+  public static final String IAM_DELETEACCOUNTALIAS = "deleteaccountalias";
   public static final String IAM_DELETEGROUP = "deletegroup";
   public static final String IAM_DELETEGROUPPOLICY = "deletegrouppolicy";
   public static final String IAM_DELETELOGINPROFILE = "deleteloginprofile";
@@ -63,6 +65,7 @@ public class PolicySpec {
   public static final String IAM_DELETEUSER = "deleteuser";
   public static final String IAM_DELETEUSERPOLICY = "deleteuserpolicy";
   public static final String IAM_ENABLEMFADEVICE = "enablemfadevice";
+  public static final String IAM_GETACCOUNTSUMMARY = "getaccountsummary";
   public static final String IAM_GETGROUP = "getgroup";
   public static final String IAM_GETGROUPPOLICY = "getgrouppolicy";
   public static final String IAM_GETLOGINPROFILE = "getloginprofile";
@@ -70,6 +73,7 @@ public class PolicySpec {
   public static final String IAM_GETUSER = "getuser";
   public static final String IAM_GETUSERPOLICY = "getuserpolicy";
   public static final String IAM_LISTACCESSKEYS = "listaccesskeys";
+  public static final String IAM_LISTACCOUNTALIASES = "listaccountaliases";
   public static final String IAM_LISTGROUPPOLICIES = "listgrouppolicies";
   public static final String IAM_LISTGROUPS = "listgroups";
   public static final String IAM_LISTGROUPSFORUSER = "listgroupsforuser";

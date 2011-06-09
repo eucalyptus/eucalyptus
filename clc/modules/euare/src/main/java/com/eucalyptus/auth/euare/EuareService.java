@@ -1,11 +1,13 @@
 package com.eucalyptus.auth.euare;
 
+import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
@@ -1461,7 +1463,100 @@ public class EuareService {
     }
     return reply;
   }
+  
+  public CreateAccountAliasResponseType createAccountAlias(CreateAccountAliasType request) throws EucalyptusCloudException {
+    CreateAccountAliasResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    String action = PolicySpec.requestToAction( request );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
+    try {
+      Accounts.lookupAccountByName( request.getAccountAlias( ) );
+    } catch ( AuthException ae ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.ALL_RESOURCE, PolicySpec.ALL_RESOURCE, account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create account alias by " + requestUser.getName( ) );
+      }
+      try {
+        account.setName( request.getAccountAlias( ) );
+        return reply;
+      } catch ( Exception e ) {
+        LOG.debug( e, e );
+        throw new EucalyptusCloudException( e );
+      }
+    }
+    throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Can not change to a name already in use: " + request.getAccountAlias( ) );
+  }
+  
+  public DeleteAccountAliasResponseType deleteAccountAlias(DeleteAccountAliasType request) throws EucalyptusCloudException {
+    DeleteAccountAliasResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    String action = PolicySpec.requestToAction( request );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.ALL_RESOURCE, PolicySpec.ALL_RESOURCE, account, action, requestUser ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete account alias by " + requestUser.getName( ) );
+    }
+    try {
+      // Only one alias is allowed by AWS IAM spec. Overwrite the current alias if matches.
+      if ( account.getName( ).equals( request.getAccountAlias( ) ) ) {
+        account.setName( account.getAccountNumber( ) );
+      }
+      return reply;
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( e );
+    }
+  }
 
+  public ListAccountAliasesResponseType listAccountAliases(ListAccountAliasesType request) throws EucalyptusCloudException {
+    ListAccountAliasesResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    String action = PolicySpec.requestToAction( request );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.ALL_RESOURCE, PolicySpec.ALL_RESOURCE, account, action, requestUser ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list account aliases by " + requestUser.getName( ) );
+    }
+    try {
+      reply.getListAccountAliasesResult( ).getAccountAliases( ).getMemberList( ).add( account.getName( ) );
+      return reply;
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( e );
+    }
+  }
+  
+  public GetAccountSummaryResponseType getAccountSummary(GetAccountSummaryType request) throws EucalyptusCloudException {
+    GetAccountSummaryResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    String action = PolicySpec.requestToAction( request );
+    Context ctx = Contexts.lookup( );
+    User requestUser = ctx.getUser( );
+    Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.ALL_RESOURCE, PolicySpec.ALL_RESOURCE, account, action, requestUser ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get account summary by " + requestUser.getName( ) );
+    }
+    try {
+      List<SummaryMapTypeEntryType> map = reply.getGetAccountSummaryResult( ).getSummaryMap( ).getEntryList( );
+      SummaryMapTypeEntryType entry;
+      entry = new SummaryMapTypeEntryType( );
+      entry.setKey( "Groups" );
+      entry.setValue( BigInteger.valueOf( account.getGroups( ).size( ) ) );
+      map.add( entry );
+      entry = new SummaryMapTypeEntryType( );
+      entry.setKey( "Users" );
+      entry.setValue( BigInteger.valueOf( account.getUsers( ).size( ) ) );
+      map.add( entry );
+      return reply;
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( e );
+    }
+  }
+  
   public CreateSigningCertificateResponseType createSigningCertificate(CreateSigningCertificateType request) throws EucalyptusCloudException {
     CreateSigningCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );

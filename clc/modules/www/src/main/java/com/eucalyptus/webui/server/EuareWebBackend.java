@@ -237,7 +237,7 @@ public class EuareWebBackend {
     } );
   }
   
-  public static List<SearchResultRow> searchAccounts( SearchQuery query ) throws EucalyptusServiceException {
+  public static List<SearchResultRow> searchAccounts( User requestUser, SearchQuery query ) throws EucalyptusServiceException {
     List<SearchResultRow> results = Lists.newArrayList( );
     try {
       // Optimization for a single account search

@@ -251,7 +251,9 @@ public class PolicyEngineImpl implements PolicyEngine {
   private List<Authorization> lookupGlobalAuthorizations( String resourceType, Account account ) throws AuthException {
     List<Authorization> results = Lists.newArrayList( );
     results.addAll( account.lookupAccountGlobalAuthorizations( resourceType ) );
-    results.addAll( account.lookupAccountGlobalAuthorizations( PolicySpec.ALL_RESOURCE ) );
+    if ( !PolicySpec.ALL_RESOURCE.equals( resourceType ) ) {
+      results.addAll( account.lookupAccountGlobalAuthorizations( PolicySpec.ALL_RESOURCE ) );
+    }
     return results;
   }
   
@@ -266,7 +268,9 @@ public class PolicyEngineImpl implements PolicyEngine {
   private List<Authorization> lookupLocalAuthorizations( String resourceType, User user ) throws AuthException {
     List<Authorization> results = Lists.newArrayList( );
     results.addAll( user.lookupAuthorizations( resourceType ) );
-    results.addAll( user.lookupAuthorizations( PolicySpec.ALL_RESOURCE ) );
+    if ( !PolicySpec.ALL_RESOURCE.equals( resourceType ) ) {
+      results.addAll( user.lookupAuthorizations( PolicySpec.ALL_RESOURCE ) );
+    }
     return results;
   }
   
@@ -283,10 +287,14 @@ public class PolicyEngineImpl implements PolicyEngine {
   private List<Authorization> lookupQuotas( String resourceType, User user, Account account, boolean isAccountAdmin ) throws AuthException {
     List<Authorization> results = Lists.newArrayList( );
     results.addAll( account.lookupAccountGlobalQuotas( resourceType ) );
-    results.addAll( account.lookupAccountGlobalQuotas( PolicySpec.ALL_RESOURCE ) );
+    if ( !PolicySpec.ALL_RESOURCE.equals( resourceType ) ) {
+      results.addAll( account.lookupAccountGlobalQuotas( PolicySpec.ALL_RESOURCE ) );
+    }
     if ( !isAccountAdmin ) {
       results.addAll( user.lookupQuotas( resourceType ) );
-      results.addAll( user.lookupQuotas( PolicySpec.ALL_RESOURCE ) );
+      if ( !PolicySpec.ALL_RESOURCE.equals( resourceType ) ) {
+        results.addAll( user.lookupQuotas( PolicySpec.ALL_RESOURCE ) );
+      }
     }
     return results;    
   }

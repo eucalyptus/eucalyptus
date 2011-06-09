@@ -652,6 +652,67 @@
     <value name="UserName" field="userName" usage="required"/>
   </mapping>
   
+  <mapping name="CreateAccountAlias" class="com.eucalyptus.auth.euare.CreateAccountAliasType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="AccountAlias" field="accountAlias" usage="required"/>
+  </mapping>
+  <mapping name="CreateAccountAliasResponse" class="com.eucalyptus.auth.euare.CreateAccountAliasResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="DeleteAccountAlias" class="com.eucalyptus.auth.euare.DeleteAccountAliasType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="AccountAlias" field="accountAlias" usage="required"/>
+  </mapping>
+  <mapping name="DeleteAccountAliasResponse" class="com.eucalyptus.auth.euare.DeleteAccountAliasResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="ListAccountAliases" class="com.eucalyptus.auth.euare.ListAccountAliasesType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+    <value name="MaxItems" field="maxItems" usage="optional"/>
+  </mapping>
+  <mapping name="ListAccountAliasesResponse" class="com.eucalyptus.auth.euare.ListAccountAliasesResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure field="listAccountAliasesResult" usage="required" map-as="com.eucalyptus.auth.euare.ListAccountAliasesResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="ListAccountAliasesResult" class="com.eucalyptus.auth.euare.ListAccountAliasesResultType">
+    <structure field="accountAliases" usage="required" map-as="com.eucalyptus.auth.euare.AccountAliasListTypeType"/>
+    <value name="IsTruncated" field="isTruncated" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+  </mapping>
+  <mapping name="AccountAliases" class="com.eucalyptus.auth.euare.AccountAliasListTypeType">
+    <collection field="memberList">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping name="GetAccountSummary" class="com.eucalyptus.auth.euare.GetAccountSummaryType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+  </mapping>
+  <mapping name="GetAccountSummaryResponse" class="com.eucalyptus.auth.euare.GetAccountSummaryResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure field="getAccountSummaryResult" usage="required" map-as="com.eucalyptus.auth.euare.GetAccountSummaryResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="GetAccountSummaryResult" class="com.eucalyptus.auth.euare.GetAccountSummaryResultType">
+    <structure field="summaryMap" usage="optional" map-as="com.eucalyptus.auth.euare.SummaryMapTypeType"/>
+  </mapping>
+  <mapping name="SummaryMap" class="com.eucalyptus.auth.euare.SummaryMapTypeType">
+    <collection field="entryList">
+      <structure map-as="com.eucalyptus.auth.euare.SummaryMapTypeEntryType"/>
+    </collection>
+  </mapping>
+  <mapping name="entry" class="com.eucalyptus.auth.euare.SummaryMapTypeEntryType">
+    <value name="key" field="key" usage="required"/>
+    <value name="value" field="value" usage="required"/>
+  </mapping>  
+  
   <mapping class="com.eucalyptus.auth.euare.AccountType" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="AccountName" field="accountName" usage="required"/>

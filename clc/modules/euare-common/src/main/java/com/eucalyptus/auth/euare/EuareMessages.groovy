@@ -721,6 +721,71 @@ public class ListUsersType extends EuareMessage {
   BigInteger maxItems;
   public ListUsersType() {  }
 }
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_CREATEACCOUNTALIAS )
+public class CreateAccountAliasType extends EuareMessage {
+  String delegateAccount;
+  String accountAlias;
+  public CreateAccountAliasType() {  }
+}
+public class CreateAccountAliasResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public CreateAccountAliasResponseType() {  }
+}
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DELETEACCOUNTALIAS )
+public class DeleteAccountAliasType extends EuareMessage {
+  String delegateAccount;
+  String accountAlias;
+  public DeleteAccountAliasType() {  }
+}
+public class DeleteAccountAliasResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public DeleteAccountAliasResponseType() {  }
+}
+public class ListAccountAliasesResultType extends EucalyptusData {
+  AccountAliasListTypeType accountAliases = new AccountAliasListTypeType( );
+  Boolean isTruncated;
+  String marker;
+  public ListAccountAliasesResultType() {  }
+}
+public class ListAccountAliasesResponseType extends EuareMessage {
+  ListAccountAliasesResultType listAccountAliasesResult = new ListAccountAliasesResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public ListAccountAliasesResponseType() {  }
+}
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTACCOUNTALIASES )
+public class ListAccountAliasesType extends EuareMessage {
+  String delegateAccount;
+  String marker;
+  BigInteger maxItems;
+  public ListAccountAliasesType() {  }
+}
+public class AccountAliasListTypeType extends EucalyptusData {
+  public AccountAliasListTypeType() {  }
+  ArrayList<String> memberList = new ArrayList<String>();
+}
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETACCOUNTSUMMARY )
+public class GetAccountSummaryType extends EuareMessage {
+  String delegateAccount;
+  public GetAccountSummaryType() {  }
+}
+public class GetAccountSummaryResponseType extends EuareMessage {
+  GetAccountSummaryResultType getAccountSummaryResult = new GetAccountSummaryResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public GetAccountSummaryResponseType() {  }
+}
+public class GetAccountSummaryResultType extends EucalyptusData {
+  SummaryMapTypeType summaryMap = new SummaryMapTypeType( );
+  public GetAccountSummaryResultType() {  }
+}
+public class SummaryMapTypeType extends EucalyptusData {
+  public SummaryMapTypeType() {  }
+  ArrayList<SummaryMapTypeEntryType> entryList = new ArrayList<SummaryMapTypeEntryType>();
+}
+public class SummaryMapTypeEntryType extends EucalyptusData {
+  String key;
+  BigInteger value;
+  public SummaryMapTypeEntryType() {  }
+}
 
 /**
  * Eucalyptus extended messages for account management
