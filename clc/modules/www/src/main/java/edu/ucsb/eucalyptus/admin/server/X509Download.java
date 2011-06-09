@@ -76,9 +76,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
@@ -121,6 +123,9 @@ public class X509Download extends HttpServlet {
     try {
       Account account = Accounts.lookupAccountByName( accountName );
       user = account.lookupUserByName( userName );
+      if ( !user.isEnabled( ) || !RegistrationStatus.CONFIRMED.equals( user.getRegistrationStatus( ) ) ) {
+        throw new AuthException( "User is not enabled or confirmed" );
+      }
     } catch ( Exception e ) {
       hasError( "User does not exist", response );
       return;

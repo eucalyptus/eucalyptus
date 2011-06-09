@@ -54,24 +54,9 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
 
   @Override
-  public Session login( String fullName, String password ) throws EucalyptusServiceException {
-    if ( fullName == null || password == null ) {
-      throw new EucalyptusServiceException( "Empty user name or password" );
-    }
-    // Parse userId in the follow forms:
-    // 1. "user@account"
-    // 2. any of the parts is missing, using the default: "admin" for user and "eucalyptus" for account.
-    //    So it could be "test" (test@eucalyptus) or "@test" (admin@test).
-    String userName = User.ACCOUNT_ADMIN;
-    String accountName = Account.SYSTEM_ACCOUNT;
-    int at = fullName.indexOf( '@' );
-    if ( at < 0 ) {
-      userName = fullName;
-    } else if ( at == 0 ) {
-      accountName = fullName.substring( 1 );
-    } else {
-      userName = fullName.substring( 0, at );
-      accountName = fullName.substring( at + 1 );
+  public Session login( String accountName, String userName, String password ) throws EucalyptusServiceException {
+    if ( Strings.isNullOrEmpty( accountName ) || Strings.isNullOrEmpty( userName ) || Strings.isNullOrEmpty( password ) ) {
+      throw new EucalyptusServiceException( "Empty login or password" );
     }
     EuareWebBackend.checkPassword( EuareWebBackend.getUser( userName, accountName ), password );
     try { Thread.sleep( 500 ); } catch ( Exception e ) { } // Simple thwart to automatic login attack.
@@ -105,7 +90,11 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   
   @Override
   public SearchResult lookupConfiguration( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    verifySession( session );
+    User user = verifySession( session );
+    if ( !user.isSystemAdmin( ) ) {
+      LOG.error( "Non system admin tries to query system configurations" );
+      throw new EucalyptusServiceException( "Operation can not be authorized" );
+    }
     SearchResult result = new SearchResult( );
     result.setDescs( ConfigurationWebBackend.COMMON_FIELD_DESCS );
     result.addRow( ConfigurationWebBackend.getCloudConfiguration( ) );
@@ -114,13 +103,16 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     result.addRows( ConfigurationWebBackend.getWalrusConfiguration( ) );
     result.setTotalSize( result.length( ) );
     result.setRange( range );
-    LOG.debug( "Configuration result: " + result );
     return result;
   }
   
   @Override
   public void setConfiguration( Session session, SearchResultRow config ) throws EucalyptusServiceException {
-    verifySession( session );
+    User user = verifySession( session );
+    if ( !user.isSystemAdmin( ) ) {
+      LOG.error( "Non system admin tries to change system configurations" );
+      throw new EucalyptusServiceException( "Operation can not be authorized" );
+    }
     if ( config == null ) {
       throw new EucalyptusServiceException( "Empty config to save" );
     }
@@ -150,26 +142,28 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     result.addRows( VmTypeWebBackend.getVmTypes( ) );
     result.setTotalSize( result.length( ) );
     result.setRange( range );
-    LOG.debug( "VmType result: " + result );
     return result;
   }
 
   @Override
   public void setVmType( Session session, SearchResultRow vmType ) throws EucalyptusServiceException {
-    verifySession( session );
+    User user = verifySession( session );
+    if ( !user.isSystemAdmin( ) ) {
+      LOG.error( "Non system admin tries to change VM type definitions" );
+      throw new EucalyptusServiceException( "Operation can not be authorized" );
+    }
     if ( vmType == null ) {
       throw new EucalyptusServiceException( "Empty UI input for VmType" );
     }
-    LOG.debug( "Set VmType: " + vmType );
     VmTypeWebBackend.setVmType( vmType );
   }
 
   
   @Override
   public SearchResult lookupAccount( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    verifySession( session );
+    User user = verifySession( session );
     SearchQuery searchQuery = parseQuery( QueryType.account, search );
-    List<SearchResultRow> rows = EuareWebBackend.searchAccounts( searchQuery );
+    List<SearchResultRow> rows = EuareWebBackend.searchAccounts( user, searchQuery );
     SearchResult result = new SearchResult( rows.size( ), range );
     result.setDescs( EuareWebBackend.ACCOUNT_COMMON_FIELD_DESCS );
     result.setRows( SearchUtil.getRange( rows, range ) );

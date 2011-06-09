@@ -66,7 +66,7 @@
 
   "users":{
 
-    "_comment":"This section defines configurations for users to sync. <base-dn> defines the base DN for searching users. <id-attribute> specifies the attribute name that which serves as the unique ID of a user. <user-info-attribute> defines which of the user attributes are chosen, with which, each field defines a mapping between LDAP attribute name and the name to be used in Eucalyptus. <password-attribute> specifies the name of the password attribute, which is used for Eucalyptus Web UI authentication. <selection> is a construct to define how to pick users in the tree.",
+    "_comment":"This section defines configurations for users to sync. <base-dn> defines the base DN for searching users. <id-attribute> specifies the attribute name that which serves as the unique ID of a user. <user-info-attribute> defines which of the user attributes are chosen, with which, each field defines a mapping between LDAP attribute name and the name to be used in Eucalyptus. <selection> is a construct to define how to pick users in the tree.",
 
     "base-dn":"ou=people,dc=foo,dc=com",
     "id-attribute":"uid",
@@ -74,7 +74,6 @@
         "name":"Name",
         "email":"Email"
     },
-    "password-attribute":"password",
     "selection":{
 
         "_comment":"This construct defines what entities to select from LDAP tree. <filter> is mandatory, which is an LDAP search filter. <select> and <not-select> are optional, which specify one-offs.",
