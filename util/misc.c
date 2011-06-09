@@ -123,7 +123,7 @@ int verify_helpers (char **helpers, char **helpers_path, int LASTHELPER)
         }
         if (!done) {
             missing_helpers++;
-            logprintfl(EUCAWARN, "did not find '%s' in path\n", helpers[i]);
+            logprintfl (EUCAINFO, "did not find '%s' in path\n", helpers[i]);
         } else {
             helpers_path[i] = strdup(file);
             logprintfl (EUCAINFO, "found '%s' at '%s'\n", helpers[i], helpers_path[i]);
