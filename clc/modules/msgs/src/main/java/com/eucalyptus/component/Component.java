@@ -65,9 +65,9 @@ package com.eucalyptus.component;
 import java.net.InetAddress;
 import java.net.URI;
 import java.util.List;
-import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
@@ -106,7 +106,19 @@ public class Component implements HasName<Component> {
   }
   
   public enum Transition implements Automata.Transition<Transition> {
-    INITIALIZING, LOADING, STARTING, READY_CHECK, STOPPING, STOPPING_NOTREADY, ENABLING, ENABLED_CHECK, DISABLING, DISABLED_CHECK, DESTROYING, FAILED_TO_PREPARE, RELOADING;
+    INITIALIZING,
+    LOADING,
+    STARTING,
+    READY_CHECK,
+    STOPPING,
+    STOPPING_NOTREADY,
+    ENABLING,
+    ENABLED_CHECK,
+    DISABLING,
+    DISABLED_CHECK,
+    DESTROYING,
+    FAILED_TO_PREPARE,
+    RELOADING;
   }
   
   Component( ComponentId componentId ) throws ServiceRegistrationException {
@@ -175,8 +187,7 @@ public class Component implements HasName<Component> {
    * True if the component has not been explicitly configured as running in remote-mode where only
    * partial services are provided locally. That is, even if
    * the code is available locally we do not prepare the service bootstrappers to run, but the local
-   * service endpoint is still configured (i.e. for
-   * {@link com.eucalyptus.component.id.ComponentService.dns}).
+   * service endpoint is still configured (i.e. for {@link com.eucalyptus.component.id.ComponentService.dns}).
    * 
    * @return true if the component has not been explicitly marked as remote.
    */
@@ -281,8 +292,14 @@ public class Component implements HasName<Component> {
                                                                     this.getComponentId( ).getPort( ) );
       this.serviceRegistry.register( config );
       return config;
+    } else if ( Bootstrap.isCloudController( ) && !Internets.testLocal( addr ) ) {
+      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ),
+                                                                    this.getComponentId( ).getPort( ) );
+      this.serviceRegistry.register( config );
+      return config;
     } else {
-      throw new ServiceRegistrationException( "The component " + this.getName( ) + " is being skipped since it should only be run local to the cloud controller." );
+      throw new ServiceRegistrationException( "Skipping invalid attempt to init remote service configuration for host " + addr + " on component "
+                                              + this.getName( ) );
     }
   }
   
@@ -301,7 +318,7 @@ public class Component implements HasName<Component> {
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to load service: " + config + " because of: " + ex.getMessage( ), ex );
       }
-    } 
+    }
     if ( State.LOADED.isIn( config ) ) {
       return Futures.predestinedFuture( config );
     } else {
@@ -346,7 +363,7 @@ public class Component implements HasName<Component> {
   
   public CheckedListenableFuture<ServiceConfiguration> enableTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
     State goal = this.serviceRegistry.getServices( ).size( ) == 1
-    ? State.ENABLED
+      ? State.ENABLED
       : State.DISABLED;
     this.setServiceGoalState( configuration, goal );
     return ServiceTransitions.transitionChain( configuration, goal );
@@ -354,7 +371,7 @@ public class Component implements HasName<Component> {
   
   public CheckedListenableFuture<ServiceConfiguration> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
     State goal = this.serviceRegistry.getServices( ).size( ) == 1
-    ? State.ENABLED
+      ? State.ENABLED
       : State.DISABLED;
     this.setServiceGoalState( configuration, goal );
     return ServiceTransitions.transitionChain( configuration, State.NOTREADY );
@@ -370,7 +387,7 @@ public class Component implements HasName<Component> {
         service = this.serviceRegistry.register( configuration );
         service.setGoal( goalState );
       } catch ( ServiceRegistrationException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     }
   }
@@ -467,8 +484,8 @@ public class Component implements HasName<Component> {
   }
   
   class ServiceRegistry {
-    private final AtomicReference<Service>           localService = new AtomicReference( null );
-    private final Map<ServiceConfiguration, Service> services     = Maps.newConcurrentMap( );
+    private final AtomicReference<Service>                     localService = new AtomicReference( null );
+    private final ConcurrentMap<ServiceConfiguration, Service> services     = Maps.newConcurrentMap( );
     
     public boolean hasLocalService( ) {
       return !Component.this.identity.runLimitedServices( ) && ( this.localService.get( ) != null && !( this.localService.get( ) instanceof MissingService ) );
@@ -487,8 +504,7 @@ public class Component implements HasName<Component> {
      * Obtain a snapshot of the current service state. Note that this method creates a new set and
      * changes to the returned set will not be reflected in the underlying services set.
      * 
-     * @return {@link NavigableSet<Service>} of the registered service of this {@link Component}
-     *         type.
+     * @return {@link NavigableSet<Service>} of the registered service of this {@link Component} type.
      */
     public NavigableSet<ServiceConfiguration> getServices( ) {
       return Sets.newTreeSet( this.services.keySet( ) );
@@ -533,8 +549,7 @@ public class Component implements HasName<Component> {
      * 
      * @param fullName
      * @return {@link Service} instance of the deregistered service.
-     * @throws NoSuchElementException if no {@link Service} is registered with the provided
-     *           {@link FullName}
+     * @throws NoSuchElementException if no {@link Service} is registered with the provided {@link FullName}
      */
     public Service deregister( ServiceConfiguration config ) throws NoSuchElementException {
       Service ret = this.services.remove( config );
@@ -546,14 +561,13 @@ public class Component implements HasName<Component> {
       try {
         ret.cleanUp( );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
       return ret;
     }
     
     /**
-     * Returns the {@link Service} instance which was registered with the provided
-     * {@link ServiceConfiguration}, if it exists. If a service with the given name
+     * Returns the {@link Service} instance which was registered with the provided {@link ServiceConfiguration}, if it exists. If a service with the given name
      * does not exist a
      * NoSuchElementException is thrown.
      * 
@@ -569,7 +583,7 @@ public class Component implements HasName<Component> {
         return this.services.get( config );
       }
     }
-        
+    
     /**
      * List the services registered within a give partition.
      * 
@@ -595,21 +609,22 @@ public class Component implements HasName<Component> {
      * Register the given {@link Service} with the registry. Only used internally.
      * 
      * @param service
-     * @throws ServiceRegistrationException 
+     * @throws ServiceRegistrationException
      */
     Service register( ServiceConfiguration config ) throws ServiceRegistrationException {
       Service service = Services.newServiceInstance( config );
       if ( config.isVmLocal( ) || config.isHostLocal( ) ) {
         this.localService.set( service );
       }
-      this.services.put( config, service );
+      Service ret = this.services.putIfAbsent( config, service );
+      ret = ( ret != null ) ? ret : service;
       EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_REGISTERED,
                           Component.this.getName( ),
                           ( config.isVmLocal( ) || config.isHostLocal( ) )
                             ? "local"
                             : "remote",
                           config.getName( ), config.getUri( ) ).info( );
-      return service;
+      return ret;
     }
     
     /**

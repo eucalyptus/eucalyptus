@@ -64,30 +64,34 @@
 package com.eucalyptus.component;
 
 import java.net.InetAddress;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
 import org.jgroups.View;
 import com.eucalyptus.bootstrap.HostManager;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Mbeans;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 
 public class Hosts {
   private static final Logger                       LOG     = Logger.getLogger( Hosts.class );
   private static final ConcurrentMap<Address, Host> hostMap = new ConcurrentHashMap<Address, Host>( );
 
-  public static <T> List<T> collect( Function<Host,? extends T> function ) {
-    return Lists.transform( Lists.newArrayList( hostMap.values( ) ), function );
+  public static <T> Collection<Host> collect( Predicate<Host> function ) {
+    return Collections2.filter( hostMap.values( ), function );
+  }
+
+  public static <T> Collection<? extends T> collect( Function<Host,? extends T> function ) {
+    return Collections2.transform( hostMap.values( ), function );
   }
   
   public static Host getHostByAddress( InetAddress addr ) {
