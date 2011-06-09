@@ -31,7 +31,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   private static final long serialVersionUID = 1L;
 
   @Override
-  public Session login( String fullname, String password ) throws EucalyptusServiceException {
+  public Session login( String accountName, String userName, String password ) throws EucalyptusServiceException {
     return new Session( "FAKESESSIONID" );
   }
 

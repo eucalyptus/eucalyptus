@@ -23,6 +23,7 @@
   </mapping>
   <mapping name="ListGroups" class="com.eucalyptus.auth.euare.ListGroupsType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="PathPrefix" field="pathPrefix" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
@@ -39,6 +40,7 @@
   </mapping>
   <mapping name="DeleteAccessKey" class="com.eucalyptus.auth.euare.DeleteAccessKeyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="optional"/>
     <value name="AccessKeyId" field="accessKeyId" usage="required"/>
   </mapping>
@@ -48,6 +50,7 @@
   </mapping>
   <mapping name="ListSigningCertificates" class="com.eucalyptus.auth.euare.ListSigningCertificatesType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
@@ -64,6 +67,7 @@
   </mapping>
   <mapping name="UploadSigningCertificate" class="com.eucalyptus.auth.euare.UploadSigningCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="optional"/>
     <value name="CertificateBody" field="certificateBody" usage="required"/>
   </mapping>
@@ -77,6 +81,7 @@
   </mapping>
   <mapping name="DeleteUserPolicy" class="com.eucalyptus.auth.euare.DeleteUserPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="PolicyName" field="policyName" usage="required"/>
   </mapping>
@@ -86,6 +91,7 @@
   </mapping>
   <mapping name="PutUserPolicy" class="com.eucalyptus.auth.euare.PutUserPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="PolicyName" field="policyName" usage="required"/>
     <value name="PolicyDocument" field="policyDocument" usage="required"/>
@@ -112,6 +118,7 @@
   </mapping>
   <mapping name="GetUserPolicy" class="com.eucalyptus.auth.euare.GetUserPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="PolicyName" field="policyName" usage="required"/>
   </mapping>
@@ -127,6 +134,7 @@
   </mapping>
   <mapping name="UpdateLoginProfile" class="com.eucalyptus.auth.euare.UpdateLoginProfileType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="Password" field="password" usage="optional"/>
   </mapping>
@@ -146,6 +154,7 @@
   </mapping>
   <mapping name="UpdateUser" class="com.eucalyptus.auth.euare.UpdateUserType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="NewPath" field="newPath" usage="optional"/>
     <value name="NewUserName" field="newUserName" usage="optional"/>
@@ -156,6 +165,7 @@
   </mapping>
   <mapping name="DeleteLoginProfile" class="com.eucalyptus.auth.euare.DeleteLoginProfileType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="required"/>
   </mapping>
   <mapping name="DeleteLoginProfileResponse" class="com.eucalyptus.auth.euare.DeleteLoginProfileResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
@@ -164,6 +174,7 @@
   </mapping>
   <mapping name="UpdateSigningCertificate" class="com.eucalyptus.auth.euare.UpdateSigningCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="optional"/>
     <value name="CertificateId" field="certificateId" usage="required"/>
     <value name="Status" field="status" usage="required"/>
@@ -174,6 +185,7 @@
   </mapping>
   <mapping name="DeleteGroupPolicy" class="com.eucalyptus.auth.euare.DeleteGroupPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="PolicyName" field="policyName" usage="required"/>
   </mapping>
@@ -183,6 +195,7 @@
   </mapping>
   <mapping name="ListUsers" class="com.eucalyptus.auth.euare.ListUsersType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="PathPrefix" field="pathPrefix" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
@@ -199,6 +212,7 @@
   </mapping>
   <mapping name="UpdateGroup" class="com.eucalyptus.auth.euare.UpdateGroupType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="NewPath" field="newPath" usage="optional"/>
     <value name="NewGroupName" field="newGroupName" usage="optional"/>
@@ -221,6 +235,7 @@
   </mapping>
   <mapping name="PutGroupPolicy" class="com.eucalyptus.auth.euare.PutGroupPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="PolicyName" field="policyName" usage="required"/>
     <value name="PolicyDocument" field="policyDocument" usage="required"/>
@@ -231,6 +246,7 @@
   </mapping>
   <mapping name="CreateUser" class="com.eucalyptus.auth.euare.CreateUserType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="Path" field="path" usage="optional"/>
     <value name="UserName" field="userName" usage="required"/>
   </mapping>
@@ -244,6 +260,7 @@
   </mapping>
   <mapping name="DeleteSigningCertificate" class="com.eucalyptus.auth.euare.DeleteSigningCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="optional"/>
     <value name="CertificateId" field="certificateId" usage="required"/>
   </mapping>
@@ -264,6 +281,7 @@
   </mapping>
   <mapping name="ListUserPolicies" class="com.eucalyptus.auth.euare.ListUserPoliciesType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
@@ -280,6 +298,7 @@
   </mapping>
   <mapping name="ListAccessKeys" class="com.eucalyptus.auth.euare.ListAccessKeysType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="optional"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
@@ -296,6 +315,7 @@
   </mapping>
   <mapping name="GetLoginProfile" class="com.eucalyptus.auth.euare.GetLoginProfileType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="required"/>
   </mapping>
   <mapping name="GetLoginProfileResponse" class="com.eucalyptus.auth.euare.GetLoginProfileResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
@@ -308,6 +328,7 @@
   </mapping>
   <mapping name="ListGroupsForUser" class="com.eucalyptus.auth.euare.ListGroupsForUserType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
@@ -324,6 +345,7 @@
   </mapping>
   <mapping name="CreateGroup" class="com.eucalyptus.auth.euare.CreateGroupType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="Path" field="path" usage="optional"/>
     <value name="GroupName" field="groupName" usage="required"/>
   </mapping>
@@ -353,6 +375,7 @@
   </mapping>
   <mapping name="GetGroupPolicy" class="com.eucalyptus.auth.euare.GetGroupPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="PolicyName" field="policyName" usage="required"/>
   </mapping>
@@ -368,7 +391,9 @@
   </mapping>
   <mapping name="DeleteUser" class="com.eucalyptus.auth.euare.DeleteUserType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="required"/>
+    <value name="IsRecursive" field="isRecursive" usage="optional"/>
   </mapping>
   <mapping name="DeleteUserResponse" class="com.eucalyptus.auth.euare.DeleteUserResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
@@ -385,6 +410,7 @@
   </mapping>
   <mapping name="RemoveUserFromGroup" class="com.eucalyptus.auth.euare.RemoveUserFromGroupType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="UserName" field="userName" usage="required"/>
   </mapping>
@@ -402,6 +428,7 @@
   </mapping>
   <mapping name="ListGroupPolicies" class="com.eucalyptus.auth.euare.ListGroupPoliciesType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
@@ -418,6 +445,7 @@
   </mapping>
   <mapping name="CreateLoginProfile" class="com.eucalyptus.auth.euare.CreateLoginProfileType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="required"/>
     <value name="Password" field="password" usage="required"/>
   </mapping>
@@ -431,6 +459,7 @@
   </mapping>
   <mapping name="CreateAccessKey" class="com.eucalyptus.auth.euare.CreateAccessKeyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="optional"/>
   </mapping>
   <mapping name="CreateAccessKeyResponse" class="com.eucalyptus.auth.euare.CreateAccessKeyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
@@ -443,6 +472,7 @@
   </mapping>
   <mapping name="GetUser" class="com.eucalyptus.auth.euare.GetUserType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="optional"/>
   </mapping>
   <mapping name="GetUserResponse" class="com.eucalyptus.auth.euare.GetUserResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
@@ -482,6 +512,7 @@
   </mapping>
   <mapping name="UpdateAccessKey" class="com.eucalyptus.auth.euare.UpdateAccessKeyType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="optional"/>
     <value name="AccessKeyId" field="accessKeyId" usage="required"/>
     <value name="Status" field="status" usage="required"/>
@@ -492,6 +523,7 @@
   </mapping>
   <mapping name="AddUserToGroup" class="com.eucalyptus.auth.euare.AddUserToGroupType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="UserName" field="userName" usage="required"/>
   </mapping>
@@ -501,6 +533,7 @@
   </mapping>
   <mapping name="GetGroup" class="com.eucalyptus.auth.euare.GetGroupType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="Marker" field="marker" usage="optional"/>
     <value name="MaxItems" field="maxItems" usage="optional"/>
@@ -518,7 +551,9 @@
   </mapping>
   <mapping name="DeleteGroup" class="com.eucalyptus.auth.euare.DeleteGroupType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="GroupName" field="groupName" usage="required"/>
+    <value name="IsRecursive" field="isRecursive" usage="optional"/>
   </mapping>
   <mapping name="DeleteGroupResponse" class="com.eucalyptus.auth.euare.DeleteGroupResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
@@ -619,6 +654,67 @@
     <value name="UserName" field="userName" usage="required"/>
   </mapping>
   
+  <mapping name="CreateAccountAlias" class="com.eucalyptus.auth.euare.CreateAccountAliasType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="AccountAlias" field="accountAlias" usage="required"/>
+  </mapping>
+  <mapping name="CreateAccountAliasResponse" class="com.eucalyptus.auth.euare.CreateAccountAliasResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="DeleteAccountAlias" class="com.eucalyptus.auth.euare.DeleteAccountAliasType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="AccountAlias" field="accountAlias" usage="required"/>
+  </mapping>
+  <mapping name="DeleteAccountAliasResponse" class="com.eucalyptus.auth.euare.DeleteAccountAliasResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="ListAccountAliases" class="com.eucalyptus.auth.euare.ListAccountAliasesType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+    <value name="MaxItems" field="maxItems" usage="optional"/>
+  </mapping>
+  <mapping name="ListAccountAliasesResponse" class="com.eucalyptus.auth.euare.ListAccountAliasesResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure field="listAccountAliasesResult" usage="required" map-as="com.eucalyptus.auth.euare.ListAccountAliasesResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="ListAccountAliasesResult" class="com.eucalyptus.auth.euare.ListAccountAliasesResultType">
+    <structure field="accountAliases" usage="required" map-as="com.eucalyptus.auth.euare.AccountAliasListTypeType"/>
+    <value name="IsTruncated" field="isTruncated" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+  </mapping>
+  <mapping name="AccountAliases" class="com.eucalyptus.auth.euare.AccountAliasListTypeType">
+    <collection field="memberList">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping name="GetAccountSummary" class="com.eucalyptus.auth.euare.GetAccountSummaryType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+  </mapping>
+  <mapping name="GetAccountSummaryResponse" class="com.eucalyptus.auth.euare.GetAccountSummaryResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure field="getAccountSummaryResult" usage="required" map-as="com.eucalyptus.auth.euare.GetAccountSummaryResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="GetAccountSummaryResult" class="com.eucalyptus.auth.euare.GetAccountSummaryResultType">
+    <structure field="summaryMap" usage="optional" map-as="com.eucalyptus.auth.euare.SummaryMapTypeType"/>
+  </mapping>
+  <mapping name="SummaryMap" class="com.eucalyptus.auth.euare.SummaryMapTypeType">
+    <collection field="entryList">
+      <structure map-as="com.eucalyptus.auth.euare.SummaryMapTypeEntryType"/>
+    </collection>
+  </mapping>
+  <mapping name="entry" class="com.eucalyptus.auth.euare.SummaryMapTypeEntryType">
+    <value name="key" field="key" usage="required"/>
+    <value name="value" field="value" usage="required"/>
+  </mapping>  
+  
   <mapping class="com.eucalyptus.auth.euare.AccountType" abstract="true" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="AccountName" field="accountName" usage="required"/>
@@ -663,6 +759,7 @@
   </mapping>
   <mapping name="CreateSigningCertificate" class="com.eucalyptus.auth.euare.CreateSigningCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="optional"/>
   </mapping>
   <mapping name="CreateSigningCertificateResponse" class="com.eucalyptus.auth.euare.CreateSigningCertificateResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
@@ -675,6 +772,7 @@
   </mapping>
   <mapping name="GetUserInfo" class="com.eucalyptus.auth.euare.GetUserInfoType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="optional"/>
     <value name="InfoKey" field="infoKey" usage="optional"/>
   </mapping>
@@ -698,6 +796,7 @@
   </mapping>
   <mapping name="UpdateUserInfo" class="com.eucalyptus.auth.euare.UpdateUserInfoType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
     <value name="UserName" field="userName" usage="optional"/>
     <value name="InfoKey" field="infoKey" usage="required"/>
     <value name="InfoValue" field="infoValue" usage="optional"/>
