@@ -81,16 +81,14 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ConfigurationService;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
-public class ServiceDispatchBootstrapper extends Bootstrapper {
-  private static Logger LOG = Logger.getLogger( ServiceDispatchBootstrapper.class );
+public class ServiceBootstrapper extends Bootstrapper {
+  private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
   
   @Override
   public boolean load( ) throws Exception {
@@ -149,32 +147,37 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
     Component euca = Components.lookup( Eucalyptus.class );
     for ( final Component comp : Components.list( ) ) {
       LOG.info( "start(): " + comp );
-      EventRecord.here( ServiceDispatchBootstrapper.class, EventType.COMPONENT_INFO, comp.getName( ), comp.isAvailableLocally( ).toString( ) ).info( );
       for ( final ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
-        if ( !comp.getComponentId( ).hasDispatcher( ) ) {
+        if( comp.getComponentId( ).isAlwaysLocal( ) ) {
+          ServiceBootstrapper.startupService( comp, s );
+        } else if ( !comp.getComponentId( ).hasDispatcher( ) ) {
           continue;
         } else if ( Bootstrap.isCloudController( ) ) {
-          try {
-            final CheckedListenableFuture<ServiceConfiguration> future = comp.startTransition( s );
-            Runnable followRunner = new Runnable( ) {
-              public void run( ) {
-                try {
-                  future.get( );
-                  comp.enableTransition( s );
-                } catch ( Exception ex ) {
-                  LOG.error( ex,
-                             ex );
-                }
-              }
-            };
-            Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, s.getFullName( ).toString( ) ).submit( followRunner );
-          } catch ( Exception e ) {
-            LOG.error( e, e );
-          }
+          ServiceBootstrapper.startupService( comp, s );
         }
       }
     }
     return true;
+  }
+
+  private static void startupService( final Component comp, final ServiceConfiguration s ) {
+    try {
+      final CheckedListenableFuture<ServiceConfiguration> future = comp.startTransition( s );
+      Runnable followRunner = new Runnable( ) {
+        public void run( ) {
+          try {
+            future.get( );
+            comp.enableTransition( s );
+          } catch ( Exception ex ) {
+            LOG.error( ex,
+                       ex );
+          }
+        }
+      };
+      Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, s.getFullName( ).toString( ) ).submit( followRunner );
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+    }
   }
   
   /**
