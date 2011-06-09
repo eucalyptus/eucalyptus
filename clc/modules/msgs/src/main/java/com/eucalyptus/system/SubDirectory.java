@@ -124,7 +124,7 @@ public enum SubDirectory {
   
   public String getChildPath( String... path ) {
     String ret = this.toString( );
-    for( String s : args ) {
+    for( String s : path ) {
       ret += File.separator + s;
     }
     return ret;
