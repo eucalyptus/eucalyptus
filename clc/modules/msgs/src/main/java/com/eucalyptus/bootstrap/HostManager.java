@@ -204,7 +204,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   
   @Override
   public void viewAccepted( final View newView ) {
-    final boolean isFirstDb = ( this.currentView.getReference( ) == null && newView.getMembers( ).size( ) == 1 && !Bootstrap.isCloudController( ) );
+    final boolean isFirstDb = ( this.currentView.getReference( ) == null && newView.getMembers( ).size( ) == 1 && Bootstrap.isCloudController( ) );
     if ( this.currentView.compareAndSet( null, newView, true, true ) ) {
       LOG.info( "Receiving initial view..." );
       this.currentView.set( newView, !isFirstDb );
