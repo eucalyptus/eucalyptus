@@ -63,7 +63,9 @@
 
 package com.eucalyptus.bootstrap;
 
+import java.net.UnknownHostException;
 import java.util.List;
+import org.apache.log4j.Logger;
 import org.jgroups.conf.ClassConfigurator;
 import org.jgroups.protocols.BARRIER;
 import org.jgroups.protocols.FC;
@@ -87,6 +89,8 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 public class Protocols {
+  
+  private static Logger LOG = Logger.getLogger( Protocols.class );
   public static short PROTOCOL_ID = 512;
   
   private static String registerProtocol( Protocol p ) {
@@ -110,7 +114,11 @@ public class Protocols {
                                                                    UDP protocol = new UDP( );
                                                                    protocol.setMulticastAddress( MembershipConfiguration.getMulticastInetAddress( ) );
                                                                    protocol.setMulticastPort( MembershipConfiguration.getMulticastPort( ) );
-                                                                   protocol.setBindAddress( Internets.localHostAddress( ) );
+                                                                   try {
+                                                                    protocol.setBindAddress( Internets.localHostAddress( ) );
+                                                                  } catch ( UnknownHostException ex ) {
+                                                                    LOG.error( ex , ex );
+                                                                  }
                                                                    protocol.setBindToAllInterfaces( true );
                                                                    protocol.setDiscardIncompatiblePackets( true );
                                                                    protocol.setMaxBundleSize( 60000 );
