@@ -82,6 +82,7 @@ import org.jgroups.protocols.pbcast.NAKACK;
 import org.jgroups.protocols.pbcast.STABLE;
 import org.jgroups.protocols.pbcast.STATE_TRANSFER;
 import org.jgroups.stack.Protocol;
+import com.eucalyptus.util.Internets;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
@@ -109,6 +110,7 @@ public class Protocols {
                                                                    UDP protocol = new UDP( );
                                                                    protocol.setMulticastAddress( MembershipConfiguration.getMulticastInetAddress( ) );
                                                                    protocol.setMulticastPort( MembershipConfiguration.getMulticastPort( ) );
+                                                                   protocol.setBindAddress( Internets.localHostAddress( ) );
                                                                    protocol.setBindToAllInterfaces( true );
                                                                    protocol.setDiscardIncompatiblePackets( true );
                                                                    protocol.setMaxBundleSize( 60000 );
