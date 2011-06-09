@@ -113,10 +113,15 @@ public enum SubDirectory {
     }
   }
   
-  public File getChildFile( String... args ) {
-    return new File( getChildPath( args ) );
+  public File getChildFile( String... path ) {
+    return new File( getChildPath( path ) );
   }
-  public String getChildPath( String... args ) {
+  
+  public boolean hasChild( String... path ) {
+    return getChildFile( path ).exists( );
+  }
+  
+  public String getChildPath( String... path ) {
     String ret = this.toString( );
     for( String s : args ) {
       ret += File.separator + s;
