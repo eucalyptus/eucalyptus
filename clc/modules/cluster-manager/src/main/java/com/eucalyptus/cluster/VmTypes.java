@@ -63,18 +63,45 @@
  */
 package com.eucalyptus.cluster;
 
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.vm.VmType;
-
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.vm.VmType;
+import com.google.common.base.Function;
+import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmTypes {
+
+  @TypeMapper
+  public enum InstanceStoreVmTypeInfoMapper implements Function<VmType, VmTypeInfo> {
+    INSTANCE;
+    
+    @Override
+    public VmTypeInfo apply( VmType arg0 ) {
+      return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda1" ) {
+        {
+          this.setSwap( "sda2", 512 * 1024l * 1024l );
+        }
+      };
+    }
+  };
+
+  @TypeMapper
+  public enum BlockStorageVmTypeInfoMapper implements Function<VmType, VmTypeInfo> {
+    INSTANCE;
+    
+    @Override
+    public VmTypeInfo apply( VmType arg0 ) {
+      return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda" );
+    }
+  };
+
 
   private static VmTypes                         singleton;
   

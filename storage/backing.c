@@ -890,7 +890,7 @@ int create_instance_backing (ncInstance * instance)
     artifact * sentinel = vbr_alloc_tree (vm, // the struct containing the VBR
                                           FALSE, // for Xen and KVM we do not need to make disk bootable
                                           TRUE, // make working copy of runtime-modifiable files
-                                          instance->keyName, // the SSH key
+                                          (instance->do_inject_key)?(instance->keyName):(NULL), // the SSH key
                                           instance->instanceId); // ID is for logging
     if (sentinel == NULL ||
         art_implement_tree (sentinel, work_bs, cache_bs, work_prefix, INSTANCE_PREP_TIMEOUT_USEC) != OK) { // download/create/combine the dependencies
@@ -913,7 +913,7 @@ int create_instance_backing (ncInstance * instance)
     return ret;
 }
 
-int destroy_instance_backing (ncInstance * instance, int destroy_files)
+int destroy_instance_backing (ncInstance * instance, int do_destroy_files)
 {
     int ret = OK;
     int total_prereqs = 0;
@@ -943,7 +943,7 @@ int destroy_instance_backing (ncInstance * instance, int destroy_files)
         logprintfl (EUCAWARN, "[%s] error: failed to chown files before cleanup\n", instance->instanceId);
     }
 
-    if (destroy_files) {
+    if (do_destroy_files) {
         char work_regex [1024]; // {userId}/{instanceId}/.*
         set_id2 (instance, "/.*", work_regex, sizeof (work_regex));
 
@@ -964,7 +964,7 @@ int destroy_instance_backing (ncInstance * instance, int destroy_files)
     // If either the user or our code introduced
     // any new files, this last step will fail.
     set_path (path, sizeof (path), instance, NULL);
-    if (rmdir (path) && destroy_files) {
+    if (rmdir (path) && do_destroy_files) {
         logprintfl (EUCAWARN, "[%s] warning: failed to remove backing directory %s\n", instance->instanceId, path);
     }
     

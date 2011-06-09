@@ -23,6 +23,7 @@ public interface CryptoProvider extends BaseSecurityProvider {
    * @return
    */
   public abstract String getDigestBase64( final String input, final Digest hash, final boolean randomize );
-  
+  public abstract String getFingerPrint( byte[] data );
+
 
 }

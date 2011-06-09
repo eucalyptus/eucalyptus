@@ -62,24 +62,15 @@
  */
 package edu.ucsb.eucalyptus.msgs;
 
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.NoSuchElementException;
-import org.jibx.runtime.BindingDirectory;
-import org.jibx.runtime.IBindingFactory;
-import org.jibx.runtime.IMarshallingContext;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentMessage;
-import com.eucalyptus.component.id.*;
-import com.eucalyptus.binding.HttpParameterMapping;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.empyrean.Empyrean;
-import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus
+import com.eucalyptus.component.ComponentId
+import com.eucalyptus.component.ComponentMessage
+import com.eucalyptus.component.ServiceConfiguration
+import com.eucalyptus.component.ServiceConfigurations
+import com.eucalyptus.component.id.ComponentService
+import com.eucalyptus.component.id.Eucalyptus
+import edu.ucsb.eucalyptus.cloud.VirtualBootRecord
+
 
 
 public class HeartbeatType extends EucalyptusMessage {
@@ -119,37 +110,37 @@ public class ComponentProperty extends EucalyptusData {
   private String displayName;
   private String value;
   private String qualifiedName;
-		
+    
   public ComponentProperty(String type, String displayName, String value, String qualifiedName) {
     this.type = type;
-	this.displayName = displayName;
-	this.value = value;
-	this.qualifiedName = qualifiedName;
-  }	
+  this.displayName = displayName;
+  this.value = value;
+  this.qualifiedName = qualifiedName;
+  }     
   public String getType() {
-	return type;
+  return type;
   }
   public void setType(String type) {
-	this.type = type;
+  this.type = type;
   }
   public String getQualifiedName() {
-	return qualifiedName;
+  return qualifiedName;
   }
   public void setQualifiedName(String qualifiedName) {
-	this.qualifiedName = qualifiedName;
+  this.qualifiedName = qualifiedName;
   }
   public String getDisplayName() {
-	return displayName;
+  return displayName;
   }
   public void setDisplayName(String displayName) {
-	this.displayName = displayName;
+  this.displayName = displayName;
   }
   public String getValue() {
-	return value;
+  return value;
   }
   public void setValue(String value) {
-	this.value = value;
-  }	
+  this.value = value;
+  }     
 }
 public class StorageStateType extends EucalyptusMessage{
   private String name;
@@ -293,7 +284,7 @@ public class DescribeResourcesResponseType extends EucalyptusMessage {
   }
 }
 
-public class VmTypeInfo extends EucalyptusData {
+public class VmTypeInfo extends EucalyptusData implements Cloneable {
   
   String name;
   Integer memory;
@@ -313,18 +304,25 @@ public class VmTypeInfo extends EucalyptusData {
     this.cores = cores;
     this.rootDeviceName = rootDevice;
   }
-  
+
+  public VmTypeInfo child( ) {
+    VmTypeInfo child = new VmTypeInfo( this.name, this.memory, this.disk, this.cores, this.rootDeviceName );
+    child.deviceMappings.addAll( this.deviceMappings );
+    child.virtualBootRecord.addAll( this.virtualBootRecord.collect{ (VirtualBootRecord) it.clone() } );
+    return child;
+  }
+    
   @Override
   public String toString() {
     return "VmTypeInfo ${name} mem=${memory} disk=${disk} cores=${cores}";
   }
   
-  public void setEbsRoot( String imageId, String iqn, Long sizeKb ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeKb, resourceLocation : "${iqn}", guestDeviceName : this.rootDeviceName, type : "ebs" ) );//TODO:GRZE: folow up on the iqn:// 
+  public void setEbsRoot( String imageId, String iqn, Long sizeBytes ) {
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes/1024l, resourceLocation : "${iqn}", guestDeviceName : this.rootDeviceName, type : "ebs" ) );//TODO:GRZE: folow up on the iqn:// 
   }
 
-  public void setRoot( String imageId, String location, Long sizeKb ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeKb, resourceLocation : "walrus://${location}", guestDeviceName : this.rootDeviceName, type : "machine" ) );
+  public void setRoot( String imageId, String location, Long sizeBytes ) {
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes/1024l, resourceLocation : "walrus://${location}", guestDeviceName : this.rootDeviceName, type : "machine" ) );
   }
   
   public void setKernel( String imageId, String location ) {
@@ -335,8 +333,8 @@ public class VmTypeInfo extends EucalyptusData {
     this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : "walrus://${location}", type : "ramdisk" ) );
   }
 
-  public void setSwap( String deviceName, Long sizeKb ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeKb, , type : "swap", format : "swap" ) );
+  protected void setSwap( String deviceName, Long sizeBytes ) {
+    this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes/1024l, , type : "swap", format : "swap" ) );
   }
 
   public void setEphemeral( Integer index, String deviceName, Long sizeKb ) {
@@ -346,11 +344,12 @@ public class VmTypeInfo extends EucalyptusData {
   public VirtualBootRecord lookupRoot( ) throws NoSuchElementException {
     VirtualBootRecord ret;
     if (( ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "machine" })==null ) {
-      if (( ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "ebs" && ( vbr.guestDeviceName == "/dev/sda1" || vbr.guestDeviceName == "xvda" ) })==null ) {
-        throw new NoSuchElementException( "Failed to find virtual boot record of type machine among: " + this.virtualBootRecord.collect{it.dump()}.toString() );
-      }
-    } else {
+      ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "ebs" && ( vbr.guestDeviceName == "sda" || vbr.guestDeviceName == "xvda" ) };
+    }
+    if( ret != null ) {
       return ret;
+    } else {
+      throw new NoSuchElementException( "Failed to find virtual boot record of type machine among: " + this.virtualBootRecord.collect{it.dump()}.toString() );
     }
   }
   public VirtualBootRecord lookupKernel( ) throws NoSuchElementException {
@@ -622,3 +621,4 @@ public class ComponentMessageResponseType extends BaseMessage {
   def ComponentMessageResponseType() {
   }
 }
+

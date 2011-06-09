@@ -90,10 +90,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
         in.close( );
         out.flush( );
         String outString = out.toString( );
-        if ( Logs.EXTREME ) {
-          LOG.trace( "Loaded model for: " + this );
-          LOG.trace( outString );
-        }
+        Logs.extreme( ).trace( "Loaded model for: " + this );
+        Logs.extreme( ).trace( outString );
         return outString;
       }
     } catch ( IOException ex ) {
