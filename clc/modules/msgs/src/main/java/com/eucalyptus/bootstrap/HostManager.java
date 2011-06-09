@@ -83,8 +83,6 @@ import com.eucalyptus.component.Host;
 import com.eucalyptus.component.Hosts;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
@@ -206,7 +204,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   
   @Override
   public void viewAccepted( final View newView ) {
-    final boolean isFirstDb = ( this.currentView.getReference( ) == null && newView.getMembers( ).size( ) == 1 && Components.lookup( Eucalyptus.class ).isAvailableLocally( ) );
+    final boolean isFirstDb = ( this.currentView.getReference( ) == null && newView.getMembers( ).size( ) == 1 && !Bootstrap.isCloudController( ) );
     if ( this.currentView.compareAndSet( null, newView, true, true ) ) {
       LOG.info( "Receiving initial view..." );
       this.currentView.set( newView, !isFirstDb );
