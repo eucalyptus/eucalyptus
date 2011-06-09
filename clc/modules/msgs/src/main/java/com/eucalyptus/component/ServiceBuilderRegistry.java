@@ -63,17 +63,54 @@
 
 package com.eucalyptus.component;
 
+import java.lang.reflect.Modifier;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Handles;
+import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+import com.eucalyptus.system.Ats;
 import com.google.common.collect.Maps;
 public class ServiceBuilderRegistry {
   private static Logger LOG = Logger.getLogger( ServiceBuilderRegistry.class );
   private static Map<Class,ServiceBuilder<? extends ServiceConfiguration>> builders = Maps.newConcurrentMap( );
   private static Map<ComponentId,ServiceBuilder<? extends ServiceConfiguration>> componentBuilders = Maps.newConcurrentMap( );
 
-  public static void addBuilder( Class c, ServiceBuilder b ) {
+  public static class ServiceBuilderDiscovery extends ServiceJarDiscovery {
+    
+    @Override
+    public Double getPriority( ) {
+      return 0.2;
+    }
+    
+    @Override
+    public boolean processClass( Class candidate ) throws Throwable {
+      if( ServiceBuilder.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) ) && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
+        /** GRZE: this implies that service builder is a singleton **/
+        ServiceBuilder b = ( ServiceBuilder ) candidate.newInstance( );
+        if( Ats.from( candidate ).has( DiscoverableServiceBuilder.class ) ) {
+          DiscoverableServiceBuilder at = Ats.from( candidate ).get( DiscoverableServiceBuilder.class );
+          for( Class c : at.value( ) ) {
+            ComponentId compId = (ComponentId) c.newInstance( );
+            ServiceBuilderRegistry.addBuilder( compId, b );
+          }
+        }
+        if( Ats.from( candidate ).has( Handles.class ) ) {
+          for( Class c : Ats.from( candidate ).get( Handles.class ).value( ) ) {
+            ServiceBuilderRegistry.addBuilder( c, b );
+          }
+        }
+        return true;
+      } else {
+        return false;
+      }
+    }
+    
+  }
+
+  
+  static void addBuilder( Class c, ServiceBuilder b ) {
     LOG.info( "Registered service builder for " + c.getSimpleName( ) + " -> " + b.getClass( ).getCanonicalName( ) );
     builders.put( c, b );
   }

@@ -115,7 +115,7 @@ public class ServiceDispatchBootstrapper extends Bootstrapper {
     }
     for ( final Component comp : Components.list( ) ) {
       LOG.info( "load(): " + comp );
-      if ( Bootstrap.isCloudController( ) && !( comp.getBuilder( ) instanceof DummyServiceBuilder ) ) {
+      if ( /** Bootstrap.isCloudController( ) && **/ !( comp.getBuilder( ) instanceof DummyServiceBuilder ) ) {
         for ( ServiceConfiguration config : comp.getBuilder( ).list( ) ) {
           LOG.info( "loadService(): " + config );
           try {
