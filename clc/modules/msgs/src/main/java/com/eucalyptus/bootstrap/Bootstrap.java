@@ -408,7 +408,7 @@ public class Bootstrap {
   }
   
   public static Boolean isCloudController( ) {
-    return !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) ) && SubDirectory.DB.getFile( ).list( ).length > 0;//TODO:GRZE:URGENT NOW NOW NOW NOW
+    return !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) ) && SubDirectory.DB.hasChild( "data", "ibdata1" );//TODO:GRZE:RELEASE fix hard coded reference to mysql specific data file
   }
   
   private static List<String> bindAddrs = parseBindAddrs( );  
