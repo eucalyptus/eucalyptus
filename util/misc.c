@@ -87,49 +87,51 @@ permission notice:
 #include <sys/mman.h> // mmap
 #include <pthread.h>
 
-int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER) {
-  int i, done, rc, j;
-  char *tok, *toka, *path, *helper, file[MAX_PATH], *save, *savea;
-  struct stat statbuf;
-
-  for (i=0; i<LASTHELPER; i++) {
-    tok = getenv("PATH");
-    if (!tok) return (1);
-    path = strdup(tok);
-    if (!path) {
-      return(1);
-    }
-
-    tok = strtok_r(path, ":", &save);
-    done=0;
-    while(tok && !done) {
-      helper = strdup(helpers[i]);
-      toka = strtok_r(helper, ",", &savea);
-      while(toka && !done) {
-        snprintf(file, MAX_PATH, "%s/%s", tok, toka);
-        rc = stat(file, &statbuf);
-        if (rc) {
-        } else {
-          if (S_ISREG(statbuf.st_mode)) {
-            done++;
-          }
+int verify_helpers (char **helpers, char **helpers_path, int LASTHELPER) 
+{
+    int i, done, rc, j;
+    char *tok, *toka, *path, *helper, file[MAX_PATH], *save, *savea;
+    int missing_helpers = 0;
+    struct stat statbuf;
+    
+    for (i=0; i<LASTHELPER; i++) {
+        tok = getenv("PATH");
+        if (!tok) return (1);
+        path = strdup(tok);
+        if (!path) {
+            return(1);
         }
-        toka = strtok_r(NULL, ":", &savea);
-      }
-      tok = strtok_r(NULL, ":", &save);
-      if (helper) free(helper);
+        
+        tok = strtok_r(path, ":", &save);
+        done=0;
+        while(tok && !done) {
+            helper = strdup(helpers[i]);
+            toka = strtok_r(helper, ",", &savea);
+            while(toka && !done) {
+                snprintf(file, MAX_PATH, "%s/%s", tok, toka);
+                rc = stat(file, &statbuf);
+                if (rc) {
+                } else {
+                    if (S_ISREG(statbuf.st_mode)) {
+                        done++;
+                    }
+                }
+                toka = strtok_r(NULL, ":", &savea);
+            }
+            tok = strtok_r(NULL, ":", &save);
+            if (helper) free(helper);
+        }
+        if (!done) {
+            missing_helpers++;
+            logprintfl (EUCAINFO, "did not find '%s' in path\n", helpers[i]);
+        } else {
+            helpers_path[i] = strdup(file);
+            logprintfl (EUCAINFO, "found '%s' at '%s'\n", helpers[i], helpers_path[i]);
+        }
+        free(path);
     }
-    if (!done) {
-      logprintfl(EUCAERROR, "cannot find helper '%s' in your path\n", helpers[i]);
-      if (path) free(path);
-      return(1);
-    }
-    helpers_path[i] = strdup(file);
-    free(path);
-    logprintfl (EUCAINFO, "found helper '%s' at '%s'\n", helpers[i], helpers_path[i]);
-  }
-
-  return(0);
+    
+    return missing_helpers;
 }
 
 int timeread(int fd, void *buf, size_t bytes, int timeout) {
