@@ -75,10 +75,13 @@ import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
+import com.eucalyptus.empyrean.DisableServiceType;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.EnableServiceType;
+import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.empyrean.StartServiceType;
+import com.eucalyptus.empyrean.StopServiceType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -304,7 +307,7 @@ public class ServiceTransitions {
   public enum TransitionActions implements TransitionAction<ServiceConfiguration> {
     ENABLE {
       @Override
-      public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
+      public void leave( final ServiceConfiguration parent, Completion transitionCallback ) {
         EventRecord.here( ServiceBuilder.class,
                               EventType.COMPONENT_SERVICE_ENABLE,
                               parent.getFullName( ).toString( ),
@@ -327,7 +330,17 @@ public class ServiceTransitions {
           }
         } else {
           try {
-            AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new EnableServiceType( ) );
+            AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new EnableServiceType( ) {
+              {
+                this.getServices( ).add( new ServiceInfoType( ) {
+                  {
+                    setPartition( parent.getPartition( ) );
+                    setName( parent.getName( ) );
+                    setType( parent.getComponentId( ).name( ) );
+                  }
+                } );
+              }
+            } );
             try {
               parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
             } catch ( Exception ex ) {
@@ -378,12 +391,13 @@ public class ServiceTransitions {
           try {
             DescribeServicesResponseType response = AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ),
                                                                             new DescribeServicesType( ) );
-            Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>() {
-
+            Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>( ) {
+              
               @Override
               public boolean apply( ServiceStatusType arg0 ) {
                 return parent.getName( ).equals( arg0.getServiceId( ).getName( ) );
-              }} );
+              }
+            } );
             //TODO:GRZE:RELEASE this is where extra remote state checks happen.
             transitionCallback.fire( );
           } catch ( Throwable ex ) {
@@ -398,7 +412,7 @@ public class ServiceTransitions {
     },
     DISABLE {
       @Override
-      public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
+      public void leave( final ServiceConfiguration parent, Completion transitionCallback ) {
         EventRecord.here( ServiceBuilder.class,
                            EventType.COMPONENT_SERVICE_DISABLE,
                            parent.getFullName( ).toString( ),
@@ -417,7 +431,17 @@ public class ServiceTransitions {
           }
         } else {
           try {
-            AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new StartServiceType( ) );
+            AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new DisableServiceType( )  {
+              {
+                this.getServices( ).add( new ServiceInfoType( ) {
+                  {
+                    setPartition( parent.getPartition( ) );
+                    setName( parent.getName( ) );
+                    setType( parent.getComponentId( ).name( ) );
+                  }
+                } );
+              }
+            } );
             try {
               parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
             } catch ( Exception ex ) {
@@ -458,7 +482,17 @@ public class ServiceTransitions {
           }
         } else {
           try {
-            AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new StartServiceType( ) );
+            AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new StartServiceType( )  {
+              {
+                this.getServices( ).add( new ServiceInfoType( ) {
+                  {
+                    setPartition( parent.getPartition( ) );
+                    setName( parent.getName( ) );
+                    setType( parent.getComponentId( ).name( ) );
+                  }
+                } );
+              }
+            } );
             try {
               parent.lookupComponent( ).getBuilder( ).fireStart( parent );
             } catch ( Exception ex ) {
@@ -497,7 +531,7 @@ public class ServiceTransitions {
     },
     STOP {
       @Override
-      public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
+      public void leave( final ServiceConfiguration parent, Completion transitionCallback ) {
         EventRecord.here( ServiceBuilder.class,
                            EventType.COMPONENT_SERVICE_STOP,
                            parent.getFullName( ).toString( ),
@@ -516,7 +550,17 @@ public class ServiceTransitions {
           }
         } else {
           try {
-            AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new StartServiceType( ) );
+            AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new StopServiceType( ) {
+              {
+                this.getServices( ).add( new ServiceInfoType( ) {
+                  {
+                    setPartition( parent.getPartition( ) );
+                    setName( parent.getName( ) );
+                    setType( parent.getComponentId( ).name( ) );
+                  }
+                } );
+              }
+            } );
             try {
               parent.lookupComponent( ).getBuilder( ).fireStop( parent );
             } catch ( Exception ex ) {
