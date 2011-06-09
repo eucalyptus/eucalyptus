@@ -75,7 +75,6 @@ import com.eucalyptus.component.id.Any;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.ws.EmpyreanService;
@@ -408,7 +407,7 @@ public class Bootstrap {
   }
   
   public static Boolean isCloudController( ) {
-    return !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) ) && SubDirectory.DB.hasChild( "data", "ibdata1" );//TODO:GRZE:RELEASE fix hard coded reference to mysql specific data file
+    return !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) );// && SubDirectory.DB.hasChild( "data", "ibdata1" );//TODO:GRZE:RELEASE fix hard coded reference to mysql specific data file
   }
   
   private static List<String> bindAddrs = parseBindAddrs( );  
