@@ -183,7 +183,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
           ServiceConfiguration config = c.initRemoteService( addr );
           c.loadService( config );
         } catch ( ServiceRegistrationException ex ) {
-          LOG.error( ex, ex );
+          LOG.error( ex );
         }
       }
       for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {

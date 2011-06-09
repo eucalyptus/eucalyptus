@@ -78,7 +78,6 @@ import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Assertions;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Internets;
@@ -283,7 +282,7 @@ public class Component implements HasName<Component> {
       this.serviceRegistry.register( config );
       return config;
     } else {
-      throw Exceptions.debug( new ServiceRegistrationException( "The component " + this.getName( ) + " cannot be loaded since it is disabled." ) );
+      throw new ServiceRegistrationException( "The component " + this.getName( ) + " is being skipped since it should only be run local to the cloud controller." );
     }
   }
   
