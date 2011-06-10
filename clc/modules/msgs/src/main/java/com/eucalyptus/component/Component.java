@@ -366,6 +366,17 @@ public class Component implements HasName<Component> {
   }
   
   public CheckedListenableFuture<ServiceConfiguration> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
+    Service service = null;
+    if ( this.serviceRegistry.hasService( configuration ) ) {
+      service = this.serviceRegistry.lookup( configuration );
+    } else {
+      try {
+        service = this.serviceRegistry.register( configuration );
+      } catch ( ServiceRegistrationException ex ) {
+        LOG.error( ex, ex );
+        throw ex;
+      }
+    }
     State goal = this.serviceRegistry.getServices( ).size( ) == 1
       ? State.ENABLED
       : State.DISABLED;
