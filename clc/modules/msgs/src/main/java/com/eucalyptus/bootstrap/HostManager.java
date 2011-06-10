@@ -166,7 +166,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
       LOG.debug( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
       Host recvHost = ( Host ) msg.getObject( );
       if ( !Bootstrap.isFinished( ) ) {
-        if ( hostEntry.hasDatabase( ) && !Bootstrap.isCloudController( ) ) {
+        if ( recvHost.hasDatabase( ) && !Bootstrap.isCloudController( ) ) {
           for ( InetAddress addr : recvHost.getHostAddresses( ) ) {
             if ( this.setupCloudLocals( addr ) ) {
               break;
