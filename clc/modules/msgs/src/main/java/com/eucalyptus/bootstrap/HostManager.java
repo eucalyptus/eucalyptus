@@ -161,20 +161,22 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   
   @Override
   public void receive( Message msg ) {
-    LOG.debug( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
-    Host recvHost = ( Host ) msg.getObject( );
-    LOG.debug( "Received updated host information: " + recvHost );
-    Host hostEntry = Hosts.updateHost( this.currentView.getReference( ), recvHost );
     View view = this.currentView.getReference( );
-    if ( !Bootstrap.isFinished( ) ) {
-      if ( hostEntry.hasDatabase( ) && !Bootstrap.isCloudController( ) ) {
-        for ( InetAddress addr : recvHost.getHostAddresses( ) ) {
-          if ( this.setupCloudLocals( addr ) ) {
-            break;
+    if( view != null ) {
+      LOG.debug( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+      Host recvHost = ( Host ) msg.getObject( );
+      LOG.debug( "Received updated host information: " + recvHost );
+      Host hostEntry = Hosts.updateHost( view, recvHost );
+      if ( !Bootstrap.isFinished( ) ) {
+        if ( hostEntry.hasDatabase( ) && !Bootstrap.isCloudController( ) ) {
+          for ( InetAddress addr : recvHost.getHostAddresses( ) ) {
+            if ( this.setupCloudLocals( addr ) ) {
+              break;
+            }
           }
+        } else if ( Bootstrap.isCloudController( ) ) {
+          this.currentView.set( this.currentView.getReference( ), false );
         }
-      } else if ( Bootstrap.isCloudController( ) ) {
-        this.currentView.set( this.currentView.getReference( ), false );
       }
     }
   }
