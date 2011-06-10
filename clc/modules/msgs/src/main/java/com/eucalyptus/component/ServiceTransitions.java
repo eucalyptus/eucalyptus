@@ -66,6 +66,7 @@ package com.eucalyptus.component;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -77,7 +78,6 @@ import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.DisableServiceType;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.empyrean.EnableServiceType;
 import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.empyrean.StartServiceType;
@@ -98,7 +98,7 @@ import com.google.common.collect.Iterables;
 public class ServiceTransitions {
   static Logger LOG = Logger.getLogger( ServiceTransitions.class );
   
-  public static CheckedListenableFuture<ServiceConfiguration> transitionChain( ServiceConfiguration configuration, State goalState ) {
+  public static CheckedListenableFuture<ServiceConfiguration> transitionChain( final ServiceConfiguration configuration, final State goalState ) {
     switch ( goalState ) {
       case DISABLED:
         return disableTransitionChain( configuration );
@@ -229,13 +229,13 @@ public class ServiceTransitions {
     INSTANCE;
     
     @Override
-    public boolean apply( Throwable input ) {
+    public boolean apply( final Throwable input ) {
       return true;
     }
     
   }
   
-  private static final boolean filterExceptions( ServiceConfiguration parent, Throwable ex ) {
+  private static final boolean filterExceptions( final ServiceConfiguration parent, final Throwable ex ) {
     return filterExceptions( parent, ex, NoopErrorFilter.INSTANCE );
   }
   
@@ -245,7 +245,7 @@ public class ServiceTransitions {
    * @param failureAction
    * @return true if the error is fatal and the transition should be aborted
    */
-  static final boolean filterExceptions( ServiceConfiguration parent, Throwable ex, Predicate<Throwable> failureAction ) {
+  static final boolean filterExceptions( final ServiceConfiguration parent, final Throwable ex, final Predicate<Throwable> failureAction ) {
     LOG.error( "Transition failed on " + parent.lookupComponent( ).getName( ) + " due to " + ex.toString( ), ex );
     boolean foundError = false;
     if ( ex instanceof CheckException ) {//go through all the exceptions and look for things with Severity greater than or equal to ERROR
@@ -287,7 +287,7 @@ public class ServiceTransitions {
     return new Predicate<Throwable>( ) {
       
       @Override
-      public boolean apply( Throwable ex ) {
+      public boolean apply( final Throwable ex ) {
         if ( State.ENABLED.isIn( parent ) ) {
           try {
             parent.lookupComponent( ).getBootstrapper( ).disable( );
@@ -304,313 +304,255 @@ public class ServiceTransitions {
     };
   }
   
+  private static void processTransition( final ServiceConfiguration parent, final Completion transitionCallback, final TransitionActions transitionAction ) {
+    try {
+      if ( parent.isVmLocal( ) || ( parent.isHostLocal( ) && Bootstrap.isCloudController( ) ) ) {
+        try {
+          LocalTransitionCallbacks.valueOf( transitionAction.name( ) ).fire( parent );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+          throw ex;
+        }
+      } else if( Bootstrap.isCloudController( ) ) {
+        try {
+          RemoteTransitionCallbacks.valueOf( transitionAction.name( ) ).fire( parent );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      } else {
+        LOG.debug( "Silentlty accepting remotely inferred state transition for " + parent ); 
+      }
+      transitionCallback.fire( );
+    } catch ( Throwable ex ) {
+      if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
+        transitionCallback.fireException( ex );
+      } else {
+        transitionCallback.fire( );
+      }
+    }
+  }
+  
   public enum TransitionActions implements TransitionAction<ServiceConfiguration> {
-    ENABLE {
+    ENABLE, CHECK, DISABLE, START, LOAD, STOP, DESTROY;
+    
+    @Override
+    public boolean before( final ServiceConfiguration parent ) {
+      EventRecord.here( ServiceBuilder.class,
+                        EventType.SERVICE_TRANSITION_BEFORE,
+                        this.name( ),
+                        parent.lookupState( ).toString( ),
+                        parent.getFullName( ).toString( ),
+                        parent.toString( ) ).debug( );      
+      return true;
+    }
+    
+    @Override
+    public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
+      EventRecord.here( ServiceBuilder.class,
+                        EventType.SERVICE_TRANSITION,
+                        this.name( ),
+                        parent.lookupState( ).toString( ),
+                        parent.getFullName( ).toString( ),
+                        parent.toString( ) ).debug( );
+      ServiceTransitions.processTransition( parent, transitionCallback, this );
+    }
+    
+    @Override
+    public void enter( final ServiceConfiguration parent ) {
+      EventRecord.here( ServiceBuilder.class,
+                        EventType.SERVICE_TRANSITION_ENTER_STATE,
+                        this.name( ),
+                        parent.lookupState( ).toString( ),
+                        parent.getFullName( ).toString( ),
+                        parent.toString( ) ).debug( );      
+    }
+    
+    @Override
+    public void after( final ServiceConfiguration parent ) {
+      EventRecord.here( ServiceBuilder.class,
+                        EventType.SERVICE_TRANSITION_AFTER_STATE,
+                        this.name( ),
+                        parent.lookupState( ).toString( ),
+                        parent.getFullName( ).toString( ),
+                        parent.toString( ) ).debug( );      
+
+    }
+    
+  }
+  
+  interface ServiceTransitionCallback {
+    public void fire( ServiceConfiguration parent ) throws Throwable;
+  }
+  
+  enum RemoteTransitionCallbacks implements ServiceTransitionCallback {
+    LOAD {
+      
       @Override
-      public void leave( final ServiceConfiguration parent, Completion transitionCallback ) {
-        EventRecord.here( ServiceBuilder.class,
-                              EventType.COMPONENT_SERVICE_ENABLE,
-                              parent.getFullName( ).toString( ),
-                              parent.toString( ) ).info( );
-        if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
-          try {
-            if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
-              parent.lookupComponent( ).getBootstrapper( ).check( );
-              parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
-            }
-            parent.lookupComponent( ).getBootstrapper( ).enable( );
-            parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
-            transitionCallback.fire( );
-          } catch ( Throwable ex ) {
-            if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
-              transitionCallback.fireException( ex );
-            } else {
-              transitionCallback.fire( );
-            }
+      public void fire( final ServiceConfiguration parent ) throws Throwable {}
+    },
+    DESTROY {
+      
+      @Override
+      public void fire( final ServiceConfiguration parent ) throws Throwable {}
+    },
+    CHECK {
+      
+      @Override
+      public void fire( final ServiceConfiguration parent ) throws Throwable {
+        DescribeServicesResponseType response = AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ),
+                                                                        new DescribeServicesType( ) );
+        Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>( ) {
+          
+          @Override
+          public boolean apply( final ServiceStatusType arg0 ) {
+            return parent.getName( ).equals( arg0.getServiceId( ).getName( ) );
           }
-        } else {
-          try {
-            AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new EnableServiceType( ) {
+        } );
+        //TODO:GRZE:RELEASE this is where extra remote state checks happen.
+      }
+    },
+    START {
+      
+      @Override
+      public void fire( final ServiceConfiguration parent ) throws Throwable {
+        AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new StartServiceType( ) {
+          {
+            this.getServices( ).add( new ServiceInfoType( ) {
               {
-                this.getServices( ).add( new ServiceInfoType( ) {
-                  {
-                    setPartition( parent.getPartition( ) );
-                    setName( parent.getName( ) );
-                    setType( parent.getComponentId( ).name( ) );
-                  }
-                } );
+                setPartition( parent.getPartition( ) );
+                setName( parent.getName( ) );
+                setType( parent.getComponentId( ).name( ) );
               }
             } );
-            try {
-              parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-            }
-            transitionCallback.fire( );
-          } catch ( Throwable ex ) {
-            LOG.error( ex, ex );
-            if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
-              transitionCallback.fireException( ex );
-            } else {
-              transitionCallback.fire( );
-            }
           }
-          try {
-            parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
-            transitionCallback.fire( );//TODO:GRZE: this is not complete.
-          } catch ( Throwable ex ) {
-            if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
-              transitionCallback.fireException( ex );
-            } else {
-              transitionCallback.fire( );
-            }
-          }
+        } );
+        try {
+          parent.lookupComponent( ).getBuilder( ).fireStart( parent );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
         }
+      }
+    },
+    ENABLE {
+      
+      @Override
+      public void fire( final ServiceConfiguration parent ) throws Throwable {}
+    },
+    DISABLE {
+      
+      @Override
+      public void fire( final ServiceConfiguration parent ) throws Throwable {
+        AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new DisableServiceType( ) {
+          {
+            this.getServices( ).add( new ServiceInfoType( ) {
+              {
+                setPartition( parent.getPartition( ) );
+                setName( parent.getName( ) );
+                setType( parent.getComponentId( ).name( ) );
+              }
+            } );
+          }
+        } );
+        try {
+          parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+    },
+    STOP {
+      
+      @Override
+      public void fire( final ServiceConfiguration parent ) throws Throwable {
+        AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new StopServiceType( ) {
+          {
+            this.getServices( ).add( new ServiceInfoType( ) {
+              {
+                setPartition( parent.getPartition( ) );
+                setName( parent.getName( ) );
+                setType( parent.getComponentId( ).name( ) );
+              }
+            } );
+          }
+        } );
+        try {
+          parent.lookupComponent( ).getBuilder( ).fireStop( parent );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+    };
+    
+  }
+  
+  enum LocalTransitionCallbacks implements ServiceTransitionCallback {
+    LOAD {
+      
+      @Override
+      public void fire( final ServiceConfiguration parent ) throws Throwable {
+        if ( parent.isVmLocal( ) ) {
+          parent.lookupComponent( ).getBootstrapper( ).load( );
+        }
+      }
+      
+    },
+    DESTROY {
+      
+      @Override
+      public void fire( final ServiceConfiguration parent ) throws Throwable {
+        parent.lookupComponent( ).getBootstrapper( ).destroy( );
       }
     },
     CHECK {
+      
       @Override
-      public void leave( final ServiceConfiguration parent, Completion transitionCallback ) {
-        if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
-          try {
-            if ( State.LOADED.ordinal( ) < parent.lookupComponent( ).getState( ).ordinal( ) ) {
-              parent.lookupComponent( ).getBootstrapper( ).check( );
-              if ( parent.lookupComponent( ).hasLocalService( ) ) {
-                parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
-              }
-            }
-            transitionCallback.fire( );
-          } catch ( Throwable ex ) {
-            if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
-              transitionCallback.fireException( ex );
-            } else {
-              transitionCallback.fire( );
-            }
-          }
-        } else {
-          try {
-            DescribeServicesResponseType response = AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ),
-                                                                            new DescribeServicesType( ) );
-            Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>( ) {
-              
-              @Override
-              public boolean apply( ServiceStatusType arg0 ) {
-                return parent.getName( ).equals( arg0.getServiceId( ).getName( ) );
-              }
-            } );
-            //TODO:GRZE:RELEASE this is where extra remote state checks happen.
-            transitionCallback.fire( );
-          } catch ( Throwable ex ) {
-            if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
-              transitionCallback.fireException( ex );
-            } else {
-              transitionCallback.fire( );
-            }
-          }
-        }
-      }
-    },
-    DISABLE {
-      @Override
-      public void leave( final ServiceConfiguration parent, Completion transitionCallback ) {
-        EventRecord.here( ServiceBuilder.class,
-                           EventType.COMPONENT_SERVICE_DISABLE,
-                           parent.getFullName( ).toString( ),
-                           parent.toString( ) ).info( );
-        if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
-          try {
-            parent.lookupComponent( ).getBootstrapper( ).disable( );
-            parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
-            transitionCallback.fire( );
-          } catch ( Throwable ex ) {
-            if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
-              transitionCallback.fireException( ex );
-            } else {
-              transitionCallback.fire( );
-            }
-          }
-        } else {
-          try {
-            AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new DisableServiceType( )  {
-              {
-                this.getServices( ).add( new ServiceInfoType( ) {
-                  {
-                    setPartition( parent.getPartition( ) );
-                    setName( parent.getName( ) );
-                    setType( parent.getComponentId( ).name( ) );
-                  }
-                } );
-              }
-            } );
-            try {
-              parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-            }
-            transitionCallback.fire( );
-          } catch ( Throwable ex ) {
-            LOG.error( ex, ex );
-            if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
-              transitionCallback.fireException( ex );
-            } else {
-              transitionCallback.fire( );
-            }
+      public void fire( final ServiceConfiguration parent ) throws Throwable {
+        if ( State.LOADED.ordinal( ) < parent.lookupComponent( ).getState( ).ordinal( ) ) {
+          parent.lookupComponent( ).getBootstrapper( ).check( );
+          if ( parent.lookupComponent( ).hasLocalService( ) ) {
+            parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
           }
         }
       }
     },
     START {
+      
       @Override
-      public void leave( final ServiceConfiguration parent, final Completion transitionCallback ) {
-        EventRecord.here( ServiceBuilder.class,
-                              EventType.COMPONENT_SERVICE_START,
-                              parent.getFullName( ).toString( ),
-                              parent.toString( ) ).info( );
-        if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
-          try {
-            parent.lookupComponent( ).getBootstrapper( ).start( );
-            if ( parent.lookupComponent( ).hasLocalService( ) ) {
-              parent.lookupComponent( ).getBuilder( ).fireStart( parent );
-            }
-            transitionCallback.fire( );
-          } catch ( Throwable ex ) {
-            if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
-              transitionCallback.fireException( ex );
-            } else {
-              transitionCallback.fire( );
-            }
-          }
-        } else {
-          try {
-            AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new StartServiceType( )  {
-              {
-                this.getServices( ).add( new ServiceInfoType( ) {
-                  {
-                    setPartition( parent.getPartition( ) );
-                    setName( parent.getName( ) );
-                    setType( parent.getComponentId( ).name( ) );
-                  }
-                } );
-              }
-            } );
-            try {
-              parent.lookupComponent( ).getBuilder( ).fireStart( parent );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-            }
-            transitionCallback.fire( );
-          } catch ( Throwable ex ) {
-            LOG.error( ex, ex );
-            if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
-              transitionCallback.fireException( ex );
-            } else {
-              transitionCallback.fire( );
-            }
-          }
+      public void fire( final ServiceConfiguration parent ) throws Throwable {
+        parent.lookupComponent( ).getBootstrapper( ).start( );
+        if ( parent.lookupComponent( ).hasLocalService( ) ) {
+          parent.lookupComponent( ).getBuilder( ).fireStart( parent );
         }
       }
     },
-    LOAD {
+    ENABLE {
+      
       @Override
-      public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
-        if ( parent.isVmLocal( ) ) {
-          try {
-            parent.lookupComponent( ).getBootstrapper( ).load( );
-            transitionCallback.fire( );
-          } catch ( Throwable ex ) {
-            if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
-              transitionCallback.fireException( ex );
-            } else {
-              transitionCallback.fire( );
-            }
-          }
-        } else {
-          transitionCallback.fire( );
+      public void fire( final ServiceConfiguration parent ) throws Throwable {
+        if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
+          parent.lookupComponent( ).getBootstrapper( ).check( );
+          parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
         }
+        parent.lookupComponent( ).getBootstrapper( ).enable( );
+        parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
+      }
+    },
+    DISABLE {
+      
+      @Override
+      public void fire( final ServiceConfiguration parent ) throws Throwable {
+        parent.lookupComponent( ).getBootstrapper( ).disable( );
+        parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
       }
     },
     STOP {
+      
       @Override
-      public void leave( final ServiceConfiguration parent, Completion transitionCallback ) {
-        EventRecord.here( ServiceBuilder.class,
-                           EventType.COMPONENT_SERVICE_STOP,
-                           parent.getFullName( ).toString( ),
-                           parent.toString( ) ).debug( );
-        if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
-          try {
-            parent.lookupComponent( ).getBootstrapper( ).stop( );
-            parent.lookupComponent( ).getBuilder( ).fireStop( parent );
-            transitionCallback.fire( );
-          } catch ( Throwable ex ) {
-            if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
-              transitionCallback.fireException( ex );
-            } else {
-              transitionCallback.fire( );
-            }
-          }
-        } else {
-          try {
-            AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new StopServiceType( ) {
-              {
-                this.getServices( ).add( new ServiceInfoType( ) {
-                  {
-                    setPartition( parent.getPartition( ) );
-                    setName( parent.getName( ) );
-                    setType( parent.getComponentId( ).name( ) );
-                  }
-                } );
-              }
-            } );
-            try {
-              parent.lookupComponent( ).getBuilder( ).fireStop( parent );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-            }
-            transitionCallback.fire( );
-          } catch ( Throwable ex ) {
-            LOG.error( ex, ex );
-            if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
-              transitionCallback.fireException( ex );
-            } else {
-              transitionCallback.fire( );
-            }
-          }
-        }
-      }
-    },
-    DESTROY {
-      @Override
-      public void leave( ServiceConfiguration parent, Completion transitionCallback ) {
-        if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
-          try {
-            parent.lookupComponent( ).getBootstrapper( ).destroy( );
-            transitionCallback.fire( );
-          } catch ( Throwable ex ) {
-            if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
-              transitionCallback.fireException( ex );
-            } else {
-              transitionCallback.fire( );
-            }
-          }
-        } else {
-          transitionCallback.fire( );//TODO:GRZE: this is not complete.
-        }
+      public void fire( final ServiceConfiguration parent ) throws Throwable {
+        parent.lookupComponent( ).getBootstrapper( ).stop( );
+        parent.lookupComponent( ).getBuilder( ).fireStop( parent );
       }
     };
-    
-    @Override
-    public boolean before( ServiceConfiguration parent ) {
-      return true;
-    }
-    
-    @Override
-    public abstract void leave( ServiceConfiguration parent, Completion transitionCallback );
-    
-    @Override
-    public void enter( ServiceConfiguration parent ) {}
-    
-    @Override
-    public void after( ServiceConfiguration parent ) {}
     
   }
   
@@ -618,7 +560,7 @@ public class ServiceTransitions {
     FIRE_START_EVENT {
       
       @Override
-      public void fire( ServiceConfiguration config ) {
+      public void fire( final ServiceConfiguration config ) {
         EventRecord.here( ServiceBuilder.class,
                           EventType.COMPONENT_SERVICE_START,
                           config.getFullName( ).toString( ), config.toString( ) ).debug( );
@@ -627,7 +569,7 @@ public class ServiceTransitions {
     },
     FIRE_STOP_EVENT {
       @Override
-      public void fire( ServiceConfiguration config ) {
+      public void fire( final ServiceConfiguration config ) {
         EventRecord.here( ServiceBuilder.class,
                                          EventType.COMPONENT_SERVICE_STOP,
                                          config.getFullName( ).toString( ), config.toString( ) ).debug( );
@@ -636,7 +578,7 @@ public class ServiceTransitions {
     },
     FIRE_ENABLE_EVENT {
       @Override
-      public void fire( ServiceConfiguration config ) {
+      public void fire( final ServiceConfiguration config ) {
         EventRecord.here( ServiceBuilder.class,
                                          EventType.COMPONENT_SERVICE_ENABLE,
                                          config.getFullName( ).toString( ), config.toString( ) ).debug( );
@@ -645,7 +587,7 @@ public class ServiceTransitions {
     },
     FIRE_DISABLE_EVENT {
       @Override
-      public void fire( ServiceConfiguration config ) {
+      public void fire( final ServiceConfiguration config ) {
         EventRecord.here( ServiceBuilder.class,
                                          EventType.COMPONENT_SERVICE_DISABLE,
                                          config.getFullName( ).toString( ), config.toString( ) ).debug( );
@@ -655,7 +597,7 @@ public class ServiceTransitions {
     },
     ENDPOINT_START {
       @Override
-      public void fire( ServiceConfiguration parent ) {
+      public void fire( final ServiceConfiguration parent ) {
         if ( parent.getComponentId( ).hasDispatcher( ) && !parent.isVmLocal( ) ) {//TODO:GRZE:URGENT fix this brain-damaged corner case
           try {
             parent.lookupService( ).getEndpoint( ).start( );
@@ -667,7 +609,7 @@ public class ServiceTransitions {
     },
     ENDPOINT_STOP {
       @Override
-      public void fire( ServiceConfiguration parent ) {
+      public void fire( final ServiceConfiguration parent ) {
         if ( parent.getComponentId( ).hasDispatcher( ) && !parent.isVmLocal( ) ) {
           try {
             parent.lookupService( ).getEndpoint( ).stop( );
@@ -679,7 +621,7 @@ public class ServiceTransitions {
     },
     SERVICE_CONTEXT_RESTART {
       @Override
-      public void fire( ServiceConfiguration parent ) {
+      public void fire( final ServiceConfiguration parent ) {
         if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
           ServiceContextManager.restartSync( );
         }
@@ -687,7 +629,7 @@ public class ServiceTransitions {
     },
     PIPELINES_ADD {
       @Override
-      public void fire( ServiceConfiguration parent ) {
+      public void fire( final ServiceConfiguration parent ) {
         if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
           PipelineRegistry.getInstance( ).enable( parent.getComponentId( ) );
         }
@@ -695,7 +637,7 @@ public class ServiceTransitions {
     },
     PIPELINES_REMOVE {
       @Override
-      public void fire( ServiceConfiguration parent ) {
+      public void fire( final ServiceConfiguration parent ) {
         if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
           PipelineRegistry.getInstance( ).disable( parent.getComponentId( ) );
         }
@@ -703,7 +645,7 @@ public class ServiceTransitions {
     },
     PROPERTIES_ADD {
       @Override
-      public void fire( ServiceConfiguration config ) {
+      public void fire( final ServiceConfiguration config ) {
         try {
           List<ConfigurableProperty> props = PropertyDirectory.getPendingPropertyEntrySet( config.getComponentId( ).name( ) );
           for ( ConfigurableProperty prop : props ) {
@@ -722,7 +664,7 @@ public class ServiceTransitions {
     },
     PROPERTIES_REMOVE {
       @Override
-      public void fire( ServiceConfiguration config ) {
+      public void fire( final ServiceConfiguration config ) {
         try {
           List<ConfigurableProperty> props = PropertyDirectory.getPropertyEntrySet( config.getComponentId( ).name( ) );
           for ( ConfigurableProperty prop : props ) {
