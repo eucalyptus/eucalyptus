@@ -152,6 +152,8 @@ public class ServiceBootstrapper extends Bootstrapper {
           ServiceBootstrapper.startupService( comp, s );
         } else if ( !comp.getComponentId( ).hasDispatcher( ) ) {
           continue;
+        } else if ( s.isHostLocal( ) ) {
+          comp.loadService( s ).get( );
         } else if ( Bootstrap.isCloudController( ) ) {
           ServiceBootstrapper.startupService( comp, s );
         }
@@ -162,6 +164,7 @@ public class ServiceBootstrapper extends Bootstrapper {
 
   private static void startupService( final Component comp, final ServiceConfiguration s ) {
     try {
+      comp.loadService( s ).get( );
       final CheckedListenableFuture<ServiceConfiguration> future = comp.startTransition( s );
       Runnable followRunner = new Runnable( ) {
         public void run( ) {
