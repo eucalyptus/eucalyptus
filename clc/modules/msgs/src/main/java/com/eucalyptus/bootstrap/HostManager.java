@@ -182,18 +182,24 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     if ( !Internets.testReachability( addr ) ) {
       return false;
     } else {
-      for ( Component c : Components.list( ) ) {//TODO:GRZE:URGENT THIS LIES
-        try {
-          ServiceConfiguration config = c.initRemoteService( addr );
-          c.loadService( config );
-        } catch ( ServiceRegistrationException ex ) {
-          LOG.error( ex );
+      try {
+        for ( Component c : Components.list( ) ) {//TODO:GRZE:URGENT THIS LIES
+          try {
+            ServiceConfiguration config = c.initRemoteService( addr );
+            c.loadService( config );
+          } catch ( ServiceRegistrationException ex ) {
+            LOG.error( ex );
+          }
         }
+        for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
+          stage.updateBootstrapDependencies( );
+        }
+      } catch( RuntimeException ex ) {
+        LOG.error( ex, ex );
+        throw ex;
+      } finally {
+        this.currentView.set( this.currentView.getReference( ), false );
       }
-      for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-        stage.updateBootstrapDependencies( );
-      }
-      this.currentView.set( this.currentView.getReference( ), false );
       return true;
     }
   }
@@ -208,19 +214,17 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   
   @Override
   public void viewAccepted( final View newView ) {
-    final boolean isFirstDb = ( this.currentView.getReference( ) == null && Bootstrap.isCloudController( ) && newView.size( ) == 1 );
-//    if ( this.currentView.compareAndSet( null, newView, true, true ) ) {
-//      LOG.info( "Receiving initial view..." );
-//      this.currentView.set( newView, !isFirstDb );
-//    } else if ( this.currentView.compareAndSet( this.currentView.getReference( ), newView, true, true ) ) {
-//      LOG.info( "Receiving view.  Still waiting for database..." );
-//    } else {
-//      this.currentView.set( newView, false );
-//    }
-    this.currentView.set( newView, false );
+    if ( this.currentView.compareAndSet( null, newView, true, true ) ) {
+      LOG.info( "Receiving initial view..." );
+      this.currentView.set( newView, !Bootstrap.isCloudController( ) );
+    } else if ( this.currentView.compareAndSet( this.currentView.getReference( ), newView, true, true ) ) {
+      LOG.info( "Receiving view.  Still waiting for database..." );
+    } else {
+      this.currentView.set( newView, false );
+    }
     LOG.info( "-> view: " + this.currentView.getReference( ) );
     LOG.info( "-> mark: " + this.currentView.isMarked( ) );
-    if ( !isFirstDb ) {
+    if ( !Bootstrap.isCloudController( ) ) {
       HostManager.this.broadcastAddresses( );
     }
   }
