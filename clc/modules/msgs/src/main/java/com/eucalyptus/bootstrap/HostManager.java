@@ -165,6 +165,10 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     Host recvHost = ( Host ) msg.getObject( );
     LOG.debug( "Received updated host information: " + recvHost );
     Host hostEntry = Hosts.updateHost( this.currentView.getReference( ), recvHost );
+    View view = this.currentView.getReference( );
+    if( hostEntry.hasDatabase( ) ) {
+      this.currentView.compareAndSet( view, view, true, false );
+    }
     if ( !Bootstrap.isFinished( ) && hostEntry.hasDatabase( ) ) {
       for ( InetAddress addr : recvHost.getHostAddresses( ) ) {
         if ( this.setupCloudLocals( addr ) ) {
@@ -204,15 +208,16 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   
   @Override
   public void viewAccepted( final View newView ) {
-    final boolean isFirstDb = ( this.currentView.getReference( ) == null && newView.getMembers( ).size( ) == 1 && Bootstrap.isCloudController( ) );
-    if ( this.currentView.compareAndSet( null, newView, true, true ) ) {
-      LOG.info( "Receiving initial view..." );
-      this.currentView.set( newView, !isFirstDb );
-    } else if ( this.currentView.compareAndSet( this.currentView.getReference( ), newView, true, true ) ) {
-      LOG.info( "Receiving view.  Still waiting for database..." );
-    } else {
-      this.currentView.set( newView, false );
-    }
+    final boolean isFirstDb = ( this.currentView.getReference( ) == null && Bootstrap.isCloudController( ) && newView.size( ) == 1 );
+//    if ( this.currentView.compareAndSet( null, newView, true, true ) ) {
+//      LOG.info( "Receiving initial view..." );
+//      this.currentView.set( newView, !isFirstDb );
+//    } else if ( this.currentView.compareAndSet( this.currentView.getReference( ), newView, true, true ) ) {
+//      LOG.info( "Receiving view.  Still waiting for database..." );
+//    } else {
+//      this.currentView.set( newView, false );
+//    }
+    this.currentView.set( newView, false );
     LOG.info( "-> view: " + this.currentView.getReference( ) );
     LOG.info( "-> mark: " + this.currentView.isMarked( ) );
     if ( !isFirstDb ) {
