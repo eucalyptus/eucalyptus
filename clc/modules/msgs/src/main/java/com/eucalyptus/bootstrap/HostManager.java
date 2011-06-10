@@ -166,14 +166,15 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     LOG.debug( "Received updated host information: " + recvHost );
     Host hostEntry = Hosts.updateHost( this.currentView.getReference( ), recvHost );
     View view = this.currentView.getReference( );
-    if( hostEntry.hasDatabase( ) ) {
-      this.currentView.compareAndSet( view, view, true, false );
-    }
-    if ( !Bootstrap.isFinished( ) && hostEntry.hasDatabase( ) ) {
-      for ( InetAddress addr : recvHost.getHostAddresses( ) ) {
-        if ( this.setupCloudLocals( addr ) ) {
-          break;
+    if ( !Bootstrap.isFinished( ) ) {
+      if ( hostEntry.hasDatabase( ) && !Bootstrap.isCloudController( ) ) {
+        for ( InetAddress addr : recvHost.getHostAddresses( ) ) {
+          if ( this.setupCloudLocals( addr ) ) {
+            break;
+          }
         }
+      } else if ( Bootstrap.isCloudController( ) ) {
+        this.currentView.set( this.currentView.getReference( ), false );
       }
     }
   }
