@@ -133,7 +133,6 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
           return singleton;
         } else {
           singleton = new HostManager( );
-          LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
           return singleton;
         }
       }
@@ -187,11 +186,13 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     } else {
       try {
         for ( Component c : Components.list( ) ) {//TODO:GRZE:URGENT THIS LIES
-          try {
-            ServiceConfiguration config = c.initRemoteService( addr );
-            c.loadService( config );
-          } catch ( ServiceRegistrationException ex ) {
-            LOG.error( ex );
+          if( c.getComponentId( ).isCloudLocal( ) ) {
+            try {
+              ServiceConfiguration config = c.initRemoteService( addr );
+              c.loadService( config );
+            } catch ( ServiceRegistrationException ex ) {
+              LOG.error( ex );
+            }
           }
         }
         for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {

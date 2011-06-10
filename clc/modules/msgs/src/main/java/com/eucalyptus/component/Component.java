@@ -81,6 +81,7 @@ import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.Automata;
@@ -287,20 +288,15 @@ public class Component implements HasName<Component> {
    * @throws ServiceRegistrationException
    */
   public ServiceConfiguration initRemoteService( InetAddress addr ) throws ServiceRegistrationException {
-    if ( !Bootstrap.isCloudController( ) ) {
-      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ),
-                                                                    this.getComponentId( ).getPort( ) );
-      this.serviceRegistry.register( config );
-      return config;
-    } else if ( Bootstrap.isCloudController( ) && !Internets.testLocal( addr ) ) {
-      ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ),
-                                                                    this.getComponentId( ).getPort( ) );
-      this.serviceRegistry.register( config );
-      return config;
-    } else {
+    if( Internets.testLocal( addr ) ) {
       throw new ServiceRegistrationException( "Skipping invalid attempt to init remote service configuration for host " + addr + " on component "
                                               + this.getName( ) );
     }
+    ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ),
+                                                                  this.getComponentId( ).getPort( ) );
+    this.serviceRegistry.register( config );
+    LOG.debug( "Initializing remote service for host " + addr + " with configuration: " + config );
+    return config;
   }
   
   /**
@@ -624,6 +620,7 @@ public class Component implements HasName<Component> {
                             ? "local"
                             : "remote",
                           config.getName( ), config.getUri( ) ).info( );
+      Logs.exhaust( ).debug( "Registered service " + ret + " for configuration: " + config );
       return ret;
     }
     
