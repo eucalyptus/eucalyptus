@@ -71,7 +71,6 @@ import com.eucalyptus.config.ConfigurationService;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 
 public class ComponentRegistrationHandler {
@@ -104,9 +103,6 @@ public class ComponentRegistrationHandler {
     
     try {
       final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
-      if( !Internets.testLocal( addr ) ) {
-        component.initRemoteService( addr );
-      }
       try {
         final CheckedListenableFuture<ServiceConfiguration> future = component.startTransition( newComponent );
         Runnable followRunner = new Runnable( ) {

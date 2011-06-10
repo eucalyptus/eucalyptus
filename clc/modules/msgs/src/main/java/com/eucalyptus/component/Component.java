@@ -365,7 +365,7 @@ public class Component implements HasName<Component> {
     return ServiceTransitions.transitionChain( configuration, goal );
   }
   
-  public CheckedListenableFuture<ServiceConfiguration> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
+  public CheckedListenableFuture<ServiceConfiguration> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException, ServiceRegistrationException {
     Service service = null;
     if ( this.serviceRegistry.hasService( configuration ) ) {
       service = this.serviceRegistry.lookup( configuration );
