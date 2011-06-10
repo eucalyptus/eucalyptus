@@ -217,7 +217,7 @@ public class EuareService {
     ArrayList<GroupType> groups = reply.getListGroupsResult( ).getGroups( ).getMemberList( );
     try {
       for ( Group group : account.getGroups( ) ) {
-        if ( Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, getGroupFullName( group ), account, action, requestUser ) ) {
+        if ( Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, action, requestUser ) ) {
           if ( group.getPath( ).startsWith( path ) ) {
             GroupType g = new GroupType( );
             fillGroupResult( g, group, account );
@@ -250,9 +250,11 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                "Not authorized to delete access key of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                  "Not authorized to delete access key of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+      }
     }
     try {
       userFound.removeKey( request.getAccessKeyId( ) );
@@ -283,9 +285,11 @@ public class EuareService {
         }
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                "Not authorized to list signing certificates for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                  "Not authorized to list signing certificates for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+      }
     }
     // TODO(Ye Wen, 01/26/2011): support pagination
     ListSigningCertificatesResultType result = reply.getListSigningCertificatesResult( );
@@ -328,9 +332,11 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                "Not authorized to upload signing certificate of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                  "Not authorized to upload signing certificate of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+      }
     }
     String encodedPem = B64.url.encString( request.getCertificateBody( ) );
     Certificate cert = null;
@@ -383,7 +389,7 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
                                 "Not authorized to " + action + " for user " + request.getUserName( ) + " by " + requestUser.getName( ) );
     }
@@ -418,7 +424,7 @@ public class EuareService {
     if ( userFound.isAccountAdmin( ) ){
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Only system admin can put policy on an account" );      
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
                                 "Not authorized to put user policy for " + request.getUserName( ) + " by " + requestUser.getName( ) );
     }
@@ -458,7 +464,7 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
                                 "Not authorized to get user policies for " + request.getUserName( ) + " by " + requestUser.getName( ) );
     }
@@ -509,9 +515,11 @@ public class EuareService {
     if ( request.getPassword( ) == null ) {
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, "Empty password", "Empty password" );
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                "Not authorized to update login profile of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                  "Not authorized to update login profile of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+      }
     }
     try {
       userFound.setPassword( Crypto.generateHashedPassword( request.getPassword( ) ) );
@@ -546,8 +554,10 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update user by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update user by " + requestUser.getName( ) );
+      }
     }
     try {
       if ( request.getNewUserName( ) != null && !"".equals( request.getNewUserName( ) ) ) {
@@ -581,9 +591,11 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                "Not authorized to delete login profile for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                  "Not authorized to delete login profile for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+      }
     }
     try {
       userFound.setPassword( null );
@@ -612,9 +624,11 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                "Not authorized to update signing certificate of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                  "Not authorized to update signing certificate of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+      }
     }
     try {
       Certificate cert = userFound.getCertificate( request.getCertificateId( ) );
@@ -650,7 +664,7 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, getGroupFullName( groupFound ), account, action, requestUser ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( groupFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
                                 "Not authorized to delete group policy of " + request.getGroupName( ) + " by " + requestUser.getName( ) );
     }
@@ -680,7 +694,7 @@ public class EuareService {
     ArrayList<UserType> users = reply.getListUsersResult( ).getUsers( ).getMemberList( );
     try {
       for ( User user : account.getUsers( ) ) {
-        if ( Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( user ), account, action, requestUser ) ) {
+        if ( Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, action, requestUser ) ) {
           if ( user.getPath( ).startsWith( path ) ) {
             UserType u = new UserType( );
             fillUserResult( u, user, account );
@@ -713,7 +727,7 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, getGroupFullName( groupFound ), account, action, requestUser ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( groupFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
                                 "Not authorized to update group " + groupFound.getName( ) + " by " + requestUser.getName( ) );
     }
@@ -755,7 +769,7 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, getGroupFullName( groupFound ), account, action, requestUser ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( groupFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
                                 "Not authorized to put group policy for " + groupFound.getName( ) + " by " + requestUser.getName( ) );
     }
@@ -817,9 +831,11 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                "Not authorized to " + action + " for user " + request.getUserName( ) + " by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                  "Not authorized to " + action + " for user " + request.getUserName( ) + " by " + requestUser.getName( ) );
+      }
     }
     try {
       userFound.removeCertificate( request.getCertificateId( ) );
@@ -854,7 +870,7 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
                                 "Not authorized to list user policies for " + request.getUserName( ) + " by " + requestUser.getName( ) );
     }
@@ -893,9 +909,11 @@ public class EuareService {
         }
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                "Not authorized to list access keys for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                  "Not authorized to list access keys for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+      }
     }
     // TODO(Ye Wen, 01/26/2011): add pagination support
     ListAccessKeysResultType result = reply.getListAccessKeysResult( );
@@ -934,9 +952,11 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                "Not authorized to get login profile for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                  "Not authorized to get login profile for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+      }
     }
     if ( userFound.getPassword( ) == null ) {
       throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find login profile for " + request.getUserName( ) );
@@ -963,9 +983,11 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                "Not authorized to get user groups for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                  "Not authorized to get user groups for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+      }
     }
     // TODO(Ye Wen, 01/16/2011): support pagination
     reply.getListGroupsForUserResult( ).setIsTruncated( false );
@@ -1038,7 +1060,7 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, getGroupFullName( groupFound ), account, action, requestUser ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( groupFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
                                 "Not authorized to get group policy for " + request.getGroupName( ) + " by " + requestUser.getName( ) );
     }
@@ -1086,7 +1108,7 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userToDelete ), account, action, requestUser ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userToDelete ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete user by " + requestUser.getName( ) );
     }
     try {
@@ -1137,10 +1159,10 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, getGroupFullName( groupFound ), account, action, requestUser ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( groupFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to access user by " + requestUser.getName( ) );
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to access group by " + requestUser.getName( ) );
     }
     try {
@@ -1176,7 +1198,7 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, getGroupFullName( groupFound ), account, action, requestUser ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( groupFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
                                 "Not authorized to list group polices for " + request.getGroupName( ) + " by " + requestUser.getName( ) );
     }
@@ -1219,9 +1241,11 @@ public class EuareService {
     if ( request.getPassword( ) == null ) {
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, "Empty password", "Empty password" );
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                "Not authorized to create login profile for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                  "Not authorized to create login profile for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+      }
     }
     try {
       userFound.setPassword( Crypto.generateHashedPassword( request.getPassword( ) ) );
@@ -1251,9 +1275,11 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                "Not authorized to create access key for user " + request.getUserName( ) + " by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                  "Not authorized to create access key for user " + request.getUserName( ) + " by " + requestUser.getName( ) );
+      }
     }
     try {
       AccessKey key = userFound.createKey( );
@@ -1292,7 +1318,7 @@ public class EuareService {
     }
     // Allow to look at myself.
     if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user by " + requestUser.getName( ) );
       }
     }
@@ -1331,9 +1357,11 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                "Not authorized to update access key of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                  "Not authorized to update access key of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+      }
     }
     try {
       AccessKey key = userFound.getKey( request.getAccessKeyId( ) );
@@ -1374,10 +1402,10 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, getGroupFullName( groupFound ), account, action, requestUser ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( groupFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to access user by " + requestUser.getName( ) );
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to access group by " + requestUser.getName( ) );
     }
     // TODO(Ye Wen, 01/22/2011): add group level quota?
@@ -1408,7 +1436,7 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, getGroupFullName( groupFound ), account, action, requestUser ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( groupFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
                                 "Not authorized to get group " + request.getGroupName( ) + " by " + requestUser.getName( ) );
     }
@@ -1448,7 +1476,7 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, getGroupFullName( groupFound ), account, action, requestUser ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( groupFound ), account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete group by " + requestUser.getName( ) );
     }
     try {
@@ -1471,6 +1499,9 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
+    if ( Account.SYSTEM_ACCOUNT.equals( account.getName( ) ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Can not modify system account alias or name" );
+    }
     try {
       Accounts.lookupAccountByName( request.getAccountAlias( ) );
     } catch ( AuthException ae ) {
@@ -1575,9 +1606,11 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                "Not authorized to create signing certificate of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                  "Not authorized to create signing certificate of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+      }
     }
     try {
       KeyPair keyPair = Certs.generateKeyPair( );
@@ -1624,8 +1657,10 @@ public class EuareService {
         }
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user by " + requestUser.getName( ) );
+      }
     }
     try {
       ArrayList<UserInfoType> infos = reply.getGetUserInfoResult( ).getInfos( ).getMemberList( );
@@ -1676,8 +1711,10 @@ public class EuareService {
     if ( request.getInfoKey( ) == null ) {
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, "Empty key name", "Empty key name" );
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) { 
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user by " + requestUser.getName( ) );
+      }
     }
     try {
       if ( request.getInfoValue( ) != null ) {
@@ -1846,22 +1883,6 @@ public class EuareService {
     reply.getGetLdapSyncStatusResult( ).setSyncEnabled( LdapSync.getLic( ).isSyncEnabled( ) );
     reply.getGetLdapSyncStatusResult( ).setInSync( LdapSync.inSync( ) );
     return reply;
-  }
-  
-  private static String getUserFullName( User user ) {
-    if ( "/".equals( user.getPath( ) ) ) {
-      return "/" + user.getName( );
-    } else {
-      return user.getPath( ) + "/" + user.getName( );
-    }
-  }
-  
-  private static String getGroupFullName( Group group ) {
-    if ( "/".equals( group.getPath( ) ) ) {
-      return "/" + group.getName( );
-    } else {
-      return group.getPath( ) + "/" + group.getName( );
-    }
   }
   
   private void fillUserResult( UserType u, User userFound, Account account ) {

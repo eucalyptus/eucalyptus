@@ -22,6 +22,7 @@ import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
 import com.google.gwt.uibinder.client.UiHandler;
 import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.CheckBox;
 import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.Grid;
@@ -395,7 +396,7 @@ public class DetailViewImpl extends Composite implements DetailView {
   SpanElement title;
   
   @UiField
-  Anchor save;
+  Button save;
   
   @UiField
   ScrollPanel gridPanel;
@@ -449,7 +450,7 @@ public class DetailViewImpl extends Composite implements DetailView {
   public void showData( ArrayList<SearchResultFieldDesc> descs, ArrayList<String> values ) {
     LOG.log( Level.INFO, "Show data: " + descs + " | " + values );
     clearRows( );
-    this.save.setVisible( false );
+    this.save.setEnabled( false );
     createGrid( descs, values );
     if ( this.currentGrid != null ) {
       gridPanel.setWidget( this.currentGrid );
@@ -616,7 +617,7 @@ public class DetailViewImpl extends Composite implements DetailView {
   }
 
   private void showSaveButton( ) {
-    this.save.setVisible( true );
+    this.save.setEnabled( true );
   }
   
   @Override
@@ -628,12 +629,12 @@ public class DetailViewImpl extends Composite implements DetailView {
   public void clear( ) {
     this.gridValues.clear( );
     this.gridPanel.clear( );
-    this.save.setVisible( false );
+    this.save.setEnabled( false );
   }
 
   @Override
   public void disableSave( ) {
-    this.save.setVisible( false );
+    this.save.setEnabled( false );
   }
   
 }
