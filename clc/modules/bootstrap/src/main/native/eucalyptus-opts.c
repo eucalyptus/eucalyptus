@@ -65,7 +65,7 @@ const char *eucalyptus_opts_full_help[] = {
   "      --disable-storage         DEPRECATED DO NOT USE. IT DOES NOTHING.  \n                                  (default=off)",
   "      --disable-vmwarebroker    DEPRECATED DO NOT USE. IT DOES NOTHING.  \n                                  (default=off)",
   "\nJava Options:",
-  "  -j, --java-home=DIRECTORY     Alternative way to specify JAVA_HOME.  \n                                  (default=`/opt/eucalyptus/packages/java/jdk1.6.0_16/')",
+  "  -j, --java-home=DIRECTORY     Alternative way to specify JAVA_HOME.  \n                                  (default=`/opt/eucalyptus/packages/java/jdk1.6.0_16')",
   "      --jvm-name=JVMNAME        Which JVM type to run (see jvm.cfg).  \n                                  (default=`-server')",
   "  -X, --jvm-args=STRING         Arguments to pass to the JVM.",
   "      --jmx                     Launch with JMX enabled.  (default=off)",
@@ -228,7 +228,7 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->disable_dns_flag = 0;
   args_info->disable_storage_flag = 0;
   args_info->disable_vmwarebroker_flag = 0;
-  args_info->java_home_arg = gengetopt_strdup ("/opt/eucalyptus/packages/java/jdk1.6.0_16/");
+  args_info->java_home_arg = gengetopt_strdup ("/opt/eucalyptus/packages/java/jdk1.6.0_16");
   args_info->java_home_orig = NULL;
   args_info->jvm_name_arg = gengetopt_strdup ("-server");
   args_info->jvm_name_orig = NULL;
@@ -1339,7 +1339,7 @@ arguments_internal (
         
           if (update_arg( (void *)&(args_info->java_home_arg), 
                &(args_info->java_home_orig), &(args_info->java_home_given),
-              &(local_args_info.java_home_given), optarg, 0, "/opt/eucalyptus/packages/java/jdk1.6.0_16/", ARG_STRING,
+              &(local_args_info.java_home_given), optarg, 0, "/opt/eucalyptus/packages/java/jdk1.6.0_16", ARG_STRING,
               check_ambiguity, override, 0, 0,
               "java-home", 'j',
               additional_error))

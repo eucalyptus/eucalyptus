@@ -108,7 +108,7 @@ struct eucalyptus_opts
   const char *disable_storage_help; /**< @brief DEPRECATED DO NOT USE. IT DOES NOTHING. help description.  */
   int disable_vmwarebroker_flag;	/**< @brief DEPRECATED DO NOT USE. IT DOES NOTHING. (default=off).  */
   const char *disable_vmwarebroker_help; /**< @brief DEPRECATED DO NOT USE. IT DOES NOTHING. help description.  */
-  char * java_home_arg;	/**< @brief Alternative way to specify JAVA_HOME. (default='/opt/eucalyptus/packages/java/jdk1.6.0_16/').  */
+  char * java_home_arg;	/**< @brief Alternative way to specify JAVA_HOME. (default='/opt/eucalyptus/packages/java/jdk1.6.0_16').  */
   char * java_home_orig;	/**< @brief Alternative way to specify JAVA_HOME. original value given at command line.  */
   const char *java_home_help; /**< @brief Alternative way to specify JAVA_HOME. help description.  */
   char * jvm_name_arg;	/**< @brief Which JVM type to run (see jvm.cfg). (default='-server').  */
