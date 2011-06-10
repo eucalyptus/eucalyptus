@@ -100,7 +100,6 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   public static HostManager                   singleton;
   
   private HostManager( ) {
-    ListenerRegistry.getInstance( ).register( ClockTick.class, new HostStateMonitor( ) );
     this.membershipChannel = HostManager.buildChannel( );
     this.membershipChannel.setReceiver( this );
     this.membershipGroupName = SystemIds.membershipGroupName( );//TODO:GRZE:RELEASE make cached
@@ -113,6 +112,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
       LOG.fatal( ex, ex );
       throw BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
     }
+    ListenerRegistry.getInstance( ).register( ClockTick.class, new HostStateMonitor( ) );
     ListenerRegistry.getInstance( ).register( ClockTick.class, this );
   }
   
@@ -165,8 +165,6 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     if( view != null ) {
       LOG.debug( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
       Host recvHost = ( Host ) msg.getObject( );
-      LOG.debug( "Received updated host information: " + recvHost );
-      Host hostEntry = Hosts.updateHost( view, recvHost );
       if ( !Bootstrap.isFinished( ) ) {
         if ( hostEntry.hasDatabase( ) && !Bootstrap.isCloudController( ) ) {
           for ( InetAddress addr : recvHost.getHostAddresses( ) ) {
@@ -178,6 +176,8 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
           this.currentView.set( this.currentView.getReference( ), false );
         }
       }
+      LOG.debug( "Received updated host information: " + recvHost );
+      Host hostEntry = Hosts.updateHost( view, recvHost );
     }
   }
   
@@ -217,9 +217,8 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   
   @Override
   public void viewAccepted( final View newView ) {
-    if ( this.currentView.compareAndSet( null, newView, true, true ) ) {
+    if ( this.currentView.compareAndSet( null, newView, true, !Bootstrap.isCloudController( ) ) ) {
       LOG.info( "Receiving initial view..." );
-      this.currentView.set( newView, !Bootstrap.isCloudController( ) );
     } else if ( this.currentView.compareAndSet( this.currentView.getReference( ), newView, true, true ) ) {
       LOG.info( "Receiving view.  Still waiting for database..." );
     } else {
@@ -265,12 +264,12 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   
   @Override
   public void block( ) {
-    LOG.info( "HostManager: blocked" );
+    LOG.debug( "HostManager: blocked" );
   }
   
   @Override
   public void unblock( ) {
-    LOG.info( "HostManager: unblocked" );
+    LOG.debug( "HostManager: unblocked" );
   }
   
   @Override

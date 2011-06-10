@@ -142,19 +142,20 @@ public class Hosts {
             try {
               empyrean.initRemoteService( addr );
               empyrean.loadService( ephemeralConfig ).get();
+              ServiceConfiguration config = empyrean.lookupService( ephemeralConfig ).getServiceConfiguration( );
+              entry = new Host( currentView.getViewId( ), updatedHost.getGroupsId( ), updatedHost.hasDatabase( ), updatedHost.getHostAddresses( ), config );
+              Host temp = hostMap.putIfAbsent( entry.getGroupsId( ), entry );
+              entry = ( temp != null ) ? temp : entry;
+              Mbeans.register( entry );
             } catch ( ServiceRegistrationException ex ) {
               LOG.error( ex , ex );
             } catch ( ExecutionException ex ) {
               LOG.error( ex , ex );
             } catch ( InterruptedException ex ) {
+              Thread.currentThread( ).interrupt( );
               LOG.error( ex , ex );
             }
           }
-          ServiceConfiguration config = empyrean.lookupService( ephemeralConfig ).getServiceConfiguration( );
-          entry = new Host( currentView.getViewId( ), updatedHost.getGroupsId( ), updatedHost.hasDatabase( ), updatedHost.getHostAddresses( ), config );
-          Host temp = hostMap.putIfAbsent( entry.getGroupsId( ), entry );
-          entry = ( temp != null ) ? temp : entry;
-          Mbeans.register( entry );
         }
       }
       /** determine hosts to remove in this view **/
