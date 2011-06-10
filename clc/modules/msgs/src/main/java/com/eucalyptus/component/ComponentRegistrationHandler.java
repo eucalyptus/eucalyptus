@@ -63,12 +63,15 @@
 
 package com.eucalyptus.component;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ConfigurationService;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 
 public class ComponentRegistrationHandler {
@@ -86,7 +89,13 @@ public class ComponentRegistrationHandler {
       LOG.error( "BUG: Provided partition is null.  Using the service name as the partition name for the time being." );
       partition = name;
     }
-    
+    InetAddress addr;
+    try {
+      addr = InetAddress.getByName( hostName );
+    } catch ( UnknownHostException ex1 ) {
+      LOG.error( "Inavlid hostname: " + hostName + " failure: " + ex1.getMessage( ), ex1 );
+      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": registration failed because the hostname " + hostName + " is invalid: " + ex1.getMessage( ), ex1 );
+    }
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) + " for: " + partition + "." + name + "@" + hostName + ":" + port );
     if ( !builder.checkAdd( partition, name, hostName, port ) ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkAdd failed." );
@@ -95,6 +104,9 @@ public class ComponentRegistrationHandler {
     
     try {
       final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
+      if( !Internets.testLocal( addr ) ) {
+        component.initRemoteService( addr );
+      }
       try {
         final CheckedListenableFuture<ServiceConfiguration> future = component.startTransition( newComponent );
         Runnable followRunner = new Runnable( ) {
@@ -116,9 +128,9 @@ public class ComponentRegistrationHandler {
       return true;
     } catch ( Throwable e ) {
       e = Exceptions.filterStackTrace( e );
-      LOG.info( builder.getClass( ).getSimpleName( ) + ": add failed because of: " + e.getMessage( ) );
+      LOG.info( builder.getClass( ).getSimpleName( ) + ": registration failed because of: " + e.getMessage( ) );
       LOG.error( e, e );
-      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": add failed with message: " + e.getMessage( ), e );
+      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": registration failed with message: " + e.getMessage( ), e );
     }
   }
   
