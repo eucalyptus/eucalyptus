@@ -8,7 +8,7 @@ option "user"                  u   "User to drop privs to after starting."      
 option "home"                  h   "Eucalyptus home directory."                        string  typestr="DIRECTORY"       default="@prefix@/"     no
 
 option "initialize"            -   "Perform first-time setup.  This is run one time (only!) on the first cloud controller before the first time it is run." flag                              off
-option "bind-addr"             i   "Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address while determining the user facing local address based on default route and netmask size."  string  typestr="HOSTNAME"                            optional multiple
+option "bind-addr"             i   "Bind the specified local address.  Can be specified multiple times, but the first one is used as the advertised address.  The default behaviour is to listen on the any address while determining the user facing local address based on default route and netmask size."  string  typestr="HOSTNAME"                            optional multiple
 option "bootstrap-host"        b   "Host to be used for bootstrapping group membership.  Many can be provided.  Note this should only be necessary when UDP multicast is not available." string  typestr="HOSTNAME"                            optional multiple
 option "force-remote-bootstrap" -  "Force the system to boot as a remote component."   flag                              off                   hidden
                                                                                        
