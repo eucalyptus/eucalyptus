@@ -433,7 +433,9 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   public void signupAccount( String accountName, String password, String email ) throws EucalyptusServiceException {
     try { Thread.sleep( 500 ); } catch ( Exception e ) { } // Simple thwart to automatic signup attack.
     User admin = EuareWebBackend.createAccount( accountName, password, email );
-    EuareWebBackend.notifyAccountRegistration( admin, accountName, email, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+    if ( admin != null ) {
+      EuareWebBackend.notifyAccountRegistration( admin, accountName, email, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+    }
   }
 
 
@@ -465,7 +467,9 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   public void signupUser( String userName, String accountName, String password, String email ) throws EucalyptusServiceException {
     try { Thread.sleep( 500 ); } catch ( Exception e ) { } // Simple thwart to automatic signup attack.
     User user = EuareWebBackend.createUser( userName, accountName, password, email );
-    EuareWebBackend.notifyUserRegistration( user, accountName, email, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+    if ( user != null ) {
+      EuareWebBackend.notifyUserRegistration( user, accountName, email, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+    }
   }
 
   @Override

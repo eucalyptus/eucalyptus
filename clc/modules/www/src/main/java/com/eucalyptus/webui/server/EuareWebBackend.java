@@ -833,7 +833,7 @@ public class EuareWebBackend {
     }
   }
   
-  public static User createAccount( String accountName, String password, String email ) throws EucalyptusServiceException {
+  public static User createAccount( String accountName, String password, String email ) {
     try {
       Account account = Accounts.addAccount( accountName );
       Map<String, String> info = Maps.newHashMap( );
@@ -847,7 +847,7 @@ public class EuareWebBackend {
     } catch ( Exception e ) {
       LOG.error( "Failed to create account " + accountName, e );
       LOG.debug( e, e );
-      throw new EucalyptusServiceException( "Failed to create account" );
+      return null;
     }
   }
 
@@ -1451,7 +1451,7 @@ public class EuareWebBackend {
     ServletUtils.sendMail( userEmail, userEmail, subject, emailMessage );
   }
 
-  public static User createUser( String userName, String accountName, String password, String email ) throws EucalyptusServiceException {
+  public static User createUser( String userName, String accountName, String password, String email ) {
     try {
       Account account = Accounts.lookupAccountByName( accountName );
       Map<String, String> info = Maps.newHashMap( );
@@ -1465,7 +1465,7 @@ public class EuareWebBackend {
     } catch ( Exception e ) {
       LOG.error( "Failed to create user " + userName + " in " + accountName, e );
       LOG.debug( e, e );
-      throw new EucalyptusServiceException( "Failed to create user" );
+      return null;
     }
   }
 

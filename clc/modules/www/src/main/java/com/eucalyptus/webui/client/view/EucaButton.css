@@ -34,7 +34,7 @@ a.button {
 }
 
 button[disabled] {
-	color:#DDDDDD;
+	color:#AAAAAA;
 }
 
 a.button.primary,button.primary {
@@ -50,7 +50,7 @@ a.button:focus,button:focus,a.button:hover,button:hover {
 }
 
 button[disabled]:focus,button[disabled]:hover,button[disabled]:active {
-	color:#FFFFFF;
+	color:#AAAAAA;
 	border:1px solid #CACACA;
 	text-shadow:1px 1px 1px #FFFFFF;
 	background-color: #ECECEC;
