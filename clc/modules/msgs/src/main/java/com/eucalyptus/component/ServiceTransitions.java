@@ -98,6 +98,11 @@ import com.google.common.collect.Iterables;
 public class ServiceTransitions {
   static Logger LOG = Logger.getLogger( ServiceTransitions.class );
   
+  interface ServiceTransitionCallback {
+    public void fire( ServiceConfiguration parent ) throws Throwable;
+  }
+  
+
   public static CheckedListenableFuture<ServiceConfiguration> transitionChain( final ServiceConfiguration configuration, final State goalState ) {
     switch ( goalState ) {
       case DISABLED:
@@ -305,23 +310,26 @@ public class ServiceTransitions {
   }
   
   private static void processTransition( final ServiceConfiguration parent, final Completion transitionCallback, final TransitionActions transitionAction ) {
+    ServiceTransitionCallback trans = null;
     try {
       if ( parent.isVmLocal( ) || ( parent.isHostLocal( ) && Bootstrap.isCloudController( ) ) ) {
         try {
-          LocalTransitionCallbacks.valueOf( transitionAction.name( ) ).fire( parent );
+          trans = LocalTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
           throw ex;
         }
       } else if( Bootstrap.isCloudController( ) ) {
         try {
-          RemoteTransitionCallbacks.valueOf( transitionAction.name( ) ).fire( parent );
+          trans = RemoteTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
       } else {
         LOG.debug( "Silentlty accepting remotely inferred state transition for " + parent ); 
+        return;
       }
+      trans.fire( parent );
       transitionCallback.fire( );
     } catch ( Throwable ex ) {
       if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
@@ -378,10 +386,6 @@ public class ServiceTransitions {
 
     }
     
-  }
-  
-  interface ServiceTransitionCallback {
-    public void fire( ServiceConfiguration parent ) throws Throwable;
   }
   
   enum RemoteTransitionCallbacks implements ServiceTransitionCallback {
