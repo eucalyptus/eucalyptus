@@ -287,7 +287,7 @@ public class Component implements HasName<Component> {
    * @throws ServiceRegistrationException
    */
   public ServiceConfiguration initRemoteService( InetAddress addr ) throws ServiceRegistrationException {
-    if ( !Bootstrap.isCloudController( ) && this.getComponentId( ).isCloudLocal( ) ) {
+    if ( !Bootstrap.isCloudController( ) ) {
       ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ),
                                                                     this.getComponentId( ).getPort( ) );
       this.serviceRegistry.register( config );
