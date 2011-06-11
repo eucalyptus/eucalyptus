@@ -135,22 +135,6 @@ public class ServiceBootstrapper extends Bootstrapper {
     return true;
   }
   
-  private static void loadService( ServiceConfiguration config ) {
-    final Component comp = config.lookupComponent( );
-    LOG.info( "load(): " + config );
-    try {
-      comp.loadService( config ).get( );
-    } catch ( ServiceRegistrationException ex ) {
-      config.error( ex );
-    } catch ( Throwable ex ) {
-      config.error( ex );
-    }
-  }
-  
-  private static boolean shouldLoad( ServiceConfiguration config ) {
-    return config.isHostLocal( ) || config.getComponentId( ).isAlwaysLocal( ) || Bootstrap.isCloudController( );
-  }
-  
   @Override
   public boolean start( ) throws Exception {
     Component euca = Components.lookup( Eucalyptus.class );
@@ -171,9 +155,28 @@ public class ServiceBootstrapper extends Bootstrapper {
     return true;
   }
   
+
+  private static void loadService( ServiceConfiguration config ) {
+    final Component comp = config.lookupComponent( );
+    LOG.info( "load(): " + config );
+    try {
+      comp.loadService( config ).get( );
+    } catch ( ServiceRegistrationException ex ) {
+      config.error( ex );
+    } catch ( Throwable ex ) {
+      config.error( ex );
+    }
+  }
+  
+  private static boolean shouldLoad( ServiceConfiguration config ) {
+    return config.isHostLocal( ) || config.getComponentId( ).isAlwaysLocal( ) || Bootstrap.isCloudController( );
+  }
+  
   private static void startupService( final Component comp, final ServiceConfiguration s ) {
     try {
-      comp.loadService( s ).get( );
+      if( !comp.hasService( s ) ) {
+        comp.loadService( s ).get( );
+      }
       final CheckedListenableFuture<ServiceConfiguration> future = comp.startTransition( s );
       Runnable followRunner = new Runnable( ) {
         public void run( ) {
