@@ -172,7 +172,7 @@ public class Component implements HasName<Component> {
   }
   
   public ServiceBuilder<? extends ServiceConfiguration> getBuilder( ) {
-    return ServiceBuilderRegistry.lookup( this.identity );
+    return ServiceBuilders.lookup( this.identity );
   }
   
   /**
@@ -181,7 +181,7 @@ public class Component implements HasName<Component> {
    * @return true if the component could be run locally.
    */
   public Boolean isAvailableLocally( ) {
-    return this.identity.isAlwaysLocal( ) || ( !this.identity.isCloudLocal( ) || Bootstrap.isCloudController( ) );
+    return this.identity.isAlwaysLocal( ) || ( this.identity.isCloudLocal( ) && Bootstrap.isCloudController( ) );
   }
   
   /**

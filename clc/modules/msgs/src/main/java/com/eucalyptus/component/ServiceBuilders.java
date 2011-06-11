@@ -72,8 +72,8 @@ import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.system.Ats;
 import com.google.common.collect.Maps;
-public class ServiceBuilderRegistry {
-  private static Logger LOG = Logger.getLogger( ServiceBuilderRegistry.class );
+public class ServiceBuilders {
+  private static Logger LOG = Logger.getLogger( ServiceBuilders.class );
   private static Map<Class,ServiceBuilder<? extends ServiceConfiguration>> builders = Maps.newConcurrentMap( );
   private static Map<ComponentId,ServiceBuilder<? extends ServiceConfiguration>> componentBuilders = Maps.newConcurrentMap( );
 
@@ -93,12 +93,12 @@ public class ServiceBuilderRegistry {
           DiscoverableServiceBuilder at = Ats.from( candidate ).get( DiscoverableServiceBuilder.class );
           for( Class c : at.value( ) ) {
             ComponentId compId = (ComponentId) c.newInstance( );
-            ServiceBuilderRegistry.addBuilder( compId, b );
+            ServiceBuilders.addBuilder( compId, b );
           }
         }
         if( Ats.from( candidate ).has( Handles.class ) ) {
           for( Class c : Ats.from( candidate ).get( Handles.class ).value( ) ) {
-            ServiceBuilderRegistry.addBuilder( c, b );
+            ServiceBuilders.addBuilder( c, b );
           }
         }
         return true;

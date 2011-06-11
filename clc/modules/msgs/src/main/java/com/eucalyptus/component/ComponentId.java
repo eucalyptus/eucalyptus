@@ -395,6 +395,6 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   }
 
   public boolean isRegisterable( ) {
-    return ServiceBuilderRegistry.lookup( this ) instanceof DummyServiceBuilder;
+    return ServiceBuilders.lookup( this ) instanceof DummyServiceBuilder;
   }
 }

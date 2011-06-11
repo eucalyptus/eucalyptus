@@ -125,7 +125,7 @@ public class Services {
     
     @Override
     public ServiceBuilder<? extends ServiceConfiguration> apply( final ServiceConfiguration input ) {
-      return ServiceBuilderRegistry.lookup( input.getComponentId( ) );
+      return ServiceBuilders.lookup( input.getComponentId( ) );
     }
     
   }

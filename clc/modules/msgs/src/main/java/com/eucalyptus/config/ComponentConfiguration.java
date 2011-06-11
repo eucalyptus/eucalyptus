@@ -81,7 +81,7 @@ import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
-import com.eucalyptus.component.ServiceBuilderRegistry;
+import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceCheckRecord;
 import com.eucalyptus.component.ServiceChecks;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -281,7 +281,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   
   @Override
   public ServiceBuilder<? extends ServiceConfiguration> lookupBuilder( ) {
-    return ServiceBuilderRegistry.lookup( this.getComponentId( ) );
+    return ServiceBuilders.lookup( this.getComponentId( ) );
   }
   
   @Override

@@ -109,7 +109,7 @@ public class Components {
    * @return
    */
   public static List<Component> whichCanLoad( ) {
-    return Lists.newArrayList( Iterables.filter( Components.list( ), Components.shouldBootstrapLocally( ) ) );
+    return Lists.newArrayList( Iterables.filter( Components.list( ), Predicates.BOOTSTRAP_LOCALS ) );
   }
   
   /**
@@ -118,7 +118,7 @@ public class Components {
    * @return
    */
   public static List<Component> whichAreEnabledLocally( ) {
-    return Lists.newArrayList( Iterables.filter( Components.list( ), Components.areEnabledLocally( ) ) );
+    return Lists.newArrayList( Iterables.filter( Components.list( ), Predicates.ARE_ENABLED_LOCAL ) );
   }
   
   /**
@@ -127,7 +127,7 @@ public class Components {
    * @return
    */
   public static List<Component> whichAreEnabled( ) {
-    return Lists.newArrayList( Iterables.filter( Components.list( ), Components.areEnabled( ) ) );
+    return Lists.newArrayList( Iterables.filter( Components.list( ), Predicates.ARE_ENABLED ) );
   }
   
   @SuppressWarnings( "unchecked" )
@@ -238,7 +238,7 @@ public class Components {
   }
   
   public static Component oneWhichHandles( Class c ) {
-    return ServiceBuilderRegistry.handles( c ).getComponent( );
+    return ServiceBuilders.handles( c ).getComponent( );
   }
   
   public static class Functions {
@@ -359,15 +359,4 @@ public class Components {
 
   }
   
-  public static Predicate<Component> shouldBootstrapLocally( ) {
-    return Predicates.BOOTSTRAP_LOCALS;
-  }
-  
-  public static Predicate<Component> areEnabledLocally( ) {
-    return Predicates.ARE_ENABLED_LOCAL;
-  }
-  
-  public static Predicate<Component> areEnabled( ) {
-    return Predicates.ARE_ENABLED;
-  }
 }

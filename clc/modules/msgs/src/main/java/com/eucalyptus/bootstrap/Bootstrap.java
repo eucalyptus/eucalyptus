@@ -67,9 +67,12 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
@@ -77,6 +80,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
+import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.ws.EmpyreanService;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -554,11 +558,12 @@ public class Bootstrap {
   public static int INIT_RETRIES = 5;
   
   public static void applyTransition( Component component, Component.Transition transition ) {
-    if ( component.getLocalServiceConfiguration( ).lookupStateMachine( ).isLegalTransition( transition ) ) {
+    StateMachine<ServiceConfiguration, State, Transition> fsm = component.getLocalServiceConfiguration( ).lookupStateMachine( );
+    if ( fsm.isLegalTransition( transition ) ) {
       for ( int i = 0; i < INIT_RETRIES; i++ ) {
         try {
           EventRecord.caller( Bootstrap.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ), component.getComponentId( ) ).info( );
-          component.getLocalServiceConfiguration( ).lookupStateMachine( ).transitionByName( transition );
+          fsm.transitionByName( transition ).get( );
           break;
         } catch ( ExistingTransitionException ex ) {
           LOG.error( ex );

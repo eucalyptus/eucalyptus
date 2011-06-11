@@ -74,7 +74,7 @@ import com.eucalyptus.component.ComponentRegistrationHandler;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
-import com.eucalyptus.component.ServiceBuilderRegistry;
+import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
@@ -227,7 +227,7 @@ public class Configuration {
         }
       }
     } else {
-      for ( final ServiceConfiguration config : ServiceBuilderRegistry.handles( request.getClass( ) ).list( ) ) {
+      for ( final ServiceConfiguration config : ServiceBuilders.handles( request.getClass( ) ).list( ) ) {
         ComponentInfoType info = TypeMappers.transform( config, ComponentInfoType.class );
         if( !Boolean.TRUE.equals( request.getVerbose( ) ) ) {
           info.setDetail( "" );

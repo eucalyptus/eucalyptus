@@ -66,7 +66,6 @@ package com.eucalyptus.ws;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
@@ -75,126 +74,112 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentRegistrationHandler;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.DummyServiceBuilder;
+import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ConfigurationService;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
 public class ServiceBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
   
+  enum ShouldLoad implements Predicate<ServiceConfiguration> {
+    INSTANCE {
+      
+      @Override
+      public boolean apply( final ServiceConfiguration config ) {
+        return config.isHostLocal( ) || config.getComponentId( ).isAlwaysLocal( )
+               || ( Bootstrap.isCloudController( ) && ( config.getComponentId( ).isCloudLocal( ) || config.isHostLocal( ) ) );
+      }
+    };
+  }
+  
   @Override
-  public boolean load( ) throws Exception {
-    /**
-     * TODO: ultimately remove this: it is legacy and enforces a one-to-one
-     * relationship between component impls
-     **/
-    for ( ComponentId c : ComponentIds.list( ) ) {
-      if ( c.hasDispatcher( ) && c.isAlwaysLocal( ) ) {
+  public boolean load( ) {
+    ServiceBootstrapper.execute( new Predicate<ServiceConfiguration>( ) {
+      
+      @Override
+      public boolean apply( final ServiceConfiguration config ) {
+        final Component comp = config.lookupComponent( );
+        LOG.info( "load(): " + config );
         try {
-          Component comp = Components.lookup( c );
-        } catch ( NoSuchElementException e ) {
-          throw BootstrapException.throwFatal( "Failed to lookup component which is alwaysLocal: " + c.name( ), e );
-        }
-      } else if ( c.hasDispatcher( ) ) {
-        try {
-          Component comp = Components.lookup( c );
-        } catch ( NoSuchElementException e ) {
-          Exceptions.eat( "Failed to lookup component which may have dispatcher references: " + c.name( ), e );
+          comp.loadService( config ).get( );
+          return true;
+        } catch ( ServiceRegistrationException ex ) {
+          config.error( ex );
+          return false;
+        } catch ( Throwable ex ) {
+          Exceptions.trace( "load(): Building service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );
+          config.error( ex );
+          return false;
         }
       }
-    }
-    for ( final Component comp : Components.list( ) ) {
-      if ( !( comp.getBuilder( ) instanceof DummyServiceBuilder ) ) {
-        for ( ServiceConfiguration config : comp.getBuilder( ).list( ) ) {
-          if ( ServiceBootstrapper.shouldLoad( config ) ) {
-            ServiceBootstrapper.loadService( config );
-          }
-        }
-      } else if ( comp.hasLocalService( ) ) {
-        final ServiceConfiguration s = comp.getLocalServiceConfiguration( );
-        if ( s.isVmLocal( ) && comp.getComponentId( ).hasDispatcher( ) ) {
-          try {
-            comp.loadService( s ).get( );
-          } catch ( ServiceRegistrationException ex ) {
-            s.error( ex );
-          } catch ( Throwable ex ) {
-            Exceptions.trace( "load(): Building service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );
-            s.error( ex );
-          }
-        }
-      }
-    }
+    } );
     return true;
   }
   
   @Override
   public boolean start( ) throws Exception {
-    Component euca = Components.lookup( Eucalyptus.class );
-    for ( final Component comp : Components.list( ) ) {
-      LOG.info( "start(): " + comp );
-      for ( final ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
-        if ( comp.getComponentId( ).isAlwaysLocal( ) ) {
-          ServiceBootstrapper.startupService( comp, s );
-        } else if ( !comp.getComponentId( ).hasDispatcher( ) ) {
-          continue;
-        } else if ( s.isHostLocal( ) ) {
-          comp.loadService( s ).get( );
-        } else if ( Bootstrap.isCloudController( ) ) {
-          ServiceBootstrapper.startupService( comp, s );
+    ServiceBootstrapper.execute( new Predicate<ServiceConfiguration>( ) {
+
+      @Override
+      public boolean apply( final ServiceConfiguration config ) {
+        final Component comp = config.lookupComponent( );
+        try {
+          if ( !comp.hasService( config ) ) {
+            comp.loadService( config ).get( );
+          }
+          final CheckedListenableFuture<ServiceConfiguration> future = comp.startTransition( config );
+          Runnable followRunner = new Runnable( ) {
+            @Override
+            public void run( ) {
+              try {
+                future.get( );
+                comp.enableTransition( config );
+              } catch ( Exception ex ) {
+                LOG.error( ex,
+                           ex );
+              }
+            }
+          };
+          Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, config.getFullName( ).toString( ) ).submit( followRunner );
+        } catch ( Exception e ) {
+          LOG.error( e, e );
         }
-      }
-    }
+        return false;
+      }} );
     return true;
   }
   
-
-  private static void loadService( ServiceConfiguration config ) {
-    final Component comp = config.lookupComponent( );
-    LOG.info( "load(): " + config );
-    try {
-      comp.loadService( config ).get( );
-    } catch ( ServiceRegistrationException ex ) {
-      config.error( ex );
-    } catch ( Throwable ex ) {
-      config.error( ex );
-    }
-  }
-  
-  private static boolean shouldLoad( ServiceConfiguration config ) {
-    return config.isHostLocal( ) || config.getComponentId( ).isAlwaysLocal( ) || Bootstrap.isCloudController( );
-  }
-  
-  private static void startupService( final Component comp, final ServiceConfiguration s ) {
-    try {
-      if( !comp.hasService( s ) ) {
-        comp.loadService( s ).get( );
-      }
-      final CheckedListenableFuture<ServiceConfiguration> future = comp.startTransition( s );
-      Runnable followRunner = new Runnable( ) {
-        public void run( ) {
-          try {
-            future.get( );
-            comp.enableTransition( s );
-          } catch ( Exception ex ) {
-            LOG.error( ex,
-                       ex );
+  private static void execute( final Predicate<ServiceConfiguration> predicate ) throws NoSuchElementException {
+    for ( final ComponentId compId : ComponentIds.list( ) ) {
+      Component comp = Components.lookup( compId );
+      if ( compId.isRegisterable( ) ) {
+        ServiceBuilder<? extends ServiceConfiguration> builder = comp.getBuilder( );
+        try {
+          for ( ServiceConfiguration config : Iterables.filter( builder.list( ), ShouldLoad.INSTANCE ) ) {
+            predicate.apply( config );
           }
+        } catch ( ServiceRegistrationException ex ) {
+          LOG.error( ex, ex );
         }
-      };
-      Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, s.getFullName( ).toString( ) ).submit( followRunner );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
+      } else if ( comp.hasLocalService( ) ) {
+        final ServiceConfiguration config = comp.getLocalServiceConfiguration( );
+        if ( config.isVmLocal( ) ) {
+          predicate.apply( config );
+        }
+      }
     }
   }
   
+
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
    */
