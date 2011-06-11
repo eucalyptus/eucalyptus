@@ -1,13 +1,14 @@
 package com.eucalyptus.auth;
 
-import java.util.List;
+public interface Contract<T> {
 
-public interface Contract {
-
-  public String getName( );
+  public enum Type {
+    EXPIRATION,
+    MAXKEYS
+  }
   
-  public String getValue( );
+  public Type getType( );
   
-  public List<String> getValues( );
+  public T getValue( );
   
 }

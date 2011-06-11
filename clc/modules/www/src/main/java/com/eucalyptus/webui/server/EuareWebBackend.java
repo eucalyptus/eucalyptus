@@ -162,10 +162,10 @@ public class EuareWebBackend {
         throw new EucalyptusServiceException( "User is not enabled or confirmed" );
       }
       return user;
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
-      if ( e instanceof EucalyptusServiceException ) {
-        throw ( EucalyptusServiceException ) e;
-      }
       LOG.error( "Failed to verify user " + userName + "@" + accountName );
       LOG.debug( e, e );
       throw new EucalyptusServiceException( "Failed to verify user " + userName + "@" + accountName + ": " + e.getMessage( ) );
@@ -214,10 +214,10 @@ public class EuareWebBackend {
       if ( !Strings.isNullOrEmpty( email ) ) {
         user.setInfo( User.EMAIL, email );
       }
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
-      if ( e instanceof EucalyptusServiceException ) {
-        throw ( EucalyptusServiceException ) e;
-      }
       LOG.error( "Failed to change password for user " + userId, e );
       LOG.debug( e, e );
       throw new EucalyptusServiceException( "Failed to change password for user " + userId + ": " + e.getMessage( ) );      
@@ -881,14 +881,13 @@ public class EuareWebBackend {
       Account account = Accounts.lookupAccountById( accountId );
       EuarePermission.authorizeModifyAccount( requestUser, account );
       account.setName( ValueCheckerFactory.createAccountNameChecker( ).check( newName ) );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to modify account " + values, e );
       LOG.debug( e, e );
-      if ( e instanceof EucalyptusServiceException ) {
-        throw ( EucalyptusServiceException ) e;
-      } else {
-        throw new EucalyptusServiceException( "Failed to modify account " + values + ": " + e.getMessage( ) );
-      }
+      throw new EucalyptusServiceException( "Failed to modify account " + values + ": " + e.getMessage( ) );
     }
   }
 
@@ -974,12 +973,12 @@ public class EuareWebBackend {
       User user = Accounts.lookupUserById( userId );
       EuarePermission.authorizeAddUserPolicy( requestUser, user.getAccount( ), user );
       user.addPolicy( name, document );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to add new policy " + name + " to user " + userId, e );
       LOG.debug( e, e );
-      if ( e instanceof EucalyptusServiceException ) {
-        throw ( EucalyptusServiceException ) e;
-      }
       throw new EucalyptusServiceException( "Failed to add policy " + name + " to user " + userId + ": " + e.getMessage( ) );
     }
   }
@@ -989,12 +988,12 @@ public class EuareWebBackend {
       Group group = Accounts.lookupGroupById( groupId );
       EuarePermission.authorizeAddGroupPolicy( requestUser, group.getAccount( ), group );
       group.addPolicy( name, document );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to add new policy " + name + " to group " + groupId, e );
       LOG.debug( e, e );
-      if ( e instanceof EucalyptusServiceException ) {
-        throw ( EucalyptusServiceException ) e;
-      }
       throw new EucalyptusServiceException( "Failed to add policy " + name + " to group " + groupId + ": " + e.getMessage( ) );
     }
   }
@@ -1019,12 +1018,12 @@ public class EuareWebBackend {
         EuarePermission.authorizeDeleteGroupPolicy( requestUser, account, group );
         group.removePolicy( policyName );
       }
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to delete policy " + policySerialized, e );
       LOG.debug( e, e );
-      if ( e instanceof EucalyptusServiceException ) {
-        throw ( EucalyptusServiceException ) e;
-      }
       throw new EucalyptusServiceException( "Failed to delete policy " + policySerialized + ": " + e.getMessage( ) );      
     }
   }
@@ -1041,12 +1040,12 @@ public class EuareWebBackend {
       User user = account.lookupUserByName( userName );
       EuarePermission.authorizeDeleteUserAccessKey( requestUser, account, user );
       user.removeKey( keyId );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to delete key " + keySerialized, e );
       LOG.debug( e, e );
-      if ( e instanceof EucalyptusServiceException ) {
-        throw ( EucalyptusServiceException ) e;
-      }
       throw new EucalyptusServiceException( "Failed to delete key " + keySerialized + ": " + e.getMessage( ) );      
     }
   }
@@ -1064,12 +1063,12 @@ public class EuareWebBackend {
       User user = account.lookupUserByName( userName );
       EuarePermission.authorizeDeleteUserCertificate( requestUser, account, user );
       user.removeKey( certId );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to delete cert " + certSerialized, e );
       LOG.debug( e, e );
-      if ( e instanceof EucalyptusServiceException ) {
-        throw ( EucalyptusServiceException ) e;
-      }
       throw new EucalyptusServiceException( "Failed to delete cert " + certSerialized + ": " + e.getMessage( ) );      
     }
   }
@@ -1131,12 +1130,12 @@ public class EuareWebBackend {
       User user = Accounts.lookupUserById( userId );
       EuarePermission.authorizeAddUserAccessKey( requestUser, user.getAccount( ), user );
       user.createKey( );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to create key for user " + userId, e );
       LOG.debug( e, e );
-      if ( e instanceof EucalyptusServiceException ) {
-        throw ( EucalyptusServiceException ) e;
-      }
       throw new EucalyptusServiceException( "Failed to create key for user " + userId + ": " + e.getMessage( ) );
     }
   }
@@ -1160,12 +1159,12 @@ public class EuareWebBackend {
         throw new EucalyptusServiceException( "Invalid certificate content" );        
       }
       user.addCertificate( x509 );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to add certificate to user " + userId + ": " + pem, e );
       LOG.debug( e, e );
-      if ( e instanceof EucalyptusServiceException ) {
-        throw ( EucalyptusServiceException ) e;
-      }
       throw new EucalyptusServiceException( "Failed to add certificate to user " + userId );
     }
   }
@@ -1184,12 +1183,12 @@ public class EuareWebBackend {
       EuarePermission.authorizeModifyUserCertificate( requestUser, account, user );
       Certificate cert = user.getCertificate( certId );
       cert.setActive( "true".equalsIgnoreCase( active ) );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to modify cert " + values, e );
       LOG.debug( e, e );
-      if ( e instanceof EucalyptusServiceException ) {
-        throw ( EucalyptusServiceException ) e;
-      }
       throw new EucalyptusServiceException( "Failed to modify cert " + values + ": " + e.getMessage( ) );      
     }
   }
@@ -1207,12 +1206,12 @@ public class EuareWebBackend {
       EuarePermission.authorizeModifyUserAccessKey( requestUser, account, user );
       AccessKey key = user.getKey( keyId );
       key.setActive( "true".equalsIgnoreCase( active ) );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to modify key " + values, e );
       LOG.debug( e, e );
-      if ( e instanceof EucalyptusServiceException ) {
-        throw ( EucalyptusServiceException ) e;
-      }
       throw new EucalyptusServiceException( "Failed to modify key " + values + ": " + e.getMessage( ) );      
     }
   }
@@ -1233,12 +1232,12 @@ public class EuareWebBackend {
       if ( !group.getPath( ).equals( path ) ) {
         group.setPath( path );
       }
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to modify group " + values, e );
       LOG.debug( e, e );
-      if ( e instanceof EucalyptusServiceException ) {
-        throw ( EucalyptusServiceException ) e;
-      }
       throw new EucalyptusServiceException( "Failed to modify group " + values + ": " + e.getMessage( ) );      
     }
   }
@@ -1285,12 +1284,12 @@ public class EuareWebBackend {
         user.setPasswordExpires( expiration );
       }
       user.setInfo( newInfo );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to modify user " + keys + " = " + values, e );
       LOG.debug( e, e );
-      if ( e instanceof EucalyptusServiceException ) {
-        throw ( EucalyptusServiceException ) e;
-      }
       throw new EucalyptusServiceException( "Failed to modify user " + keys + " = " + values + ": " + e.getMessage( ) );      
     }
   }
