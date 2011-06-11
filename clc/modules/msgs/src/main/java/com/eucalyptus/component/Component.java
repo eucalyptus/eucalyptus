@@ -640,7 +640,7 @@ public class Component implements HasName<Component> {
       if ( ret == null ) {
         ret = service;
         try {
-          ret.getStateMachine( ).transition( Component.State.LOADED ).get( );
+          ret.getStateMachine( ).transition( Component.State.INITIALIZED ).get( );
         } catch ( IllegalStateException ex ) {
           LOG.error( ex , ex );
         } catch ( ExecutionException ex ) {
