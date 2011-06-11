@@ -150,8 +150,6 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return this.serviceDependencies( ).contains( Eucalyptus.class );
   }
   
-  public abstract Boolean hasDispatcher( );
-  
   public final Boolean isAlwaysLocal( ) {
     return this.serviceDependencies( ).contains( Empyrean.class );
   }

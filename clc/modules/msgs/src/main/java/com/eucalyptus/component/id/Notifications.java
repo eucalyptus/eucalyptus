@@ -69,10 +69,6 @@ import com.eucalyptus.component.ComponentId;
 
 public class Notifications extends ComponentId.Unpartioned {
   public static Notifications INSTANCE = new Notifications( );
-  @Override
-  public Boolean hasDispatcher( ) {
-    return true;
-  }
   
   @Override
   public List<Class<? extends ComponentId>> serviceDependencies( ) {

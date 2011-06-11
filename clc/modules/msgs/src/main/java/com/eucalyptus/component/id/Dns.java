@@ -76,11 +76,6 @@ public class Dns extends ComponentId.Unpartioned {
   }
   
   @Override
-  public Boolean hasDispatcher( ) {
-    return true;
-  }
-  
-  @Override
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
     return new ArrayList( ) {
       {

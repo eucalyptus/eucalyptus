@@ -74,11 +74,6 @@ public class Walrus extends ComponentId.Unpartioned {
   }
   
   @Override
-  public Boolean hasDispatcher( ) {
-    return true;
-  }
-
-  @Override
   public Boolean hasCredentials( ) {
     return true;
   }

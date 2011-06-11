@@ -79,11 +79,6 @@ public class HttpService extends ComponentId.Unpartioned {
   }
   
   @Override
-  public Boolean hasDispatcher( ) {
-    return false;
-  }
-  
-  @Override
   public String getServiceModelFileName( ) {
     return "eucalyptus-www.xml";
   }

@@ -72,10 +72,10 @@ import com.eucalyptus.empyrean.Empyrean;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.CloudServiceInit )
-public class ServiceBootstrapper extends Bootstrapper {
-  private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
+public class ServiceContextBootstrapper extends Bootstrapper {
+  private static Logger LOG = Logger.getLogger( ServiceContextBootstrapper.class );
   
-  public ServiceBootstrapper( ) {}
+  public ServiceContextBootstrapper( ) {}
   
   @Override
   public boolean load( ) throws Exception {

@@ -78,9 +78,4 @@ public class Arbitrator extends ComponentId.Unpartioned {
     };
   }
   
-  @Override
-  public Boolean hasDispatcher( ) {
-    return false;
-  }
-  
 }
