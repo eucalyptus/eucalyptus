@@ -312,9 +312,16 @@ public class Component implements HasName<Component> {
    */
   public CheckedListenableFuture<ServiceConfiguration> loadService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     this.lookupRegisteredService( config );
-    if ( State.INITIALIZED.isIn( config ) ) {
+    if ( State.PRIMORDIAL.isIn( config ) ) {
       try {
         config.lookupStateMachine( ).transitionByName( Transition.INITIALIZING ).get( );
+      } catch ( Throwable ex ) {
+        throw new ServiceRegistrationException( "Failed to initialize service state: " + config + " because of: " + ex.getMessage( ), ex );
+      }
+    }
+    if ( State.INITIALIZED.isIn( config ) ) {
+      try {
+        config.lookupStateMachine( ).transitionByName( Transition.LOADING ).get( );
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to load service: " + config + " because of: " + ex.getMessage( ), ex );
       }
