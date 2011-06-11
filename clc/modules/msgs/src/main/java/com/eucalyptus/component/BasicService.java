@@ -173,12 +173,7 @@ public class BasicService extends AbstractService implements Service {
   
   @Override
   public Dispatcher getDispatcher( ) {
-    throw new RuntimeException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
-  }
-  
-  @Override
-  public ServiceEndpoint getEndpoint( ) {
-    throw new RuntimeException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
+    throw new IllegalStateException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
   }
   
   @Override

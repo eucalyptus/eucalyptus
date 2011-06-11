@@ -602,12 +602,10 @@ public class ServiceTransitions {
     ENDPOINT_START {
       @Override
       public void fire( final ServiceConfiguration parent ) {
-        if ( parent.getComponentId( ).hasDispatcher( ) && !parent.isVmLocal( ) ) {//TODO:GRZE:URGENT fix this brain-damaged corner case
-          try {
-            parent.lookupService( ).getEndpoint( ).start( );
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
-          }
+        try {
+          parent.lookupService( ).start( );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
         }
       }
     },
@@ -616,7 +614,7 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration parent ) {
         if ( parent.getComponentId( ).hasDispatcher( ) && !parent.isVmLocal( ) ) {
           try {
-            parent.lookupService( ).getEndpoint( ).stop( );
+            parent.lookupService( ).stop( );
           } catch ( Exception ex ) {
             LOG.error( ex, ex );
           }

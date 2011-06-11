@@ -182,11 +182,6 @@ public class MessagableService extends AbstractService implements Service {
   }
   
   @Override
-  public ServiceEndpoint getEndpoint( ) {
-    return this.endpoint;
-  }
-  
-  @Override
   public void fireEvent( final Event event ) {
     this.serviceDelegate.fireEvent( event );
   }
@@ -222,6 +217,16 @@ public class MessagableService extends AbstractService implements Service {
   @Override
   public void cleanUp( ) {
     this.serviceDelegate.cleanUp( );
+  }
+
+  @Override
+  public void start( ) {
+    this.endpoint.start( );
+  }
+
+  @Override
+  public void stop( ) {
+    this.endpoint.stop( );
   }
   
 }
