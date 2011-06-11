@@ -446,6 +446,7 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
     outAddressesLen = 0;
   } else if (rc) {
     logprintf("ERROR: doDescribePublicAddresses() returned FAIL\n");
+    snprintf(statusMessage, 256, "ERROR");
     status = AXIS2_FALSE;
     outAddressesLen = 0;
   } else {
