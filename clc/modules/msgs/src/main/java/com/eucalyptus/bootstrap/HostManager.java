@@ -79,6 +79,8 @@ import org.jgroups.Receiver;
 import org.jgroups.View;
 import org.jgroups.stack.ProtocolStack;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Host;
 import com.eucalyptus.component.Hosts;
@@ -186,11 +188,12 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
       return false;
     } else {
       try {
-        for ( Component c : Components.list( ) ) {//TODO:GRZE:URGENT THIS LIES
-          if ( c.getComponentId( ).isCloudLocal( ) ) {
+        for ( ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
+          if ( compId.isCloudLocal( ) ) {
             try {
-              ServiceConfiguration config = c.initRemoteService( addr );
-              c.loadService( config );
+              Component comp = Components.lookup( compId );
+              ServiceConfiguration config = comp.initRemoteService( addr );
+              comp.loadService( config );
             } catch ( Exception ex ) {
               LOG.error( ex, ex );
             }
