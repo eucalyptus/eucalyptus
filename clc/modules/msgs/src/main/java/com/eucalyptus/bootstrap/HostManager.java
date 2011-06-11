@@ -64,6 +64,7 @@
 package com.eucalyptus.bootstrap;
 
 import java.net.InetAddress;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
@@ -106,7 +107,8 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     try {
       LOG.info( "Starting membership channel... " );
       this.membershipChannel.connect( this.membershipGroupName );
-      this.physicalAddress = ( PhysicalAddress ) this.membershipChannel.downcall( new org.jgroups.Event( org.jgroups.Event.GET_PHYSICAL_ADDRESS, this.membershipChannel.getAddress( ) ) );
+      this.physicalAddress = ( PhysicalAddress ) this.membershipChannel.downcall( new org.jgroups.Event( org.jgroups.Event.GET_PHYSICAL_ADDRESS,
+                                                                                                         this.membershipChannel.getAddress( ) ) );
       LOG.info( "Started membership channel: " + this.membershipGroupName );
     } catch ( ChannelException ex ) {
       LOG.fatal( ex, ex );
@@ -161,7 +163,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   @Override
   public void receive( Message msg ) {
     View view = this.currentView.getReference( );
-    if( view != null ) {
+    if ( view != null ) {
       LOG.debug( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
       Host recvHost = ( Host ) msg.getObject( );
       if ( !Bootstrap.isFinished( ) ) {
@@ -186,7 +188,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     } else {
       try {
         for ( Component c : Components.list( ) ) {//TODO:GRZE:URGENT THIS LIES
-          if( c.getComponentId( ).isCloudLocal( ) ) {
+          if ( c.getComponentId( ).isCloudLocal( ) ) {
             try {
               ServiceConfiguration config = c.initRemoteService( addr );
               c.loadService( config );
@@ -198,7 +200,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
         for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
           stage.updateBootstrapDependencies( );
         }
-      } catch( RuntimeException ex ) {
+      } catch ( RuntimeException ex ) {
         LOG.error( ex, ex );
         throw ex;
       } finally {
@@ -228,7 +230,18 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     LOG.info( "-> view: " + this.currentView.getReference( ) );
     LOG.info( "-> mark: " + this.currentView.isMarked( ) );
     if ( !Bootstrap.isCloudController( ) ) {
-      HostManager.this.broadcastAddresses( );
+      Threads.lookup( Empyrean.class, HostManager.class, "broadcastAddresses" ).submit( new Runnable( ) {
+        
+        @Override
+        public void run( ) {
+          try {
+            TimeUnit.SECONDS.sleep( 2 );
+          } catch ( InterruptedException ex ) {
+            LOG.error( ex, ex );
+          }
+          HostManager.this.broadcastAddresses( );
+        }
+      } );
     }
   }
   
@@ -283,7 +296,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   public JChannel getMembershipChannel( ) {
     return this.membershipChannel;
   }
-
+  
   public PhysicalAddress getPhysicalAddress( ) {
     return this.physicalAddress;
   }
