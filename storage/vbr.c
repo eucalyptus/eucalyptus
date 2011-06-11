@@ -825,6 +825,7 @@ static int copy_creator (artifact * a)
     }
 
     const char * dev = blockblob_get_dev (a->bb);    
+    const char * bbfile = blockblob_get_file(a->bb);
 
     if (a->do_tune_fs) {
         // tune file system, which is needed to boot EMIs fscked long ago
@@ -833,6 +834,14 @@ static int copy_creator (artifact * a)
             logprintfl (EUCAERROR, "[%s] error: failed to tune root file system\n", a->instanceId);
             return ERROR;
         }
+    }
+    
+    if (!strcmp(vbr->typeName, "kernel") || !strcmp(vbr->typeName, "ramdisk")) {
+        // for libvirt/kvm, kernel and ramdisk must be readable by libvirt
+        if (diskutil_ch (bbfile, NULL, NULL, 0664) != OK) {
+            logprintfl (EUCAINFO, "[%s] error: failed to change user and/or permissions for '%s' '%s'\n", a->instanceId, vbr->typeName, bbfile);
+        }
+        
     }
     
     if (strlen (a->sshkey)) {
@@ -858,7 +867,7 @@ static int copy_creator (artifact * a)
             logprintfl (EUCAINFO, "[%s] error: failed to create path '%s'\n", a->instanceId, path);
             goto unmount;
         }
-        if (diskutil_ch (path, "root", 0700) != OK) {
+        if (diskutil_ch (path, "root", NULL, 0700) != OK) {
             logprintfl (EUCAINFO, "[%s] error: failed to change user and/or permissions for '%s'\n", a->instanceId, path);
             goto unmount;
         }
@@ -867,7 +876,7 @@ static int copy_creator (artifact * a)
             logprintfl (EUCAINFO, "[%s] error: failed to save key in '%s'\n", a->instanceId, path);
             goto unmount;
         }
-        if (diskutil_ch (path, "root", 0600) != OK) {
+        if (diskutil_ch (path, "root", NULL, 0600) != OK) {
             logprintfl (EUCAINFO, "[%s] error: failed to change user and/or permissions for '%s'\n", a->instanceId, path);
             goto unmount;
         }

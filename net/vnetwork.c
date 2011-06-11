@@ -2067,6 +2067,7 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
   }
   
   vnetconfig->networks[vlan].active = 0;
+  bzero(vnetconfig->networks[vlan].addrs, sizeof(netEntry) * NUMBER_OF_HOSTS_PER_VLAN);
 
   if (!strcmp(vnetconfig->mode, "MANAGED")) {
     snprintf(newbrname, 32, "eucabr%d", vlan);
@@ -2076,11 +2077,7 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
       logprintfl(EUCAERROR, "vnetStopNetworkManaged(): cmd '%s' failed\n", cmd);
       ret = 1;
     }    
-  }
 
-    //  }
-  
-  if (!strcmp(vnetconfig->mode, "MANAGED")) {
     snprintf(newdevname, 32, "%s.%d", vnetconfig->privInterface, vlan);
     rc = check_device(newdevname);
     if (!rc) {
@@ -2125,7 +2122,7 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
       if (rc) {
 	logprintfl(EUCAWARN, "vnetStopNetworkManaged(): could not remove '%s' from list of interfaces\n", newdevname);
       }
-    } 
+    }
     rc = vnetDelGatewayIP(vnetconfig, vlan, newdevname);
     if (rc) {
       logprintfl(EUCAWARN, "vnetStopNetworkManaged(): failed to delete gateway IP from interface %s\n", newdevname);
