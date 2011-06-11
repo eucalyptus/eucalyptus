@@ -193,7 +193,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
             try {
               Component comp = Components.lookup( compId );
               ServiceConfiguration config = comp.initRemoteService( addr );
-              comp.loadService( config );
+              comp.loadService( config ).get( );
             } catch ( Exception ex ) {
               LOG.error( ex, ex );
             }
