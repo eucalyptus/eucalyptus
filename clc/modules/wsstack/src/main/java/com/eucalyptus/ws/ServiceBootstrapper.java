@@ -142,8 +142,7 @@ public class ServiceBootstrapper extends Bootstrapper {
                 future.get( );
                 comp.enableTransition( config );
               } catch ( Exception ex ) {
-                LOG.error( ex,
-                           ex );
+                LOG.error( ex, ex );
               }
             }
           };
