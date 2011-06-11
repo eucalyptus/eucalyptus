@@ -94,10 +94,6 @@ public class PolicySpec {
   public static final String IAM_UPDATEUSER = "updateuser";
   public static final String IAM_UPLOADSERVERCERTIFICATE = "uploadservercertificate";
   public static final String IAM_UPLOADSIGNINGCERTIFICATE = "uploadsigningcertificate";
-  // Eucalyptus extension
-  public static final String IAM_CREATESIGNINGCERTIFICATE = "createsigningcertificate";
-  public static final String IAM_GETUSERINFO = "getuserinfo";
-  public static final String IAM_UPDATEUSERINFO = "updateuserinfo";
 
   public static final Set<String> IAM_ACTIONS = Sets.newHashSet( );
   
@@ -144,10 +140,6 @@ public class PolicySpec {
     IAM_ACTIONS.add( IAM_UPDATEUSER );
     IAM_ACTIONS.add( IAM_UPLOADSERVERCERTIFICATE );
     IAM_ACTIONS.add( IAM_UPLOADSIGNINGCERTIFICATE );
-    
-    IAM_ACTIONS.add( IAM_CREATESIGNINGCERTIFICATE );
-    IAM_ACTIONS.add( IAM_GETUSERINFO );
-    IAM_ACTIONS.add( IAM_UPDATEUSERINFO );
   }
   
   // EC2 actions, based on API version 2010-08-31

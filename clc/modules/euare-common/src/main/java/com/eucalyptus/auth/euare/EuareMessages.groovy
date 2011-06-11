@@ -837,7 +837,7 @@ public class AccountListTypeType extends EucalyptusData {
   public AccountListTypeType() {  }
   ArrayList<AccountType> memberList = new ArrayList<AccountType>();
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_CREATESIGNINGCERTIFICATE )
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPLOADSIGNINGCERTIFICATE )
 public class CreateSigningCertificateType extends EuareMessage {
   String delegateAccount;
   String userName;
@@ -852,7 +852,7 @@ public class CreateSigningCertificateResultType extends EucalyptusData {
   SigningCertificateType certificate = new SigningCertificateType( );
   public CreateSigningCertificateResultType() {  }
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETUSERINFO )
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETUSER )
 public class GetUserInfoType extends EuareMessage {
   String delegateAccount;
   String userName;
@@ -877,7 +877,7 @@ public class UserInfoType extends EuareMessage  {
   String value;
   public UserInfoType() {  }
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPDATEUSERINFO )
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPDATEUSER )
 public class UpdateUserInfoType extends EuareMessage {
   String delegateAccount;
   String userName;

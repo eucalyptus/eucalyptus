@@ -10,7 +10,7 @@ import com.eucalyptus.auth.Contract;
  * @author wenye
  *
  */
-public abstract class ContractKey implements Key {
+public abstract class ContractKey<T> implements Key {
 
   /**
    * Get a contract object by input values from the policy spec.
@@ -18,7 +18,7 @@ public abstract class ContractKey implements Key {
    * @param values The input values.
    * @return A contract object.
    */
-  public abstract Contract getContract( String[] values );
+  public abstract Contract<T> getContract( String[] values );
   
   /**
    * Check if another contract is better than the current one. The exact "betterness"
@@ -28,7 +28,7 @@ public abstract class ContractKey implements Key {
    * @param update The new contract.
    * @return If new contract is better than the current one.
    */
-  public abstract boolean isBetter( Contract current, Contract update );
+  public abstract boolean isBetter( Contract<T> current, Contract<T> update );
   
   @Override
   public final String value( ) throws AuthException {

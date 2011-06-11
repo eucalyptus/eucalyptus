@@ -34,7 +34,7 @@ public class Context {
   private WeakReference<MuleEvent> muleEvent     = new WeakReference<MuleEvent>( null );
   private User                     user          = null;
   private Subject                  subject       = null;
-  private Map<String, Contract>    contracts     = Maps.newHashMap( );
+  private Map<Contract.Type, Contract>    contracts     = Maps.newHashMap( );
   
   protected Context( String dest, final BaseMessage msg ) {
     this.correlationId = msg.getCorrelationId( );
@@ -171,7 +171,7 @@ public class Context {
     return obj;
   }
   
-  public Map<String, Contract> getContracts( ) {
+  public Map<Contract.Type, Contract> getContracts( ) {
     return this.contracts;
   }
   
