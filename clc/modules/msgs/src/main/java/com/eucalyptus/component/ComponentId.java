@@ -15,7 +15,6 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import com.eucalyptus.bootstrap.BootstrapException;
-import com.eucalyptus.component.id.Any;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.AnonymousMessage;
 import com.eucalyptus.empyrean.Empyrean;
@@ -154,7 +153,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public abstract Boolean hasDispatcher( );
   
   public final Boolean isAlwaysLocal( ) {
-    return this.serviceDependencies( ).contains( Any.class );
+    return this.serviceDependencies( ).contains( Empyrean.class );
   }
   
   public Boolean hasCredentials( ) {

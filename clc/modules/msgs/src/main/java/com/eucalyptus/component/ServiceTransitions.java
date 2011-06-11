@@ -612,12 +612,10 @@ public class ServiceTransitions {
     ENDPOINT_STOP {
       @Override
       public void fire( final ServiceConfiguration parent ) {
-        if ( parent.getComponentId( ).hasDispatcher( ) && !parent.isVmLocal( ) ) {
-          try {
-            parent.lookupService( ).stop( );
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
-          }
+        try {
+          parent.lookupService( ).stop( );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
         }
       }
     },

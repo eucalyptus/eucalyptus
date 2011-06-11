@@ -67,6 +67,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import com.eucalyptus.component.ComponentId;
 
 /**
  * Only used for logging at the moment.  Will be replaced with something more useful forthwith.
@@ -76,5 +77,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 //@Deprecated
 public @interface Provides {
-  Class value( );
+  Class value( ) default ComponentId.class;
 }

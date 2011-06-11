@@ -76,11 +76,11 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceCheckRecord;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.id.Any;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.DisableServiceResponseType;
 import com.eucalyptus.empyrean.DisableServiceType;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.EnableServiceResponseType;
 import com.eucalyptus.empyrean.EnableServiceType;
 import com.eucalyptus.empyrean.ModifyServiceResponseType;
@@ -343,7 +343,7 @@ public class EmpyreanService {
       return new Predicate<Component>( ) {
         @Override
         public boolean apply( Component input ) {
-          return Any.class.equals( compId.getClass( ) ) || input.getComponentId( ).equals( compId );
+          return Empyrean.class.equals( compId.getClass( ) ) || input.getComponentId( ).equals( compId );
         }
       };
     }
@@ -375,7 +375,7 @@ public class EmpyreanService {
     
     ComponentId compId = ( request.getByServiceType( ) != null )
       ? ComponentIds.lookup( request.getByServiceType( ).toLowerCase( ) )
-      : Any.INSTANCE;
+      : Empyrean.INSTANCE;
     final boolean showEventStacks = Boolean.TRUE.equals( request.getShowEventStacks( ) );
     final boolean showEvents = Boolean.TRUE.equals( request.getShowEvents( ) ) || showEventStacks;
     

@@ -66,8 +66,6 @@ package com.eucalyptus.empyrean;
 import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.id.Any;
-import com.google.common.collect.Lists;
 
 public class Empyrean extends ComponentId.Unpartioned {
   
@@ -99,6 +97,6 @@ public class Empyrean extends ComponentId.Unpartioned {
   
   @Override
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return new ArrayList() {{ add( Any.class ); }};
+    return new ArrayList() {{ add( Empyrean.class ); }};
   }
  }
