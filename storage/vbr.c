@@ -717,8 +717,13 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
             logprintfl (EUCAERROR, "[%s] error: no ramdisk found among the VBRs\n", a->instanceId);
             goto cleanup;
         }
-        blockblob * root = map [root_entry].source.blob;
-        const char * dev = blockblob_get_dev (root);
+        // `parted mkpart` creates children devices for each partition
+        // (e.g., /dev/mapper/euca-diskX gets /dev/mapper/euca-diskXp1 and so on)
+        // we mount such a device here so as to copy files to the root partition
+        // (we cannot mount the dev of the partition's blob because it becomes
+        // 'busy' after the clone operation)
+        char dev [EUCA_MAX_PATH];
+        snprintf (dev, sizeof (dev), "%sp%d", blockblob_get_dev (a->bb), root_entry);
         
         // mount the root partition
         char mnt_pt [EUCA_MAX_PATH] = "/tmp/euca-mount-XXXXXX";
