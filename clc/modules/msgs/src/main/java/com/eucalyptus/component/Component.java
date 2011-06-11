@@ -320,7 +320,7 @@ public class Component implements HasName<Component> {
                                       Component.State.INITIALIZED,
                                       Component.State.LOADED ).call( ).get( );
       } catch ( Throwable ex ) {
-        throw Exceptions.error( new ServiceRegistrationException( "Failed to initialize service state: " + config + " because of: " + ex.getMessage( ), ex ) );
+        throw Exceptions.debug( new ServiceRegistrationException( "Failed to initialize service state: " + config + " because of: " + ex.getMessage( ), ex ) );
       }
     }
     if ( State.LOADED.isIn( config ) ) {
