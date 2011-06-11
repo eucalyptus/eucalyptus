@@ -1,6 +1,5 @@
 package com.eucalyptus.auth;
 
-import java.security.AuthProvider;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicyEngineImpl;
@@ -12,10 +11,7 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.crypto.Certs;
-import com.eucalyptus.crypto.CryptoProvider;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.entities.EntityWrapper;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.UserCredentialsInit )
@@ -30,7 +26,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   }
   
   public boolean start( ) throws Exception {
-  if(Components.lookup( Eucalyptus.class ).isAvailableLocally( )) {
+    if(Components.lookup( Eucalyptus.class ).isAvailableLocally( )) {
       this.eusureSystemAdminExist( );
       LdapSync.start( );
     }
@@ -42,8 +38,6 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
    */
   @Override
   public boolean enable( ) throws Exception {
-
-    
     return true;
   }
 
@@ -59,7 +53,8 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
    * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
    */
   @Override
-  public void destroy( ) throws Exception {}
+  public void destroy( ) throws Exception {
+  }
 
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
@@ -76,6 +71,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   public boolean check( ) throws Exception {
     return LdapSync.check( );
   }
+  
   private void eusureSystemAdminExist( ) throws Exception {
     try {
       Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );

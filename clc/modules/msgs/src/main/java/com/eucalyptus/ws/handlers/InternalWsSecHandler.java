@@ -114,7 +114,9 @@ public class InternalWsSecHandler extends WsSecHandler {
       final SOAPEnvelope envelope = httpRequest.getSoapEnvelope( );
       final Element secNode = WSSecurity.getSecurityElement( envelope );
       final XMLSignature sig = WSSecurity.getXMLSignature( secNode );
-      SecurityContext.enqueueSignature( sig.getTextFromTextChild( ) );
+      String sigValue = new String(sig.getSignatureValue());
+      SecurityContext.enqueueSignature( sigValue );
+      //SecurityContext.enqueueSignature( sig.getTextFromTextChild( ) );
       final X509Certificate cert = WSSecurity.verifySignature( secNode, sig );
       if(cert != null) {
         if( !cert.equals( SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( ) ) ) {

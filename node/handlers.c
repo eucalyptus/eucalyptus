@@ -93,6 +93,7 @@ permission notice:
 #include "euca_auth.h"
 #include "xml.h"
 #include "vbr.h"
+#include "iscsi.h"
 
 #include "windows-bundle.h"
 #define MONITORING_PERIOD (5)
@@ -464,7 +465,7 @@ monitoring_thread (void *arg)
                 // it's been long enough, we can forget the instance
                 if ((now - instance->terminationTime)>teardown_state_duration) {
                     remove_instance (&global_instances, instance);
-                    logprintfl (EUCAINFO, "[%] forgetting about instance\n", instance->instanceId);
+                    logprintfl (EUCAINFO, "[%s] forgetting about instance\n", instance->instanceId);
                     free_instance (&instance);
                     break;	// need to get out since the list changed
                 }
@@ -559,6 +560,7 @@ void *startup_thread (void * arg)
     strncpy (instance->hypervisorType, nc_state.H->name, sizeof (instance->hypervisorType)); // set the hypervisor type
     instance->hypervisorCapability = nc_state.capability; // set the cap (xen/hw/hw+xen)
     instance->combinePartitions = nc_state.convert_to_disk; 
+    instance->do_inject_key = nc_state.do_inject_key;
 
     char xslt_path [1024];
     snprintf (xslt_path, sizeof (xslt_path), "%s/etc/eucalyptus/libvirt.xsl", nc_state.home);
@@ -720,7 +722,7 @@ static int init (void)
 		*bridge,
 		*hypervisor,
 		*s,
-	       	*tmp;
+        *tmp;
 	struct stat mystat;
 	struct statfs fs;
 	struct handlers ** h; 
@@ -741,8 +743,9 @@ static int init (void)
 	if (!tmp) {
 		nc_state.home[0] = '\0';
 		do_warn = 1;
-	} else 
+	} else {
 		strncpy(nc_state.home, tmp, MAX_PATH);
+    }
 
 	/* set the minimum log for now */
 	snprintf(log, MAX_PATH, "%s/var/log/eucalyptus/nc.log", nc_state.home);
@@ -785,12 +788,14 @@ static int init (void)
 	GET_VAR_INT(nc_state.config_max_disk,     CONFIG_MAX_DISK);
 	GET_VAR_INT(nc_state.config_max_cores,    CONFIG_MAX_CORES);
 	GET_VAR_INT(nc_state.save_instance_files, CONFIG_SAVE_INSTANCES);
-
-	nc_state.config_network_port = NC_NET_PORT_DEFAULT;
-	strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
-
-        add_euca_to_path (nc_state.home); // add three eucalyptus directories with executables to PATH of this process
-
+    int disable_injection = 0;
+    GET_VAR_INT(disable_injection, CONFIG_DISABLE_KEY_INJECTION); 
+    nc_state.do_inject_key = !disable_injection;
+    nc_state.config_network_port = NC_NET_PORT_DEFAULT;
+    strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
+                
+    add_euca_to_path (nc_state.home); // add three eucalyptus directories with executables to PATH of this process
+                
 	if (euca_init_cert ()) {
 	  logprintfl (EUCAERROR, "init(): failed to find cryptographic certificates\n");
 	  return 1;
@@ -813,6 +818,8 @@ static int init (void)
 		return ERROR_FATAL;
     }
 
+    init_iscsi (nc_state.home);
+
 	/* set default in the paths. the driver will override */
 	nc_state.config_network_path[0] = '\0';
 	nc_state.gen_libvirt_cmd_path[0] = '\0';
@@ -821,15 +828,15 @@ static int init (void)
 	nc_state.get_info_cmd_path[0] = '\0';
 	snprintf (nc_state.rootwrap_cmd_path, MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
 
-        // backing store configuration
-        int cache_size_mb = DEFAULT_NC_CACHE_SIZE;
-        int work_size_mb = DEFAULT_NC_WORK_SIZE;
-        GET_VAR_INT(cache_size_mb, CONFIG_NC_CACHE_SIZE);
-        GET_VAR_INT(work_size_mb, CONFIG_NC_WORK_SIZE);
-        char * instance_path = getConfString(configFiles, 2, INSTANCE_PATH);
-	if (init_backing_store (instance_path, work_size_mb, cache_size_mb)) {
-            logprintfl (EUCAFATAL, "error: failed to initialize backing store\n");
-            return ERROR_FATAL;
+    // backing store configuration
+    int cache_size_mb = DEFAULT_NC_CACHE_SIZE;
+    int work_size_mb = DEFAULT_NC_WORK_SIZE;
+    GET_VAR_INT(cache_size_mb, CONFIG_NC_CACHE_SIZE);
+    GET_VAR_INT(work_size_mb, CONFIG_NC_WORK_SIZE);
+    char * instance_path = getConfString(configFiles, 2, INSTANCE_PATH);
+    if (init_backing_store (instance_path, work_size_mb, cache_size_mb)) {
+        logprintfl (EUCAFATAL, "error: failed to initialize backing store\n");
+        return ERROR_FATAL;
 	}
 	if (statfs (instance_path, &fs) == -1) { // TODO: get the values from instance backing code
 		logprintfl(EUCAWARN, "Failed to stat %s\n", instance_path);
@@ -841,9 +848,9 @@ static int init (void)
 
 		logprintfl (EUCAINFO, "Maximum disk available: %lld (under %s)\n", nc_state.disk_max, instance_path);
 	}
-        if (instance_path) free (instance_path);
+    if (instance_path) free (instance_path);
 
-	/* determine the hypervisor to use */
+	// determine the hypervisor to use
 	
 	//if (get_conf_var(config, CONFIG_HYPERVISOR, &hypervisor)<1) {
 	hypervisor = getConfString(configFiles, 2, CONFIG_HYPERVISOR);
@@ -852,7 +859,7 @@ static int init (void)
 		return ERROR_FATAL;
 	}
 
-	/* let's look for the right hypervisor driver */
+	// let's look for the right hypervisor driver
 	for (h = available_handlers; *h; h++ ) {
 		if (!strncmp ((*h)->name, "default", CHAR_BUFFER_SIZE))
 			nc_state.D = *h; 
@@ -865,15 +872,16 @@ static int init (void)
 		return ERROR_FATAL;
 	}
 	
-	/* only load virtio config for kvm */
+	// only load virtio config for kvm
 	if (!strncmp("kvm", hypervisor, CHAR_BUFFER_SIZE) ||
 		!strncmp("KVM", hypervisor, CHAR_BUFFER_SIZE)) {
 		GET_VAR_INT(nc_state.config_use_virtio_net, CONFIG_USE_VIRTIO_NET);
 		GET_VAR_INT(nc_state.config_use_virtio_disk, CONFIG_USE_VIRTIO_DISK);
 		GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT);
 	}
-
 	free (hypervisor);
+
+    // 
 
 	/* NOTE: this is the only call which needs to be called on both
 	 * the default and the specific handler! All the others will be
@@ -1316,164 +1324,6 @@ int doCreateImage (ncMetadata *meta, char *instanceId, char *volumeId, char *rem
 	return ret;
 }
 
-int check_iscsi(char* dev_string) {
-    if(strchr(dev_string, ',') == NULL)
-	return 0;
-    return 1;
-}
-
-void parse_target(char *dev_string) {
-    char *delimiter = ",";
-    char *brk, *part;
-    char dev_name[256];
-    snprintf(dev_name, 256, "%s", dev_string);
-
-    for (part = strtok_r(dev_name, delimiter, &brk); part != NULL; part = strtok_r(NULL, delimiter, &brk)) {
-    }  
-}
-
-char* connect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
-    char buf [MAX_PATH];
-    char *retval=NULL;
-    int pid, status, rc, len, rbytes, filedes[2];
-    
-    snprintf (buf, MAX_PATH, "%s %s,%s", storage_cmd_path, euca_home, dev_string);
-    logprintfl (EUCAINFO, "connect_iscsi_target invoked (dev_string=%s)\n", dev_string);
-    
-    rc = pipe(filedes);
-    if (rc) {
-      logprintfl(EUCAERROR, "connect_iscsi_target: cannot create pipe\n");
-      return(NULL);
-    }
-
-    pid = fork();
-    if (!pid) {
-      close(filedes[0]);
-
-      if ((retval = system_output(buf)) == NULL) {
-	logprintfl (EUCAERROR, "ERROR: connect_iscsi_target failed\n");
-	len = 0;
-      } else {
-	logprintfl (EUCAINFO, "Attached device: %s\n", retval);
-	len = strlen(retval);
-      } 
-      rc = write(filedes[1], &len, sizeof(int));
-      if (retval) {
-	rc = write(filedes[1], retval, sizeof(char) * len);
-      }
-
-      if (rc == len) {
-	exit(0);
-      }
-      exit(1);
-
-    } else {
-      close(filedes[1]);
-
-      rbytes = timeread(filedes[0], &len, sizeof(int), 15);
-      if (rbytes <= 0) {
-	kill(pid, SIGKILL);
-      } else {
-	retval = malloc(sizeof(char) * (len+1));
-	bzero(retval, len+1);
-	rbytes = timeread(filedes[0], retval, len, 15);
-	if (rbytes <= 0) {
-	  kill(pid, SIGKILL);
-	}
-      }
-      
-      rc = timewait(pid, &status, 15);
-      if (rc) {
-	rc = WEXITSTATUS(status);
-      } else {
-	kill(pid, SIGKILL);
-      }
-    }
-    return retval;
-}
-
-int disconnect_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
-  int pid, retval, status;
-    logprintfl (EUCAINFO, "disconnect_iscsi_target invoked (dev_string=%s)\n", dev_string);
-    pid = fork();
-    if (!pid) {
-      if (vrun("%s %s,%s", storage_cmd_path, euca_home, dev_string) != 0) {
-	logprintfl (EUCAERROR, "ERROR: disconnect_iscsi_target failed\n");
-	exit(1);
-      }
-      exit(0);
-    } else {
-      retval = timewait(pid, &status, 15);
-      if (retval) {
-	retval = WEXITSTATUS(status);
-      } else {
-	kill(pid, SIGKILL);
-	retval = -1;
-      }
-    }
-    return retval;
-}
-
-char* get_iscsi_target(const char *storage_cmd_path, char *euca_home, char *dev_string) {
-    char buf [MAX_PATH];
-    char *retval=NULL;
-    int pid, status, rc, len, rbytes, filedes[2];
-    
-    snprintf (buf, MAX_PATH, "%s %s,%s", storage_cmd_path, euca_home, dev_string);
-    logprintfl (EUCAINFO, "get_iscsi_target invoked (dev_string=%s)\n", dev_string);
-    
-    rc = pipe(filedes);
-    if (rc) {
-      logprintfl(EUCAERROR, "get_iscsi_target: cannot create pipe\n");
-      return(NULL);
-    }
-
-    pid = fork();
-    if (!pid) {
-      close(filedes[0]);
-
-      if ((retval = system_output(buf)) == NULL) {
-	logprintfl (EUCAERROR, "ERROR: get_iscsi_target failed\n");
-	len = 0;
-      } else {
-	logprintfl (EUCAINFO, "Device: %s\n", retval);
-	len = strlen(retval);
-      } 
-      rc = write(filedes[1], &len, sizeof(int));
-      if (retval) {
-	rc = write(filedes[1], retval, sizeof(char) * len);
-      }
-
-      if (rc == len) {
-	exit(0);
-      }
-      exit(1);
-
-    } else {
-      close(filedes[1]);
-
-      rbytes = timeread(filedes[0], &len, sizeof(int), 15);
-      if (rbytes <= 0) {
-	kill(pid, SIGKILL);
-      } else {
-	retval = malloc(sizeof(char) * (len+1));
-	bzero(retval, len+1);
-	rbytes = timeread(filedes[0], retval, len, 15);
-	if (rbytes <= 0) {
-	  kill(pid, SIGKILL);
-	}
-      }
-      
-      rc = timewait(pid, &status, 15);
-      if (rc) {
-	rc = WEXITSTATUS(status);
-      } else {
-	kill(pid, SIGKILL);
-      }
-    }
-    return retval;
-}
-
 int get_instance_stats(virDomainPtr dom, ncInstance *instance)
 {
     char *xml;
@@ -1543,3 +1393,25 @@ int get_instance_stats(virDomainPtr dom, ncInstance *instance)
     
   return(ret);
 }
+
+int generate_attach_xml(char *localDevReal, char *remoteDev, struct nc_state_t *nc, char *xml) {
+        int virtio_dev = 0;
+        int rc = 0;
+        struct stat statbuf;
+        /* only attach using virtio when the device is /dev/vdXX */
+        if (localDevReal[5] == 'v' && localDevReal[6] == 'd') {
+             virtio_dev = 1;
+        }
+        if (nc->config_use_virtio_disk && virtio_dev) {
+             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", remoteDev, localDevReal);
+        } else {
+             snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);
+        }
+        rc = stat(remoteDev, &statbuf);
+        if (rc) {
+             logprintfl(EUCAERROR, "AttachVolume(): cannot locate local block device file '%s'\n", remoteDev);
+             rc = 1;
+        }
+        return rc;
+}
+

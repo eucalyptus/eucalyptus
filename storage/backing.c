@@ -80,7 +80,7 @@
 #include "blobstore.h"
 #include "walrus.h"
 #include "backing.h"
-#include "handlers.h" // connect_iscsi*
+#include "iscsi.h"
 #include "vbr.h"
 
 #define CACHE_TIMEOUT_USEC 1000000LL*60*60*2 
@@ -91,7 +91,6 @@ static char instances_path [MAX_PATH];
 static blobstore * cache_bs = NULL;
 static blobstore * work_bs;
 
-extern struct nc_state_t nc_state; // TODO: remove this extern
 static void bs_errors (const char * msg) { 
     // we normally do not care to print all messages from blobstore as many are errors that we can handle
     logprintfl (EUCADEBUG2, "{%u} blobstore: %s", (unsigned int)pthread_self(), msg);
@@ -404,7 +403,7 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
     }
         
     case NC_LOCATION_IQN: {
-        char * dev = connect_iscsi_target(nc_state.connect_storage_cmd_path, nc_state.home, vbr->resourceLocation);
+        char * dev = connect_iscsi_target(vbr->resourceLocation);
 		if (!dev || !strstr(dev, "/dev")) {
             logprintfl(EUCAERROR, "[%s] error: failed to connect to iSCSI target\n", instance->instanceId);
             goto i_error;
@@ -528,7 +527,6 @@ static int create_disk (ncInstance * instance, virtualBootRecord * disk, virtual
     logprintfl (EUCAINFO, "[%s] composing a disk from supplied partitions...\n", instance->instanceId);
 
     int ret = ERROR;
-#define MBR_BLOCKS (62 + 4)
     disk->size = 512 * MBR_BLOCKS; 
     blockblob * pbbs [EUCA_MAX_PARTITIONS];
     blockmap map [EUCA_MAX_PARTITIONS] = { {BLOBSTORE_SNAPSHOT, BLOBSTORE_ZERO, {blob:NULL}, 0, 0, MBR_BLOCKS} }; // initially only MBR is in the map
@@ -745,7 +743,7 @@ int destroy_instance_backing1 (ncInstance * instance, int destroy_files) // TODO
                 virtualBootRecord * vbr = parts [i][j][k];
                 if (vbr) {  
                     if (vbr->locationType==NC_LOCATION_IQN) {
-                        if (disconnect_iscsi_target (nc_state.disconnect_storage_cmd_path, nc_state.home, vbr->resourceLocation)) {
+                        if (disconnect_iscsi_target (vbr->resourceLocation)) {
                             logprintfl(EUCAERROR, "[%s] error: failed to disconnect iSCSI target attached to %s\n", instance->instanceId, vbr->backingPath);
                         } 
                     } else {
@@ -891,7 +889,7 @@ int create_instance_backing (ncInstance * instance)
     artifact * sentinel = vbr_alloc_tree (vm, // the struct containing the VBR
                                           FALSE, // for Xen and KVM we do not need to make disk bootable
                                           TRUE, // make working copy of runtime-modifiable files
-                                          instance->keyName, // the SSH key
+                                          (instance->do_inject_key)?(instance->keyName):(NULL), // the SSH key
                                           instance->instanceId); // ID is for logging
     if (sentinel == NULL ||
         art_implement_tree (sentinel, work_bs, cache_bs, work_prefix, INSTANCE_PREP_TIMEOUT_USEC) != OK) { // download/create/combine the dependencies
@@ -914,7 +912,7 @@ int create_instance_backing (ncInstance * instance)
     return ret;
 }
 
-int destroy_instance_backing (ncInstance * instance, int destroy_files)
+int destroy_instance_backing (ncInstance * instance, int do_destroy_files)
 {
     int ret = OK;
     int total_prereqs = 0;
@@ -925,7 +923,7 @@ int destroy_instance_backing (ncInstance * instance, int destroy_files)
     for (int i=0; i<EUCA_MAX_VBRS && i<vm->virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(vm->virtualBootRecord[i]);
         if (vbr->locationType==NC_LOCATION_IQN) {
-            if (disconnect_iscsi_target (nc_state.disconnect_storage_cmd_path, nc_state.home, vbr->resourceLocation)) {
+            if (disconnect_iscsi_target (vbr->resourceLocation)) {
                 logprintfl(EUCAERROR, "[%s] error: failed to disconnect iSCSI target attached to %s\n", instance->instanceId, vbr->backingPath);
             } 
         }
@@ -944,7 +942,7 @@ int destroy_instance_backing (ncInstance * instance, int destroy_files)
         logprintfl (EUCAWARN, "[%s] error: failed to chown files before cleanup\n", instance->instanceId);
     }
 
-    if (destroy_files) {
+    if (do_destroy_files) {
         char work_regex [1024]; // {userId}/{instanceId}/.*
         set_id2 (instance, "/.*", work_regex, sizeof (work_regex));
 
@@ -965,7 +963,7 @@ int destroy_instance_backing (ncInstance * instance, int destroy_files)
     // If either the user or our code introduced
     // any new files, this last step will fail.
     set_path (path, sizeof (path), instance, NULL);
-    if (rmdir (path) && destroy_files) {
+    if (rmdir (path) && do_destroy_files) {
         logprintfl (EUCAWARN, "[%s] warning: failed to remove backing directory %s\n", instance->instanceId, path);
     }
     

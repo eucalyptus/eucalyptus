@@ -84,14 +84,14 @@ public class CategoryTreeModel implements TreeViewModel {
     }
   }
   
-  private List<CategoryTag> tags;
+  private ArrayList<CategoryTag> tags;
   
   private SelectionModel<CategoryItem> selectionModel;
   
   private static Images images;
   private static HashMap<String, String> imageMap = new HashMap<String, String>( );
   
-  public CategoryTreeModel( List<CategoryTag> tags, SelectionModel<CategoryItem> selectionModel ) {
+  public CategoryTreeModel( ArrayList<CategoryTag> tags, SelectionModel<CategoryItem> selectionModel ) {
     this.tags = tags;
     this.selectionModel = selectionModel;
     

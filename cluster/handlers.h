@@ -113,7 +113,7 @@ static configEntry configKeysRestart[] = {
   {"POWER_WAKETHRESH", "300"},
   {"CC_IMAGE_PROXY", NULL},
   {"CC_IMAGE_PROXY_CACHE_SIZE", "32768"},
-  {"CC_IMAGE_PROXY_PATH", "/var/lib/eucalyptus/dynserv/"},
+  {"CC_IMAGE_PROXY_PATH", "$EUCALYPTUS/var/lib/eucalyptus/dynserv/"},
   {"LOGLEVEL", "DEBUG"},
   {NULL, NULL}
 };

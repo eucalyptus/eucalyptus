@@ -17,6 +17,12 @@ public enum QueryType {
   report,
   
   downloads,
-  rightscale
+  rightscale,
+  
+  approve,
+  reject,
+  
+  confirm,
+  reset
   
 }

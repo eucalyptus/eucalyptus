@@ -25,6 +25,7 @@ public interface AccountProvider {
   public User lookupUserById( String userId ) throws AuthException;
   public User lookupUserByAccessKeyId( String keyId ) throws AuthException;
   public User lookupUserByCertificate( X509Certificate cert ) throws AuthException;
+  public User lookupUserByConfirmationCode( String code ) throws AuthException;
   
   public Group lookupGroupById( String groupId ) throws AuthException;
   

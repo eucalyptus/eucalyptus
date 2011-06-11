@@ -61,52 +61,31 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.sla;
+package com.eucalyptus.cloud.run;
 
 import java.util.List;
 import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.context.Contexts;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.util.Counters;
+import com.eucalyptus.sla.NodeResourceAllocator;
+import com.eucalyptus.sla.PrivateNetworkAllocator;
+import com.eucalyptus.sla.PublicAddressAllocator;
+import com.eucalyptus.sla.ResourceAllocator;
+import com.eucalyptus.sla.SubnetIndexAllocator;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import com.eucalyptus.records.EventRecord;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
-public class VmAdmissionControl {
+public class AdmissionControl {
   
-  private static Logger LOG = Logger.getLogger( VmAdmissionControl.class );
+  private static Logger LOG = Logger.getLogger( AdmissionControl.class );
   
-  public VmAllocationInfo verify( RunInstancesType request ) throws EucalyptusCloudException {
-    //:: encapsulate the request into a VmAllocationInfo object and forward it on :://
-    VmAllocationInfo vmAllocInfo = new VmAllocationInfo( request );
-    if( vmAllocInfo.getRequest( ).getInstanceType( ) == null || "".equals( vmAllocInfo.getRequest( ).getInstanceType( ) )) {
-      vmAllocInfo.getRequest( ).setInstanceType( VmInstance.DEFAULT_TYPE );
-    }
-    vmAllocInfo.setOwnerFullName( Contexts.lookup( ).getUserFullName( ) );
-    vmAllocInfo.setReservationIndex( Counters.getIdBlock( request.getMaxCount( ) ) );
-    
-    byte[] userData = new byte[0];
-    if ( vmAllocInfo.getRequest( ).getUserData( ) != null ) {
-      try {
-        userData = Base64.decode( vmAllocInfo.getRequest( ).getUserData( ) );
-      } catch ( Exception e ) {
-      }
-    }
-    vmAllocInfo.setUserData( userData );
-    vmAllocInfo.getRequest( ).setUserData( new String( Base64.encode( userData ) ) );
-    return vmAllocInfo;
-  }
-  
-  public VmAllocationInfo evaluate( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    List<ResourceAllocator> pending = Lists.newArrayList( );
+  public Allocation evaluate( Allocation allocInfo ) throws EucalyptusCloudException {
+    List<ResourceAllocator> pending = Lists.newArrayList( );                                
     pending.add( new NodeResourceAllocator() );
     if( Clusters.getInstance( ).hasNetworking( ) ) {
       pending.add( new PublicAddressAllocator() );
@@ -117,7 +96,7 @@ public class VmAdmissionControl {
     
     for( ResourceAllocator allocator : pending ) {
       try {
-        allocator.allocate( vmAllocInfo );
+        allocator.allocate( allocInfo );
         finished.add( allocator );
       } catch (ScriptExecutionFailedException e) {
         if( e.getCause() != null ) {
@@ -128,13 +107,13 @@ public class VmAdmissionControl {
       } catch ( Throwable e ) {
         LOG.debug( e, e );
         try {
-          allocator.fail( vmAllocInfo, e );
+          allocator.fail( allocInfo, e );
         } catch ( Throwable e1 ) {
           LOG.debug( e1, e1 );
         }
         for( ResourceAllocator rollback : Iterables.reverse( finished ) ) {
           try {
-            rollback.fail( vmAllocInfo, e );
+            rollback.fail( allocInfo, e );
           } catch ( Throwable e1 ) {
             LOG.debug( e1, e1 );
           }
@@ -142,8 +121,8 @@ public class VmAdmissionControl {
         throw new EucalyptusCloudException( e.getMessage( ), e );
       }
     }
-    EventRecord.here( this.getClass(), EventType.VM_RESERVED, LogUtil.dumpObject( vmAllocInfo ) ).trace( );
-    return vmAllocInfo;
+    EventRecord.here( this.getClass(), EventType.VM_RESERVED, LogUtil.dumpObject( allocInfo ) ).trace( );
+    return allocInfo;
   }
   
 }

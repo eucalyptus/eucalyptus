@@ -152,15 +152,17 @@ public abstract class MappingHttpMessage extends DefaultHttpMessage implements H
     this.correlationId = correlationId;
   }
   
-  public void logMessage( ) {
-    LOG.trace( "============================================" );
-    LOG.trace( "HTTP" + this.getProtocolVersion( ) );
+  public String logMessage( ) {
+    StringBuffer buf = new StringBuffer();
+    buf.append( "============================================\n" );
+    buf.append( "HTTP" ).append( this.getProtocolVersion( ) ).append( '\n' );
     for( String s : this.getHeaderNames( ) ) {
-      LOG.trace( s + ": " + this.getHeader( s ) ); 
+      buf.append( s ).append( ": " ).append( this.getHeader( s ) ).append( '\n' );
     }
-    LOG.trace( "============================================" );
-    LOG.trace( this.getContent( ).toString( "UTF-8" ) );
-    LOG.trace( "============================================" );
+    buf.append( "============================================\n" );
+    buf.append( this.getContent( ).toString( "UTF-8" ) ).append( '\n' );;
+    buf.append( "============================================\n" );
+    return buf.toString( );
   }
 
   /**

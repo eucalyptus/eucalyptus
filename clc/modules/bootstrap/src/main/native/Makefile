@@ -53,7 +53,7 @@ clean:
 	@$(RM) -f $(OBJS) eucalyptus-cloud
 
 distclean: clean
-	@$(RM) -f $(OBJS) eucalyptus-cloud
+	@$(RM) -f $(OBJS) eucalyptus-cloud arguments.ggo
 
 uninstall:
-	@$(RM) -f $(DESTDIR)$(sbindir)/eucalyptus-cloud
+	@$(RM) -f $(DESTDIR)$(sbindir)/eucalyptus-cloud 

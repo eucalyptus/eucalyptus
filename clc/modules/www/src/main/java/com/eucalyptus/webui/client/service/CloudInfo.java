@@ -58,61 +58,52 @@
 *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
 *    ANY SUCH LICENSES OR RIGHTS.
 *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
- */
-package com.eucalyptus.cluster;
+package com.eucalyptus.webui.client.service;
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.NoSuchContextException;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.vm.VmType;
+import java.io.Serializable;
 
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
+public class CloudInfo implements Serializable {
+ 
+  private static final long serialVersionUID = 1L;
+ 
+  private String internalHostPort;
+	private String externalHostPort;
+	private String servicePath;
+	private String cloudId;
+	
+	public CloudInfo ( ) {
+	}
 
-public class VmTypeVerify {
-  private static Logger LOG = Logger.getLogger( VmTypeVerify.class );
-  public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException
-  {
-    Context ctx;
-    try {
-      ctx = Contexts.lookup(vmAllocInfo.getCorrelationId( ));
-    } catch ( NoSuchContextException ex ) {
-      LOG.debug( ex );
-      try {
-        ctx = Contexts.lookup(vmAllocInfo.getRequest( ).getCorrelationId( ));
-      } catch ( NoSuchContextException ex1 ) {
-        LOG.debug( ex );
-        throw new EucalyptusCloudException( "Failed to lookup context for correlationId=" + vmAllocInfo.getCorrelationId( ), ex );
-      }
-    }
-    User user = ctx.getUser( );
-    RunInstancesType request = vmAllocInfo.getRequest( );
-    String instanceType = request.getInstanceType( );
-    VmType v = VmTypes.getVmType( ( instanceType == null ) ? "m1.small" : instanceType );
-    if( v == null ) {
-      throw new EucalyptusCloudException( "instance type does not exist: " + request.getInstanceType( ) );
-    }
-    String action = PolicySpec.requestToAction( vmAllocInfo.getRequest( ) );
-    try {
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VMTYPE, instanceType, user.getAccount( ), action, user ) ) {
-        throw new EucalyptusCloudException( "Not authorized to allocate vm type " + instanceType + " for " + ctx.getUserFullName( ) );
-      }
-    } catch ( AuthException ex ) {
-      LOG.error( ex , ex );
-      throw new EucalyptusCloudException( "Not authorized to allocate vm type " + instanceType + " for " + ctx.getUserFullName( ) );
-    }
-    vmAllocInfo.setVmTypeInfo( v.getAsVmTypeInfo( ) );
-    return vmAllocInfo;
-  }
+	public String getInternalHostPort( ) {
+		return internalHostPort;
+	}
 
+	public void setInternalHostPort( final String hostPort ) {
+		this.internalHostPort = hostPort;
+	}
+
+	public String getExternalHostPort( ) {
+		return externalHostPort;
+	}
+
+	public void setExternalHostPort( final String hostPort ) {
+		this.externalHostPort = hostPort;
+	}
+
+	public String getServicePath( ) {
+		return servicePath;
+	}
+
+	public void setServicePath( final String servicePath ) {
+		this.servicePath = servicePath;
+	}
+
+	public String getCloudId( ) {
+		return cloudId;
+	}
+
+	public void setCloudId( final String cloudId ) {
+		this.cloudId = cloudId;
+	}
+	
 }

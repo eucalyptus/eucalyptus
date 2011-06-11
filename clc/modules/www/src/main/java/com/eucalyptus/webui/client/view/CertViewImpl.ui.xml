@@ -15,11 +15,11 @@
         <g:north size="36">
             <g:HTMLPanel addStyleNames="{style.toolbar}">
                 <table>
-                    <colgroup width="100px"/>
+                    <colgroup width="1px"/>
                     <tbody>
                         <tr>
                             <td>
-                                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button}" ui:field="delButton">
+                                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.small} {global.buttonCss.button}" ui:field="delButton">
                                     <span class="{global.buttonCss.minus} {global.buttonCss.icon}"/>Delete certificate
                                 </g:Anchor>
                             </td>

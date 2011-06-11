@@ -17,6 +17,7 @@ public class SearchResultFieldDesc implements Serializable {
     TEXT,       // single line text string
     ARTICLE,    // multi-line text
     HIDDEN,     // password like text
+    REVEALING,  // text revealing itself when mouseover (for security related stuff, like secret key)
     BOOLEAN,    // boolean
     DATE,       // date in long
     ENUM,       // enum value

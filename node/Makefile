@@ -3,6 +3,7 @@
 
 include ../Makedefs
 
+SUBDIRS=generated .
 WSDLPATH=../wsdl/
 CCWSDLNAME=eucalyptus_cc.wsdl
 CCWSDL=$(WSDLPATH)/$(CCWSDLNAME)
@@ -14,13 +15,17 @@ CLIENT=NCclient
 #WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
 NC_LIBS	= $(LIBS) $(LDFLAGS) -lvirt -lcurl -lssl -lcrypto -lrampart `xslt-config --libs`
 NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o xml.o
-STORAGE_OBJS=../storage/backing.o ../storage/diskutil.o ../storage/blobstore.o ../storage/walrus.o ../storage/vbr.o
+STORAGE_OBJS=../storage/backing.o ../storage/diskutil.o ../storage/blobstore.o ../storage/walrus.o ../storage/vbr.o ../storage/iscsi.o
 BUILD_ID=-DEUCA_COMPILE_TIMESTAMP=\""[built `date --rfc-3339='sec'`]"\"
 #EFENCE=-lefence
 
-all: server client clientlib test_nc test
+all: generated/stubs
+	@for subdir in $(SUBDIRS); do \
+		(cd $$subdir && $(MAKE) buildall) || exit $$? ; done
 
 build: all
+
+buildall: server client clientlib test_nc test
 
 generated/stubs: $(NCWSDL)
 	@echo Generating server stubs
@@ -32,8 +37,10 @@ generated/stubs: $(NCWSDL)
 	../tools/add_marshalling.pl generated/axis2_skel_*.c 
 	@echo Generating client stubs
 	sh $(WSDL2C) -uri $(NCWSDL) -g -d adb -u -uw -f -o generated | grep -v 'the classpath'
-	@echo Compiling the stubs
-	cd generated; patch -p1 < ../axis2_svc_generated.patch; $(CC) -c $(CFLAGS) $(INCLUDES) *.c
+#	@echo Compiling the stubs
+#	cd generated; patch -p1 < ../axis2_svc_generated.patch; $(CC) -c $(CFLAGS) $(INCLUDES) *.c
+	@cp ../tools/Makefile.gen generated/Makefile
+#	cd generated; $(MAKE); cd ..
 	@echo "this is a cute little makefile marker" >generated/stubs
 	@echo Stubs generated.
 
@@ -55,6 +62,9 @@ server: $(SERVICE_SO)
 	make -C ../storage
 
 ../storage/walrus.o: ../storage/walrus.c ../util/misc.o ../util/data.o
+	make -C ../storage
+
+../storage/iscsi.o: ../storage/iscsi.c 
 	make -C ../storage
 
 ../storage/http.o: ../storage/http.c ../util/misc.o ../util/data.o
@@ -118,7 +128,7 @@ clean:
 	rm -rf $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local *~* *#*
 
 distclean:
-	rm -rf generated $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local *~* *#*
+	rm -rf generated $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local nc-client-policy.xml test test_nc *~* *#*
 
 install: deploy
 	$(INSTALL) nc-client-policy.xml $(DESTDIR)$(vardir)/lib/eucalyptus/keys/

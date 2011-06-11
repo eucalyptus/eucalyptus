@@ -45,7 +45,7 @@ public class DirectoryViewImpl extends Composite implements DirectoryView {
   }
 
   @Override
-  public void buildTree( List<CategoryTag> data ) {
+  public void buildTree( ArrayList<CategoryTag> data ) {
     if ( data == null || data.size( ) < 1 ) {
       LOG.log( Level.WARNING, "Can not build category tree: data is empty." );
       return;

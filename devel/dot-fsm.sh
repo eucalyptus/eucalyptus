@@ -39,7 +39,7 @@ END{
 	for( i in states ) if(index(i,"_")==0) print "\t\t"i" [shape=\"doublecircle\",weight=\"2.0\",label=<<FONT POINT-SIZE=\"18\">"i"</FONT>>];"
 	print "\t}"
 }
-' | sed 's/\./=/g')"
+' | sed 's/\./=/g;/^\t* \[shape.*/d')"
 
 SUBGRAPHS=$(echo "${TRANS}" | \
 awk '

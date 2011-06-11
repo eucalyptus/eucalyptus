@@ -16,7 +16,7 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
       {
         regarding( );
         for ( VmType v : VmTypes.list( ) ) {
-          getInstanceTypes( ).add( v.getAsVmTypeInfo( ) );
+          getInstanceTypes( ).add( VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( v ) );
         }
       }
     } );
