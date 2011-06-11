@@ -640,8 +640,6 @@ public class Component implements HasName<Component> {
         this.localService.set( service );
       }
       Service ret = this.services.putIfAbsent( config, service );
-      ListenerRegistry.getInstance( ).register( ClockTick.class, ret );
-      ListenerRegistry.getInstance( ).register( Hertz.class, ret );
       if ( ret == null ) {
         ret = service;
         try {
@@ -656,6 +654,8 @@ public class Component implements HasName<Component> {
           LOG.error( ex , ex );
         }
       }
+      ListenerRegistry.getInstance( ).register( ClockTick.class, ret );
+      ListenerRegistry.getInstance( ).register( Hertz.class, ret );
       EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_REGISTERED,
                           Component.this.getName( ),
                           ( config.isVmLocal( ) || config.isHostLocal( ) )

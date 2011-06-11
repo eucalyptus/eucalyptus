@@ -530,7 +530,7 @@ public class Bootstrap {
      * and satisfy any forward references from bootstrappers.
      */
     LOG.info( LogUtil.header( "Building core local services: cloudLocal=" + Bootstrap.isCloudController( ) ) );
-    List<Component> components = Components.list( );
+    List<Component> components = Components.whichCanLoad( );
     for ( Component comp : components ) {
       try {
         comp.initService( );
@@ -542,7 +542,7 @@ public class Bootstrap {
     }
     
     LOG.info( LogUtil.header( "Initializing component resources:" ) );
-    for ( Component c : Components.list( ) ) {
+    for ( Component c : Components.whichCanLoad( ) ) {
       Bootstrap.applyTransition( c, Component.Transition.INITIALIZING );
     }
     
