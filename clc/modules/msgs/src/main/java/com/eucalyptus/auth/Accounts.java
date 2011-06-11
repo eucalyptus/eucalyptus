@@ -141,6 +141,22 @@ public class Accounts {
     return Accounts.getAccountProvider( ).lookupUserByConfirmationCode( code );
   }
 
+  public static String getUserFullName( User user ) {
+    if ( "/".equals( user.getPath( ) ) ) {
+      return "/" + user.getName( );
+    } else {
+      return user.getPath( ) + "/" + user.getName( );
+    }
+  }
+  
+  public static String getGroupFullName( Group group ) {
+    if ( "/".equals( group.getPath( ) ) ) {
+      return "/" + group.getName( );
+    } else {
+      return group.getPath( ) + "/" + group.getName( );
+    }
+  }
+  
   /**
    * @deprecated TEMPORARY
    */

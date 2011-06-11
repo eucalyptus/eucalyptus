@@ -3,6 +3,7 @@ package com.eucalyptus.webui.server;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.images.MachineImageInfo;
@@ -44,7 +45,8 @@ public class ImageWebBackend {
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( PLATFORM, "Platform", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
   }
   
-  public static List<SearchResultRow> searchImages( String query ) throws EucalyptusServiceException {
+  public static List<SearchResultRow> searchImages( User requestUser, String query ) throws EucalyptusServiceException {
+    // TODO: add permission check after fixing the image permission
     List<SearchResultRow> results = Lists.newArrayList( );
     try {
       for ( ImageInfo image : Images.listAllImages( ) ) {
