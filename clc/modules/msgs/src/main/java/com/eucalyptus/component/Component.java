@@ -314,7 +314,7 @@ public class Component implements HasName<Component> {
     this.lookupRegisteredService( config );
     if ( State.INITIALIZED.isIn( config ) ) {
       try {
-        config.lookupStateMachine( ).transitionByName( Transition.LOADING ).get( );
+        config.lookupStateMachine( ).transitionByName( Transition.INITIALIZING ).get( );
       } catch ( Throwable ex ) {
         throw new ServiceRegistrationException( "Failed to load service: " + config + " because of: " + ex.getMessage( ), ex );
       }

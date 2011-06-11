@@ -134,9 +134,6 @@ public class ServiceBootstrapper extends Bootstrapper {
       public boolean apply( final ServiceConfiguration config ) {
         final Component comp = config.lookupComponent( );
         try {
-//          if ( !comp.hasService( config ) ) {
-//            comp.loadService( config ).get( );
-//          }
           final CheckedListenableFuture<ServiceConfiguration> future = comp.startTransition( config );
           Runnable followRunner = new Runnable( ) {
             @Override
