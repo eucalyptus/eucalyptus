@@ -306,4 +306,16 @@ public class BasicService extends AbstractService implements Service {
     ListenerRegistry.getInstance( ).register( ClockTick.class, this );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
+
+  /**
+   * @see com.eucalyptus.component.Service#start()
+   */
+  @Override
+  public void start( ) {}
+
+  /**
+   * @see com.eucalyptus.component.Service#stop()
+   */
+  @Override
+  public void stop( ) {}
 }
