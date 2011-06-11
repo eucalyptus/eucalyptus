@@ -324,12 +324,12 @@ public class ServiceTransitions {
           trans = RemoteTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
+          throw ex;
         }
+        trans.fire( parent );
       } else {
         LOG.debug( "Silentlty accepting remotely inferred state transition for " + parent ); 
-        return;
       }
-      trans.fire( parent );
       transitionCallback.fire( );
     } catch ( Throwable ex ) {
       if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
