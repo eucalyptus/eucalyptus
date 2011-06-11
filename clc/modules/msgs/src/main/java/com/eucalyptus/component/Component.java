@@ -81,6 +81,7 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Assertions;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Internets;
@@ -312,18 +313,14 @@ public class Component implements HasName<Component> {
    */
   public CheckedListenableFuture<ServiceConfiguration> loadService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     this.lookupRegisteredService( config );
-    if ( State.PRIMORDIAL.isIn( config ) ) {
+    if ( State.PRIMORDIAL.equals( config.lookupState( ) ) || State.INITIALIZED.equals( config.lookupState( ) ) ) {
       try {
-        config.lookupStateMachine( ).transitionByName( Transition.INITIALIZING ).get( );
+        Automata.sequenceTransitions( config,
+                                      Component.State.PRIMORDIAL,
+                                      Component.State.INITIALIZED,
+                                      Component.State.LOADED ).call( ).get( );
       } catch ( Throwable ex ) {
-        throw new ServiceRegistrationException( "Failed to initialize service state: " + config + " because of: " + ex.getMessage( ), ex );
-      }
-    }
-    if ( State.INITIALIZED.isIn( config ) ) {
-      try {
-        config.lookupStateMachine( ).transitionByName( Transition.LOADING ).get( );
-      } catch ( Throwable ex ) {
-        throw new ServiceRegistrationException( "Failed to load service: " + config + " because of: " + ex.getMessage( ), ex );
+        throw Exceptions.error( new ServiceRegistrationException( "Failed to initialize service state: " + config + " because of: " + ex.getMessage( ), ex ) );
       }
     }
     if ( State.LOADED.isIn( config ) ) {
