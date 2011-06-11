@@ -259,7 +259,7 @@ int main (int argc, char * argv[])
         // set the function that will catch blobstore errors
         blobstore_set_error_function ( &bs_errors ); 
 
-        if (ensure_directories_exist (get_work_dir(), 0, BLOBSTORE_DIRECTORY_PERM) == -1)
+        if (ensure_directories_exist (get_work_dir(), 0, NULL, NULL, BLOBSTORE_DIRECTORY_PERM) == -1)
             err ("failed to open or create work directory");
         work_bs = blobstore_open (get_work_dir(), get_work_limit()/512, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
         if (work_bs==NULL) {
@@ -271,7 +271,7 @@ int main (int argc, char * argv[])
     // see if cache blobstore will be needed at any stage
     blobstore * cache_bs = NULL;
     if (root && tree_uses_cache (root)) {
-        if (ensure_directories_exist (get_cache_dir(), 0, BLOBSTORE_DIRECTORY_PERM) == -1)
+        if (ensure_directories_exist (get_cache_dir(), 0, NULL, NULL, BLOBSTORE_DIRECTORY_PERM) == -1)
             err ("failed to open or create cache directory");
         cache_bs = blobstore_open (get_cache_dir(), get_cache_limit()/512, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
         if (cache_bs==NULL) {

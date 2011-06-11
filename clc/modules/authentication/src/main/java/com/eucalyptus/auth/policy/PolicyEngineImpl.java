@@ -11,6 +11,7 @@ import com.eucalyptus.auth.api.PolicyEngine;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.Conditions;
 import com.eucalyptus.auth.policy.condition.NumericGreaterThan;
+import com.eucalyptus.auth.policy.ern.AddressUtil;
 import com.eucalyptus.auth.policy.key.CachedKeyEvaluator;
 import com.eucalyptus.auth.policy.key.ContractKey;
 import com.eucalyptus.auth.policy.key.ContractKeyEvaluator;
@@ -40,6 +41,24 @@ public class PolicyEngineImpl implements PolicyEngine {
     DENY,    // explicit deny
     ALLOW,   // explicit allow
   }
+  
+  private static interface Matcher {
+    boolean match( String pattern, String instance );
+  }
+  
+  private static final Matcher PATTERN_MATCHER = new Matcher( ) {
+    @Override
+    public boolean match( String pattern, String instance ) {
+      return Pattern.matches( PatternUtils.toJavaPattern( pattern ), instance );
+    }
+  };
+  
+  private static final Matcher ADDRESS_MATCHER = new Matcher( ) {
+    @Override
+    public boolean match( String pattern, String instance ) {
+      return AddressUtil.addressRangeMatch( pattern, instance );
+    }
+  };
   
   public PolicyEngineImpl( ) {
   }
@@ -141,11 +160,10 @@ public class PolicyEngineImpl implements PolicyEngine {
   private Decision processAuthorizations( List<Authorization> authorizations, String action, String resource, CachedKeyEvaluator keyEval, ContractKeyEvaluator contractEval ) throws AuthException {
     Decision result = Decision.DEFAULT; 
     for ( Authorization auth : authorizations ) {
-      if ( !evaluatePatterns( auth.getActions( ), auth.isNotAction( ), action ) ) {
+      if ( !matchActions( auth, action ) ) {
         continue;
       }
-      //YE TODO: special case for ec2:address with IP range.
-      if ( !evaluatePatterns( auth.getResources( ), auth.isNotResource( ), resource ) ) {
+      if ( !matchResources( auth, resource ) ) {
         continue;
       }
       if ( !evaluateConditions( auth.getConditions( ), action, auth.getType( ), keyEval, contractEval ) ) {
@@ -161,26 +179,29 @@ public class PolicyEngineImpl implements PolicyEngine {
     return result;
   }
   
-  /**
-   * Match action or resource patterns with an action or resource name instance.
-   * 
-   * @param patterns The list of input patterns
-   * @param isNot If the action list or resource list is a negated list.
-   * @param instance The action or resource name instance
-   * @return true if matched, false otherwise.
-   */
-  private boolean evaluatePatterns( Set<String> patterns, boolean isNot, String instance ) {
-    boolean matched = false;
+  private boolean matchActions( Authorization auth, String action ) throws AuthException {
+    return evaluateElement( matchOne( auth.getActions( ), action, PATTERN_MATCHER ), auth.isNotAction( ) );
+  }
+  
+  private boolean matchResources( Authorization auth, String resource ) throws AuthException {
+    if ( PolicySpec.EC2_RESOURCE_ADDRESS.equals( auth.getType( ) ) ) {
+      return evaluateElement( matchOne( auth.getResources( ), resource, ADDRESS_MATCHER ), auth.isNotResource( ) );
+    } else {
+      return evaluateElement( matchOne( auth.getResources( ), resource, PATTERN_MATCHER ), auth.isNotResource( ) );
+    }
+  }
+  
+  private static boolean matchOne( Set<String> patterns, String instance, Matcher matcher ) {
     for ( String pattern : patterns ) {
-      if ( Pattern.matches( PatternUtils.toJavaPattern( pattern ), instance ) ) {
-        matched = true;
-        break;
+      if ( matcher.match( pattern, instance ) ) {
+        return true;
       }
     }
-    if ( ( matched && !isNot ) || ( !matched && isNot ) ) {
-      return true;
-    }
     return false;
+  }
+  
+  private boolean evaluateElement( boolean patternMatched, boolean isNot ) {
+    return ( ( patternMatched && !isNot ) || ( !patternMatched && isNot ) );
   }
   
   /**
@@ -230,7 +251,9 @@ public class PolicyEngineImpl implements PolicyEngine {
   private List<Authorization> lookupGlobalAuthorizations( String resourceType, Account account ) throws AuthException {
     List<Authorization> results = Lists.newArrayList( );
     results.addAll( account.lookupAccountGlobalAuthorizations( resourceType ) );
-    results.addAll( account.lookupAccountGlobalAuthorizations( PolicySpec.ALL_RESOURCE ) );
+    if ( !PolicySpec.ALL_RESOURCE.equals( resourceType ) ) {
+      results.addAll( account.lookupAccountGlobalAuthorizations( PolicySpec.ALL_RESOURCE ) );
+    }
     return results;
   }
   
@@ -245,7 +268,9 @@ public class PolicyEngineImpl implements PolicyEngine {
   private List<Authorization> lookupLocalAuthorizations( String resourceType, User user ) throws AuthException {
     List<Authorization> results = Lists.newArrayList( );
     results.addAll( user.lookupAuthorizations( resourceType ) );
-    results.addAll( user.lookupAuthorizations( PolicySpec.ALL_RESOURCE ) );
+    if ( !PolicySpec.ALL_RESOURCE.equals( resourceType ) ) {
+      results.addAll( user.lookupAuthorizations( PolicySpec.ALL_RESOURCE ) );
+    }
     return results;
   }
   
@@ -262,10 +287,14 @@ public class PolicyEngineImpl implements PolicyEngine {
   private List<Authorization> lookupQuotas( String resourceType, User user, Account account, boolean isAccountAdmin ) throws AuthException {
     List<Authorization> results = Lists.newArrayList( );
     results.addAll( account.lookupAccountGlobalQuotas( resourceType ) );
-    results.addAll( account.lookupAccountGlobalQuotas( PolicySpec.ALL_RESOURCE ) );
+    if ( !PolicySpec.ALL_RESOURCE.equals( resourceType ) ) {
+      results.addAll( account.lookupAccountGlobalQuotas( PolicySpec.ALL_RESOURCE ) );
+    }
     if ( !isAccountAdmin ) {
       results.addAll( user.lookupQuotas( resourceType ) );
-      results.addAll( user.lookupQuotas( PolicySpec.ALL_RESOURCE ) );
+      if ( !PolicySpec.ALL_RESOURCE.equals( resourceType ) ) {
+        results.addAll( user.lookupQuotas( PolicySpec.ALL_RESOURCE ) );
+      }
     }
     return results;    
   }
@@ -283,12 +312,10 @@ public class PolicyEngineImpl implements PolicyEngine {
   private void processQuotas( List<Authorization> quotas, String action, String resourceType, String resourceName, Long quantity ) throws AuthException {
     NumericGreaterThan ngt = new NumericGreaterThan( );
     for ( Authorization auth : quotas ) {
-      LOG.debug( "YE " + "evaluate quota " + auth );
-      if ( !evaluatePatterns( auth.getActions( ), auth.isNotAction( ), action ) ) {
-        LOG.debug( " YE " + "action " + action + " not matching" );
+      if ( !matchActions( auth, action ) ) {
         continue;
       }
-      if ( !evaluatePatterns( auth.getResources( ), auth.isNotResource( ), resourceName ) ) {
+      if ( !matchResources( auth, resourceName ) ) {
         LOG.debug( " YE " + "resource " + resourceName + " not matching" );
         continue;
       }

@@ -692,13 +692,21 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
         return ERROR;
 }
 
-int diskutil_ch (const char * path, const char * user, const int perms)
+int diskutil_ch (const char * path, const char * user, const char * group, const int perms)
 {
     int ret = OK;
     char * output;
 
     if (user) {
         output = pruntf (TRUE, "%s %s %s %s", helpers_path[ROOTWRAP], helpers_path[CHOWN], user, path);
+        if (!output) {
+            return ERROR;
+        }
+        free (output);
+    }
+
+    if (group) {
+        output = pruntf (TRUE, "%s %s :%s %s", helpers_path[ROOTWRAP], helpers_path[CHOWN], group, path);
         if (!output) {
             return ERROR;
         }

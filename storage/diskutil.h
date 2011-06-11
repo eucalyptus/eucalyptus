@@ -91,7 +91,7 @@ int diskutil_grub (const char * path, const char * mnt_pt, const int part, const
 int diskutil_grub_files (const char * mnt_pt, const int part, const char * kernel, const char * ramdisk);
 int diskutil_grub_mbr (const char * path, const int part);
 int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt);
-int diskutil_ch (const char * path, const char * user, const int perms);
+int diskutil_ch (const char * path, const char * user, const char * group, const int perms);
 int diskutil_mkdir (const char * path);
 int diskutil_cp (const char * from, const char * to);
 long long round_up_sec   (long long bytes);

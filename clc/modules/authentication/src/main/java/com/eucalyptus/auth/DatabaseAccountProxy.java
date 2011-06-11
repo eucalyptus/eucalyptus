@@ -54,15 +54,24 @@ public class DatabaseAccountProxy implements Account {
   @Override
   public void setName( final String name ) throws AuthException {
     try {
-      Transactions.one( AccountEntity.newInstanceWithAccountNumber( this.delegate.getAccountNumber( ) ), new Tx<AccountEntity>( ) {
-        public void fire( AccountEntity t ) throws Throwable {
-          t.setName( name );
-        }
-      } );
-    } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to setName for " + this.delegate );
-      throw new AuthException( e );
-    }    
+      // try finding the account with the same name to change to
+      ( new DatabaseAuthProvider( ) ).lookupAccountByName( name );
+    } catch ( AuthException ae ) {
+      try {
+        // not found
+        Transactions.one( AccountEntity.newInstanceWithAccountNumber( this.delegate.getAccountNumber( ) ), new Tx<AccountEntity>( ) {
+          public void fire( AccountEntity t ) throws Throwable {
+            t.setName( name );
+          }
+        } );
+      } catch ( Exception e ) {
+        Debugging.logError( LOG, e, "Failed to setName for " + this.delegate );
+        throw new AuthException( e );
+      }
+      return;
+    }
+    // found
+    throw new AuthException( "Can not change to a name already in use: " + name );
   }
 
   @Override

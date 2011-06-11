@@ -1152,7 +1152,7 @@ static int ensure_blockblob_metadata_path (const blobstore * bs, const char * bb
 {
     char base [PATH_MAX];
     snprintf (base, sizeof (base), "%s/%s", bs->path, bb_id);
-    return ensure_directories_exist (base, !(bs->format == BLOBSTORE_FORMAT_DIRECTORY), BLOBSTORE_DIRECTORY_PERM);
+    return ensure_directories_exist (base, !(bs->format == BLOBSTORE_FORMAT_DIRECTORY), NULL, NULL, BLOBSTORE_DIRECTORY_PERM);
 }
 
 static void free_bbs ( blockblob * bbs )
