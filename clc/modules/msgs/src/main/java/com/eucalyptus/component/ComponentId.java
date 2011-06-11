@@ -89,7 +89,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
         in.close( );
         out.flush( );
         String outString = out.toString( );
-        Logs.extreme( ).trace( "Loaded model for: " + this );
+        Logs.extreme( ).trace( "Loaded model for: " + this.name );
         Logs.extreme( ).trace( outString );
         return outString;
       }
