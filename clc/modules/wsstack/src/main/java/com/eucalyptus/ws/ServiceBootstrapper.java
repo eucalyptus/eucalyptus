@@ -95,7 +95,9 @@ public class ServiceBootstrapper extends Bootstrapper {
       
       @Override
       public boolean apply( final ServiceConfiguration config ) {
-        return config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( ) || ( Bootstrap.isCloudController( ) && ( config.getComponentId( ).isCloudLocal( ) || config.isHostLocal( ) ) );
+        boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( ) || ( Bootstrap.isCloudController( ) && ( config.getComponentId( ).isCloudLocal( ) || config.isHostLocal( ) ) );
+        LOG.debug( "ServiceBootstrapper.shouldLoad("+config.toString( )+"):" + ret );
+        return ret;
       }
     };
   }
@@ -107,7 +109,7 @@ public class ServiceBootstrapper extends Bootstrapper {
       @Override
       public boolean apply( final ServiceConfiguration config ) {
         final Component comp = config.lookupComponent( );
-        LOG.info( "load(): " + config );
+        LOG.debug( "load(): " + config );
         try {
           comp.loadService( config ).get( );
           return true;
@@ -132,9 +134,9 @@ public class ServiceBootstrapper extends Bootstrapper {
       public boolean apply( final ServiceConfiguration config ) {
         final Component comp = config.lookupComponent( );
         try {
-          if ( !comp.hasService( config ) ) {
-            comp.loadService( config ).get( );
-          }
+//          if ( !comp.hasService( config ) ) {
+//            comp.loadService( config ).get( );
+//          }
           final CheckedListenableFuture<ServiceConfiguration> future = comp.startTransition( config );
           Runnable followRunner = new Runnable( ) {
             @Override
@@ -165,14 +167,18 @@ public class ServiceBootstrapper extends Bootstrapper {
         ServiceBuilder<? extends ServiceConfiguration> builder = comp.getBuilder( );
         try {
           for ( ServiceConfiguration config : Iterables.filter( builder.list( ), ShouldLoad.INSTANCE ) ) {
-            predicate.apply( config );
+            try {
+              predicate.apply( config );
+            } catch ( Exception ex ) {
+              LOG.error( ex , ex );
+            }
           }
         } catch ( ServiceRegistrationException ex ) {
           LOG.error( ex, ex );
         }
       } else if ( comp.hasLocalService( ) ) {
         final ServiceConfiguration config = comp.getLocalServiceConfiguration( );
-        if ( config.isVmLocal( ) ) {
+        if ( config.isVmLocal( ) || ( Bootstrap.isCloudController( ) && config.isHostLocal( ) ) ) {
           predicate.apply( config );
         }
       }
