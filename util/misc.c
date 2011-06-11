@@ -86,6 +86,7 @@ permission notice:
 #include <openssl/md5.h>
 #include <sys/mman.h> // mmap
 #include <pthread.h>
+#include <diskutil.h>
 
 int verify_helpers (char **helpers, char **helpers_path, int LASTHELPER) 
 {
@@ -1945,7 +1946,7 @@ int hexjenkins (char * buf, unsigned int buf_size, const char * str)
 // given path=A/B/C and only A existing, create A/B and, unless
 // is_file_path==1, also create A/B/C directory
 // returns: 0 = path already existed, 1 = created OK, -1 = error
-int ensure_directories_exist (const char * path, int is_file_path, mode_t mode)
+int ensure_directories_exist (const char * path, int is_file_path, const char * user, const char * group, mode_t mode)
 {
     int len = strlen (path);
     char * path_copy = NULL;
@@ -1982,7 +1983,8 @@ int ensure_directories_exist (const char * path, int is_file_path, mode_t mode)
                     return -1;
                 }
                 ret = 1; // we created a directory
-                chmod (path_copy, mode); // ensure perms are right despite mask
+                diskutil_ch(path_copy, user, group, mode);
+                //                chmod (path_copy, mode); // ensure perms are right despite mask
             }
             path_copy[i] = '/'; // restore the slash
         }
