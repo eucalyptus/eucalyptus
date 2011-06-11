@@ -112,20 +112,13 @@ public class ServiceBootstrapper extends Bootstrapper {
       }
     }
     for ( final Component comp : Components.list( ) ) {
-      LOG.info( "load(): " + comp );
-      if ( /** Bootstrap.isCloudController( ) && **/ !( comp.getBuilder( ) instanceof DummyServiceBuilder ) ) {
+      if ( !( comp.getBuilder( ) instanceof DummyServiceBuilder ) ) {
         for ( ServiceConfiguration config : comp.getBuilder( ).list( ) ) {
-          LOG.info( "loadService(): " + config );
-          try {
-            comp.loadService( config ).get( );
-          } catch ( ServiceRegistrationException ex ) {
-            config.error( ex );
-          } catch ( Throwable ex ) {
-            config.error( ex );
+          if ( ServiceBootstrapper.shouldLoad( config ) ) {
+            ServiceBootstrapper.loadService( config );
           }
         }
       } else if ( comp.hasLocalService( ) ) {
-        LOG.info( "load(): " + comp );
         final ServiceConfiguration s = comp.getLocalServiceConfiguration( );
         if ( s.isVmLocal( ) && comp.getComponentId( ).hasDispatcher( ) ) {
           try {
@@ -142,13 +135,29 @@ public class ServiceBootstrapper extends Bootstrapper {
     return true;
   }
   
+  private static void loadService( ServiceConfiguration config ) {
+    final Component comp = config.lookupComponent( );
+    LOG.info( "load(): " + config );
+    try {
+      comp.loadService( config ).get( );
+    } catch ( ServiceRegistrationException ex ) {
+      config.error( ex );
+    } catch ( Throwable ex ) {
+      config.error( ex );
+    }
+  }
+  
+  private static boolean shouldLoad( ServiceConfiguration config ) {
+    return config.isHostLocal( ) || config.getComponentId( ).isAlwaysLocal( ) || Bootstrap.isCloudController( );
+  }
+  
   @Override
   public boolean start( ) throws Exception {
     Component euca = Components.lookup( Eucalyptus.class );
     for ( final Component comp : Components.list( ) ) {
       LOG.info( "start(): " + comp );
       for ( final ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
-        if( comp.getComponentId( ).isAlwaysLocal( ) ) {
+        if ( comp.getComponentId( ).isAlwaysLocal( ) ) {
           ServiceBootstrapper.startupService( comp, s );
         } else if ( !comp.getComponentId( ).hasDispatcher( ) ) {
           continue;
@@ -161,7 +170,7 @@ public class ServiceBootstrapper extends Bootstrapper {
     }
     return true;
   }
-
+  
   private static void startupService( final Component comp, final ServiceConfiguration s ) {
     try {
       comp.loadService( s ).get( );
