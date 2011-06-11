@@ -95,7 +95,7 @@ public class ServiceBootstrapper extends Bootstrapper {
       
       @Override
       public boolean apply( final ServiceConfiguration config ) {
-        return config.isHostLocal( ) || config.getComponentId( ).isAlwaysLocal( ) || Bootstrap.isCloudController( );
+        return config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( ) || ( Bootstrap.isCloudController( ) && ( config.getComponentId( ).isCloudLocal( ) || config.isHostLocal( ) ) );
       }
     };
   }
