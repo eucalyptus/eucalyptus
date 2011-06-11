@@ -315,10 +315,12 @@ public class Component implements HasName<Component> {
     this.lookupRegisteredService( config );
     if ( State.PRIMORDIAL.equals( config.lookupState( ) ) || State.INITIALIZED.equals( config.lookupState( ) ) ) {
       try {
-        return Automata.sequenceTransitions( config,
+        CheckedListenableFuture<ServiceConfiguration> ret = Automata.sequenceTransitions( config,
                                       Component.State.PRIMORDIAL,
                                       Component.State.INITIALIZED,
                                       Component.State.LOADED ).call( );//.get( );
+        ret.get( );
+        return ret;
       } catch ( Throwable ex ) {
         throw Exceptions.debug( new ServiceRegistrationException( "Failed to initialize service state: " + config + " because of: " + ex.getMessage( ), ex ) );
       }
