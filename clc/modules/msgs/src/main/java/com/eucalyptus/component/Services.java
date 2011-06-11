@@ -131,10 +131,10 @@ public class Services {
   }
   
   static Service newServiceInstance( ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( config.isVmLocal( ) && !config.lookupComponent( ).isAvailableLocally( ) ) {
-      return new BasicService.Broken( config );
-    } else {
+//    if ( config.isVmLocal( ) && !config.lookupComponent( ).isAvailableLocally( ) ) {
+//      return new BasicService.Broken( config );
+//    } else {
       return new MessagableService( config );
-    }
+//    }
   }
 }
