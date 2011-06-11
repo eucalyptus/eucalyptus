@@ -83,7 +83,6 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Host;
 import com.eucalyptus.component.Hosts;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
@@ -192,8 +191,8 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
             try {
               ServiceConfiguration config = c.initRemoteService( addr );
               c.loadService( config );
-            } catch ( ServiceRegistrationException ex ) {
-              LOG.error( ex );
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
             }
           }
         }
