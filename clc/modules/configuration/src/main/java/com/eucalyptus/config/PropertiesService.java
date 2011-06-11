@@ -93,4 +93,9 @@ public class PropertiesService extends ComponentId.Unpartioned {
     };
   }
   
+  @Override
+  public boolean isAdminService( ) {
+    return true;
+  }
+  
 }

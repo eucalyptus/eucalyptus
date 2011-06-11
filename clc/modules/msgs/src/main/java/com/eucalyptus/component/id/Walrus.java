@@ -82,5 +82,11 @@ public class Walrus extends ComponentId.Unpartioned {
   public Boolean hasCredentials( ) {
     return true;
   }
+  
+  @Override
+  public boolean isUserService( ) {
+    return true;
+  }
+
 
 }

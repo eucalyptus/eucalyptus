@@ -92,5 +92,10 @@ public class ConfigurationService extends ComponentId.Unpartioned {
       }
     };
   }
+
+  @Override
+  public boolean isAdminService( ) {
+    return true;
+  }
   
 }

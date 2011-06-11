@@ -66,7 +66,6 @@ package com.eucalyptus.component.id;
 import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
-import com.google.common.collect.Lists;
 
 public class HttpService extends ComponentId.Unpartioned {
   
@@ -102,6 +101,11 @@ public class HttpService extends ComponentId.Unpartioned {
       }
     };
     
+  }
+  
+  @Override
+  public boolean isAdminService( ) {
+    return true;
   }
   
 }

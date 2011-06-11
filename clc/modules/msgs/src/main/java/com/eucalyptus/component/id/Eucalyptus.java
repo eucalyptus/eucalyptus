@@ -66,7 +66,6 @@ package com.eucalyptus.component.id;
 import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
-import com.google.common.collect.Lists;
 
 public class Eucalyptus extends ComponentId.Unpartioned {
   public static final Eucalyptus INSTANCE = new Eucalyptus( ); //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
@@ -93,6 +92,11 @@ public class Eucalyptus extends ComponentId.Unpartioned {
         this.add( Eucalyptus.class );
       }
     };
+  }
+
+  @Override
+  public boolean isUserService( ) {
+    return true;
   }
   
 }

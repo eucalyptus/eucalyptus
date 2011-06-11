@@ -329,12 +329,13 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return this.externalUriPattern;
   }
   
-  @Override
-  public String toString( ) {
-    return String.format( "ComponentId:%s:partitioned=%s:msg=%s:disp=%s:alwaysLocal=%s:cloudLocal=%s:creds=%s",
-                          this.name( ), this.lookupBaseMessageType( ).getSimpleName( ), this.hasDispatcher( ), this.isAlwaysLocal( ), this.isCloudLocal( ),
-                          this.isPartitioned( ), this.hasCredentials( ) );
-  }
+  
+//  @Override
+//  public String toString( ) {
+//    return String.format( "ComponentId:%s:parent=%s:%spartitioned:disp=%s:alwaysLocal=%s:cloudLocal=%s:creds=%s",
+//                          this.name( ), this.serviceDependencies( ), this.isPartitioned( ) ? "" : "un", this.lookupBaseMessageType( ).getSimpleName( ), this.hasDispatcher( ), this.isAlwaysLocal( ), this.isCloudLocal( ),
+//                          this.isPartitioned( ), this.hasCredentials( ) );
+//  }
   
   public static abstract class Unpartioned extends ComponentId {
     
@@ -359,5 +360,43 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   
   public boolean runLimitedServices( ) {
     return false;
+  }
+
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( this.getFullName( ) ).append( " " );
+    builder.append( this.name( ) ).append( ":" );
+    if( this.isPartitioned( ) ) {
+      builder.append( "partitioned" );
+    } else {
+      builder.append( "unpartitioned" );
+    }
+    builder.append( ":deps:" ).append( this.serviceDependencies( ) ).append( ":" );
+    if( this.isCloudLocal( ) ) {
+      builder.append( "cloudLocal:" );
+    } else if( this.isAlwaysLocal( ) ) {
+      builder.append( "alwaysLocal:" );
+    }
+    if( this.runLimitedServices( ) ) {
+      builder.append( "runs-limited-services" );
+    }
+    return builder.toString( );
+  }
+
+  public final boolean isInternal( ) {
+    return !this.isAdminService( ) && !this.isUserService( );
+  }
+
+  public boolean isUserService( ) {
+    return false;
+  }
+
+  public boolean isAdminService( ) {
+    return false;
+  }
+
+  public boolean isRegisterable( ) {
+    return ServiceBuilderRegistry.lookup( this ) instanceof DummyServiceBuilder;
   }
 }

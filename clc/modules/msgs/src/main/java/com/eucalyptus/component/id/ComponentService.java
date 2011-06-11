@@ -92,4 +92,11 @@ public class ComponentService extends ComponentId.Unpartioned {
       }
     };
   }
+
+  @Override
+  public boolean isAdminService( ) {
+    return true;
+  }
+  
+  
 }

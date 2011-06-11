@@ -99,4 +99,10 @@ public class Empyrean extends ComponentId.Unpartioned {
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
     return new ArrayList() {{ add( Empyrean.class ); }};
   }
+  
+  @Override
+  public boolean isAdminService( ) {
+    return true;
+  }  
+
  }

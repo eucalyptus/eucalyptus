@@ -83,4 +83,9 @@ public class Notifications extends ComponentId.Unpartioned {
     };
   }
   
+  @Override
+  public boolean isUserService( ) {
+    return true;
+  }
+  
 }
