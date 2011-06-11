@@ -107,8 +107,6 @@ public interface Service extends EventListener<Event>, HasFullName<ServiceConfig
   
   public abstract StateMachine<ServiceConfiguration, State, Transition> getStateMachine( );
 
-  void cleanUp( );
-
   public abstract void start( );
 
   public abstract void stop( );

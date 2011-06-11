@@ -75,6 +75,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.empyrean.ServiceInfoType;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.Hertz;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Assertions;
@@ -85,6 +88,7 @@ import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.Automata;
+import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.HasStateMachine;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
@@ -566,9 +570,14 @@ public class Component implements HasName<Component> {
         this.localService.compareAndSet( ret, null );
       }
       try {
-        ret.cleanUp( );
+        ListenerRegistry.getInstance( ).deregister( ClockTick.class, ret );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
+      }
+      try {
+        ListenerRegistry.getInstance( ).deregister( Hertz.class, ret );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
       }
       return ret;
     }
@@ -624,7 +633,22 @@ public class Component implements HasName<Component> {
         this.localService.set( service );
       }
       Service ret = this.services.putIfAbsent( config, service );
-      ret = ( ret != null ) ? ret : service;
+      ListenerRegistry.getInstance( ).register( ClockTick.class, ret );
+      ListenerRegistry.getInstance( ).register( Hertz.class, ret );
+      if ( ret == null ) {
+        ret = service;
+        try {
+          ret.getStateMachine( ).transition( Component.State.LOADED ).get( );
+        } catch ( IllegalStateException ex ) {
+          LOG.error( ex , ex );
+        } catch ( ExecutionException ex ) {
+          LOG.error( ex , ex );
+        } catch ( InterruptedException ex ) {
+          LOG.error( ex , ex );
+        } catch ( ExistingTransitionException ex ) {
+          LOG.error( ex , ex );
+        }
+      }
       EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_REGISTERED,
                           Component.this.getName( ),
                           ( config.isVmLocal( ) || config.isHostLocal( ) )

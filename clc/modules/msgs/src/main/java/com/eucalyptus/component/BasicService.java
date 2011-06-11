@@ -66,7 +66,6 @@ package com.eucalyptus.component;
 import java.net.InetSocketAddress;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
-import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -94,19 +93,6 @@ public class BasicService extends AbstractService implements Service {
     super( );
     this.serviceConfiguration = serviceConfiguration;
     this.stateMachine = new ServiceState( this.serviceConfiguration );
-    try {
-      this.stateMachine.transition( State.INITIALIZED );
-    } catch ( IllegalStateException ex ) {
-      LOG.error( ex, ex );
-      throw new ServiceRegistrationException( "Initializing service " + this.serviceConfiguration + " failed because of: " + ex.getMessage( ), ex );
-    } catch ( NoSuchElementException ex ) {
-      LOG.error( ex, ex );
-      throw new ServiceRegistrationException( "Initializing service " + this.serviceConfiguration + " failed because of: " + ex.getMessage( ), ex );
-    } catch ( ExistingTransitionException ex ) {
-      LOG.error( ex, ex );
-      throw new ServiceRegistrationException( "Initializing service " + this.serviceConfiguration + " failed because of: " + ex.getMessage( ), ex );
-    }
-    
     ListenerRegistry.getInstance( ).register( ClockTick.class, this );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
@@ -229,9 +215,6 @@ public class BasicService extends AbstractService implements Service {
             config.error( ex.getCause( ) );
             //          config.lookupService( ).setGoal( Component.State.DISABLED );
           }
-        } else {
-          ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
-          ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
         }
       }
     }
@@ -301,12 +284,6 @@ public class BasicService extends AbstractService implements Service {
     return this.stateMachine;
   }
   
-  @Override
-  public void cleanUp( ) {
-    ListenerRegistry.getInstance( ).register( ClockTick.class, this );
-    ListenerRegistry.getInstance( ).register( Hertz.class, this );
-  }
-
   /**
    * @see com.eucalyptus.component.Service#start()
    */

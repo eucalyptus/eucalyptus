@@ -215,11 +215,6 @@ public class MessagableService extends AbstractService implements Service {
   }
   
   @Override
-  public void cleanUp( ) {
-    this.serviceDelegate.cleanUp( );
-  }
-
-  @Override
   public void start( ) {
     this.endpoint.start( );
   }

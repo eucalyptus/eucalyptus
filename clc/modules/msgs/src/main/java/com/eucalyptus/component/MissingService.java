@@ -195,9 +195,6 @@ public class MissingService extends AbstractService implements Service {
     return null;
   }
 
-  @Override
-  public void cleanUp( ) {}
-
   /**
    * @see com.eucalyptus.component.Service#start()
    */
