@@ -213,6 +213,9 @@ const char * blobstore_get_last_trace(); // returns last error stack trace logge
 const char * blobstore_get_error_str ( blobstore_error_t error ); // description of the error
 void blobstore_set_error_function ( void (* fn) (const char * msg)); // sets the function that will be handed error messages (instead of sending them to stdout)
 
+int blobstore_init (void);
+int blobstore_cleanup (void);
+
 // blockblob operations
 
 blockblob * blockblob_open ( blobstore * bs,
