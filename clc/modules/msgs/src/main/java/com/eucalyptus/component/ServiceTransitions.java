@@ -326,6 +326,7 @@ public class ServiceTransitions {
           LOG.error( ex, ex );
           throw ex;
         }
+        LOG.debug( "Executing transition: " + trans.getClass( ).getCanonicalName( ) + "." + transitionAction.name( ) + " for " + parent );
         trans.fire( parent );
       } else {
         LOG.debug( "Silentlty accepting remotely inferred state transition for " + parent ); 
