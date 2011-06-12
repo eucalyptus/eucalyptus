@@ -1184,8 +1184,7 @@ art_alloc_disk ( // allocates a 'keyed' disk artifact and possibly the underlyin
                 artifact * parts [], int num_parts, // OPTION A: partitions for constructing a 'raw' disk
                 artifact * emi_disk, // OPTION B: the artifact of the EMI that serves as a full disk
                 boolean do_make_bootable, // kernel injection is requested (not needed on KVM and Xen)
-                boolean do_make_work_copy, // generated disk should be a work copy
-                const char * sshkey) // ssh key to inject into 'keyed' disk
+                boolean do_make_work_copy) // generated disk should be a work copy
 {
     char art_sig [ART_SIG_MAX] = ""; 
     char art_pref [EUCA_MAX_PATH] = "dsk";
@@ -1306,7 +1305,7 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                 virtualMachine * vm, // virtual machine containing the VBR
                 boolean do_make_bootable, // make the disk bootable by copying kernel and ramdisk into it and running grub
                 boolean do_make_work_copy, // ensure that all components that get modified at run time have work copies
-                const char * sshkey, // key to inject into the root partition 
+                const char * sshkey, // key to inject into the root partition or NULL if no key
                 const char * instanceId) // ID of the instance (for logging purposes only)
 {
     if (instanceId)
@@ -1380,8 +1379,7 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                                                         NULL, 0, 
                                                         disk_arts [k], 
                                                         do_make_bootable, 
-                                                        do_make_work_copy, 
-                                                        use_sshkey);
+                                                        do_make_work_copy);
                         if (disk_arts [k] == NULL) {
                             arts_free (disk_arts, EUCA_MAX_PARTITIONS);
                             goto free;
@@ -1403,8 +1401,7 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                                                     disk_arts + 1, partitions, 
                                                     NULL, 
                                                     do_make_bootable, 
-                                                    do_make_work_copy,
-                                                    use_sshkey);
+                                                    do_make_work_copy);
                     if (disk_arts [0] == NULL) {
                         arts_free (disk_arts, EUCA_MAX_PARTITIONS);
                         goto free;
