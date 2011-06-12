@@ -675,7 +675,7 @@ static char * helpers [LASTHELPER] = {
 static char * helpers_path [LASTHELPER];
 static int initialized = 0;
 
-static int blobstore_init (void)
+int blobstore_init (void)
 {
     int ret = 0;
 
@@ -696,7 +696,7 @@ static int blobstore_init (void)
     return ret;
 }
 
-static int blobstore_cleanup (void)
+int blobstore_cleanup (void)
 {
     diskutil_cleanup();
     return 0;
