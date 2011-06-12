@@ -64,7 +64,8 @@
 #include "data.h"
 #include "blobstore.h"
 
-#define INSTANCE_PREP_TIMEOUT_USEC 1000000L*60*60*2 // TODO: change the timeout?
+/* This is two hours; note that using multiplication with longs in defines causes 32bit compile warnings */
+#define INSTANCE_PREP_TIMEOUT_USEC 7200000000L // TODO: change the timeout?
 
 #define MAX_ARTIFACT_DEPS 16
 #define MAX_ARTIFACT_SIG 4096
