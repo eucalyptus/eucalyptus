@@ -346,12 +346,16 @@ public class ServiceTransitions {
     
     @Override
     public boolean before( final ServiceConfiguration parent ) {
-      EventRecord.here( ServiceBuilder.class,
-                        EventType.SERVICE_TRANSITION_BEFORE,
-                        this.name( ),
-                        parent.lookupState( ).toString( ),
-                        parent.getFullName( ).toString( ),
-                        parent.toString( ) ).debug( );      
+      try {
+        EventRecord.here( ServiceBuilder.class,
+                          EventType.SERVICE_TRANSITION_BEFORE,
+                          this.name( ),
+                          parent.lookupState( ).toString( ),
+                          parent.getFullName( ).toString( ),
+                          parent.toString( ) ).debug( );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }      
       return true;
     }
     
@@ -368,22 +372,30 @@ public class ServiceTransitions {
     
     @Override
     public void enter( final ServiceConfiguration parent ) {
-      EventRecord.here( ServiceBuilder.class,
-                        EventType.SERVICE_TRANSITION_ENTER_STATE,
-                        this.name( ),
-                        parent.lookupState( ).toString( ),
-                        parent.getFullName( ).toString( ),
-                        parent.toString( ) ).debug( );      
+      try {
+        EventRecord.here( ServiceBuilder.class,
+                          EventType.SERVICE_TRANSITION_ENTER_STATE,
+                          this.name( ),
+                          parent.lookupState( ).toString( ),
+                          parent.getFullName( ).toString( ),
+                          parent.toString( ) ).debug( );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }      
     }
     
     @Override
     public void after( final ServiceConfiguration parent ) {
-      EventRecord.here( ServiceBuilder.class,
-                        EventType.SERVICE_TRANSITION_AFTER_STATE,
-                        this.name( ),
-                        parent.lookupState( ).toString( ),
-                        parent.getFullName( ).toString( ),
-                        parent.toString( ) ).debug( );      
+      try {
+        EventRecord.here( ServiceBuilder.class,
+                          EventType.SERVICE_TRANSITION_AFTER_STATE,
+                          this.name( ),
+                          parent.lookupState( ).toString( ),
+                          parent.getFullName( ).toString( ),
+                          parent.toString( ) ).debug( );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }      
 
     }
     
