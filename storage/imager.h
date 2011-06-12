@@ -48,5 +48,6 @@ char * get_euca_home (void);
 map * get_artifacts_map (void);
 int ensure_path_exists (const char * path, mode_t mode);
 int ensure_dir_exists (const char * path, mode_t mode);
+artifact * skip_sentinels (artifact * a);
 
 #endif // _IMAGER_H_
