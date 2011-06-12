@@ -3,6 +3,7 @@ package com.eucalyptus.auth.api;
 import java.util.Map;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
+import com.eucalyptus.auth.Contract.Type;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 
@@ -16,10 +17,10 @@ public interface PolicyEngine {
    * @param resourceAccount
    * @param action
    * @param requestUser
-   * @return
+   * @param contracts For output collected contracts
    * @throws AuthException
    */
-  public Map<String, Contract> evaluateAuthorization( String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) throws AuthException;
+  public void evaluateAuthorization( String resourceType, String resourceName, Account resourceAccount, String action, User requestUser, Map<Type, Contract> contracts ) throws AuthException;
   
   /**
    * Evaluate quota for a request to allocate a resource.

@@ -81,9 +81,9 @@
                     <tbody>
                         <tr>
                             <td>
-                                <g:Anchor styleName="{global.buttonCss.button}" ui:field="save">
+                                <g:Button ui:field="save">
                                     <span class="{global.buttonCss.floppy} {global.buttonCss.icon}"/>Save
-                                </g:Anchor>                            
+                                </g:Button>                            
                             </td>
                         </tr>
                     </tbody>
