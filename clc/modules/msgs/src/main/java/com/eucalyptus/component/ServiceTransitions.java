@@ -495,9 +495,7 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Throwable {
-        if ( parent.isVmLocal( ) ) {
-          parent.lookupComponent( ).getBootstrapper( ).load( );
-        }
+        parent.lookupComponent( ).getBootstrapper( ).load( );
       }
       
     },
@@ -514,9 +512,7 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration parent ) throws Throwable {
         if ( State.LOADED.ordinal( ) < parent.lookupComponent( ).getState( ).ordinal( ) ) {
           parent.lookupComponent( ).getBootstrapper( ).check( );
-          if ( parent.lookupComponent( ).hasLocalService( ) ) {
-            parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
-          }
+          parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
         }
       }
     },
@@ -525,9 +521,7 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Throwable {
         parent.lookupComponent( ).getBootstrapper( ).start( );
-        if ( parent.lookupComponent( ).hasLocalService( ) ) {
-          parent.lookupComponent( ).getBuilder( ).fireStart( parent );
-        }
+        parent.lookupComponent( ).getBuilder( ).fireStart( parent );
       }
     },
     ENABLE {
