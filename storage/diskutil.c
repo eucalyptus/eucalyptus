@@ -536,8 +536,8 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
 {
     int ret = OK;
     char * output = NULL;
-    char * kfile = NULL;
-    char * rfile = NULL;
+    char * kfile = "euca-vmlinuz";
+    char * rfile = "euca-initrd";
 
     logprintfl (EUCAINFO, "{%u} installing kernel and ramdisk\n", (unsigned int)pthread_self());
     output = pruntf (TRUE, "%s %s -p %s/boot/grub/", helpers_path[ROOTWRAP], helpers_path[MKDIR], mnt_pt);
@@ -554,22 +554,6 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
             return ERROR;
         }
         free (output);
-    }
-
-    char * ptr = strrchr (kernel, '/');
-    if (ptr) {
-        kfile = strdup (ptr+1);
-    } else {
-        kfile = strdup (kernel);
-    }
-
-    if (ramdisk) {
-        ptr = strrchr (ramdisk, '/');
-        if (ptr) {
-            rfile = strdup (ptr+1);
-        } else {
-            rfile = strdup (ramdisk);
-        }
     }
 
     output = pruntf (TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], kernel, mnt_pt, kfile);
@@ -634,9 +618,6 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
     }
     
  cleanup:        
-    if(kfile) free(kfile);
-    if(rfile) free(rfile);
-
     return ret;
 }
 
@@ -671,11 +652,26 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
             snprintf (s, sizeof (s), "root (hd0,%d)\n", part);   _PR;
             snprintf (s, sizeof (s), "setup (hd0)\n");           _PR;
             snprintf (s, sizeof (s), "quit\n");                  _PR;
-            rc = pclose (fp);
+
+            char buf [1024];
+            bzero (buf, sizeof (buf));
+            boolean success = FALSE;
+            while (!feof (fp)) {
+                if (fgets (buf, sizeof (buf), fp)==NULL) {
+                    logprintfl (EUCADEBUG, "\t%s", buf);
+                    if (strstr (buf, "Done"))
+                        success = TRUE;
+                }
+            }
+            if (success) {
+                rc = pclose (fp); // base success on exit code of grub
+            } else {
+                pclose (fp);
+            }
         }
         if (rc)
             logprintfl (EUCAERROR, "{%u} error: failed to run grub 1 on disk '%s': %s\n", (unsigned int)pthread_self(), path, strerror (errno));
-
+        
     } else if (grub_version==2) {
         char * output = pruntf (TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s %s", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt, path);
         if (!output) {
