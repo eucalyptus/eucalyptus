@@ -657,10 +657,12 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
             bzero (buf, sizeof (buf));
             boolean success = FALSE;
             while (!feof (fp)) {
-                if (fgets (buf, sizeof (buf), fp)==NULL) {
+                if (fgets (buf, sizeof (buf), fp)!=NULL) {
                     logprintfl (EUCADEBUG, "\t%s", buf);
                     if (strstr (buf, "Done"))
                         success = TRUE;
+                } else {
+                    break;
                 }
             }
             if (success) {
