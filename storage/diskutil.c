@@ -649,13 +649,15 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
             return ERROR;
         }
 
-        snprintf(cmd, sizeof (cmd), "%s --batch >%s 2>&1", helpers_path[GRUB], tmp_file);
+        // we now invoke grub through euca_rootwrap because it may need to operate on
+        // devices that are owned by root (e.g. /dev/mapper/euca-dsk-7E4E131B-fca1d769p1)
+        snprintf(cmd, sizeof (cmd), "%s %s --batch >%s 2>&1", helpers_path[ROOTWRAP], helpers_path[GRUB], tmp_file);
         logprintfl (EUCADEBUG, "{%u} running %s\n", (unsigned int)pthread_self(), cmd);
         errno = 0;
         FILE * fp = popen (cmd, "w");
         if (fp!=NULL) {
             char s [EUCA_MAX_PATH];
-#define _PR fprintf (fp, "%s", s); logprintfl (EUCADEBUG, "\t%s", s)
+#define _PR fprintf (fp, "%s", s); // logprintfl (EUCADEBUG, "\t%s", s)
             snprintf (s, sizeof (s), "device (hd0) %s\n", path); _PR;
             snprintf (s, sizeof (s), "root (hd0,%d)\n", part);   _PR;
             snprintf (s, sizeof (s), "setup (hd0)\n");           _PR;
