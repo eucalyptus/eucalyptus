@@ -947,7 +947,7 @@ int destroy_instance_backing (ncInstance * instance, int do_destroy_files)
         set_id2 (instance, "/.*", work_regex, sizeof (work_regex));
 
         if (blobstore_delete_regex (work_bs, work_regex) == -1) {
-            logprintfl (EUCAERROR, "[%s] error: failed to remove some artifacts in %s\n", path);
+            logprintfl (EUCAERROR, "[%s] error: failed to remove some artifacts in %s\n", instance->instanceId, path);
         }
 
         // remove the known leftover files
