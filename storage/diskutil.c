@@ -668,7 +668,7 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
             int ret;
             char buf [1024];
             bzero (buf, sizeof (buf));
-            boolean success = FALSE;
+            boolean saw_done = FALSE;
             do {
                 // read in a line
                 int bytes_read = 0;
@@ -679,11 +679,16 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
                     buf [bytes_read++] = '\n';
                 buf [bytes_read] = '\0';
                 logprintfl (EUCADEBUG, "\t%s", buf);
-                if (ret==0 && strstr (buf, "Done"))
-                    success = TRUE;
+                if (strstr (buf, "Done"))
+                    saw_done = TRUE;
             } while (ret>0);
-            if (success)
+            
+            if (saw_done==FALSE) {
+                logprintfl (EUCAERROR, "{%u} error: failed to run grub 1 on disk '%s': %s\n", (unsigned int)pthread_self(), path);
+                rc = 1;
+            } else {
                 rc = 0;
+            }
         }
         
     } else if (grub_version==2) {
