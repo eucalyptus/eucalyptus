@@ -26,7 +26,7 @@ import com.eucalyptus.records.EventType;
 @DiscoverableServiceBuilder( ClusterController.class )
 @Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class, ModifyClusterAttributeType.class } )
 public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration> {
-  static Logger LOG                 = Logger.getLogger( ClusterBuilder.class );
+  static Logger LOG = Logger.getLogger( ClusterBuilder.class );
   
   @Override
   public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
@@ -81,7 +81,8 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Starting up cluster: " + config );
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponentId( ).name( ), config.getName( ),
+                      config.getUri( ).toASCIIString( ) ).info( );
     try {
       if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
         if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
@@ -107,7 +108,8 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
   @Override
   public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Enabling cluster: " + config );
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_ENABLED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_ENABLED, config.getComponentId( ).name( ), config.getName( ),
+                      config.getUri( ).toASCIIString( ) ).info( );
     try {
       if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
         try {
@@ -128,7 +130,8 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
   @Override
   public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
     LOG.info( "Disabling cluster: " + config );
-    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_DISABLED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
+    EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_DISABLED, config.getComponentId( ).name( ), config.getName( ),
+                      config.getUri( ).toASCIIString( ) ).info( );
     try {
       if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
         if ( Clusters.getInstance( ).contains( config.getName( ) ) ) {
@@ -152,10 +155,11 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     try {
       LOG.info( "Tearing down cluster: " + config );
       Cluster cluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
-      EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.getComponentId( ).name( ), config.getName( ), config.getUri( ).toASCIIString( ) ).info( );
+      EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.getComponentId( ).name( ), config.getName( ),
+                        config.getUri( ).toASCIIString( ) ).info( );
       cluster.stop( );
     } catch ( NoSuchElementException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     } catch ( Throwable ex ) {
       LOG.error( ex, ex );
     }
@@ -163,7 +167,11 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
   
   @Override
   public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException, CheckException {
-    Clusters.lookup( config ).check( );
+    try {
+      Clusters.lookup( config ).check( );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex );
+    }
   }
   
 }

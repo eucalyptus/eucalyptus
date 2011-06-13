@@ -376,7 +376,7 @@ int ncRebootInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId)
     return status;
 }
 
-int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instId, int *shutdownState, int *previousState)
+int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instId, int force, int *shutdownState, int *previousState)
 {
     axutil_env_t * env = st->env;
     axis2_stub_t * stub = st->stub;
@@ -391,6 +391,11 @@ int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instId, int *sh
       EUCA_MESSAGE_MARSHAL(ncTerminateInstanceType, request, meta);
     }
     adb_ncTerminateInstanceType_set_instanceId(request, env, instId);
+    if (force) {
+      adb_ncTerminateInstanceType_set_force(request, env, AXIS2_TRUE);
+    } else {
+      adb_ncTerminateInstanceType_set_force(request, env, AXIS2_FALSE);
+    }
     adb_ncTerminateInstance_set_ncTerminateInstance(input, env, request);
     
     int status = 0;
@@ -711,7 +716,11 @@ int ncDetachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vo
     adb_ncDetachVolumeType_set_volumeId(request, env, volumeId);
     adb_ncDetachVolumeType_set_remoteDev(request, env, remoteDev);
     adb_ncDetachVolumeType_set_localDev(request, env, localDev);
-    adb_ncDetachVolumeType_set_force(request, env, force);
+    if (force) {
+      adb_ncDetachVolumeType_set_force(request, env, AXIS2_TRUE);
+    } else {
+      adb_ncDetachVolumeType_set_force(request, env, AXIS2_FALSE);
+    }
     adb_ncDetachVolume_set_ncDetachVolume(input, env, request);
 
     int status = 0;

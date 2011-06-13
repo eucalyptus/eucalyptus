@@ -321,11 +321,9 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
    */
   public String toString( ) {
     ActiveTransition t = this.currentTransition.get( );
-    return String.format( "State:name=%s:state=%s:mark=%s:transition=%s", this.name, this.state.getReference( ), this.state.isMarked( ), ( Logs.EXTREME
-      ? ( t != null
+    return String.format( "State:name=%s:state=%s:mark=%s:transition=%s", this.name, this.state.getReference( ), this.state.isMarked( ), ( t != null
         ? t.toString( )
-        : "idle" )
-      : "" ) );
+        : "idle" ) );
   }
   
   /**
@@ -391,16 +389,17 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
       if ( Logs.EXTREME ) {
         RuntimeException ex = new RuntimeException( );
         if ( this.endTime != 0l ) {
-          LOG.error( "Transition being committed for a second time!" );
-          LOG.error( "FIRST: " + Exceptions.filterStackTraceElements( this.endStackTrace ), this.endStackTrace );
-          LOG.error( "SECOND: " + Exceptions.filterStackTraceElements( ex ), ex );
+          Logs.extreme( ).error( "Transition being committed for a second time!" );
+          Logs.extreme( ).error( "FIRST: " + Exceptions.filterStackTraceElements( this.endStackTrace ), this.endStackTrace );
+          Logs.extreme( ).error( "SECOND: " + Exceptions.filterStackTraceElements( ex ), ex );
+          Logs.extreme( ).error( this.toString( ) );
         } else {
           this.endTime = System.nanoTime( );
           this.endStackTrace.setStackTrace( Exceptions.filterStackTraceElements( new RuntimeException( ) ).toArray( new StackTraceElement[] {} ) );
-          LOG.trace( this );
+          Logs.extreme( ).trace( this );
         }
-      } else if ( Logs.EXTREME ) {
-        LOG.error( this.toString( ) );
+      } else if( Logs.DEBUG ) {
+        Logs.extreme( ).error( this.toString( ) );
       }
     }
     

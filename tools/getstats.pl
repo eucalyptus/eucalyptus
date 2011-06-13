@@ -14,7 +14,7 @@ my @blkdevs = split(",", $blkdevstr);
 my @ifaces = split(",", $ifacestr);
 
 foreach $blkdev (@blkdevs) {
-    $blkdev =~ s/\d*$//;
+#    $blkdev =~ s/\d*$//;
     $blks{$blkdev} = 1;
 }
 foreach $blkdev (keys((%blks))) {

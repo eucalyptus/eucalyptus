@@ -52,11 +52,11 @@ class DescribeVMwareBrokers(AWSQueryRequest):
     def cli_formatter(self, data):
         brokers = getattr(data, 'euca:registered')
         for broker in brokers:
-            print 'VMWARE\t%s\t%s\t%s\t%s\t%s' % (cluster['euca:partition'],
-                                                  cluster['euca:name'],
-                                                  cluster['euca:hostName'],
-                                                  cluster['euca:state'],
-                                                  cluster['euca:detail'])
+            print 'VMWARE\t%s\t%s\t%s\t%s\t%s' % (broker['euca:partition'],
+                                                  broker['euca:name'],
+                                                  broker['euca:hostName'],
+                                                  broker['euca:state'],
+                                                  broker['euca:detail'])
 
     def main(self, **args):
         return self.send(**args)

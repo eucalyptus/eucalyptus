@@ -64,6 +64,7 @@
 package com.eucalyptus.images;
 
 import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutionException;
 import javax.persistence.Column;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
@@ -78,6 +79,8 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.RecoverablePersistenceException;
+import com.eucalyptus.util.Transactions;
+import com.eucalyptus.util.async.Callback;
 
 @Entity
 @javax.persistence.Entity
@@ -100,8 +103,12 @@ public class ImageConfiguration extends AbstractPersistent {
   @Column( name = "config_image_default_ramdisk_id" )
   private String        defaultRamdiskId;
   
-  protected ImageConfiguration( ) {
+  public ImageConfiguration( ) {
     super( );
+  }
+  
+  public static void modify( Callback<ImageConfiguration> callback ) throws ExecutionException {
+    Transactions.one( new ImageConfiguration( ), callback );
   }
   
   public static ImageConfiguration getInstance( ) {

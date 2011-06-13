@@ -104,17 +104,17 @@
                         <tr>
                             <td>Start date</td>
                             <td>End date</td>
+                            <td>Report type</td>
                             <td>Criteria</td>
                             <td>Group by</td>
-                            <td>Resource type</td>
                             <td>&nbsp;</td>
                         </tr>
                         <tr>
                             <td><d:DateBox addStyleNames="{style.input}" ui:field="fromDate"/></td>
                             <td><d:DateBox addStyleNames="{style.input}" ui:field="toDate"/></td>
+                            <td><g:ListBox addStyleNames="{style.list}" ui:field="type"/></td>
                             <td><g:ListBox addStyleNames="{style.list}" ui:field="criteria"/></td>
                             <td><g:ListBox addStyleNames="{style.list}" ui:field="groupBy"/></td>
-                            <td><g:ListBox addStyleNames="{style.list}" ui:field="type"/></td>
                             <td>
                                 <g:Anchor styleName="{global.buttonCss.button}" ui:field="generateButton">
                                     <span class="{global.buttonCss.report} {global.buttonCss.icon}"/>Generate

@@ -3,14 +3,18 @@ package com.eucalyptus.util;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URL;
+import java.util.Enumeration;
+import java.util.ResourceBundle;
 import org.apache.log4j.Appender;
 import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.Priority;
 import org.apache.log4j.RollingFileAppender;
 import org.apache.log4j.spi.Configurator;
 import org.apache.log4j.spi.LoggerRepository;
+import org.apache.log4j.spi.LoggingEvent;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.records.EventType;
@@ -116,9 +120,174 @@ public class Logs {
     
   }
   
-  public static boolean DEBUG   = false;                                                                    //TODO:get rid of this non-sense
-  public static boolean TRACE   = false;                                                                    //TODO:get rid of this non-sense
-  public static boolean EXTREME = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
+  public static boolean DEBUG      = false;                                                                    //TODO:get rid of this non-sense
+  public static boolean TRACE      = false;                                                                    //TODO:get rid of this non-sense
+  public static boolean EXTREME    = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
+  private static final Logger nullLogger = new Logger( "/dev/null" ) {
+                                     
+                                     @Override
+                                     public boolean isTraceEnabled( ) {
+                                       return false;
+                                     }
+                                     
+                                     @Override
+                                     public void trace( Object message, Throwable t ) {}
+                                     
+                                     @Override
+                                     public void trace( Object message ) {}
+                                     
+                                     @Override
+                                     public synchronized void addAppender( Appender newAppender ) {}
+                                     
+                                     @Override
+                                     public void assertLog( boolean assertion, String msg ) {}
+                                     
+                                     @Override
+                                     public void callAppenders( LoggingEvent arg0 ) {}
+                                     
+                                     @Override
+                                     public void debug( Object message, Throwable t ) {}
+                                     
+                                     @Override
+                                     public void debug( Object message ) {}
+                                     
+                                     @Override
+                                     public void error( Object message, Throwable t ) {}
+                                     
+                                     @Override
+                                     public void error( Object message ) {}
+                                     
+                                     @Override
+                                     public void fatal( Object message, Throwable t ) {}
+                                     
+                                     @Override
+                                     public void fatal( Object message ) {}
+                                     
+                                     @Override
+                                     protected void forcedLog( String fqcn, Priority level, Object message, Throwable t ) {}
+                                     
+                                     @Override
+                                     public boolean getAdditivity( ) {
+                                       return false;
+                                     }
+                                     
+                                     @Override
+                                     public synchronized Enumeration getAllAppenders( ) {
+                                       return super.getAllAppenders( );
+                                     }
+                                     
+                                     @Override
+                                     public synchronized Appender getAppender( String name ) {
+                                       return super.getAppender( name );
+                                     }
+                                     
+                                     @Override
+                                     public Priority getChainedPriority( ) {
+                                       return super.getChainedPriority( );
+                                     }
+                                     
+                                     @Override
+                                     public Level getEffectiveLevel( ) {
+                                       return super.getEffectiveLevel( );
+                                     }
+                                     
+                                     @Override
+                                     public LoggerRepository getHierarchy( ) {
+                                       return super.getHierarchy( );
+                                     }
+                                     
+                                     @Override
+                                     public LoggerRepository getLoggerRepository( ) {
+                                       return super.getLoggerRepository( );
+                                     }
+                                     
+                                     @Override
+                                     public ResourceBundle getResourceBundle( ) {
+                                       return super.getResourceBundle( );
+                                     }
+                                     
+                                     @Override
+                                     protected String getResourceBundleString( String arg0 ) {
+                                       return super.getResourceBundleString( arg0 );
+                                     }
+                                     
+                                     @Override
+                                     public void info( Object message, Throwable t ) {}
+                                     
+                                     @Override
+                                     public void info( Object message ) {}
+                                     
+                                     @Override
+                                     public boolean isAttached( Appender appender ) {
+                                       return super.isAttached( appender );
+                                     }
+                                     
+                                     @Override
+                                     public boolean isDebugEnabled( ) {
+                                       return super.isDebugEnabled( );
+                                     }
+                                     
+                                     @Override
+                                     public boolean isEnabledFor( Priority level ) {
+                                       return super.isEnabledFor( level );
+                                     }
+                                     
+                                     @Override
+                                     public boolean isInfoEnabled( ) {
+                                       return super.isInfoEnabled( );
+                                     }
+                                     
+                                     @Override
+                                     public void l7dlog( Priority arg0, String arg1, Object[] arg2, Throwable arg3 ) {}
+                                     
+                                     @Override
+                                     public void l7dlog( Priority arg0, String arg1, Throwable arg2 ) {}
+                                     
+                                     @Override
+                                     public void log( Priority priority, Object message, Throwable t ) {}
+                                     
+                                     @Override
+                                     public void log( Priority priority, Object message ) {}
+                                     
+                                     @Override
+                                     public void log( String callerFQCN, Priority level, Object message, Throwable t ) {}
+                                     
+                                     @Override
+                                     public synchronized void removeAllAppenders( ) {}
+                                     
+                                     @Override
+                                     public synchronized void removeAppender( Appender appender ) {}
+                                     
+                                     @Override
+                                     public synchronized void removeAppender( String name ) {}
+                                     
+                                     @Override
+                                     public void setAdditivity( boolean additive ) {}
+                                     
+                                     @Override
+                                     public void setLevel( Level level ) {}
+                                     
+                                     @Override
+                                     public void setPriority( Priority priority ) {}
+                                     
+                                     @Override
+                                     public void setResourceBundle( ResourceBundle bundle ) {}
+                                     
+                                     @Override
+                                     public void warn( Object message, Throwable t ) {}
+                                     
+                                     @Override
+                                     public void warn( Object message ) {}
+                                     
+                                   };
+  
+  public static Logger extreme( ) {
+    if ( EXTREME ) {
+      return Logger.getLogger( "EXHAUST" );
+    } else {
+      return nullLogger;
+    }
+  }
   
   public static Logger exhaust( ) {
     return Logger.getLogger( "EXHAUST" );
@@ -129,7 +298,7 @@ public class Logs {
   }
   
   public static void init( ) {
-    if( Bootstrap.isInitializeSystem( ) ) {
+    if ( Bootstrap.isInitializeSystem( ) ) {
       System.setProperty( "euca.log.level", "INFO" );
       System.setProperty( "euca.exhaust.level", "INFO" );
       System.setProperty( "euca.log.exhaustive", "INFO" );

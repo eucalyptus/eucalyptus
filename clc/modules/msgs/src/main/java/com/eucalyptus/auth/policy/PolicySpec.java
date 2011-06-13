@@ -50,11 +50,13 @@ public class PolicySpec {
   // IAM actions, based on API version 2010-05-08
   public static final String IAM_ADDUSERTOGROUP = "addusertogroup";
   public static final String IAM_CREATEACCESSKEY = "createaccesskey";
+  public static final String IAM_CREATEACCOUNTALIAS = "createaccountalias";
   public static final String IAM_CREATEGROUP = "creategroup";
   public static final String IAM_CREATELOGINPROFILE = "createloginprofile";
   public static final String IAM_CREATEUSER = "createuser";
   public static final String IAM_DEACTIVATEMFADEVICE = "deactivatemfadevice";
   public static final String IAM_DELETEACCESSKEY = "deleteaccesskey";
+  public static final String IAM_DELETEACCOUNTALIAS = "deleteaccountalias";
   public static final String IAM_DELETEGROUP = "deletegroup";
   public static final String IAM_DELETEGROUPPOLICY = "deletegrouppolicy";
   public static final String IAM_DELETELOGINPROFILE = "deleteloginprofile";
@@ -63,6 +65,7 @@ public class PolicySpec {
   public static final String IAM_DELETEUSER = "deleteuser";
   public static final String IAM_DELETEUSERPOLICY = "deleteuserpolicy";
   public static final String IAM_ENABLEMFADEVICE = "enablemfadevice";
+  public static final String IAM_GETACCOUNTSUMMARY = "getaccountsummary";
   public static final String IAM_GETGROUP = "getgroup";
   public static final String IAM_GETGROUPPOLICY = "getgrouppolicy";
   public static final String IAM_GETLOGINPROFILE = "getloginprofile";
@@ -70,6 +73,7 @@ public class PolicySpec {
   public static final String IAM_GETUSER = "getuser";
   public static final String IAM_GETUSERPOLICY = "getuserpolicy";
   public static final String IAM_LISTACCESSKEYS = "listaccesskeys";
+  public static final String IAM_LISTACCOUNTALIASES = "listaccountaliases";
   public static final String IAM_LISTGROUPPOLICIES = "listgrouppolicies";
   public static final String IAM_LISTGROUPS = "listgroups";
   public static final String IAM_LISTGROUPSFORUSER = "listgroupsforuser";
@@ -90,10 +94,6 @@ public class PolicySpec {
   public static final String IAM_UPDATEUSER = "updateuser";
   public static final String IAM_UPLOADSERVERCERTIFICATE = "uploadservercertificate";
   public static final String IAM_UPLOADSIGNINGCERTIFICATE = "uploadsigningcertificate";
-  // Eucalyptus extension
-  public static final String IAM_CREATESIGNINGCERTIFICATE = "createsigningcertificate";
-  public static final String IAM_GETUSERINFO = "getuserinfo";
-  public static final String IAM_UPDATEUSERINFO = "updateuserinfo";
 
   public static final Set<String> IAM_ACTIONS = Sets.newHashSet( );
   
@@ -140,10 +140,6 @@ public class PolicySpec {
     IAM_ACTIONS.add( IAM_UPDATEUSER );
     IAM_ACTIONS.add( IAM_UPLOADSERVERCERTIFICATE );
     IAM_ACTIONS.add( IAM_UPLOADSIGNINGCERTIFICATE );
-    
-    IAM_ACTIONS.add( IAM_CREATESIGNINGCERTIFICATE );
-    IAM_ACTIONS.add( IAM_GETUSERINFO );
-    IAM_ACTIONS.add( IAM_UPDATEUSERINFO );
   }
   
   // EC2 actions, based on API version 2010-08-31
@@ -379,6 +375,8 @@ public class PolicySpec {
     EC2_RESOURCES.add( EC2_RESOURCE_SNAPSHOT );
     EC2_RESOURCES.add( EC2_RESOURCE_VMTYPE );
   }
+
+  public static final Pattern IPV4_ADDRESS_RANGE_PATTERN = Pattern.compile( "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})(?:-(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3}))?" );
   
   // S3 resource types
   public static final String S3_RESOURCE_BUCKET = "bucket";

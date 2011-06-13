@@ -277,7 +277,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 
             switch (httpcode) {
             case 200L: /* all good */
-                logprintfl (EUCAINFO, "{%u} walrus_request: saved image in %s\n", (unsigned int)pthread_self(), outfile);
+                logprintfl (EUCAINFO, "{%u} walrus_request: to %s\n", (unsigned int)pthread_self(), outfile);
                 code = OK;
                 break;
             case 408L: /* timeout, retry */

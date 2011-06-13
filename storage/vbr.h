@@ -64,7 +64,8 @@
 #include "data.h"
 #include "blobstore.h"
 
-#define INSTANCE_PREP_TIMEOUT_USEC 1000000L*60*60*2 // TODO: change the timeout?
+/* This is two hours; note that using multiplication with longs in defines causes 32bit compile warnings */
+#define INSTANCE_PREP_TIMEOUT_USEC 7200000000L // TODO: change the timeout?
 
 #define MAX_ARTIFACT_DEPS 16
 #define MAX_ARTIFACT_SIG 4096
@@ -81,7 +82,8 @@ typedef struct _artifact {
     int (* creator) (struct _artifact * a); // function that can create this artifact based on info in this struct (must be NULL for a sentinel)
     long long size_bytes; // size of the artifact, in bytes (OPTIONAL for some types)
     virtualBootRecord * vbr; // VBR associated with the artifact (OPTIONAL for some types)
-    boolean make_bootable; // tells 'disk_creator' whether to make the disk bootable
+    boolean do_make_bootable; // tells 'disk_creator' whether to make the disk bootable
+    boolean do_tune_fs; // tells 'copy_creator' whether to tune the file system
     boolean is_partition; // this artifact is a partition for a disk to be constructed
     char sshkey [MAX_SSHKEY_SIZE]; // the key to inject into the artifact (OPTIONAL for all except keyed_disk_creator)
     blockblob * bb; // blockblob handle for the artifact, when it is open
@@ -95,7 +97,7 @@ typedef struct _artifact {
 int vbr_add_ascii (const char * spec_str, virtualMachine * vm_type);
 int vbr_legacy (const char * instanceId, virtualMachine * vm, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL);
 int vbr_parse (virtualMachine * vm, ncMetadata * meta);
-artifact * vbr_alloc_tree (virtualMachine * vm, boolean make_bootable, boolean make_work_copy, const char * sshkey, const char * instanceId);
+artifact * vbr_alloc_tree (virtualMachine * vm, boolean do_make_bootable, boolean do_make_work_copy, const char * sshkey, const char * instanceId);
 void art_set_instanceId (const char * instanceId);
 int art_implement_tree (artifact * root, blobstore * work_bs, blobstore * cache_bs, const char * work_prefix, long long timeout);
 artifact * art_alloc (const char * id, const char * sig, long long size_bytes, boolean may_be_cached, boolean must_be_file, int (* creator) (artifact * a), virtualBootRecord * vbr);

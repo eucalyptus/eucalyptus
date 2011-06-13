@@ -249,17 +249,17 @@ int main (int argc, char * argv[])
                 err ("failed while verifying requirements");
         }
     }
-    if(!root) err ("failed to find root while verifying requirements");
+    // it OK for root to be NULL at this point
     
     // see if work blobstore will be needed at any stage
     // and open or create the work blobstore
     blobstore * work_bs = NULL;
 
-    if (tree_uses_blobstore (root)) {
+    if (root && tree_uses_blobstore (root)) {
         // set the function that will catch blobstore errors
         blobstore_set_error_function ( &bs_errors ); 
 
-        if (ensure_directories_exist (get_work_dir(), 0, BLOBSTORE_DIRECTORY_PERM) == -1)
+        if (ensure_directories_exist (get_work_dir(), 0, NULL, NULL, BLOBSTORE_DIRECTORY_PERM) == -1)
             err ("failed to open or create work directory");
         work_bs = blobstore_open (get_work_dir(), get_work_limit()/512, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
         if (work_bs==NULL) {
@@ -270,8 +270,8 @@ int main (int argc, char * argv[])
 
     // see if cache blobstore will be needed at any stage
     blobstore * cache_bs = NULL;
-    if (tree_uses_cache (root)) {
-        if (ensure_directories_exist (get_cache_dir(), 0, BLOBSTORE_DIRECTORY_PERM) == -1)
+    if (root && tree_uses_cache (root)) {
+        if (ensure_directories_exist (get_cache_dir(), 0, NULL, NULL, BLOBSTORE_DIRECTORY_PERM) == -1)
             err ("failed to open or create cache directory");
         cache_bs = blobstore_open (get_cache_dir(), get_cache_limit()/512, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
         if (cache_bs==NULL) {
@@ -475,4 +475,18 @@ int ensure_dir_exists (const char * path, mode_t mode)
 
     free (path_copy);
     return err;
+}
+
+// function for bypassing sentinel artifacts in a tree
+artifact * skip_sentinels (artifact * root)
+{
+    artifact * ret = root;
+    while (ret) {
+        if (ret->creator != NULL) break; // has a creator => not a sentinel
+        if (ret->deps[1] != NULL) break; // has multiple children => do not skip
+        artifact * next_ret = ret->deps[0];
+        free (ret);
+        ret = next_ret;
+    }
+    return ret;
 }

@@ -92,7 +92,6 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Transactions;
@@ -118,20 +117,20 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
    * Constraints: 3-128 alphanumeric characters, parenthesis (()), commas (,), slashes (/), dashes
    * (-), or underscores(_)
    */
-  @Column( name = "metadata_image_name" )
+  @Column( name = "metadata_image_name", nullable = false )
   private String                imageName;
   
   @Column( name = "metadata_image_description" )
   private String                description;
   
-  @Column( name = "metadata_image_arch" )
+  @Column( name = "metadata_image_arch", nullable = false )
   @Enumerated( EnumType.STRING )
   private Image.Architecture    architecture;
   
-  @Column( name = "metadata_image_is_public", nullable = false, columnDefinition = "boolean default true" )
+  @Column( name = "metadata_image_is_public", columnDefinition = "boolean default true" )
   private Boolean               imagePublic;
   
-  @Column( name = "metadata_image_platform" )
+  @Column( name = "metadata_image_platform", nullable = false )
   @Enumerated( EnumType.STRING )
   private Image.Platform        platform;
   
@@ -151,26 +150,45 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<DeviceMapping>    deviceMappings = new HashSet<DeviceMapping>( );
   
+  @Column( name = "metadata_image_size_bytes", nullable = false )
+  private Long                  imageSizeBytes;
+  
   @Transient
   private FullName              fullName;
   
   public ImageInfo( ) {}
   
-  public ImageInfo( final String imageId ) {
+  public ImageInfo( final Image.Type imageType ) {
+    this.imageType = imageType;
+  }
+  
+  ImageInfo( final String imageId ) {
     this( );
     this.setDisplayName( imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
   }
-
-  public ImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription, final Image.Architecture arch, final Image.Platform platform ) {
+  
+  ImageInfo( final Image.Type imageType, final String imageId ) {
+    this( imageId );
+    this.imageType = imageType;
+  }
+  
+  protected ImageInfo( final UserFullName userFullName, final String imageId,
+                       final Image.Type imageType, final String imageName, final String imageDescription, final Long imageSizeBytes,
+                       final Image.Architecture arch, final Image.Platform platform ) {
     super( userFullName, imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
+    assertThat( imageName, notNullValue( ) );
+    assertThat( imageType, notNullValue( ) );
+    assertThat( imageSizeBytes, notNullValue( ) );
     assertThat( arch, notNullValue( ) );
-    assertThat( imageName, notNullValue( ) );
-    assertThat( imageName, notNullValue( ) );
     assertThat( platform, notNullValue( ) );
     this.setState( Image.State.pending );
-    this.imagePublic = ImageConfiguration.getInstance( ).getDefaultVisibility( );
+    this.imageType = imageType;
+    this.imageName = imageName;
+    this.description = imageDescription;
+    this.imageSizeBytes = imageSizeBytes;
     this.architecture = arch;
     this.platform = platform;
+    this.imagePublic = ImageConfiguration.getInstance( ).getDefaultVisibility( );
   }
   
   public Image.Type getImageType( ) {
@@ -181,7 +199,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     return this.platform;
   }
   
-  public void setPlatform( Image.Platform platform ) {
+  public void setPlatform( final Image.Platform platform ) {
     this.platform = platform;
   }
   
@@ -189,16 +207,16 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     return this.architecture;
   }
   
-  public void setArchitecture( Architecture architecture ) {
+  public void setArchitecture( final Architecture architecture ) {
     this.architecture = architecture;
   }
   
   public Boolean getImagePublic( ) {
-    return imagePublic;
+    return this.imagePublic;
   }
   
-  public void setImagePublic( Boolean aPublic ) {
-    imagePublic = aPublic;
+  public void setImagePublic( final Boolean aPublic ) {
+    this.imagePublic = aPublic;
   }
   
   private Set<LaunchPermission> getPermissions( ) {
@@ -214,8 +232,8 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     try {
       Transactions.one( new ImageInfo( this.displayName ), new Callback<ImageInfo>( ) {
         @Override
-        public void fire( ImageInfo t ) {
-          EntityWrapper<ImageInfo> db = Transactions.join( );
+        public void fire( final ImageInfo t ) {
+//          EntityWrapper<ImageInfo> db = Transactions.join( );
           LaunchPermission imgAuth = new LaunchPermission( t, account.getAccountNumber( ) );
           if ( !t.getPermissions( ).contains( imgAuth ) ) {
 //            db.recast( LaunchPermission.class ).add( imgAuth );
@@ -250,7 +268,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     try {
       Transactions.one( new ImageInfo( this.displayName ), new Tx<ImageInfo>( ) {
         @Override
-        public void fire( ImageInfo t ) throws Throwable {
+        public void fire( final ImageInfo t ) throws Throwable {
           t.getPermissions( ).clear( );
           t.getPermissions( ).add( new LaunchPermission( t, t.getOwnerAccountId( ) ) );
           t.setImagePublic( ImageConfiguration.getInstance( ).getDefaultVisibility( ) );
@@ -268,7 +286,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
       ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
       Transactions.one( search, new Tx<ImageInfo>( ) {
         @Override
-        public void fire( ImageInfo t ) throws Throwable {
+        public void fire( final ImageInfo t ) throws Throwable {
           for ( ProductCode p : t.getProductCodes( ) ) {
             prods.add( p.getValue( ) );
           }
@@ -286,7 +304,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
       ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
       Transactions.one( search, new Tx<ImageInfo>( ) {
         @Override
-        public void fire( ImageInfo t ) throws Throwable {
+        public void fire( final ImageInfo t ) throws Throwable {
           for ( LaunchPermission p : t.getPermissions( ) ) {
             perms.add( p.getAccountId( ) );
           }
@@ -303,7 +321,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
       ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
       Transactions.one( search, new Tx<ImageInfo>( ) {
         @Override
-        public void fire( ImageInfo t ) throws Throwable {
+        public void fire( final ImageInfo t ) throws Throwable {
           t.getProductCodes( ).clear( );
         }
       } );
@@ -318,7 +336,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
       ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
       Transactions.one( search, new Tx<ImageInfo>( ) {
         @Override
-        public void fire( ImageInfo t ) throws Throwable {
+        public void fire( final ImageInfo t ) throws Throwable {
           LaunchPermission imgAuth;
           t.getPermissions( ).remove( new LaunchPermission( t, account.getAccountNumber( ) ) );
         }
@@ -365,7 +383,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     return this.getDisplayName( ).hashCode( );
   }
   
-  public boolean isAllowed( Account account ) {
+  public boolean isAllowed( final Account account ) {
     return this.getImagePublic( ) || this.checkPermission( account );
   }
   
@@ -379,7 +397,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   }
   
   @Override
-  public int compareTo( Image o ) {
+  public int compareTo( final Image o ) {
     return this.getDisplayName( ).compareTo( o.getName( ) );
   }
   
@@ -398,8 +416,16 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
       : this.fullName;
   }
   
-  public void setImageType( Type imageType ) {
+  public void setImageType( final Type imageType ) {
     this.imageType = imageType;
+  }
+  
+  public Long getImageSizeBytes( ) {
+    return this.imageSizeBytes;
+  }
+  
+  public void setImageSizeBytes( final Long imageSizeBytes ) {
+    this.imageSizeBytes = imageSizeBytes;
   }
   
   public boolean addProductCode( final String prodCode ) {
@@ -407,7 +433,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
       ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
       Transactions.one( search, new Tx<ImageInfo>( ) {
         @Override
-        public void fire( ImageInfo t ) throws Throwable {
+        public void fire( final ImageInfo t ) throws Throwable {
           t.getProductCodes( ).add( new ProductCode( t, prodCode ) );
         }
       }
@@ -422,7 +448,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     return this.description;
   }
   
-  public void setDescription( String description ) {
+  public void setDescription( final String description ) {
     this.description = description;
   }
   
@@ -430,7 +456,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     return this.deviceMappings;
   }
   
-  protected void setDeviceMappings( Set<DeviceMapping> deviceMappings ) {
+  protected void setDeviceMappings( final Set<DeviceMapping> deviceMappings ) {
     this.deviceMappings = deviceMappings;
   }
   
@@ -438,7 +464,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     return this.imageName;
   }
   
-  protected void setImageName( String imageName ) {
+  protected void setImageName( final String imageName ) {
     this.imageName = imageName;
   }
 }

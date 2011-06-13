@@ -37,9 +37,10 @@ install: euca_admin
 	$(PYTHON) setup.py install --root=$(DESTDIR)
 
 clean:
-	@$(RM) -fr ./dist ./build
+	@$(RM) -fr ./dist ./build 
 
 distclean: clean
+	@$(RM) -f setup.cfg setup.cfg.template bin/euca_conf
 
 uninstall:
 	@echo uninstall

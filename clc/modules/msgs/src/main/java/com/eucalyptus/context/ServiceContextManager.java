@@ -263,11 +263,9 @@ public class ServiceContextManager implements EventListener<Event> {
   
   private static ConfigResource createConfigResource( Component component, String outString ) {
     ByteArrayInputStream bis = new ByteArrayInputStream( outString.getBytes( ) );
-    if ( Logs.EXTREME ) {
-      Logs.exhaust( ).trace( "===================================" );
-      Logs.exhaust( ).trace( outString );
-      Logs.exhaust( ).trace( "===================================" );
-    }
+    Logs.extreme( ).trace( "===================================" );
+    Logs.extreme( ).trace( outString );
+    Logs.extreme( ).trace( "===================================" );
     ConfigResource configRsc = new ConfigResource( component.getComponentId( ).getServiceModelFileName( ), bis );
     return configRsc;
   }

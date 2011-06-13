@@ -52,14 +52,23 @@ public class SearchResultRow implements Serializable {
   }
   
   public String getField( int i ) {
-    return row.get( i );
+    if ( i < row.size( ) ) {
+      return row.get( i );
+    }
+    return null;
   }
   
   public void setField( int i, String val ) {
+    if ( val == null ) {
+      val = "";
+    }    
     row.set( i, val );
   }
 
   public void addField( String val ) {
+    if ( val == null ) {
+      val = "";
+    }
     row.add( val );
   }
   

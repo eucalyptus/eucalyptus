@@ -13,7 +13,15 @@ public interface LoginView extends IsWidget {
   void setPresenter( Presenter listener );
   
   public interface Presenter {
-    void login( String username, String password, boolean staySignedIn );
+    
+    void login( String accountName, String userName, String password, boolean staySignedIn );
+
+    void onAccountSignup( );
+
+    void onUserSignup( );
+
+    void onRecoverPassword( );
+    
   }
   
 }

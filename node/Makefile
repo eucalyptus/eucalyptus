@@ -3,6 +3,7 @@
 
 include ../Makedefs
 
+SUBDIRS=generated .
 WSDLPATH=../wsdl/
 CCWSDLNAME=eucalyptus_cc.wsdl
 CCWSDL=$(WSDLPATH)/$(CCWSDLNAME)
@@ -14,13 +15,17 @@ CLIENT=NCclient
 #WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
 NC_LIBS	= $(LIBS) $(LDFLAGS) -lvirt -lcurl -lssl -lcrypto -lrampart `xslt-config --libs`
 NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o xml.o
-STORAGE_OBJS=../storage/backing.o ../storage/diskutil.o ../storage/blobstore.o ../storage/walrus.o ../storage/vbr.o
+STORAGE_OBJS=../storage/backing.o ../storage/diskutil.o ../storage/blobstore.o ../storage/walrus.o ../storage/vbr.o ../storage/iscsi.o
 BUILD_ID=-DEUCA_COMPILE_TIMESTAMP=\""[built `date --rfc-3339='sec'`]"\"
 #EFENCE=-lefence
 
-all: server client clientlib test_nc test
+all: generated/stubs
+	@for subdir in $(SUBDIRS); do \
+		(cd $$subdir && $(MAKE) buildall) || exit $$? ; done
 
 build: all
+
+buildall: server client clientlib test_nc test
 
 generated/stubs: $(NCWSDL)
 	@echo Generating server stubs
@@ -32,8 +37,10 @@ generated/stubs: $(NCWSDL)
 	../tools/add_marshalling.pl generated/axis2_skel_*.c 
 	@echo Generating client stubs
 	sh $(WSDL2C) -uri $(NCWSDL) -g -d adb -u -uw -f -o generated | grep -v 'the classpath'
-	@echo Compiling the stubs
-	cd generated; patch -p1 < ../axis2_svc_generated.patch; $(CC) -c $(CFLAGS) $(INCLUDES) *.c
+#	@echo Compiling the stubs
+#	cd generated; patch -p1 < ../axis2_svc_generated.patch; $(CC) -c $(CFLAGS) $(INCLUDES) *.c
+	@cp ../tools/Makefile.gen generated/Makefile
+#	cd generated; $(MAKE); cd ..
 	@echo "this is a cute little makefile marker" >generated/stubs
 	@echo Stubs generated.
 
@@ -55,6 +62,9 @@ server: $(SERVICE_SO)
 	make -C ../storage
 
 ../storage/walrus.o: ../storage/walrus.c ../util/misc.o ../util/data.o
+	make -C ../storage
+
+../storage/iscsi.o: ../storage/iscsi.c 
 	make -C ../storage
 
 ../storage/http.o: ../storage/http.c ../util/misc.o ../util/data.o
@@ -86,13 +96,13 @@ clientlib: generated/stubs ../util/data.o client-marshal-adb.o
 client: $(CLIENT) $(CLIENT)_local
 
 $(CLIENT): generated/stubs $(STORAGE_OBJS) ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(CLIENT).c ../storage/vbr.o
-	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(NC_LIBS) generated/adb_*.o generated/axis2_stub_*.o client-marshal-adb.o ../util/*.o ../net/*.o $(CLIENT).c ../storage/http.o ../storage/storage-windows.o
+	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(NC_LIBS) generated/adb_*.o generated/axis2_stub_*.o client-marshal-adb.o ../util/*.o $(STORAGE_OBJS) ../net/*.o $(CLIENT).c ../storage/http.o ../storage/storage-windows.o
 
 $(CLIENT)_local: generated/stubs $(STORAGE_OBJS) ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o ../storage/vbr.o
 	$(CC) -o $(CLIENT)_local $(INCLUDES) $(CFLAGS) client-marshal-local.o ../util/*.o $(STORAGE_OBJS) ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS) ../storage/http.o ../storage/storage-windows.o
 
 test: test.c ../util/misc.o ../util/data.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/misc.o ../util/data.o ../util/euca_auth.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/misc.o ../storage/diskutil.o ../util/data.o ../util/euca_auth.o ../util/ipc.o
 
 test_nc: test_nc.c ../util/misc.o ../storage/diskutil.o
 	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc test_nc.c ../util/misc.o ../storage/diskutil.o ../util/euca_auth.o ../util/ipc.o
@@ -118,7 +128,7 @@ clean:
 	rm -rf $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local *~* *#*
 
 distclean:
-	rm -rf generated $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local *~* *#*
+	rm -rf generated $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local nc-client-policy.xml test test_nc *~* *#*
 
 install: deploy
 	$(INSTALL) nc-client-policy.xml $(DESTDIR)$(vardir)/lib/eucalyptus/keys/

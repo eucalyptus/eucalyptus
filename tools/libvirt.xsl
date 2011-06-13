@@ -48,12 +48,13 @@ that describes a Eucalyptus instance to be launched.
 					<kernel>
 						<xsl:value-of select="instance/kernel"/>
 					</kernel>
-					<cmdline>root=/dev/sda1 console=ttyS0</cmdline>
 					<xsl:choose>
 						<xsl:when test="instance/os/@virtioRoot = 'true'">
+						  <cmdline>root=/dev/vda1 console=ttyS0</cmdline>
 							<root>/dev/vda1</root>
 						</xsl:when>
 						<xsl:when test="instance/os/@virtioRoot = 'false'">
+						  <cmdline>root=/dev/sda1 console=ttyS0</cmdline>
 							<root>/dev/sda1</root>
 						</xsl:when>
 						<xsl:otherwise>
@@ -63,6 +64,9 @@ that describes a Eucalyptus instance to be launched.
 				</xsl:if>
 			</os>
 			<features>
+			  <xsl:if test="/instance/hypervisor/@type = 'kvm'">
+			    <acpi/>
+			  </xsl:if>
 				<xsl:for-each select="instance/features">
 					<xsl:copy-of select="*"/>
 				</xsl:for-each>
@@ -86,7 +90,7 @@ that describes a Eucalyptus instance to be launched.
 				<xsl:for-each select="instance/disks/diskPath">
 					<disk>
 						<xsl:attribute name="device">
-							<xsl:value-of select="@targetDeviceType"/>
+						      <xsl:value-of select="@targetDeviceType"/>
 						</xsl:attribute>
 						<xsl:attribute name="type">
 							<xsl:value-of select="@sourceType"/>
@@ -109,12 +113,24 @@ that describes a Eucalyptus instance to be launched.
 							</xsl:choose>
 						</source>
 						<target>
-							<xsl:attribute name="dev">
+							  <xsl:choose>
+							    <xsl:when test="/instance/os/@virtioRoot = 'true'">
+							      <xsl:attribute name="dev">
+								<xsl:value-of select="@targetDeviceNameVirtio"/>
+							      </xsl:attribute>
+							      <xsl:attribute name="bus">
+								<xsl:value-of select="@targetDeviceBusVirtio"/>
+							      </xsl:attribute>
+							    </xsl:when>
+							    <xsl:when test="/instance/os/@virtioRoot = 'false'">
+							      <xsl:attribute name="dev">
 								<xsl:value-of select="@targetDeviceName"/>
-							</xsl:attribute>
-							<xsl:attribute name="bus">
+							      </xsl:attribute>
+							      <xsl:attribute name="bus">
 								<xsl:value-of select="@targetDeviceBus"/>
-							</xsl:attribute>
+							      </xsl:attribute>
+							    </xsl:when>
+							  </xsl:choose>
 						</target>
 					</disk>
 				</xsl:for-each>

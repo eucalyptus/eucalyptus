@@ -107,7 +107,7 @@ public class Component implements HasName<Component> {
   }
   
   public enum Transition implements Automata.Transition<Transition> {
-    INITIALIZING, LOADING, STARTING, READY_CHECK, STOPPING, ENABLING, ENABLED_CHECK, DISABLING, DISABLED_CHECK, DESTROYING, FAILED_TO_PREPARE;
+    INITIALIZING, LOADING, STARTING, READY_CHECK, STOPPING, STOPPING_NOTREADY, ENABLING, ENABLED_CHECK, DISABLING, DISABLED_CHECK, DESTROYING, FAILED_TO_PREPARE, RELOADING;
   }
   
   Component( ComponentId componentId ) throws ServiceRegistrationException {
@@ -346,16 +346,18 @@ public class Component implements HasName<Component> {
   }
   
   public CheckedListenableFuture<ServiceConfiguration> enableTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
-    this.setServiceGoalState( configuration, this.serviceRegistry.getServices( ).size( ) == 1
-                              ? State.ENABLED
-                                : State.DISABLED );
-    return ServiceTransitions.transitionChain( configuration, State.ENABLED );
+    State goal = this.serviceRegistry.getServices( ).size( ) == 1
+    ? State.ENABLED
+      : State.DISABLED;
+    this.setServiceGoalState( configuration, goal );
+    return ServiceTransitions.transitionChain( configuration, goal );
   }
   
   public CheckedListenableFuture<ServiceConfiguration> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
-    this.setServiceGoalState( configuration, this.serviceRegistry.getServices( ).size( ) == 1
-                         ? State.ENABLED
-                           : State.DISABLED );
+    State goal = this.serviceRegistry.getServices( ).size( ) == 1
+    ? State.ENABLED
+      : State.DISABLED;
+    this.setServiceGoalState( configuration, goal );
     return ServiceTransitions.transitionChain( configuration, State.NOTREADY );
   }
   
@@ -563,7 +565,7 @@ public class Component implements HasName<Component> {
      */
     public Service lookup( ServiceConfiguration config ) throws NoSuchElementException {
       if ( !this.services.containsKey( config ) ) {
-        throw new NoSuchElementException( "Failed to lookup service corresponding to full-name: " + config );
+        throw new NoSuchElementException( "Failed to lookup service corresponding to service configuration: " + config );
       } else {
         return this.services.get( config );
       }

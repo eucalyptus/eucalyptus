@@ -113,7 +113,7 @@ static configEntry configKeysRestart[] = {
   {"POWER_WAKETHRESH", "300"},
   {"CC_IMAGE_PROXY", NULL},
   {"CC_IMAGE_PROXY_CACHE_SIZE", "32768"},
-  {"CC_IMAGE_PROXY_PATH", "/var/lib/eucalyptus/dynserv/"},
+  {"CC_IMAGE_PROXY_PATH", "$EUCALYPTUS/var/lib/eucalyptus/dynserv/"},
   {"LOGLEVEL", "DEBUG"},
   {NULL, NULL}
 };
@@ -253,7 +253,7 @@ int doDescribeInstances(ncMetadata *meta, char **instIds, int instIdsLen, ccInst
 int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds, int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen, char **uuids, int uuidsLen, int minCount, int maxCount, char *accountId, char *reservationId, virtualMachine *ccvm, char *keyName, int vlan, char *userData, char *launchIndex, char *platform, int expiryTime, char *targetNode, ccInstance **outInsts, int *outInstsLen);
 int doGetConsoleOutput(ncMetadata *meta, char *instId, char **consoleOutput);
 int doRebootInstances(ncMetadata *meta, char **instIds, int instIdsLen);
-int doTerminateInstances(ncMetadata *meta, char **instIds, int instIdsLen, int **outStatus);
+int doTerminateInstances(ncMetadata *meta, char **instIds, int instIdsLen, int force, int **outStatus);
 
 int doRegisterImage(ncMetadata *meta, char *amiId, char *location);
 int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, int **outTypesMax, int **outTypesAvail, int *outTypesLen, ccResource **outNodes, int *outNodesLen);

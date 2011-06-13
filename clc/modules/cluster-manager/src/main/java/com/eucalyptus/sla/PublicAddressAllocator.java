@@ -63,28 +63,16 @@
 
 package com.eucalyptus.sla;
 
-import com.eucalyptus.address.Address;
-import com.eucalyptus.address.Addresses;
-import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import com.eucalyptus.address.Addresses;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 public class PublicAddressAllocator implements ResourceAllocator {
   
   @Override
-  public void allocate( VmAllocationInfo vmInfo ) throws Exception {
-    for( ResourceToken toke : vmInfo.getAllocationTokens( ) ) {
-      for( Address addr : Addresses.allocateSystemAddresses( toke.getCluster( ), toke.getAmount( ) ) ) {
-        toke.getAddresses( ).add( addr.getDisplayName( ) );
-      }
-    }    
+  public void allocate( Allocation allocInfo ) throws Exception {
+    allocInfo.requestAddressTokens( );
   }
   
   @Override
-  public void fail( VmAllocationInfo vmInfo, Throwable t ) {
-    for( ResourceToken toke : vmInfo.getAllocationTokens( ) ) {
-      for( String addr : toke.getAddresses( ) ) {
-        Addresses.release( Addresses.getInstance().lookup( addr ) );
-      }
-    }
+  public void fail( Allocation allocInfo, Throwable t ) {
+    allocInfo.releaseAddressTokens( );
   }  
 }
