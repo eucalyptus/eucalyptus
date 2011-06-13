@@ -667,24 +667,26 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
         if (rc) {
             logprintfl (EUCAERROR, "{%u} error: failed to run grub 1 on disk '%s': %s\n", (unsigned int)pthread_self(), path, strerror (errno));
         } else {
-            int ret;
+            int read_bytes;
             char buf [1024];
             bzero (buf, sizeof (buf));
             boolean saw_done = FALSE;
             do {
                 // read in a line
                 int bytes_read = 0;
-                while ((sizeof (buf) - 2 - bytes_read)>0 && ((ret = read (tfd, buf + bytes_read, 1)) > 0))
+                while ((sizeof (buf) - 2 - bytes_read)>0 // there is space in buffer for \n and \0
+                       && ((read_bytes = read (tfd, buf + bytes_read, 1)) > 0))
                     if (buf [bytes_read++] == '\n')
                         break;
-                if (ret < 0) 
+                if (read_bytes < 0) // possibly truncated output, ensure there is newline
                     buf [bytes_read++] = '\n';
                 buf [bytes_read] = '\0';
-                logprintfl (EUCADEBUG, "\t%s", buf);
-                if (strstr (buf, "Done"))
+                logprintfl (EUCADEBUG, "\t%s", buf); // log grub 1 prompts and our inputs
+                if (strstr (buf, "Done.")) // this indicates that grub 1 succeeded (the message has been there since 2000)
                     saw_done = TRUE;
-            } while (ret>0);
-            
+            } while (read_bytes>0);
+            close (tfd);
+
             if (saw_done==FALSE) {
                 logprintfl (EUCAERROR, "{%u} error: failed to run grub 1 on disk '%s': %s\n", (unsigned int)pthread_self(), path);
                 rc = 1;
