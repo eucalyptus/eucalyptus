@@ -75,7 +75,6 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceCheckRecord;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.DisableServiceResponseType;
@@ -93,7 +92,6 @@ import com.eucalyptus.empyrean.StartServiceResponseType;
 import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.empyrean.StopServiceResponseType;
 import com.eucalyptus.empyrean.StopServiceType;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
@@ -108,7 +106,7 @@ public class EmpyreanService {
     START, STOP, ENABLE, DISABLE, RESTART
   }
   
-  public ModifyServiceResponseType modifyService( ModifyServiceType request ) {
+  public ModifyServiceResponseType modifyService( ModifyServiceType request ) throws Exception {
     ModifyServiceResponseType reply = request.getReply( );
     TransitionName transition = TransitionName.valueOf( request.getState( ).toUpperCase( ) );
     for ( Component comp : Components.list( ) ) {
@@ -199,13 +197,13 @@ public class EmpyreanService {
         }
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
-        return reply.markFailed( );
+        throw ex;
       }
     }
     return reply;
   }
   
-  public StartServiceResponseType startService( StartServiceType request ) throws ServiceRegistrationException {
+  public StartServiceResponseType startService( StartServiceType request ) throws Throwable {
     StartServiceResponseType reply = request.getReply( );
     for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
       try {
@@ -213,9 +211,17 @@ public class EmpyreanService {
         ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
         if ( service.isVmLocal( ) ) {
           try {
-            comp.startTransition( service );
+            comp.startTransition( service ).get( );
+            reply.getServices( ).add( serviceInfo );
           } catch ( IllegalStateException ex ) {
             LOG.error( ex, ex );
+            throw ex;
+          } catch ( ExecutionException ex ) {
+            LOG.error( ex , ex );
+            throw ex.getCause( );
+          } catch ( InterruptedException ex ) {
+            LOG.error( ex , ex );
+            Thread.currentThread( ).interrupt( );
             throw ex;
           }
         }
@@ -227,7 +233,7 @@ public class EmpyreanService {
     return reply;
   }
   
-  public StopServiceResponseType stopService( StopServiceType request ) {
+  public StopServiceResponseType stopService( StopServiceType request ) throws Throwable {
     StopServiceResponseType reply = request.getReply( );
     for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
       try {
@@ -236,26 +242,28 @@ public class EmpyreanService {
         if ( service.isVmLocal( ) ) {
           try {
             comp.stopTransition( service ).get( );
+            reply.getServices( ).add( serviceInfo );
           } catch ( IllegalStateException ex ) {
             LOG.error( ex, ex );
-            return reply.markFailed( );
+            throw ex;
           } catch ( ExecutionException ex ) {
-            LOG.error( ex, ex );
-            return reply.markFailed( );
+            LOG.error( ex , ex );
+            throw ex.getCause( );
           } catch ( InterruptedException ex ) {
-            LOG.error( ex, ex );
-            return reply.markFailed( );
+            LOG.error( ex , ex );
+            Thread.currentThread( ).interrupt( );
+            throw ex;
           }
         }
       } catch ( NoSuchElementException ex ) {
         LOG.error( ex, ex );
-        return reply.markFailed( );
+        throw ex;
       }
     }
     return reply;
   }
   
-  public EnableServiceResponseType enableService( EnableServiceType request ) {
+  public EnableServiceResponseType enableService( EnableServiceType request ) throws Throwable {
     EnableServiceResponseType reply = request.getReply( );
     for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
       try {
@@ -263,49 +271,53 @@ public class EmpyreanService {
         ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
         if ( service.isVmLocal( ) ) {
           try {
-            comp.enableTransition( service );
+            comp.enableTransition( service ).get( );
+            reply.getServices( ).add( serviceInfo );
           } catch ( IllegalStateException ex ) {
             LOG.error( ex, ex );
-            return reply.markFailed( );
+            throw ex;
+          } catch ( ExecutionException ex ) {
+            LOG.error( ex , ex );
+            throw ex.getCause( );
+          } catch ( InterruptedException ex ) {
+            LOG.error( ex , ex );
+            Thread.currentThread( ).interrupt( );
+            throw ex;
           }
         }
       } catch ( NoSuchElementException ex ) {
         LOG.error( ex, ex );
-        return reply.markFailed( );
+        throw ex;
       }
     }
     return reply;
   }
   
-  public DisableServiceResponseType disableService( DisableServiceType request ) {
+  public DisableServiceResponseType disableService( DisableServiceType request ) throws Throwable {
     DisableServiceResponseType reply = request.getReply( );
     for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
       try {
-        Component c = Components.lookup( serviceInfo.getType( ) );
-        for ( ServiceConfiguration config : c.lookupServiceConfigurations( ) ) {
-          String partition = config.getPartition( );
-          String name = config.getName( );
-          if ( partition.equals( serviceInfo.getPartition( ) ) && name.equals( serviceInfo.getName( ) ) ) {
-            if ( Component.State.ENABLED.equals( config.lookupState( ) ) ) {
-              try {
-                c.disableTransition( config ).get( );
-                reply.getServices( ).add( serviceInfo );
-              } catch ( ExecutionException ex ) {
-                LOG.error( ex, ex );
-                return reply.markFailed( );
-              } catch ( InterruptedException ex ) {
-                LOG.error( ex, ex );
-                return reply.markFailed( );
-              }
-            } else {
-              LOG.error( "Attempt to DISABLE a service which is not currently ENABLED: " + config.toString( ) );
-              return reply.markFailed( );
-            }
+        Component comp = Components.lookup( serviceInfo.getType( ) );
+        ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
+        if ( service.isVmLocal( ) ) {
+          try {
+            comp.disableTransition( service ).get( );
+            reply.getServices( ).add( serviceInfo );
+          } catch ( IllegalStateException ex ) {
+            LOG.error( ex, ex );
+            throw ex;
+          } catch ( ExecutionException ex ) {
+            LOG.error( ex , ex );
+            throw ex.getCause( );
+          } catch ( InterruptedException ex ) {
+            LOG.error( ex , ex );
+            Thread.currentThread( ).interrupt( );
+            throw ex;
           }
         }
       } catch ( NoSuchElementException ex ) {
-        Exceptions.trace( "Failed to lookup component of type: " + serviceInfo.getType( ), ex );
-        return reply.markFailed( );
+        LOG.error( ex, ex );
+        throw ex;
       }
     }
     return reply;

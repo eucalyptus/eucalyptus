@@ -275,8 +275,8 @@ public class Internets {
       addr = InetAddress.getByName( address );
       return testLocal( addr );
     } catch ( UnknownHostException e ) {
-      LOG.error( e.getMessage( ), e );
-      return false;
+      LOG.error( e.getMessage( ) );
+      return address.endsWith( "Internal" );
     }
   }
   
