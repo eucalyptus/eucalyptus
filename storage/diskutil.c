@@ -641,6 +641,7 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
     }
     
     logprintfl (EUCAINFO, "{%u} installing grub in MBR\n", (unsigned int)pthread_self());
+    int saved_errno;
     if (grub_version==1) {
         snprintf(cmd, sizeof (cmd), "%s --batch >/dev/null 2>&1", helpers_path[GRUB]);
         logprintfl (EUCADEBUG, "{%u} running %s\n", (unsigned int)pthread_self(), cmd);
@@ -656,6 +657,7 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
             char buf [1024];
             bzero (buf, sizeof (buf));
             boolean success = FALSE;
+            errno = 0;
             while (!feof (fp)) {
                 if (fgets (buf, sizeof (buf), fp)!=NULL) {
                     logprintfl (EUCADEBUG, "\t%s", buf);
@@ -665,14 +667,16 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
                     break;
                 }
             }
+            saved_errno = errno;
             if (success) {
                 rc = pclose (fp); // base success on exit code of grub
+                saved_errno = errno;
             } else {
                 pclose (fp);
             }
         }
         if (rc)
-            logprintfl (EUCAERROR, "{%u} error: failed to run grub 1 on disk '%s': %s\n", (unsigned int)pthread_self(), path, strerror (errno));
+            logprintfl (EUCAERROR, "{%u} error: failed to run grub 1 on disk '%s': %s\n", (unsigned int)pthread_self(), path, strerror (saved_errno));
         
     } else if (grub_version==2) {
         char * output = pruntf (TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s %s", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt, path);
