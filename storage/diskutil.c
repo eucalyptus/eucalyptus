@@ -536,8 +536,8 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
 {
     int ret = OK;
     char * output = NULL;
-    char * kfile = NULL;
-    char * rfile = NULL;
+    char * kfile = "euca-vmlinuz";
+    char * rfile = "euca-initrd";
 
     logprintfl (EUCAINFO, "{%u} installing kernel and ramdisk\n", (unsigned int)pthread_self());
     output = pruntf (TRUE, "%s %s -p %s/boot/grub/", helpers_path[ROOTWRAP], helpers_path[MKDIR], mnt_pt);
@@ -554,22 +554,6 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
             return ERROR;
         }
         free (output);
-    }
-
-    char * ptr = strrchr (kernel, '/');
-    if (ptr) {
-        kfile = strdup (ptr+1);
-    } else {
-        kfile = strdup (kernel);
-    }
-
-    if (ramdisk) {
-        ptr = strrchr (ramdisk, '/');
-        if (ptr) {
-            rfile = strdup (ptr+1);
-        } else {
-            rfile = strdup (ramdisk);
-        }
     }
 
     output = pruntf (TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], kernel, mnt_pt, kfile);
@@ -634,9 +618,6 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
     }
     
  cleanup:        
-    if(kfile) free(kfile);
-    if(rfile) free(rfile);
-
     return ret;
 }
 
@@ -652,30 +633,68 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
     int rc = 1;
 
     if (grub_version!=1 && grub_version!=2) {
-        logprintfl (EUCAERROR, "{%u} internal error: invocation of diskutil_grub2_mbr without grub found\n");
+        logprintfl (EUCAERROR, "{%u} internal error: invocation of diskutil_grub2_mbr without grub found\n", (unsigned int)pthread_self());
         return ERROR;
     } else if (mnt_pt==NULL && grub_version!=1) {
-        logprintfl (EUCAERROR, "{%u} internal error: invocation of diskutil_grub2_mbr with grub 1\n");
+        logprintfl (EUCAERROR, "{%u} internal error: invocation of diskutil_grub2_mbr with grub 1\n", (unsigned int)pthread_self());
         return ERROR;
     }
     
     logprintfl (EUCAINFO, "{%u} installing grub in MBR\n", (unsigned int)pthread_self());
     if (grub_version==1) {
-        snprintf(cmd, sizeof (cmd), "%s --batch >/dev/null 2>&1", helpers_path[GRUB]);
+        char tmp_file [EUCA_MAX_PATH] = "/tmp/euca-temp-XXXXXX";
+        int tfd = mkstemp (tmp_file);
+        if (tfd < 0) {
+            logprintfl (EUCAINFO, "{%u} error: mkstemp() failed: %s\n", (unsigned int)pthread_self(), strerror (errno));
+            return ERROR;
+        }
+
+        // we now invoke grub through euca_rootwrap because it may need to operate on
+        // devices that are owned by root (e.g. /dev/mapper/euca-dsk-7E4E131B-fca1d769p1)
+        snprintf(cmd, sizeof (cmd), "%s %s --batch >%s 2>&1", helpers_path[ROOTWRAP], helpers_path[GRUB], tmp_file);
         logprintfl (EUCADEBUG, "{%u} running %s\n", (unsigned int)pthread_self(), cmd);
+        errno = 0;
         FILE * fp = popen (cmd, "w");
         if (fp!=NULL) {
             char s [EUCA_MAX_PATH];
-#define _PR fprintf (fp, "%s", s); logprintfl (EUCADEBUG, "\t%s", s)
+#define _PR fprintf (fp, "%s", s); // logprintfl (EUCADEBUG, "\t%s", s)
             snprintf (s, sizeof (s), "device (hd0) %s\n", path); _PR;
             snprintf (s, sizeof (s), "root (hd0,%d)\n", part);   _PR;
             snprintf (s, sizeof (s), "setup (hd0)\n");           _PR;
             snprintf (s, sizeof (s), "quit\n");                  _PR;
-            rc = pclose (fp);
+            rc = pclose (fp); // base success on exit code of grub
         }
-        if (rc)
+        if (rc) {
             logprintfl (EUCAERROR, "{%u} error: failed to run grub 1 on disk '%s': %s\n", (unsigned int)pthread_self(), path, strerror (errno));
+        } else {
+            int read_bytes;
+            char buf [1024];
+            bzero (buf, sizeof (buf));
+            boolean saw_done = FALSE;
+            do {
+                // read in a line
+                int bytes_read = 0;
+                while ((sizeof (buf) - 2 - bytes_read)>0 // there is space in buffer for \n and \0
+                       && ((read_bytes = read (tfd, buf + bytes_read, 1)) > 0))
+                    if (buf [bytes_read++] == '\n')
+                        break;
+                if (read_bytes < 0) // possibly truncated output, ensure there is newline
+                    buf [bytes_read++] = '\n';
+                buf [bytes_read] = '\0';
+                logprintfl (EUCADEBUG, "\t%s", buf); // log grub 1 prompts and our inputs
+                if (strstr (buf, "Done.")) // this indicates that grub 1 succeeded (the message has been there since 2000)
+                    saw_done = TRUE;
+            } while (read_bytes>0);
+            close (tfd);
 
+            if (saw_done==FALSE) {
+                logprintfl (EUCAERROR, "{%u} error: failed to run grub 1 on disk '%s': %s\n", (unsigned int)pthread_self(), path);
+                rc = 1;
+            } else {
+                rc = 0;
+            }
+        }
+        
     } else if (grub_version==2) {
         char * output = pruntf (TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s %s", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt, path);
         if (!output) {
