@@ -255,7 +255,7 @@ static void gen_id (char * str, unsigned int size)
 {
     struct timeval tv;
     gettimeofday (&tv, NULL);
-    srandom ((unsigned int) ((unsigned)str * (unsigned long long)tv.tv_usec));
+    srandom ((unsigned int) ((unsigned long long)str * (unsigned long long)tv.tv_usec));
     snprintf (str, size, "%08lx%08lx%08lx", (unsigned long)random(), (unsigned long)random(), (unsigned long)random());
 }
 
