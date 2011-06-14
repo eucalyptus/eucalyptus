@@ -91,9 +91,9 @@ public class ComponentBootstrapper {
   
   public void addBootstrapper( Bootstrapper b ) {
     EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, b.getBootstrapStage( ).name( ), b.getClass( ).getName( ), "component=" + this.component.getName( ) ).info( );
-    if( this.component.isAvailableLocally( ) ) {
+//    if( this.component.isAvailableLocally( ) ) {
       this.bootstrappers.put( b.getBootstrapStage( ), b );
-    }
+//    }
   }
 
   private void updateBootstrapDependencies( ) {    
