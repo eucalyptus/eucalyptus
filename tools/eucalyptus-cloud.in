@@ -179,7 +179,7 @@ do_upgrade() {
                 OLD_EUCA_PATH=$b
         done < $EUCALYPTUS/etc/eucalyptus/eucalyptus.upgrade
         #Attempt db upgrade
-        echo "Attempting database upgrade..."
+        echo "Attempting database upgrade from $OLD_EUCA_VERSION at $OLD_EUCA_PATH..."
 	$EUCALYPTUS/usr/share/eucalyptus/euca_upgrade --old $OLD_EUCA_PATH --new $EUCALYPTUS --db
 	case "$?" in
 	0) 
