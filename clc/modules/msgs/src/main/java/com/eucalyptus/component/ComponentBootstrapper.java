@@ -127,7 +127,7 @@ public class ComponentBootstrapper {
 
   private boolean doTransition( EventType transition, CheckedFunction<Bootstrapper, Boolean> checkedFunction ) {
     String name = transition.name( ).replaceAll( ".*_", "" ).toLowerCase( );
-//    this.updateBootstrapDependencies( );
+    this.updateBootstrapDependencies( );
     for ( Stage s : Bootstrap.Stage.values( ) ) {
       for ( Bootstrapper b : this.bootstrappers.get( s ) ) {
         EventRecord.here( Bootstrap.class, transition, this.component.getName( ), "stage", s.name( ), b.getClass( ).getCanonicalName( ) ).debug( );
