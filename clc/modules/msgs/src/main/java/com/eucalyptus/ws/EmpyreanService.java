@@ -208,7 +208,7 @@ public class EmpyreanService {
     for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
-        ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
+        ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
         if ( service.isVmLocal( ) ) {
           try {
             comp.startTransition( service ).get( );
@@ -225,7 +225,7 @@ public class EmpyreanService {
             throw ex;
           }
         }
-      } catch ( NoSuchElementException ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
         throw ex;
       }
@@ -238,7 +238,7 @@ public class EmpyreanService {
     for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
-        ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
+        ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
         if ( service.isVmLocal( ) ) {
           try {
             comp.stopTransition( service ).get( );
@@ -255,7 +255,7 @@ public class EmpyreanService {
             throw ex;
           }
         }
-      } catch ( NoSuchElementException ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
         throw ex;
       }
@@ -268,7 +268,7 @@ public class EmpyreanService {
     for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
-        ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
+        ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
         if ( service.isVmLocal( ) ) {
           try {
             comp.enableTransition( service ).get( );
@@ -285,7 +285,7 @@ public class EmpyreanService {
             throw ex;
           }
         }
-      } catch ( NoSuchElementException ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
         throw ex;
       }
@@ -298,7 +298,7 @@ public class EmpyreanService {
     for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
-        ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
+        ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
         if ( service.isVmLocal( ) ) {
           try {
             comp.disableTransition( service ).get( );

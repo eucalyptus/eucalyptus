@@ -78,12 +78,14 @@ import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.DisableServiceType;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.empyrean.EnableServiceType;
 import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.empyrean.StopServiceType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
@@ -436,13 +438,7 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration parent ) throws Throwable {
         AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new StartServiceType( ) {
           {
-            this.getServices( ).add( new ServiceInfoType( ) {
-              {
-                setPartition( parent.getPartition( ) );
-                setName( parent.getName( ) );
-                setType( parent.getComponentId( ).name( ) );
-              }
-            } );
+            this.getServices( ).add( TypeMappers.transform( parent, ServiceInfoType.class ) );
           }
         } );
         try {
@@ -455,7 +451,19 @@ public class ServiceTransitions {
     ENABLE {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {}
+      public void fire( final ServiceConfiguration parent ) throws Throwable {
+        AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new EnableServiceType( ) {
+          {
+            this.getServices( ).add( TypeMappers.transform( parent, ServiceInfoType.class ) );
+          }
+        } );
+        try {
+          parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+
+      }
     },
     DISABLE {
       
@@ -463,13 +471,7 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration parent ) throws Throwable {
         AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new DisableServiceType( ) {
           {
-            this.getServices( ).add( new ServiceInfoType( ) {
-              {
-                setPartition( parent.getPartition( ) );
-                setName( parent.getName( ) );
-                setType( parent.getComponentId( ).name( ) );
-              }
-            } );
+            this.getServices( ).add( TypeMappers.transform( parent, ServiceInfoType.class ) );
           }
         } );
         try {
@@ -485,13 +487,7 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration parent ) throws Throwable {
         AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new StopServiceType( ) {
           {
-            this.getServices( ).add( new ServiceInfoType( ) {
-              {
-                setPartition( parent.getPartition( ) );
-                setName( parent.getName( ) );
-                setType( parent.getComponentId( ).name( ) );
-              }
-            } );
+            this.getServices( ).add( TypeMappers.transform( parent, ServiceInfoType.class ) );
           }
         } );
         try {
