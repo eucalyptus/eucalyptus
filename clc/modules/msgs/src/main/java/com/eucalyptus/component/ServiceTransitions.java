@@ -453,7 +453,7 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Throwable {
-        DescribeServicesResponseType response = sendEmpyreanRequest( parent, new DescribeServicesType( ) );
+        DescribeServicesResponseType response = ServiceTransitions.sendEmpyreanRequest( parent, new DescribeServicesType( ) );
         Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>( ) {
           
           @Override
@@ -470,7 +470,7 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Throwable {
-        AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new StartServiceType( ) {
+        ServiceTransitions.sendEmpyreanRequest( parent, new StartServiceType( ) {
           {
             this.getServices( ).add( TypeMappers.transform( parent, ServiceInfoType.class ) );
           }
@@ -486,7 +486,7 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Throwable {
-        AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new EnableServiceType( ) {
+        ServiceTransitions.sendEmpyreanRequest( parent, new EnableServiceType( ) {
           {
             this.getServices( ).add( TypeMappers.transform( parent, ServiceInfoType.class ) );
           }
@@ -503,7 +503,7 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Throwable {
-        AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new DisableServiceType( ) {
+        ServiceTransitions.sendEmpyreanRequest( parent, new DisableServiceType( ) {
           {
             this.getServices( ).add( TypeMappers.transform( parent, ServiceInfoType.class ) );
           }
@@ -519,7 +519,7 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Throwable {
-        AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ), new StopServiceType( ) {
+        ServiceTransitions.sendEmpyreanRequest( parent, new StopServiceType( ) {
           {
             this.getServices( ).add( TypeMappers.transform( parent, ServiceInfoType.class ) );
           }
