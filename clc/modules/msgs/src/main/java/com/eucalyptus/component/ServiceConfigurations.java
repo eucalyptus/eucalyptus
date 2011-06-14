@@ -20,9 +20,9 @@ public class ServiceConfigurations {
   private static ServiceConfigurationProvider singleton = new DatabaseServiceConfigurationProvider( );
   
   @TypeMapper
-  enum ServiceInfoToServiceConfiguration implements Function<ServiceInfoType,ServiceConfiguration> {
+  enum ServiceInfoToServiceConfiguration implements Function<ServiceInfoType, ServiceConfiguration> {
     INSTANCE;
-
+    
     @Override
     public ServiceConfiguration apply( ServiceInfoType arg0 ) {
       Component comp = Components.lookup( arg0.getType( ) );
@@ -39,7 +39,7 @@ public class ServiceConfigurations {
           LOG.error( ex, ex );
           throw new UndeclaredThrowableException( ex );
         } catch ( ServiceRegistrationException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
           throw new UndeclaredThrowableException( ex );
         }
       }
@@ -49,12 +49,19 @@ public class ServiceConfigurations {
   }
   
   @TypeMapper
-  enum ServiceConfigurationToServiceInfo implements Function<ServiceConfiguration,ServiceInfoType> {
+  enum ServiceConfigurationToServiceInfo implements Function<ServiceConfiguration, ServiceInfoType> {
     INSTANCE;
-
+    
     @Override
-    public ServiceInfoType apply( ServiceConfiguration arg0 ) {
-      return null;
+    public ServiceInfoType apply( final ServiceConfiguration arg0 ) {
+      return new ServiceInfoType( ) {
+        {
+          setPartition( arg0.getPartition( ) );
+          setName( arg0.getName( ) );
+          setType( arg0.getComponentId( ).name( ) );
+          getUris( ).add( arg0.getUri( ).toASCIIString( ) );
+        }
+      };;
     }
     
   }
@@ -62,16 +69,16 @@ public class ServiceConfigurations {
   public static ServiceConfigurationProvider getInstance( ) {
     return singleton;
   }
-
+  
   public static ServiceConfiguration createEphemeral( ComponentId compId, String partition, String name, URI remoteUri ) {
     return new EphemeralConfiguration( compId, partition, name, remoteUri );
   }
-
+  
   public static ServiceConfiguration createEphemeral( ComponentId compId, InetAddress host ) {
     return new EphemeralConfiguration( compId, compId.getPartition( ), host.getHostAddress( ), compId.makeInternalRemoteUri( host.getHostAddress( ),
-                                                                                                                           compId.getPort( ) ) );
+                                                                                                                             compId.getPort( ) ) );
   }
-
+  
   public static ServiceConfiguration createEphemeral( Component component, InetAddress host ) {
     return createEphemeral( component.getComponentId( ), host );
   }
