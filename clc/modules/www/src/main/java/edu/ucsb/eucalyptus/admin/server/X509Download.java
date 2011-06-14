@@ -226,7 +226,7 @@ public class X509Download extends HttpServlet {
       sb.append( "\nalias ec2-upload-bundle=\"ec2-upload-bundle -a ${EC2_ACCESS_KEY} -s ${EC2_SECRET_KEY} --url ${S3_URL} --ec2cert ${EUCALYPTUS_CERT}\"" );
       sb.append( "\n" );
       zipOut.putArchiveEntry( entry = new ZipArchiveEntry( "eucarc" ) );
-      entry.setUnixMode( 0x600 );
+      entry.setUnixMode( 0600 );
       zipOut.write( sb.toString( ).getBytes( "UTF-8" ) );
       zipOut.closeArchiveEntry( );
       
@@ -234,18 +234,18 @@ public class X509Download extends HttpServlet {
       sb.append( "AWSAccessKeyId=" ).append( userAccessKey ).append( '\n' );
       sb.append( "AWSSecretKey=" ).append( userSecretKey );
       zipOut.putArchiveEntry( entry = new ZipArchiveEntry( "iamrc" ) );
-      entry.setUnixMode( 0x600 );
+      entry.setUnixMode( 0600 );
       zipOut.write( sb.toString( ).getBytes( "UTF-8" ) );
       zipOut.closeArchiveEntry( );
       
       /** write the private key to the zip stream **/
       zipOut.putArchiveEntry( entry = new ZipArchiveEntry( "cloud-cert.pem" ) );
-      entry.setUnixMode( 0x600 );
+      entry.setUnixMode( 0600 );
       zipOut.write( PEMFiles.getBytes( cloudCert ) );
       zipOut.closeArchiveEntry( );
       
       zipOut.putArchiveEntry( entry = new ZipArchiveEntry( "jssecacerts" ) );
-      entry.setUnixMode( 0x600 );
+      entry.setUnixMode( 0600 );
       KeyStore tempKs = KeyStore.getInstance( "jks" );
       tempKs.load( null );
       tempKs.setCertificateEntry( "eucalyptus", cloudCert );
@@ -256,13 +256,13 @@ public class X509Download extends HttpServlet {
       
       /** write the private key to the zip stream **/
       zipOut.putArchiveEntry( entry = new ZipArchiveEntry( baseName + "-pk.pem" ) );
-      entry.setUnixMode( 0x600 );
+      entry.setUnixMode( 0600 );
       zipOut.write( PEMFiles.getBytes( keyPair.getPrivate( ) ) );
       zipOut.closeArchiveEntry( );
       
       /** write the X509 certificate to the zip stream **/
       zipOut.putArchiveEntry( entry = new ZipArchiveEntry( baseName + "-cert.pem" ) );
-      entry.setUnixMode( 0x600 );
+      entry.setUnixMode( 0600 );
       zipOut.write( PEMFiles.getBytes( x509 ) );
       zipOut.closeArchiveEntry( );
     }
