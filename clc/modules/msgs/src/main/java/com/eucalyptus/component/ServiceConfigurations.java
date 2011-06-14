@@ -20,7 +20,7 @@ public class ServiceConfigurations {
   private static ServiceConfigurationProvider singleton = new DatabaseServiceConfigurationProvider( );
   
   @TypeMapper
-  enum ServiceInfoToServiceConfiguration implements Function<ServiceInfoType, ServiceConfiguration> {
+  public enum ServiceInfoToServiceConfiguration implements Function<ServiceInfoType, ServiceConfiguration> {
     INSTANCE;
     
     @Override
@@ -49,7 +49,7 @@ public class ServiceConfigurations {
   }
   
   @TypeMapper
-  enum ServiceConfigurationToServiceInfo implements Function<ServiceConfiguration, ServiceInfoType> {
+  public enum ServiceConfigurationToServiceInfo implements Function<ServiceConfiguration, ServiceInfoType> {
     INSTANCE;
     
     @Override
@@ -61,7 +61,7 @@ public class ServiceConfigurations {
           setType( arg0.getComponentId( ).name( ) );
           getUris( ).add( arg0.getUri( ).toASCIIString( ) );
         }
-      };;
+      };
     }
     
   }
