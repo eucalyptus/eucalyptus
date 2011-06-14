@@ -84,7 +84,8 @@ public class AsyncRequests {
         }
       } ).sendSync( config );
     } catch ( ExecutionException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex.getMessage( ) );
+      LOG.error( ex.getCause( ), ex.getCause( ) );
       throw ex.getCause( );
     } catch ( InterruptedException ex ) {
       Thread.currentThread( ).interrupt( );

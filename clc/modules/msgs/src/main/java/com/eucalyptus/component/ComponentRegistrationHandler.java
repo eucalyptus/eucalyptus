@@ -65,13 +65,13 @@ package com.eucalyptus.component;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ConfigurationService;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.async.CheckedListenableFuture;
 
 public class ComponentRegistrationHandler {
   private static Logger LOG = Logger.getLogger( ComponentRegistrationHandler.class );
@@ -104,15 +104,24 @@ public class ComponentRegistrationHandler {
     try {
       final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
       try {
-        final CheckedListenableFuture<ServiceConfiguration> future = component.startTransition( newComponent );
         Runnable followRunner = new Runnable( ) {
           public void run( ) {
             try {
-              future.get( );
-              component.enableTransition( newComponent );
-            } catch ( Exception ex ) {
-              LOG.error( ex,
-                         ex );
+              component.startTransition( newComponent ).get( );
+              try {
+                component.enableTransition( newComponent );
+              } catch ( Exception ex ) {
+                LOG.error( ex, ex );
+              }
+            } catch ( ServiceRegistrationException ex1 ) {
+              LOG.error( ex1 , ex1 );
+            } catch ( IllegalStateException ex1 ) {
+              LOG.error( ex1 , ex1 );
+            } catch ( ExecutionException ex ) {
+              LOG.error( ex , ex );
+            } catch ( InterruptedException ex ) {
+              Thread.currentThread( ).interrupt( );
+              LOG.error( ex , ex );
             }
           }
         };
@@ -153,11 +162,10 @@ public class ComponentRegistrationHandler {
       throw e;
     }
     try {
-      final CheckedListenableFuture<ServiceConfiguration> future = component.stopTransition( conf );
       Runnable followRunner = new Runnable( ) {
         public void run( ) {
           try {
-            future.get( );
+            component.stopTransition( conf ).get( );
             for ( int i = 0; i < 3; i++ ) {
               try {
                 component.destroyTransition( conf );

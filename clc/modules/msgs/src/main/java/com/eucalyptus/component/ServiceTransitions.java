@@ -106,7 +106,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
 public class ServiceTransitions {
-  private static final int BOOTSTRAP_REMOTE_RETRY_INTERVAL = 5;//TODO:GRZE:@Configurable
+  private static final int BOOTSTRAP_REMOTE_RETRY_INTERVAL = 10;//TODO:GRZE:@Configurable
   private static final int BOOTSTRAP_REMOTE_RETRIES = 10;//TODO:GRZE:@Configurable
   static Logger LOG = Logger.getLogger( ServiceTransitions.class );
   
@@ -307,6 +307,13 @@ public class ServiceTransitions {
       try {
         T reply = (T) AsyncRequests.sendSync( config, msg );
         return reply;
+      } catch ( RetryableConnectionException ex ) {
+        try {
+          TimeUnit.SECONDS.sleep( BOOTSTRAP_REMOTE_RETRY_INTERVAL );
+        } catch ( InterruptedException ex1 ) {
+          Thread.currentThread( ).interrupt( );
+        }
+        continue;
       } catch ( ExecutionException ex ) {
         LOG.error( ex, ex );
         if( ex.getCause( ) instanceof RetryableConnectionException ) {
