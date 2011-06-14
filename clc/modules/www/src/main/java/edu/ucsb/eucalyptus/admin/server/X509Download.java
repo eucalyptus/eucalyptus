@@ -68,12 +68,14 @@ import java.io.IOException;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
-import java.util.zip.ZipEntry;
+import java.util.zip.ZipArchiveEntry;
 import java.util.zip.ZipOutputStream;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -189,7 +191,8 @@ public class X509Download extends HttpServlet {
       throw e;
     }
     ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
-    ZipOutputStream zipOut = new ZipOutputStream( byteOut );
+    ZipArchiveOutputStream zipOut = new ZipArchiveOutputStream( byteOut );
+    ZipArchiveEntry entry = null;
     String fingerPrint = Certs.getFingerPrint( keyPair.getPublic( ) );
     if ( fingerPrint != null ) {
       String baseName = X509Download.NAME_SHORT + "-" + u.getName( ) + "-" + fingerPrint.replaceAll( ":", "" ).toLowerCase( ).substring( 0, 8 );
@@ -223,40 +226,46 @@ public class X509Download extends HttpServlet {
       sb.append( "\nalias ec2-bundle-image=\"ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_PRIVATE_KEY} --user ${EC2_ACCOUNT_NUMBER} --ec2cert ${EUCALYPTUS_CERT}\"" );
       sb.append( "\nalias ec2-upload-bundle=\"ec2-upload-bundle -a ${EC2_ACCESS_KEY} -s ${EC2_SECRET_KEY} --url ${S3_URL} --ec2cert ${EUCALYPTUS_CERT}\"" );
       sb.append( "\n" );
-      zipOut.putNextEntry( new ZipEntry( "eucarc" ) );
+      zipOut.putArchiveEntry( entry = new ZipArchiveEntry( "eucarc" ) );
+      entry.setUnixMode( 0x600 );
       zipOut.write( sb.toString( ).getBytes( "UTF-8" ) );
-      zipOut.closeEntry( );
+      zipOut.closeArchiveEntry( );
       
       sb = new StringBuilder( );
       sb.append( "AWSAccessKeyId=" ).append( userAccessKey ).append( '\n' );
       sb.append( "AWSSecretKey=" ).append( userSecretKey );
-      zipOut.putNextEntry( new ZipEntry( "iamrc" ) );
+      zipOut.putArchiveEntry( entry = new ZipArchiveEntry( "iamrc" ) );
+      entry.setUnixMode( 0x600 );
       zipOut.write( sb.toString( ).getBytes( "UTF-8" ) );
-      zipOut.closeEntry( );
+      zipOut.closeArchiveEntry( );
       
       /** write the private key to the zip stream **/
-      zipOut.putNextEntry( new ZipEntry( "cloud-cert.pem" ) );
+      zipOut.putArchiveEntry( entry = new ZipArchiveEntry( "cloud-cert.pem" ) );
+      entry.setUnixMode( 0x600 );
       zipOut.write( PEMFiles.getBytes( cloudCert ) );
-      zipOut.closeEntry( );
+      zipOut.closeArchiveEntry( );
       
-      zipOut.putNextEntry( new ZipEntry( "jssecacerts" ) );
+      zipOut.putArchiveEntry( entry = new ZipArchiveEntry( "jssecacerts" ) );
+      entry.setUnixMode( 0x600 );
       KeyStore tempKs = KeyStore.getInstance( "jks" );
       tempKs.load( null );
       tempKs.setCertificateEntry( "eucalyptus", cloudCert );
       ByteArrayOutputStream bos = new ByteArrayOutputStream( );
       tempKs.store( bos, "changeit".toCharArray( ) );
       zipOut.write( bos.toByteArray( ) );
-      zipOut.closeEntry( );
+      zipOut.closeArchiveEntry( );
       
       /** write the private key to the zip stream **/
-      zipOut.putNextEntry( new ZipEntry( baseName + "-pk.pem" ) );
+      zipOut.putArchiveEntry( entry = new ZipArchiveEntry( baseName + "-pk.pem" ) );
+      entry.setUnixMode( 0x600 );
       zipOut.write( PEMFiles.getBytes( keyPair.getPrivate( ) ) );
-      zipOut.closeEntry( );
+      zipOut.closeArchiveEntry( );
       
       /** write the X509 certificate to the zip stream **/
-      zipOut.putNextEntry( new ZipEntry( baseName + "-cert.pem" ) );
+      zipOut.putArchiveEntry( entry = new ZipArchiveEntry( baseName + "-cert.pem" ) );
+      entry.setUnixMode( 0x600 );
       zipOut.write( PEMFiles.getBytes( x509 ) );
-      zipOut.closeEntry( );
+      zipOut.closeArchiveEntry( );
     }
     /** close the zip output stream and return the bytes **/
     zipOut.close( );
