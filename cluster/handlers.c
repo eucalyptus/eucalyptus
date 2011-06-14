@@ -3919,7 +3919,7 @@ int reconfigureNetworkFromCLC() {
   snprintf(clcnetfile, MAX_PATH, "/tmp/euca-clcnet-XXXXXX");
   snprintf(chainmapfile, MAX_PATH, "/tmp/euca-chainmap-XXXXXX");
   
-  fd = mkstemp(clcnetfile);
+  fd = safe_mkstemp(clcnetfile);
   if (fd < 0) {
     logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot open clcnetfile '%s'\n", clcnetfile);
     if(cloudIp)
@@ -3929,7 +3929,7 @@ int reconfigureNetworkFromCLC() {
   chmod(clcnetfile, 0644);
   close(fd);
 
-  fd = mkstemp(chainmapfile);
+  fd = safe_mkstemp(chainmapfile);
   if (fd < 0) {
     logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot open chainmapfile '%s'\n", chainmapfile);
     unlink(clcnetfile);

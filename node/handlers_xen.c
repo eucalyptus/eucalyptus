@@ -472,7 +472,7 @@ static int xenDetachHelper(struct nc_state_t *nc, char *instanceId, char *localD
   pid = fork();
   if (!pid) {
     snprintf(tmpfile, 32, "/tmp/detachxml.XXXXXX");
-    fd = mkstemp(tmpfile);
+    fd = safe_mkstemp(tmpfile);
     if (fd > 0) {
       write(fd, xml, strlen(xml));
       close(fd);

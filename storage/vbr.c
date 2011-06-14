@@ -727,7 +727,7 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
         
         // mount the root partition
         char mnt_pt [EUCA_MAX_PATH] = "/tmp/euca-mount-XXXXXX";
-        if (mkdtemp (mnt_pt)==NULL) {
+        if (safe_mkdtemp (mnt_pt)==NULL) {
             logprintfl (EUCAINFO, "[%s] error: mkdtemp() failed: %s\n", a->instanceId, strerror (errno));
             goto cleanup;
         }
@@ -856,7 +856,7 @@ static int copy_creator (artifact * a)
 
         // mount the partition
         char mnt_pt [EUCA_MAX_PATH] = "/tmp/euca-mount-XXXXXX";
-        if (mkdtemp (mnt_pt)==NULL) {
+        if (safe_mkdtemp (mnt_pt)==NULL) {
             logprintfl (EUCAINFO, "[%s] error: mkdtemp() failed: %s\n", a->instanceId,  strerror (errno));
             goto error;
         }
