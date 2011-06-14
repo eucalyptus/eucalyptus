@@ -329,7 +329,7 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
             // mount the partition
             char mnt_pt [EUCA_MAX_PATH];
             set_path (mnt_pt, sizeof (mnt_pt), instance, "euca-mount-XXXXXX");
-            if (mkdtemp (mnt_pt)==NULL) {
+            if (safe_mkdtemp (mnt_pt)==NULL) {
                 logprintfl (EUCAINFO, "[%s] error: mkdtemp() failed: %s\n", instance->instanceId,  strerror (errno));
                 goto w_error;
             }

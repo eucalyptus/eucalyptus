@@ -2006,6 +2006,23 @@ long long time_usec (void)
     return (long long)tv.tv_sec * 1000000 + tv.tv_usec;
 }
 
+char *safe_mkdtemp(char *template){
+    mode_t u;
+    char *ret=NULL;
+    u=umask(0077);
+    ret = mkdtemp(template);
+    umask(u);
+    return(ret);
+}
+int safe_mkstemp(char *template){
+    mode_t u;
+    int ret;
+    u=umask(0077);
+    ret = mkstemp(template);
+    umask(u);
+    return(ret);
+}
+
 /////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////
 
 #ifdef _UNIT_TEST
