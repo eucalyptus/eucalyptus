@@ -96,13 +96,13 @@ clientlib: generated/stubs ../util/data.o client-marshal-adb.o
 client: $(CLIENT) $(CLIENT)_local
 
 $(CLIENT): generated/stubs $(STORAGE_OBJS) ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(CLIENT).c ../storage/vbr.o
-	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(NC_LIBS) generated/adb_*.o generated/axis2_stub_*.o client-marshal-adb.o ../util/*.o ../net/*.o $(CLIENT).c ../storage/http.o ../storage/storage-windows.o
+	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(NC_LIBS) generated/adb_*.o generated/axis2_stub_*.o client-marshal-adb.o ../util/*.o $(STORAGE_OBJS) ../net/*.o $(CLIENT).c ../storage/http.o ../storage/storage-windows.o
 
 $(CLIENT)_local: generated/stubs $(STORAGE_OBJS) ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o ../storage/vbr.o
 	$(CC) -o $(CLIENT)_local $(INCLUDES) $(CFLAGS) client-marshal-local.o ../util/*.o $(STORAGE_OBJS) ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS) ../storage/http.o ../storage/storage-windows.o
 
 test: test.c ../util/misc.o ../util/data.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/misc.o ../util/data.o ../util/euca_auth.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/misc.o ../storage/diskutil.o ../util/data.o ../util/euca_auth.o ../util/ipc.o
 
 test_nc: test_nc.c ../util/misc.o ../storage/diskutil.o
 	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc test_nc.c ../util/misc.o ../storage/diskutil.o ../util/euca_auth.o ../util/ipc.o

@@ -7,7 +7,7 @@ import com.google.gwt.user.client.rpc.AsyncCallback;
 
 public interface EucalyptusServiceAsync {
   
-  void login( String fullname, String password, AsyncCallback<Session> callback );
+  void login( String accountName, String userName, String password, AsyncCallback<Session> callback );
 
   void logout( Session session, AsyncCallback<Void> callback );
   

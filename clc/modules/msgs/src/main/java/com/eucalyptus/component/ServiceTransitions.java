@@ -677,8 +677,8 @@ public class ServiceTransitions {
               //GRZE:REVIEW do nothing?
             } else if ( prop instanceof MultiDatabasePropertyEntry ) {
               ( ( MultiDatabasePropertyEntry ) prop ).setIdentifierValue( config.getPartition( ) );
+              PropertyDirectory.removeProperty( prop );
             }
-            PropertyDirectory.removeProperty( prop );
           }
         } catch ( Throwable ex ) {
           LOG.error( ex, ex );

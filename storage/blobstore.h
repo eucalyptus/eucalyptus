@@ -70,7 +70,7 @@
 
 #define BLOBSTORE_MAX_PATH 1024
 #define MAX_BLOCKMAP_SIZE 32
-#define MAX_DM_NAME 64                 // e.g. euca-819312998196-i-4336096F-prt-00512swap-ac8d5670
+#define MAX_DM_NAME 128                // e.g. euca-819312998196-i-4336096F-prt-00512swap-ac8d5670
 #define MAX_DM_PATH (MAX_DM_NAME+12)   // e.g. /dev/mapper/euca-819312998196-i-4336096F-prt-00512swap-ac8d5670 
 #define MAX_DM_LINE (MAX_DM_PATH*2+40) // e.g. 0 1048576 snapshot $DM1 $DM2 p 16
 
@@ -212,6 +212,9 @@ const char * blobstore_get_last_msg (); // returns last message logged inside bl
 const char * blobstore_get_last_trace(); // returns last error stack trace logged inside blobstore
 const char * blobstore_get_error_str ( blobstore_error_t error ); // description of the error
 void blobstore_set_error_function ( void (* fn) (const char * msg)); // sets the function that will be handed error messages (instead of sending them to stdout)
+
+int blobstore_init (void);
+int blobstore_cleanup (void);
 
 // blockblob operations
 

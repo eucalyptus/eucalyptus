@@ -64,6 +64,9 @@ public abstract class Ern {
         throw new JSONException( "EC2 type '" + type + "' is not supported" );
       }
       String id = matcher.group( ARN_PATTERNGROUP_EC2_ID ).toLowerCase( );
+      if ( PolicySpec.EC2_RESOURCE_ADDRESS.equals( type ) ) {
+        AddressUtil.validateAddressRange( id );
+      }
       return new Ec2ResourceName( type, id );
     } else if ( matcher.group( ARN_PATTERNGROUP_S3 ) != null ) {
       String bucket = matcher.group( ARN_PATTERNGROUP_S3_BUCKET );

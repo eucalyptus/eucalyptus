@@ -77,7 +77,7 @@ permission notice:
 struct nc_state_t {
 	struct handlers *H;             // selected handler
 	struct handlers *D;             // default  handler
-    hypervisorCapabilityType capability;
+        hypervisorCapabilityType capability;
 	vnetConfig *vnetconfig;		// network config
 	// globals
 	int  config_network_port;
@@ -86,7 +86,8 @@ struct nc_state_t {
 	char uri[CHAR_BUFFER_SIZE];
         char iqn[CHAR_BUFFER_SIZE];
 	virConnectPtr conn;
-	int convert_to_disk;
+	boolean convert_to_disk;
+        boolean do_inject_key;
 	// defined max
 	long long config_max_disk;
 	long long config_max_mem;
@@ -108,7 +109,7 @@ struct nc_state_t {
 	int config_use_virtio_net;	// KVM: use virtio for network
 	int config_use_virtio_disk;	// KVM: use virtio for disk attachment
 	int config_use_virtio_root;	// KVM: use virtio for root partition
-    // windows support
+        // windows support
 	char ncBundleUploadCmd[MAX_PATH];
   	char ncCheckBucketCmd[MAX_PATH];
   	char ncDeleteBundleCmd[MAX_PATH];

@@ -215,7 +215,7 @@ int str2md5str (char * buf, unsigned int buf_size, const char * str);
 uint32_t jenkins (const char * key, size_t len);
 int hexjenkins (char * buf, unsigned int buf_size, const char * str);
 char * file2md5str (const char *path);
-int ensure_directories_exist (const char * path, int is_file_path, mode_t mode);
+int ensure_directories_exist (const char * path, int is_file_path, const char *user, const char *group, mode_t mode);
 long long time_usec (void);
 
 #endif

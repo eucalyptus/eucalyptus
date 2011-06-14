@@ -110,9 +110,9 @@ int init_backing_store (const char * conf_instances_path, unsigned int conf_work
         return ERROR;
     }
     char cache_path [MAX_PATH]; snprintf (cache_path, sizeof (cache_path), "%s/cache", instances_path);
-    if (ensure_directories_exist (cache_path, 0, BACKING_DIRECTORY_PERM) == -1) return ERROR;
+    if (ensure_directories_exist (cache_path, 0, NULL, NULL, BACKING_DIRECTORY_PERM) == -1) return ERROR;
     char work_path [MAX_PATH];  snprintf (work_path,  sizeof (work_path),  "%s/work", instances_path);
-    if (ensure_directories_exist (work_path, 0, BACKING_DIRECTORY_PERM) == -1) return ERROR;
+    if (ensure_directories_exist (work_path, 0, NULL, NULL, BACKING_DIRECTORY_PERM) == -1) return ERROR;
     unsigned long long cache_limit_blocks = conf_cache_size_mb * 2048; // convert MB to blocks
     unsigned long long work_limit_blocks  = conf_work_size_mb * 2048;
     if (work_limit_blocks==0) { // we take 0 as unlimited
@@ -347,7 +347,7 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
                 injection_failed = 1;
                 goto unmount;
             }
-            if (diskutil_ch (path, "root", 0700) != OK) {
+            if (diskutil_ch (path, "root", NULL, 0700) != OK) {
                 logprintfl (EUCAINFO, "[%s] error: failed to change user and/or permissions for '%s'\n", instance->instanceId, path);
                 injection_failed = 1;
                 goto unmount;
@@ -358,7 +358,7 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
                 injection_failed = 1;
                 goto unmount;
             }
-            if (diskutil_ch (path, "root", 0600) != OK) {
+            if (diskutil_ch (path, "root", NULL, 0600) != OK) {
                 logprintfl (EUCAINFO, "[%s] error: failed to change user and/or permissions for '%s'\n", instance->instanceId, path);
                 injection_failed = 1;
                 goto unmount;
@@ -527,7 +527,6 @@ static int create_disk (ncInstance * instance, virtualBootRecord * disk, virtual
     logprintfl (EUCAINFO, "[%s] composing a disk from supplied partitions...\n", instance->instanceId);
 
     int ret = ERROR;
-#define MBR_BLOCKS (62 + 4)
     disk->size = 512 * MBR_BLOCKS; 
     blockblob * pbbs [EUCA_MAX_PARTITIONS];
     blockmap map [EUCA_MAX_PARTITIONS] = { {BLOBSTORE_SNAPSHOT, BLOBSTORE_ZERO, {blob:NULL}, 0, 0, MBR_BLOCKS} }; // initially only MBR is in the map
@@ -641,7 +640,7 @@ int create_instance_backing1 (ncInstance * instance) // remove this obsolete fun
 
     char instance_path [MAX_PATH];
     set_path (instance_path, sizeof (instance_path), instance, NULL);
-    ensure_directories_exist (instance_path, 0, BACKING_DIRECTORY_PERM);
+    ensure_directories_exist (instance_path, 0, NULL, "root", BACKING_DIRECTORY_PERM);
 
     // sort vbrs into prereqs[] and parts[] so they can be approached in the right order
     // (first the prereqs, then disks and partitions, in increasing order)
@@ -720,7 +719,7 @@ int destroy_instance_backing1 (ncInstance * instance, int destroy_files) // TODO
     // (e.g., libvirt on KVM on Maverick chowns them to libvirt-qemu while
     // VM is running and then chowns them to root after termination)
     set_path (path, sizeof (path), instance, "*");
-    if (diskutil_ch (path, EUCALYPTUS_ADMIN, BACKING_FILE_PERM)) {
+    if (diskutil_ch (path, EUCALYPTUS_ADMIN, NULL, BACKING_FILE_PERM)) {
         logprintfl (EUCAWARN, "[%s] error: failed to chown files before cleanup\n", instance->instanceId);
     }
     
@@ -880,7 +879,7 @@ int create_instance_backing (ncInstance * instance)
     { // ensure instance directory exists
         char instance_path [MAX_PATH];
         set_path (instance_path, sizeof (instance_path), instance, NULL);
-        ensure_directories_exist (instance_path, 0, BACKING_DIRECTORY_PERM);
+        ensure_directories_exist (instance_path, 0, NULL, "root", BACKING_DIRECTORY_PERM);
     }
     
     char work_prefix [1024]; // {userId}/{instanceId}
@@ -890,7 +889,7 @@ int create_instance_backing (ncInstance * instance)
     artifact * sentinel = vbr_alloc_tree (vm, // the struct containing the VBR
                                           FALSE, // for Xen and KVM we do not need to make disk bootable
                                           TRUE, // make working copy of runtime-modifiable files
-                                          instance->keyName, // the SSH key
+                                          (instance->do_inject_key)?(instance->keyName):(NULL), // the SSH key
                                           instance->instanceId); // ID is for logging
     if (sentinel == NULL ||
         art_implement_tree (sentinel, work_bs, cache_bs, work_prefix, INSTANCE_PREP_TIMEOUT_USEC) != OK) { // download/create/combine the dependencies
@@ -913,7 +912,7 @@ int create_instance_backing (ncInstance * instance)
     return ret;
 }
 
-int destroy_instance_backing (ncInstance * instance, int destroy_files)
+int destroy_instance_backing (ncInstance * instance, int do_destroy_files)
 {
     int ret = OK;
     int total_prereqs = 0;
@@ -939,16 +938,16 @@ int destroy_instance_backing (ncInstance * instance, int destroy_files)
     // (e.g., libvirt on KVM on Maverick chowns them to libvirt-qemu while
     // VM is running and then chowns them to root after termination)
     set_path (path, sizeof (path), instance, "*");
-    if (diskutil_ch (path, EUCALYPTUS_ADMIN, BACKING_FILE_PERM)) {
+    if (diskutil_ch (path, EUCALYPTUS_ADMIN, NULL, BACKING_FILE_PERM)) {
         logprintfl (EUCAWARN, "[%s] error: failed to chown files before cleanup\n", instance->instanceId);
     }
 
-    if (destroy_files) {
+    if (do_destroy_files) {
         char work_regex [1024]; // {userId}/{instanceId}/.*
         set_id2 (instance, "/.*", work_regex, sizeof (work_regex));
 
         if (blobstore_delete_regex (work_bs, work_regex) == -1) {
-            logprintfl (EUCAERROR, "[%s] error: failed to remove some artifacts in %s\n", path);
+            logprintfl (EUCAERROR, "[%s] error: failed to remove some artifacts in %s\n", instance->instanceId, path);
         }
 
         // remove the known leftover files
@@ -964,7 +963,7 @@ int destroy_instance_backing (ncInstance * instance, int destroy_files)
     // If either the user or our code introduced
     // any new files, this last step will fail.
     set_path (path, sizeof (path), instance, NULL);
-    if (rmdir (path) && destroy_files) {
+    if (rmdir (path) && do_destroy_files) {
         logprintfl (EUCAWARN, "[%s] warning: failed to remove backing directory %s\n", instance->instanceId, path);
     }
     
