@@ -65,6 +65,7 @@ package com.eucalyptus.component;
 
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -105,7 +106,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
 public class ServiceTransitions {
-  private static final int BOOTSTRAP_REMOTE_RETRY_INTERVAL = 2;//TODO:GRZE:@Configurable
+  private static final int BOOTSTRAP_REMOTE_RETRY_INTERVAL = 5;//TODO:GRZE:@Configurable
   private static final int BOOTSTRAP_REMOTE_RETRIES = 10;//TODO:GRZE:@Configurable
   static Logger LOG = Logger.getLogger( ServiceTransitions.class );
   
@@ -306,14 +307,18 @@ public class ServiceTransitions {
       try {
         T reply = (T) AsyncRequests.sendSync( config, msg );
         return reply;
-      } catch ( RetryableConnectionException ex ) {
+      } catch ( ExecutionException ex ) {
         LOG.error( ex, ex );
-        try {
-          TimeUnit.SECONDS.sleep( BOOTSTRAP_REMOTE_RETRY_INTERVAL );
-        } catch ( InterruptedException ex1 ) {
-          Thread.currentThread( ).interrupt( );
+        if( ex.getCause( ) instanceof RetryableConnectionException ) {
+          try {
+            TimeUnit.SECONDS.sleep( BOOTSTRAP_REMOTE_RETRY_INTERVAL );
+          } catch ( InterruptedException ex1 ) {
+            Thread.currentThread( ).interrupt( );
+          }
+          continue;
+        } else {
+          throw ex;
         }
-        continue;
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
         throw ex;
