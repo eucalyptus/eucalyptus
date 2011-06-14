@@ -30,11 +30,6 @@ public class ClusterController extends ComponentId {
     return "http://%s:%d/axis2/services/EucalyptusCC";
   }  
   
-  @Override
-  public Boolean hasDispatcher( ) {
-    return true;
-  }
-  
   private static ChannelPipelineFactory clusterPipeline;
   
   @Override

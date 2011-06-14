@@ -64,28 +64,31 @@ permission notice:
 #include <stdio.h>
 #include <stdlib.h>
 #define _GNU_SOURCE
-#include <string.h> /* strlen, strcpy */
-#include <ctype.h> /* isspace */
-#include "misc.h"
+#include <string.h> // strlen, strcpy
+#include <ctype.h> // isspace
+#include <assert.h>
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <time.h>
-#include <math.h> /* powf */
-#include <vnetwork.h>
-#include <fcntl.h> /* open */
-#include <utime.h> /* utime */
+#include <math.h> // powf 
+#include <fcntl.h> // open
+#include <utime.h> // utime 
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <dirent.h> // opendir, etc
 #include <errno.h> // errno
 #include <sys/time.h> // gettimeofday
 #include <limits.h>
-#include <euca_auth.h>
 #include <openssl/md5.h>
 #include <sys/mman.h> // mmap
 #include <pthread.h>
+
+#include "misc.h"
+#include "euca_auth.h"
+#include "diskutil.h"
+#include "vnetwork.h"
 
 int verify_helpers (char **helpers, char **helpers_path, int LASTHELPER) 
 {
@@ -515,40 +518,42 @@ int sscanf_lines (char * lines, char * format, void * varp)
 char * fp2str (FILE * fp)
 {
 #   define INCREMENT 512
-  int buf_max = INCREMENT;
-  int buf_current = 0;
-  char * last_read;
-  char * buf = NULL;
-
-  if (fp==NULL) return NULL;
-  do {
-    // create/enlarge the buffer
-    void * new_buf;
-    if ((new_buf = realloc (buf, buf_max)) == NULL) {
-      if ( buf != NULL ) { // previous realloc()s worked
-	free (buf); // free partial buffer
-      }
-      return NULL;
-    }
-    buf = new_buf;
-    logprintfl (EUCADEBUG2, "fp2str: enlarged buf to %d\n", buf_max);
-
-    do { // read in until EOF or buffer is full
-      last_read = fgets (buf+buf_current, buf_max-buf_current, fp);
-      if ( last_read != NULL )
-	buf_current = strlen(buf);
-      logprintfl (EUCADEBUG2, "fp2str: read %d characters so far (max=%d, last=%s)\n", buf_current, buf_max, last_read?"no":"yes");
-    } while ( last_read && buf_max > buf_current+1 ); /* +1 is needed for fgets() to put \0 */
+    int buf_max = INCREMENT;
+    int buf_current = 0;
+    char * last_read;
+    char * buf = NULL;
+    
+    if (fp==NULL) return NULL;
+    do {
+        // create/enlarge the buffer
+        void * new_buf;
+        if ((new_buf = realloc (buf, buf_max)) == NULL) {
+            if ( buf != NULL ) { // previous realloc()s worked
+                free (buf); // free partial buffer
+            }
+            return NULL;
+        }
+        buf = new_buf;
+        logprintfl (EUCADEBUG2, "fp2str: enlarged buf to %d\n", buf_max);
         
-    buf_max += INCREMENT; /* in case it is full */
-  } while (last_read);
-
-  if ( buf_current < 1 ) {
-    free (buf);
-    buf = NULL;
-  }
-
-  return buf;
+        do { // read in until EOF or buffer is full
+            last_read = fgets (buf+buf_current, buf_max-buf_current, fp);
+            if ( last_read != NULL ) {
+                buf_current = strlen(buf);
+            } else {
+                if (! feof(fp)) {
+                    logprintfl (EUCAERROR, "fp2str: failed while reading from file handle\n");
+                    free (buf);
+                    return NULL;
+                }
+            }
+            logprintfl (EUCADEBUG2, "fp2str: read %d characters so far (max=%d, last=%s)\n", buf_current, buf_max, last_read?"no":"yes");
+        } while ( last_read && buf_max > buf_current+1 ); // +1 is needed for fgets() to put \0
+        
+        buf_max += INCREMENT; // in case it is full
+    } while (last_read);
+    
+    return buf;
 }
 
 /* execute system(shell_command) and return stdout in new string
@@ -1945,7 +1950,7 @@ int hexjenkins (char * buf, unsigned int buf_size, const char * str)
 // given path=A/B/C and only A existing, create A/B and, unless
 // is_file_path==1, also create A/B/C directory
 // returns: 0 = path already existed, 1 = created OK, -1 = error
-int ensure_directories_exist (const char * path, int is_file_path, mode_t mode)
+int ensure_directories_exist (const char * path, int is_file_path, const char * user, const char * group, mode_t mode)
 {
     int len = strlen (path);
     char * path_copy = NULL;
@@ -1982,7 +1987,8 @@ int ensure_directories_exist (const char * path, int is_file_path, mode_t mode)
                     return -1;
                 }
                 ret = 1; // we created a directory
-                chmod (path_copy, mode); // ensure perms are right despite mask
+                diskutil_ch(path_copy, user, group, mode);
+                //                chmod (path_copy, mode); // ensure perms are right despite mask
             }
             path_copy[i] = '/'; // restore the slash
         }
@@ -1999,3 +2005,37 @@ long long time_usec (void)
     gettimeofday (&tv, NULL);
     return (long long)tv.tv_sec * 1000000 + tv.tv_usec;
 }
+
+/////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////
+
+#ifdef _UNIT_TEST
+
+#define _STR "a lovely string"
+
+int main (int argc, char ** argv)
+{
+    int errors = 0;
+    char cwd [1024];
+    getcwd (cwd, sizeof (cwd));
+    srandom (time(NULL));
+
+    printf ("testing fp2str in misc.c\n");
+    FILE * fp = tmpfile ();
+    assert (fp);
+    char * s = fp2str (fp);
+    assert (s);
+    assert (strlen (s) == 0);
+    free (s);
+    rewind (fp);
+    fputs (_STR, fp);
+    rewind (fp);
+    s = fp2str (fp);
+    assert (s);
+    assert (strlen (s) == strlen (_STR));
+    free (s);
+    fclose (fp);
+
+    return 0;
+}
+
+#endif // _UNIT_TEST

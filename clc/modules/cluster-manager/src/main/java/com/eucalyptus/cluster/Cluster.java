@@ -693,7 +693,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   public String toString( ) {
     final StringBuilder buf = new StringBuilder( );
     buf.append( "Cluster " ).append( this.configuration ).append( '\n' );
-    buf.append( "Cluster " ).append( this.configuration.getName( ) ).append( " mq=" ).append( this.getConfiguration( ).lookupService( ).getEndpoint( ) ).append( '\n' );
+    buf.append( "Cluster " ).append( this.configuration.getName( ) );//.append( " mq=" ).append( this.getConfiguration( ).lookupService( ). ).append( '\n' );//TODO:GRZE:RESTORE ME
     for ( final NodeInfo node : this.nodeMap.values( ) ) {
       buf.append( "Cluster " ).append( this.configuration.getName( ) ).append( " node=" ).append( node ).append( '\n' );
     }

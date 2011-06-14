@@ -162,10 +162,10 @@ public class EuareWebBackend {
         throw new EucalyptusServiceException( "User is not enabled or confirmed" );
       }
       return user;
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
-      if ( e instanceof EucalyptusServiceException ) {
-        throw ( EucalyptusServiceException ) e;
-      }
       LOG.error( "Failed to verify user " + userName + "@" + accountName );
       LOG.debug( e, e );
       throw new EucalyptusServiceException( "Failed to verify user " + userName + "@" + accountName + ": " + e.getMessage( ) );
@@ -197,6 +197,7 @@ public class EuareWebBackend {
   public static void changeUserPassword( User requestUser, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
     try {
       User user = Accounts.lookupUserById( userId );
+      EuarePermission.authorizeModifyUserPassword( requestUser, user.getAccount( ), user );
       // Anyone want to change some other people's password must authenticate himself first
       if ( !requestUser.getPassword( ).equals( Crypto.generateHashedPassword( oldPass ) ) ) {
         throw new EucalyptusServiceException( "You can not be authenticated to change user password" );
@@ -213,10 +214,10 @@ public class EuareWebBackend {
       if ( !Strings.isNullOrEmpty( email ) ) {
         user.setInfo( User.EMAIL, email );
       }
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
-      if ( e instanceof EucalyptusServiceException ) {
-        throw ( EucalyptusServiceException ) e;
-      }
       LOG.error( "Failed to change password for user " + userId, e );
       LOG.debug( e, e );
       throw new EucalyptusServiceException( "Failed to change password for user " + userId + ": " + e.getMessage( ) );      
@@ -243,13 +244,17 @@ public class EuareWebBackend {
       // Optimization for a single account search
       if ( query.hasOnlySingle( ID ) ) {
         Account account = Accounts.lookupAccountById( query.getSingle( ID ).getValue( ) );
-        User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
-        results.add( serializeAccount( account, admin.getRegistrationStatus( ) ) );
+        if ( EuarePermission.allowReadAccount( requestUser, account ) ) {
+          User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+          results.add( serializeAccount( account, admin.getRegistrationStatus( ) ) );
+        }
       } else {
         for ( Account account : Accounts.listAllAccounts( ) ) {
           if ( accountMatchQuery( account, query ) ) {
-            User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
-            results.add( serializeAccount( account, admin.getRegistrationStatus( ) ) );
+            if ( EuarePermission.allowReadAccount( requestUser, account ) ) {
+              User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+              results.add( serializeAccount( account, admin.getRegistrationStatus( ) ) );
+            }
           }
         }
       }
@@ -362,36 +367,46 @@ public class EuareWebBackend {
     } );
   }
   
-  public static List<SearchResultRow> searchGroups( SearchQuery query ) throws EucalyptusServiceException {
+  public static List<SearchResultRow> searchGroups( User requestUser, SearchQuery query ) throws EucalyptusServiceException {
     List<SearchResultRow> results = Lists.newArrayList( );
     try {
       if ( query.hasOnlySingle( ID ) ) {
         // Optimization for a single group search
         Group group = Accounts.lookupGroupById( query.getSingle( ID ).getValue( ) );
         Account account = group.getAccount( );
-        results.add( serializeGroup( account, group ) );
+        if ( EuarePermission.allowReadGroup( requestUser, account, group ) ) {
+          results.add( serializeGroup( account, group ) );
+        }
       } else if ( query.hasOnlySingle( USERID ) ) {
         // Optimization for groups of a user
         User user = Accounts.lookupUserById( query.getSingle( USERID ).getValue( ) );
         Account account = user.getAccount( );
-        for ( Group group : user.getGroups( ) ) {
-          if ( !group.isUserGroup( ) ) {
-            results.add( serializeGroup( account, group ) );
+        // Listing groups for a user, we don't check for each group, instead, just check
+        // the general permission with "ListGroupsForUser" action.
+        if ( EuarePermission.allowListGroupsForUser( requestUser, account, user ) ) {
+          for ( Group group : user.getGroups( ) ) {
+            if ( !group.isUserGroup( ) ) {
+              results.add( serializeGroup( account, group ) );
+            }
           }
-        }        
+        }
       } else if ( query.hasOnlySingle( ACCOUNTID ) ) {
         // Optimization for groups of an account
         Account account = Accounts.lookupAccountById( query.getSingle( ACCOUNTID ).getValue( ) );
         for ( Group group : account.getGroups( ) ) {
           if ( !group.isUserGroup( ) ) {
-            results.add( serializeGroup( account, group ) );
+            if ( EuarePermission.allowReadGroup( requestUser, account, group ) ) {
+              results.add( serializeGroup( account, group ) );
+            }
           }
         }
       } else {
         for ( Account account : getAccounts( query ) ) {
           for ( Group group : account.getGroups( ) ) {
             if ( !group.isUserGroup( ) && groupMatchQuery( group, query ) ) {
-              results.add( serializeGroup( account, group ) );
+              if ( EuarePermission.allowReadGroup( requestUser, account, group ) ) {
+                results.add( serializeGroup( account, group ) );
+              }
             }
           }
         }
@@ -481,31 +496,40 @@ public class EuareWebBackend {
     return true;
   }
     
-  public static List<SearchResultRow> searchUsers( SearchQuery query ) throws EucalyptusServiceException {
+  public static List<SearchResultRow> searchUsers( User requestUser, SearchQuery query ) throws EucalyptusServiceException {
     List<SearchResultRow> results = Lists.newArrayList( );
     try {
       if ( query.hasOnlySingle( ID ) ) {
         // Optimization for a single user search
         User user = Accounts.lookupUserById( query.getSingle( ID ).getValue( ) );
-        results.add( serializeUser( user.getAccount( ), user ) );
+        Account account = user.getAccount( );
+        if ( EuarePermission.allowReadUser( requestUser, account, user ) ) {
+          results.add( serializeUser( account, user ) );
+        }
       } else if ( query.hasOnlySingle( GROUPID ) ) {
         // Optimization for users of a single group
         Group group = Accounts.lookupGroupById( query.getSingle( GROUPID ).getValue( ) );
         Account account = group.getAccount( );
         for ( User user : group.getUsers( ) ) {
-          results.add( serializeUser( account, user ) );
+          if ( EuarePermission.allowReadUser( requestUser, account, user ) ) {
+            results.add( serializeUser( account, user ) );
+          }
         }
       } else if ( query.hasOnlySingle( ACCOUNTID ) ) {
         // Optimization for users of a single account
         Account account = Accounts.lookupAccountById( query.getSingle( ACCOUNTID ).getValue( ) );
         for ( User user : account.getUsers( ) ) {
-          results.add( serializeUser( account, user ) );
+          if ( EuarePermission.allowReadUser( requestUser, account, user ) ) {
+            results.add( serializeUser( account, user ) );
+          }
         }        
       } else {
         for ( Account account : getAccounts( query ) ) {
           for ( User user : account.getUsers( ) ) {
             if ( userMatchQuery( user, query ) ) {
-              results.add( serializeUser( account, user ) );
+              if ( EuarePermission.allowReadUser( requestUser, account, user ) ) {
+                results.add( serializeUser( account, user ) );
+              }
             }
           }
         }
@@ -569,7 +593,7 @@ public class EuareWebBackend {
     } );
   }
   
-  public static List<SearchResultRow> searchPolicies( SearchQuery query ) throws EucalyptusServiceException {
+  public static List<SearchResultRow> searchPolicies( User requestUser, SearchQuery query ) throws EucalyptusServiceException {
     if ( ( query.has( USER ) || query.has( USERID ) ) && ( query.has( GROUP ) && query.has( GROUPID ) ) ) {
       throw new EucalyptusServiceException( "Invalid policy search: can not have both user and group conditions." );
     }
@@ -580,21 +604,27 @@ public class EuareWebBackend {
         User user = Accounts.lookupUserById( query.getSingle( USERID ).getValue( ) );
         Account account = user.getAccount( );
         for ( Policy policy : user.getPolicies( ) ) {
-          results.add( serializePolicy( policy, account, null, user ) );
+          if ( EuarePermission.allowReadUserPolicy( requestUser, account, user ) ) {
+            results.add( serializePolicy( policy, account, null, user ) );
+          }
         }
       } else if ( query.hasOnlySingle( GROUPID ) ) {
         // Optimization for a single group's policies
         Group group = Accounts.lookupGroupById( query.getSingle( GROUPID ).getValue( ) );
         Account account = group.getAccount( );
         for ( Policy policy : group.getPolicies( ) ) {
-          results.add( serializePolicy( policy, account, group, null ) );
+          if ( EuarePermission.allowReadGroupPolicy( requestUser, account, group ) ) {
+            results.add( serializePolicy( policy, account, group, null ) );
+          }
         }
       } else if ( query.hasOnlySingle( ACCOUNTID ) ) {
         // Optimization for a single account's policies
         Account account = Accounts.lookupAccountById( query.getSingle( ACCOUNTID ).getValue( ) );
         User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
         for ( Policy policy : admin.getPolicies( ) ) {
-          results.add( serializePolicy( policy, account, null, null ) );
+          if ( EuarePermission.allowReadAccountPolicy( requestUser, account ) ) {
+            results.add( serializePolicy( policy, account, null, null ) );
+          }
         }        
       } else {
         for ( Account account : getAccounts( query ) ) {
@@ -603,7 +633,9 @@ public class EuareWebBackend {
               if ( user.isAccountAdmin( ) ) continue;
               for ( Policy policy : user.getPolicies( ) ) {
                 if ( policyMatchQuery( policy, query ) ) {
-                  results.add( serializePolicy( policy, account, null, user ) );
+                  if ( EuarePermission.allowReadUserPolicy( requestUser, account, user ) ) {
+                    results.add( serializePolicy( policy, account, null, user ) );
+                  }
                 }
               }
             }
@@ -611,7 +643,9 @@ public class EuareWebBackend {
             for ( Group group : getGroups( account, query ) ) {
               for ( Policy policy : group.getPolicies( ) ) {
                 if ( policyMatchQuery( policy, query ) ) {
-                  results.add( serializePolicy( policy, account, group, null ) );
+                  if ( EuarePermission.allowReadGroupPolicy( requestUser, account, group ) ) {
+                    results.add( serializePolicy( policy, account, group, null ) );
+                  }
                 }
               }
             }          
@@ -619,7 +653,9 @@ public class EuareWebBackend {
             User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
             for ( Policy policy : admin.getPolicies( ) ) {
               if ( policyMatchQuery( policy, query ) ) {
-                results.add( serializePolicy( policy, account, null, null ) );
+                if ( EuarePermission.allowReadAccountPolicy( requestUser, account ) ) {
+                  results.add( serializePolicy( policy, account, null, null ) );
+                }
               }
             }          
           }
@@ -673,7 +709,7 @@ public class EuareWebBackend {
     } );
   }
   
-  public static List<SearchResultRow> searchCerts( SearchQuery query ) throws EucalyptusServiceException {
+  public static List<SearchResultRow> searchCerts( User requestUser, SearchQuery query ) throws EucalyptusServiceException {
     List<SearchResultRow> results = Lists.newArrayList( );
     try {
       if ( query.hasOnlySingle( USERID ) ) {
@@ -681,14 +717,18 @@ public class EuareWebBackend {
         User user = Accounts.lookupUserById( query.getSingle( USERID ).getValue( ) );
         Account account = user.getAccount( );
         for ( Certificate cert : user.getCertificates( ) ) {
-          results.add( serializeCert( cert, account, user ) );
+          if ( EuarePermission.allowReadUserCertificate( requestUser, account, user ) ) {
+            results.add( serializeCert( cert, account, user ) );
+          }
         }        
       } else {
         for ( Account account : getAccounts( query ) ) {
           for ( User user : account.getUsers( ) ) {
             for ( Certificate cert : user.getCertificates( ) ) {
               if ( certMatchQuery( cert, query ) ) {
-                results.add( serializeCert( cert, account, user ) );
+                if ( EuarePermission.allowReadUserCertificate( requestUser, account, user ) ) {
+                  results.add( serializeCert( cert, account, user ) );
+                }
               }
             }
           }
@@ -730,7 +770,7 @@ public class EuareWebBackend {
     } );
   }
   
-  public static List<SearchResultRow> searchKeys( SearchQuery query ) throws EucalyptusServiceException {
+  public static List<SearchResultRow> searchKeys( User requestUser, SearchQuery query ) throws EucalyptusServiceException {
     List<SearchResultRow> results = Lists.newArrayList( );
     try {
       if ( query.hasOnlySingle( USERID ) ) {
@@ -738,14 +778,18 @@ public class EuareWebBackend {
         User user = Accounts.lookupUserById( query.getSingle( USERID ).getValue( ) );
         Account account = user.getAccount( );
         for ( AccessKey key : user.getKeys( ) ) {
-          results.add( serializeKey( key, account, user ) );
+          if ( EuarePermission.allowReadUserKey( requestUser, account, user ) ) {
+            results.add( serializeKey( key, account, user ) );
+          }
         }
       } else {
         for ( Account account : getAccounts( query ) ) {
           for ( User user : account.getUsers( ) ) {
             for ( AccessKey key : user.getKeys( ) ) {
               if ( keyMatchQuery( key, query ) ) {
-                results.add( serializeKey( key, account, user ) );
+                if ( EuarePermission.allowReadUserKey( requestUser, account, user ) ) {
+                  results.add( serializeKey( key, account, user ) );
+                }
               }
             }
           }
@@ -771,7 +815,10 @@ public class EuareWebBackend {
     return result;
   }
 
-  public static String createAccount( String accountName ) throws EucalyptusServiceException {
+  public static String createAccount( User requestUser, String accountName ) throws EucalyptusServiceException {
+    if ( !requestUser.isSystemAdmin( ) ) {
+      throw new EucalyptusServiceException( "Operation is not authorized" );
+    }
     try {
       Account account = Accounts.addAccount( accountName );
       User admin = account.addUser( User.ACCOUNT_ADMIN, "/", true/*skipRegistration*/, true/*enabled*/, null/*info*/ );
@@ -786,7 +833,7 @@ public class EuareWebBackend {
     }
   }
   
-  public static User createAccount( String accountName, String password, String email ) throws EucalyptusServiceException {
+  public static User createAccount( String accountName, String password, String email ) {
     try {
       Account account = Accounts.addAccount( accountName );
       Map<String, String> info = Maps.newHashMap( );
@@ -800,11 +847,14 @@ public class EuareWebBackend {
     } catch ( Exception e ) {
       LOG.error( "Failed to create account " + accountName, e );
       LOG.debug( e, e );
-      throw new EucalyptusServiceException( "Failed to create account" );
+      return null;
     }
   }
 
-  public static void deleteAccounts( ArrayList<String> ids ) throws EucalyptusServiceException {
+  public static void deleteAccounts( User requestUser, ArrayList<String> ids ) throws EucalyptusServiceException {
+    if ( !requestUser.isSystemAdmin( ) ) {
+      throw new EucalyptusServiceException( "Operation is not authorized" );
+    }
     boolean hasError = false;
     for ( String id : ids ) {
       try { 
@@ -821,7 +871,7 @@ public class EuareWebBackend {
     }
   }
 
-  public static void modifyAccount( ArrayList<String> values ) throws EucalyptusServiceException {
+  public static void modifyAccount( User requestUser, ArrayList<String> values ) throws EucalyptusServiceException {
     try {
       // deserialize
       int i = 0;
@@ -829,25 +879,22 @@ public class EuareWebBackend {
       String newName = values.get( i++ );
       
       Account account = Accounts.lookupAccountById( accountId );
-      if ( Account.SYSTEM_ACCOUNT.equals( account.getName( ) ) ) {
-        throw new EucalyptusServiceException( "System account can not be modified" );
-      }
+      EuarePermission.authorizeModifyAccount( requestUser, account );
       account.setName( ValueCheckerFactory.createAccountNameChecker( ).check( newName ) );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to modify account " + values, e );
       LOG.debug( e, e );
-      if ( e instanceof EucalyptusServiceException ) {
-        throw ( EucalyptusServiceException ) e;
-      } else {
-        throw new EucalyptusServiceException( "Failed to modify account " + values + ": " + e.getMessage( ) );
-      }
+      throw new EucalyptusServiceException( "Failed to modify account " + values + ": " + e.getMessage( ) );
     }
-    
   }
 
-  public static String createUser( String accountId, String name, String path ) {
+  public static String createUser( User requestUser, String accountId, String name, String path ) {
     try {
       Account account = Accounts.lookupAccountById( accountId );
+      EuarePermission.authorizeCreateUser( requestUser, account );
       User user = account.addUser( name, path, true, true, null );
       return user.getName( );
     } catch ( Exception e ) {
@@ -857,9 +904,10 @@ public class EuareWebBackend {
     return null;
   }
 
-  public static String createGroup( String accountId, String name, String path ) {
+  public static String createGroup( User requestUser, String accountId, String name, String path ) {
     try {
       Account account = Accounts.lookupAccountById( accountId );
+      EuarePermission.authorizeCreateGroup( requestUser, account );
       Group group = account.addGroup( name, path );
       return group.getName( );
     } catch ( Exception e ) {
@@ -869,12 +917,13 @@ public class EuareWebBackend {
     return null;
   }
   
-  public static void deleteUsers( ArrayList<String> ids ) throws EucalyptusServiceException {
+  public static void deleteGroups( User requestUser, ArrayList<String> ids ) throws EucalyptusServiceException {
     boolean hasError = false;
     for ( String id : ids ) {
       try { 
         Group group = Accounts.lookupGroupById( id );
         Account account = group.getAccount( );
+        EuarePermission.authorizeDeleteGroup( requestUser, account, group );
         account.deleteGroup( group.getName( ), true );
       } catch ( Exception e ) {
         LOG.error( "Failed to delete group " + id, e );
@@ -887,25 +936,27 @@ public class EuareWebBackend {
     }
   }
 
-  public static void deleteGroups( ArrayList<String> ids ) throws EucalyptusServiceException {
+  public static void deleteUsers( User requestUser, ArrayList<String> ids ) throws EucalyptusServiceException {
     boolean hasError = false;
     for ( String id : ids ) {
       try { 
         User user = Accounts.lookupUserById( id );
         Account account = user.getAccount( );
+        EuarePermission.authorizeDeleteUser( requestUser, account, user );
         account.deleteUser( user.getName( ), false, true );
       } catch ( Exception e ) {
-        LOG.error( "Failed to delete group " + id, e );
+        LOG.error( "Failed to delete user " + id, e );
         LOG.debug( e, e );
         hasError = true;
       }
     }
     if ( hasError ) {
-      throw new EucalyptusServiceException( "Failed to delete some groups" );
+      throw new EucalyptusServiceException( "Failed to delete some users" );
     }    
   }
 
-  public static void addAccountPolicy( String accountId, String name, String document ) throws EucalyptusServiceException {
+  public static void addAccountPolicy( User requestUser, String accountId, String name, String document ) throws EucalyptusServiceException {
+    EuarePermission.authorizeAddAccountPolicy( requestUser );
     try {
       Account account = Accounts.lookupAccountById( accountId );
       User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
@@ -917,10 +968,14 @@ public class EuareWebBackend {
     }
   }
 
-  public static void addUserPolicy( String userId, String name, String document ) throws EucalyptusServiceException {
+  public static void addUserPolicy( User requestUser, String userId, String name, String document ) throws EucalyptusServiceException {
     try {
       User user = Accounts.lookupUserById( userId );
+      EuarePermission.authorizeAddUserPolicy( requestUser, user.getAccount( ), user );
       user.addPolicy( name, document );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to add new policy " + name + " to user " + userId, e );
       LOG.debug( e, e );
@@ -928,10 +983,14 @@ public class EuareWebBackend {
     }
   }
 
-  public static void addGroupPolicy( String groupId, String name, String document ) throws EucalyptusServiceException {
+  public static void addGroupPolicy( User requestUser, String groupId, String name, String document ) throws EucalyptusServiceException {
     try {
       Group group = Accounts.lookupGroupById( groupId );
+      EuarePermission.authorizeAddGroupPolicy( requestUser, group.getAccount( ), group );
       group.addPolicy( name, document );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to add new policy " + name + " to group " + groupId, e );
       LOG.debug( e, e );
@@ -939,7 +998,7 @@ public class EuareWebBackend {
     }
   }
 
-  public static void deletePolicy( SearchResultRow policySerialized ) throws EucalyptusServiceException {
+  public static void deletePolicy( User requestUser, SearchResultRow policySerialized ) throws EucalyptusServiceException {
     try {
       // Deserialize
       int i = 0;
@@ -952,11 +1011,16 @@ public class EuareWebBackend {
       Account account = Accounts.lookupAccountByName( accountName );
       if ( !Strings.isNullOrEmpty( userName ) ) {
         User user = account.lookupUserByName( userName );
+        EuarePermission.authorizeDeleteUserPolicy( requestUser, account, user );
         user.removePolicy( policyName );
       } else {
         Group group = account.lookupGroupByName( groupName );
+        EuarePermission.authorizeDeleteGroupPolicy( requestUser, account, group );
         group.removePolicy( policyName );
       }
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to delete policy " + policySerialized, e );
       LOG.debug( e, e );
@@ -964,7 +1028,7 @@ public class EuareWebBackend {
     }
   }
 
-  public static void deleteAccessKey( SearchResultRow keySerialized ) throws EucalyptusServiceException {
+  public static void deleteAccessKey( User requestUser, SearchResultRow keySerialized ) throws EucalyptusServiceException {
     try {
       // Deserialize
       int i = 0;
@@ -974,7 +1038,11 @@ public class EuareWebBackend {
       String userName = keySerialized.getField( i++ );
       Account account = Accounts.lookupAccountByName( accountName );
       User user = account.lookupUserByName( userName );
+      EuarePermission.authorizeDeleteUserAccessKey( requestUser, account, user );
       user.removeKey( keyId );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to delete key " + keySerialized, e );
       LOG.debug( e, e );
@@ -982,7 +1050,7 @@ public class EuareWebBackend {
     }
   }
 
-  public static void deleteCertificate( SearchResultRow certSerialized ) throws EucalyptusServiceException {
+  public static void deleteCertificate( User requestUser, SearchResultRow certSerialized ) throws EucalyptusServiceException {
     try {
       // Deserialize
       int i = 0;
@@ -993,7 +1061,11 @@ public class EuareWebBackend {
       String userName = certSerialized.getField( i++ );
       Account account = Accounts.lookupAccountByName( accountName );
       User user = account.lookupUserByName( userName );
+      EuarePermission.authorizeDeleteUserCertificate( requestUser, account, user );
       user.removeKey( certId );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to delete cert " + certSerialized, e );
       LOG.debug( e, e );
@@ -1001,9 +1073,12 @@ public class EuareWebBackend {
     }
   }
 
-  public static void addUserToGroupByName( String userName, String groupId ) {
+  public static void addUserToGroupByName( User requestUser, String userName, String groupId ) {
     try {
       Group group = Accounts.lookupGroupById( groupId );
+      Account account = group.getAccount( );
+      User user = account.lookupUserByName( userName );
+      EuarePermission.authorizeAddUserToGroup( requestUser, account, group, user );
       group.addUserByName( userName );
     } catch ( Exception e ) {
       LOG.error( "Failed to add user " + userName + " to group " + groupId, e );
@@ -1011,11 +1086,12 @@ public class EuareWebBackend {
     }    
   }
 
-  public static void addUserToGroupById( String userId, String groupName ) {
+  public static void addUserToGroupById( User requestUser, String userId, String groupName ) {
     try {
       User user = Accounts.lookupUserById( userId );
       Account account = user.getAccount( );
       Group group = account.lookupGroupByName( groupName );
+      EuarePermission.authorizeAddUserToGroup( requestUser, account, group, user );
       group.addUserByName( user.getName( ) );
     } catch ( Exception e ) {
       LOG.error( "Failed to add user " + userId + " to group " + groupName, e );
@@ -1023,9 +1099,12 @@ public class EuareWebBackend {
     }    
   }
 
-  public static void removeUserFromGroupByName( String userName, String groupId ) {
+  public static void removeUserFromGroupByName( User requestUser, String userName, String groupId ) {
     try {
       Group group = Accounts.lookupGroupById( groupId );
+      Account account = group.getAccount( );
+      User user = account.lookupUserByName( userName );
+      EuarePermission.authorizeRemoveUserFromGroup( requestUser, account, group, user );
       group.removeUserByName( userName );
     } catch ( Exception e ) {
       LOG.error( "Failed to remove user " + userName + " from group " + groupId, e );
@@ -1033,11 +1112,12 @@ public class EuareWebBackend {
     }
   }
 
-  public static void removeUserFromGroupById( String userId, String groupName ) {
+  public static void removeUserFromGroupById( User requestUser, String userId, String groupName ) {
     try {
       User user = Accounts.lookupUserById( userId );
       Account account = user.getAccount( );
       Group group = account.lookupGroupByName( groupName );
+      EuarePermission.authorizeRemoveUserFromGroup( requestUser, account, group, user );
       group.removeUserByName( user.getName( ) );
     } catch ( Exception e ) {
       LOG.error( "Failed to remove user " + userId + " from group " + groupName, e );
@@ -1045,10 +1125,14 @@ public class EuareWebBackend {
     }
   }
 
-  public static void addAccessKey( String userId ) throws EucalyptusServiceException {
+  public static void addAccessKey( User requestUser, String userId ) throws EucalyptusServiceException {
     try {
       User user = Accounts.lookupUserById( userId );
+      EuarePermission.authorizeAddUserAccessKey( requestUser, user.getAccount( ), user );
       user.createKey( );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to create key for user " + userId, e );
       LOG.debug( e, e );
@@ -1056,9 +1140,10 @@ public class EuareWebBackend {
     }
   }
 
-  public static void addCertificate( String userId, String pem ) throws EucalyptusServiceException {
+  public static void addCertificate( User requestUser, String userId, String pem ) throws EucalyptusServiceException {
     try {
       User user = Accounts.lookupUserById( userId );
+      EuarePermission.authorizeAddUserCertificate( requestUser, user.getAccount( ), user );
       String encodedPem = B64.url.encString( pem );
       for ( Certificate c : user.getCertificates( ) ) {
         if ( c.getPem( ).equals( encodedPem ) ) {
@@ -1074,17 +1159,17 @@ public class EuareWebBackend {
         throw new EucalyptusServiceException( "Invalid certificate content" );        
       }
       user.addCertificate( x509 );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to add certificate to user " + userId + ": " + pem, e );
       LOG.debug( e, e );
-      if ( e instanceof EucalyptusServiceException ) {
-        throw ( EucalyptusServiceException ) e;
-      }
       throw new EucalyptusServiceException( "Failed to add certificate to user " + userId );
     }
   }
 
-  public static void modifyCertificate( ArrayList<String> values ) throws EucalyptusServiceException {
+  public static void modifyCertificate( User requestUser, ArrayList<String> values ) throws EucalyptusServiceException {
     try {
       // Deserialize
       int i = 0;
@@ -1095,8 +1180,12 @@ public class EuareWebBackend {
       String userName = values.get( i++ );
       Account account = Accounts.lookupAccountByName( accountName );
       User user = account.lookupUserByName( userName );
+      EuarePermission.authorizeModifyUserCertificate( requestUser, account, user );
       Certificate cert = user.getCertificate( certId );
       cert.setActive( "true".equalsIgnoreCase( active ) );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to modify cert " + values, e );
       LOG.debug( e, e );
@@ -1104,7 +1193,7 @@ public class EuareWebBackend {
     }
   }
 
-  public static void modifyAccessKey( ArrayList<String> values ) throws EucalyptusServiceException {
+  public static void modifyAccessKey( User requestUser, ArrayList<String> values ) throws EucalyptusServiceException {
     try {
       // Deserialize
       int i = 0;
@@ -1114,8 +1203,12 @@ public class EuareWebBackend {
       String userName = values.get( i++ );
       Account account = Accounts.lookupAccountByName( accountName );
       User user = account.lookupUserByName( userName );
+      EuarePermission.authorizeModifyUserAccessKey( requestUser, account, user );
       AccessKey key = user.getKey( keyId );
       key.setActive( "true".equalsIgnoreCase( active ) );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to modify key " + values, e );
       LOG.debug( e, e );
@@ -1123,7 +1216,7 @@ public class EuareWebBackend {
     }
   }
 
-  public static void modifyGroup( ArrayList<String> values ) throws EucalyptusServiceException {
+  public static void modifyGroup( User requestUser, ArrayList<String> values ) throws EucalyptusServiceException {
     try {
       // Deserialize
       int i = 0;
@@ -1132,12 +1225,16 @@ public class EuareWebBackend {
       String path = values.get( i++ );
       
       Group group = Accounts.lookupGroupById( groupId );
+      EuarePermission.authorizeModifyGroup( requestUser, group.getAccount( ), group );
       if ( !group.getName( ).equals( groupName ) ) {
         group.setName( ValueCheckerFactory.createUserAndGroupNameChecker( ).check( groupName ) );
       }
       if ( !group.getPath( ).equals( path ) ) {
         group.setPath( path );
       }
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to modify group " + values, e );
       LOG.debug( e, e );
@@ -1145,7 +1242,7 @@ public class EuareWebBackend {
     }
   }
 
-  public static void modifyUser( ArrayList<String> keys, ArrayList<String> values ) throws EucalyptusServiceException {
+  public static void modifyUser( User requestUser, ArrayList<String> keys, ArrayList<String> values ) throws EucalyptusServiceException {
     try {
       // Deserialize
       int i = 0;
@@ -1173,6 +1270,7 @@ public class EuareWebBackend {
       }
       
       User user = Accounts.lookupUserById( userId );
+      EuarePermission.authorizeModifyUser( requestUser, user.getAccount( ), user );
       if ( !user.getName( ).equals( userName ) ) {
         user.setName( ValueCheckerFactory.createUserAndGroupNameChecker( ).check( userName ) );
       }
@@ -1186,6 +1284,9 @@ public class EuareWebBackend {
         user.setPasswordExpires( expiration );
       }
       user.setInfo( newInfo );
+    } catch ( EucalyptusServiceException e ) {
+      LOG.debug( e, e );
+      throw e;
     } catch ( Exception e ) {
       LOG.error( "Failed to modify user " + keys + " = " + values, e );
       LOG.debug( e, e );
@@ -1242,7 +1343,10 @@ public class EuareWebBackend {
     }
   }
 
-  public static ArrayList<String> processAccountSignups( ArrayList<String> accountNames, boolean approve, String backendUrl ) {
+  public static ArrayList<String> processAccountSignups( User requestUser, ArrayList<String> accountNames, boolean approve, String backendUrl ) throws EucalyptusServiceException {
+    if ( EuarePermission.allowProcessAccountSignup( requestUser ) ) {
+      throw new EucalyptusServiceException( "Operation is not authorized" );
+    }
     ArrayList<String> success = Lists.newArrayList( );
     for ( String accountName : accountNames ) {
       try {
@@ -1293,23 +1397,25 @@ public class EuareWebBackend {
     ServletUtils.sendMail( userEmail, userEmail, subject, emailMessage );
   }
 
-  public static ArrayList<String> processUserSignups( ArrayList<String> userIds, boolean approve, String backendUrl ) throws EucalyptusServiceException {
+  public static ArrayList<String> processUserSignups( User requestUser, ArrayList<String> userIds, boolean approve, String backendUrl ) throws EucalyptusServiceException {
     ArrayList<String> success = Lists.newArrayList( );
     for ( String userId : userIds ) {
       try {
         User user = Accounts.lookupUserById( userId );
-        if ( user.getRegistrationStatus( ).equals( RegistrationStatus.REGISTERED ) ) {
-          if ( approve ) {
-            user.setRegistrationStatus( RegistrationStatus.APPROVED );
-            notifyUserApproval( user, backendUrl );
+        if ( EuarePermission.allowProcessUserSignup( requestUser, user ) ) {
+          if ( user.getRegistrationStatus( ).equals( RegistrationStatus.REGISTERED ) ) {
+            if ( approve ) {
+              user.setRegistrationStatus( RegistrationStatus.APPROVED );
+              notifyUserApproval( user, backendUrl );
+            } else {
+              notifyUserRejection( user, backendUrl );
+              Account account = user.getAccount( );
+              account.deleteUser( user.getName( ), false, true );
+            }
+            success.add( userId );
           } else {
-            notifyUserRejection( user, backendUrl );
-            Account account = user.getAccount( );
-            account.deleteUser( user.getName( ), false, true );
+            throw new IllegalArgumentException( "User " + user + " can not be approved or rejected." );
           }
-          success.add( userId );
-        } else {
-          throw new IllegalArgumentException( "User " + user + " can not be approved or rejected." );
         }
       } catch ( Exception e ) {
         LOG.error( "Failed to " + ( approve ? "approve" : "reject" ) + " user " + userId, e );
@@ -1344,7 +1450,7 @@ public class EuareWebBackend {
     ServletUtils.sendMail( userEmail, userEmail, subject, emailMessage );
   }
 
-  public static User createUser( String userName, String accountName, String password, String email ) throws EucalyptusServiceException {
+  public static User createUser( String userName, String accountName, String password, String email ) {
     try {
       Account account = Accounts.lookupAccountByName( accountName );
       Map<String, String> info = Maps.newHashMap( );
@@ -1358,7 +1464,7 @@ public class EuareWebBackend {
     } catch ( Exception e ) {
       LOG.error( "Failed to create user " + userName + " in " + accountName, e );
       LOG.debug( e, e );
-      throw new EucalyptusServiceException( "Failed to create user" );
+      return null;
     }
   }
 

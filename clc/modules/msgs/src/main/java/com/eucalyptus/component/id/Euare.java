@@ -79,7 +79,7 @@ public class Euare extends ComponentId.Unpartioned {
   }
   
   @Override
-  public Boolean hasDispatcher( ) {
+  public boolean isUserService( ) {
     return true;
   }
   

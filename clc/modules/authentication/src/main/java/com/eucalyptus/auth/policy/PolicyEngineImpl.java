@@ -85,9 +85,9 @@ public class PolicyEngineImpl implements PolicyEngine {
    * @see com.eucalyptus.auth.api.PolicyEngine#evaluateAuthorization(java.lang.Class, java.lang.String, java.lang.String)
    */
   @Override
-  public Map<String, Contract> evaluateAuthorization( String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) throws AuthException {
+  public void evaluateAuthorization( String resourceType, String resourceName, Account resourceAccount, String action, User requestUser, Map<Contract.Type, Contract> contracts ) throws AuthException {
     try {
-      ContractKeyEvaluator contractEval = new ContractKeyEvaluator( );
+      ContractKeyEvaluator contractEval = new ContractKeyEvaluator( contracts );
       CachedKeyEvaluator keyEval = new CachedKeyEvaluator( );
 
       // System admin can do everything
@@ -114,11 +114,12 @@ public class PolicyEngineImpl implements PolicyEngine {
         }
       }
       // Allowed
-      return contractEval.getContracts( );
     } catch ( AuthException e ) {
       //throw by the policy engine implementation 
+      LOG.debug( e, e );
       throw e;
     } catch ( Throwable e ) {
+      LOG.debug( e, e );
       throw new AuthException( "An error occurred while trying to evaluate policy for resource access", e );
     }    
   }

@@ -73,7 +73,6 @@ import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.async.Request;
-import com.eucalyptus.util.fsm.HasStateMachine;
 import com.eucalyptus.util.fsm.StateMachine;
 
 public interface Service extends EventListener<Event>, HasFullName<ServiceConfiguration> {
@@ -106,13 +105,10 @@ public interface Service extends EventListener<Event>, HasFullName<ServiceConfig
   
   public abstract void setGoal( State state );
   
-  ServiceEndpoint getEndpoint( );
-
   public abstract StateMachine<ServiceConfiguration, State, Transition> getStateMachine( );
 
-  /**
-   * TODO: DOCUMENT Service.java
-   */
-  void cleanUp( );
+  public abstract void start( );
+
+  public abstract void stop( );
   
 }

@@ -228,15 +228,22 @@ void change_state(	ncInstance *instance,
     case RUNNING:
     case BLOCKED:
     case PAUSED:
-    case SHUTDOWN:
-    case SHUTOFF:
+        instance->stateCode = EXTANT;
+        instance->retries = LIBVIRT_QUERY_RETRIES;
+        break;
     case CRASHED:
     case BUNDLING_SHUTDOWN:
     case BUNDLING_SHUTOFF:
     case CREATEIMAGE_SHUTDOWN:
     case CREATEIMAGE_SHUTOFF:
-        instance->stateCode = EXTANT;
-	instance->retries = LIBVIRT_QUERY_RETRIES;
+    case SHUTDOWN:
+    case SHUTOFF:
+        if (instance->stateCode == EXTANT) {
+            instance->stateCode = EXTANT;
+        } else {
+            instance->stateCode = PENDING;
+        }
+        instance->retries = LIBVIRT_QUERY_RETRIES;
         break;
     case TEARDOWN:
         instance->stateCode = TEARDOWN;

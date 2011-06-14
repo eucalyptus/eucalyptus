@@ -66,20 +66,15 @@ package com.eucalyptus.component.id;
 import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.empyrean.Empyrean;
 
 public class Reporting extends ComponentId.Unpartioned {
-  
-  @Override
-  public Boolean hasDispatcher( ) {
-    return false;
-  }
   
   @Override
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
     return new ArrayList( ) {
       {
-        this.add( Eucalyptus.class );
-        this.add( Any.class );
+        this.add( Empyrean.class );
       }
     };
   }

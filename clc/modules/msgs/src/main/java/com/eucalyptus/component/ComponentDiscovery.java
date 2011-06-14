@@ -66,7 +66,6 @@ package com.eucalyptus.component;
 import java.lang.reflect.Modifier;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
-import com.eucalyptus.component.id.Any;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 
@@ -76,7 +75,7 @@ public class ComponentDiscovery extends ServiceJarDiscovery {
   @Override
   public boolean processClass( final Class candidate ) throws Throwable {
     if ( ComponentId.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) )
-         && !Modifier.isInterface( candidate.getModifiers( ) ) && !Any.class.equals( candidate ) ) {
+         && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
       try {
         EventRecord.here( ComponentDiscovery.class, EventType.BOOTSTRAP_INIT_COMPONENT, candidate.getCanonicalName( ) ).info( );
         final ComponentId id = ( ComponentId ) candidate.newInstance( );

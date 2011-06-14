@@ -1,5 +1,6 @@
 package com.eucalyptus.auth;
 
+import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.PolicyEngine;
 import com.eucalyptus.auth.principal.Account;
@@ -25,8 +26,8 @@ public class Permissions {
     Context context = null;
     try {
       context = Contexts.lookup( );
-      context.getContracts( ).putAll(
-          policyEngine.evaluateAuthorization( vendor + ":" + resourceType, resourceName, resourceAccount, action, requestUser ) );
+      Map<Contract.Type, Contract> contracts = context.getContracts( );
+      policyEngine.evaluateAuthorization( vendor + ":" + resourceType, resourceName, resourceAccount, action, requestUser, contracts );
       return true;
     } catch ( IllegalContextAccessException e ) {
       LOG.debug( "Exception trying to identify the current request context requesting resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount.getName( ) + " for " + requestUser.getName( ), e );      
