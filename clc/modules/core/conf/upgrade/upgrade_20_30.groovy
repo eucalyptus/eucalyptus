@@ -11,6 +11,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 
+// For keypairs
+import java.security.KeyPair;
+import org.bouncycastle.openssl.PEMReader;
+
 import javax.persistence.Column;
 import javax.persistence.Id;
 import javax.persistence.MappedSuperclass;
@@ -28,11 +32,14 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import java.security.cert.X509Certificate;
 import com.eucalyptus.auth.util.X509CertHelper;
+import com.eucalyptus.crypto.util.PEMFiles;
 
 // Config
 import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
+import com.eucalyptus.cluster.ClusterBuilder;
+import com.eucalyptus.component.Partition;
 
 // DNS
 import edu.ucsb.eucalyptus.cloud.entities.ARecordInfo;
@@ -129,6 +136,8 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         } else if (!upgradeNetwork()) {
             return;
         } else if (!upgradeWalrus()) {
+            return;
+        } else if (!upgradeCluster(oldEucaHome)) {
             return;
         }
         
@@ -392,6 +401,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 def path = img.image_path.split("/");
                 // TODO:AGRIMM Need to make sure I get size / bundle size correctly here.
                 // Do I have to actually fetch and read the manifest?
+                /* 
                 def imgSize = 1;
                 def platform = Image.Platform.valueOf("linux");
                 def cachedImg = walrus_conn.firstRow("""SELECT size sz FROM ImageCache 
@@ -442,6 +452,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     dbLP.add(new LaunchPermission(ii, imgAuth.image_auth_name));
                     dbLP.commit();
                 }
+                */
             }
 
             image_conn.rows("""SELECT * FROM Volume WHERE username=${ it.auth_user_name }""").each { vol ->
@@ -634,6 +645,47 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         }
         return true;
     }
+    
+    public boolean upgradeCluster(oldEucaHome) {
+        def oldHome = System.getProperty( "euca.upgrade.old.dir" );
+        def config_conn = StandalonePersistence.getConnection("eucalyptus_config");
+        def config_auth = StandalonePersistence.getConnection("eucalyptus_auth");
+        config_conn.rows('SELECT * FROM config_clusters').each{
+            EntityWrapper<ClusterConfiguration> dbCluster = EntityWrapper.get(ClusterConfiguration.class);
+            EntityWrapper<Partition> dbPart = EntityWrapper.get(Partition.class);
+            try {
+                def clCert = config_auth.firstRow("SELECT * from auth_x509 x join auth_clusters ac ON ac.auth_cluster_x509_certificate=x.id where ac.auth_cluster_name=${it.config_component_name}");
+                def nodeCert = config_auth.firstRow("SELECT * from auth_x509 x join auth_clusters ac ON ac.auth_cluster_node_x509_certificate=x.id where ac.auth_cluster_name=${it.config_component_name}");
+
+                PEMReader pem = new PEMReader(new FileReader("${ oldHome }/var/lib/eucalyptus/keys/node-pk.pem"));
+                KeyPair nodeKeyPair = (KeyPair) pem.readObject();
+                pem.close();
+                pem = new PEMReader(new FileReader("${ oldHome }/var/lib/eucalyptus/keys/cluster-pk.pem"));
+                KeyPair clusterKeyPair = (KeyPair) pem.readObject();
+                pem.close();
+                Partition p = new Partition(it.config_component_name, 
+                                            clusterKeyPair, 
+                                            X509CertHelper.toCertificate(clCert.auth_x509_pem_certificate), 
+                                            nodeKeyPair, 
+                                            X509CertHelper.toCertificate(nodeCert.auth_x509_pem_certificate));
+                dbPart.persist(p);
+                dbPart.commit();
+            } catch (Throwable t) {
+                t.printStackTrace();
+                dbPart.rollback();
+                return false;
+            }
+            try {
+                ClusterBuilder cbldr = new ClusterBuilder()
+                ClusterConfiguration clcfg = cbldr.add(it.config_component_name, it.config_component_name, it.config_component_hostname, it.config_component_port);
+                dbCluster.commit();
+            } catch (Thrwoable t) {
+                t.printStackTrace();
+                dbCluster.rollback();
+                return false;
+            }
+        }
+    }   
 
     static {
         entities.add(SshKeyPair.class);
