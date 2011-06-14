@@ -332,7 +332,7 @@ public class ServiceTransitions {
         LOG.debug( "Silentlty accepting remotely inferred state transition for " + parent ); 
       }
       if( trans != null ) {
-        LOG.debug( "Executing transition: " + trans.getClass( ).getCanonicalName( ) + "." + transitionAction.name( ) + " for " + parent );
+        LOG.debug( "Executing transition: " + trans.getClass( ) + "." + transitionAction.name( ) + " for " + parent );
         trans.fire( parent );
       }
       transitionCallback.fire( );
