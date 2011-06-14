@@ -66,7 +66,6 @@ package com.eucalyptus.component.id;
 import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
-import com.google.common.collect.Lists;
 
 public class HttpService extends ComponentId.Unpartioned {
   
@@ -77,11 +76,6 @@ public class HttpService extends ComponentId.Unpartioned {
   @Override
   public String getLocalEndpointName( ) {
     return "vm://HttpServer";
-  }
-  
-  @Override
-  public Boolean hasDispatcher( ) {
-    return false;
   }
   
   @Override
@@ -102,6 +96,11 @@ public class HttpService extends ComponentId.Unpartioned {
       }
     };
     
+  }
+  
+  @Override
+  public boolean isAdminService( ) {
+    return true;
   }
   
 }

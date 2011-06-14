@@ -68,7 +68,6 @@ import java.util.Map.Entry;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
-import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -78,11 +77,11 @@ import com.eucalyptus.util.fsm.TransitionException;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 
 public class ComponentBootstrapper {
   private static Logger LOG = Logger.getLogger( ComponentBootstrapper.class );
   private final Multimap<Bootstrap.Stage, Bootstrapper> bootstrappers = ArrayListMultimap.create( );
+  private final Multimap<Bootstrap.Stage, Bootstrapper> disabledBootstrappers = ArrayListMultimap.create( );
   private final Component component; 
   
   ComponentBootstrapper( Component component ) {
@@ -92,21 +91,36 @@ public class ComponentBootstrapper {
   
   public void addBootstrapper( Bootstrapper b ) {
     EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, b.getBootstrapStage( ).name( ), b.getClass( ).getName( ), "component=" + this.component.getName( ) ).info( );
-    if( this.component.isAvailableLocally( ) ) {
+//    if( this.component.isAvailableLocally( ) ) {
       this.bootstrappers.put( b.getBootstrapStage( ), b );
-    }
+//    }
   }
 
   private void updateBootstrapDependencies( ) {    
+    for ( Entry<Stage, Bootstrapper> entry : Lists.newArrayList( this.disabledBootstrappers.entries( ) ) ) {
+      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_RELOAD, "DISABLED", "stage:" + entry.getKey( ), this.getClass( ).getSimpleName( ),
+                        "Depends.local=" + entry.getValue( ).toString( ), "Component." + entry.getValue( ).toString( ) + "=remote" ).info( );
+    }
+    this.bootstrappers.putAll( this.disabledBootstrappers );
+    for ( Entry<Stage, Bootstrapper> entry : Lists.newArrayList( this.bootstrappers.entries( ) ) ) {
+      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_RELOAD, "UPDATE", "stage:" + entry.getKey( ), this.getClass( ).getSimpleName( ),
+                        "Depends.local=" + entry.getValue( ).toString( ), "Component." + entry.getValue( ).toString( ) + "=remote" ).info( );
+    }
     for ( Entry<Stage, Bootstrapper> entry : Lists.newArrayList( this.bootstrappers.entries( ) ) ) {
       if ( !entry.getValue( ).checkLocal( ) ) {
-        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + Bootstrap.getCurrentStage( ), this.getClass( ).getSimpleName( ),
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + entry.getKey( ), this.getClass( ).getSimpleName( ),
                           "Depends.local=" + entry.getValue( ).toString( ), "Component." + entry.getValue( ).toString( ) + "=remote" ).info( );
+        Bootstrap.Stage stage = entry.getKey( );
+        Bootstrapper bootstrapper = entry.getValue( );
         this.bootstrappers.remove( entry.getKey( ), entry.getValue( ) );
+        this.disabledBootstrappers.put( stage, bootstrapper );
       } else if ( !entry.getValue( ).checkRemote( ) ) {
-        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + Bootstrap.getCurrentStage( ), this.getClass( ).getSimpleName( ),
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + entry.getKey( ), this.getClass( ).getSimpleName( ),
                           "Depends.remote=" + entry.getValue( ).toString( ), "Component." + entry.getValue( ).toString( ) + "=local" ).info( );
+        Bootstrap.Stage stage = entry.getKey( );
+        Bootstrapper bootstrapper = entry.getValue( );
         this.bootstrappers.remove( entry.getKey( ), entry.getValue( ) );
+        this.disabledBootstrappers.put( stage, bootstrapper );
       }
     }
   }

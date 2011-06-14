@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009  Eucalyptus Systems, Inc.
+ *Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -57,39 +57,127 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************
+ *******************************************************************************/
+/*
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
+package com.eucalyptus.ws;
 
-package com.eucalyptus.context;
-
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ComponentRegistrationHandler;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceBuilder;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.config.ConfigurationService;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 
 @Provides( Empyrean.class )
-@RunDuring( Bootstrap.Stage.CloudServiceInit )
+@RunDuring( Bootstrap.Stage.RemoteServicesInit )
 public class ServiceBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
   
-  public ServiceBootstrapper( ) {}
+  enum ShouldLoad implements Predicate<ServiceConfiguration> {
+    INSTANCE {
+      
+      @Override
+      public boolean apply( final ServiceConfiguration config ) {
+        boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( ) || Bootstrap.isCloudController( );
+        LOG.debug( "ServiceBootstrapper.shouldLoad("+config.toString( )+"):" + ret );
+        return ret;
+      }
+    };
+  }
   
   @Override
-  public boolean load( ) throws Exception {
+  public boolean load( ) {
+    ServiceBootstrapper.execute( new Predicate<ServiceConfiguration>( ) {
+      
+      @Override
+      public boolean apply( final ServiceConfiguration config ) {
+        final Component comp = config.lookupComponent( );
+        LOG.debug( "load(): " + config );
+        try {
+          comp.loadService( config ).get( );
+          return true;
+        } catch ( ServiceRegistrationException ex ) {
+          config.error( ex );
+          return false;
+        } catch ( Throwable ex ) {
+          Exceptions.trace( "load(): Building service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );
+          config.error( ex );
+          return false;
+        }
+      }
+    } );
     return true;
   }
   
   @Override
   public boolean start( ) throws Exception {
-    try {
-      ServiceContextManager.restartSync( );
-      return true;
-    } catch ( Exception ex ) {
-      LOG.error( ex , ex );
-      throw ex;
+    ServiceBootstrapper.execute( new Predicate<ServiceConfiguration>( ) {
+      
+      @Override
+      public boolean apply( final ServiceConfiguration config ) {
+        final Component comp = config.lookupComponent( );
+        try {
+          final CheckedListenableFuture<ServiceConfiguration> future = comp.startTransition( config );
+          Runnable followRunner = new Runnable( ) {
+            @Override
+            public void run( ) {
+              try {
+                future.get( );
+                comp.enableTransition( config );
+              } catch ( Exception ex ) {
+                LOG.error( ex, ex );
+              }
+            }
+          };
+          Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, config.getFullName( ).toString( ) ).submit( followRunner );
+        } catch ( Exception e ) {
+          LOG.error( e, e );
+        }
+        return false;
+      }
+    } );
+    return true;
+  }
+  
+  private static void execute( final Predicate<ServiceConfiguration> predicate ) throws NoSuchElementException {
+    for ( final ComponentId compId : ComponentIds.list( ) ) {
+      Component comp = Components.lookup( compId );
+      if ( compId.isRegisterable( ) ) {
+        ServiceBuilder<? extends ServiceConfiguration> builder = comp.getBuilder( );
+        try {
+          for ( ServiceConfiguration config : Iterables.filter( builder.list( ), ShouldLoad.INSTANCE ) ) {
+            try {
+              predicate.apply( config );
+            } catch ( Exception ex ) {
+              LOG.error( ex , ex );
+            }
+          }
+        } catch ( ServiceRegistrationException ex ) {
+          LOG.error( ex, ex );
+        }
+      } else if ( comp.hasLocalService( ) ) {
+        final ServiceConfiguration config = comp.getLocalServiceConfiguration( );
+        if ( config.isVmLocal( ) || ( Bootstrap.isCloudController( ) && config.isHostLocal( ) ) ) {
+          predicate.apply( config );
+        }
+      }
     }
   }
   
@@ -130,5 +218,4 @@ public class ServiceBootstrapper extends Bootstrapper {
   public boolean check( ) throws Exception {
     return true;
   }
-  
 }

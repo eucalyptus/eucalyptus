@@ -734,6 +734,9 @@ int java_init(euca_opts *args, java_home_t *data) {
 			JVM_ARG(opt[++x], "-Deuca.disable.iscsi=true");
 		}
 	}
+	if (args->force_remote_bootstrap_flag || args->disable_cloud_flag) {
+		JVM_ARG(opt[++x], "-Deuca.force.remote.bootstrap=true");
+	}
 	if (args->debug_flag) {
 		JVM_ARG(opt[++x], "-Xdebug");
 		JVM_ARG(
