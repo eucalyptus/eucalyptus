@@ -143,9 +143,13 @@ public class ServiceContextManager implements EventListener<Event> {
                 ServiceContextManager.this.update( );
               } catch ( Throwable ex ) {
                 LOG.error( ex, ex );
+              } finally {
+                ServiceContextManager.this.canHasWrite.unlock( );
               }
             }
           } );
+        } else {
+          this.canHasWrite.unlock( );
         }
         if ( this.shouldReload( ) ) {
           this.pendingCount.incrementAndGet( );
@@ -153,8 +157,6 @@ public class ServiceContextManager implements EventListener<Event> {
         return ret != null
           ? ret
           : Futures.predestinedFuture( null );
-      } finally {
-        this.canHasWrite.unlock( );
       }
     } else {
       return Futures.predestinedFuture( null );
