@@ -63,31 +63,23 @@
 package com.eucalyptus.ws;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.id.Any;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
-import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.google.common.collect.Lists;
-import com.eucalyptus.records.EventRecord;
 
-@Provides( Any.class )
+@Provides( ComponentId.class )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
-public class DeferredPropertiesBootstrapper extends Bootstrapper {
+public class DeferredPropertiesBootstrapper extends Bootstrapper {//TODO:GRZE:REVIEW can we get rid of this?  it is a special case for bootstrap & @Provides
 	private static Logger LOG = Logger.getLogger( DeferredPropertiesBootstrapper.class );
 	@Override
 	public boolean start( ) throws Exception {

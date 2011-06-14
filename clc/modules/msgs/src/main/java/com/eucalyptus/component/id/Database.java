@@ -67,7 +67,6 @@ import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.util.Internets;
-import com.google.common.collect.Lists;
 
 public class Database extends ComponentId.Unpartioned {
   
@@ -88,11 +87,6 @@ public class Database extends ComponentId.Unpartioned {
   @Override
   public String getUriPattern( ) {
     return "mysql://%s:%d/eucalyptus";
-  }
-  
-  @Override
-  public Boolean hasDispatcher( ) {
-    return false;
   }
   
   @Override

@@ -241,13 +241,13 @@ public class Internets {
     try {
       ret = InetAddress.getByName( hostAddress );
     } catch ( UnknownHostException e1 ) {
-      throw Exceptions.fatal( "Failed to resolve address for host: " + maybeUrlMaybeHostname, e1 );
+      Exceptions.fatal( "Failed to resolve address for host: " + maybeUrlMaybeHostname, e1 );
     }
     return ret;
   }
   
   public static boolean testLocal( final InetAddress addr ) {
-    Assertions.assertNotNull( addr );
+    if( addr == null ) return true;
     try {
       Boolean result = addr.isAnyLocalAddress( );
       result |= Iterables.any( Collections.list( NetworkInterface.getNetworkInterfaces( ) ), new Predicate<NetworkInterface>( ) {
@@ -263,18 +263,20 @@ public class Internets {
       } );
       return result;
     } catch ( Exception e ) {
-      return Exceptions.eat( e.getMessage( ), e );
+//      Exceptions.eat( e.getMessage( ), e );
+      return false;
     }
   }
   
   public static boolean testLocal( String address ) {
-    Assertions.assertNotNull( address );
+    if( address == null ) return true;
     InetAddress addr;
     try {
       addr = InetAddress.getByName( address );
       return testLocal( addr );
     } catch ( UnknownHostException e ) {
-      return Exceptions.eat( e.getMessage( ), e );
+      LOG.error( e.getMessage( ) );
+      return address.endsWith( "Internal" );
     }
   }
   

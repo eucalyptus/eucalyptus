@@ -63,7 +63,6 @@ package com.eucalyptus.component;
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-import java.net.URI;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -117,9 +116,9 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     try {
       if ( !Internets.testGoodAddress( host ) ) {
         throw new EucalyptusCloudException( "Components cannot be registered using local, link-local, or multicast addresses." );
-      } else if ( Internets.testLocal( host ) && !this.getComponent( ).isAvailableLocally( ) ) {
-        throw new EucalyptusCloudException( "You do not have a local " + this.newInstance( ).getClass( ).getSimpleName( ).replaceAll( "Configuration", "" )
-                                            + " enabled (or it is not installed)." );
+//      } else if ( Internets.testLocal( host ) && !this.getComponent( ).isAvailableLocally( ) ) {
+//        throw new EucalyptusCloudException( "You do not have a local " + this.newInstance( ).getClass( ).getSimpleName( ).replaceAll( "Configuration", "" )
+//                                            + " enabled (or it is not installed)." );
       }
     } catch ( EucalyptusCloudException e ) {
       throw new ServiceRegistrationException( e.getMessage( ), e );

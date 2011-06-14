@@ -71,8 +71,7 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
+import com.eucalyptus.empyrean.Empyrean;
 import com.google.common.collect.Lists;
 
 public class ComponentIds {
@@ -82,7 +81,8 @@ public class ComponentIds {
   public static boolean shouldBootstrapLocally( ComponentId c ) {
     boolean cloudLocal = Bootstrap.isCloudController( ) && c.isCloudLocal( );
     boolean alwaysLocal = c.isAlwaysLocal( );
-    return cloudLocal || alwaysLocal;
+    boolean isBootrapperItself = Empyrean.class.equals( c );
+    return cloudLocal || alwaysLocal || isBootrapperItself;
   }
   
   public static List<ComponentId> listLocallyRynning( ) {//TODO:GRZE:FIXME: isRunningLocally check shoudl be sufficient... replace with Component.

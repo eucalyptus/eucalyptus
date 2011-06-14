@@ -108,8 +108,8 @@ import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Transactions;
-import com.eucalyptus.util.Tx;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -260,7 +260,7 @@ public class SystemState {
       } catch ( XPathExpressionException e ) {
         LOG.error( e, e );
       }
-    } catch ( EucalyptusCloudException e ) { 
+    } catch ( EucalyptusCloudException e ) {
       LOG.error( e, e );
     } catch ( DOMException e ) {
       LOG.error( e, e );
@@ -284,7 +284,11 @@ public class SystemState {
         launchIndex = Integer.parseInt( runVm.getLaunchIndex( ) );
       } catch ( NumberFormatException e ) {}
       //ASAP: FIXME: GRZE: HANDLING OF PRODUCT CODES AND ANCESTOR IDs
-      ImageInfo img = Transactions.one( Images.exampleMachineWithImageId( runVm.getInstanceType( ).lookupRoot( ).getId( ) ), Tx.NOOP );
+      ImageInfo img = Transactions.one( Images.exampleMachineWithImageId( runVm.getInstanceType( ).lookupRoot( ).getId( ) ), new Callback<ImageInfo>( ) {
+        
+        @Override
+        public void fire( ImageInfo t ) {}
+      } );
       VmKeyInfo keyInfo = null;
       SshKeyPair key = null;
       if ( runVm.getKeyValue( ) != null || !"".equals( runVm.getKeyValue( ) ) ) {
@@ -341,7 +345,8 @@ public class SystemState {
           }
         }
       }
-      VmInstance vm = new VmInstance( ownerId, instanceId, instanceUuid, reservationId, launchIndex, placement, userData, keyInfo, vmType, img.getPlatform( ).toString( ),
+      VmInstance vm = new VmInstance( ownerId, instanceId, instanceUuid, reservationId, launchIndex, placement, userData, keyInfo, vmType,
+                                      img.getPlatform( ).toString( ),
                                       networks,
                                       Integer.toString( runVm.getNetParams( ).getNetworkIndex( ) ) );
       vm.clearPending( );

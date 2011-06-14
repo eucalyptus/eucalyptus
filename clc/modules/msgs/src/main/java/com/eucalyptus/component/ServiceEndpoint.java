@@ -68,10 +68,12 @@ import java.net.URISyntaxException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import org.jgroups.util.UUID;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -114,7 +116,11 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<M
     }
     this.running = new AtomicBoolean( false );
     this.msgQueue = new LinkedBlockingQueue<QueuedRequest>( );
-    this.workers = Threads.lookup( parent.getComponentId( ).getClass( ), ServiceEndpoint.class, uri.getHost( ) + "-queue" ).limitTo( NUM_WORKERS );
+    this.workers = this.createPool( );
+  }
+
+  private ThreadPool createPool( ) {
+    return Threads.lookup( this.parent.getComponentId( ).getClass( ), ServiceEndpoint.class, this.parent.getServiceConfiguration( ) + "-queue-" + UUID.randomUUID( ).toString( ) ).limitTo( NUM_WORKERS );
   }
   
   public Boolean isRunning( ) {
@@ -123,6 +129,9 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<M
   
   public void start( ) {
     if ( this.running.compareAndSet( false, true ) ) {
+      if( this.workers == null || this.workers.isShutdown( ) || this.workers.isTerminated( ) ) {
+        this.workers = this.createPool( );
+      }
       for ( int i = 0; i < NUM_WORKERS; i++ ) {
         this.workers.execute( new ServiceEndpointWorker( ) );
       }
@@ -131,7 +140,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<M
   
   public void enqueue( final Request request ) {//FIXME: for now request is already wrapped in messaging state.
     if ( !this.running.get( ) ) {
-      throw new RuntimeException( "Endpoint is currently not operational." );
+      throw new RejectedExecutionException( "Endpoint is currently not running: " + this.parent.getServiceConfiguration( ).getFullName( ) );
     } else {
       QueuedRequest event = new QueuedRequest( request );
       EventRecord.caller( ServiceEndpoint.class, EventType.MSG_PENDING, this.parent.getName( ), event.getCallback( ).getClass( ).getSimpleName( ) ).info( );
