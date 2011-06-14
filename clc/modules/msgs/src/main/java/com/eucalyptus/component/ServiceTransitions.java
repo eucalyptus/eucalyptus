@@ -77,13 +77,17 @@ import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
+import com.eucalyptus.empyrean.DisableServiceResponseType;
 import com.eucalyptus.empyrean.DisableServiceType;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.EmpyreanMessage;
+import com.eucalyptus.empyrean.EnableServiceResponseType;
 import com.eucalyptus.empyrean.EnableServiceType;
 import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.empyrean.ServiceStatusType;
+import com.eucalyptus.empyrean.StartServiceResponseType;
 import com.eucalyptus.empyrean.StartServiceType;
+import com.eucalyptus.empyrean.StopServiceResponseType;
 import com.eucalyptus.empyrean.StopServiceType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -101,14 +105,8 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
 public class ServiceTransitions {
-  /**
-   * 
-   */
-  private static final int BOOTSTRAP_REMOTE_RETRY_INTERVAL = 2;
-  /**
-   * 
-   */
-  private static final int BOOTSTRAP_REMOTE_RETRIES = 10;
+  private static final int BOOTSTRAP_REMOTE_RETRY_INTERVAL = 2;//TODO:GRZE:@Configurable
+  private static final int BOOTSTRAP_REMOTE_RETRIES = 10;//TODO:GRZE:@Configurable
   static Logger LOG = Logger.getLogger( ServiceTransitions.class );
   
   interface ServiceTransitionCallback {
@@ -306,7 +304,8 @@ public class ServiceTransitions {
     LOG.debug( "Sending request " + msg.getClass( ).getSimpleName( ) + " to " + parent.getFullName( ) );
     for ( int i = 0; i < BOOTSTRAP_REMOTE_RETRIES; i++ ) {
       try {
-        return AsyncRequests.sendSync( config, msg );
+        T reply = (T) AsyncRequests.sendSync( config, msg );
+        return reply;
       } catch ( RetryableConnectionException ex ) {
         LOG.error( ex, ex );
         try {
@@ -470,7 +469,7 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Throwable {
-        ServiceTransitions.sendEmpyreanRequest( parent, new StartServiceType( ) {
+        StartServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new StartServiceType( ) {
           {
             this.getServices( ).add( TypeMappers.transform( parent, ServiceInfoType.class ) );
           }
@@ -486,7 +485,7 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Throwable {
-        ServiceTransitions.sendEmpyreanRequest( parent, new EnableServiceType( ) {
+        EnableServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new EnableServiceType( ) {
           {
             this.getServices( ).add( TypeMappers.transform( parent, ServiceInfoType.class ) );
           }
@@ -503,7 +502,7 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Throwable {
-        ServiceTransitions.sendEmpyreanRequest( parent, new DisableServiceType( ) {
+        DisableServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new DisableServiceType( ) {
           {
             this.getServices( ).add( TypeMappers.transform( parent, ServiceInfoType.class ) );
           }
@@ -519,7 +518,7 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Throwable {
-        ServiceTransitions.sendEmpyreanRequest( parent, new StopServiceType( ) {
+        StopServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new StopServiceType( ) {
           {
             this.getServices( ).add( TypeMappers.transform( parent, ServiceInfoType.class ) );
           }
