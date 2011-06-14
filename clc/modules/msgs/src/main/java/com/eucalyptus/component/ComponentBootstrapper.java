@@ -97,17 +97,25 @@ public class ComponentBootstrapper {
   }
 
   private void updateBootstrapDependencies( ) {    
+    for ( Entry<Stage, Bootstrapper> entry : Lists.newArrayList( this.disabledBootstrappers.entries( ) ) ) {
+      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_RELOAD, "DISABLED", "stage:" + entry.getKey( ), this.getClass( ).getSimpleName( ),
+                        "Depends.local=" + entry.getValue( ).toString( ), "Component." + entry.getValue( ).toString( ) + "=remote" ).info( );
+    }
     this.bootstrappers.putAll( this.disabledBootstrappers );
     for ( Entry<Stage, Bootstrapper> entry : Lists.newArrayList( this.bootstrappers.entries( ) ) ) {
+      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_RELOAD, "UPDATE", "stage:" + entry.getKey( ), this.getClass( ).getSimpleName( ),
+                        "Depends.local=" + entry.getValue( ).toString( ), "Component." + entry.getValue( ).toString( ) + "=remote" ).info( );
+    }
+    for ( Entry<Stage, Bootstrapper> entry : Lists.newArrayList( this.bootstrappers.entries( ) ) ) {
       if ( !entry.getValue( ).checkLocal( ) ) {
-        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + Bootstrap.getCurrentStage( ), this.getClass( ).getSimpleName( ),
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + entry.getKey( ), this.getClass( ).getSimpleName( ),
                           "Depends.local=" + entry.getValue( ).toString( ), "Component." + entry.getValue( ).toString( ) + "=remote" ).info( );
         Bootstrap.Stage stage = entry.getKey( );
         Bootstrapper bootstrapper = entry.getValue( );
         this.bootstrappers.remove( entry.getKey( ), entry.getValue( ) );
         this.disabledBootstrappers.put( stage, bootstrapper );
       } else if ( !entry.getValue( ).checkRemote( ) ) {
-        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + Bootstrap.getCurrentStage( ), this.getClass( ).getSimpleName( ),
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + entry.getKey( ), this.getClass( ).getSimpleName( ),
                           "Depends.remote=" + entry.getValue( ).toString( ), "Component." + entry.getValue( ).toString( ) + "=local" ).info( );
         Bootstrap.Stage stage = entry.getKey( );
         Bootstrapper bootstrapper = entry.getValue( );
