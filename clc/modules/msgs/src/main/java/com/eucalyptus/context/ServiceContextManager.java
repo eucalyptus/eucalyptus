@@ -133,31 +133,29 @@ public class ServiceContextManager implements EventListener<Event> {
   
   private Future<?> doUpdate( ) {
     if ( Bootstrap.isFinished( ) && this.canHasWrite.tryLock( ) ) {
-      try {
-        Future<?> ret = null;
-        if ( this.pendingCount.getAndSet( 0 ) > 0 || this.shouldReload( ) ) {
-          Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
-            @Override
-            public void run( ) {
-              try {
-                ServiceContextManager.this.update( );
-              } catch ( Throwable ex ) {
-                LOG.error( ex, ex );
-              } finally {
-                ServiceContextManager.this.canHasWrite.unlock( );
-              }
+      Future<?> ret = null;
+      if ( this.pendingCount.getAndSet( 0 ) > 0 || this.shouldReload( ) ) {
+        Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
+          @Override
+          public void run( ) {
+            try {
+              ServiceContextManager.this.update( );
+            } catch ( Throwable ex ) {
+              LOG.error( ex, ex );
+            } finally {
+              ServiceContextManager.this.canHasWrite.unlock( );
             }
-          } );
-        } else {
-          this.canHasWrite.unlock( );
-        }
-        if ( this.shouldReload( ) ) {
-          this.pendingCount.incrementAndGet( );
-        }
-        return ret != null
-          ? ret
-          : Futures.predestinedFuture( null );
+          }
+        } );
+      } else {
+        this.canHasWrite.unlock( );
       }
+      if ( this.shouldReload( ) ) {
+        this.pendingCount.incrementAndGet( );
+      }
+      return ret != null
+        ? ret
+        : Futures.predestinedFuture( null );
     } else {
       return Futures.predestinedFuture( null );
     }
