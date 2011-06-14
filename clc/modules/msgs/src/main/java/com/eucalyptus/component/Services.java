@@ -94,7 +94,7 @@ public class Services {
     @Override
     public ServiceStatusDetail apply( final ServiceCheckRecord input ) {
       return new ServiceStatusDetail( ) {
-        { 
+        {
           this.setSeverity( input.getSeverity( ).toString( ) );
           this.setUuid( input.getUuid( ) );
           this.setTimestamp( input.getTimestamp( ).toString( ) );
@@ -125,23 +125,16 @@ public class Services {
     
     @Override
     public ServiceBuilder<? extends ServiceConfiguration> apply( final ServiceConfiguration input ) {
-      return ServiceBuilderRegistry.lookup( input.getComponentId( ) );
+      return ServiceBuilders.lookup( input.getComponentId( ) );
     }
     
   }
   
   static Service newServiceInstance( ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( config.isVmLocal( ) && config.lookupComponent( ).isAvailableLocally( ) ) {
-      return config.getComponentId( ).hasDispatcher( )
-        ? new MessagableService( config )
-        : new BasicService( config );
-    } else if ( config.isVmLocal( ) && !config.lookupComponent( ).isAvailableLocally( ) ) {
-      return new BasicService.Broken( config );
-    } else /** if( !config.isLocal() ) **/
-    {
-      return config.getComponentId( ).hasDispatcher( )
-        ? new MessagableService( config )
-        : new BasicService( config );//TODO:GRZE:fix this up.
-    }
+//    if ( config.isVmLocal( ) && !config.lookupComponent( ).isAvailableLocally( ) ) {
+//      return new BasicService.Broken( config );
+//    } else {
+      return new MessagableService( config );
+//    }
   }
 }

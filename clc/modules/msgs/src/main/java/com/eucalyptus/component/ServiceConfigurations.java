@@ -1,33 +1,84 @@
 package com.eucalyptus.component;
 
+import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.config.ComponentConfiguration;
-import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.TypeMapper;
+import com.google.common.base.Function;
 
 public class ServiceConfigurations {
   private static Logger                       LOG       = Logger.getLogger( ServiceConfigurations.class );
   private static ServiceConfigurationProvider singleton = new DatabaseServiceConfigurationProvider( );
   
+  @TypeMapper
+  public enum ServiceInfoToServiceConfiguration implements Function<ServiceInfoType, ServiceConfiguration> {
+    INSTANCE;
+    
+    @Override
+    public ServiceConfiguration apply( ServiceInfoType arg0 ) {
+      Component comp = Components.lookup( arg0.getType( ) );
+      ServiceConfiguration config;
+      try {
+        config = comp.lookupServiceConfiguration( arg0.getName( ) );
+      } catch ( NoSuchElementException ex1 ) {
+        ServiceBuilder<? extends ServiceConfiguration> builder = comp.getBuilder( );
+        try {
+          URI uri = new URI( arg0.getUris( ).get( 0 ) );
+          config = builder.newInstance( arg0.getPartition( ), arg0.getName( ), uri.getHost( ), uri.getPort( ) );
+          comp.loadService( config );
+        } catch ( URISyntaxException ex ) {
+          LOG.error( ex, ex );
+          throw new UndeclaredThrowableException( ex );
+        } catch ( ServiceRegistrationException ex ) {
+          LOG.error( ex, ex );
+          throw new UndeclaredThrowableException( ex );
+        }
+      }
+      return config;
+    }
+    
+  }
+  
+  @TypeMapper
+  public enum ServiceConfigurationToServiceInfo implements Function<ServiceConfiguration, ServiceInfoType> {
+    INSTANCE;
+    
+    @Override
+    public ServiceInfoType apply( final ServiceConfiguration arg0 ) {
+      return new ServiceInfoType( ) {
+        {
+          setPartition( arg0.getPartition( ) );
+          setName( arg0.getName( ) );
+          setType( arg0.getComponentId( ).name( ) );
+          getUris( ).add( arg0.getUri( ).toASCIIString( ) );
+        }
+      };
+    }
+    
+  }
+  
   public static ServiceConfigurationProvider getInstance( ) {
     return singleton;
   }
-
+  
   public static ServiceConfiguration createEphemeral( ComponentId compId, String partition, String name, URI remoteUri ) {
     return new EphemeralConfiguration( compId, partition, name, remoteUri );
   }
-
+  
   public static ServiceConfiguration createEphemeral( ComponentId compId, InetAddress host ) {
     return new EphemeralConfiguration( compId, compId.getPartition( ), host.getHostAddress( ), compId.makeInternalRemoteUri( host.getHostAddress( ),
-                                                                                                                           compId.getPort( ) ) );
+                                                                                                                             compId.getPort( ) ) );
   }
-
+  
   public static ServiceConfiguration createEphemeral( Component component, InetAddress host ) {
     return createEphemeral( component.getComponentId( ), host );
   }

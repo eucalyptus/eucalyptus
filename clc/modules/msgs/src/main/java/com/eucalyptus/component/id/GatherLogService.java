@@ -91,11 +91,6 @@ public class GatherLogService extends ComponentId {
   }
   
   @Override
-  public Boolean hasDispatcher( ) {
-    return false;
-  }
-  
-  @Override
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
     return new ArrayList( ) {
       {

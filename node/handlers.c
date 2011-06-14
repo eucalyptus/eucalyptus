@@ -228,15 +228,22 @@ void change_state(	ncInstance *instance,
     case RUNNING:
     case BLOCKED:
     case PAUSED:
-    case SHUTDOWN:
-    case SHUTOFF:
+        instance->stateCode = EXTANT;
+        instance->retries = LIBVIRT_QUERY_RETRIES;
+        break;
     case CRASHED:
     case BUNDLING_SHUTDOWN:
     case BUNDLING_SHUTOFF:
     case CREATEIMAGE_SHUTDOWN:
     case CREATEIMAGE_SHUTOFF:
-        instance->stateCode = EXTANT;
-	instance->retries = LIBVIRT_QUERY_RETRIES;
+    case SHUTDOWN:
+    case SHUTOFF:
+        if (instance->stateCode == EXTANT) {
+            instance->stateCode = EXTANT;
+        } else {
+            instance->stateCode = PENDING;
+        }
+        instance->retries = LIBVIRT_QUERY_RETRIES;
         break;
     case TEARDOWN:
         instance->stateCode = TEARDOWN;
@@ -465,7 +472,7 @@ monitoring_thread (void *arg)
                 // it's been long enough, we can forget the instance
                 if ((now - instance->terminationTime)>teardown_state_duration) {
                     remove_instance (&global_instances, instance);
-                    logprintfl (EUCAINFO, "[%] forgetting about instance\n", instance->instanceId);
+                    logprintfl (EUCAINFO, "[%s] forgetting about instance\n", instance->instanceId);
                     free_instance (&instance);
                     break;	// need to get out since the list changed
                 }

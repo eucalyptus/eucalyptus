@@ -73,22 +73,31 @@ public class DatabaseUserProxy implements User {
 
   @Override
   public void setName( String name ) throws AuthException {
-    EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
-      UserEntity user = db.getUnique( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ) );
-      user.setName( name );
-      for ( GroupEntity g : user.getGroups( ) ) {
-        if ( g.isUserGroup( ) ) {
-          g.setName( DatabaseAuthUtils.getUserGroupName( name ) );
-          break;
+      // try looking up the user with same name
+      this.getAccount( ).lookupUserByName( name );
+    } catch ( AuthException e ) {
+      // not found
+      EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
+      try {
+        UserEntity user = db.getUnique( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ) );
+        user.setName( name );
+        for ( GroupEntity g : user.getGroups( ) ) {
+          if ( g.isUserGroup( ) ) {
+            g.setName( DatabaseAuthUtils.getUserGroupName( name ) );
+            break;
+          }
         }
+        db.commit( );
+      } catch ( Throwable t ) {
+        Debugging.logError( LOG, t, "Failed to setName for " + this.delegate );
+        db.rollback( );
+        throw new AuthException( t );
       }
-      db.commit( );
-    } catch ( Throwable e ) {
-      Debugging.logError( LOG, e, "Failed to setName for " + this.delegate );
-      db.rollback( );
-      throw new AuthException( e );
+      return;
     }
+    // found
+    throw new AuthException( "Can not change to a name already in use: " + name );
   }
 
   @Override

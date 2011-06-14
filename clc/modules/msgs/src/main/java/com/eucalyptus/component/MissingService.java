@@ -154,17 +154,12 @@ public class MissingService extends AbstractService implements Service {
     
   @Override
   public Dispatcher getDispatcher( ) {
-    throw new RuntimeException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
+    throw new IllegalStateException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
   }
   
   @Override
   public Collection<ServiceCheckRecord> getDetails( ) {
-    throw new RuntimeException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
-  }
-  
-  @Override
-  public ServiceEndpoint getEndpoint( ) {
-    throw new RuntimeException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
+    throw new IllegalStateException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
   }
   
   @Override
@@ -200,7 +195,16 @@ public class MissingService extends AbstractService implements Service {
     return null;
   }
 
+  /**
+   * @see com.eucalyptus.component.Service#start()
+   */
   @Override
-  public void cleanUp( ) {}
+  public void start( ) {}
+
+  /**
+   * @see com.eucalyptus.component.Service#stop()
+   */
+  @Override
+  public void stop( ) {}
   
 }

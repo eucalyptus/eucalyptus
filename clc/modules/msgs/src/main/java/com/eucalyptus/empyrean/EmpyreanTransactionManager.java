@@ -2,20 +2,16 @@ package com.eucalyptus.empyrean;
 
 import java.util.Properties;
 import javax.naming.Context;
-import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.transaction.Transaction;
 import javax.transaction.TransactionManager;
 import org.apache.log4j.Logger;
 import org.hibernate.HibernateException;
-import org.mortbay.naming.InitialContextFactory;
-import org.mortbay.naming.NamingUtil;
-import com.eucalyptus.bootstrap.SystemIds;
-import com.eucalyptus.system.SubDirectory;
-import bitronix.tm.BitronixTransactionManager;
 import bitronix.tm.Configuration;
 import bitronix.tm.TransactionManagerServices;
 import bitronix.tm.jndi.BitronixContext;
+import com.eucalyptus.bootstrap.SystemIds;
+import com.eucalyptus.system.SubDirectory;
 
 public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLifeCycle implements org.jboss.cache.transaction.TransactionManagerLookup, org.hibernate.transaction.TransactionManagerLookup {
 //  public static final String JNDI_NAME = "eucalyptusTransactionManager";
@@ -49,8 +45,8 @@ public class EmpyreanTransactionManager extends org.mortbay.component.AbstractLi
     Configuration tm_conf = TransactionManagerServices.getConfiguration( );
     tm_conf.setServerId( SystemIds.createCloudUniqueName( "transaction-manager" ) );
     tm_conf.setAsynchronous2Pc( false );
-    tm_conf.setLogPart1Filename( SubDirectory.DB.toString( ) + "/btm1.tx" );
-    tm_conf.setLogPart2Filename( SubDirectory.DB.toString( ) + "/btm2.tx" );
+    tm_conf.setLogPart1Filename( SubDirectory.TX.toString( ) + "/btm1.tx" );
+    tm_conf.setLogPart2Filename( SubDirectory.TX.toString( ) + "/btm2.tx" );
 //    tm_conf.setJndiUserTransactionName( JNDI_NAME );
     LOG.debug( "Setting up transaction manager: " + tm_conf.getJndiUserTransactionName( ) );
     return new BitronixContext( );

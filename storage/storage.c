@@ -831,7 +831,7 @@ static long long get_cached_file (const char * user_id, const char * url, const 
         } else {
             char manifestURL[1024];
             snprintf(manifestURL, 1024, "%s.manifest.xml", url);
-            e = http_get_timeout(manifestURL, tmp_digest_path, 10, 4);
+            e = http_get_timeout(manifestURL, tmp_digest_path, 10, 4, 0, 0);
         }
         if (e==OK && stat (tmp_digest_path, &mystat)) {
             digest_size_b = (long long)mystat.st_size;
@@ -877,7 +877,7 @@ static long long get_cached_file (const char * user_id, const char * url, const 
         if (strstr(url, "services/Walrus")) {
             e = walrus_image_by_manifest_url (url, file_path, 1);
         } else {
-            e = http_get_timeout(url, file_path, 10, 4);
+            e = http_get_timeout(url, file_path, 10, 4, 0, 0);
         }
 
         /* for KVM, convert partition into disk */

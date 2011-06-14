@@ -73,6 +73,7 @@ import com.eucalyptus.scripting.groovy.GroovyUtil;
 
 public enum SubDirectory {
   DB( BaseDirectory.VAR, "db" ),
+  TX( BaseDirectory.HOME, "/var/run/eucalyptus/tx" ),
   WWW( BaseDirectory.CONF, "www" ),
   WEBAPPS( BaseDirectory.VAR, "webapps" ),
   KEYS( BaseDirectory.VAR, "keys" ),
@@ -113,12 +114,17 @@ public enum SubDirectory {
     }
   }
   
-  public File getChildFile( String... args ) {
-    return new File( getChildPath( args ) );
+  public File getChildFile( String... path ) {
+    return new File( getChildPath( path ) );
   }
-  public String getChildPath( String... args ) {
+  
+  public boolean hasChild( String... path ) {
+    return getChildFile( path ).exists( );
+  }
+  
+  public String getChildPath( String... path ) {
     String ret = this.toString( );
-    for( String s : args ) {
+    for( String s : path ) {
       ret += File.separator + s;
     }
     return ret;
