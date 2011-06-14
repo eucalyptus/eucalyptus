@@ -132,12 +132,12 @@ public class ServiceContextManager implements EventListener<Event> {
   }
   
   private Future<?> doUpdate( ) {
-    if ( Bootstrap.isFinished( ) && this.canHasWrite.tryLock( ) ) {
+    if ( Bootstrap.isFinished( ) ) {
       Future<?> ret = null;
-      if ( this.pendingCount.getAndSet( 0 ) > 0 ) {
-        Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
-          @Override
-          public void run( ) {
+      Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
+        @Override
+        public void run( ) {
+          if( ServiceContextManager.this.canHasWrite.tryLock( ) ) {
             try {
               ServiceContextManager.this.update( );
             } catch ( Throwable ex ) {
@@ -146,10 +146,8 @@ public class ServiceContextManager implements EventListener<Event> {
               ServiceContextManager.this.canHasWrite.unlock( );
             }
           }
-        } );
-      } else {
-        this.canHasWrite.unlock( );
-      }
+        }
+      } );
       return ret != null
         ? ret
         : Futures.predestinedFuture( null );
