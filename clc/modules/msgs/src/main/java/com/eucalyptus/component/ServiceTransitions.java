@@ -65,6 +65,7 @@ package com.eucalyptus.component;
 
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component.State;
@@ -78,6 +79,7 @@ import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.DisableServiceType;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.empyrean.EmpyreanMessage;
 import com.eucalyptus.empyrean.EnableServiceType;
 import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.empyrean.ServiceStatusType;
@@ -91,6 +93,7 @@ import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
+import com.eucalyptus.util.async.RetryableConnectionException;
 import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.ws.util.PipelineRegistry;
@@ -98,6 +101,14 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
 public class ServiceTransitions {
+  /**
+   * 
+   */
+  private static final int BOOTSTRAP_REMOTE_RETRY_INTERVAL = 2;
+  /**
+   * 
+   */
+  private static final int BOOTSTRAP_REMOTE_RETRIES = 10;
   static Logger LOG = Logger.getLogger( ServiceTransitions.class );
   
   interface ServiceTransitionCallback {
@@ -290,6 +301,28 @@ public class ServiceTransitions {
     return foundError;
   }
   
+  private static <T extends EmpyreanMessage> T sendEmpyreanRequest( final ServiceConfiguration parent, final EmpyreanMessage msg ) throws Throwable {
+    ServiceConfiguration config = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) );
+    LOG.debug( "Sending request " + msg.getClass( ).getSimpleName( ) + " to " + parent.getFullName( ) );
+    for ( int i = 0; i < BOOTSTRAP_REMOTE_RETRIES; i++ ) {
+      try {
+        return AsyncRequests.sendSync( config, msg );
+      } catch ( RetryableConnectionException ex ) {
+        LOG.error( ex, ex );
+        try {
+          TimeUnit.SECONDS.sleep( BOOTSTRAP_REMOTE_RETRY_INTERVAL );
+        } catch ( InterruptedException ex1 ) {
+          Thread.currentThread( ).interrupt( );
+        }
+        continue;
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        throw ex;
+      }
+    }
+    throw new ServiceRegistrationException( "Failed to contact host after " + BOOTSTRAP_REMOTE_RETRIES + " retries: " + config.getUri( ) + " when sending message: " + msg );
+  }
+
   static final Predicate<Throwable> errorFilterCheckTransition( final ServiceConfiguration parent ) {
     return new Predicate<Throwable>( ) {
       
@@ -420,8 +453,7 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Throwable {
-        DescribeServicesResponseType response = AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) ),
-                                                                        new DescribeServicesType( ) );
+        DescribeServicesResponseType response = sendEmpyreanRequest( parent, new DescribeServicesType( ) );
         Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>( ) {
           
           @Override
@@ -430,7 +462,9 @@ public class ServiceTransitions {
           }
         } );
         //TODO:GRZE:RELEASE this is where extra remote state checks happen.
+        
       }
+
     },
     START {
       
