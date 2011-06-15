@@ -30,19 +30,19 @@ public class EventRecord extends EucalyptusMessage {
   }
 
   public static Record here( final Class component, final EventClass eventClass, final EventType eventName, final String... other ) {
-    return create( component, eventClass, eventName, getMessageString( other ), 1 );
+    return create( component, eventClass, eventName, getMessageString( other ), 2 );
   }
     
   public static Record caller( final Class component, final EventClass eventClass, final EventType eventName, final Object... other ) {
-    return create( component, eventClass, eventName, getMessageString( other ), 2 );
+    return create( component, eventClass, eventName, getMessageString( other ), 3 );
   }
 
   public static Record here( final Class component, final EventType eventName, final String... other ) {
-    return create( component, EventClass.ORPHAN, eventName, getMessageString( other ), 1 );
+    return create( component, EventClass.ORPHAN, eventName, getMessageString( other ), 2 );
   }
     
   public static Record caller( final Class component, final EventType eventName, final Object... other ) {
-    return create( component, EventClass.ORPHAN, eventName, getMessageString( other ), 2 );
+    return create( component, EventClass.ORPHAN, eventName, getMessageString( other ), 3 );
   }
 
   private static String getMessageString( final Object[] other ) {
