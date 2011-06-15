@@ -73,6 +73,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
+import apple.laf.CoreUIConstants.State;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.TopologyChanges.CloudTopologyCallables;
 import com.eucalyptus.component.TopologyChanges.RemoteTopologyCallables;
@@ -263,7 +264,7 @@ public class Topology implements EventListener<Event> {
         ServiceConfiguration curr = Topology.this.services.putIfAbsent( serviceKey, config );
         if ( curr != null && !curr.equals( config ) ) {
           return false;
-        } else if( curr != null && curr.equals( config ) ) {
+        } else if ( curr != null && curr.equals( config ) ) {
           return true;
         } else {
           Topology.this.currentEpoch++;
@@ -292,7 +293,7 @@ public class Topology implements EventListener<Event> {
         ServiceConfiguration curr = Topology.this.services.put( serviceKey, config );
         if ( curr != null && !curr.equals( config ) ) {
           return false;
-        } else if( curr != null && curr.equals( config ) ) {
+        } else if ( curr != null && curr.equals( config ) ) {
           return true;
         } else {
           return true;
@@ -419,9 +420,10 @@ public class Topology implements EventListener<Event> {
   public void fireEvent( Event event ) {
     if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 5l ) ) {
       this.runChecks( );
+      this.runFailover( );
     }
   }
-
+  
   private void runChecks( ) {
     this.getWorker( ).submit( new Runnable( ) {
       
@@ -446,7 +448,7 @@ public class Topology implements EventListener<Event> {
             return arg0.isDone( );
           }
         };
-        Map<ServiceConfiguration,Future<ServiceConfiguration>> futures = Maps.newHashMap( );
+        Map<ServiceConfiguration, Future<ServiceConfiguration>> futures = Maps.newHashMap( );
         for ( ServiceConfiguration config : checkServicesList ) {
           LOG.debug( "Submitting CHECK for: " + config );
           futures.put( config, Topology.getInstance( ).submitExternal( config, TopologyChanges.checkFunction( ) ) );
@@ -459,24 +461,53 @@ public class Topology implements EventListener<Event> {
             Thread.currentThread( ).interrupt( );
           }
         }
-        for( Map.Entry<ServiceConfiguration,Future<ServiceConfiguration>> result : futures.entrySet( ) ) {
+        List<ServiceConfiguration> disabledServices = Lists.newArrayList( );
+        for ( Map.Entry<ServiceConfiguration, Future<ServiceConfiguration>> result : futures.entrySet( ) ) {
           LOG.debug( "Inspecting result of CHECK for: " + result.getKey( ) );
           try {
             result.getValue( ).get( );
           } catch ( InterruptedException ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
             Thread.currentThread( ).interrupt( );
           } catch ( ExecutionException ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
             try {
               Topology.this.getGuard( ).tryDisable( ServiceKey.create( result.getKey( ) ), result.getKey( ) );
+              disabledServices.add( result.getKey( ) );
             } catch ( ServiceRegistrationException ex1 ) {
-              LOG.error( ex1 , ex1 );
-            }              
+              LOG.error( ex1, ex1 );
+            }
+          }
+        }
+        if ( Bootstrap.isCloudController( ) ) {
+          List<ServiceConfiguration> failoverServicesList = ServiceConfigurations.collect( new Predicate<ServiceConfiguration>( ) {
+            
+            @Override
+            public boolean apply( ServiceConfiguration arg0 ) {
+              try {
+                ServiceKey key = ServiceKey.create( arg0 );
+                return Bootstrap.isCloudController( ) && Component.State.DISABLED.isIn( arg0 ) && !Topology.this.services.containsKey( key );
+              } catch ( ServiceRegistrationException ex ) {
+                LOG.error( ex , ex );
+                return false;
+              }
+            }
+          } );
+          failoverServicesList.removeAll( disabledServices );
+          for( ServiceConfiguration config : failoverServicesList ) {
+            try {
+              Topology.getInstance( ).submitExternal( config, CloudTopologyCallables.ENABLE ).get( );
+            } catch ( InterruptedException ex ) {
+              LOG.error( ex , ex );
+              Thread.currentThread( ).interrupt( );
+            } catch ( ExecutionException ex ) {
+              LOG.error( ex , ex );
+            } catch ( Exception ex ) {
+              LOG.error( ex , ex );
+            }
           }
         }
       }
-      
     } );
   }
 }
