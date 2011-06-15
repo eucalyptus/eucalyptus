@@ -1177,7 +1177,7 @@ int scMakeInstanceImage (char *euca_home, char *userId, char *imageId, char *ima
 
             key_template = strdup("/tmp/sckey.XXXXXX");
 
-            if (((fd = mkstemp(key_template)) < 0)) {
+            if (((fd = safe_mkstemp(key_template)) < 0)) {
                 logprintfl (EUCAERROR, "failed to create a temporary key file\n");
             } else if ((ret = write (fd, keyName, key_len))<key_len) {
                 logprintfl (EUCAERROR, "failed to write to key file %s write()=%d\n", key_template, ret);

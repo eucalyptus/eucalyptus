@@ -155,6 +155,10 @@ int check_block (const char *file);
 int check_path (const char *path);
 int check_file_newer_than(char *file, time_t mtime);
 
+// safe version of common fuctions
+char *safe_mkdtemp(char *);
+int safe_mkstemp(char *);
+
 // argument checker
 int param_check(char *func, ...);
 // end of dan't functions

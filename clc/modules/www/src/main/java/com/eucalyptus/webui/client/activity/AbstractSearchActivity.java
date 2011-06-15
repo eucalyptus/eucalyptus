@@ -77,7 +77,13 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
     this.clientFactory.getShellView( ).getDetailView( ).clear( );
     this.clientFactory.getShellView( ).hideDetail( );
   }
-  
+
+  @Override
+  public void onCancel( ) {
+    this.clientFactory.getShellView( ).getDetailView( ).clear( );
+    this.clientFactory.getShellView( ).hideDetail( );
+  }
+
   protected void displayData( SearchResult result ) {
     if ( this.place != this.clientFactory.getMainPlaceController( ).getWhere( ) ) {
       LOG.log( Level.INFO, "Place was changed prematurely" );

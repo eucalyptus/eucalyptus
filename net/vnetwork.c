@@ -748,7 +748,7 @@ int vnetSaveTablesToMemory(vnetConfig *vnetconfig) {
     return(1);
   }
   
-  fd = mkstemp(file);
+  fd = safe_mkstemp(file);
   if (fd < 0) {
     free(file);
     return(1);
@@ -801,7 +801,7 @@ int vnetRestoreTablesFromMemory(vnetConfig *vnetconfig) {
   if (!file) {
     return(1);
   }
-  fd = mkstemp(file);
+  fd = safe_mkstemp(file);
   if (fd < 0) {
     free(file);
     return(1);
@@ -886,7 +886,7 @@ int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule) {
   if (!file) {
     return(1);
   }
-  fd = mkstemp(file);
+  fd = safe_mkstemp(file);
   if (fd < 0) {
     free(file);
     return(1);
