@@ -152,11 +152,11 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   }
   
   public final Boolean isCloudLocal( ) {
-    return this.serviceDependencies( ).contains( Eucalyptus.class );
+    return this.serviceDependencies( ).contains( Eucalyptus.class ) || Eucalyptus.class.equals( this.getClass( ) );
   }
   
   public final Boolean isAlwaysLocal( ) {
-    return this.serviceDependencies( ).contains( Empyrean.class );
+    return this.serviceDependencies( ).contains( Empyrean.class ) || Empyrean.class.equals( this.getClass( ) );
   }
   
   public Boolean hasCredentials( ) {

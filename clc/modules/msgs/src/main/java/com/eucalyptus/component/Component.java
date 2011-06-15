@@ -180,9 +180,18 @@ public class Component implements HasName<Component> {
    * @return true if the component could be run locally.
    */
   public Boolean isAvailableLocally( ) {
-    return this.identity.isAlwaysLocal( ) || ( this.identity.isCloudLocal( ) && Bootstrap.isCloudController( ) );
+    return this.identity.isAlwaysLocal( ) || ( this.identity.isCloudLocal( ) && Bootstrap.isCloudController( ) ) || this.checkComponentParts( );
   }
   
+  private boolean checkComponentParts( ) {
+    return true;//TODO:GRZE:add checks to ensure full component state is present
+//    try {
+//      return ComponentMessages.lookup( this.getComponentId( ).getClass( ) ) != null;
+//    } catch ( NoSuchElementException ex ) {
+//      return false;
+//    }
+  }
+
   /**
    * True if the component has not been explicitly configured as running in remote-mode where only
    * partial services are provided locally. That is, even if
@@ -270,7 +279,7 @@ public class Component implements HasName<Component> {
   public ServiceConfiguration initService( ) throws ServiceRegistrationException {
     if ( !this.isAvailableLocally( ) ) {
       throw new ServiceRegistrationException( "The component " + this.getName( ) + " is not being loaded automatically." );
-    } else {//if ( this.identity.isAlwaysLocal( ) || this.identity.isCloudLocal( ) ) {
+    } else {
       URI uri = this.getComponentId( ).getLocalEndpointUri( );
       String fakeName = Internets.localHostAddress( );
       ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), fakeName,
