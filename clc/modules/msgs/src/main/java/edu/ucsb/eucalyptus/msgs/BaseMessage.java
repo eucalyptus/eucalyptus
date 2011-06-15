@@ -38,13 +38,13 @@ import com.google.common.collect.Lists;
 
 public class BaseMessage {
   @Transient
-  private static Logger              LOG      = Logger.getLogger( BaseMessage.class );
-  private String                     correlationId;
-  private String                     userId;
-  private String                     effectiveUserId;
-  private Boolean                    _return  = true;
-  private String                     statusMessage;
-  private Integer                    epoch    = Topology.epoch( );
+  private static Logger        LOG      = Logger.getLogger( BaseMessage.class );
+  private String               correlationId;
+  private String               userId;
+  private String               effectiveUserId;
+  private Boolean              _return  = true;
+  private String               statusMessage;
+  private Integer              epoch;
   private ArrayList<ServiceId> services = Lists.newArrayList( );
   
   public BaseMessage( ) {
