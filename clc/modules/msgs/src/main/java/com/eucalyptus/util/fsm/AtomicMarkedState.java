@@ -78,7 +78,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
   public CheckedListenableFuture<P> transitionByName( T transitionName ) throws IllegalStateException, ExistingTransitionException {
     if ( this.state.isMarked( ) ) {
       throw new ExistingTransitionException( "Transition request transition=" + transitionName + " rejected because of an ongoing transition: "
-                                             + this.currentTransition.get( ) );
+                                             + this.toString( ) );
     } else if ( !this.transitions.containsKey( transitionName ) ) {
       throw new NoSuchElementException( "No such transition named: " + transitionName.toString( ) + ". Known transitions: " + this.getTransitions( ) );
     } else {
@@ -93,7 +93,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
   public CheckedListenableFuture<P> transition( S nextState ) throws IllegalStateException, ExistingTransitionException {
     if ( this.state.isMarked( ) ) {
       throw new ExistingTransitionException( "Transition request state=" + nextState + " rejected because of an ongoing transition: "
-                                             + this.currentTransition.get( ) );
+                                             + this.toString( ) );
     } else if ( !this.stateTransitions.get( this.state.getReference( ) ).containsKey( nextState ) ) {
       throw new NoSuchElementException( "No transition to " + nextState.toString( ) + " from current state " + this.toString( ) + ". Known transitions: "
                                         + this.getTransitions( ) );
@@ -115,15 +115,11 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
   protected ActiveTransition request( T transitionName ) throws ExistingTransitionException {
     TransitionHandler<P, S, T> transition = lookupTransition( transitionName );
     TransitionRule<S, T> rule = transition.getRule( );
-    if ( !this.currentTransition.compareAndSet( null, new ActiveTransition( this.id.incrementAndGet( ), rule, transition ) ) ) {
+    if ( !this.state.compareAndSet( rule.getFromState( ), rule.getToState( ), rule.getFromStateMark( ), true ) ) {
       throw new ExistingTransitionException( "Transition request " + transitionName + " rejected because of an ongoing transition: "
-                                             + this.currentTransition.get( ) );
-    } else if ( !this.state.compareAndSet( rule.getFromState( ), rule.getToState( ), rule.getFromStateMark( ), true ) ) {
-      this.id.decrementAndGet( );
-      this.currentTransition.set( null );
-      throw new IllegalStateException( "Failed to validate expected preconditions for transition: " + transition.getRule( ).toString( )
-                                       + " for current state: " + this.toString( ) );
+                                             + this.toString( ) );
     } else {
+      this.currentTransition.set( new ActiveTransition( this.id.incrementAndGet( ), rule, transition ) );
       return this.currentTransition.get( );
     }
   }
@@ -148,36 +144,29 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
    */
   private void commit( ) {
     LOG.debug( "Transition commit(): " + this.currentTransition.get( ) );
-    if ( this.currentTransition.get( ) == null ) {
+    if ( !this.state.isMarked( ) ) {
       Exceptions.trace( new IllegalStateException( "commit() called when there is no currently pending transition: " + this.toString( ) ) );
+      this.currentTransition.set( null );
     } else {
       ActiveTransition tr = this.currentTransition.getAndSet( null );
-      boolean doFireInListeners = !this.state.getReference( ).equals( tr.getTransitionRule( ).getFromState( ) );
-      if ( !this.state.compareAndSet( tr.getTransitionRule( ).getToState( ), tr.getTransitionRule( ).getToState( ), true,
-                                      tr.getTransitionRule( ).getToStateMark( ) ) ) {
-        this.state.set( this.state.getReference( ), false );
-        Exceptions.trace( new IllegalStateException( "Failed to apply toState for the transition: " + tr.toString( ) + " for current state: "
-                                                              + this.toString( ) ) );
-      }
-      if ( doFireInListeners ) {
+      this.state.set( tr.getTransitionRule( ).getToState( ), tr.getTransitionRule( ).getToStateMark( ) );
+      if ( !tr.getTransitionRule( ).getFromState( ).equals( tr.getTransitionRule( ).getToState( ) ) ) {
+        this.state.set( tr.getTransitionRule( ).getToState( ), false );
         this.fireInListeners( tr.getTransitionRule( ).getToState( ) );
+      } else {
+        this.state.set( tr.getTransitionRule( ).getToState( ), false );
       }
     }
   }
   
   private void error( ) {
-    LOG.debug( "Transition error(): " + this.currentTransition.get( ) );
-    if ( this.currentTransition.get( ) == null ) {
-      Exceptions.trace( new IllegalStateException( "error() called when there is no currently pending transition: " + this.toString( ) ) );
+    LOG.debug( "Transition error(): " + this.toString( ) );
+    if ( !this.state.isMarked( ) ) {
+      Exceptions.trace( new IllegalStateException( "commit() called when there is no currently pending transition: " + this.toString( ) ) );
     } else {
       ActiveTransition tr = this.currentTransition.getAndSet( null );
-      if ( !this.state.compareAndSet( tr.getTransitionRule( ).getToState( ), tr.getTransitionRule( ).getErrorState( ), true,
-                                      tr.getTransitionRule( ).getErrorStateMark( ) ) ) {
-        this.state.set( this.state.getReference( ), false );
-        Exceptions.trace( new IllegalStateException( "Failed to apply toState for the transition: " + tr.toString( ) + " for current state: "
-                                                              + this.toString( ) ) );
-      }
-      if ( !this.state.getReference( ).equals( tr.getTransitionRule( ).getErrorState( ) ) ) {
+      this.state.set( tr.getTransitionRule( ).getErrorState( ), tr.getTransitionRule( ).getErrorStateMark( ) );
+      if ( !tr.getTransitionRule( ).getFromState( ).equals( tr.getTransitionRule( ).getErrorState( ) ) ) {
         this.state.set( tr.getTransitionRule( ).getErrorState( ), false );
         this.fireInListeners( tr.getTransitionRule( ).getErrorState( ) );
       } else {
@@ -187,25 +176,12 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
   }
   
   private void rollback( ) {
-    LOG.debug( "Transition debug(): " + this.currentTransition.get( ) );
-    if ( this.currentTransition.get( ) == null ) {
-      if ( this.state.isMarked( ) ) {
-        this.state.set( this.state.getReference( ), false );
-      }
-      Exceptions.trace( new IllegalStateException( "rollback() called when there is no currently pending transition: " + this.toString( ) ) );
+    LOG.debug( "Transition debug(): " + this.toString( ) );
+    if ( !this.state.isMarked( ) ) {
+      Exceptions.trace( new IllegalStateException( "commit() called when there is no currently pending transition: " + this.toString( ) ) );
     } else {
       ActiveTransition tr = this.currentTransition.getAndSet( null );
-      if ( !this.state.compareAndSet( tr.getTransitionRule( ).getToState( ), tr.getTransitionRule( ).getFromState( ), true,
-                                      tr.getTransitionRule( ).getFromStateMark( ) ) ) {
-        Exceptions.trace( new IllegalStateException( "Failed to apply toState for the transition: " + tr.toString( ) + " for current state: "
-                                                            + this.toString( ) ) );
-      }
-      if ( !this.state.getReference( ).equals( tr.getTransitionRule( ).getFromState( ) ) ) {
-        this.state.set( tr.getTransitionRule( ).getFromState( ), false );
-        this.fireInListeners( tr.getTransitionRule( ).getFromState( ) );
-      } else {
-        this.state.set( tr.getTransitionRule( ).getFromState( ), false );
-      }
+      this.state.set( tr.getTransitionRule( ).getFromState( ), false );
     }
   }
   
