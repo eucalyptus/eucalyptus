@@ -65,15 +65,19 @@ package com.eucalyptus.component;
 
 import java.net.InetAddress;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import org.jgroups.util.UUID;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.HostStateMonitor;
+import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.ServiceChecks.CheckException;
+import com.eucalyptus.component.ServiceChecks.Severity;
 import com.eucalyptus.component.ServiceEndpoint.ServiceEndpointWorker;
 import com.eucalyptus.component.TopologyChanges.CloudTopologyCallables;
 import com.eucalyptus.component.TopologyChanges.RemoteTopologyCallables;
@@ -85,6 +89,7 @@ import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Hertz;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
@@ -92,6 +97,7 @@ import com.eucalyptus.system.Threads.ThreadPool;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.SubjectMessageCallback;
 import com.google.common.base.Function;
@@ -100,7 +106,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-public class Topology {
+public class Topology implements EventListener<Event> {
   private static Logger                                         LOG          = Logger.getLogger( Topology.class );
   private static final Topology                                 singleton    = new Topology( );                   //TODO:GRZE:handle differently for remote case?
   private Integer                                               currentEpoch = 0;
@@ -134,6 +140,48 @@ public class Topology {
     final String localhostAddr = localAddr.getHostAddress( );
     return Lists.transform( Topology.getInstance( ).lookupPartitionView( partition ),
                             TypeMappers.lookup( ServiceConfiguration.class, ServiceId.class ) );
+  }
+  
+  private <T> Future<T> submit( final Callable<T> callable ) {
+    EventRecord.here( Topology.class, EventType.ENQUEUE, Topology.this.toString( ), callable.toString( ) ).info( );
+    final Long queueStart = System.currentTimeMillis( );
+    return this.getWorker( ).submit( new Callable<T>( ) {
+      
+      @Override
+      public T call( ) throws Exception {
+        Long serviceStart = System.currentTimeMillis( );
+        EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), callable.toString( ) )
+                   .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) )
+                   .info( );
+        T result = callable.call( );
+        Long finish = System.currentTimeMillis( );
+        EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), callable.toString( ) )
+                   .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) )
+                   .info( );
+        return result;
+      }
+    } );
+  }
+  
+  private Future<ServiceConfiguration> submitExternal( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
+    EventRecord.here( Topology.class, EventType.ENQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) ).info( );
+    final Long queueStart = System.currentTimeMillis( );
+    return Threads.lookup( Empyrean.class, Topology.class, "submitExternal" ).submit( new Callable<ServiceConfiguration>( ) {
+      
+      @Override
+      public ServiceConfiguration call( ) throws Exception {
+        Long serviceStart = System.currentTimeMillis( );
+        EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
+                   .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) )
+                   .info( );
+        ServiceConfiguration result = function.apply( config );
+        Long finish = System.currentTimeMillis( );
+        EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
+                   .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) )
+                   .info( );
+        return result;
+      }
+    } );
   }
   
   private Future<ServiceConfiguration> submit( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
@@ -205,11 +253,11 @@ public class Topology {
   }
   
   interface TransitionGuard {
-    boolean tryEnable( final ServiceKey serviceKey, final ServiceConfiguration config ) throws ServiceStateException;
+    boolean tryEnable( final ServiceKey serviceKey, final ServiceConfiguration config ) throws ServiceRegistrationException;
     
     boolean nextEpoch( );
     
-    boolean tryDisable( final ServiceKey serviceKey, final ServiceConfiguration config ) throws ServiceStateException;
+    boolean tryDisable( final ServiceKey serviceKey, final ServiceConfiguration config ) throws ServiceRegistrationException;
   }
   
   private TransitionGuard cloudControllerGuard( ) {
@@ -222,7 +270,7 @@ public class Topology {
       }
       
       @Override
-      public boolean tryEnable( final ServiceKey serviceKey, final ServiceConfiguration config ) throws ServiceStateException {
+      public boolean tryEnable( final ServiceKey serviceKey, final ServiceConfiguration config ) throws ServiceRegistrationException {
         ServiceConfiguration curr = Topology.this.services.putIfAbsent( serviceKey, config );
         if ( curr != null ) {
           return false;
@@ -249,7 +297,7 @@ public class Topology {
       }
       
       @Override
-      public boolean tryEnable( final ServiceKey serviceKey, final ServiceConfiguration config ) throws ServiceStateException {
+      public boolean tryEnable( final ServiceKey serviceKey, final ServiceConfiguration config ) throws ServiceRegistrationException {
         ServiceConfiguration curr = Topology.this.services.put( serviceKey, config );
         if ( curr != null ) {
           return false;
@@ -363,11 +411,72 @@ public class Topology {
   public TransitionGuard getGuard( ) {
     return this.guard;
   }
-
+  
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
     builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( this.guard.getClass( ).getSimpleName( ) );
     return builder.toString( );
+  }
+  
+  /**
+   * @see com.eucalyptus.event.EventListener#fireEvent(com.eucalyptus.event.Event)
+   */
+  @Override
+  public void fireEvent( Event event ) {
+    if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 5l ) ) {
+      this.getWorker( ).submit( new Runnable( ) {
+        
+        @Override
+        public void run( ) {
+          List<ServiceConfiguration> checkServicesList = ServiceConfigurations.collect( new Predicate<ServiceConfiguration>( ) {
+            
+            @Override
+            public boolean apply( ServiceConfiguration arg0 ) {
+              if ( Bootstrap.isCloudController( ) ) {
+                return true;
+              } else {
+                return arg0.isVmLocal( );
+              }
+            }
+          } );
+          Predicate<Future<?>> futureIsDone = new Predicate<Future<?>>( ) {
+            
+            @Override
+            public boolean apply( Future<?> arg0 ) {
+              return arg0.isDone( );
+            }
+          };
+          Map<ServiceConfiguration,Future<ServiceConfiguration>> futures = Maps.newHashMap( );
+          for ( ServiceConfiguration config : checkServicesList ) {
+            futures.put( config, Topology.getInstance( ).submitExternal( config, TopologyChanges.checkFunction( ) ) );
+          }
+          for ( int i = 0; i < 100 && !Iterables.all( futures.values( ), futureIsDone ); i++ ) {
+            try {
+              TimeUnit.MILLISECONDS.sleep( 100 );
+            } catch ( InterruptedException ex ) {
+              LOG.error( ex, ex );
+              Thread.currentThread( ).interrupt( );
+            }
+          }
+          for( Map.Entry<ServiceConfiguration,Future<ServiceConfiguration>> result : futures.entrySet( ) ) {
+            try {
+              result.getValue( ).get( );
+            } catch ( InterruptedException ex ) {
+              LOG.error( ex , ex );
+              Thread.currentThread( ).interrupt( );
+            } catch ( ExecutionException ex ) {
+              LOG.error( ex , ex );
+              try {
+                Topology.this.getGuard( ).tryDisable( ServiceKey.create( result.getKey( ) ), result.getKey( ) );
+              } catch ( ServiceRegistrationException ex1 ) {
+                LOG.error( ex1 , ex1 );
+              }              
+            }
+          }
+        }
+        
+      } );
+    }
   }
 }

@@ -70,7 +70,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component.State;
-import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
@@ -242,64 +241,6 @@ public class ServiceTransitions {
     }
   }
   
-  private enum NoopErrorFilter implements Predicate<Throwable> {
-    INSTANCE;
-    
-    @Override
-    public boolean apply( final Throwable input ) {
-      return true;
-    }
-    
-  }
-  
-  private static final boolean filterExceptions( final ServiceConfiguration parent, final Throwable ex ) {
-    return filterExceptions( parent, ex, NoopErrorFilter.INSTANCE );
-  }
-  
-  /**
-   * @param parent
-   * @param ex
-   * @param failureAction
-   * @return true if the error is fatal and the transition should be aborted
-   */
-  static final boolean filterExceptions( final ServiceConfiguration parent, final Throwable ex, final Predicate<Throwable> failureAction ) {
-    LOG.error( "Transition failed on " + parent.lookupComponent( ).getName( ) + " due to " + ex.toString( ), ex );
-    boolean foundError = false;
-    if ( ex instanceof CheckException ) {//go through all the exceptions and look for things with Severity greater than or equal to ERROR
-      CheckException checkExHead = ( CheckException ) ex;
-      for ( CheckException checkEx : checkExHead ) {
-        switch ( checkEx.getSeverity( ) ) {
-          case ERROR:
-          case URGENT:
-          case FATAL:
-            if ( !foundError ) {
-              foundError = true;
-              try {
-                failureAction.apply( ex );
-              } catch ( Exception ex1 ) {
-                LOG.error( ex1, ex1 );
-              }
-            }
-            break;
-          case DEBUG:
-          case INFO:
-          case WARNING:
-            break;
-        }
-      }
-      LifecycleEvents.fireExceptionEvent( parent, checkExHead );
-    } else {//treat generic exceptions as always being Severity.ERROR
-      foundError = true;
-      try {
-        failureAction.apply( ex );
-      } catch ( Exception ex1 ) {
-        LOG.error( ex1, ex1 );
-      }
-      parent.error( ex );
-    }
-    return foundError;
-  }
-  
   private static <T extends EmpyreanMessage> T sendEmpyreanRequest( final ServiceConfiguration parent, final EmpyreanMessage msg ) throws Throwable {
     ServiceConfiguration config = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) );
     LOG.debug( "Sending request " + msg.getClass( ).getSimpleName( ) + " to " + parent.getFullName( ) );
@@ -334,26 +275,6 @@ public class ServiceTransitions {
     throw new ServiceRegistrationException( "Failed to contact host after " + BOOTSTRAP_REMOTE_RETRIES + " retries: " + config.getUri( ) + " when sending message: " + msg );
   }
 
-  static final Predicate<Throwable> errorFilterCheckTransition( final ServiceConfiguration parent ) {
-    return new Predicate<Throwable>( ) {
-      
-      @Override
-      public boolean apply( final Throwable ex ) {
-        if ( State.ENABLED.isIn( parent ) ) {
-          try {
-            parent.lookupComponent( ).getBootstrapper( ).disable( );
-            if ( parent.lookupComponent( ).hasLocalService( ) ) {
-              parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
-            }
-          } catch ( Throwable ex1 ) {
-            LOG.error( "Transition failed on " + parent.lookupComponent( ).getName( ) + " due to " + ex.toString( ), ex );
-          }
-        }
-        return true;
-      }
-      
-    };
-  }
   
   private static void processTransition( final ServiceConfiguration parent, final Completion transitionCallback, final TransitionActions transitionAction ) {
     ServiceTransitionCallback trans = null;
@@ -381,7 +302,7 @@ public class ServiceTransitions {
       }
       transitionCallback.fire( );
     } catch ( Throwable ex ) {
-      if ( ServiceTransitions.filterExceptions( parent, ex, errorFilterCheckTransition( parent ) ) ) {
+      if ( ServiceExceptions.filterExceptions( parent, ex ) ) {
         transitionCallback.fireException( ex );
       } else {
         transitionCallback.fire( );

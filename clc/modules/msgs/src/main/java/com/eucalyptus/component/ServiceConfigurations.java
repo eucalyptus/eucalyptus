@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.ServiceChecks.CheckException;
+import com.eucalyptus.component.ServiceChecks.Severity;
+import com.eucalyptus.component.Topology.ServiceKey;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceStatusDetail;
@@ -25,7 +28,7 @@ import com.google.common.collect.Lists;
 public class ServiceConfigurations {
   private static Logger                       LOG       = Logger.getLogger( ServiceConfigurations.class );
   private static ServiceConfigurationProvider singleton = new DatabaseServiceConfigurationProvider( );
-  
+
   public static List<ServiceConfiguration> collect( Predicate<ServiceConfiguration> predicate ) {
     List<ServiceConfiguration> configs = Lists.newArrayList( );
     for( Component comp : Components.list( ) ) {
@@ -97,7 +100,7 @@ public class ServiceConfigurations {
   };
   
   @TypeMapper
-  public enum ServiceInfoToServiceConfiguration implements Function<ServiceId, ServiceConfiguration> {
+  public enum ServiceIdToServiceConfiguration implements Function<ServiceId, ServiceConfiguration> {
     INSTANCE;
     
     @Override
@@ -126,7 +129,7 @@ public class ServiceConfigurations {
   }
   
   @TypeMapper
-  public enum ServiceConfigurationToServiceInfo implements Function<ServiceConfiguration, ServiceId> {
+  public enum ServiceConfigurationToServiceId implements Function<ServiceConfiguration, ServiceId> {
     INSTANCE;
     
     @Override
@@ -240,5 +243,7 @@ public class ServiceConfigurations {
       throw new PersistenceException( ex );
     }
   }
+
+
   
 }
