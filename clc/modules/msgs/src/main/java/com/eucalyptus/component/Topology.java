@@ -461,20 +461,28 @@ public class Topology implements EventListener<Event> {
         }
         List<ServiceConfiguration> disabledServices = Lists.newArrayList( );
         for ( Map.Entry<ServiceConfiguration, Future<ServiceConfiguration>> result : futures.entrySet( ) ) {
-          LOG.debug( "Inspecting result of CHECK for: " + result.getKey( ) );
           try {
-            result.getValue( ).get( );
+            ServiceConfiguration resultConfig = result.getValue( ).get( );
+            LOG.debug( "Inspecting result of CHECK for: " + result.getKey( ) );
           } catch ( InterruptedException ex ) {
+            LOG.debug( "Inspecting result of CHECK for: " + result.getKey( ) );
             LOG.error( ex, ex );
             Thread.currentThread( ).interrupt( );
-          } catch ( ExecutionException ex ) {
-            LOG.error( ex, ex );
+          } catch ( Exception ex ) {
+            Throwable e = ex;
+            if( ex instanceof ExecutionException ) {
+              LOG.debug( "Error while inspecting result of CHECK for: \n\t" + result.getKey( ) + ": \n\t" + ex.getCause( ).getMessage( ) );
+              e = ex.getCause( );
+            } else {
+              LOG.debug( "Error while inspecting result of CHECK for: \n\t" + result.getKey( ) + ": \n\t" + ex.getMessage( ) );
+            }
             try {
-              Topology.this.getGuard( ).tryDisable( ServiceKey.create( result.getKey( ) ), result.getKey( ) );
               disabledServices.add( result.getKey( ) );
+              Topology.this.getGuard( ).tryDisable( ServiceKey.create( result.getKey( ) ), result.getKey( ) );
             } catch ( ServiceRegistrationException ex1 ) {
               LOG.error( ex1, ex1 );
             }
+            LOG.error( ex, ex );
           }
         }
         if ( Bootstrap.isCloudController( ) ) {
