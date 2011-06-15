@@ -447,8 +447,6 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
           }
         }
       }
-    } catch ( final IllegalStateException ex ) {
-      Exceptions.trace( ex );
     } catch ( final Exception ex ) {
       LOG.error( ex, ex );
     }
