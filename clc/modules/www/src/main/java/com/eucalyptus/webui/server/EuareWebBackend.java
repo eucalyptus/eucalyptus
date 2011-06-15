@@ -1344,7 +1344,7 @@ public class EuareWebBackend {
   }
 
   public static ArrayList<String> processAccountSignups( User requestUser, ArrayList<String> accountNames, boolean approve, String backendUrl ) throws EucalyptusServiceException {
-    if ( EuarePermission.allowProcessAccountSignup( requestUser ) ) {
+    if ( !EuarePermission.allowProcessAccountSignup( requestUser ) ) {
       throw new EucalyptusServiceException( "Operation is not authorized" );
     }
     ArrayList<String> success = Lists.newArrayList( );
