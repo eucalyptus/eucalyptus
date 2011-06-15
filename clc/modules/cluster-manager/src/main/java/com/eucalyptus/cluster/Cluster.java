@@ -297,6 +297,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
             AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
+            parent.errors.clear( );
           } catch ( final ExecutionException e ) {
             if ( e.getCause( ) instanceof FailedRequestException ) {
               LOG.error( e.getCause( ).getMessage( ) );
@@ -935,7 +936,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   
   public void check( ) throws CheckException {
     List<Throwable> currentErrors = Lists.newArrayList( );
-    this.errors.drainTo( currentErrors );
+    currentErrors.addAll( this.errors );
     if ( !currentErrors.isEmpty( ) ) {
       CheckException ex = ServiceChecks.Severity.ERROR.transform( this.configuration, currentErrors );
       throw ex;
