@@ -88,6 +88,7 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -428,6 +429,7 @@ public class Topology implements EventListener<Event> {
               }
             }
           } );
+          LOG.debug( "Preparing to CHECK the following configurations: " + Joiner.on( "\n\t" ).join( checkServicesList ) );
           Predicate<Future<?>> futureIsDone = new Predicate<Future<?>>( ) {
             
             @Override
@@ -437,6 +439,7 @@ public class Topology implements EventListener<Event> {
           };
           Map<ServiceConfiguration,Future<ServiceConfiguration>> futures = Maps.newHashMap( );
           for ( ServiceConfiguration config : checkServicesList ) {
+            LOG.debug( "Submitting CHECK for: " + config );
             futures.put( config, Topology.getInstance( ).submitExternal( config, TopologyChanges.checkFunction( ) ) );
           }
           for ( int i = 0; i < 100 && !Iterables.all( futures.values( ), futureIsDone ); i++ ) {
@@ -448,6 +451,7 @@ public class Topology implements EventListener<Event> {
             }
           }
           for( Map.Entry<ServiceConfiguration,Future<ServiceConfiguration>> result : futures.entrySet( ) ) {
+            LOG.debug( "Inspecting result of CHECK for: " + result.getKey( ) );
             try {
               result.getValue( ).get( );
             } catch ( InterruptedException ex ) {
