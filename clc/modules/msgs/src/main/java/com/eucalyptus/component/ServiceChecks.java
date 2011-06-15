@@ -282,12 +282,12 @@ public class ServiceChecks {
         
         @Override
         public boolean hasNext( ) {
-          return this.curr.other != null;
+          return this.curr != null && this.curr.other != null;
         }
         
         @Override
         public CheckException next( ) {
-          return this.curr.other;
+          return this.curr = this.curr.other;
         }
         
         @Override
