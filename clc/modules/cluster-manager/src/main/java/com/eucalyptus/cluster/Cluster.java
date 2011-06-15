@@ -65,6 +65,7 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
@@ -175,6 +176,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   private final ThreadFactory                            threadFactory;
   private final ConcurrentNavigableMap<String, NodeInfo> nodeMap;
   private final BlockingQueue<Throwable>                 errors                       = new LinkedBlockingDeque<Throwable>( );
+  private final BlockingQueue<Throwable>                 pendingErrors                = new LinkedBlockingDeque<Throwable>( );
   private final ClusterState                             state;
   private final ClusterNodeState                         nodeState;
   private NodeLogInfo                                    lastLog                      = new NodeLogInfo( );
@@ -283,11 +285,6 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       this.refresh = refresh;
     }
     
-    private static final List<Class<? extends Exception>> communicationErrors = Lists.newArrayList( ConnectionException.class, IOException.class,
-                                                                                                    WebServicesException.class );
-    private static final List<Class<? extends Exception>> executionErrors     = Lists.newArrayList( UndeclaredThrowableException.class,
-                                                                                                    ExecutionException.class );
-    
     @Override
     public TransitionAction<Cluster> apply( final Cluster cluster ) {
       final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = newSubjectMessageFactory( this.refresh, cluster );
@@ -297,7 +294,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
             AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
-            parent.errors.clear( );
+            parent.clearExceptions( );
           } catch ( final Throwable t ) {
             parent.filterExceptions( t );
           }
@@ -305,6 +302,11 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       };
     }
   }
+  
+  private static final List<Class<? extends Exception>> communicationErrors = Lists.newArrayList( ConnectionException.class, IOException.class,
+                                                                                                  WebServicesException.class );
+  private static final List<Class<? extends Exception>> executionErrors     = Lists.newArrayList( UndeclaredThrowableException.class,
+                                                                                                  ExecutionException.class );
   
   public enum State implements Automata.State<State> {
     BROKEN, /** cannot establish initial contact with cluster because of CLC side errors **/
@@ -379,6 +381,20 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         
       }
     }.newAtomicMarkedState( );
+  }
+  
+  protected void clearExceptions( ) {
+    if ( !this.errors.isEmpty( ) ) {
+      List<Throwable> currentErrors = Lists.newArrayList( );
+      this.errors.drainTo( currentErrors );
+      for ( Throwable t : currentErrors ) {
+        Throwable filtered = Exceptions.filterStackTrace( t );
+        LOG.error( "Clearing error: " + filtered.getMessage( ), filtered );
+        this.pendingErrors.add( t );
+      }
+    } else {
+      LOG.trace( this.toString( ) + " has no pending errors to clear." );
+    }
   }
   
   private void fireClockTick( final Hertz tick ) {
@@ -905,9 +921,9 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       Thread.currentThread( ).interrupt( );
       LOG.error( t );
     } else if ( fin instanceof FailedRequestException ) {
-        LOG.error( fin, fin );
-        this.errors.add( fin );
-      } else if ( ( fin instanceof ConnectionException ) || ( fin instanceof IOException ) ) {
+      LOG.error( fin, fin );
+      this.errors.add( fin );
+    } else if ( ( fin instanceof ConnectionException ) || ( fin instanceof IOException ) ) {
       LOG.error( this.getName( ) + ": Error communicating with cluster: " + fin.getMessage( ) );
       LOG.trace( fin, fin );
       this.errors.add( fin );
@@ -919,7 +935,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   
   public void check( ) throws CheckException {
     List<Throwable> currentErrors = Lists.newArrayList( );
-    currentErrors.addAll( this.errors );
+    this.pendingErrors.drainTo( currentErrors );
     if ( !currentErrors.isEmpty( ) ) {
       CheckException ex = ServiceChecks.Severity.ERROR.transform( this.configuration, currentErrors );
       throw ex;
