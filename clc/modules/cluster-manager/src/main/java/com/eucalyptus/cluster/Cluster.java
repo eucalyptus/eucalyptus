@@ -78,6 +78,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.resource.spi.IllegalStateException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cluster.callback.ClusterCertsCallback;
@@ -215,6 +216,8 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             } catch ( NoSuchElementException ex ) {
               Clusters.getInstance( ).register( input );
               LOG.error( ex, ex );
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
             }
           }
         } else {
@@ -228,7 +231,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         if ( Component.State.DISABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) ) ) {
           try {
             Clusters.getInstance( ).disable( input.getName( ) );
-          } catch ( NoSuchElementException ex ) {
+          } catch ( Exception ex ) {
             LOG.error( ex, ex );
           }
           try {
@@ -935,10 +938,13 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   
   public void check( ) throws CheckException {
     List<Throwable> currentErrors = Lists.newArrayList( );
+    this.clearExceptions( );
     this.pendingErrors.drainTo( currentErrors );
     if ( !currentErrors.isEmpty( ) ) {
       CheckException ex = ServiceChecks.Severity.ERROR.transform( this.configuration, currentErrors );
       throw ex;
+    } else if( this.stateMachine.getState( ).ordinal( ) < State.DISABLED.ordinal( ) ) {
+      throw new IllegalStateException( "Cluster is currently NOTREADY:  please see logs for additional information" );
     }
   }
   
