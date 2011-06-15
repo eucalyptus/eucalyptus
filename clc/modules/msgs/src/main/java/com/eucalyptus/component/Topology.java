@@ -261,8 +261,10 @@ public class Topology implements EventListener<Event> {
       @Override
       public boolean tryEnable( final ServiceKey serviceKey, final ServiceConfiguration config ) throws ServiceRegistrationException {
         ServiceConfiguration curr = Topology.this.services.putIfAbsent( serviceKey, config );
-        if ( curr != null ) {
+        if ( curr != null && !curr.equals( config ) ) {
           return false;
+        } else if( curr != null && curr.equals( config ) ) {
+          return true;
         } else {
           Topology.this.currentEpoch++;
           return true;
@@ -288,8 +290,10 @@ public class Topology implements EventListener<Event> {
       @Override
       public boolean tryEnable( final ServiceKey serviceKey, final ServiceConfiguration config ) throws ServiceRegistrationException {
         ServiceConfiguration curr = Topology.this.services.put( serviceKey, config );
-        if ( curr != null ) {
+        if ( curr != null && !curr.equals( config ) ) {
           return false;
+        } else if( curr != null && curr.equals( config ) ) {
+          return true;
         } else {
           return true;
         }
@@ -414,61 +418,65 @@ public class Topology implements EventListener<Event> {
   @Override
   public void fireEvent( Event event ) {
     if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 5l ) ) {
-      this.getWorker( ).submit( new Runnable( ) {
-        
-        @Override
-        public void run( ) {
-          List<ServiceConfiguration> checkServicesList = ServiceConfigurations.collect( new Predicate<ServiceConfiguration>( ) {
-            
-            @Override
-            public boolean apply( ServiceConfiguration arg0 ) {
-              if ( Bootstrap.isCloudController( ) ) {
-                return true;
-              } else {
-                return arg0.isVmLocal( );
-              }
-            }
-          } );
-          LOG.debug( "Preparing to CHECK the following configurations: " + Joiner.on( "\n\t" ).join( checkServicesList ) );
-          Predicate<Future<?>> futureIsDone = new Predicate<Future<?>>( ) {
-            
-            @Override
-            public boolean apply( Future<?> arg0 ) {
-              return arg0.isDone( );
-            }
-          };
-          Map<ServiceConfiguration,Future<ServiceConfiguration>> futures = Maps.newHashMap( );
-          for ( ServiceConfiguration config : checkServicesList ) {
-            LOG.debug( "Submitting CHECK for: " + config );
-            futures.put( config, Topology.getInstance( ).submitExternal( config, TopologyChanges.checkFunction( ) ) );
-          }
-          for ( int i = 0; i < 100 && !Iterables.all( futures.values( ), futureIsDone ); i++ ) {
-            try {
-              TimeUnit.MILLISECONDS.sleep( 100 );
-            } catch ( InterruptedException ex ) {
-              LOG.error( ex, ex );
-              Thread.currentThread( ).interrupt( );
+      this.runChecks( );
+    }
+  }
+
+  private void runChecks( ) {
+    this.getWorker( ).submit( new Runnable( ) {
+      
+      @Override
+      public void run( ) {
+        List<ServiceConfiguration> checkServicesList = ServiceConfigurations.collect( new Predicate<ServiceConfiguration>( ) {
+          
+          @Override
+          public boolean apply( ServiceConfiguration arg0 ) {
+            if ( Bootstrap.isCloudController( ) ) {
+              return true;
+            } else {
+              return arg0.isVmLocal( );
             }
           }
-          for( Map.Entry<ServiceConfiguration,Future<ServiceConfiguration>> result : futures.entrySet( ) ) {
-            LOG.debug( "Inspecting result of CHECK for: " + result.getKey( ) );
-            try {
-              result.getValue( ).get( );
-            } catch ( InterruptedException ex ) {
-              LOG.error( ex , ex );
-              Thread.currentThread( ).interrupt( );
-            } catch ( ExecutionException ex ) {
-              LOG.error( ex , ex );
-              try {
-                Topology.this.getGuard( ).tryDisable( ServiceKey.create( result.getKey( ) ), result.getKey( ) );
-              } catch ( ServiceRegistrationException ex1 ) {
-                LOG.error( ex1 , ex1 );
-              }              
-            }
+        } );
+        LOG.debug( "Preparing to CHECK the following configurations: " + Joiner.on( "\n\t" ).join( checkServicesList ) );
+        Predicate<Future<?>> futureIsDone = new Predicate<Future<?>>( ) {
+          
+          @Override
+          public boolean apply( Future<?> arg0 ) {
+            return arg0.isDone( );
+          }
+        };
+        Map<ServiceConfiguration,Future<ServiceConfiguration>> futures = Maps.newHashMap( );
+        for ( ServiceConfiguration config : checkServicesList ) {
+          LOG.debug( "Submitting CHECK for: " + config );
+          futures.put( config, Topology.getInstance( ).submitExternal( config, TopologyChanges.checkFunction( ) ) );
+        }
+        for ( int i = 0; i < 100 && !Iterables.all( futures.values( ), futureIsDone ); i++ ) {
+          try {
+            TimeUnit.MILLISECONDS.sleep( 100 );
+          } catch ( InterruptedException ex ) {
+            LOG.error( ex, ex );
+            Thread.currentThread( ).interrupt( );
           }
         }
-        
-      } );
-    }
+        for( Map.Entry<ServiceConfiguration,Future<ServiceConfiguration>> result : futures.entrySet( ) ) {
+          LOG.debug( "Inspecting result of CHECK for: " + result.getKey( ) );
+          try {
+            result.getValue( ).get( );
+          } catch ( InterruptedException ex ) {
+            LOG.error( ex , ex );
+            Thread.currentThread( ).interrupt( );
+          } catch ( ExecutionException ex ) {
+            LOG.error( ex , ex );
+            try {
+              Topology.this.getGuard( ).tryDisable( ServiceKey.create( result.getKey( ) ), result.getKey( ) );
+            } catch ( ServiceRegistrationException ex1 ) {
+              LOG.error( ex1 , ex1 );
+            }              
+          }
+        }
+      }
+      
+    } );
   }
 }

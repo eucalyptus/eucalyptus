@@ -68,8 +68,6 @@ import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component.State;
-import com.eucalyptus.component.ServiceChecks.CheckException;
-import com.eucalyptus.component.ServiceChecks.Severity;
 import com.eucalyptus.component.Topology.ServiceKey;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.google.common.base.Function;
