@@ -144,7 +144,6 @@ public class ServiceConfigurations {
           } else {
             setUri( arg0.getUri( ).toASCIIString( ) );
           }
-          getUris( ).add( arg0.getUri( ).toASCIIString( ) );
         }
       };
     }
