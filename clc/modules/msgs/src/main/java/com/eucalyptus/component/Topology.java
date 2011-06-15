@@ -63,22 +63,37 @@
 
 package com.eucalyptus.component;
 
-import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetAddress;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
+import org.jgroups.util.UUID;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.HostStateMonitor;
+import com.eucalyptus.component.ServiceEndpoint.ServiceEndpointWorker;
+import com.eucalyptus.component.TopologyChanges.CloudTopologyCallables;
+import com.eucalyptus.component.TopologyChanges.RemoteTopologyCallables;
 import com.eucalyptus.context.ServiceStateException;
+import com.eucalyptus.empyrean.DescribeServicesResponseType;
+import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.Event;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMappers;
-import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.async.Request;
+import com.eucalyptus.util.async.SubjectMessageCallback;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -87,115 +102,10 @@ import com.google.common.collect.Maps;
 
 public class Topology {
   private static Logger                                         LOG          = Logger.getLogger( Topology.class );
-  private static final Topology                                 singleton    = new Topology( );                                                        //TODO:GRZE:handle differently for remote case?
+  private static final Topology                                 singleton    = new Topology( );                   //TODO:GRZE:handle differently for remote case?
   private Integer                                               currentEpoch = 0;
   private final TransitionGuard                                 guard;
   private final ConcurrentMap<ServiceKey, ServiceConfiguration> services     = Maps.newConcurrentMap( );
-  private static ThreadPool                                     worker       = Threads.lookup( Empyrean.class, Topology.class, "worker" ).limitTo( 1 );
-  
-  public enum CloudTopologyCallables implements Function<ServiceConfiguration, ServiceConfiguration> {
-    ENABLE {
-      @Override
-      public ServiceConfiguration apply( ServiceConfiguration config ) {
-        try {
-          ServiceKey serviceKey = ServiceKey.create( config );
-          if ( Topology.getInstance( ).getGuard( ).tryEnable( serviceKey, config ) ) {
-            CheckedListenableFuture<ServiceConfiguration> transition = ServiceTransitions.transitionChain( config, Component.State.ENABLED );
-            try {
-              return transition.get( );
-            } catch ( InterruptedException ex ) {
-              Thread.currentThread( ).interrupt( );
-              throw ex;
-            } catch ( Exception ex ) {
-              Topology.getInstance( ).getGuard( ).tryDisable( serviceKey, config );
-              throw ex;
-            }
-          } else {
-            CheckedListenableFuture<ServiceConfiguration> transition = ServiceTransitions.transitionChain( config, Component.State.DISABLED );
-            try {
-              return transition.get( );
-            } catch ( InterruptedException ex ) {
-              Thread.currentThread( ).interrupt( );
-              throw ex;
-            }
-          }
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          throw new UndeclaredThrowableException( ex );
-        }
-      }
-    },
-    DISABLE {
-      @Override
-      public ServiceConfiguration apply( ServiceConfiguration config ) {
-        try {
-          ServiceKey serviceKey = ServiceKey.create( config );
-          Future<ServiceConfiguration> transition = ServiceTransitions.transitionChain( config, Component.State.DISABLED );
-          ServiceConfiguration result = transition.get( );
-          Topology.getInstance( ).getGuard( ).tryDisable( serviceKey, config );
-          return result;
-        } catch ( InterruptedException ex ) {
-          Thread.currentThread( ).interrupt( );
-          throw new UndeclaredThrowableException( ex );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          throw new UndeclaredThrowableException( ex );
-        }
-      }
-    };
-  }
-  
-  public enum RemoteTopologyCallables implements Function<ServiceConfiguration, ServiceConfiguration> {
-    ENABLE {
-      @Override
-      public ServiceConfiguration apply( ServiceConfiguration config ) {
-        try {
-          ServiceKey serviceKey = ServiceKey.create( config );
-          if ( Topology.getInstance( ).getGuard( ).tryEnable( serviceKey, config ) ) {
-            CheckedListenableFuture<ServiceConfiguration> transition = ServiceTransitions.transitionChain( config, Component.State.ENABLED );
-            try {
-              return transition.get( );
-            } catch ( InterruptedException ex ) {
-              Thread.currentThread( ).interrupt( );
-              throw ex;
-            } catch ( Exception ex ) {
-              Topology.getInstance( ).getGuard( ).tryDisable( serviceKey, config );
-              throw ex;
-            }
-          } else {
-            CheckedListenableFuture<ServiceConfiguration> transition = ServiceTransitions.transitionChain( config, Component.State.DISABLED );
-            try {
-              return transition.get( );
-            } catch ( InterruptedException ex ) {
-              Thread.currentThread( ).interrupt( );
-              throw ex;
-            }
-          }
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          throw new UndeclaredThrowableException( ex );
-        }
-      }
-    },
-    DISABLE {
-      @Override
-      public ServiceConfiguration apply( ServiceConfiguration config ) {
-        try {
-          ServiceKey serviceKey = ServiceKey.create( config );
-          Future<ServiceConfiguration> transition = ServiceTransitions.transitionChain( config, Component.State.DISABLED );
-          ServiceConfiguration result = transition.get( );
-          Topology.getInstance( ).getGuard( ).tryDisable( serviceKey, config );
-          return result;
-        } catch ( InterruptedException ex ) {
-          Thread.currentThread( ).interrupt( );
-          throw new UndeclaredThrowableException( ex );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          throw new UndeclaredThrowableException( ex );
-        }
-      }
-    };
-  }
   
   private Topology( ) {
     super( );
@@ -206,6 +116,10 @@ public class Topology {
   
   public static Topology getInstance( ) {
     return singleton;
+  }
+  
+  private ThreadPool getWorker( ) {
+    return Threads.lookup( Empyrean.class, Topology.class, "worker" ).limitTo( 1 );
   }
   
   private Integer getEpoch( ) {
@@ -223,11 +137,22 @@ public class Topology {
   }
   
   private Future<ServiceConfiguration> submit( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
-    return this.worker.submit( new Callable<ServiceConfiguration>( ) {
+    EventRecord.here( Topology.class, EventType.ENQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) ).info( );
+    final Long queueStart = System.currentTimeMillis( );
+    return this.getWorker( ).submit( new Callable<ServiceConfiguration>( ) {
       
       @Override
       public ServiceConfiguration call( ) throws Exception {
-        return function.apply( config );
+        Long serviceStart = System.currentTimeMillis( );
+        EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
+                   .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) )
+                   .info( );
+        ServiceConfiguration result = function.apply( config );
+        Long finish = System.currentTimeMillis( );
+        EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
+                   .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) )
+                   .info( );
+        return result;
       }
     } );
   }
@@ -241,11 +166,7 @@ public class Topology {
   }
   
   public static Future<ServiceConfiguration> disable( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( Bootstrap.isCloudController( ) ) {
-      return Topology.getInstance( ).submit( config, CloudTopologyCallables.DISABLE );
-    } else {
-      return Topology.getInstance( ).submit( config, RemoteTopologyCallables.DISABLE );
-    }
+    return Topology.getInstance( ).submit( config, TopologyChanges.disableFunction( ) );
   }
   
   public List<ServiceConfiguration> lookupPartitionView( final Partition partition ) {
@@ -442,5 +363,11 @@ public class Topology {
   public TransitionGuard getGuard( ) {
     return this.guard;
   }
-  
+
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( this.guard.getClass( ).getSimpleName( ) );
+    return builder.toString( );
+  }
 }

@@ -89,6 +89,7 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
@@ -115,7 +116,6 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
       LOG.fatal( ex, ex );
       throw BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
     }
-    ListenerRegistry.getInstance( ).register( ClockTick.class, new HostStateMonitor( ) );
     ListenerRegistry.getInstance( ).register( ClockTick.class, this );
   }
   
@@ -276,7 +276,9 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   }
   
   @Override
-  public void suspect( Address suspected_mbr ) {}
+  public void suspect( Address suspect ) {
+    LOG.debug( "HostManager: suspected failure of " + suspect + " -> " + Hosts.getHostInstance( suspect ) );
+  }
   
   @Override
   public void block( ) {
@@ -290,7 +292,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   
   @Override
   public void fireEvent( Event event ) {
-    if ( event instanceof ClockTick ) {
+    if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 5l ) ) {
       this.broadcastAddresses( );
     }
   }

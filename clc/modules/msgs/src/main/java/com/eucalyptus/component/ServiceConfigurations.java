@@ -18,11 +18,29 @@ import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
 
 public class ServiceConfigurations {
   private static Logger                       LOG       = Logger.getLogger( ServiceConfigurations.class );
   private static ServiceConfigurationProvider singleton = new DatabaseServiceConfigurationProvider( );
+  
+  public static List<ServiceConfiguration> collect( Predicate<ServiceConfiguration> predicate ) {
+    List<ServiceConfiguration> configs = Lists.newArrayList( );
+    for( Component comp : Components.list( ) ) {
+      for( ServiceConfiguration config : comp.lookupServiceConfigurations( ) ) {
+        try {
+          if( predicate.apply( config ) ) {
+            configs.add( config );
+          }
+        } catch ( Exception ex ) {
+          LOG.error( ex , ex );
+        }
+      }
+    }
+    return configs;
+  }
   
   public static Function<ServiceConfiguration, ServiceStatusType> asServiceStatus( final boolean showEvents, final boolean showEventStacks ) {
     return new Function<ServiceConfiguration, ServiceStatusType>( ) {
@@ -91,7 +109,7 @@ public class ServiceConfigurations {
       } catch ( NoSuchElementException ex1 ) {
         ServiceBuilder<? extends ServiceConfiguration> builder = comp.getBuilder( );
         try {
-          URI uri = new URI( arg0.getUris( ).get( 0 ) );
+          URI uri = new URI( arg0.getUri( ) );
           config = builder.newInstance( arg0.getPartition( ), arg0.getName( ), uri.getHost( ), uri.getPort( ) );
           comp.loadService( config );
         } catch ( URISyntaxException ex ) {
@@ -119,9 +137,9 @@ public class ServiceConfigurations {
           setName( arg0.getName( ) );
           setType( arg0.getComponentId( ).name( ) );
           if ( arg0.isVmLocal( ) ) {
-            getUris( ).add( arg0.getComponentId( ).makeExternalRemoteUri( Internets.localHostAddress( ), arg0.getComponentId( ).getPort( ) ).toASCIIString( ) );
+            setUri( arg0.getComponentId( ).makeExternalRemoteUri( Internets.localHostAddress( ), arg0.getComponentId( ).getPort( ) ).toASCIIString( ) );
           } else {
-            getUris( ).add( arg0.getUri( ).toASCIIString( ) );
+            setUri( arg0.getUri( ).toASCIIString( ) );
           }
           getUris( ).add( arg0.getUri( ).toASCIIString( ) );
         }

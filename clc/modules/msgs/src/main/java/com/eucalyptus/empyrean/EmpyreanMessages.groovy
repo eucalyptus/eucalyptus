@@ -116,12 +116,14 @@ public class ServiceId extends EucalyptusData {
   String type;/** name of the ComponentId **/
   String fullName;/** full name of the registration **/
   ArrayList<String> uris = new ArrayList<String>( );
+  String uri;
   public String getUri( ) {
     return ( uris.isEmpty( ) ? "none" : uris.get( 0 ) );
   }
   public void setUri( String uri ) {
     this.uris.remove( uri );
     this.uris.add(0, element);
+    this.uri = uri;
   }
 }
 public class ServiceStatusType extends EucalyptusData {
