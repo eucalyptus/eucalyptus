@@ -17,7 +17,7 @@ public class EventRecord extends EucalyptusMessage {
     BaseMessage msg = tryForMessage( );
     StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
     StackTraceElement ste = stack[dist+3<stack.length?dist+3:stack.length-1];
-    String userFn = Bootstrap.isFinished( ) ? FakePrincipals.NOBODY_USER_ERN.toString( ) : "bootstrap";
+    String userFn = Bootstrap.isFinished( ) ? "" : "bootstrap";
     try {
       Context ctx = Contexts.lookup( msg.getCorrelationId( ) );
       userFn = ctx.getUserFullName( ).toString( );
