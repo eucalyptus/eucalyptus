@@ -55,7 +55,7 @@ public class ServiceConfigurations {
             this.setServiceId( TypeMappers.transform( config, ServiceId.class ) );
             this.setLocalEpoch( Topology.epoch( ) );
             try {
-              this.setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
+              this.setLocalState( config.lookupState( ).toString( ) );
             } catch ( Exception ex ) {
               this.setLocalState( "n/a: " + ex.getMessage( ) );
             }

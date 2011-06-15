@@ -115,7 +115,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
   protected ActiveTransition request( T transitionName ) throws ExistingTransitionException {
     TransitionHandler<P, S, T> transition = lookupTransition( transitionName );
     TransitionRule<S, T> rule = transition.getRule( );
-    if ( !this.state.compareAndSet( rule.getFromState( ), rule.getToState( ), rule.getFromStateMark( ), true ) ) {
+    if ( !this.state.compareAndSet( rule.getFromState( ), rule.getFromState( ), rule.getFromStateMark( ), true ) ) {
       throw new ExistingTransitionException( "Transition request " + transitionName + " rejected because of an ongoing transition: "
                                              + this.toString( ) );
     } else {
