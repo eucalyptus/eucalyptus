@@ -26,7 +26,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
-import com.eucalyptus.empyrean.ServiceInfoType;
+import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
@@ -45,7 +45,7 @@ public class BaseMessage {
   private Boolean                    _return  = true;
   private String                     statusMessage;
   private Integer                    epoch    = Topology.epoch( );
-  private ArrayList<ServiceInfoType> services = Lists.newArrayList( );
+  private ArrayList<ServiceId> services = Lists.newArrayList( );
   
   public BaseMessage( ) {
     super( );
@@ -264,14 +264,14 @@ public class BaseMessage {
   /**
    * @return the services
    */
-  public ArrayList<ServiceInfoType> getBaseServices( ) {
+  public ArrayList<ServiceId> getBaseServices( ) {
     return this.services;
   }
   
   /**
    * @param services the services to set
    */
-  public void setBaseServices( ArrayList<ServiceInfoType> services ) {
+  public void setBaseServices( ArrayList<ServiceId> services ) {
     this.services = services;
   }
   

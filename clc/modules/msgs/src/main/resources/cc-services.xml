@@ -68,12 +68,9 @@
   <mapping class="com.eucalyptus.empyrean.EmpyreanMessage" abstract="true" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
   </mapping>
-  <mapping class="com.eucalyptus.empyrean.ServiceId" abstract="true">
-    <value name="type" field="type" usage="required" />
-    <value name="name" field="name" usage="required" />
-    <value name="uris" field="uri" usage="optional" />
-  </mapping>
   <mapping class="com.eucalyptus.empyrean.ServiceInfoType" abstract="true">
+    <value name="uuid" field="uuid" usage="optional" />
+    <value name="partition" field="partition" usage="optional" />
     <value name="type" field="type" usage="required" />
     <value name="name" field="name" usage="required" />
     <collection field="uris" factory="org.jibx.runtime.Utility.arrayListFactory">
@@ -81,7 +78,7 @@
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.empyrean.ServiceStatusType" abstract="true">
-    <structure name="serviceId" field="serviceId" map-as="com.eucalyptus.empyrean.ServiceId" />
+    <structure name="serviceId" field="serviceId" map-as="com.eucalyptus.empyrean.ServiceInfoType" />
     <value name="localState" field="localState" usage="required" />
     <value name="localEpoch" field="localEpoch" usage="required" />
     <collection field="details" factory="org.jibx.runtime.Utility.arrayListFactory">

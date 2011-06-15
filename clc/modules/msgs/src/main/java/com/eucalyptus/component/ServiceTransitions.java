@@ -84,7 +84,7 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.EmpyreanMessage;
 import com.eucalyptus.empyrean.EnableServiceResponseType;
 import com.eucalyptus.empyrean.EnableServiceType;
-import com.eucalyptus.empyrean.ServiceInfoType;
+import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.empyrean.StartServiceResponseType;
 import com.eucalyptus.empyrean.StartServiceType;
@@ -483,7 +483,7 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration parent ) throws Throwable {
         StartServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new StartServiceType( ) {
           {
-            this.getServices( ).add( TypeMappers.transform( parent, ServiceInfoType.class ) );
+            this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
           }
         } );
         try {
@@ -499,7 +499,7 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration parent ) throws Throwable {
         EnableServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new EnableServiceType( ) {
           {
-            this.getServices( ).add( TypeMappers.transform( parent, ServiceInfoType.class ) );
+            this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
           }
         } );
         try {
@@ -516,7 +516,7 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration parent ) throws Throwable {
         DisableServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new DisableServiceType( ) {
           {
-            this.getServices( ).add( TypeMappers.transform( parent, ServiceInfoType.class ) );
+            this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
           }
         } );
         try {
@@ -532,7 +532,7 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration parent ) throws Throwable {
         StopServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new StopServiceType( ) {
           {
-            this.getServices( ).add( TypeMappers.transform( parent, ServiceInfoType.class ) );
+            this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
           }
         } );
         try {

@@ -9,23 +9,81 @@ import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.config.ComponentConfiguration;
-import com.eucalyptus.empyrean.ServiceInfoType;
+import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.empyrean.ServiceStatusDetail;
+import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
 
 public class ServiceConfigurations {
   private static Logger                       LOG       = Logger.getLogger( ServiceConfigurations.class );
   private static ServiceConfigurationProvider singleton = new DatabaseServiceConfigurationProvider( );
   
+  public static Function<ServiceConfiguration, ServiceStatusType> asServiceStatus( final boolean showEvents, final boolean showEventStacks ) {
+    return new Function<ServiceConfiguration, ServiceStatusType>( ) {
+      
+      @Override
+      public ServiceStatusType apply( final ServiceConfiguration config ) {
+        return new ServiceStatusType( ) {
+          {
+            this.setServiceId( TypeMappers.transform( config, ServiceId.class ) );
+            this.setLocalEpoch( Topology.epoch( ) );
+            try {
+              this.setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
+            } catch ( Exception ex ) {
+              this.setLocalState( "n/a: " + ex.getMessage( ) );
+            }
+            if ( showEvents ) {
+              this.getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
+                                                                       TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
+              if ( !showEventStacks ) {
+                for ( ServiceStatusDetail a : this.getStatusDetails( ) ) {
+                  a.setStackTrace( "" );
+                }
+              }
+            }
+          }
+        };
+      }
+    };
+  }
+  
   @TypeMapper
-  public enum ServiceInfoToServiceConfiguration implements Function<ServiceInfoType, ServiceConfiguration> {
+  enum ServiceConfigurationToStatus implements Function<ServiceConfiguration, ServiceStatusType> {
     INSTANCE;
     
     @Override
-    public ServiceConfiguration apply( ServiceInfoType arg0 ) {
+    public ServiceStatusType apply( final ServiceConfiguration config ) {
+      return new ServiceStatusType( ) {
+        {
+          this.setServiceId( TypeMappers.transform( config, ServiceId.class ) );
+          this.setLocalEpoch( Topology.epoch( ) );
+          try {
+            this.setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
+          } catch ( Exception ex ) {
+            this.setLocalState( "n/a: " + ex.getMessage( ) );
+          }
+          this.getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
+                                                                   TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
+          for ( ServiceStatusDetail a : this.getStatusDetails( ) ) {
+            a.setStackTrace( "" );
+          }
+        }
+      };
+    }
+  };
+  
+  @TypeMapper
+  public enum ServiceInfoToServiceConfiguration implements Function<ServiceId, ServiceConfiguration> {
+    INSTANCE;
+    
+    @Override
+    public ServiceConfiguration apply( ServiceId arg0 ) {
       Component comp = Components.lookup( arg0.getType( ) );
       ServiceConfiguration config;
       try {
@@ -50,12 +108,12 @@ public class ServiceConfigurations {
   }
   
   @TypeMapper
-  public enum ServiceConfigurationToServiceInfo implements Function<ServiceConfiguration, ServiceInfoType> {
+  public enum ServiceConfigurationToServiceInfo implements Function<ServiceConfiguration, ServiceId> {
     INSTANCE;
     
     @Override
-    public ServiceInfoType apply( final ServiceConfiguration arg0 ) {
-      return new ServiceInfoType( ) {
+    public ServiceId apply( final ServiceConfiguration arg0 ) {
+      return new ServiceId( ) {
         {
           setPartition( arg0.getPartition( ) );
           setName( arg0.getName( ) );

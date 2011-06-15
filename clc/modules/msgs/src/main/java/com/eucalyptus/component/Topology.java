@@ -74,7 +74,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.empyrean.ServiceInfoType;
+import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
 import com.eucalyptus.util.TypeMappers;
@@ -216,10 +216,10 @@ public class Topology {
     return Topology.getInstance( ).getEpoch( );
   }
   
-  public static List<ServiceInfoType> partitionRelativeView( final Partition partition, final InetAddress localAddr ) {
+  public static List<ServiceId> partitionRelativeView( final Partition partition, final InetAddress localAddr ) {
     final String localhostAddr = localAddr.getHostAddress( );
     return Lists.transform( Topology.getInstance( ).lookupPartitionView( partition ),
-                            TypeMappers.lookup( ServiceConfiguration.class, ServiceInfoType.class ) );
+                            TypeMappers.lookup( ServiceConfiguration.class, ServiceId.class ) );
   }
   
   private Future<ServiceConfiguration> submit( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {

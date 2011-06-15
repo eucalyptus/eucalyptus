@@ -296,7 +296,7 @@ public class Components {
       };
     }
     
-    public static Function<ServiceId, ServiceConfiguration> serviceIdToServiceConfiguration( ) {
+    public static Function<ServiceId, ServiceConfiguration> serviceIdToServiceConfiguration( ) {//TODO:GRZE:remove this crap
       return new Function<ServiceId, ServiceConfiguration>( ) {
         
         @Override
