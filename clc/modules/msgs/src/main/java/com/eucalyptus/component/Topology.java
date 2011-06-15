@@ -73,7 +73,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
-import apple.laf.CoreUIConstants.State;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.TopologyChanges.CloudTopologyCallables;
 import com.eucalyptus.component.TopologyChanges.RemoteTopologyCallables;
@@ -420,7 +419,6 @@ public class Topology implements EventListener<Event> {
   public void fireEvent( Event event ) {
     if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 5l ) ) {
       this.runChecks( );
-      this.runFailover( );
     }
   }
   
