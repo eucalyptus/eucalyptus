@@ -263,7 +263,7 @@ public class TopologyChanges {
             nextState = State.DISABLED;
           }
           try {
-            Future<ServiceConfiguration> result = config.lookupStateMachine( ).transition( initialState );
+            Future<ServiceConfiguration> result = config.lookupStateMachine( ).transition( nextState );
             State endState = result.get( ).lookupState( );
             LOG.debug( this.toString( ) + " completed for: " + result + " trying " + initialState + "->" + nextState + " ended in: " + endState );
             return result.get( );
