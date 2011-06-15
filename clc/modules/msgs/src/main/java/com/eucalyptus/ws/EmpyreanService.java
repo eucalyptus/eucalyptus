@@ -75,6 +75,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceCheckRecord;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.DisableServiceResponseType;
@@ -273,6 +274,9 @@ public class EmpyreanService {
           try {
             comp.enableTransition( service ).get( );
             reply.getServices( ).add( serviceInfo );
+          } catch ( ServiceRegistrationException ex ) {
+            LOG.error( ex, ex );
+            throw ex;
           } catch ( IllegalStateException ex ) {
             LOG.error( ex, ex );
             throw ex;

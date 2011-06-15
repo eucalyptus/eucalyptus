@@ -12,6 +12,7 @@ import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 
@@ -59,6 +60,11 @@ public class ServiceConfigurations {
           setPartition( arg0.getPartition( ) );
           setName( arg0.getName( ) );
           setType( arg0.getComponentId( ).name( ) );
+          if ( arg0.isVmLocal( ) ) {
+            getUris( ).add( arg0.getComponentId( ).makeExternalRemoteUri( Internets.localHostAddress( ), arg0.getComponentId( ).getPort( ) ).toASCIIString( ) );
+          } else {
+            getUris( ).add( arg0.getUri( ).toASCIIString( ) );
+          }
           getUris( ).add( arg0.getUri( ).toASCIIString( ) );
         }
       };

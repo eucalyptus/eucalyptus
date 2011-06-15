@@ -100,7 +100,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
 //TODO:GRZE: better logging here                LOG.debug( "Connected as: " + future.getChannel( ).getLocalAddress( ) );
                 final InetAddress localAddr = ( ( InetSocketAddress ) future.getChannel( ).getLocalAddress( ) ).getAddress( );
                 if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
-                  AsyncRequestHandler.this.request.get( ).getBaseServices( ).addAll( Topology.relativeView( config.lookupPartition( ), localAddr ) );
+                  AsyncRequestHandler.this.request.get( ).getBaseServices( ).addAll( Topology.partitionRelativeView( config.lookupPartition( ), localAddr ) );
                 }
                 EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPEN, request.getClass( ).getSimpleName( ),
                                   request.getCorrelationId( ), serviceSocketAddress.toString( ), "" + future.getChannel( ).getLocalAddress( ),

@@ -64,7 +64,6 @@ package com.eucalyptus.component;
 
 import java.net.InetAddress;
 import java.net.URI;
-import java.util.List;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
@@ -74,7 +73,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.empyrean.ServiceInfoType;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
@@ -93,7 +91,6 @@ import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.HasStateMachine;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -154,10 +151,6 @@ public class Component implements HasName<Component> {
    */
   public String name( ) {
     return this.identity.name( );
-  }
-  
-  public final List<ServiceInfoType> getServiceSnapshot( String localhostAddr ) {
-    return this.serviceRegistry.getServiceInfos( localhostAddr );
   }
   
   public State getState( ) {
@@ -367,12 +360,8 @@ public class Component implements HasName<Component> {
     }
   }
   
-  public CheckedListenableFuture<ServiceConfiguration> enableTransition( final ServiceConfiguration configuration ) throws IllegalStateException {
-    State goal = this.serviceRegistry.getServices( ).size( ) == 1
-      ? State.ENABLED
-      : State.DISABLED;
-    this.setServiceGoalState( configuration, goal );
-    return ServiceTransitions.transitionChain( configuration, goal );
+  public CheckedListenableFuture<ServiceConfiguration> enableTransition( final ServiceConfiguration configuration ) throws IllegalStateException, ServiceRegistrationException {
+    return Topology.getInstance( ).enable( configuration );
   }
   
   public CheckedListenableFuture<ServiceConfiguration> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException, ServiceRegistrationException {
@@ -387,26 +376,7 @@ public class Component implements HasName<Component> {
         throw ex;
       }
     }
-    State goal = this.serviceRegistry.getServices( ).size( ) == 1
-      ? State.ENABLED
-      : State.DISABLED;
-    this.setServiceGoalState( configuration, goal );
     return ServiceTransitions.transitionChain( configuration, State.NOTREADY );
-  }
-  
-  private void setServiceGoalState( final ServiceConfiguration configuration, final State goalState ) throws NoSuchElementException {
-    Service service = null;
-    if ( this.serviceRegistry.hasService( configuration ) ) {
-      service = this.serviceRegistry.lookup( configuration );
-      service.setGoal( goalState );
-    } else {
-      try {
-        service = this.serviceRegistry.register( configuration );
-        service.setGoal( goalState );
-      } catch ( ServiceRegistrationException ex ) {
-        LOG.error( ex, ex );
-      }
-    }
   }
   
   public NavigableSet<ServiceConfiguration> enabledServices( ) {
@@ -525,40 +495,6 @@ public class Component implements HasName<Component> {
      */
     public NavigableSet<ServiceConfiguration> getServices( ) {
       return Sets.newTreeSet( this.services.keySet( ) );
-    }
-    
-    List<ServiceInfoType> getServiceInfos( final String localhostAddr ) {
-      List<ServiceInfoType> serviceSnapshot = Lists.newArrayList( );
-      for ( final Service s : this.services.values( ) ) {
-        if ( State.ENABLED.equals( s.getServiceConfiguration( ).lookupState( ) ) ) {
-          serviceSnapshot.add( 0, new ServiceInfoType( ) {
-            {
-              setPartition( s.getServiceConfiguration( ).getPartition( ) );
-              setName( s.getServiceConfiguration( ).getName( ) );
-              setType( Component.this.getName( ) );
-              if ( s.getServiceConfiguration( ).isVmLocal( ) ) {
-                getUris( ).add( s.getComponentId( ).makeExternalRemoteUri( localhostAddr, s.getComponentId( ).getPort( ) ).toASCIIString( ) );
-              } else {
-                getUris( ).add( s.getServiceConfiguration( ).getUri( ).toASCIIString( ) );
-              }
-            }
-          } );
-        } else {
-          serviceSnapshot.add( new ServiceInfoType( ) {
-            {
-              setPartition( s.getServiceConfiguration( ).getPartition( ) );
-              setName( s.getServiceConfiguration( ).getName( ) );
-              setType( Component.this.getName( ) );
-              if ( s.getServiceConfiguration( ).isVmLocal( ) ) {
-                getUris( ).add( s.getComponentId( ).makeExternalRemoteUri( localhostAddr, s.getComponentId( ).getPort( ) ).toASCIIString( ) );
-              } else {
-                getUris( ).add( s.getServiceConfiguration( ).getUri( ).toASCIIString( ) );
-              }
-            }
-          } );
-        }
-      }
-      return serviceSnapshot;
     }
     
     /**

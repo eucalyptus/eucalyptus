@@ -202,6 +202,8 @@ public class BasicService extends AbstractService implements Service {
                     } else if ( State.NOTREADY.isIn( BasicService.this.getServiceConfiguration( ) ) ) {
                       config.lookupComponent( ).disableTransition( config ).get( );
                     }
+                  } catch ( InterruptedException ex ) {
+                    Thread.currentThread( ).interrupt( );
                   } catch ( Throwable ex ) {
                     LOG.debug( "CheckRunner caught an exception: " + ex );
                     BasicService.this.getServiceConfiguration( ).info( ex );
