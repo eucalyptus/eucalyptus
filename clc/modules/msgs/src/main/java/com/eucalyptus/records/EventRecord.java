@@ -56,8 +56,7 @@ public class EventRecord extends EucalyptusMessage {
 
   private static EucalyptusMessage BOGUS  = getBogusMessage( );
   private static EucalyptusMessage getBogusMessage( ) {
-    EucalyptusMessage hi = new EucalyptusMessage( ) {{
-    }}
+    EucalyptusMessage hi = new EucalyptusMessage( );
     hi.setCorrelationId( "" );
     hi.setUserId( "" );
     return hi;
