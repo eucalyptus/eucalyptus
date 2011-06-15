@@ -81,6 +81,7 @@ import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
@@ -104,6 +105,7 @@ public class Topology implements EventListener<Event> {
     this.guard = ( Bootstrap.isCloudController( )
       ? cloudControllerGuard( )
       : remoteGuard( ) );
+    ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
   
   public static Topology getInstance( ) {

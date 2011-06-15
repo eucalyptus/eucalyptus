@@ -80,34 +80,25 @@ public class ModifyServiceType extends EmpyreanMessage {
   String state;
 }
 public class ModifyServiceResponseType extends EmpyreanMessage implements HasSideEffect {
-  
 }
 public class ServiceTransitionType extends EmpyreanMessage  {
   ArrayList<ServiceId> services = new ArrayList<ServiceId>();
 }
 public class StartServiceType extends ServiceTransitionType {
-  
 }
 public class StartServiceResponseType extends ServiceTransitionType {
-  
 }
 public class StopServiceType extends ServiceTransitionType {
-  
 }
 public class StopServiceResponseType extends ServiceTransitionType {
-  
 }
 public class EnableServiceType extends ServiceTransitionType {
-  
 }
 public class EnableServiceResponseType extends ServiceTransitionType implements HasSideEffect {
-  
 }
 public class DisableServiceType extends ServiceTransitionType {
-  
 }
 public class DisableServiceResponseType extends ServiceTransitionType implements HasSideEffect {
-  
 }
 public class ServiceId extends EucalyptusData {
   String uuid;/** UUID of the registration **/
@@ -122,7 +113,7 @@ public class ServiceId extends EucalyptusData {
   }
   public void setUri( String uri ) {
     this.uris.remove( uri );
-    this.uris.add(0, element);
+    this.uris.add(0, uri);
     this.uri = uri;
   }
 }
