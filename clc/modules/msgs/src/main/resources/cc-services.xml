@@ -78,7 +78,7 @@
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.empyrean.ServiceStatusType" abstract="true">
-    <structure name="serviceId" field="serviceId" map-as="com.eucalyptus.empyrean.ServiceInfoType" />
+    <structure name="serviceId" field="serviceId" map-as="com.eucalyptus.empyrean.ServiceId" />
     <value name="localState" field="localState" usage="required" />
     <value name="localEpoch" field="localEpoch" usage="required" />
     <collection field="details" factory="org.jibx.runtime.Utility.arrayListFactory">
