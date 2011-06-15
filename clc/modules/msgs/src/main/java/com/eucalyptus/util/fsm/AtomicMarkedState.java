@@ -151,7 +151,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     if ( this.currentTransition.get( ) == null ) {
       Exceptions.trace( new IllegalStateException( "commit() called when there is no currently pending transition: " + this.toString( ) ) );
     } else {
-      ActiveTransition tr = this.currentTransition.get( );
+      ActiveTransition tr = this.currentTransition.getAndSet( null );
       boolean doFireInListeners = !this.state.getReference( ).equals( tr.getTransitionRule( ).getFromState( ) );
       if ( !this.state.compareAndSet( tr.getTransitionRule( ).getToState( ), tr.getTransitionRule( ).getToState( ), true,
                                       tr.getTransitionRule( ).getToStateMark( ) ) ) {
@@ -159,7 +159,6 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
         Exceptions.trace( new IllegalStateException( "Failed to apply toState for the transition: " + tr.toString( ) + " for current state: "
                                                               + this.toString( ) ) );
       }
-      this.currentTransition.set( null );
       if ( doFireInListeners ) {
         this.fireInListeners( tr.getTransitionRule( ).getToState( ) );
       }
@@ -171,7 +170,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     if ( this.currentTransition.get( ) == null ) {
       Exceptions.trace( new IllegalStateException( "error() called when there is no currently pending transition: " + this.toString( ) ) );
     } else {
-      ActiveTransition tr = this.currentTransition.get( );
+      ActiveTransition tr = this.currentTransition.getAndSet( null );
       if ( !this.state.compareAndSet( tr.getTransitionRule( ).getToState( ), tr.getTransitionRule( ).getErrorState( ), true,
                                       tr.getTransitionRule( ).getErrorStateMark( ) ) ) {
         this.state.set( this.state.getReference( ), false );
@@ -179,11 +178,9 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
                                                               + this.toString( ) ) );
       }
       if ( !this.state.getReference( ).equals( tr.getTransitionRule( ).getErrorState( ) ) ) {
-        this.currentTransition.set( null );
         this.state.set( tr.getTransitionRule( ).getErrorState( ), false );
         this.fireInListeners( tr.getTransitionRule( ).getErrorState( ) );
       } else {
-        this.currentTransition.set( null );
         this.state.set( tr.getTransitionRule( ).getErrorState( ), false );
       }
     }
@@ -197,19 +194,17 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
       }
       Exceptions.trace( new IllegalStateException( "rollback() called when there is no currently pending transition: " + this.toString( ) ) );
     } else {
-      ActiveTransition tr = this.currentTransition.get( );
+      ActiveTransition tr = this.currentTransition.getAndSet( null );
       if ( !this.state.compareAndSet( tr.getTransitionRule( ).getToState( ), tr.getTransitionRule( ).getFromState( ), true,
                                       tr.getTransitionRule( ).getFromStateMark( ) ) ) {
         Exceptions.trace( new IllegalStateException( "Failed to apply toState for the transition: " + tr.toString( ) + " for current state: "
-                                                              + this.toString( ) ) );
+                                                            + this.toString( ) ) );
       }
       if ( !this.state.getReference( ).equals( tr.getTransitionRule( ).getFromState( ) ) ) {
         this.state.set( tr.getTransitionRule( ).getFromState( ), false );
-        this.currentTransition.set( null );
         this.fireInListeners( tr.getTransitionRule( ).getFromState( ) );
       } else {
         this.state.set( tr.getTransitionRule( ).getFromState( ), false );
-        this.currentTransition.set( null );
       }
     }
   }
@@ -279,7 +274,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
    */
   @Override
   public S getState( ) {
-    return this.currentTransition.get( ) != null ? this.currentTransition.get( ).getTransitionRule( ).getFromState( ) : this.state.getReference( );
+    return this.state.getReference( );
   }
   
   /**
