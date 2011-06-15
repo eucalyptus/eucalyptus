@@ -85,7 +85,7 @@
     <value name="return" field="_return" usage="optional" />
     <value name="epoch" field="epoch" usage="optional" />
     <collection field="services" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <structure name="services" map-as="com.eucalyptus.empyrean.ServiceInfoType" />
+      <structure name="services" map-as="com.eucalyptus.empyrean.ServiceId" />
     </collection>
   </mapping>
 
