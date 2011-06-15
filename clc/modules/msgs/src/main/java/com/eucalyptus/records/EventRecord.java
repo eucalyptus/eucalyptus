@@ -7,7 +7,6 @@ import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.util.FullName;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
@@ -18,14 +17,14 @@ public class EventRecord extends EucalyptusMessage {
     BaseMessage msg = tryForMessage( );
     StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
     StackTraceElement ste = stack[dist+3<stack.length?dist+3:stack.length-1];
-    FullName userFn = Bootstrap.isFinished( ) ? FakePrincipals.NOBODY_USER_ERN : FakePrincipals.SYSTEM_USER_ERN;
+    String userFn = Bootstrap.isFinished( ) ? FakePrincipals.NOBODY_USER_ERN.toString( ) : "bootstrap";
     try {
       Context ctx = Contexts.lookup( msg.getCorrelationId( ) );
-      userFn = ctx.getUserFullName( );
+      userFn = ctx.getUserFullName( ).toString( );
     } catch ( Exception ex ) {
     }
     
-    return new LogFileRecord( eventClass, eventName, component, ste, userFn.toString( ), msg.getCorrelationId( ), other );
+    return new LogFileRecord( eventClass, eventName, component, ste, userFn, msg.getCorrelationId( ), other );
   }
 
   public static Record here( final Class component, final EventClass eventClass, final EventType eventName, final String... other ) {
