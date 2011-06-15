@@ -298,23 +298,8 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
           try {
             AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
             parent.errors.clear( );
-          } catch ( final ExecutionException e ) {
-            if ( e.getCause( ) instanceof FailedRequestException ) {
-              LOG.error( e.getCause( ).getMessage( ) );
-              parent.errors.add( e );
-            } else if ( ( e.getCause( ) instanceof ConnectionException ) || ( e.getCause( ) instanceof IOException ) ) {
-              LOG.error( parent.getName( ) + ": Error communicating with cluster: " + e.getCause( ).getMessage( ) );
-              parent.errors.add( e );
-            } else {
-              LOG.error( e, e );
-              parent.errors.add( e );
-            }
-          } catch ( final InterruptedException e ) {
-            LOG.error( e, e );
-            parent.errors.add( e );
-          } catch ( final Throwable e ) {
-            LOG.error( e, e );
-            parent.errors.add( e );
+          } catch ( final Throwable t ) {
+            parent.filterExceptions( t );
           }
         }
       };
@@ -910,26 +895,24 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   }
   
   private <T extends Throwable> boolean filterExceptions( final T t ) {
+    Throwable fin = t;
     if ( t instanceof ExecutionException ) {
-      Throwable fin = t.getCause( ) != null
+      fin = t.getCause( ) != null
         ? t.getCause( )
         : t;
-      if ( fin instanceof FailedRequestException ) {
-        LOG.error( fin );
-      } else if ( ( fin instanceof ConnectionException ) || ( fin instanceof IOException ) ) {
-        LOG.error( this.getName( ) + ": Error communicating with cluster: " + fin.getMessage( ) );
-        LOG.trace( fin, fin );
-      } else {
-        LOG.error( fin, fin );
-      }
-      this.errors.add( fin );
-    } else if ( t instanceof InterruptedException ) {
+    }
+    if ( t instanceof InterruptedException ) {
       Thread.currentThread( ).interrupt( );
       LOG.error( t );
+    } else if ( fin instanceof FailedRequestException ) {
+        LOG.error( fin, fin );
+        this.errors.add( fin );
+      } else if ( ( fin instanceof ConnectionException ) || ( fin instanceof IOException ) ) {
+      LOG.error( this.getName( ) + ": Error communicating with cluster: " + fin.getMessage( ) );
+      LOG.trace( fin, fin );
+      this.errors.add( fin );
     } else {
-      this.errors.add( t );
-      LOG.error( t );
-      LOG.trace( t, t );
+      LOG.error( fin, fin );
     }
     return false;
   }
