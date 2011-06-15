@@ -934,7 +934,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     return false;
   }
   
-  public void check( ) throws CheckException {
+  public void check( ) throws CheckException, IllegalStateException {
     List<Throwable> currentErrors = Lists.newArrayList( );
     this.clearExceptions( );
     this.pendingErrors.drainTo( currentErrors );
