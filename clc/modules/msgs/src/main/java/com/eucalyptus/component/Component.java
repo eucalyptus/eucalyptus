@@ -70,6 +70,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -326,12 +327,10 @@ public class Component implements HasName<Component> {
   }
   
   public CheckedListenableFuture<ServiceConfiguration> disableTransition( ServiceConfiguration config ) {
-    this.setServiceGoalState( config, State.DISABLED );
     return ServiceTransitions.transitionChain( config, State.DISABLED );
   }
   
   public CheckedListenableFuture<ServiceConfiguration> stopTransition( final ServiceConfiguration configuration ) {
-    this.setServiceGoalState( configuration, State.STOPPED );
     return ServiceTransitions.transitionChain( configuration, State.STOPPED );
   }
   
@@ -360,7 +359,7 @@ public class Component implements HasName<Component> {
     }
   }
   
-  public CheckedListenableFuture<ServiceConfiguration> enableTransition( final ServiceConfiguration configuration ) throws IllegalStateException, ServiceRegistrationException {
+  public Future<ServiceConfiguration> enableTransition( final ServiceConfiguration configuration ) throws IllegalStateException, ServiceRegistrationException {
     return Topology.getInstance( ).enable( configuration );
   }
   
