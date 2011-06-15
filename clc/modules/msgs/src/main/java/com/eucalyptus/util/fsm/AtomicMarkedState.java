@@ -338,21 +338,21 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
         } catch ( IllegalStateException t ) {
           LOG.trace( t, t );
         }
+        try {
+          this.transition.after( AtomicMarkedState.this.parent );
+          EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE, "set(" + AtomicMarkedState.this.parent.getClass( ).getCanonicalName( ) + ")" ).trace( );
+          this.transitionFuture.set( AtomicMarkedState.this.parent );
+        } catch ( Throwable t ) {
+          EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE, "setException(" + t.getClass( ).getCanonicalName( ) + "): " + t.getMessage( ) ).trace( );
+          this.transitionFuture.setException( t );
+          LOG.error( t, t );
+        }
       } catch ( Throwable t ) {
         LOG.error( t, t );
         this.teardown( );
-        AtomicMarkedState.this.rollback( );
+        AtomicMarkedState.this.error( );
         EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE, "setException(" + t.getClass( ).getCanonicalName( ) + "): " + t.getMessage( ) ).trace( );
         this.transitionFuture.setException( t );
-      }
-      try {
-        this.transition.after( AtomicMarkedState.this.parent );
-        EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE, "set(" + AtomicMarkedState.this.parent.getClass( ).getCanonicalName( ) + ")" ).trace( );
-        this.transitionFuture.set( AtomicMarkedState.this.parent );
-      } catch ( Throwable t ) {
-        EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE, "setException(" + t.getClass( ).getCanonicalName( ) + "): " + t.getMessage( ) ).trace( );
-        this.transitionFuture.setException( t );
-        LOG.error( t, t );
       }
     }
     
