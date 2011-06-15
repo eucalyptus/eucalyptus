@@ -139,6 +139,7 @@ public class ServiceConfigurations {
           setPartition( arg0.getPartition( ) );
           setName( arg0.getName( ) );
           setType( arg0.getComponentId( ).name( ) );
+          setFullName( arg0.getFullName( ).toString( ) );
           if ( arg0.isVmLocal( ) ) {
             setUri( arg0.getComponentId( ).makeExternalRemoteUri( Internets.localHostAddress( ), arg0.getComponentId( ).getPort( ) ).toASCIIString( ) );
           } else {
