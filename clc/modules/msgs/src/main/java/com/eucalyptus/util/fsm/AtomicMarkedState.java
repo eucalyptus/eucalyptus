@@ -279,7 +279,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
    */
   @Override
   public S getState( ) {
-    return this.state.getReference( );
+    return this.currentTransition.get( ) != null ? this.currentTransition.get( ).getTransitionRule( ).getFromState( ) : this.state.getReference( );
   }
   
   /**
