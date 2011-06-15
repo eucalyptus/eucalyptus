@@ -70,6 +70,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
@@ -84,6 +85,7 @@ import com.eucalyptus.empyrean.EmpyreanMessage;
 import com.eucalyptus.empyrean.EnableServiceResponseType;
 import com.eucalyptus.empyrean.EnableServiceType;
 import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.empyrean.StartServiceResponseType;
 import com.eucalyptus.empyrean.StartServiceType;
@@ -105,15 +107,14 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
 public class ServiceTransitions {
-  private static final int BOOTSTRAP_REMOTE_RETRY_INTERVAL = 10;//TODO:GRZE:@Configurable
-  private static final int BOOTSTRAP_REMOTE_RETRIES = 10;//TODO:GRZE:@Configurable
-  static Logger LOG = Logger.getLogger( ServiceTransitions.class );
+  private static final int BOOTSTRAP_REMOTE_RETRY_INTERVAL = 10;                                           //TODO:GRZE:@Configurable
+  private static final int BOOTSTRAP_REMOTE_RETRIES        = 10;                                           //TODO:GRZE:@Configurable
+  static Logger            LOG                             = Logger.getLogger( ServiceTransitions.class );
   
   interface ServiceTransitionCallback {
     public void fire( ServiceConfiguration parent ) throws Throwable;
   }
   
-
   public static CheckedListenableFuture<ServiceConfiguration> transitionChain( final ServiceConfiguration configuration, final State goalState ) {
     switch ( goalState ) {
       case DISABLED:
@@ -246,7 +247,7 @@ public class ServiceTransitions {
     LOG.debug( "Sending request " + msg.getClass( ).getSimpleName( ) + " to " + parent.getFullName( ) );
     for ( int i = 0; i < BOOTSTRAP_REMOTE_RETRIES; i++ ) {
       try {
-        T reply = (T) AsyncRequests.sendSync( config, msg );
+        T reply = ( T ) AsyncRequests.sendSync( config, msg );
         return reply;
       } catch ( RetryableConnectionException ex ) {
         try {
@@ -257,7 +258,7 @@ public class ServiceTransitions {
         continue;
       } catch ( ExecutionException ex ) {
         LOG.error( ex, ex );
-        if( ex.getCause( ) instanceof RetryableConnectionException ) {
+        if ( ex.getCause( ) instanceof RetryableConnectionException ) {
           try {
             TimeUnit.SECONDS.sleep( BOOTSTRAP_REMOTE_RETRY_INTERVAL );
           } catch ( InterruptedException ex1 ) {
@@ -272,9 +273,9 @@ public class ServiceTransitions {
         throw ex;
       }
     }
-    throw new ServiceRegistrationException( "Failed to contact host after " + BOOTSTRAP_REMOTE_RETRIES + " retries: " + config.getUri( ) + " when sending message: " + msg );
+    throw new ServiceRegistrationException( "Failed to contact host after " + BOOTSTRAP_REMOTE_RETRIES + " retries: " + config.getUri( )
+                                            + " when sending message: " + msg );
   }
-
   
   private static void processTransition( final ServiceConfiguration parent, final Completion transitionCallback, final TransitionActions transitionAction ) {
     ServiceTransitionCallback trans = null;
@@ -286,7 +287,7 @@ public class ServiceTransitions {
           LOG.error( ex, ex );
           throw ex;
         }
-      } else if( Bootstrap.isCloudController( ) ) {
+      } else if ( Bootstrap.isCloudController( ) ) {
         try {
           trans = RemoteTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
@@ -294,9 +295,9 @@ public class ServiceTransitions {
           throw ex;
         }
       } else {
-        LOG.debug( "Silentlty accepting remotely inferred state transition for " + parent ); 
+        LOG.debug( "Silentlty accepting remotely inferred state transition for " + parent );
       }
-      if( trans != null ) {
+      if ( trans != null ) {
         LOG.debug( "Executing transition: " + trans.getClass( ) + "." + transitionAction.name( ) + " for " + parent );
         trans.fire( parent );
       }
@@ -323,8 +324,8 @@ public class ServiceTransitions {
                           parent.getFullName( ).toString( ),
                           parent.toString( ) ).debug( );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
-      }      
+        LOG.error( ex, ex );
+      }
       return true;
     }
     
@@ -349,8 +350,8 @@ public class ServiceTransitions {
                           parent.getFullName( ).toString( ),
                           parent.toString( ) ).debug( );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
-      }      
+        LOG.error( ex, ex );
+      }
     }
     
     @Override
@@ -363,9 +364,9 @@ public class ServiceTransitions {
                           parent.getFullName( ).toString( ),
                           parent.toString( ) ).debug( );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
-      }      
-
+        LOG.error( ex, ex );
+      }
+      
     }
     
   }
@@ -386,17 +387,27 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Throwable {
         DescribeServicesResponseType response = ServiceTransitions.sendEmpyreanRequest( parent, new DescribeServicesType( ) );
-        Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>( ) {
+        ServiceStatusType status = Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>( ) {
           
           @Override
           public boolean apply( final ServiceStatusType arg0 ) {
             return parent.getName( ).equals( arg0.getServiceId( ).getName( ) );
           }
         } );
-        //TODO:GRZE:RELEASE this is where extra remote state checks happen.
-        
+        String corrId = response.getCorrelationId( );
+        List<CheckException> errors = ServiceChecks.Functions.statusToCheckExceptions( corrId ).apply( status );
+        if ( !errors.isEmpty( ) ) {
+          if ( Component.State.ENABLED.equals( parent.lookupState( ) ) ) {
+            try {
+              DISABLE.fire( parent );
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
+            }
+          }
+          throw ServiceChecks.chainCheckExceptions( errors );
+        }
       }
-
+      
     },
     START {
       
@@ -428,7 +439,7 @@ public class ServiceTransitions {
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
-
+        
       }
     },
     DISABLE {
@@ -487,8 +498,20 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Throwable {
         if ( State.LOADED.ordinal( ) < parent.lookupComponent( ).getState( ).ordinal( ) ) {
-          parent.lookupComponent( ).getBootstrapper( ).check( );
-          parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
+          try {
+            parent.lookupComponent( ).getBootstrapper( ).check( );
+            parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
+          } catch ( Throwable ex ) {
+            if ( State.ENABLED.equals( parent.lookupState( ) ) ) {
+              try {
+                DISABLE.fire( parent );
+              } catch ( Exception ex1 ) {
+                LOG.error( ex1, ex1 );
+              }
+            }
+            LOG.error( ex, ex );
+            throw ex;
+          }
         }
       }
     },
