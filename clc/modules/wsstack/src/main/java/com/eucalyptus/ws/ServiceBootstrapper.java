@@ -63,7 +63,9 @@
  */
 package com.eucalyptus.ws;
 
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -140,9 +142,37 @@ public class ServiceBootstrapper extends Bootstrapper {
             public void run( ) {
               try {
                 future.get( );
-                comp.enableTransition( config );
               } catch ( Exception ex ) {
-                LOG.error( ex, ex );
+                Throwable lastEx = ex;
+                for( int i = 0; i < 5; i ++ ) {
+                  try {
+                    comp.startTransition( config ).get( );
+                    lastEx = null;
+                    break;
+                  } catch ( ExecutionException ex1 ) {
+                    LOG.error( ex1 , ex1 );
+                    lastEx = ex1.getCause( );
+                    continue;
+                  } catch ( InterruptedException ex1 ) {
+                    LOG.error( ex1 , ex1 );
+                    Thread.currentThread( ).interrupt( );
+                    continue;
+                  } catch ( Exception ex1 ) {
+                    LOG.error( ex1 , ex1 );
+                    lastEx = ex1;
+                    continue;
+                  }
+                }
+                if( lastEx != null ) {
+                  throw new UndeclaredThrowableException( lastEx );
+                }
+              }
+              try {
+                comp.enableTransition( config );
+              } catch ( ServiceRegistrationException ex ) {
+                LOG.error( ex , ex );
+              } catch ( IllegalStateException ex ) {
+                LOG.error( ex , ex );
               }
             }
           };

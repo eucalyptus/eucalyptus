@@ -107,8 +107,8 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
 public class ServiceTransitions {
-  private static final int BOOTSTRAP_REMOTE_RETRY_INTERVAL = 10;                                           //TODO:GRZE:@Configurable
-  private static final int BOOTSTRAP_REMOTE_RETRIES        = 10;                                           //TODO:GRZE:@Configurable
+  private static final int BOOTSTRAP_REMOTE_RETRY_INTERVAL = 1;                                           //TODO:GRZE:@Configurable
+  private static final int BOOTSTRAP_REMOTE_RETRIES        = 5;                                           //TODO:GRZE:@Configurable
   static Logger            LOG                             = Logger.getLogger( ServiceTransitions.class );
   
   interface ServiceTransitionCallback {
@@ -245,6 +245,7 @@ public class ServiceTransitions {
   private static <T extends EmpyreanMessage> T sendEmpyreanRequest( final ServiceConfiguration parent, final EmpyreanMessage msg ) throws Throwable {
     ServiceConfiguration config = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) );
     LOG.debug( "Sending request " + msg.getClass( ).getSimpleName( ) + " to " + parent.getFullName( ) );
+    Throwable lastEx = null;
     for ( int i = 0; i < BOOTSTRAP_REMOTE_RETRIES; i++ ) {
       try {
         T reply = ( T ) AsyncRequests.sendSync( config, msg );
@@ -255,6 +256,7 @@ public class ServiceTransitions {
         } catch ( InterruptedException ex1 ) {
           Thread.currentThread( ).interrupt( );
         }
+        lastEx  = ex;
         continue;
       } catch ( ExecutionException ex ) {
         LOG.error( ex, ex );
@@ -264,6 +266,7 @@ public class ServiceTransitions {
           } catch ( InterruptedException ex1 ) {
             Thread.currentThread( ).interrupt( );
           }
+          lastEx = ex.getCause( );
           continue;
         } else {
           throw ex;
@@ -273,8 +276,8 @@ public class ServiceTransitions {
         throw ex;
       }
     }
-    throw new ServiceRegistrationException( "Failed to contact host after " + BOOTSTRAP_REMOTE_RETRIES + " retries: " + config.getUri( )
-                                            + " when sending message: " + msg );
+    throw new ServiceRegistrationException( "Failed to contact host because of " + lastEx + " after " + BOOTSTRAP_REMOTE_RETRIES + " retries: " + config.getUri( )
+                                            + " when sending message: " + msg, lastEx );
   }
   
   private static void processTransition( final ServiceConfiguration parent, final Completion transitionCallback, final TransitionActions transitionAction ) {
