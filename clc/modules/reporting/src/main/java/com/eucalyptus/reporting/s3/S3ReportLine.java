@@ -22,12 +22,12 @@ public class S3ReportLine
 		this.units = units;
 	}
 
-	public String getLabel()
+	public String getCriterionValue()
 	{
 		return key.getLabel();
 	}
 
-	public String getGroupBy()
+	public String getGroupByValue()
 	{
 		return key.getGroupByLabel();
 	}

@@ -21,12 +21,12 @@ public class StorageReportLine
 		this.units = units;
 	}
 
-	public String getLabel()
+	public String getCriterionValue()
 	{
 		return key.getLabel();
 	}
 
-	public String getGroupBy()
+	public String getGroupByValue()
 	{
 		return key.getGroupByLabel();
 	}
@@ -70,7 +70,7 @@ public class StorageReportLine
 	public String toString()
 	{
 		return String.format("[label:%s,groupBy:%s,volSizeMax:%d,volSizeTime:%d,snapsSizeMax:%d,snapsSizeTime:%d]",
-						getLabel(), getGroupBy(), getVolumesSizeMax(),
+						getCriterionValue(), getGroupByValue(), getVolumesSizeMax(),
 						getVolumesSizeTime(), getSnapshotsSizeMax(),
 						getSnapshotsSizeTime());
 	}

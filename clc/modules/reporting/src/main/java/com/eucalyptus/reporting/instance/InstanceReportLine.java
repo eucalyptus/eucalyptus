@@ -21,12 +21,12 @@ public class InstanceReportLine
 		this.units = units;
 	}
 
-	public String getLabel()
+	public String getCriterionValue()
 	{
 		return key.getLabel();
 	}
 
-	public String getGroupBy()
+	public String getGroupByValue()
 	{
 		return key.getGroupByLabel();
 	}
