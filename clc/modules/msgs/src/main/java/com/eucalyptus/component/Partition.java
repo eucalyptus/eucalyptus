@@ -306,5 +306,12 @@ public class Partition extends AbstractPersistent {
         }
     }
   }
+
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "Partition:name=" ).append( this.name ).append( ":cc-cert-serial=" ).append( this.getCertificate( ).getSerialNumber( ) ).append( ":nc-cert-serial=" ).append( this.getNodeCertificate( ).getSerialNumber( ) );
+    return builder.toString( );
+  }
   
 }

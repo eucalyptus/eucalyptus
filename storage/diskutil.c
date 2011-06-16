@@ -502,7 +502,7 @@ int diskutil_write2file (const char * file, const char * str)
 {
     int ret = OK;
     char tmpfile [] = "/tmp/euca-temp-XXXXXX";
-    int fd = mkstemp (tmpfile);
+    int fd = safe_mkstemp (tmpfile);
     if (fd<0) {
         logprintfl (EUCAERROR, "{%u} error: failed to create temporary directory\n");
         return ERROR;

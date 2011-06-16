@@ -286,31 +286,6 @@ public class Components {
       }
     }
     
-    public static Function<Service, ServiceConfiguration> serviceToServiceConfiguration( ) {
-      return new Function<Service, ServiceConfiguration>( ) {
-        
-        @Override
-        public ServiceConfiguration apply( Service input ) {
-          return input.getServiceConfiguration( );
-        }
-      };
-    }
-    
-    public static Function<ServiceId, ServiceConfiguration> serviceIdToServiceConfiguration( ) {
-      return new Function<ServiceId, ServiceConfiguration>( ) {
-        
-        @Override
-        public ServiceConfiguration apply( ServiceId serviceId ) {
-          try {
-            Component comp = Components.lookup( serviceId.getType( ) );
-            return comp.lookupServiceConfiguration( serviceId.getName( ) );
-          } catch ( NoSuchElementException ex ) {
-            LOG.error( ex, ex );
-            throw ex;
-          }
-        }
-      };
-    }
     
   }
   

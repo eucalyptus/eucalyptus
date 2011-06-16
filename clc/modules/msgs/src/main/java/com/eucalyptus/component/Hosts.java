@@ -86,14 +86,6 @@ public class Hosts {
   private static final Logger                       LOG     = Logger.getLogger( Hosts.class );
   private static final ConcurrentMap<Address, Host> hostMap = new ConcurrentHashMap<Address, Host>( );
 
-  public static <T> Collection<Host> collect( Predicate<Host> function ) {
-    return Collections2.filter( hostMap.values( ), function );
-  }
-
-  public static <T> Collection<? extends T> collect( Function<Host,? extends T> function ) {
-    return Collections2.transform( hostMap.values( ), function );
-  }
-  
   public static Host getHostByAddress( InetAddress addr ) {
     for ( Host h : hostMap.values( ) ) {
       if ( h.getHostAddresses( ).contains( addr ) ) {
