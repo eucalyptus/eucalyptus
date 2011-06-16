@@ -107,7 +107,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
 public class ServiceTransitions {
-  private static final int BOOTSTRAP_REMOTE_RETRY_INTERVAL = 1;                                           //TODO:GRZE:@Configurable
+  private static final int BOOTSTRAP_REMOTE_RETRY_INTERVAL_SECONDS = 1;                                           //TODO:GRZE:@Configurable
   private static final int BOOTSTRAP_REMOTE_RETRIES        = 5;                                           //TODO:GRZE:@Configurable
   static Logger            LOG                             = Logger.getLogger( ServiceTransitions.class );
   
@@ -146,9 +146,9 @@ public class ServiceTransitions {
       }
       try {
         return transition.call( );
-      } catch ( Exception ex ) {
+      } catch ( Throwable ex ) {
         LOG.error( ex, ex );
-        throw new RuntimeException( ex );
+        return Futures.predestinedFailedFuture( ex );
       }
     } else {
       return Futures.predestinedFuture( config );
@@ -169,7 +169,7 @@ public class ServiceTransitions {
         return transition.call( );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
-        throw new RuntimeException( ex );
+        return Futures.predestinedFailedFuture( ex );
       }
     } else {
       return Futures.predestinedFuture( config );
@@ -183,9 +183,9 @@ public class ServiceTransitions {
                                                                                                          Component.State.DISABLED );
       try {
         return transition.call( );
-      } catch ( Exception ex ) {
+      } catch ( Throwable ex ) {
         LOG.error( ex, ex );
-        throw new RuntimeException( ex );
+        return Futures.predestinedFailedFuture( ex );
       }
     } else if ( !State.DISABLED.isIn( config ) && !State.NOTREADY.isIn( config ) ) {
       Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config,
@@ -197,9 +197,9 @@ public class ServiceTransitions {
                                                                                                          Component.State.DISABLED );
       try {
         return transition.call( );
-      } catch ( Exception ex ) {
+      } catch ( Throwable ex ) {
         LOG.error( ex, ex );
-        throw new RuntimeException( ex );
+        return Futures.predestinedFailedFuture( ex );
       }
     } else {
       return Futures.predestinedFuture( config );
@@ -215,17 +215,17 @@ public class ServiceTransitions {
                                                                                                          Component.State.STOPPED );
       try {
         return transition.call( );
-      } catch ( Exception ex ) {
+      } catch ( Throwable ex ) {
         LOG.error( ex, ex );
-        throw new RuntimeException( ex );
+        return Futures.predestinedFailedFuture( ex );
       }
     } else if ( State.DISABLED.equals( currState ) || State.NOTREADY.equals( currState ) ) {
       Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, currState, Component.State.STOPPED );
       try {
         return transition.call( );
-      } catch ( Exception ex ) {
+      } catch ( Throwable ex ) {
         LOG.error( ex, ex );
-        throw new RuntimeException( ex );
+        return Futures.predestinedFailedFuture( ex );
       }
     } else {
       return Futures.predestinedFuture( config );
@@ -240,9 +240,9 @@ public class ServiceTransitions {
                                                                                                          Component.State.STOPPED );
       try {
         return transition.call( );
-      } catch ( Exception ex ) {
+      } catch ( Throwable ex ) {
         LOG.error( ex, ex );
-        throw new RuntimeException( ex );
+        return Futures.predestinedFailedFuture( ex );
       }
     } else {
       return Futures.predestinedFuture( config );
@@ -259,7 +259,7 @@ public class ServiceTransitions {
         return reply;
       } catch ( RetryableConnectionException ex ) {
         try {
-          TimeUnit.SECONDS.sleep( BOOTSTRAP_REMOTE_RETRY_INTERVAL );
+          TimeUnit.SECONDS.sleep( BOOTSTRAP_REMOTE_RETRY_INTERVAL_SECONDS );
         } catch ( InterruptedException ex1 ) {
           Thread.currentThread( ).interrupt( );
         }
@@ -269,7 +269,7 @@ public class ServiceTransitions {
         LOG.error( ex, ex );
         if ( ex.getCause( ) instanceof RetryableConnectionException ) {
           try {
-            TimeUnit.SECONDS.sleep( BOOTSTRAP_REMOTE_RETRY_INTERVAL );
+            TimeUnit.SECONDS.sleep( BOOTSTRAP_REMOTE_RETRY_INTERVAL_SECONDS );
           } catch ( InterruptedException ex1 ) {
             Thread.currentThread( ).interrupt( );
           }
@@ -278,7 +278,7 @@ public class ServiceTransitions {
         } else {
           throw ex;
         }
-      } catch ( Exception ex ) {
+      } catch ( Throwable ex ) {
         LOG.error( ex, ex );
         throw ex;
       }
@@ -513,13 +513,13 @@ public class ServiceTransitions {
             parent.lookupComponent( ).getBootstrapper( ).check( );
             parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
           } catch ( Throwable ex ) {
-            if ( State.ENABLED.equals( parent.lookupState( ) ) ) {
-              try {
-                DISABLE.fire( parent );
-              } catch ( Exception ex1 ) {
-                LOG.error( ex1, ex1 );
-              }
-            }
+//            if ( State.ENABLED.equals( parent.lookupState( ) ) ) {
+//              try {
+//                DISABLE.fire( parent );
+//              } catch ( Throwable ex1 ) {
+//                LOG.error( ex1, ex1 );
+//              }
+//            }
             LOG.error( ex, ex );
             throw ex;
           }
@@ -550,6 +550,10 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Throwable {
+        if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
+          parent.lookupComponent( ).getBootstrapper( ).check( );
+          parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
+        } 
         parent.lookupComponent( ).getBootstrapper( ).disable( );
         parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
       }
