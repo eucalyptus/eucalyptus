@@ -230,14 +230,18 @@ public class Threads {
     public List<Runnable> free( ) {
       List<Runnable> ret = Lists.newArrayList( );
       for ( final Runnable r : ( ret = this.pool.shutdownNow( ) ) ) {
-        LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Discarded pending task: " + r.getClass( ) + " [" + r.toString( ) + "]" );
+        LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Pending task: " + r.getClass( ) + " [" + r.toString( ) + "]" );
       }
       try {
-        while ( !this.pool.awaitTermination( 1, TimeUnit.SECONDS ) ) {
+        for( int i = 0; i < 10 && !this.pool.awaitTermination( 1, TimeUnit.SECONDS ); i++ ) {
           LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Waiting for pool to shutdown." );
+          for ( final Runnable r : ( ret = this.pool.shutdownNow( ) ) ) {
+            LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Waiting for task: " + r.getClass( ) + " [" + r.toString( ) + "]" );
+          }
+
           if ( this.pool instanceof ThreadPoolExecutor ) {
             final ThreadPoolExecutor tpe = ( ThreadPoolExecutor ) this.pool;
-            for ( final Runnable r : tpe.getQueue( ).toArray( EMPTY ) ) {
+            for ( final Runnable r : tpe.getQueue( ).toArray( new Runnable[] {} ) ) {
               LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - " + r.getClass( ) );
             }
           }
