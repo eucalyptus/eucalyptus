@@ -1,0 +1,72 @@
+
+<p>The reporting package tracks usage statistics and generates visual reports
+of those statistics. It tracks statistics for instance usage, EBS usage, and
+S3 usage.
+
+<p>The reporting mechanism records statistics as a series of <i>snapshots</i>
+in the database, where each snapshot contains the total usage for
+a given (user,account,cluster,avail_zone) tuple at a given moment in time.
+
+<p>The reporting mechanism gathers information by means of events which
+are sent from various components of Eucalyptus, to the reporting mechanism.
+Instance events are sent periodically (once every 20 seconds) whereas EBS
+and S3 events are sent every time something notable happens within storage
+(for example, when an s3 object is allocated).
+
+<p>The reporting mechanism is divided into 3 main sub-packages: instance,
+storage, and s3. The sub-packages are responsible for handling usage
+statistics for instances, EBS, and S3 respectively. Each sub-package has its
+own event listener for usage events, its own database tables, its own separate
+statistics which are tracked, its own logic for storing, retrieving, and
+aggregating statistics, and so on.
+
+<p>The sub-packages all have the following classes:
+<ul>
+ <li><i>UsageSnapshot</i> - a snapshot of resource usage at a moment of time,
+     keyed by a (user,account,cluster,avail_zone,timestamp) tuple, and mapped
+     to the DB using hibernate. A UsageSnapshot consists of a <i>SnapshotKey</i>
+     object and a <i>UsageData</i> object.</li>
+ <li><i>SnapshotKey</i> - A key for usage snapshots. Consists of (user,account,
+     cluster,avail_zone,timestamp).</li>
+ <li><i>UsageData</i> - Statistics of usage (like disk bandwidth used or S3
+     objects used) at a single moment in time.</li>
+ <li><i>UsageSummary</i> - Contains aggregated resource usage over an
+     extended period of time. Aggregates several UsageSnapshots.</li>
+ <li><i>UsageLog</i> - A singleton object which allows retrieval of statistics
+     for some time period. This is the main class for accessing reporting
+     statistics for each sub-package. Contains logic for database queries,
+     extrapolation, fractional periods, and so on. Contains a single primary
+     method called <i>scanLog</i> for gathering usage information.</li>
+ <li><i>ReportLine</i> - A bean which represents a single line in a visual
+     report. Like a UsageSummary, but with units adjusted for human-readable
+     units (hours instead of milliseconds) and human-readable strings for
+     criteria values</li>
+ <li><i>ReportLineGenerator</i> - A wrapper around UsageLog which converts
+     units, generates displayable Strings, and returns displayable
+     ReportLines</li>
+</ul>
+
+<p>These classes in the various sub-packages do not implement common interfaces
+because they are similar only in a very abstract sense, and do not store the
+same statistics, or have the same method signatures, or use exactly the same
+keys, and so on. They follow a common general design and so use similarly-named
+classes (but with Instance-, Storage-, or S3- naming prefixes). But the
+sub-packages have different method signatures and different statistics tracked,
+which generally prevents implementing common interfaces. For example, the S3
+package has keys that lack attributes for cluster or availability zone, since
+S3 is global and has no notion of clusters or zones. Also the sub-packages all
+store different aggregated statistics. Also the UsageData objects in the
+various sub-packages store completely different attributes and are mapped by
+Hibernate to separate tables. And there are other important differences which
+affect method signatures and prevent common interfaces. The only classes
+which implement common interfaces are <i>ReportLine</i> and
+<i>ReportLineGenerator</i>.
+
+<p>The reporting mechanism also has a <i>queue</i> package for transmitting
+events over the network if necessary, and a <i>units</i> package for unit
+conversions.
+
+<p>The reporting mechanism has a <i>ReportGenerator</i> class which acts as a
+facade for all the underlying logic and is the only class accessed by outside
+facilities. It has a single method (generateReport).
+
