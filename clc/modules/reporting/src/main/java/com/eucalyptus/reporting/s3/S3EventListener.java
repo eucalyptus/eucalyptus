@@ -125,6 +125,10 @@ public class S3EventListener
 		return new Long(a.longValue() + b);
 	}
 
+	/**
+	 * Overridable for the purpose of testing. Testing generates fake events
+	 * with fake times.
+	 */
 	protected long getCurrentTimeMillis()
 	{
 		return (this.testCurrentTimeMillis == null)
