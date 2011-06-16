@@ -73,8 +73,9 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.ServiceCheckRecord;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.DisableServiceResponseType;
@@ -85,8 +86,6 @@ import com.eucalyptus.empyrean.EnableServiceType;
 import com.eucalyptus.empyrean.ModifyServiceResponseType;
 import com.eucalyptus.empyrean.ModifyServiceType;
 import com.eucalyptus.empyrean.ServiceId;
-import com.eucalyptus.empyrean.ServiceInfoType;
-import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.empyrean.StartServiceResponseType;
 import com.eucalyptus.empyrean.StartServiceType;
@@ -97,7 +96,6 @@ import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.collect.Collections2;
 
 public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
@@ -205,7 +203,7 @@ public class EmpyreanService {
   
   public StartServiceResponseType startService( StartServiceType request ) throws Throwable {
     StartServiceResponseType reply = request.getReply( );
-    for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
+    for ( ServiceId serviceInfo : request.getServices( ) ) {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
         ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
@@ -235,7 +233,7 @@ public class EmpyreanService {
   
   public StopServiceResponseType stopService( StopServiceType request ) throws Throwable {
     StopServiceResponseType reply = request.getReply( );
-    for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
+    for ( ServiceId serviceInfo : request.getServices( ) ) {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
         ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
@@ -265,7 +263,7 @@ public class EmpyreanService {
   
   public EnableServiceResponseType enableService( EnableServiceType request ) throws Throwable {
     EnableServiceResponseType reply = request.getReply( );
-    for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
+    for ( ServiceId serviceInfo : request.getServices( ) ) {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
         ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
@@ -273,6 +271,9 @@ public class EmpyreanService {
           try {
             comp.enableTransition( service ).get( );
             reply.getServices( ).add( serviceInfo );
+          } catch ( ServiceRegistrationException ex ) {
+            LOG.error( ex, ex );
+            throw ex;
           } catch ( IllegalStateException ex ) {
             LOG.error( ex, ex );
             throw ex;
@@ -295,7 +296,7 @@ public class EmpyreanService {
   
   public DisableServiceResponseType disableService( DisableServiceType request ) throws Throwable {
     DisableServiceResponseType reply = request.getReply( );
-    for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
+    for ( ServiceId serviceInfo : request.getServices( ) ) {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
         ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
@@ -395,33 +396,7 @@ public class EmpyreanService {
     final boolean showEventStacks = Boolean.TRUE.equals( request.getShowEventStacks( ) );
     final boolean showEvents = Boolean.TRUE.equals( request.getShowEvents( ) ) || showEventStacks;
     
-    Function<ServiceConfiguration, ServiceStatusType> transformToStatus = new Function<ServiceConfiguration, ServiceStatusType>( ) {
-      
-      @Override
-      public ServiceStatusType apply( final ServiceConfiguration config ) {
-        return new ServiceStatusType( ) {
-          {
-            this.setServiceId( TypeMappers.transform( config, ServiceId.class ) );
-            this.setLocalEpoch( reply.getBaseEpoch( ) );
-            try {
-              this.setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
-            } catch ( Exception ex ) {
-              this.setLocalState( "n/a: " + ex.getMessage( ) );
-            }
-            if ( showEvents ) {
-              this.getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
-                                                                       TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
-              if ( !showEventStacks ) {
-                for ( ServiceStatusDetail a : this.getStatusDetails( ) ) {
-                  a.setStackTrace( "" );
-                }
-              }
-            }
-          }
-        };
-      }
-    };
-    
+    Function<ServiceConfiguration, ServiceStatusType> transformToStatus = ServiceConfigurations.asServiceStatus( showEvents, showEventStacks );
     List<Predicate<ServiceConfiguration>> filters = new ArrayList<Predicate<ServiceConfiguration>>( ) {
       {
         if ( request.getByPartition( ) != null ) {

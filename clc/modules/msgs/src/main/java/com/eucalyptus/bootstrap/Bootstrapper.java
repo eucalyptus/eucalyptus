@@ -276,7 +276,7 @@ public abstract class Bootstrapper {
   public boolean checkLocal( ) {
     for ( ComponentId c : this.getDependsLocal( ) ) {
       try {
-        if ( !Components.lookup( c ).hasLocalService( ) ) {
+        if ( !Components.lookup( c ).hasLocalService( ) || Components.lookup( c ).isRunningRemoteMode( ) ) {
           return false;
         }
       } catch ( NoSuchElementException ex ) {

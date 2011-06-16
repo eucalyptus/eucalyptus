@@ -104,7 +104,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   private Integer port;
   @Column( name = "config_component_service_path" )
   private String  servicePath;
-
+  
   public ComponentConfiguration( ) {
 
   }
@@ -183,7 +183,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
       return false;
     }
   }
-
+  
   @Override
   public Boolean isVmLocal( ) {
     try {
@@ -208,8 +208,14 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   
   @Override
   public String toString( ) {
-    return String.format( "ComponentConfiguration component=%s local=%s partition=%s name=%s hostName=%s port=%s servicePath=%s",
-                          this.getComponentId( ), this.isVmLocal( ), this.partition, this.name, this.hostName, this.port, this.servicePath );
+    return String.format( "ServiceConfiguration %s:%s:%s:%s:%s:%s:%s%s",
+                          this.getComponentId( ).name( ), this.partition, this.name, this.hostName, this.port, this.servicePath,
+                          ( this.isVmLocal( )
+                            ? "vm-local:"
+                            : "" ),
+                          ( this.isHostLocal( )
+                            ? "host-local:"
+                            : "" ) );
   }
   
   @Override

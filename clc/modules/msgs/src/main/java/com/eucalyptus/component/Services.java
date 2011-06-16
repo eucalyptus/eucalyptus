@@ -63,30 +63,11 @@
 
 package com.eucalyptus.component;
 
-import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 
 public class Services {
-  @TypeMapper( { ServiceConfiguration.class, ServiceId.class } )
-  public enum ServiceIdMapper implements Function<ServiceConfiguration, ServiceId> {
-    INSTANCE;
-    
-    @Override
-    public ServiceId apply( final ServiceConfiguration input ) {
-      return new ServiceId( ) {
-        {
-          this.setUuid( input.getFullName( ).toString( ) );
-          this.setPartition( input.getPartition( ) );
-          this.setFullName( input.getFullName( ).toString( ) );
-          this.setName( input.getName( ) );
-          this.setType( input.getComponentId( ).getName( ) );
-          this.setUri( input.getComponentId( ).makeExternalRemoteUri( input.getHostName( ), input.getPort( ) ).toString( ) );
-        }
-      };
-    }
-  }
   
   @TypeMapper( { ServiceCheckRecord.class, ServiceStatusDetail.class } )
   public enum ServiceCheckRecordMapper implements Function<ServiceCheckRecord, ServiceStatusDetail> {

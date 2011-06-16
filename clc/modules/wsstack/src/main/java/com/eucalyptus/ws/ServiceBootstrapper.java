@@ -63,7 +63,9 @@
  */
 package com.eucalyptus.ws;
 
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -135,22 +137,61 @@ public class ServiceBootstrapper extends Bootstrapper {
         final Component comp = config.lookupComponent( );
         try {
           final CheckedListenableFuture<ServiceConfiguration> future = comp.startTransition( config );
-          Runnable followRunner = new Runnable( ) {
-            @Override
-            public void run( ) {
-              try {
-                future.get( );
-                comp.enableTransition( config );
-              } catch ( Exception ex ) {
-                LOG.error( ex, ex );
-              }
-            }
-          };
+          Runnable followRunner = getTransitionRunnable( config, comp, future );
           Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, config.getFullName( ).toString( ) ).submit( followRunner );
+          return true;
         } catch ( Exception e ) {
           LOG.error( e, e );
+          return false;
         }
-        return false;
+      }
+
+      private Runnable getTransitionRunnable( final ServiceConfiguration config, final Component comp, final CheckedListenableFuture<ServiceConfiguration> future ) {
+        Runnable followRunner = new Runnable( ) {
+          @Override
+          public void run( ) {
+            try {
+              future.get( );
+              try {
+                comp.enableTransition( config ).get( );
+              } catch ( ServiceRegistrationException ex ) {
+                LOG.error( ex , ex );
+              } catch ( IllegalStateException ex ) {
+                LOG.error( ex , ex );
+              } catch ( InterruptedException ex ) {
+                LOG.error( ex , ex );
+              } catch ( ExecutionException ex ) {
+                LOG.error( ex , ex );
+              }
+            } catch ( Exception ex ) {
+//              Throwable lastEx = ex;
+//              for( int i = 0; i < 5; i ++ ) {
+//                try {
+//                  comp.startTransition( config ).get( );
+//                  lastEx = null;
+//                  break;
+//                } catch ( ExecutionException ex1 ) {
+//                  LOG.error( ex1 , ex1 );
+//                  lastEx = ex1.getCause( );
+//                  continue;
+//                } catch ( InterruptedException ex1 ) {
+//                  LOG.error( ex1 , ex1 );
+//                  Thread.currentThread( ).interrupt( );
+//                  continue;
+//                } catch ( Exception ex1 ) {
+//                  LOG.error( ex1 , ex1 );
+//                  lastEx = ex1;
+//                  continue;
+//                }
+//              }
+//              if( lastEx != null ) {
+//                throw new UndeclaredThrowableException( lastEx );
+//              }
+              LOG.error( ex, ex );
+            }
+          }
+        };
+        return followRunner;
       }
     } );
     return true;
@@ -165,7 +206,7 @@ public class ServiceBootstrapper extends Bootstrapper {
           for ( ServiceConfiguration config : Iterables.filter( builder.list( ), ShouldLoad.INSTANCE ) ) {
             try {
               predicate.apply( config );
-            } catch ( Exception ex ) {
+            } catch ( Throwable ex ) {
               LOG.error( ex , ex );
             }
           }

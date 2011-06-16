@@ -6,6 +6,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.*;
 import com.eucalyptus.component.id.Reporting;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.*;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.reporting.event.StorageEvent;
@@ -16,7 +17,7 @@ import com.eucalyptus.reporting.queue.mq.QueueBroker;
 import com.eucalyptus.reporting.s3.S3EventListener;
 import com.eucalyptus.reporting.storage.StorageEventListener;
 
-@Provides(Reporting.class)
+@Provides(Empyrean.class)//NOTE:GRZE: have the bootstrapper run earlier in bootstrap
 @RunDuring(Bootstrap.Stage.RemoteServicesInit)
 public class ReportingBootstrapper
 	extends Bootstrapper

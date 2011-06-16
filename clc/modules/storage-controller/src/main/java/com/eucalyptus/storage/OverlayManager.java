@@ -971,7 +971,7 @@ public class OverlayManager implements LogicalStorageManager {
 						} catch(ExecutionException ex) {
 							String error = "Unable to run command: " + ex.getMessage();
 							LOG.error(error);
-							return;
+							throw new EucalyptusCloudException(ex);
 						}
 						String returnValue = aoeStatus(pid);
 						if(returnValue.length() == 0) {
@@ -1014,6 +1014,13 @@ public class OverlayManager implements LogicalStorageManager {
 				if(lvmVolumeInfo instanceof ISCSIVolumeInfo) {
 					ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
 					String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + iscsiVolumeInfo.getVgName() + PATH_SEPARATOR + iscsiVolumeInfo.getLvName();
+                                        try {
+                                            enableLogicalVolume(absoluteLVName);
+                                        } catch(ExecutionException ex) {
+                                            String error = "Unable to run command: " + ex.getMessage();
+                                            LOG.error(error);
+					    throw new EucalyptusCloudException(ex);
+                                        }
 					((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
 				} else {
 					ISCSIVolumeInfo volumeInfo = new ISCSIVolumeInfo();

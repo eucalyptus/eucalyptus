@@ -33,7 +33,7 @@ public class ServiceStateCallback extends SubjectMessageCallback<Cluster, Descri
           Component.State serviceState = Component.State.valueOf( status.getLocalState( ) );
           CheckException ex = ServiceChecks.chainCheckExceptions( ServiceChecks.Functions.statusToCheckExceptions( this.getRequest( ).getCorrelationId( ) ).apply( status ) );
           if ( Component.State.NOTREADY.equals( serviceState ) ) {
-            throw new RuntimeException( ex );
+            throw new IllegalStateException( ex );
           } else {
             this.getSubject( ).getConfiguration( ).info( ex );
           }
