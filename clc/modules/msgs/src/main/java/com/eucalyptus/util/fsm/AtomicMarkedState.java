@@ -311,7 +311,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     private Long                             endTime          = 0l;
     private final TransitionAction<P>        transition;
     private final Throwable                  startStackTrace;
-    private final Throwable                  endStackTrace    = new RuntimeException( );
+    private Throwable                  endStackTrace;
     private final CheckedListenableFuture<P> transitionFuture = Futures.newGenericeFuture( );
     private TransitionRule<S, T>             rule;
     
@@ -323,7 +323,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
       this.transition = transition;
       this.name = AtomicMarkedState.this.getName( ) + "-" + this.rule.getName( ) + "-" + id;
       if ( Logs.EXTREME ) {
-        this.startStackTrace = Exceptions.filterStackTrace( new RuntimeException( ) );
+        this.startStackTrace = Exceptions.filterStackTrace( new RuntimeException( ), 20 );
       } else {
         this.startStackTrace = null;
       }
@@ -366,7 +366,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
           Logs.extreme( ).error( this.toString( ) );
         } else {
           this.endTime = System.nanoTime( );
-          this.endStackTrace.setStackTrace( Exceptions.filterStackTraceElements( new RuntimeException( ) ).toArray( new StackTraceElement[] {} ) );
+          this.endStackTrace = Exceptions.filterStackTrace( ex, 20 );
           Logs.extreme( ).trace( this );
         }
       } else if( Logs.DEBUG ) {
@@ -407,7 +407,12 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
         ? this.transition.toString( )
         : "null" ).append( " id=" ).append( this.id ).append( " startTime=" ).append( new Date( this.startTime ) );
       Logs.exhaust( ).info( sb.toString( ) );
-      Logs.exhaust( ).info( Exceptions.string( this.startStackTrace ) );
+      if( this.startStackTrace != null ) {
+        Logs.exhaust( ).info( Exceptions.string( this.startStackTrace ) );
+      }
+      if( this.endStackTrace != null ) {
+        Logs.exhaust( ).info( Exceptions.string( this.endStackTrace ) );
+      }
       return sb.toString( );
     }
   }
