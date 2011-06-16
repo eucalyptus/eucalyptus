@@ -137,9 +137,9 @@ public class ServiceBootstrapper extends Bootstrapper {
         final Component comp = config.lookupComponent( );
         try {
           final CheckedListenableFuture<ServiceConfiguration> future = comp.startTransition( config );
-          return true;
           Runnable followRunner = getTransitionRunnable( config, comp, future );
           Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, config.getFullName( ).toString( ) ).submit( followRunner );
+          return true;
         } catch ( Exception e ) {
           LOG.error( e, e );
           return false;
