@@ -211,9 +211,11 @@ public class Topology implements EventListener<Event> {
       
       @Override
       public boolean apply( final ServiceConfiguration config ) {
-        if ( config.getComponentId( ).isRootService( ) && !config.getComponentId( ).isPartitioned( ) ) {
+        if ( config.getComponentId( ).isUserService( ) ) {
           return true;
-        } else if ( config.getComponentId( ).isRootService( ) && !config.getComponentId( ).isPartitioned( )
+        } else if ( config.getComponentId( ).isRootService( ) && !config.getComponentId( ).isPartitioned( ) ) {
+          return true;
+        } else if ( config.getComponentId( ).isRootService( ) && config.getComponentId( ).isPartitioned( )
                     && partition.getName( ).equals( config.getPartition( ) ) ) {
           return true;
         } else {
