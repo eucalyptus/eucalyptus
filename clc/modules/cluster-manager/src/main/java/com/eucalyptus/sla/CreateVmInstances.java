@@ -94,8 +94,8 @@ public class CreateVmInstances {
     if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, "", action, requestUser, quantity ) ) {
       throw new EucalyptusCloudException( "Quota exceeded in allocating " + quantity + " vm instances for " + requestUser.getName( ) );
     }
-    String reservationId = VmInstances.getId( allocInfo.getReservationIndex( ), 0 ).replaceAll( "i-", "r-" );
-    int vmIndex = 1; /*<--- this corresponds to the first instance id CANT COLLIDE WITH RSVID             */
+    String reservationId = VmInstances.getId( allocInfo.getReservationIndex( ), -1 ).replaceAll( "i-", "r-" );
+    int vmIndex = 0; /*<--- this corresponds to the first instance id CANT COLLIDE WITH RSVID             */
     for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
       if ( Clusters.getInstance( ).hasNetworking( ) ) {
         for ( Integer networkIndex : token.getPrimaryNetwork( ).getIndexes( ) ) {
@@ -127,7 +127,7 @@ public class CreateVmInstances {
   }
   
   private VmInstance getVmInstance( UserFullName userFullName, Allocation allocInfo, String reservationId, ResourceToken token, Integer index, Integer networkIndex ) {
-    VmInstance vmInst = new VmInstance( userFullName,  VmInstances.getId( allocInfo.getReservationIndex( ), index ), token.getInstanceUuids( ).get( index - 1 ), reservationId, 
+    VmInstance vmInst = new VmInstance( userFullName,  VmInstances.getId( allocInfo.getReservationIndex( ), index ), token.getInstanceUuids( ).get( index ), reservationId, 
                                         index - 1, token.getCluster( ),
                                         allocInfo.getUserData( ),
                                         allocInfo.getKeyInfo( ),
