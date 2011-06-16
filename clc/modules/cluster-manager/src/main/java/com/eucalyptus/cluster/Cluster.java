@@ -341,6 +341,15 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     
   }
   
+  enum ErrorStateListeners implements Callback<Cluster> {
+    FLUSHPENDING;
+    @Override
+    public void fire( Cluster t ) {
+      LOG.debug( "Clearing error logs for: " + t );
+      t.clearExceptions( );
+    }
+  };
+  
   public Cluster( final ClusterConfiguration configuration ) {
     super( );
     this.configuration = configuration;
@@ -353,6 +362,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       {
         final TransitionAction<Cluster> noop = Transitions.noop( );
         
+        in( State.DISABLED ).run( ErrorStateListeners.FLUSHPENDING );
         this.from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( noop );
         
         this.from( State.STOPPED ).to( State.PENDING ).error( State.PENDING ).on( Transition.PRESTART ).run( noop );
@@ -942,7 +952,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     if ( !currentErrors.isEmpty( ) ) {
       CheckException ex = ServiceChecks.Severity.ERROR.transform( this.configuration, currentErrors );
       throw ex;
-    } else if( this.stateMachine.getState( ).ordinal( ) < State.DISABLED.ordinal( ) ) {
+    } else if ( this.stateMachine.getState( ).ordinal( ) < State.DISABLED.ordinal( ) ) {
       throw new IllegalStateException( "Cluster is currently NOTREADY:  please see logs for additional information" );
     }
   }
