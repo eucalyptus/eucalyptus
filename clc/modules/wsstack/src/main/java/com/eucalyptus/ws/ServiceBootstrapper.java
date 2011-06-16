@@ -152,41 +152,42 @@ public class ServiceBootstrapper extends Bootstrapper {
           public void run( ) {
             try {
               future.get( );
+              try {
+                comp.enableTransition( config ).get( );
+              } catch ( ServiceRegistrationException ex ) {
+                LOG.error( ex , ex );
+              } catch ( IllegalStateException ex ) {
+                LOG.error( ex , ex );
+              } catch ( InterruptedException ex ) {
+                LOG.error( ex , ex );
+              } catch ( ExecutionException ex ) {
+                LOG.error( ex , ex );
+              }
             } catch ( Exception ex ) {
-              Throwable lastEx = ex;
-              for( int i = 0; i < 5; i ++ ) {
-                try {
-                  comp.startTransition( config ).get( );
-                  lastEx = null;
-                  break;
-                } catch ( ExecutionException ex1 ) {
-                  LOG.error( ex1 , ex1 );
-                  lastEx = ex1.getCause( );
-                  continue;
-                } catch ( InterruptedException ex1 ) {
-                  LOG.error( ex1 , ex1 );
-                  Thread.currentThread( ).interrupt( );
-                  continue;
-                } catch ( Exception ex1 ) {
-                  LOG.error( ex1 , ex1 );
-                  lastEx = ex1;
-                  continue;
-                }
-              }
-              if( lastEx != null ) {
-                throw new UndeclaredThrowableException( lastEx );
-              }
-            }
-            try {
-              comp.enableTransition( config ).get( );
-            } catch ( ServiceRegistrationException ex ) {
-              LOG.error( ex , ex );
-            } catch ( IllegalStateException ex ) {
-              LOG.error( ex , ex );
-            } catch ( InterruptedException ex ) {
-              LOG.error( ex , ex );
-            } catch ( ExecutionException ex ) {
-              LOG.error( ex , ex );
+//              Throwable lastEx = ex;
+//              for( int i = 0; i < 5; i ++ ) {
+//                try {
+//                  comp.startTransition( config ).get( );
+//                  lastEx = null;
+//                  break;
+//                } catch ( ExecutionException ex1 ) {
+//                  LOG.error( ex1 , ex1 );
+//                  lastEx = ex1.getCause( );
+//                  continue;
+//                } catch ( InterruptedException ex1 ) {
+//                  LOG.error( ex1 , ex1 );
+//                  Thread.currentThread( ).interrupt( );
+//                  continue;
+//                } catch ( Exception ex1 ) {
+//                  LOG.error( ex1 , ex1 );
+//                  lastEx = ex1;
+//                  continue;
+//                }
+//              }
+//              if( lastEx != null ) {
+//                throw new UndeclaredThrowableException( lastEx );
+//              }
+              LOG.error( ex, ex );
             }
           }
         };
