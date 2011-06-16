@@ -44,8 +44,8 @@ public class BaseMessage {
   private String               effectiveUserId;
   private Boolean              _return  = true;
   private String               statusMessage;
-  private Integer              epoch;
-  private ArrayList<ServiceId> services = Lists.newArrayList( );
+  private Integer              _epoch;//NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
+  private ArrayList<ServiceId> _services = Lists.newArrayList( );//NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
   
   public BaseMessage( ) {
     super( );
@@ -250,29 +250,29 @@ public class BaseMessage {
   /**
    * @return the epoch
    */
-  public Integer getBaseEpoch( ) {
-    return this.epoch;
+  public Integer get_epoch( ) {
+    return this._epoch;
   }
   
   /**
    * @param epoch the epoch to set
    */
-  public void setBaseEpoch( Integer epoch ) {
-    this.epoch = epoch;
+  public void set_epoch( Integer epoch ) {
+    this._epoch = epoch;
   }
   
   /**
    * @return the services
    */
-  public ArrayList<ServiceId> getBaseServices( ) {
-    return this.services;
+  public ArrayList<ServiceId> get_services( ) {
+    return this._services;
   }
   
   /**
    * @param services the services to set
    */
-  public void setBaseServices( ArrayList<ServiceId> services ) {
-    this.services = services;
+  public void set_services( ArrayList<ServiceId> services ) {
+    this._services = services;
   }
   
   /**

@@ -83,8 +83,8 @@
     <value name="userId" field="userId" usage="optional" />
     <value name="statusMessage" field="statusMessage" usage="optional" />
     <value name="return" field="_return" usage="optional" />
-    <value name="epoch" field="epoch" usage="optional" />
-    <collection field="services" factory="org.jibx.runtime.Utility.arrayListFactory">
+    <value name="epoch" field="_epoch" usage="optional" />
+    <collection field="_services" factory="org.jibx.runtime.Utility.arrayListFactory">
       <structure name="services" map-as="com.eucalyptus.empyrean.ServiceId" />
     </collection>
   </mapping>
