@@ -174,7 +174,6 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   private final StateMachine<Cluster, State, Transition> stateMachine;
   private final ClusterConfiguration                     configuration;
   private final FullName                                 fullName;
-  private final ThreadFactory                            threadFactory;
   private final ConcurrentNavigableMap<String, NodeInfo> nodeMap;
   private final BlockingQueue<Throwable>                 errors                       = new LinkedBlockingDeque<Throwable>( );
   private final BlockingQueue<Throwable>                 pendingErrors                = new LinkedBlockingDeque<Throwable>( );
@@ -357,7 +356,6 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     this.state = new ClusterState( configuration.getName( ) );
     this.nodeState = new ClusterNodeState( configuration.getName( ) );
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>( );
-    this.threadFactory = Threads.lookup( com.eucalyptus.component.id.ClusterController.class, Cluster.class, this.getFullName( ).toString( ) );
     this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.PENDING ) {
       {
         final TransitionAction<Cluster> noop = Transitions.noop( );
@@ -398,14 +396,13 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     }.newAtomicMarkedState( );
   }
   
-  protected void clearExceptions( ) {
+  public void clearExceptions( ) {
     if ( !this.errors.isEmpty( ) ) {
       List<Throwable> currentErrors = Lists.newArrayList( );
       this.errors.drainTo( currentErrors );
       for ( Throwable t : currentErrors ) {
         Throwable filtered = Exceptions.filterStackTrace( t );
         LOG.error( "Clearing error: " + filtered.getMessage( ), filtered );
-        this.pendingErrors.add( t );
       }
     } else {
       LOG.trace( this.toString( ) + " has no pending errors to clear." );
@@ -701,7 +698,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   }
   
   public ThreadFactory getThreadFactory( ) {
-    return this.threadFactory;
+    return Threads.lookup( ClusterController.class, Cluster.class, this.getFullName( ).toString( ) );
   }
   
   @Override
