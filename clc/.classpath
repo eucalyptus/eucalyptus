@@ -190,5 +190,6 @@
 	<classpathentry kind="lib" path="lib/xml-security-1.4.2.jar"/>
 	<classpathentry kind="lib" path="lib/xom-1.1.jar"/>
 	<classpathentry kind="lib" path="lib/xpp3-1.1.3.4.O.jar"/>
+	<classpathentry kind="lib" path="lib/commons-compress-1.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
