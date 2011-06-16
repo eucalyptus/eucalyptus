@@ -69,8 +69,8 @@
     <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
   </mapping>
   <mapping class="com.eucalyptus.empyrean.ServiceId" abstract="true">
-    <value name="uuid" field="uuid" usage="optional" />
-    <value name="partition" field="partition" usage="optional" />
+<!--     <value name="uuid" field="uuid" usage="optional" /> -->
+<!--     <value name="partition" field="partition" usage="optional" /> -->
     <value name="type" field="type" usage="required" />
     <value name="name" field="name" usage="required" />
     <collection field="uris" factory="org.jibx.runtime.Utility.arrayListFactory">

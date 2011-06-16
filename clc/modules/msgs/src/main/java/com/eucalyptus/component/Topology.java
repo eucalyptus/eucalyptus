@@ -127,8 +127,25 @@ public class Topology implements EventListener<Event> {
   
   public static List<ServiceId> partitionRelativeView( final Partition partition, final InetAddress localAddr ) {
     final String localhostAddr = localAddr.getHostAddress( );
-    return Lists.transform( Topology.getInstance( ).lookupPartitionView( partition ),
-                            TypeMappers.lookup( ServiceConfiguration.class, ServiceId.class ) );
+    Function<ServiceConfiguration, ServiceId> toServiceId = new Function<ServiceConfiguration, ServiceId>( ) {
+      
+      @Override
+      public ServiceId apply( final ServiceConfiguration input ) {
+        return new ServiceId( ) {
+          {
+            setPartition( input.getPartition( ) );
+            setName( input.getName( ) );
+            setType( input.getComponentId( ).name( ) );
+            if ( input.isVmLocal( ) ) {
+              getUris( ).add( input.getComponentId( ).makeExternalRemoteUri( localhostAddr, input.getComponentId( ).getPort( ) ).toASCIIString( ) );
+            } else {
+              getUris( ).add( input.getUri( ).toASCIIString( ) );
+            }
+          }
+        };
+      }
+    };
+    return Lists.transform( Topology.getInstance( ).lookupPartitionView( partition ), toServiceId );
   }
   
   private <T> Future<T> submit( final Callable<T> callable ) {
@@ -472,7 +489,7 @@ public class Topology implements EventListener<Event> {
             Thread.currentThread( ).interrupt( );
           } catch ( Exception ex ) {
             Throwable e = ex;
-            if( ex instanceof ExecutionException ) {
+            if ( ex instanceof ExecutionException ) {
               LOG.debug( "Error while inspecting result of CHECK for: \n\t" + result.getKey( ) + ": \n\t" + ex.getCause( ).getMessage( ) );
               e = ex.getCause( );
             } else {
@@ -496,22 +513,22 @@ public class Topology implements EventListener<Event> {
                 ServiceKey key = ServiceKey.create( arg0 );
                 return Bootstrap.isCloudController( ) && Component.State.DISABLED.isIn( arg0 ) && !Topology.this.services.containsKey( key );
               } catch ( ServiceRegistrationException ex ) {
-                LOG.error( ex , ex );
+                LOG.error( ex, ex );
                 return false;
               }
             }
           } );
           failoverServicesList.removeAll( disabledServices );
-          for( ServiceConfiguration config : failoverServicesList ) {
+          for ( ServiceConfiguration config : failoverServicesList ) {
             try {
               Topology.getInstance( ).submitExternal( config, CloudTopologyCallables.ENABLE ).get( );
             } catch ( InterruptedException ex ) {
-              LOG.error( ex , ex );
+              LOG.error( ex, ex );
               Thread.currentThread( ).interrupt( );
             } catch ( ExecutionException ex ) {
-              LOG.error( ex , ex );
+              LOG.error( ex, ex );
             } catch ( Exception ex ) {
-              LOG.error( ex , ex );
+              LOG.error( ex, ex );
             }
           }
         }
