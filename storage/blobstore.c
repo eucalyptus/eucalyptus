@@ -86,6 +86,7 @@
 #include "diskutil.h"
 #include <regex.h>
 #include "misc.h" // ensure_...
+#include "eucalyptus.h" // euca user
 
 #define BLOBSTORE_METADATA_FILE ".blobstore"
 #define BLOBSTORE_METADATA_TIMEOUT_USEC 9999999LL
@@ -674,7 +675,7 @@ static char * helpers [LASTHELPER] = {
 static char * helpers_path [LASTHELPER];
 static int initialized = 0;
 
-static int blobstore_init (void)
+int blobstore_init (void)
 {
     int ret = 0;
 
@@ -695,7 +696,7 @@ static int blobstore_init (void)
     return ret;
 }
 
-static int blobstore_cleanup (void)
+int blobstore_cleanup (void)
 {
     diskutil_cleanup();
     return 0;
@@ -1151,7 +1152,7 @@ static int ensure_blockblob_metadata_path (const blobstore * bs, const char * bb
 {
     char base [PATH_MAX];
     snprintf (base, sizeof (base), "%s/%s", bs->path, bb_id);
-    return ensure_directories_exist (base, !(bs->format == BLOBSTORE_FORMAT_DIRECTORY), BLOBSTORE_DIRECTORY_PERM);
+    return ensure_directories_exist (base, !(bs->format == BLOBSTORE_FORMAT_DIRECTORY), NULL, NULL, BLOBSTORE_DIRECTORY_PERM);
 }
 
 static void free_bbs ( blockblob * bbs )
@@ -1853,6 +1854,13 @@ static int dm_create_devices (char * dev_names[], char * dm_tables[], int size)
                 goto cleanup;
             }
 
+        }
+
+        char dm_path [MAX_DM_PATH];
+        snprintf (dm_path, sizeof (dm_path), DM_PATH "%s", dev_names[i]);
+        if (diskutil_ch (dm_path, EUCALYPTUS_ADMIN, NULL, BLOBSTORE_FILE_PERM) != OK) {
+            ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to change permissions on the device mapper file\n");
+            goto cleanup;
         }
     }
 

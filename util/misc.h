@@ -151,8 +151,13 @@ int logfile(char *file, int in_loglevel);
 int check_process(pid_t pid, char *search);
 int check_directory(char *dir);
 int check_file (const char *file);
+int check_block (const char *file);
 int check_path (const char *path);
 int check_file_newer_than(char *file, time_t mtime);
+
+// safe version of common fuctions
+char *safe_mkdtemp(char *);
+int safe_mkstemp(char *);
 
 // argument checker
 int param_check(char *func, ...);
@@ -214,7 +219,7 @@ int str2md5str (char * buf, unsigned int buf_size, const char * str);
 uint32_t jenkins (const char * key, size_t len);
 int hexjenkins (char * buf, unsigned int buf_size, const char * str);
 char * file2md5str (const char *path);
-int ensure_directories_exist (const char * path, int is_file_path, mode_t mode);
+int ensure_directories_exist (const char * path, int is_file_path, const char *user, const char *group, mode_t mode);
 long long time_usec (void);
 
 #endif

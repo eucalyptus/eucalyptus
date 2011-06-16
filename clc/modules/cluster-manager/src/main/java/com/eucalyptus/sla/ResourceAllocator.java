@@ -1,12 +1,9 @@
 package com.eucalyptus.sla;
 
-import java.util.List;
-import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 
 public interface ResourceAllocator {
-  public void allocate( VmAllocationInfo vmInfo ) throws Exception;
-  public void fail( VmAllocationInfo vmInfo, Throwable t );
+  public void allocate( Allocation allocInfo ) throws Exception;
+  public void fail( Allocation allocInfo, Throwable t );
   
 }

@@ -68,40 +68,24 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class CreateVmInstances {
   private static Logger LOG = Logger.getLogger( CreateVmInstances.class );
   
-  public VmAllocationInfo allocate( final VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    long quantity = getVmAllocationNumber( vmAllocInfo );
-    RunInstancesType request = vmAllocInfo.getRequest( );
-    Context ctx;
-    try {
-      ctx = Contexts.lookup( vmAllocInfo.getCorrelationId( ) );
-    } catch ( NoSuchContextException ex ) {
-      LOG.debug( ex );
-      try {
-        ctx = Contexts.lookup( vmAllocInfo.getRequest( ).getCorrelationId( ) );
-      } catch ( NoSuchContextException ex1 ) {
-        LOG.debug( ex );
-        throw new EucalyptusCloudException( "CreateVmInstances failed because the user could not be looked up: " + ex.getMessage( ), ex );
-      }
-    }
+  public Allocation allocate( final Allocation allocInfo ) throws EucalyptusCloudException {
+    long quantity = getVmAllocationNumber( allocInfo );
+    Context ctx = allocInfo.getContext( );
     User requestUser = ctx.getUser( );
     UserFullName userFullName = ctx.getUserFullName( );
-    vmAllocInfo.setOwnerFullName( userFullName );
-    String action = PolicySpec.requestToAction( request );
-    String vmType = vmAllocInfo.getVmTypeInfo( ).getName( );
+    String action = PolicySpec.requestToAction( allocInfo.getRequest( ) );
+    String vmType = allocInfo.getVmTypeInfo( ).getName( );
     // Allocate VmType instances
     if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VMTYPE, vmType, action, requestUser, 1L ) ) {
       throw new EucalyptusCloudException( "Quota exceeded in allocating vm type " + vmType + " for " + requestUser.getName( ) );
@@ -110,30 +94,29 @@ public class CreateVmInstances {
     if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, "", action, requestUser, quantity ) ) {
       throw new EucalyptusCloudException( "Quota exceeded in allocating " + quantity + " vm instances for " + requestUser.getName( ) );
     }
-    String reservationId = VmInstances.getId( vmAllocInfo.getReservationIndex( ), 0 ).replaceAll( "i-", "r-" );
+    String reservationId = VmInstances.getId( allocInfo.getReservationIndex( ), 0 ).replaceAll( "i-", "r-" );
     int vmIndex = 1; /*<--- this corresponds to the first instance id CANT COLLIDE WITH RSVID             */
-    for ( ResourceToken token : vmAllocInfo.getAllocationTokens( ) ) {
+    for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
       if ( Clusters.getInstance( ).hasNetworking( ) ) {
         for ( Integer networkIndex : token.getPrimaryNetwork( ).getIndexes( ) ) {
-          VmInstance vmInst = getVmInstance( userFullName, vmAllocInfo, reservationId, token, vmIndex++, networkIndex );
+          VmInstance vmInst = getVmInstance( userFullName, allocInfo, reservationId, token, vmIndex++, networkIndex );
           VmInstances.getInstance( ).register( vmInst );
           token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
         }
       } else {
         for ( int i = 0; i < token.getAmount( ); i++ ) {
-          VmInstance vmInst = getVmInstance( userFullName, vmAllocInfo, reservationId, token, vmIndex++, -1 );
+          VmInstance vmInst = getVmInstance( userFullName, allocInfo, reservationId, token, vmIndex++, -1 );
           VmInstances.getInstance( ).register( vmInst );
           token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
         }
       }
     }
-    vmAllocInfo.setReservationId( reservationId );
-    return vmAllocInfo;
+    return allocInfo;
   }
   
-  private int getVmAllocationNumber( VmAllocationInfo vmAllocInfo ) {
+  private int getVmAllocationNumber( Allocation allocInfo ) {
     int vmNum = 0;
-    for ( ResourceToken token : vmAllocInfo.getAllocationTokens( ) ) {
+    for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
       if ( Clusters.getInstance( ).hasNetworking( ) ) {
         vmNum += token.getPrimaryNetwork( ).getIndexes( ).size( );
       } else {
@@ -143,14 +126,14 @@ public class CreateVmInstances {
     return vmNum;
   }
   
-  private VmInstance getVmInstance( UserFullName userFullName, VmAllocationInfo vmAllocInfo, String reservationId, ResourceToken token, Integer index, Integer networkIndex ) {
-    VmInstance vmInst = new VmInstance( userFullName,  VmInstances.getId( vmAllocInfo.getReservationIndex( ), index ), reservationId, 
+  private VmInstance getVmInstance( UserFullName userFullName, Allocation allocInfo, String reservationId, ResourceToken token, Integer index, Integer networkIndex ) {
+    VmInstance vmInst = new VmInstance( userFullName,  VmInstances.getId( allocInfo.getReservationIndex( ), index ), token.getInstanceUuids( ).get( index - 1 ), reservationId, 
                                         index - 1, token.getCluster( ),
-                                        vmAllocInfo.getUserData( ),
-                                        vmAllocInfo.getKeyInfo( ),
-                                        vmAllocInfo.getVmTypeInfo( ),
-                                        vmAllocInfo.getPlatform( ),
-                                        vmAllocInfo.getNetworks( ),
+                                        allocInfo.getUserData( ),
+                                        allocInfo.getKeyInfo( ),
+                                        allocInfo.getVmTypeInfo( ),
+                                        allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ),
+                                        allocInfo.getNetworks( ),
                                         networkIndex.toString( ) );
     return vmInst;
   }

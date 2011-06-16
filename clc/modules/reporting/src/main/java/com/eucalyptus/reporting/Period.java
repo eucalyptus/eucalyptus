@@ -58,5 +58,9 @@ public final class Period
 		return true;
 	}
 
+	public String toString()
+	{
+		return String.format("[%d-%d]", beginningMs, endingMs);
+	}
 
 }

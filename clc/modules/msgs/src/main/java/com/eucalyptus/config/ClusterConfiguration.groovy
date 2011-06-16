@@ -65,7 +65,6 @@ package com.eucalyptus.config
 
 import java.io.Serializable
 import javax.persistence.Column
-import javax.persistence.Lob
 import javax.persistence.PersistenceContext
 import javax.persistence.Table
 import javax.persistence.Transient
@@ -73,7 +72,6 @@ import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.hibernate.annotations.Entity
 import com.eucalyptus.component.ComponentId
-import com.eucalyptus.component.ComponentIds
 import com.eucalyptus.component.ComponentPart
 import com.eucalyptus.component.id.ClusterController
 
@@ -114,4 +112,9 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   public Boolean isVmLocal() {
     return false;
   }
+  @Override
+  public Boolean isHostLocal( ) {
+    return true;
+  }
+  
 }

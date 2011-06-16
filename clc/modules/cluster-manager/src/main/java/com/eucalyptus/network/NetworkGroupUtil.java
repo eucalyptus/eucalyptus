@@ -14,7 +14,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Logs;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
@@ -86,7 +85,7 @@ public class NetworkGroupUtil {
     return group;
   }
   
-  protected static void makeDefault( AccountFullName accountFullName ) {
+  public static void makeDefault( AccountFullName accountFullName ) {
     try {
       getUserNetworkRulesGroup( accountFullName, NetworkRulesGroup.NETWORK_DEFAULT_NAME );
     } catch ( Exception e ) {

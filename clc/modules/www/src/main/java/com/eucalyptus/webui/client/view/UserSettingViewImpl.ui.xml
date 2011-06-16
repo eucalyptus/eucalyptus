@@ -52,7 +52,13 @@
                                 <g:Anchor styleName="{style.links}" ui:field="profileLink">View/change profile</g:Anchor>
                             </div>
                             <div style="margin-bottom:8px;">
-                                <g:Anchor styleName="{style.links}" ui:field="credLink">Download credential</g:Anchor>
+                                <g:Anchor styleName="{style.links}" ui:field="keyLink">View access key</g:Anchor>
+                            </div>
+                            <div style="margin-bottom:8px;">
+                                <g:Anchor styleName="{style.links}" ui:field="passwordLink">Change password</g:Anchor>
+                            </div>
+                            <div style="margin-bottom:8px;">
+                                <g:Anchor styleName="{style.links}" ui:field="credLink">Download new credentials</g:Anchor>
                             </div>
                             <div style="border-top:1px solid #888888">
                                 <g:Anchor styleName="{style.links}" ui:field="logoutLink">Sign out</g:Anchor>

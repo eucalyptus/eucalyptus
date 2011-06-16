@@ -82,6 +82,11 @@ public interface User extends /*HasId, */BasePrincipal, Serializable {
   public static final String ACCOUNT_ADMIN = "admin";
   public static final String ACCOUNT_NOBODY = "nobody";
   
+  public static final String EMAIL = "Email";
+  
+  public static final Long PASSWORD_LIFETIME = 1000 * 60 * 60 * 24 * 60L; // 2 months
+  public static final Long RECOVERY_EXPIRATION = 1000 * 60 * 30L; // 30 minutes
+  
   public static enum RegistrationStatus {
     REGISTERED,
     APPROVED,

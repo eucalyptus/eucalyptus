@@ -15,7 +15,6 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import com.eucalyptus.bootstrap.BootstrapException;
-import com.eucalyptus.component.id.Any;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.AnonymousMessage;
 import com.eucalyptus.empyrean.Empyrean;
@@ -90,10 +89,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
         in.close( );
         out.flush( );
         String outString = out.toString( );
-        if ( Logs.EXTREME ) {
-          LOG.trace( "Loaded model for: " + this );
-          LOG.trace( outString );
-        }
+        Logs.extreme( ).trace( "Loaded model for: " + this.name );
+        Logs.extreme( ).trace( outString );
         return outString;
       }
     } catch ( IOException ex ) {
@@ -153,10 +150,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return this.serviceDependencies( ).contains( Eucalyptus.class );
   }
   
-  public abstract Boolean hasDispatcher( );
-  
   public final Boolean isAlwaysLocal( ) {
-    return this.serviceDependencies( ).contains( Any.class );
+    return this.serviceDependencies( ).contains( Empyrean.class );
   }
   
   public Boolean hasCredentials( ) {
@@ -261,7 +256,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     try {
       uri = String.format( this.getUriPattern( ), hostName, port );
     } catch ( MissingFormatArgumentException e ) {
-      uri = String.format( this.getUriPattern( ), hostName, port, this.getCapitalizedName( ) );
+      uri = String.format( this.getUriPattern( ) + "Internal", hostName, port, this.getCapitalizedName( ) );
     }
     try {
       URI u = new URI( uri );
@@ -332,12 +327,13 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return this.externalUriPattern;
   }
   
-  @Override
-  public String toString( ) {
-    return String.format( "ComponentId:%s:partitioned=%s:msg=%s:disp=%s:alwaysLocal=%s:cloudLocal=%s:creds=%s",
-                          this.name( ), this.lookupBaseMessageType( ).getSimpleName( ), this.hasDispatcher( ), this.isAlwaysLocal( ), this.isCloudLocal( ),
-                          this.isPartitioned( ), this.hasCredentials( ) );
-  }
+  
+//  @Override
+//  public String toString( ) {
+//    return String.format( "ComponentId:%s:parent=%s:%spartitioned:disp=%s:alwaysLocal=%s:cloudLocal=%s:creds=%s",
+//                          this.name( ), this.serviceDependencies( ), this.isPartitioned( ) ? "" : "un", this.lookupBaseMessageType( ).getSimpleName( ), this.hasDispatcher( ), this.isAlwaysLocal( ), this.isCloudLocal( ),
+//                          this.isPartitioned( ), this.hasCredentials( ) );
+//  }
   
   public static abstract class Unpartioned extends ComponentId {
     
@@ -362,5 +358,43 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   
   public boolean runLimitedServices( ) {
     return false;
+  }
+
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( this.getFullName( ) ).append( " " );
+    builder.append( this.name( ) ).append( ":" );
+    if( this.isPartitioned( ) ) {
+      builder.append( "partitioned" );
+    } else {
+      builder.append( "unpartitioned" );
+    }
+    builder.append( ":deps:" ).append( this.serviceDependencies( ) ).append( ":" );
+    if( this.isCloudLocal( ) ) {
+      builder.append( "cloudLocal:" );
+    } else if( this.isAlwaysLocal( ) ) {
+      builder.append( "alwaysLocal:" );
+    }
+    if( this.runLimitedServices( ) ) {
+      builder.append( "runs-limited-services" );
+    }
+    return builder.toString( );
+  }
+
+  public final boolean isInternal( ) {
+    return !this.isAdminService( ) && !this.isUserService( );
+  }
+
+  public boolean isUserService( ) {
+    return false;
+  }
+
+  public boolean isAdminService( ) {
+    return false;
+  }
+
+  public boolean isRegisterable( ) {
+    return !( ServiceBuilders.lookup( this ) instanceof DummyServiceBuilder);
   }
 }

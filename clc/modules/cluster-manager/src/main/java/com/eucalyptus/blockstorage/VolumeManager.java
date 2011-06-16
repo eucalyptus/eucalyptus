@@ -68,6 +68,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -78,13 +79,11 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.VolumeAttachCallback;
 import com.eucalyptus.cluster.callback.VolumeDetachCallback;
-import com.eucalyptus.component.NoSuchComponentException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
@@ -103,7 +102,6 @@ import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.CreateVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateVolumeType;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeResponseType;
@@ -117,90 +115,57 @@ import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
 
 public class VolumeManager {
-  private static String ID_PREFIX = "vol";
-  private static Logger LOG       = Logger.getLogger( VolumeManager.class );
+  private static final int VOL_CREATE_RETRIES = 10;
+  private static Logger    LOG                = Logger.getLogger( VolumeManager.class );
   
   public CreateVolumeResponseType CreateVolume( final CreateVolumeType request ) throws EucalyptusCloudException {
     Context ctx = Contexts.lookup( );
     String action = PolicySpec.requestToAction( request );
-    if ( !ctx.hasAdministrativePrivileges( ) ) {
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VOLUME, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
-        throw new EucalyptusCloudException( "Not authorized to create volume by " + ctx.getUser( ).getName( ) );
-      }
-      long volSize = 0;
-      try {
-        volSize = Long.valueOf( request.getSize( ) );
-      } catch ( NumberFormatException e ) {
-        LOG.error( "Invalid volume size " + request.getSize( ), e );
-        throw new EucalyptusCloudException( e );
-      }
-      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VOLUME, "", action, ctx.getUser( ), volSize ) ) {
-        throw new EucalyptusCloudException( "Exceeded quota of volume creation by " + ctx.getUser( ).getName( ) );
-      }
+    if ( !ctx.hasAdministrativePrivileges( )
+         && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VOLUME, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+      throw new EucalyptusCloudException( "Not authorized to create volume by " + ctx.getUser( ).getName( ) );
     }
+    
+    Long volSize = request.getSize( ) != null ? Long.parseLong( request.getSize( ) ) : null;
+    final String snapId = request.getSnapshotId( );
+    String partition = request.getAvailabilityZone( );
+    
+    if ( !ctx.hasAdministrativePrivileges( )
+         && !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VOLUME, "", action, ctx.getUser( ), volSize ) ) {
+      throw new EucalyptusCloudException( "Exceeded quota of volume creation by " + ctx.getUser( ).getName( ) );
+    }
+    
     if ( ( request.getSnapshotId( ) == null && request.getSize( ) == null ) ) {
       throw new EucalyptusCloudException( "One of size or snapshotId is required as a parameter." );
     }
-    ServiceConfiguration sc = Partitions.lookupService( Storage.class, request.getAvailabilityZone( ) );
-    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
-    if ( request.getSnapshotId( ) != null ) {
+    
+    if ( snapId != null ) {
       try {
-        db.recast( Snapshot.class ).getUnique( Snapshot.named( ctx.getUserFullName( ), request.getSnapshotId( ) ) );
-      } catch ( EucalyptusCloudException e ) {
-        LOG.debug( e, e );
-        db.rollback( );
-        throw new EucalyptusCloudException( "Snapshot does not exist: " + request.getSnapshotId( ) );
+        Snapshots.lookup( snapId );
+      } catch ( ExecutionException ex ) {
+        throw new EucalyptusCloudException( "Failed to create volume because the referenced snapshot id is invalid: " + snapId );
       }
     }
-    String newId = null;
-    Volume newVol = null;
-    while ( true ) {
-      newId = Crypto.generateId( ctx.getUserFullName( ).getAccountNumber( ), ID_PREFIX );
+    Integer newSize = new Integer( request.getSize( ) != null
+                                   ? request.getSize( )
+                                     : "-1" );
+    Exception lastEx = null;
+    for ( int i = 0; i < VOL_CREATE_RETRIES; i++ ) {
       try {
-        db.getUnique( Volume.named( null, newId ) );
-      } catch ( EucalyptusCloudException e ) {
-        try {
-          Integer newSize = new Integer( request.getSize( ) != null
-                                         ? request.getSize( )
-                                           : "-1" );
-          newVol = new Volume( ctx.getUserFullName( ), newId, newSize, sc.getName( ), sc.getPartition( ), request.getSnapshotId( ) );
-          db.add( newVol );
-          db.commit( );
-          break;
-        } catch ( Throwable e1 ) {
-          db.rollback( );
-          db = EntityWrapper.get( Volume.class );
-        }
+        final ServiceConfiguration sc = Partitions.lookupService( Storage.class, partition );
+        UserFullName owner = ctx.getUserFullName( );
+        Volume newVol = Volumes.createStorageVolume( sc, owner, snapId, newSize, request );
+        CreateVolumeResponseType reply = request.getReply( );
+        reply.setVolume( newVol.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) ) );
+        return reply;
+      } catch ( ExecutionException ex ) {
+        LOG.error( ex, ex );
+        lastEx = ex;
       }
     }
-    newVol.setState( State.GENERATING );
-    try {
-      CreateStorageVolumeType req = new CreateStorageVolumeType( newId, request.getSize( ), request.getSnapshotId( ), null );
-      req.regardingUserRequest( request );
-      ServiceDispatcher.lookup( sc ).send( req );
-      try {
-        ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, newVol.getSize( ), newVol.getOwnerUserId( ), newVol.getOwnerAccountId( ), newVol.getScName( ), newVol.getPartition( ) ) );
-      } catch ( EventFailedException ex ) {
-        LOG.error( ex , ex );
-      }
-    } catch ( EucalyptusCloudException e ) {
-      LOG.debug( e, e );
-      try {
-        db = EntityWrapper.get( Volume.class );
-        Volume d = db.getUnique( Volume.named( ( UserFullName ) newVol.getOwner( ), newVol.getDisplayName( ) ) );
-        db.delete( d );
-        db.commit( );
-      } catch ( Throwable e1 ) {
-        db.rollback( );
-        LOG.debug( e1, e1 );
-      }
-      throw new EucalyptusCloudException( "Error while communicating with Storage Controller: CreateStorageVolume:" + e.getMessage( ) );
-    }
-    CreateVolumeResponseType reply = ( CreateVolumeResponseType ) request.getReply( );
-    reply.setVolume( newVol.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) ) );
-    return reply;
+    throw new EucalyptusCloudException( "Failed to create volume after " + VOL_CREATE_RETRIES + " because of: " + lastEx, lastEx );
   }
-  
+
   public DeleteVolumeResponseType DeleteVolume( DeleteVolumeType request ) throws EucalyptusCloudException {
     DeleteVolumeResponseType reply = ( DeleteVolumeResponseType ) request.getReply( );
     Context ctx = Contexts.lookup( );
@@ -233,9 +198,10 @@ public class VolumeManager {
         vol.setState( State.ANNIHILATING );
         db.commit( );
         try {
-          ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, vol.getSize( ), vol.getOwnerUserId( ), vol.getOwnerAccountId( ), vol.getScName( ), vol.getPartition( ) ) );
+          ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, vol.getSize( ), vol.getOwnerUserId( ),
+                                                                       vol.getOwnerAccountId( ), vol.getScName( ), vol.getPartition( ) ) );
         } catch ( EventFailedException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         }
       } else {
         reallyFailed = true;
@@ -280,9 +246,10 @@ public class VolumeManager {
           describeVolumes.add( v );
         } else {
           try {
-            ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, v.getSize( ), v.getOwnerUserId( ), v.getOwnerAccountId( ), v.getScName( ), v.getPartition( ) ) );
+            ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, v.getSize( ), v.getOwnerUserId( ),
+                                                                         v.getOwnerAccountId( ), v.getScName( ), v.getPartition( ) ) );
           } catch ( EventFailedException ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
           }
           db.delete( v );
         }
@@ -364,7 +331,7 @@ public class VolumeManager {
       throw new EucalyptusCloudException( "Not authorized to attach volume " + request.getVolumeId( ) + " by " + ctx.getUser( ).getName( ) );
     }
     ServiceConfiguration sc = Partitions.lookupService( Storage.class, volume.getPartition( ) );
-    ServiceConfiguration scVm = Partitions.lookupService( Storage.class, cluster.getName( ) );
+    ServiceConfiguration scVm = Partitions.lookupService( Storage.class, cluster.getConfiguration( ).getPartition( ) );
     if ( !sc.equals( scVm ) ) {
       throw new EucalyptusCloudException( "Can only attach volumes in the same cluster: " + request.getVolumeId( ) );
     } else if ( "invalid".equals( volume.getRemoteDevice( ) ) ) {
@@ -373,7 +340,8 @@ public class VolumeManager {
     
     AttachStorageVolumeResponseType scAttachResponse;
     try {
-      scAttachResponse = ServiceDispatcher.lookup( sc ).send( new AttachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), volume.getDisplayName( ) ) );
+      scAttachResponse = ServiceDispatcher.lookup( sc ).send( new AttachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ),
+                                                                                           volume.getDisplayName( ) ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e.getMessage( ) );

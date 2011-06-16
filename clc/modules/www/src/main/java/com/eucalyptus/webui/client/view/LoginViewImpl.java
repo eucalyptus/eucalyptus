@@ -4,9 +4,11 @@ import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.DivElement;
 import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.InputElement;
+import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.uibinder.client.UiHandler;
 import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.FormPanel;
 import com.google.gwt.user.client.ui.Label;
@@ -22,22 +24,22 @@ public class LoginViewImpl extends Composite implements LoginView {
     String loginLabel( );
     String loginInput( );
     String checkLabel( );
-    String hint( );
     String eucaLabel( );
   }
   
   private static final String LOGINFORM_ID = "loginForm";
+  private static final String LOGINFORM_ACCOUNTNAME_ID = "accountName";
   private static final String LOGINFORM_USERNAME_ID = "userName";
   private static final String LOGINFORM_PASSWORD_ID = "password";
   private static final String LOGINFORM_STAYSIGNEDIN_ID = "checkStaySignedIn";
   private static final String LOGINFORM_SIGNINLABEL_ID = "signInLabel";
   private static final String LOGINFORM_EUCALABEL_ID = "eucaLabel";
+  private static final String LOGINFORM_ACCOUNTNAMELABEL_ID = "accountnameLabel";
   private static final String LOGINFORM_USERNAMELABEL_ID = "usernameLabel";
-  private static final String LOGINFORM_FORMATLABEL_ID = "formatLabel";
   private static final String LOGINFORM_PASSWORDLABEL_ID = "passwordLabel";
   private static final String LOGINFORM_STAYSIGNEDINLABEL_ID = "staySignedInLabel";
   
-  private Presenter listener;
+  private Presenter presenter;
   
   @UiField
   DivElement loginArea;
@@ -53,6 +55,21 @@ public class LoginViewImpl extends Composite implements LoginView {
     injectLoginForm( );
   }
 
+  @UiHandler( "accountSignup" )
+  void handleAccountSignupButtonClick( ClickEvent e ) {
+    this.presenter.onAccountSignup( );
+  }
+
+  @UiHandler( "userSignup" )
+  void handleUserSignupButtonClick( ClickEvent e ) {
+    this.presenter.onUserSignup( );
+  }
+
+  @UiHandler( "recover" )
+  void handleRecoverButtonClick( ClickEvent e ) {
+    this.presenter.onRecoverPassword( );
+  }
+
   private void injectLoginForm( ) {
     // Inject style first. After the form is wrapped, it is too late (IDs are gone)
     injectLoginFormStyle( );
@@ -66,10 +83,11 @@ public class LoginViewImpl extends Composite implements LoginView {
     Document.get( ).getElementById( LOGINFORM_ID ).addClassName( formStyle.loginBox( ) );
     Document.get( ).getElementById( LOGINFORM_USERNAMELABEL_ID ).addClassName( formStyle.loginLabel( ) );
     Document.get( ).getElementById( LOGINFORM_USERNAME_ID ).addClassName( formStyle.loginInput( ) );
+    Document.get( ).getElementById( LOGINFORM_ACCOUNTNAMELABEL_ID ).addClassName( formStyle.loginLabel( ) );
+    Document.get( ).getElementById( LOGINFORM_ACCOUNTNAME_ID ).addClassName( formStyle.loginInput( ) );
     Document.get( ).getElementById( LOGINFORM_PASSWORDLABEL_ID ).addClassName( formStyle.loginLabel( ) );
     Document.get( ).getElementById( LOGINFORM_PASSWORD_ID ).addClassName( formStyle.loginInput( ) );
     Document.get( ).getElementById( LOGINFORM_STAYSIGNEDINLABEL_ID ).addClassName( formStyle.checkLabel( ) );
-    Document.get( ).getElementById( LOGINFORM_FORMATLABEL_ID ).addClassName( formStyle.hint( ) );
     Document.get( ).getElementById( LOGINFORM_SIGNINLABEL_ID ).addClassName( formStyle.loginLabel( ) );
     Document.get( ).getElementById( LOGINFORM_EUCALABEL_ID ).addClassName( formStyle.eucaLabel( ) );
   }
@@ -81,15 +99,16 @@ public class LoginViewImpl extends Composite implements LoginView {
   }-*/;
   
   private void login( ) {
-    String username = ( ( InputElement ) Document.get( ).getElementById( LOGINFORM_USERNAME_ID ) ).getValue( );
+    String accountName = ( ( InputElement ) Document.get( ).getElementById( LOGINFORM_ACCOUNTNAME_ID ) ).getValue( );
+    String userName = ( ( InputElement ) Document.get( ).getElementById( LOGINFORM_USERNAME_ID ) ).getValue( );
     String password = ( ( InputElement ) Document.get( ).getElementById( LOGINFORM_PASSWORD_ID ) ).getValue( );
     boolean staySignedIn = ( ( InputElement ) Document.get( ).getElementById( LOGINFORM_STAYSIGNEDIN_ID ) ).isChecked( );
-    this.listener.login( username, password, staySignedIn );
+    this.presenter.login( accountName, userName, password, staySignedIn );
   }
   
   @Override
   public void setPresenter( Presenter listener ) {
-    this.listener = listener;
+    this.presenter = listener;
   }
 
   @Override
@@ -99,7 +118,7 @@ public class LoginViewImpl extends Composite implements LoginView {
 
   @Override
   public void setFocus( ) {
-    Document.get( ).getElementById( LOGINFORM_USERNAME_ID ).focus( );
+    Document.get( ).getElementById( LOGINFORM_ACCOUNTNAME_ID ).focus( );
   }
 
   @Override

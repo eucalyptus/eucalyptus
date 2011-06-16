@@ -105,10 +105,11 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
     final TransitionAction<ServiceConfiguration> noop = Transitions.noop( );
     return new StateMachineBuilder<ServiceConfiguration, State, Transition>( this.parent, State.PRIMORDIAL ) {
       {
-        in( State.ENABLED ).run( ServiceTransitions.StateCallbacks.SERVICE_CONTEXT_RESTART ).run( ServiceTransitions.StateCallbacks.PIPELINES_ADD ).run( ServiceTransitions.StateCallbacks.PROPERTIES_ADD );
+        in( State.ENABLED ).run( ServiceTransitions.StateCallbacks.PIPELINES_ADD ).run( ServiceTransitions.StateCallbacks.PROPERTIES_ADD ).run( ServiceTransitions.StateCallbacks.SERVICE_CONTEXT_RESTART );
         in( State.LOADED ).run( ServiceTransitions.StateCallbacks.ENDPOINT_START );
         in( State.STOPPED ).run( ServiceTransitions.StateCallbacks.ENDPOINT_STOP );
-        in( State.DISABLED ).run( ServiceTransitions.StateCallbacks.SERVICE_CONTEXT_RESTART ).run( ServiceTransitions.StateCallbacks.PIPELINES_REMOVE ).run( ServiceTransitions.StateCallbacks.PROPERTIES_REMOVE );
+//        in( State.INITIALIZED ).run( ServiceTransitions.StateCallbacks.ENDPOINT_STOP );
+        in( State.DISABLED ).run( ServiceTransitions.StateCallbacks.PIPELINES_REMOVE ).run( ServiceTransitions.StateCallbacks.PROPERTIES_REMOVE ).run( ServiceTransitions.StateCallbacks.SERVICE_CONTEXT_RESTART );
         from( State.PRIMORDIAL ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.INITIALIZING ).run( noop );
         from( State.PRIMORDIAL ).to( State.BROKEN ).error( State.BROKEN ).on( Transition.FAILED_TO_PREPARE ).run( noop );
         from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).on( Transition.LOADING ).run( ServiceTransitions.TransitionActions.LOAD );
@@ -116,10 +117,12 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
         from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.READY_CHECK ).run( ServiceTransitions.TransitionActions.CHECK );
         from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLING ).addListener( ServiceTransitions.StateCallbacks.FIRE_ENABLE_EVENT ).run( ServiceTransitions.TransitionActions.ENABLE );
         from( State.DISABLED ).to( State.STOPPED ).error( State.NOTREADY ).on( Transition.STOPPING ).addListener( ServiceTransitions.StateCallbacks.FIRE_STOP_EVENT ).run( ServiceTransitions.TransitionActions.STOP );
+        from( State.NOTREADY ).to( State.STOPPED ).error( State.NOTREADY ).on( Transition.STOPPING_NOTREADY ).addListener( ServiceTransitions.StateCallbacks.FIRE_STOP_EVENT ).run( ServiceTransitions.TransitionActions.STOP );
         from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLED_CHECK ).run( ServiceTransitions.TransitionActions.CHECK );
         from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLING ).addListener( ServiceTransitions.StateCallbacks.FIRE_DISABLE_EVENT ).run( ServiceTransitions.TransitionActions.DISABLE );
         from( State.ENABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLED_CHECK ).run( ServiceTransitions.TransitionActions.CHECK );
         from( State.STOPPED ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.DESTROYING ).run( ServiceTransitions.TransitionActions.DESTROY );
+        from( State.BROKEN ).to( State.PRIMORDIAL ).error( State.BROKEN ).on( Transition.RELOADING ).run( noop );
       }
     }.newAtomicMarkedState( );
   }

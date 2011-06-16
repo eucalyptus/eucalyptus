@@ -1,0 +1,74 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui">
+    
+    <ui:image field="minusGray" src="image/minus_alt_16x16_gray.png"/>
+    <ui:image field="minusRed" src="image/minus_alt_16x16_red.png"/>
+    <ui:image field="plusGray" src="image/plus_alt_16x16_gray.png"/>
+    <ui:image field="plusBlue" src="image/plus_alt_16x16_blue.png"/>
+    <ui:image field="penGray" src="image/pen_alt_fill_16x16_gray.png"/>
+    <ui:image field="penBlue" src="image/pen_alt_fill_16x16_blue.png"/>
+    <ui:image field="magGray" src="image/magnifying_glass_16x16_gray.png"/>
+    <ui:image field="magBlue" src="image/magnifying_glass_16x16_blue.png"/>
+        
+    <ui:style>
+    </ui:style>
+    
+    <ui:style field="type" type="com.eucalyptus.webui.client.view.IconButton.TypeStyle">
+        a.button {
+            display:inline-block;
+            cursor:pointer;
+            cursor:hand;
+        }
+        a.button span {
+            display:inline-block;
+            width:16px;
+            height:16px;
+        }
+        @sprite a.button span.add {
+            gwt-image:'plusGray';
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }
+        @sprite a.button:hover span.add, a.button:focus span.add {
+            gwt-image:'plusBlue';
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }
+        @sprite a.button span.remove {
+            gwt-image:'minusGray';
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }
+        @sprite a.button:hover span.remove, a.button:focus span.remove {
+            gwt-image:'minusRed';
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }
+        @sprite a.button span.modify {
+            gwt-image:'penGray';
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }
+        @sprite a.button:hover span.modify, a.button:focus span.modify {
+            gwt-image:'penBlue';
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }
+        @sprite a.button span.show {
+            gwt-image:'magGray';
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }
+        @sprite a.button:hover span.show, a.button:focus span.show {
+            gwt-image:'magBlue';
+            background-repeat:no-repeat;
+            background-position:center center;                      
+        }        
+    </ui:style>
+    
+    <g:HTMLPanel>
+        <g:Anchor styleName="{type.button}" ui:field="button"><span ui:field="icon"/></g:Anchor>
+    </g:HTMLPanel>
+    
+</ui:UiBinder> 

@@ -134,3 +134,11 @@ uninstall:
 	$(RM) -rf $(DESTDIR)$(etcdir)/eucalyptus/cloud.d
 	$(RM) -rf $(DESTDIR)$(datarootdir)/eucalyptus/*jar
 	$(RM) -rf $(DESTDIR)$(vardir)/eucalyptus/webapps
+
+# cleaning up after run-test currently requires a few iterations of:
+#   dmsetup table | cut -d':' -f 1 | sort | uniq | xargs -L 1 dmsetup remove ; losetup -a | cut -d':' -f 1 | xargs -L 1 losetup -d; losetup -a
+run-test:
+	tools/runJUnitTest.sh com.eucalyptus.cloud.ws.EucaImagerTest
+	tools/runJUnitTest.sh com.eucalyptus.cloud.ws.BrokerInterfaceTest
+	tools/runJUnitTest.sh com.eucalyptus.cloud.ws.vsphere.VSphereEndpointTest -Dvsphere.url=${VSPHERE_URL} -Dvsphere.login=${VSPHERE_LOGIN} -Dvsphere.password=${VSPHERE_PASSWORD}
+	tools/runJUnitTest.sh com.eucalyptus.cloud.ws.vsphere.VSphereEndpointAsyncTest -Dvsphere.url=${VSPHERE_URL} -Dvsphere.login=${VSPHERE_LOGIN} -Dvsphere.password=${VSPHERE_PASSWORD}

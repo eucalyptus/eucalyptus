@@ -150,7 +150,7 @@
         <Set name="retainDays">90</Set>
         <Set name="append">true</Set>
         <Set name="extended">true</Set>
-        <Set name="logCookies">true</Set>
+        <Set name="logCookies">false</Set>
         <Set name="LogTimeZone">GMT</Set>
       </New>
     </Set>

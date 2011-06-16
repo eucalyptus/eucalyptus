@@ -1,12 +1,10 @@
 package com.eucalyptus.webui.client.activity;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.Date;
+
 import com.eucalyptus.webui.client.ClientFactory;
 import com.eucalyptus.webui.client.place.ReportPlace;
 import com.eucalyptus.webui.client.view.ReportView;
-import com.eucalyptus.webui.client.view.StartView;
 import com.google.gwt.activity.shared.AbstractActivity;
 import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.user.client.Timer;
@@ -29,50 +27,82 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
     this.clientFactory.getShellView( ).getContentView( ).setContentTitle( TITLE );
     ReportView reportView = this.clientFactory.getReportView( );
     reportView.setPresenter( this );
+    
     reportView.init( new Date( ),
                      new Date( ),
-                     Arrays.asList( "criteria1", "criteria2" ),
-                     Arrays.asList( "group1", "group2", "group3" ),
-                     Arrays.asList( "type1", "type2" ) );
+                     new String[] {"User","Account","Cluster","Availability Zone"},
+                     new String[] {"None","Account","Cluster","Availability Zone"},
+                     new String[] {"Instance","Storage","S3"});
     container.setWidget( reportView );
   }
 
+  
+  private void downloadReport(String format) {
+	  if (this.sessionId == null) {
+	    return;
+	  }
+
+	  final String reportUrl =
+		    "/reportservlet"
+			+ "?session=" + sessionId
+			+ "&type=" + type
+			+ "&format=" + format
+			+ "&start="	+ fromDate.getTime()
+			+ "&end=" + toDate.getTime()
+			+ "&criterion=" + criteria
+			+ "&groupByCriterion=" + groupBy;
+
+	  clientFactory.getReportView( ).loadReport( reportUrl );
+  }
+  
   @Override
   public void downloadPdf( ) {
-    // TODO Auto-generated method stub
-    
+	  downloadReport("PDF");
   }
 
   @Override
   public void downloadCsv( ) {
-    // TODO Auto-generated method stub
-    
+	  downloadReport("CSV");
   }
 
   @Override
   public void downloadXls( ) {
-    // TODO Auto-generated method stub
-    
+	  downloadReport("XLS");
   }
 
   @Override
   public void downloadHtml( ) {
-    // TODO Auto-generated method stub
-    
+	  downloadReport("HTML");    
   }
 
+  private String sessionId = null;
+  private Date fromDate;
+  private Date toDate;
+  private String criteria;
+  private String groupBy;
+  private String type;
+  
   @Override
   public void generateReport( Date fromDate, Date toDate, String criteria, String groupBy, String type ) {
-    // TODO Fill in real report logic
-    Timer t = new Timer( ) {
+    String sessionId = clientFactory.getLocalSession().getSession().getId();
+    final String reportUrl =
+      "/reportservlet"
+      + "?session=" + sessionId
+      + "&type=" + type
+      + "&format=HTML" 
+      + "&start="	+ fromDate.getTime()
+      + "&end=" + toDate.getTime()
+      + "&criterion=" + criteria
+      + "&groupByCriterion=" + groupBy;
 
-      @Override
-      public void run( ) {
-        clientFactory.getReportView( ).loadReport( "http://www.google.com" );
-      }
-      
-    };
-    t.schedule( 2000 );
+    clientFactory.getReportView( ).loadReport( reportUrl );
+
+    this.sessionId = sessionId;
+    this.fromDate = fromDate;
+    this.toDate = toDate;
+    this.criteria = criteria;
+    this.groupBy = groupBy;
+    this.type = type;
   }
   
 }

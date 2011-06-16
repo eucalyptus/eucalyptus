@@ -324,10 +324,10 @@ char * url_decode (const char * encoded) {
 
 int http_get (const char * url, const char * outfile)
 {
-  return(http_get_timeout(url, outfile, TOTAL_RETRIES, FIRST_TIMEOUT));
+  return(http_get_timeout(url, outfile, TOTAL_RETRIES, FIRST_TIMEOUT, 0, 0));
 }
 
-int http_get_timeout (const char * url, const char * outfile, int total_retries, int first_timeout)
+int http_get_timeout (const char * url, const char * outfile, int total_retries, int first_timeout, int connect_timeout, int total_timeout)
 {
 	int code = ERROR;
 
@@ -368,6 +368,12 @@ int http_get_timeout (const char * url, const char * outfile, int total_retries,
 	curl_easy_setopt (curl, CURLOPT_WRITEDATA, &params);
 	curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, write_data);
 
+	if (connect_timeout > 0) {
+	  curl_easy_setopt (curl, CURLOPT_CONNECTTIMEOUT, connect_timeout);
+	}
+	if (total_timeout > 0) {
+	  curl_easy_setopt (curl, CURLOPT_TIMEOUT, total_timeout);
+	}
 	//	curl_easy_setopt (curl, CURLOPT_HTTPHEADER, headers); /* register headers */
 
         logprintfl (EUCADEBUG, "http_get(): writing %s output to %s\n", "GET", outfile);
