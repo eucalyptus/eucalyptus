@@ -99,6 +99,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
 import org.jgroups.util.ThreadFactory;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.google.common.collect.Lists;
@@ -245,6 +246,9 @@ public class Threads {
               LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - " + r.getClass( ) );
             }
           }
+        }
+        if( Bootstrap.isShuttingDown( ) ) {
+          System.exit( -1 );
         }
       } catch ( final InterruptedException e ) {
         Thread.currentThread( ).interrupt( );
