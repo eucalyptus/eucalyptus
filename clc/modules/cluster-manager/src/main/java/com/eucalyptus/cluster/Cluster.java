@@ -267,7 +267,6 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             BaseMessage res = AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback )
                                            .sendSync( parent.getLogServiceConfiguration( ) );
             LOG.error( res );
-            parent.clearExceptions( );
           } catch ( Throwable t ) {
             parent.filterExceptions( t );
           }
@@ -297,7 +296,6 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
             AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
-            parent.clearExceptions( );
           } catch ( final Throwable t ) {
             parent.filterExceptions( t );
           }

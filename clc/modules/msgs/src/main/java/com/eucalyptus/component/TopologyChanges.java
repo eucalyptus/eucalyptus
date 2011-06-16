@@ -164,6 +164,7 @@ public class TopologyChanges {
             nextState = State.DISABLED;
           }
           try {
+            LOG.debug( this.toString( ) + " attempting check for: " + config + " trying " + initialState + "->" + nextState );
             Future<ServiceConfiguration> result = config.lookupStateMachine( ).transition( initialState );
             State endState = result.get( ).lookupState( );
             LOG.debug( this.toString( ) + " completed for: " + result + " trying " + initialState + "->" + nextState + " ended in: " + endState );
@@ -263,10 +264,12 @@ public class TopologyChanges {
             nextState = State.DISABLED;
           }
           try {
+            LOG.debug( this.toString( ) + " attempting check for: " + config + " trying " + initialState + "->" + nextState );
             Future<ServiceConfiguration> result = config.lookupStateMachine( ).transition( nextState );
+            ServiceConfiguration endConfig = result.get( );
             State endState = result.get( ).lookupState( );
-            LOG.debug( this.toString( ) + " completed for: " + result + " trying " + initialState + "->" + nextState + " ended in: " + endState );
-            return result.get( );
+            LOG.debug( this.toString( ) + " completed for: " + endConfig + " trying " + initialState + "->" + nextState + " ended in: " + endState );
+            return endConfig;
           } catch ( InterruptedException ex ) {
             Thread.currentThread( ).interrupt( );
             return config;
