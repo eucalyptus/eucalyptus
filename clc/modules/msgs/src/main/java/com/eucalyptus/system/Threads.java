@@ -102,6 +102,7 @@ import org.jgroups.util.ThreadFactory;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 
 public class Threads {
@@ -156,6 +157,7 @@ public class Threads {
     private final String      name;
     private ExecutorService   pool;
     private Integer           numThreads  = -1;
+    private final StackTraceElement[] creationPoint;
     
     private ThreadPool( final String groupPrefix, final Integer threadCount ) {
       this( groupPrefix );
@@ -163,6 +165,7 @@ public class Threads {
     }
     
     private ThreadPool( final String groupPrefix ) {
+      this.creationPoint = Thread.currentThread( ).getStackTrace( );
       this.name = groupPrefix;
       this.group = new ThreadGroup( this.name );
       this.pool = Executors.newCachedThreadPool( );
@@ -236,19 +239,9 @@ public class Threads {
       try {
         for( int i = 0; i < 10 && !this.pool.awaitTermination( 1, TimeUnit.SECONDS ); i++ ) {
           LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Waiting for pool to shutdown." );
-          for ( final Runnable r : ( ret = this.pool.shutdownNow( ) ) ) {
-            LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Waiting for task: " + r.getClass( ) + " [" + r.toString( ) + "]" );
+          if( i > 2 ) {
+            LOG.warn( Joiner.on( "\n\t\t" ).join( this.creationPoint ) ); 
           }
-
-          if ( this.pool instanceof ThreadPoolExecutor ) {
-            final ThreadPoolExecutor tpe = ( ThreadPoolExecutor ) this.pool;
-            for ( final Runnable r : tpe.getQueue( ).toArray( new Runnable[] {} ) ) {
-              LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - " + r.getClass( ) );
-            }
-          }
-        }
-        if( Bootstrap.isShuttingDown( ) ) {
-          System.exit( -1 );
         }
       } catch ( final InterruptedException e ) {
         Thread.currentThread( ).interrupt( );
