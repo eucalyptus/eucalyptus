@@ -1311,6 +1311,9 @@ static long long purge_blockblobs_lru ( blobstore * bs, blockblob * bb_list, lon
         int i;
 
         blockblob ** bb_array = (blockblob **) calloc (list_length, sizeof (blockblob *));
+        if(!bb_array)
+            return purged;
+
         for (i=0, bb = bb_list; bb; bb = bb->next, i++) {
             bb_array [i] = bb;
         }

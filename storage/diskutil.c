@@ -792,6 +792,13 @@ static char * pruntf (boolean log_error, char *format, ...)
     }
 
     output = malloc(sizeof(char) * outsize);
+
+    while(output != NULL && (bytes = fread(output+(outsize-1025), 1, 1024, IF)) > 0) {
+        output[(outsize-1025)+bytes] = '\0';
+        outsize += 1024;
+        output = realloc(output, outsize);
+    }
+
     if (output == NULL) {
         logprintfl (EUCAERROR, "error: failed to allocate mem for output\n");
         va_end(ap);
@@ -799,11 +806,6 @@ static char * pruntf (boolean log_error, char *format, ...)
         return(NULL);
     }
 
-    while((bytes = fread(output+(outsize-1025), 1, 1024, IF)) > 0) {
-        output[(outsize-1025)+bytes] = '\0';
-        outsize += 1024;
-        output = realloc(output, outsize);
-    }
     rc = pclose(IF);
     if (rc) {
         if (log_error) {
@@ -814,6 +816,7 @@ static char * pruntf (boolean log_error, char *format, ...)
         output = NULL;
     }
     va_end(ap);
+
     return (output);
 }
 

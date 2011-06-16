@@ -360,7 +360,11 @@ int check_directory(char *dir) {
     if (S_ISLNK(mystat.st_mode)) { // links to dirs are OK
       char tmp [4096];
       snprintf (tmp, 4096, "%s/", dir);
+
       lstat (tmp, &mystat);
+      if (rc < 0)
+          return 1;
+
       if (S_ISDIR(mystat.st_mode)) {
         return 0;
       }
@@ -1987,7 +1991,12 @@ int ensure_directories_exist (const char * path, int is_file_path, const char * 
                     return -1;
                 }
                 ret = 1; // we created a directory
-                diskutil_ch(path_copy, user, group, mode);
+
+                if(diskutil_ch(path_copy, user, group, mode) != OK) {
+                    logprintfl (EUCAERROR, "error: failed to change perms on path %s\n", path_copy);
+                    free (path_copy);
+                    return -1;
+                }
                 //                chmod (path_copy, mode); // ensure perms are right despite mask
             }
             path_copy[i] = '/'; // restore the slash

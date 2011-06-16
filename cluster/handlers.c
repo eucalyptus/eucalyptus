@@ -3932,6 +3932,7 @@ int reconfigureNetworkFromCLC() {
   fd = safe_mkstemp(chainmapfile);
   if (fd < 0) {
     logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot open chainmapfile '%s'\n", chainmapfile);
+    if (cloudIp) free(cloudIp);
     unlink(clcnetfile);
     return(1);
   }
