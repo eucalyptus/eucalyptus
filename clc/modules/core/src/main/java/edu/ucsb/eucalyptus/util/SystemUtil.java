@@ -67,6 +67,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.util.EucalyptusCloudException;
 import java.util.concurrent.ExecutionException;
+import java.io.File;
 
 public class SystemUtil {
 	private static Logger LOG = Logger.getLogger(SystemUtil.class);
@@ -124,4 +125,20 @@ public class SystemUtil {
 // Shutting the system down is never an option for a component anymore.		
 //		System.exit(0xEC2);
 	}        
+
+	public static void setEucaReadWriteOnly(String filePath) throws EucalyptusCloudException {
+		File file = new File(filePath);
+	        try {
+                	file.setReadable(false, false);
+                        file.setWritable(false, false);
+                        file.setExecutable(false, false);
+                        file.setReadable(true, true);
+                        file.setWritable(true, true);
+                        file.setExecutable(true, true);
+                } catch(SecurityException ex) {
+			LOG.error(ex);
+			throw new EucalyptusCloudException(ex);
+                }
+
+	}
 }
