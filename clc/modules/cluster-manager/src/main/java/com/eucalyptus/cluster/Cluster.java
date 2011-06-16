@@ -268,6 +268,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             BaseMessage res = AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback )
                                            .sendSync( parent.getLogServiceConfiguration( ) );
             LOG.error( res );
+            parent.clearExceptions( );
           } catch ( Throwable t ) {
             parent.filterExceptions( t );
           }
@@ -351,6 +352,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.PENDING ) {
       {
         final TransitionAction<Cluster> noop = Transitions.noop( );
+        
         this.from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( noop );
         
         this.from( State.STOPPED ).to( State.PENDING ).error( State.PENDING ).on( Transition.PRESTART ).run( noop );
@@ -936,8 +938,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   
   public void check( ) throws CheckException, IllegalStateException {
     List<Throwable> currentErrors = Lists.newArrayList( );
-    this.clearExceptions( );
-    this.pendingErrors.drainTo( currentErrors );
+    currentErrors.addAll( this.pendingErrors );
     if ( !currentErrors.isEmpty( ) ) {
       CheckException ex = ServiceChecks.Severity.ERROR.transform( this.configuration, currentErrors );
       throw ex;

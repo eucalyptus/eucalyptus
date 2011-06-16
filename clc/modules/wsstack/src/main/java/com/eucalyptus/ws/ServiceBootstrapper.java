@@ -137,50 +137,60 @@ public class ServiceBootstrapper extends Bootstrapper {
         final Component comp = config.lookupComponent( );
         try {
           final CheckedListenableFuture<ServiceConfiguration> future = comp.startTransition( config );
-          Runnable followRunner = new Runnable( ) {
-            @Override
-            public void run( ) {
-              try {
-                future.get( );
-              } catch ( Exception ex ) {
-                Throwable lastEx = ex;
-                for( int i = 0; i < 5; i ++ ) {
-                  try {
-                    comp.startTransition( config ).get( );
-                    lastEx = null;
-                    break;
-                  } catch ( ExecutionException ex1 ) {
-                    LOG.error( ex1 , ex1 );
-                    lastEx = ex1.getCause( );
-                    continue;
-                  } catch ( InterruptedException ex1 ) {
-                    LOG.error( ex1 , ex1 );
-                    Thread.currentThread( ).interrupt( );
-                    continue;
-                  } catch ( Exception ex1 ) {
-                    LOG.error( ex1 , ex1 );
-                    lastEx = ex1;
-                    continue;
-                  }
-                }
-                if( lastEx != null ) {
-                  throw new UndeclaredThrowableException( lastEx );
-                }
-              }
-              try {
-                comp.enableTransition( config );
-              } catch ( ServiceRegistrationException ex ) {
-                LOG.error( ex , ex );
-              } catch ( IllegalStateException ex ) {
-                LOG.error( ex , ex );
-              }
-            }
-          };
+          return true;
+          Runnable followRunner = getTransitionRunnable( config, comp, future );
           Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, config.getFullName( ).toString( ) ).submit( followRunner );
         } catch ( Exception e ) {
           LOG.error( e, e );
+          return false;
         }
-        return false;
+      }
+
+      private Runnable getTransitionRunnable( final ServiceConfiguration config, final Component comp, final CheckedListenableFuture<ServiceConfiguration> future ) {
+        Runnable followRunner = new Runnable( ) {
+          @Override
+          public void run( ) {
+            try {
+              future.get( );
+            } catch ( Exception ex ) {
+              Throwable lastEx = ex;
+              for( int i = 0; i < 5; i ++ ) {
+                try {
+                  comp.startTransition( config ).get( );
+                  lastEx = null;
+                  break;
+                } catch ( ExecutionException ex1 ) {
+                  LOG.error( ex1 , ex1 );
+                  lastEx = ex1.getCause( );
+                  continue;
+                } catch ( InterruptedException ex1 ) {
+                  LOG.error( ex1 , ex1 );
+                  Thread.currentThread( ).interrupt( );
+                  continue;
+                } catch ( Exception ex1 ) {
+                  LOG.error( ex1 , ex1 );
+                  lastEx = ex1;
+                  continue;
+                }
+              }
+              if( lastEx != null ) {
+                throw new UndeclaredThrowableException( lastEx );
+              }
+            }
+            try {
+              comp.enableTransition( config ).get( );
+            } catch ( ServiceRegistrationException ex ) {
+              LOG.error( ex , ex );
+            } catch ( IllegalStateException ex ) {
+              LOG.error( ex , ex );
+            } catch ( InterruptedException ex ) {
+              LOG.error( ex , ex );
+            } catch ( ExecutionException ex ) {
+              LOG.error( ex , ex );
+            }
+          }
+        };
+        return followRunner;
       }
     } );
     return true;
@@ -195,7 +205,7 @@ public class ServiceBootstrapper extends Bootstrapper {
           for ( ServiceConfiguration config : Iterables.filter( builder.list( ), ShouldLoad.INSTANCE ) ) {
             try {
               predicate.apply( config );
-            } catch ( Exception ex ) {
+            } catch ( Throwable ex ) {
               LOG.error( ex , ex );
             }
           }
