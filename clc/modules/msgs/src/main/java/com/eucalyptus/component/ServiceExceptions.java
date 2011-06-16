@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,79 +61,97 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.bootstrap;
+package com.eucalyptus.component;
 
-import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.Host;
-import com.eucalyptus.component.Hosts;
-import com.eucalyptus.empyrean.DescribeServicesResponseType;
-import com.eucalyptus.empyrean.DescribeServicesType;
-import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.event.ClockTick;
-import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.Request;
-import com.eucalyptus.util.async.SubjectMessageCallback;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.ServiceChecks.CheckException;
+import com.eucalyptus.component.ServiceChecks.Severity;
+import com.eucalyptus.component.Topology.ServiceKey;
 import com.google.common.base.Predicate;
 
-public class HostStateMonitor implements EventListener<Event> {
-  private static Logger LOG = Logger.getLogger( HostStateMonitor.class );
-  class ServiceCallback extends SubjectMessageCallback<Host, DescribeServicesType, DescribeServicesResponseType> {
-    
-    public ServiceCallback( Host target ) {
-      this.setSubject( target );
-      this.setRequest( new DescribeServicesType( ) );
-    }
+public class ServiceExceptions {
+  
+  private static Logger LOG = Logger.getLogger( ServiceExceptions.class );
+  
+  enum NoopErrorFilter implements Predicate<Throwable> {
+    INSTANCE;
     
     @Override
-    public void fire( DescribeServicesResponseType msg ) {
-      LOG.info( LogUtil.dumpObject( msg ) );//TODO:GRZE:submit state/fd event here
-    }
-
-    @Override
-    public void fireException( Throwable t ) {
-      LOG.error( "Failed sending describe services to host: " + this.getSubject( ) + " with error: " + t.getMessage( ), t );//TODO:GRZE:submit state/fd event here
+    public boolean apply( final Throwable input ) {
+      LOG.error( input, input );
+      return true;
     }
     
   }
-  
-  @Override
-  public void fireEvent( Event event ) {
-    if ( event instanceof ClockTick ) {
-      Hosts.collect( new Predicate<Host>( ) {
-        @Override
-        public boolean apply( final Host target ) {
-          try {
-            if( target.getServiceConfiguration( ) != null ) { 
-              final Request req = AsyncRequests.newRequest( new ServiceCallback( target ) );
-              Threads.lookup( Empyrean.class, HostStateMonitor.class ).submit( new Runnable( ) {
-                
-                @Override
-                public void run( ) {
-                  try {
-                    req.sendSync( target.getServiceConfiguration( ) );
-                  } catch ( ExecutionException ex ) {
-                    LOG.error( ex , ex );
-                  } catch ( InterruptedException ex ) {
-                    LOG.error( ex , ex );
-                    Thread.currentThread( ).interrupt( );
-                  }
-                }
-              } );
-              return true;
-            } else {
-              return false;
+    
+  /**
+   * @param parent
+   * @param ex
+   * @param failureAction
+   * @return true if the error is fatal and the transition should be aborted
+   */
+  public static final boolean filterExceptions( final ServiceConfiguration parent, final Throwable ex, final Predicate<Throwable> failureAction ) {
+    LOG.error( "Transition failed on " + parent.lookupComponent( ).getName( ) + " due to " + ex.toString( ), ex );
+    boolean foundError = false;
+    if ( ex instanceof CheckException ) {//go through all the exceptions and look for things with Severity greater than or equal to ERROR
+      CheckException checkExHead = ( CheckException ) ex;
+      for ( CheckException checkEx : checkExHead ) {
+        switch ( checkEx.getSeverity( ) ) {
+          case ERROR:
+          case URGENT:
+          case FATAL:
+            if ( !foundError ) {
+              foundError = true;
+              try {
+                failureAction.apply( ex );
+              } catch ( Exception ex1 ) {
+                LOG.error( ex1, ex1 );
+              }
             }
-          } catch ( Exception ex ) {
-            LOG.error( ex , ex );
-            return false;
+            break;
+          case DEBUG:
+          case INFO:
+          case WARNING:
+            break;
+        }
+      }
+      parent.error( checkExHead );
+    } else {//treat generic exceptions as always being Severity.ERROR
+      foundError = true;
+      try {
+        failureAction.apply( ex );
+      } catch ( Exception ex1 ) {
+        LOG.error( ex1, ex1 );
+      }
+      parent.error( ex );
+    }
+    return foundError;
+  }
+  
+  public static final boolean filterExceptions( final ServiceConfiguration parent, final Throwable ex ) {
+    if( ex instanceof InterruptedException ) {
+      Thread.currentThread( ).interrupt( );
+    }
+    return filterExceptions( parent, ex, NoopErrorFilter.INSTANCE );
+  }
+  
+  public static final Predicate<Throwable> maybeDisableService( final ServiceConfiguration parent ) {
+    return new Predicate<Throwable>( ) {
+      
+      @Override
+      public boolean apply( final Throwable ex ) {
+        if ( State.ENABLED.isIn( parent ) && ( parent.isVmLocal( ) || ( Bootstrap.isCloudController( ) && parent.isHostLocal( ) ) ) ) {
+          try {
+            Topology.disable( parent );
+          } catch ( ServiceRegistrationException ex1 ) {
+            LOG.error( "Transition failed on " + parent.lookupComponent( ).getName( ) + " due to " + ex.toString( ), ex );
           }
         }
-      } );
-    }
+        return true;
+      }
+      
+    };
   }
 }

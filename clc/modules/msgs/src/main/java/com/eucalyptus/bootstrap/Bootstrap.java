@@ -77,6 +77,7 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
@@ -331,10 +332,10 @@ public class Bootstrap {
           Components.lookup( comp ).getBootstrapper( ).addBootstrapper( bootstrap );
         } catch ( InstantiationException ex ) {
           LOG.error( ex, ex );
-          System.exit( 1 );
+//          System.exit( 1 );
         } catch ( IllegalAccessException ex ) {
           LOG.error( ex, ex );
-          System.exit( 1 );
+//          System.exit( 1 );
         }
       } else {
         Exceptions.error( new ClassCastException( "Fatal error attempting to register bootstrapper " + bootstrap.getClass( ).getCanonicalName( ) + ":  @Provides specifies a class which does not conform to ComponentId." ) );  
@@ -415,7 +416,7 @@ public class Bootstrap {
   }
   
   public static Boolean isCloudController( ) {
-    return !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) );// && SubDirectory.DB.hasChild( "data", "ibdata1" );//TODO:GRZE:RELEASE fix hard coded reference to mysql specific data file
+    return SubDirectory.DB.hasChild( "data", "ibdata1" ) || !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) );
   }
   
   private static List<String> bindAddrs = parseBindAddrs( );  

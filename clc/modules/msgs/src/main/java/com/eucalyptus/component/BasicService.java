@@ -181,42 +181,6 @@ public class BasicService extends AbstractService implements Service {
   public final void fireEvent( Event event ) {
     if ( event instanceof LifecycleEvent ) {
       super.fireLifecycleEvent( event );
-    } else if ( event instanceof Hertz && Bootstrap.isFinished( ) && ( ( Hertz ) event ).isAsserted( 10l ) ) {
-      final ServiceConfiguration config = this.getServiceConfiguration( );
-      if ( config.lookupComponent( ).hasService( config ) ) {
-        if ( Component.State.STOPPED.ordinal( ) < config.lookupState( ).ordinal( ) ) {
-          try {
-            Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
-              @Override
-              public void run( ) {
-                if ( !Bootstrap.isFinished( ) ) {
-                  return;
-                } else {
-                  try {
-                    if ( Component.State.ENABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.DISABLED.isIn( config ) ) {
-                      config.lookupComponent( ).enableTransition( config ).get( );
-                    } else if ( Component.State.DISABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.ENABLED.isIn( config ) ) {
-                      config.lookupComponent( ).disableTransition( config ).get( );
-                    } else if ( BasicService.this.stateMachine.getState( ).ordinal( ) > State.NOTREADY.ordinal( ) ) {
-                      BasicService.this.stateMachine.transition( BasicService.this.stateMachine.getState( ) ).get( );
-                    } else if ( State.NOTREADY.isIn( BasicService.this.getServiceConfiguration( ) ) ) {
-                      config.lookupComponent( ).disableTransition( config ).get( );
-                    }
-                  } catch ( Throwable ex ) {
-                    LOG.debug( "CheckRunner caught an exception: " + ex );
-                    BasicService.this.getServiceConfiguration( ).info( ex );
-                  }
-                }
-              }
-            } ).get( );
-          } catch ( InterruptedException ex ) {
-            Thread.currentThread( ).interrupt( );
-          } catch ( ExecutionException ex ) {
-            config.error( ex.getCause( ) );
-            //          config.lookupService( ).setGoal( Component.State.DISABLED );
-          }
-        }
-      }
     }
   }
   
@@ -289,7 +253,7 @@ public class BasicService extends AbstractService implements Service {
    */
   @Override
   public void start( ) {}
-
+  
   /**
    * @see com.eucalyptus.component.Service#stop()
    */

@@ -97,32 +97,43 @@ public class ComponentBootstrapper {
   }
 
   private void updateBootstrapDependencies( ) {    
-    for ( Entry<Stage, Bootstrapper> entry : Lists.newArrayList( this.disabledBootstrappers.entries( ) ) ) {
-      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_RELOAD, "DISABLED", "stage:" + entry.getKey( ), this.getClass( ).getSimpleName( ),
-                        "Depends.local=" + entry.getValue( ).toString( ), "Component." + entry.getValue( ).toString( ) + "=remote" ).info( );
-    }
-    this.bootstrappers.putAll( this.disabledBootstrappers );
-    for ( Entry<Stage, Bootstrapper> entry : Lists.newArrayList( this.bootstrappers.entries( ) ) ) {
-      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_RELOAD, "UPDATE", "stage:" + entry.getKey( ), this.getClass( ).getSimpleName( ),
-                        "Depends.local=" + entry.getValue( ).toString( ), "Component." + entry.getValue( ).toString( ) + "=remote" ).info( );
-    }
-    for ( Entry<Stage, Bootstrapper> entry : Lists.newArrayList( this.bootstrappers.entries( ) ) ) {
-      if ( !entry.getValue( ).checkLocal( ) ) {
-        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + entry.getKey( ), this.getClass( ).getSimpleName( ),
-                          "Depends.local=" + entry.getValue( ).toString( ), "Component." + entry.getValue( ).toString( ) + "=remote" ).info( );
-        Bootstrap.Stage stage = entry.getKey( );
-        Bootstrapper bootstrapper = entry.getValue( );
-        this.bootstrappers.remove( entry.getKey( ), entry.getValue( ) );
-        this.disabledBootstrappers.put( stage, bootstrapper );
-      } else if ( !entry.getValue( ).checkRemote( ) ) {
-        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + entry.getKey( ), this.getClass( ).getSimpleName( ),
-                          "Depends.remote=" + entry.getValue( ).toString( ), "Component." + entry.getValue( ).toString( ) + "=local" ).info( );
-        Bootstrap.Stage stage = entry.getKey( );
-        Bootstrapper bootstrapper = entry.getValue( );
-        this.bootstrappers.remove( entry.getKey( ), entry.getValue( ) );
-        this.disabledBootstrappers.put( stage, bootstrapper );
+    try {
+      for ( Entry<Stage, Bootstrapper> entry : Lists.newArrayList( this.bootstrappers.entries( ) ) ) {
+        if ( !entry.getValue( ).checkLocal( ) ) {
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + entry.getKey( ), this.component.getComponentId( ).name( ),
+                            "Depends.local=" + entry.getValue( ).getDependsRemote( ).toString( ), "Component=" + this.component.getComponentId( ).name( ) + "=remote" ).info( );
+          Bootstrap.Stage stage = entry.getKey( );
+          Bootstrapper bootstrapper = entry.getValue( );
+          this.bootstrappers.remove( entry.getKey( ), entry.getValue( ) );
+          this.disabledBootstrappers.put( stage, bootstrapper );
+        } else if ( !entry.getValue( ).checkRemote( ) ) {
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + entry.getKey( ), this.component.getComponentId( ).name( ),
+                            "Depends.remote=" + entry.getValue( ).getDependsRemote( ).toString( ), "Component=" + this.component.getComponentId( ).name( ) + "=local" ).info( );
+          Bootstrap.Stage stage = entry.getKey( );
+          Bootstrapper bootstrapper = entry.getValue( );
+          this.bootstrappers.remove( entry.getKey( ), entry.getValue( ) );
+          this.disabledBootstrappers.put( stage, bootstrapper );
+        }
       }
-    }
+      for ( Entry<Stage, Bootstrapper> entry : Lists.newArrayList( this.disabledBootstrappers.entries( ) ) ) {
+        Bootstrapper b = entry.getValue( );
+        if ( entry.getValue( ).checkLocal( ) ) {
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, "stage:" , entry.getKey( ).toString( ), b.getClass( ).getName( ), "component=" + this.component.getComponentId( ).name( ) ).info( );
+          Bootstrap.Stage stage = entry.getKey( );
+          Bootstrapper bootstrapper = entry.getValue( );
+          this.disabledBootstrappers.remove( entry.getKey( ), entry.getValue( ) );
+          this.bootstrappers.put( stage, bootstrapper );
+        } else if ( entry.getValue( ).checkRemote( ) ) {
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, "stage:" , entry.getKey( ).toString( ), b.getClass( ).getName( ), "component=" + this.component.getComponentId( ).name( ) ).info( );
+          Bootstrap.Stage stage = entry.getKey( );
+          Bootstrapper bootstrapper = entry.getValue( );
+          this.disabledBootstrappers.remove( entry.getKey( ), entry.getValue( ) );
+          this.bootstrappers.put( stage, bootstrapper );
+        }
+      }
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+    }    
   }
 
   private boolean doTransition( EventType transition, CheckedFunction<Bootstrapper, Boolean> checkedFunction ) {

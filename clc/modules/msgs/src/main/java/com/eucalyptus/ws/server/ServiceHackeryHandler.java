@@ -119,6 +119,8 @@ public class ServiceHackeryHandler extends SimpleChannelHandler {
        } else {
          ctx.sendDownstream( msge );
        }
+      } else if ( msge.getMessage( ) instanceof Throwable ) {
+        ctx.sendDownstream( e );
       } else {
         e.getFuture( ).cancel( );
         LOG.warn( "Non-specific type being written to the channel. Not dropping this message causes breakage:" + msge.getMessage( ).getClass( ) );
