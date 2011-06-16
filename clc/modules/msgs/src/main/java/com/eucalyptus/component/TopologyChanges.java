@@ -164,8 +164,7 @@ public class TopologyChanges {
             return config;
           }
           try {
-            LOG.debug( this.toString( ) + " attempting check for: " + config + " trying " + initialState + "->" + nextState );
-            Future<ServiceConfiguration> result = config.lookupStateMachine( ).transition( nextState );
+            Future<ServiceConfiguration> result = ServiceTransitions.transitionChain( config, nextState );//TODO:GRZE:OMGFIXME timeout here.
             ServiceConfiguration endConfig = result.get( );
             State endState = endConfig.lookupState( );
             LOG.debug( this.toString( ) + " completed for: " + endConfig + " trying " + initialState + "->" + nextState + " ended in: " + endState );
@@ -262,8 +261,7 @@ public class TopologyChanges {
             return config;
           }
           try {
-            LOG.debug( this.toString( ) + " attempting check for: " + config + " trying " + initialState + "->" + nextState );
-            Future<ServiceConfiguration> result = config.lookupStateMachine( ).transition( nextState );
+            Future<ServiceConfiguration> result = ServiceTransitions.transitionChain( config, nextState );//TODO:GRZE:OMGFIXME timeout here.
             ServiceConfiguration endConfig = result.get( );
             State endState = endConfig.lookupState( );
             LOG.debug( this.toString( ) + " completed for: " + endConfig + " trying " + initialState + "->" + nextState + " ended in: " + endState );
