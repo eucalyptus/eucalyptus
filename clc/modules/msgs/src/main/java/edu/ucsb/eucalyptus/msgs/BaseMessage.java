@@ -267,6 +267,15 @@ public class BaseMessage {
   public ArrayList<ServiceId> get_services( ) {
     return this._services;
   }
+
+  /**
+   * @deprecated use get_services( ) as needed, this old name presents a potential naming conflict
+   * @see #get_services()
+   */
+  @Deprecated
+  public ArrayList<ServiceId> getBaseServices( ) {
+    return this._services;
+  }
   
   /**
    * @param services the services to set
