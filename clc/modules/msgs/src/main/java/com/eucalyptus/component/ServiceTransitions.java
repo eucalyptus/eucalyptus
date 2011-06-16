@@ -134,14 +134,9 @@ public class ServiceTransitions {
   static final CheckedListenableFuture<ServiceConfiguration> startTransitionChain( final ServiceConfiguration config ) {
     if ( !State.NOTREADY.equals( config.lookupState( ) ) && !State.DISABLED.equals( config.lookupState( ) ) && !State.ENABLED.equals( config.lookupState( ) ) ) {
       Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
-      if ( State.STOPPED.isIn( config ) ) {
+      if ( State.STOPPED.isIn( config ) || State.INITIALIZED.isIn( config ) || State.BROKEN.isIn( config ) ) {
         transition = Automata.sequenceTransitions( config,
-                                                   Component.State.INITIALIZED,
-                                                   Component.State.LOADED,
-                                                   Component.State.NOTREADY,
-                                                   Component.State.DISABLED );
-      } else if ( State.INITIALIZED.isIn( config ) ) {
-        transition = Automata.sequenceTransitions( config,
+                                                   Component.State.BROKEN,
                                                    Component.State.INITIALIZED,
                                                    Component.State.LOADED,
                                                    Component.State.NOTREADY,
@@ -162,10 +157,14 @@ public class ServiceTransitions {
   
   static final CheckedListenableFuture<ServiceConfiguration> enableTransitionChain( final ServiceConfiguration config ) {
     if ( !State.ENABLED.equals( config.lookupState( ) ) ) {
-      Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.INITIALIZED,
-                                                                                                           Component.State.LOADED,
-                                                                                                           Component.State.NOTREADY, Component.State.DISABLED,
-                                                                                                           Component.State.DISABLED, Component.State.ENABLED );
+      Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config,
+                                                                                                         Component.State.BROKEN,
+                                                                                                         Component.State.INITIALIZED,
+                                                                                                         Component.State.LOADED,
+                                                                                                         Component.State.NOTREADY,
+                                                                                                         Component.State.DISABLED,
+                                                                                                         Component.State.DISABLED,
+                                                                                                         Component.State.ENABLED );
       try {
         return transition.call( );
       } catch ( Exception ex ) {
@@ -179,8 +178,9 @@ public class ServiceTransitions {
   
   static final CheckedListenableFuture<ServiceConfiguration> disableTransitionChain( final ServiceConfiguration config ) {
     if ( State.ENABLED.isIn( config ) ) {
-      Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.ENABLED,
-                                                                                                           Component.State.DISABLED );
+      Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config,
+                                                                                                         Component.State.ENABLED,
+                                                                                                         Component.State.DISABLED );
       try {
         return transition.call( );
       } catch ( Exception ex ) {
@@ -188,10 +188,13 @@ public class ServiceTransitions {
         throw new RuntimeException( ex );
       }
     } else if ( !State.DISABLED.isIn( config ) && !State.NOTREADY.isIn( config ) ) {
-      Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.INITIALIZED,
-                                                                                                           Component.State.LOADED,
-                                                                                                           Component.State.NOTREADY, Component.State.DISABLED,
-                                                                                                           Component.State.DISABLED );
+      Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config,
+                                                                                                         Component.State.BROKEN,
+                                                                                                         Component.State.INITIALIZED,
+                                                                                                         Component.State.LOADED,
+                                                                                                         Component.State.NOTREADY,
+                                                                                                         Component.State.DISABLED,
+                                                                                                         Component.State.DISABLED );
       try {
         return transition.call( );
       } catch ( Exception ex ) {
@@ -206,8 +209,10 @@ public class ServiceTransitions {
   static final CheckedListenableFuture<ServiceConfiguration> stopTransitionChain( final ServiceConfiguration config ) {
     Component.State currState = config.lookupState( );
     if ( State.ENABLED.equals( currState ) ) {
-      Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.ENABLED,
-                                                                                                         Component.State.DISABLED, Component.State.STOPPED );
+      Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config,
+                                                                                                         Component.State.ENABLED,
+                                                                                                         Component.State.DISABLED,
+                                                                                                         Component.State.STOPPED );
       try {
         return transition.call( );
       } catch ( Exception ex ) {
@@ -229,8 +234,10 @@ public class ServiceTransitions {
   
   static final CheckedListenableFuture<ServiceConfiguration> destroyTransitionChain( final ServiceConfiguration config ) {
     if ( !State.INITIALIZED.isIn( config ) ) {
-      Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config, Component.State.ENABLED,
-                                                                                                           Component.State.DISABLED, Component.State.STOPPED );
+      Callable<CheckedListenableFuture<ServiceConfiguration>> transition = Automata.sequenceTransitions( config,
+                                                                                                         Component.State.ENABLED,
+                                                                                                         Component.State.DISABLED,
+                                                                                                         Component.State.STOPPED );
       try {
         return transition.call( );
       } catch ( Exception ex ) {
@@ -256,7 +263,7 @@ public class ServiceTransitions {
         } catch ( InterruptedException ex1 ) {
           Thread.currentThread( ).interrupt( );
         }
-        lastEx  = ex;
+        lastEx = ex;
         continue;
       } catch ( ExecutionException ex ) {
         LOG.error( ex, ex );
@@ -276,7 +283,8 @@ public class ServiceTransitions {
         throw ex;
       }
     }
-    throw new ServiceRegistrationException( "Failed to contact host because of " + lastEx + " after " + BOOTSTRAP_REMOTE_RETRIES + " retries: " + config.getUri( )
+    throw new ServiceRegistrationException( "Failed to contact host because of " + lastEx + " after " + BOOTSTRAP_REMOTE_RETRIES + " retries: "
+                                            + config.getUri( )
                                             + " when sending message: " + msg, lastEx );
   }
   

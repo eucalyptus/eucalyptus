@@ -153,32 +153,29 @@ public class TopologyChanges {
       @Override
       public ServiceConfiguration apply( ServiceConfiguration config ) {
         if ( !Bootstrap.isFinished( ) ) {
-          LOG.debug( this.toString( ) + " aborted because bootstrap is not complete" );
+          LOG.debug( this.toString( ) + " aborted because bootstrap is not complete for service: " + config );
           return config;
         } else if ( config.isVmLocal( ) && !config.lookupStateMachine( ).isBusy( ) ) {
           State initialState = config.lookupState( );
           State nextState = config.lookupState( );
-          if ( initialState.ordinal( ) < State.NOTREADY.ordinal( ) ) {
-            return config;
-          } else if ( State.NOTREADY.equals( initialState ) ) {
+          if ( State.NOTREADY.equals( initialState ) || State.BROKEN.equals( initialState ) ) {
             nextState = State.DISABLED;
+          } else if ( initialState.ordinal( ) < State.NOTREADY.ordinal( ) ) {
+            return config;
           }
           try {
             LOG.debug( this.toString( ) + " attempting check for: " + config + " trying " + initialState + "->" + nextState );
-            Future<ServiceConfiguration> result = config.lookupStateMachine( ).transition( initialState );
-            State endState = result.get( ).lookupState( );
-            LOG.debug( this.toString( ) + " completed for: " + result + " trying " + initialState + "->" + nextState + " ended in: " + endState );
-            return result.get( );
+            Future<ServiceConfiguration> result = config.lookupStateMachine( ).transition( nextState );
+            ServiceConfiguration endConfig = result.get( );
+            State endState = endConfig.lookupState( );
+            LOG.debug( this.toString( ) + " completed for: " + endConfig + " trying " + initialState + "->" + nextState + " ended in: " + endState );
+            return endConfig;
           } catch ( InterruptedException ex ) {
             Thread.currentThread( ).interrupt( );
             return config;
           } catch ( Exception ex ) {
             LOG.error( ex, ex );
-//            if( ServiceExceptions.filterExceptions( config, ex ) ) {
             throw new UndeclaredThrowableException( ex );
-//            } else {
-//              return config;
-//            }
           }
         } else {
           return config;
@@ -254,20 +251,21 @@ public class TopologyChanges {
       @Override
       public ServiceConfiguration apply( ServiceConfiguration config ) {
         if ( !Bootstrap.isFinished( ) ) {
+          LOG.debug( this.toString( ) + " aborted because bootstrap is not complete for service: " + config );
           return config;
         } else if ( !config.lookupStateMachine( ).isBusy( ) ) {
           State initialState = config.lookupState( );
           State nextState = config.lookupState( );
-          if ( initialState.ordinal( ) < State.NOTREADY.ordinal( ) ) {
-            return config;
-          } else if ( State.NOTREADY.equals( initialState ) ) {
+          if ( State.NOTREADY.equals( initialState ) || State.BROKEN.equals( initialState ) ) {
             nextState = State.DISABLED;
+          } else if ( initialState.ordinal( ) < State.NOTREADY.ordinal( ) ) {
+            return config;
           }
           try {
             LOG.debug( this.toString( ) + " attempting check for: " + config + " trying " + initialState + "->" + nextState );
             Future<ServiceConfiguration> result = config.lookupStateMachine( ).transition( nextState );
             ServiceConfiguration endConfig = result.get( );
-            State endState = result.get( ).lookupState( );
+            State endState = endConfig.lookupState( );
             LOG.debug( this.toString( ) + " completed for: " + endConfig + " trying " + initialState + "->" + nextState + " ended in: " + endState );
             return endConfig;
           } catch ( InterruptedException ex ) {
