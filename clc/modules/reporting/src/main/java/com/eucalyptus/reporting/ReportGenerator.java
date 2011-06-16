@@ -71,6 +71,7 @@ public class ReportGenerator
 		if (displayUnits == null)
 			displayUnits = Units.DEFAULT_DISPLAY_UNITS;
 		
+		
 		final Map<String, String> params = new HashMap<String, String>();
 		params.put("criterion", criterion.toString());
 		params.put("timeUnit", displayUnits.getTimeUnit().toString());
@@ -82,7 +83,8 @@ public class ReportGenerator
 		if (groupByCriterion != null) {
 			params.put("groupByCriterion", groupByCriterion.toString());			
 		}
-		
+
+
 		final String filename = (groupByCriterion==null)
 								? reportType.getJrxmlFilename()
 								: reportType.getNestedJrxmlFilename();
@@ -104,6 +106,11 @@ public class ReportGenerator
 				break;
 		}
 
+		
+		/* We maintain a small cache here of very recently-viewed reports. If
+		 * not found in cache then get report lines from {s3,storage,instance}
+		 * API
+		 */
 		List<ReportLine> reportLines = null;
 		ReportKey key = new ReportKey(reportType, period, criterion,
 				groupByCriterion, displayUnits, System.currentTimeMillis());
