@@ -304,6 +304,9 @@ int main (int argc, char * argv[])
     // if work dir was created and is now empty, it will be deleted
     clean_work_dir();
 
+    // indicate completion
+    logprintfl (EUCAINFO, "imager done (exit code=%d)\n", ret);
+
     exit (ret);
 }
 

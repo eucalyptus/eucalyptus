@@ -63,9 +63,7 @@
 package com.eucalyptus.util.async;
 
 import java.util.concurrent.ExecutionException;
-import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceEndpoint;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public interface Request<Q extends BaseMessage, R extends BaseMessage> {

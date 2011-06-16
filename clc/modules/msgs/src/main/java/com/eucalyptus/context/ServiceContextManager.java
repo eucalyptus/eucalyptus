@@ -132,51 +132,43 @@ public class ServiceContextManager implements EventListener<Event> {
   }
   
   private Future<?> doUpdate( ) {
-    if ( Bootstrap.isFinished( ) && this.canHasWrite.tryLock( ) ) {
-      try {
-        Future<?> ret = null;
-        if ( this.pendingCount.getAndSet( 0 ) > 0 || this.shouldReload( ) ) {
-          Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
-            @Override
-            public void run( ) {
-              try {
-                ServiceContextManager.this.update( );
-              } catch ( Throwable ex ) {
-                LOG.error( ex, ex );
-              }
+    if ( Bootstrap.isFinished( ) ) {
+      Future<?> ret = null;
+      Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
+        @Override
+        public void run( ) {
+          if( ServiceContextManager.this.canHasWrite.tryLock( ) ) {
+            try {
+              ServiceContextManager.this.update( );
+            } catch ( Throwable ex ) {
+              LOG.error( ex, ex );
+            } finally {
+              ServiceContextManager.this.canHasWrite.unlock( );
             }
-          } );
+          }
         }
-        if ( this.shouldReload( ) ) {
-          this.pendingCount.incrementAndGet( );
-        }
-        return ret != null
-          ? ret
-          : Futures.predestinedFuture( null );
-      } finally {
-        this.canHasWrite.unlock( );
-      }
+      } );
+      return ret != null
+        ? ret
+        : Futures.predestinedFuture( null );
     } else {
       return Futures.predestinedFuture( null );
     }
   }
   
-  private boolean shouldReload( ) {
+  private List<ComponentId> shouldReload( ) {
     List<Component> components = Components.whichAreEnabledLocally( );
     List<ComponentId> currentComponentIds = Components.toIds( components );
     if ( this.context == null ) {
-      return true;
-    } else if ( currentComponentIds.isEmpty( ) ) {
-      return true;
+      return currentComponentIds;
     } else if ( !this.enabledCompIds.equals( currentComponentIds ) ) {
-      return true;
+      return currentComponentIds;
     } else {
-      return false;
+      return Lists.newArrayList( );
     }
   }
   
   public static final void restartSync( ) {
-    singleton.pendingCount.incrementAndGet( );
     try {
       singleton.doUpdate( ).get( );
     } catch ( InterruptedException ex ) {
@@ -187,20 +179,19 @@ public class ServiceContextManager implements EventListener<Event> {
   }
   
   public static final void restart( ) {
-    singleton.pendingCount.incrementAndGet( );
+    singleton.doUpdate( );
   }
   
   private void update( ) throws ServiceInitializationException {
-    List<Component> components = Components.whichAreEnabledLocally( );
-    List<ComponentId> currentComponentIds = Components.toIds( components );
-    LOG.error( "Restarting service context with these enabled services: " + currentComponentIds );
     this.canHasWrite.lock( );
     try {
-      if ( this.shouldReload( ) ) {
+      List<ComponentId> reloadComponentIds = this.shouldReload( );
+
+      if ( !reloadComponentIds.isEmpty( ) ) {
         if ( this.context != null ) {
           this.shutdown( );
         }
-        this.context = this.createContext( components, currentComponentIds );
+        this.context = this.createContext( reloadComponentIds );
         Assertions.assertNotNull( this.context, "BUG: failed to build mule context for reasons unknown" );
         try {
           this.context.start( );
@@ -225,21 +216,22 @@ public class ServiceContextManager implements EventListener<Event> {
     }
   }
   
-  private MuleContext createContext( List<Component> components, List<ComponentId> currentComponentIds ) throws ServiceInitializationException {
+  private MuleContext createContext( List<ComponentId> currentComponentIds ) throws ServiceInitializationException {
     this.canHasWrite.lock( );
     try {
+      LOG.error( "Restarting service context with these enabled services: " + currentComponentIds );
       Set<ConfigResource> configs = Sets.newHashSet( );
       MuleContext muleCtx = null;
-      for ( Component component : components ) {
-        ComponentId id = component.getComponentId( );
-        String errMsg = "Failed to render model for: " + component.getComponentId( ) + " because of: ";
-        LOG.info( "-> Rendering configuration for " + component.getComponentId( ).name( ) );
+      for ( ComponentId componentId : currentComponentIds ) {
+        Component component = Components.lookup( componentId );
+        String errMsg = "Failed to render model for: " + componentId + " because of: ";
+        LOG.info( "-> Rendering configuration for " + componentId.name( ) );
         try {
-          String outString = Templates.prepare( id.getServiceModelFileName( ) )
-                                      .withProperty( "components", Components.toIds( components ) )
-                                      .withProperty( "thisComponent", id )
-                                      .evaluate( id.getServiceModel( ) );
-          ConfigResource configRsc = createConfigResource( component, outString );
+          String outString = Templates.prepare( componentId.getServiceModelFileName( ) )
+                                      .withProperty( "components", currentComponentIds )
+                                      .withProperty( "thisComponent", componentId )
+                                      .evaluate( componentId.getServiceModel( ) );
+          ConfigResource configRsc = createConfigResource( componentId, outString );
           configs.add( configRsc );
         } catch ( Exception ex ) {
           LOG.error( errMsg + ex.getMessage( ), ex );
@@ -261,12 +253,12 @@ public class ServiceContextManager implements EventListener<Event> {
     }
   }
   
-  private static ConfigResource createConfigResource( Component component, String outString ) {
+  private static ConfigResource createConfigResource( ComponentId componentId, String outString ) {
     ByteArrayInputStream bis = new ByteArrayInputStream( outString.getBytes( ) );
     Logs.extreme( ).trace( "===================================" );
     Logs.extreme( ).trace( outString );
     Logs.extreme( ).trace( "===================================" );
-    ConfigResource configRsc = new ConfigResource( component.getComponentId( ).getServiceModelFileName( ), bis );
+    ConfigResource configRsc = new ConfigResource( componentId.getServiceModelFileName( ), bis );
     return configRsc;
   }
   

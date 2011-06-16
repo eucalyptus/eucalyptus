@@ -61,50 +61,74 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component;
+package com.eucalyptus.context;
 
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 import org.apache.log4j.Logger;
-import com.google.common.collect.Maps;
-public class ServiceBuilderRegistry {
-  private static Logger LOG = Logger.getLogger( ServiceBuilderRegistry.class );
-  private static Map<Class,ServiceBuilder<? extends ServiceConfiguration>> builders = Maps.newConcurrentMap( );
-  private static Map<ComponentId,ServiceBuilder<? extends ServiceConfiguration>> componentBuilders = Maps.newConcurrentMap( );
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.empyrean.Empyrean;
 
-  public static void addBuilder( Class c, ServiceBuilder b ) {
-    LOG.info( "Registered service builder for " + c.getSimpleName( ) + " -> " + b.getClass( ).getCanonicalName( ) );
-    builders.put( c, b );
+@Provides( Empyrean.class )
+@RunDuring( Bootstrap.Stage.CloudServiceInit )
+public class ServiceContextBootstrapper extends Bootstrapper {
+  private static Logger LOG = Logger.getLogger( ServiceContextBootstrapper.class );
+  
+  public ServiceContextBootstrapper( ) {}
+  
+  @Override
+  public boolean load( ) throws Exception {
+    return true;
   }
-
-  public static void addBuilder( ComponentId c, ServiceBuilder b ) {
-    LOG.info( "Registered service builder for " + c.name( ) + " -> " + b.getClass( ).getCanonicalName( ) );
-    componentBuilders.put( c, b );
-  }
-
-  public static Set<Entry<Class,ServiceBuilder<? extends ServiceConfiguration>>> entrySet( ) {
-    return builders.entrySet( );
-  }
-
-  public static ServiceBuilder<? extends ServiceConfiguration> handles( Class handlesType ) {
-    return builders.get( handlesType );
-  }
-
-  public static ServiceBuilder<? extends ServiceConfiguration> lookup( ComponentId componentId ) {
-    if( !componentBuilders.containsKey( componentId ) ) {
-      Component comp = Components.lookup( componentId );
-      componentBuilders.put( componentId, new DummyServiceBuilder( comp ) );
-    }
-    return componentBuilders.get( componentId );
-  }  
-
-  public static ServiceBuilder<? extends ServiceConfiguration> lookup( Class<? extends ComponentId> componentIdClass ) {
+  
+  @Override
+  public boolean start( ) throws Exception {
     try {
-      return lookup( componentIdClass.newInstance( ) );
-    } catch ( Throwable ex ) {
+      ServiceContextManager.restartSync( );
+      return true;
+    } catch ( Exception ex ) {
       LOG.error( ex , ex );
-      throw new RuntimeException( ex );
+      throw ex;
     }
-  }  
+  }
+  
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
+   */
+  @Override
+  public boolean enable( ) throws Exception {
+    return true;
+  }
+  
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
+   */
+  @Override
+  public boolean stop( ) throws Exception {
+    return true;
+  }
+  
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
+   */
+  @Override
+  public void destroy( ) throws Exception {}
+  
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+   */
+  @Override
+  public boolean disable( ) throws Exception {
+    return true;
+  }
+  
+  /**
+   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
+   */
+  @Override
+  public boolean check( ) throws Exception {
+    return true;
+  }
+  
 }

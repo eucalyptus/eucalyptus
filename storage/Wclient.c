@@ -67,6 +67,8 @@
 #include <string.h>
 #include <unistd.h> /* getopt */
 #include <fcntl.h> /* open */
+#include <sys/types.h>
+#include <sys/stat.h>
 #include "euca_auth.h"
 #include "eucalyptus.h"
 #include "misc.h"
@@ -153,7 +155,7 @@ int main (int argc, char * argv[])
     if (do_get) {
         /* use a temporary file for network data */
         char * tmp_name = strdup ("walrus-download-XXXXXX");
-        int tmp_fd = mkstemp (tmp_name);
+        int tmp_fd = safe_mkstemp (tmp_name);
         if (tmp_fd<0) {
             fprintf (stderr, "Error: failed to create a temporary file\n");
             USAGE;

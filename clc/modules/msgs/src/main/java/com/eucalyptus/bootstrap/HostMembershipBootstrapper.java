@@ -65,6 +65,7 @@ package com.eucalyptus.bootstrap;
 
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.Hosts;
 import com.eucalyptus.empyrean.Empyrean;
 
 @Provides( Empyrean.class )
@@ -81,6 +82,7 @@ public class HostMembershipBootstrapper extends Bootstrapper {
         TimeUnit.SECONDS.sleep( 1 );
         LOG.info( "Waiting for system view with database..." );
       }
+      LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
       return true;
     } catch ( Exception ex ) {
       LOG.fatal( ex, ex );

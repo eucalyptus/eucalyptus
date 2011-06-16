@@ -63,24 +63,22 @@
 
 package com.eucalyptus.bootstrap;
 
-import java.util.List;
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Host;
 import com.eucalyptus.component.Hosts;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.SubjectMessageCallback;
-import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 
 public class HostStateMonitor implements EventListener<Event> {
   private static Logger LOG = Logger.getLogger( HostStateMonitor.class );
@@ -93,9 +91,12 @@ public class HostStateMonitor implements EventListener<Event> {
     
     @Override
     public void fire( DescribeServicesResponseType msg ) {
-      for( ServiceStatusType status : msg.getServiceStatuses( ) ) {
-        LOG.info( LogUtil.dumpObject( status ) );
-      }
+      LOG.info( LogUtil.dumpObject( msg ) );//TODO:GRZE:submit state/fd event here
+    }
+
+    @Override
+    public void fireException( Throwable t ) {
+      LOG.error( "Failed sending describe services to host: " + this.getSubject( ) + " with error: " + t.getMessage( ), t );//TODO:GRZE:submit state/fd event here
     }
     
   }
@@ -103,9 +104,9 @@ public class HostStateMonitor implements EventListener<Event> {
   @Override
   public void fireEvent( Event event ) {
     if ( event instanceof ClockTick ) {
-      Hosts.collect( new Function<Host, Request>( ) {
+      Hosts.collect( new Predicate<Host>( ) {
         @Override
-        public Request apply( final Host target ) {
+        public boolean apply( final Host target ) {
           try {
             if( target.getServiceConfiguration( ) != null ) { 
               final Request req = AsyncRequests.newRequest( new ServiceCallback( target ) );
@@ -113,16 +114,23 @@ public class HostStateMonitor implements EventListener<Event> {
                 
                 @Override
                 public void run( ) {
-                  req.dispatch( target.getServiceConfiguration( ) );
+                  try {
+                    req.sendSync( target.getServiceConfiguration( ) );
+                  } catch ( ExecutionException ex ) {
+                    LOG.error( ex , ex );
+                  } catch ( InterruptedException ex ) {
+                    LOG.error( ex , ex );
+                    Thread.currentThread( ).interrupt( );
+                  }
                 }
               } );
-              return req;
+              return true;
             } else {
-              return null;
+              return false;
             }
           } catch ( Exception ex ) {
             LOG.error( ex , ex );
-            return null;
+            return false;
           }
         }
       } );

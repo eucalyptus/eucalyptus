@@ -430,7 +430,7 @@ char * alloc_tmp_file (const char * name_base, long long size)
     }
 
     snprintf (path, EUCA_MAX_PATH, "%s/%s-XXXXXX", get_work_dir(), name_base);
-    int tmp_fd = mkstemp (path);
+    int tmp_fd = safe_mkstemp (path);
     if (tmp_fd<0) {
         logprintfl (EUCAERROR, "error: failed to create a temporary file under %s\n", path);
         free(path);

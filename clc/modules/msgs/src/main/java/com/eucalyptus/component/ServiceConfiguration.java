@@ -1,6 +1,7 @@
 package com.eucalyptus.component;
 
 import java.io.Serializable;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Collection;
@@ -62,5 +63,10 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
   public Collection<ServiceCheckRecord> lookupDetails( );
 
   public abstract Boolean isHostLocal( );
+
+  /**
+   * @return
+   */
+  InetAddress getInetAddress( );
 
 }

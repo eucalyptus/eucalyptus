@@ -66,7 +66,6 @@ package com.eucalyptus.component;
 import java.lang.reflect.Modifier;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
-import com.eucalyptus.component.id.Any;
 import com.eucalyptus.system.Ats;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -77,7 +76,7 @@ public class ComponentMessageDiscovery extends ServiceJarDiscovery {
   @Override
   public boolean processClass( Class candidate ) throws Throwable {
     if ( BaseMessage.class.isAssignableFrom( candidate ) && Ats.from( candidate ).has( ComponentMessage.class ) && !Modifier.isAbstract( candidate.getModifiers( ) )
-         && !Modifier.isInterface( candidate.getModifiers( ) ) && !Any.class.equals( candidate ) ) {
+         && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
       try {
         ComponentMessages.register( candidate );
       } catch ( Throwable ex ) {
