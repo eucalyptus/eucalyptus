@@ -520,21 +520,12 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Throwable {
-        if ( State.LOADED.ordinal( ) < parent.lookupComponent( ).getState( ).ordinal( ) ) {
-          try {
-            parent.lookupComponent( ).getBootstrapper( ).check( );
-            parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
-          } catch ( Throwable ex ) {
-//            if ( State.ENABLED.equals( parent.lookupState( ) ) ) {
-//              try {
-//                DISABLE.fire( parent );
-//              } catch ( Throwable ex1 ) {
-//                LOG.error( ex1, ex1 );
-//              }
-//            }
-            LOG.error( ex, ex );
-            throw ex;
-          }
+        try {
+          parent.lookupComponent( ).getBootstrapper( ).check( );
+          parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
+        } catch ( Throwable ex ) {
+          LOG.error( ex, ex );
+          throw ex;
         }
       }
     },
