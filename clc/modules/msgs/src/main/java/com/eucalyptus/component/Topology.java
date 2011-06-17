@@ -86,6 +86,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -149,42 +150,38 @@ public class Topology implements EventListener<Event> {
   }
   
   private <T> Future<T> submit( final Callable<T> callable ) {
-    EventRecord.here( Topology.class, EventType.ENQUEUE, Topology.this.toString( ), callable.toString( ) ).info( );
+    Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.ENQUEUE, Topology.this.toString( ), callable.toString( ) ) );
     final Long queueStart = System.currentTimeMillis( );
     return this.getWorker( ).submit( new Callable<T>( ) {
       
       @Override
       public T call( ) throws Exception {
         Long serviceStart = System.currentTimeMillis( );
-        EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), callable.toString( ) )
-                   .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) )
-                   .info( );
+        Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), callable.toString( ) )
+                   .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) ) );
         T result = callable.call( );
         Long finish = System.currentTimeMillis( );
-        EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), callable.toString( ) )
-                   .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) )
-                   .info( );
+        Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), callable.toString( ) )
+                   .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) ) );
         return result;
       }
     } );
   }
   
   private Future<ServiceConfiguration> submitExternal( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
-    EventRecord.here( Topology.class, EventType.ENQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) ).info( );
+    Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.ENQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) ) );
     final Long queueStart = System.currentTimeMillis( );
     return Threads.lookup( Empyrean.class, Topology.class, "submitExternal" ).submit( new Callable<ServiceConfiguration>( ) {
       
       @Override
       public ServiceConfiguration call( ) throws Exception {
         Long serviceStart = System.currentTimeMillis( );
-        EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
-                   .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) )
-                   .info( );
+        Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
+                   .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) ) );
         ServiceConfiguration result = function.apply( config );
         Long finish = System.currentTimeMillis( );
-        EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
-                   .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) )
-                   .info( );
+        Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
+                   .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) ) );
         return result;
       }
     } );
