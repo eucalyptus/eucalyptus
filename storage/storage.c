@@ -456,12 +456,12 @@ static long long init_cache (const char * cache_path)
             if ((suffix=strstr (name, "-digest"))==NULL) {
                 if (strlen (X))
                     break; /* already saw X => fail */
-                strncpy (X, name, BUFSIZE);
+                safe_strncpy (X, name, BUFSIZE);
             } else {
                 if (strlen (X_digest))
                     break; /* already saw X-digest => fail */
                 * suffix = '\0';
-                strncpy (X_digest, name, BUFSIZE);
+                safe_strncpy (X_digest, name, BUFSIZE);
             }
         }
         closedir(image_dir);

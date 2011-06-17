@@ -124,17 +124,22 @@ int vbr_add_ascii (const char * spec_str, virtualMachine * vm_type)
     char * dev_spec = strtok (NULL, ":");
     char * loc_spec = strtok (NULL, ":");
     if (type_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'type' specification in VBR '%s'\n", spec_str); goto out_error; }
-    strncpy (vbr->typeName, type_spec, sizeof (vbr->typeName));
+    safe_strncpy (vbr->typeName, type_spec, sizeof (vbr->typeName));
+
     if (id_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'id' specification in VBR '%s'\n", spec_str); goto out_error; }
-    strncpy (vbr->id, id_spec, sizeof (vbr->id));
+    safe_strncpy (vbr->id, id_spec, sizeof (vbr->id));
+
     if (size_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'size' specification in VBR '%s'\n", spec_str); goto out_error; }
     vbr->size = atoi (size_spec);
+
     if (format_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'format' specification in VBR '%s'\n", spec_str); goto out_error; }
-    strncpy (vbr->formatName, format_spec, sizeof (vbr->formatName));
+    safe_strncpy (vbr->formatName, format_spec, sizeof (vbr->formatName));
+
     if (dev_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'guestDeviceName' specification in VBR '%s'\n", spec_str); goto out_error; }
-    strncpy (vbr->guestDeviceName, dev_spec, sizeof (vbr->guestDeviceName));
+    safe_strncpy (vbr->guestDeviceName, dev_spec, sizeof (vbr->guestDeviceName));
+
     if (loc_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'resourceLocation' specification in VBR '%s'\n", spec_str); goto out_error; }
-    strncpy (vbr->resourceLocation, spec_str + (loc_spec - spec_copy), sizeof (vbr->resourceLocation));
+    safe_strncpy (vbr->resourceLocation, spec_str + (loc_spec - spec_copy), sizeof (vbr->resourceLocation));
     
     free (spec_copy);
     return 0;
@@ -191,7 +196,7 @@ parse_rec ( // parses the VBR as supplied by a client or user, checks values, an
         } else {
             vbr->locationType = NC_LOCATION_URL;
         }
-        strncpy (vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
+        safe_strncpy (vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
     } else if (strcasestr (vbr->resourceLocation, "iqn://") == vbr->resourceLocation ||
                strchr (vbr->resourceLocation, ',')) { // TODO: remove this transitionary iSCSI crutch?
         vbr->locationType = NC_LOCATION_IQN;
@@ -241,7 +246,7 @@ parse_rec ( // parses the VBR as supplied by a client or user, checks values, an
         if (strstr (vbr->guestDeviceName, "/dev/") == vbr->guestDeviceName) {
             logprintfl (EUCAWARN, "Warning: trimming off invalid prefix '/dev/' from guestDeviceName '%s'\n", vbr->guestDeviceName);
             char buf [10];
-            strncpy (buf, vbr->guestDeviceName + 5, sizeof (buf));
+            safe_strncpy (buf, vbr->guestDeviceName + 5, sizeof (buf));
             strncpy (vbr->guestDeviceName, buf, sizeof (vbr->guestDeviceName));
         }
         
@@ -424,14 +429,9 @@ vbr_legacy ( // constructs VBRs for {image|kernel|ramdisk}x{Id|URL} entries (DEP
             
             { // create root partition VBR
                 virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
-                strncpy (vbr->resourceLocation, imageURL, sizeof (vbr->resourceLocation));
-                vbr->resourceLocation[sizeof(vbr->resourceLocation) - 1] = '\0';
-
+                safe_strncpy (vbr->resourceLocation, imageURL, sizeof (vbr->resourceLocation));
                 strncpy (vbr->guestDeviceName, "sda1", sizeof (vbr->guestDeviceName));
-
-                strncpy (vbr->id, imageId, sizeof (vbr->id));
-                vbr->id[sizeof(vbr->id) - 1] = '\0';
-
+                safe_strncpy (vbr->id, imageId, sizeof (vbr->id));
                 strncpy (vbr->typeName, "machine", sizeof (vbr->typeName));
                 vbr->size = -1;
                 strncpy (vbr->formatName, "none", sizeof (vbr->formatName));

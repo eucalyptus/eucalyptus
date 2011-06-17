@@ -139,7 +139,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
         return code;
     }
 
-    int fd = open (outfile, O_CREAT | O_WRONLY); // we do not truncate the file
+    int fd = open (outfile, O_CREAT | S_IRUSR | S_IWUSR | O_WRONLY); // we do not truncate the file
     if (fd==-1 || lseek (fd, 0, SEEK_SET)==-1) {
         logprintfl (EUCAERROR, "{%u} walrus_request: failed to open %s for writing\n", (unsigned int)pthread_self(), outfile);
         return code;

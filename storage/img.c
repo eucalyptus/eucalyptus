@@ -157,8 +157,9 @@ int img_init_spec (img_spec * spec, const char * id, const char * loc, const img
 {
     bzero (spec, sizeof(spec));
 
-    if (id && strlen(id))
-        strncpy (spec->id, id, sizeof(spec->id));
+    if (id && strlen(id)) 
+        strncpy (spec->id, id, sizeof(spec->id) - 1); 
+    
     else
         return 0; // if no ID is given, this function just zeroes out the struct
 

@@ -390,7 +390,7 @@ refresh_instance_info(	struct nc_state_t *nc,
                 if (!rc) {
                     if(ip) {
                         logprintfl (EUCAINFO, "[%s] discovered public IP %s for instance\n", instance->instanceId, ip);
-                        strncpy(instance->ncnet.publicIp, ip, 24);
+                        safe_strncpy(instance->ncnet.publicIp, ip, 24);
                         free(ip);
                     }
                 }
@@ -401,7 +401,7 @@ refresh_instance_info(	struct nc_state_t *nc,
             if (!rc) {
                 if(ip) {
                     logprintfl (EUCAINFO, "[%s] discovered private IP %s for instance\n", instance->instanceId, ip);
-                    strncpy(instance->ncnet.privateIp, ip, 24);
+                    safe_strncpy(instance->ncnet.privateIp, ip, 24);
                     free(ip);
                 }
             }
@@ -552,7 +552,8 @@ void *startup_thread (void * arg)
         goto free;
     }
 
-    strncpy (instance->params.guestNicDeviceName, brname, sizeof (instance->params.guestNicDeviceName));
+    safe_strncpy (instance->params.guestNicDeviceName, brname, sizeof (instance->params.guestNicDeviceName));
+
     if (nc_state.config_use_virtio_net) {
         instance->params.nicType = NIC_TYPE_VIRTIO;
     } else {
@@ -564,7 +565,8 @@ void *startup_thread (void * arg)
     }
     logprintfl (EUCAINFO, "[%s] started network\n", instance->instanceId);
 
-    strncpy (instance->hypervisorType, nc_state.H->name, sizeof (instance->hypervisorType)); // set the hypervisor type
+    safe_strncpy (instance->hypervisorType, nc_state.H->name, sizeof (instance->hypervisorType)); // set the hypervisor type
+
     instance->hypervisorCapability = nc_state.capability; // set the cap (xen/hw/hw+xen)
     instance->combinePartitions = nc_state.convert_to_disk; 
     instance->do_inject_key = nc_state.do_inject_key;

@@ -2032,6 +2032,12 @@ int safe_mkstemp(char *template){
     return(ret);
 }
 
+char* safe_strncpy(char *s1, const char *s2, size_t len) {
+    char* ret = strncpy(s1, s2, len);
+    s1[len-1] = '\0';
+    return ret;
+}
+
 /////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////
 
 #ifdef _UNIT_TEST

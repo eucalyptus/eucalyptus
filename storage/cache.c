@@ -70,7 +70,7 @@ int set_cache_dir (const char * path)
         logprintfl (EUCAERROR, "failed to set cache directory to '%s'\n", path);
         return 1;
     }
-    strncpy (cache_path, path, EUCA_MAX_PATH);
+    safe_strncpy (cache_path, path, EUCA_MAX_PATH);
     return 0;
 }
 
@@ -383,7 +383,8 @@ int set_work_dir (const char * path)
         logprintfl (EUCAERROR, "failed to set work directory to '%s'\n", path);
         return 1;
     }
-    strncpy (work_path, path, EUCA_MAX_PATH);
+    safe_strncpy (work_path, path, EUCA_MAX_PATH);
+
     return 0;
 }
 
@@ -694,7 +695,7 @@ output_file * preprocess_output_path (const char * id, artifacts_spec * spec, bo
     }
     o->do_work = use_work;
     o->do_cache = use_cache;
-    strncpy (o->id, id, sizeof (o->id));
+    safe_strncpy (o->id, id, sizeof (o->id));
 
     // is there a valid work copy already?
     o->work_copy = find_disk_item (id, FALSE);
@@ -807,7 +808,7 @@ output_file * preprocess_output_path (const char * id, artifacts_spec * spec, bo
     }
 
     if (result_path) {
-        strncpy (o->path, result_path, sizeof (o->path));
+        safe_strncpy (o->path, result_path, sizeof (o->path));
     }
 
  cleanup:
