@@ -94,6 +94,14 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
     
   }
   
+  public String getIdentifiedMethodName( ) {
+    return this.identifiedMethodName;
+  }
+
+  public void setIdentifiedMethodName( String identifiedMethodName ) {
+    this.identifiedMethodName = identifiedMethodName;
+  }
+
   public void setIdentifierValue( String value ) {
     identifierValue = value;
   }
