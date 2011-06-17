@@ -9,9 +9,9 @@ import org.hibernate.annotations.Entity;
 
 public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty implements ConfigurableProperty {
   private static Logger LOG = Logger.getLogger( MultiDatabasePropertyEntry.class );
-  protected Method      setIdentifier;
-  protected Field       identifierField;
-  protected String      identifierValue;
+  private Method      setIdentifier;
+  private Field       identifierField;
+  private String      identifierValue;
   private String identifiedMethodName;
   
   public MultiDatabasePropertyEntry( Class definingClass, String entrySetName, Field field, Field identifierField, String description, String defaultValue,
@@ -29,7 +29,7 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
       setMethod.setAccessible( true );
       return setMethod;
     } catch ( Exception ex ) {
-      throw new RuntimeException( "Failed to obtain reference to method for setting the identifier field: " + this.identifierField.getName( ) + " in type " + this.getDefiningClass( ).getSimpleName( ) );
+      throw new RuntimeException( "Failed to obtain reference to method for setting the identifier field: " + this.identifierField.getName( ) + "/" + this.identifiedMethodName + " in type " + this.getDefiningClass( ).getSimpleName( ) );
     }
   }
   
