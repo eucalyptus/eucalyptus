@@ -572,6 +572,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       }
       if ( error != null ) {
         this.configuration.error( error );
+        throw new ServiceRegistrationException( "Failed to call start on cluster: " + this.configuration + " because of: " + error.getMessage( ), error );
       }
     }
   }
@@ -586,34 +587,36 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                                     State.ENABLING_NET, State.ENABLING_VMS,
                                                                                                     State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
                                                                                                     State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
-        try {
-          CheckedListenableFuture<Cluster> res = Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
-          Exception error = null;
-          for ( int i = 0; i < Cluster.CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
+        CheckedListenableFuture<Cluster> res = Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
+        Exception error = null;
+        for ( int i = 0; i < Cluster.CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
+          try {
             try {
-              try {
-                res.get( );
-                error = null;
-                break;
-              } catch ( Exception ex ) {
-                LOG.error( ex );
-                error = ex;
-              }
-              TimeUnit.SECONDS.sleep( 1 );
-            } catch ( InterruptedException ex ) {
-              LOG.error( ex, ex );
+              res.get( );
+              error = null;
+              break;
+            } catch ( Exception ex ) {
+              LOG.error( ex );
+              error = ex;
             }
+            TimeUnit.SECONDS.sleep( 1 );
+          } catch ( InterruptedException ex ) {
+            Thread.currentThread( ).interrupt( );
+            LOG.error( ex, ex );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+            error = ex;
           }
-          if ( error != null ) {
-            this.configuration.error( error );
-          }
-        } catch ( InterruptedException ex1 ) {
-          LOG.error( ex1, ex1 );
-        } catch ( ExecutionException ex1 ) {
-          LOG.error( ex1, ex1 );
+        }
+        if ( error != null ) {
+          this.configuration.error( error );
+          throw new ServiceRegistrationException( "Failed to call enable() on cluster: " + this.configuration + " because of: " + error.getMessage( ), error );
         }
       } catch ( NoSuchElementException ex ) {
         throw ex;
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        throw new ServiceRegistrationException( "Failed to call enable() on cluster: " + this.configuration + " because of: " + ex.getMessage( ), ex );
       }
     }
   }
