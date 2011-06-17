@@ -197,7 +197,7 @@ public class Emis {
                                             + vmType.getDisk( ) * 1024l + "MB]" );
       }
       VmTypeInfo vmTypeInfo = createVmTypeInfo( vmType, imgSize );
-      if ( !Image.Platform.windows.equals( this.getMachine( ).getPlatform( ) ) ) {
+      if ( this.isLinux( ) ) {
         if ( this.hasKernel( ) ) {
           vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), this.getKernel( ).getManifestLocation( ) );
         }
@@ -277,7 +277,6 @@ public class Emis {
       bootSet = Emis.bootsetWithRamdisk( bootSet );
     }
     Emis.checkStoredImage( bootSet );
-//    bootSet.populateVirtualBootRecord( vmType );
     return bootSet;
   }
   

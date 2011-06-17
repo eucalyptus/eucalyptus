@@ -9,23 +9,25 @@ import org.hibernate.annotations.Entity;
 
 public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty implements ConfigurableProperty {
   private static Logger LOG = Logger.getLogger( MultiDatabasePropertyEntry.class );
-  protected final Method      setIdentifier;
+  protected Method      setIdentifier;
   protected Field       identifierField;
   protected String      identifierValue;
+  private String identifiedMethodName;
   
   public MultiDatabasePropertyEntry( Class definingClass, String entrySetName, Field field, Field identifierField, String description, String defaultValue,
                                      PropertyTypeParser typeParser,
                                      Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias, String identifierValue ) {
     super( definingClass, entrySetName, field, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias );
     this.identifierField = identifierField;
-    String identifiedMethodName = identifierField.getName( ).substring( 0, 1 ).toUpperCase( ) + identifierField.getName( ).substring( 1 );
-    this.setIdentifier = lookupSetIdentifierMethod( identifierField, identifiedMethodName );
+    this.identifiedMethodName = identifierField.getName( ).substring( 0, 1 ).toUpperCase( ) + identifierField.getName( ).substring( 1 );
     this.identifierValue = identifierValue;
   }
 
-  private Method lookupSetIdentifierMethod( Field identifierField, String identifiedMethodName ) {
+  private Method lookupSetIdentifierMethod( ) {
     try {
-      return this.getDefiningClass( ).getMethod( identifiedMethodName, identifierField.getType( ) );
+      Method setMethod = this.getDefiningClass( ).getMethod( this.identifiedMethodName, this.identifierField.getType( ) );
+      setMethod.setAccessible( true );
+      return setMethod;
     } catch ( Exception ex ) {
       throw new RuntimeException( "Failed to obtain reference to method for setting the identifier field: " + this.identifierField.getName( ) + " in type " + this.getDefiningClass( ).getSimpleName( ) );
     }
@@ -34,10 +36,11 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
   protected Object getQueryObject( ) throws Exception {
     Object queryObject = super.getDefiningClass( ).newInstance( );
     try {
+      setIdentifier = ( setIdentifier != null ) ? setIdentifier : this.lookupSetIdentifierMethod( );
       setIdentifier.invoke( queryObject, identifierValue );
     } catch ( Exception e1 ) {
       try {
-        this.lookupSetIdentifierMethod( identifierField, identifierValue ).invoke( queryObject, identifierValue );
+        this.lookupSetIdentifierMethod( ).invoke( queryObject, identifierValue );
       } catch ( Exception ex ) {
         LOG.error( ex , ex );
         return ex.getMessage( );
