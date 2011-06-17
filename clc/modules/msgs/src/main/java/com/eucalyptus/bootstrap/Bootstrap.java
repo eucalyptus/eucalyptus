@@ -328,19 +328,10 @@ public class Bootstrap {
             stage.addBootstrapper( bootstrap );
           }
         } else if ( ComponentId.class.isAssignableFrom( compType ) && !Empyrean.class.equals( compType ) ) {
-          ComponentId comp;
-          try {
-            comp = compType.newInstance( );
-            Components.lookup( comp ).getBootstrapper( ).addBootstrapper( bootstrap );
-          } catch ( InstantiationException ex ) {
-            LOG.error( ex, ex );
-//          System.exit( 1 );
-          } catch ( IllegalAccessException ex ) {
-            LOG.error( ex, ex );
-//          System.exit( 1 );
-          }
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
+          Components.lookup( compType ).getBootstrapper( ).addBootstrapper( bootstrap );
         } else {
-          LOG.error( new ClassCastException( "Fatal error attempting to register bootstrapper " + bootstrap.getClass( ).getCanonicalName( ) + ":  @Provides specifies a class which does not conform to ComponentId." ) );  
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
         }
       } catch ( Throwable ex ) {
         LOG.error( ex , ex );
