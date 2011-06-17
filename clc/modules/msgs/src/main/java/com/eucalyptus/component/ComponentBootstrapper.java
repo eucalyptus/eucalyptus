@@ -140,12 +140,13 @@ public class ComponentBootstrapper {
     this.updateBootstrapDependencies( );
     for ( Stage s : Bootstrap.Stage.values( ) ) {
       for ( Bootstrapper b : this.bootstrappers.get( s ) ) {
-        EventRecord.here( Bootstrap.class, transition, this.component.getName( ), "stage", s.name( ), b.getClass( ).getCanonicalName( ) ).debug( );
+        EventRecord.here( this.component.getClass( ), transition, "stage", s.name( ), b.getClass( ).getCanonicalName( ) ).debug( );
         try {
           boolean result = checkedFunction.apply( b );
           if ( !result ) {
-            throw Exceptions.error( new TransitionException( b.getClass( ).getSimpleName( ) + " returned 'false' from " + name
+            Exceptions.error( new TransitionException( b.getClass( ).getSimpleName( ) + " returned 'false' from " + name
                                                              + "( ): terminating bootstrap for component: " + this.component.getName( ) ) );
+            return false;
           }
         } catch ( Throwable e ) {
           throw Exceptions.error( new TransitionException( b.getClass( ).getSimpleName( ) + " returned '" + e.getMessage( ) + "' from " + name
@@ -188,14 +189,12 @@ public class ComponentBootstrapper {
   }
   
   public boolean stop( ) {
-    this.doTransition( EventType.BOOTSTRAPPER_STOP, new CheckedFunction<Bootstrapper, Boolean>( ) {
+    return this.doTransition( EventType.BOOTSTRAPPER_STOP, new CheckedFunction<Bootstrapper, Boolean>( ) {
       @Override
       public Boolean apply( Bootstrapper arg0 ) throws Exception {
         return arg0.stop( );
       }
     } );
-    
-    return true;
   }
   
   public void destroy( ) {
