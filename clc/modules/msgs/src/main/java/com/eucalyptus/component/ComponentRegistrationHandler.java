@@ -123,7 +123,7 @@ public class ComponentRegistrationHandler {
           }
         };
         try {
-          Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class ).submit( followRunner ).get( 100, TimeUnit.MILLISECONDS );
+          Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class ).submit( followRunner ).get( 5000, TimeUnit.MILLISECONDS );
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
         } catch ( TimeoutException ex ) {

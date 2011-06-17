@@ -264,39 +264,13 @@ public class ServiceTransitions {
     ServiceConfiguration config = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) );
     LOG.debug( "Sending request " + msg.getClass( ).getSimpleName( ) + " to " + parent.getFullName( ) );
     Throwable lastEx = null;
-    for ( int i = 0; i < BOOTSTRAP_REMOTE_RETRIES; i++ ) {
-      try {
-        T reply = ( T ) AsyncRequests.sendSync( config, msg );
-        return reply;
-      } catch ( RetryableConnectionException ex ) {
-        try {
-          TimeUnit.MILLISECONDS.sleep( BOOTSTRAP_REMOTE_RETRY_INTERVAL_MSEC );
-        } catch ( InterruptedException ex1 ) {
-          Thread.currentThread( ).interrupt( );
-        }
-        lastEx = ex;
-        continue;
-      } catch ( ExecutionException ex ) {
-        LOG.error( ex, ex );
-        if ( ex.getCause( ) instanceof RetryableConnectionException ) {
-          try {
-            TimeUnit.MILLISECONDS.sleep( BOOTSTRAP_REMOTE_RETRY_INTERVAL_MSEC );
-          } catch ( InterruptedException ex1 ) {
-            Thread.currentThread( ).interrupt( );
-          }
-          lastEx = ex.getCause( );
-          continue;
-        } else {
-          throw ex;
-        }
-      } catch ( Throwable ex ) {
-        LOG.error( ex, ex );
-        throw ex;
-      }
+    try {
+      T reply = ( T ) AsyncRequests.sendSync( config, msg );
+      return reply;
+    } catch ( Throwable ex ) {
+      LOG.error( ex, ex );
+      throw ex;
     }
-    throw new ServiceRegistrationException( "Failed to contact host because of " + lastEx + " after " + BOOTSTRAP_REMOTE_RETRIES + " retries: "
-                                            + config.getUri( )
-                                            + " when sending message: " + msg, lastEx );
   }
   
   private static void processTransition( final ServiceConfiguration parent, final Completion transitionCallback, final TransitionActions transitionAction ) {
