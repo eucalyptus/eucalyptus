@@ -127,7 +127,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
               } else {
                 AsyncRequestHandler.this.teardown( future.getCause( ) );
               }
-            } catch ( RuntimeException ex ) {
+            } catch ( Exception ex ) {
               LOG.error( ex, ex );
               AsyncRequestHandler.this.teardown( future.getCause( ) );
             }

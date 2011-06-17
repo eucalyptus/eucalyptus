@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Logs;
@@ -87,7 +88,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    */
   @Override
   public CheckedListenableFuture<R> dispatch( String cluster ) {//TODO:GRZE:ASAP: get rid of this method
-    ServiceConfiguration serviceConfig = Components.lookup( com.eucalyptus.component.id.ClusterController.class ).lookupServiceConfiguration( cluster );
+    ServiceConfiguration serviceConfig = Components.lookup( ClusterController.class ).lookupServiceConfiguration( cluster );
     return this.dispatch( serviceConfig );
   }
   

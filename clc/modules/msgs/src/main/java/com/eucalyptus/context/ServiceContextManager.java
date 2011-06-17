@@ -178,10 +178,6 @@ public class ServiceContextManager implements EventListener<Event> {
     }
   }
   
-  public static final void restart( ) {
-    singleton.doUpdate( );
-  }
-  
   private void update( ) throws ServiceInitializationException {
     this.canHasWrite.lock( );
     try {
