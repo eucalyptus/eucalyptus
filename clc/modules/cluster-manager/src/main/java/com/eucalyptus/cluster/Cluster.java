@@ -571,7 +571,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         }
       }
       if ( error != null ) {
-        this.configuration.info( error );
+        this.configuration.error( error );
       }
     }
   }
@@ -605,7 +605,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             }
           }
           if ( error != null ) {
-            this.configuration.info( error );
+            this.configuration.error( error );
           }
         } catch ( InterruptedException ex1 ) {
           LOG.error( ex1, ex1 );
