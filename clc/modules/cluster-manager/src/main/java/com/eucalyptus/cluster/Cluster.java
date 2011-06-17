@@ -152,7 +152,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   /**
    * 
    */
-  private static final int                               CLUSTER_STARTUP_SYNC_RETRIES = 15;
+  private static final int                               CLUSTER_STARTUP_SYNC_RETRIES = 1;
   /**
    * 
    */
