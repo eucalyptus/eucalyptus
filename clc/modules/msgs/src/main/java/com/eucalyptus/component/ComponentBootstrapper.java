@@ -144,9 +144,8 @@ public class ComponentBootstrapper {
         try {
           boolean result = checkedFunction.apply( b );
           if ( !result ) {
-            Exceptions.error( new TransitionException( b.getClass( ).getSimpleName( ) + " returned 'false' from " + name
+            throw Exceptions.error( new TransitionException( b.getClass( ).getSimpleName( ) + " returned 'false' from " + name
                                                              + "( ): terminating bootstrap for component: " + this.component.getName( ) ) );
-            return false;
           }
         } catch ( Throwable e ) {
           throw Exceptions.error( new TransitionException( b.getClass( ).getSimpleName( ) + " returned '" + e.getMessage( ) + "' from " + name
@@ -189,12 +188,13 @@ public class ComponentBootstrapper {
   }
   
   public boolean stop( ) {
-    return this.doTransition( EventType.BOOTSTRAPPER_STOP, new CheckedFunction<Bootstrapper, Boolean>( ) {
+    this.doTransition( EventType.BOOTSTRAPPER_STOP, new CheckedFunction<Bootstrapper, Boolean>( ) {
       @Override
       public Boolean apply( Bootstrapper arg0 ) throws Exception {
         return arg0.stop( );
       }
     } );
+    return true;
   }
   
   public void destroy( ) {
