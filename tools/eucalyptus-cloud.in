@@ -183,13 +183,14 @@ do_upgrade() {
 	$EUCALYPTUS/usr/share/eucalyptus/euca_upgrade --old $OLD_EUCA_PATH --new $EUCALYPTUS --db
 	case "$?" in
 	0) 
+        	echo "done."
 		rm -f $EUCALYPTUS/etc/eucalyptus/eucalyptus.upgrade
+		;;
         1)	
 		echo "Upgrade failed. Aborting start."
 		exit 1
+		;;
 	esac
-	;;
-        echo "done."
 }
 
 do_start() {
