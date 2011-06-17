@@ -4,6 +4,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
@@ -113,7 +114,7 @@ public class Callbacks {
   @SuppressWarnings( "unchecked" )
   public static Runnable addListenerHandler( final CheckedListenableFuture<?> future, final Callback<?> listener ) {
     Runnable r;
-    future.addListener( r = new Callbacks.BasicCallbackProcessor( future, listener ), Threads.currentThreadExecutor( ) );
+    future.addListener( r = new Callbacks.BasicCallbackProcessor( future, listener ), Threads.lookup( Empyrean.class, Callbacks.class, BasicCallbackProcessor.class.toString( ) ) );
     return r;
   }
   
