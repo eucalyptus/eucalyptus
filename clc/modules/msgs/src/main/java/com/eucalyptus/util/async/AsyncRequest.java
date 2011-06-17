@@ -156,6 +156,14 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
             this.result.setException( ex );
           } catch ( Throwable t ) {}
         }
+      } else {
+        try {
+          this.requestResult.get( );
+        } catch ( ExecutionException ex ) {
+          LOG.error( ex , ex );
+        } catch ( InterruptedException ex ) {
+          LOG.error( ex , ex );
+        }
       }
     } catch ( RuntimeException ex ) {
       LOG.error( ex, ex );
