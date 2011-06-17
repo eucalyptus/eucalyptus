@@ -75,6 +75,7 @@ import com.eucalyptus.util.CheckedFunction;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.fsm.TransitionException;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 
@@ -98,42 +99,32 @@ public class ComponentBootstrapper {
 
   private void updateBootstrapDependencies( ) {    
     try {
-      for ( Entry<Stage, Bootstrapper> entry : Lists.newArrayList( this.bootstrappers.entries( ) ) ) {
-        if ( !entry.getValue( ).checkLocal( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + entry.getKey( ), this.component.getComponentId( ).name( ),
-                            "Depends.local=" + entry.getValue( ).getDependsRemote( ).toString( ), "Component=" + this.component.getComponentId( ).name( ) + "=remote" ).info( );
-          Bootstrap.Stage stage = entry.getKey( );
-          Bootstrapper bootstrapper = entry.getValue( );
-          this.bootstrappers.remove( entry.getKey( ), entry.getValue( ) );
-          this.disabledBootstrappers.put( stage, bootstrapper );
-        } else if ( !entry.getValue( ).checkRemote( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + entry.getKey( ), this.component.getComponentId( ).name( ),
-                            "Depends.remote=" + entry.getValue( ).getDependsRemote( ).toString( ), "Component=" + this.component.getComponentId( ).name( ) + "=local" ).info( );
-          Bootstrap.Stage stage = entry.getKey( );
-          Bootstrapper bootstrapper = entry.getValue( );
-          this.bootstrappers.remove( entry.getKey( ), entry.getValue( ) );
-          this.disabledBootstrappers.put( stage, bootstrapper );
-        }
-      }
-      for ( Entry<Stage, Bootstrapper> entry : Lists.newArrayList( this.disabledBootstrappers.entries( ) ) ) {
-        Bootstrapper b = entry.getValue( );
-        if ( entry.getValue( ).checkLocal( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, "stage:" , entry.getKey( ).toString( ), b.getClass( ).getName( ), "component=" + this.component.getComponentId( ).name( ) ).info( );
-          Bootstrap.Stage stage = entry.getKey( );
-          Bootstrapper bootstrapper = entry.getValue( );
-          this.disabledBootstrappers.remove( entry.getKey( ), entry.getValue( ) );
-          this.bootstrappers.put( stage, bootstrapper );
-        } else if ( entry.getValue( ).checkRemote( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, "stage:" , entry.getKey( ).toString( ), b.getClass( ).getName( ), "component=" + this.component.getComponentId( ).name( ) ).info( );
-          Bootstrap.Stage stage = entry.getKey( );
-          Bootstrapper bootstrapper = entry.getValue( );
-          this.disabledBootstrappers.remove( entry.getKey( ), entry.getValue( ) );
-          this.bootstrappers.put( stage, bootstrapper );
+      for ( Entry<Stage, Bootstrapper> entry : Iterables.concat( this.bootstrappers.entries( ), this.disabledBootstrappers.entries( ) ) ) {
+        Bootstrap.Stage stage = entry.getKey( );
+        Bootstrapper bootstrapper = entry.getValue( );
+        if ( !entry.getValue( ).checkLocal( ) || !entry.getValue( ).checkRemote( ) ) {
+          this.disableBootstrapper( stage, bootstrapper );
+        } else {
+          this.enableBootstrapper( stage, bootstrapper );
         }
       }
     } catch ( Exception ex ) {
       LOG.error( ex , ex );
     }    
+  }
+
+  private void enableBootstrapper( Bootstrap.Stage stage, Bootstrapper bootstrapper ) {
+    EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, "stage:" , stage.toString( ), this.component.getComponentId( ).name( ),
+                      bootstrapper.getClass( ).getName( ), "component=" + this.component.getComponentId( ).name( ) ).info( );
+    this.disabledBootstrappers.remove( stage, bootstrapper );
+    this.bootstrappers.put( stage, bootstrapper );
+  }
+
+  private void disableBootstrapper( Bootstrap.Stage stage, Bootstrapper bootstrapper ) {
+    EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + stage.toString( ), this.component.getComponentId( ).name( ),
+                      bootstrapper.getClass( ).getName( ), "component=" + this.component.getComponentId( ).name( ) ).info( );
+    this.bootstrappers.remove( stage, bootstrapper );
+    this.disabledBootstrappers.put( stage, bootstrapper );
   }
 
   private boolean doTransition( EventType transition, CheckedFunction<Bootstrapper, Boolean> checkedFunction ) {
