@@ -197,11 +197,13 @@ public class Emis {
                                             + vmType.getDisk( ) * 1024l + "MB]" );
       }
       VmTypeInfo vmTypeInfo = createVmTypeInfo( vmType, imgSize );
-      if ( this.hasKernel( ) ) {
-        vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), this.getKernel( ).getManifestLocation( ) );
-      }
-      if ( this.hasRamdisk( ) ) {
-        vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), this.getRamdisk( ).getManifestLocation( ) );
+      if ( !Image.Platform.windows.equals( this.getMachine( ).getPlatform( ) ) ) {
+        if ( this.hasKernel( ) ) {
+          vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), this.getKernel( ).getManifestLocation( ) );
+        }
+        if ( this.hasRamdisk( ) ) {
+          vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), this.getRamdisk( ).getManifestLocation( ) );
+        }
       }
       return vmTypeInfo;
     }
