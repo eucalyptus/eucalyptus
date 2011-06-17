@@ -188,7 +188,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       
       @Override
       public boolean apply( final Cluster input ) {
-        if ( Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupStateMachine( ).getState( ).ordinal( ) ) {
+        if ( Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupState( ).ordinal( ) ) {
           try {
             AsyncRequests.newRequest( new StartServiceCallback( input ) ).dispatch( input.configuration ).get( );
             return true;
@@ -203,7 +203,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     ENABLED {
       @Override
       public boolean apply( final Cluster input ) {
-        if ( Component.State.ENABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) ) ) {
+        if ( Component.State.ENABLED.equals( input.getConfiguration( ).lookupState( ) ) ) {
           try {
             AsyncRequests.newRequest( new EnableServiceCallback( input ) ).sendSync( input.configuration );
             return true;
@@ -227,7 +227,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     DISABLED {
       @Override
       public boolean apply( final Cluster input ) {
-        if ( Component.State.DISABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) ) ) {
+        if ( Component.State.DISABLED.equals( input.getConfiguration( ).lookupState( ) ) ) {
           try {
             Clusters.getInstance( ).disable( input.getName( ) );
           } catch ( Exception ex ) {

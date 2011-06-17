@@ -89,17 +89,6 @@ public class Services {
     }
   }
   
-  @TypeMapper( from = ServiceConfiguration.class, to = Service.class )
-  public enum ServiceMapper implements Function<ServiceConfiguration, Service> {
-    INSTANCE;
-    
-    @Override
-    public Service apply( final ServiceConfiguration input ) {
-      return input.lookupComponent( ).lookupService( input );
-    }
-    
-  }
-  
   @TypeMapper
   public enum ServiceBuilderMapper implements Function<ServiceConfiguration, ServiceBuilder<? extends ServiceConfiguration>> {
     INSTANCE;

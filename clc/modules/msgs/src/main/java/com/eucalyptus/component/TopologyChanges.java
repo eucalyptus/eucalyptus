@@ -155,7 +155,7 @@ public class TopologyChanges {
         if ( !Bootstrap.isFinished( ) ) {
           LOG.debug( this.toString( ) + " aborted because bootstrap is not complete for service: " + config );
           return config;
-        } else if ( config.isVmLocal( ) && !config.lookupStateMachine( ).isBusy( ) ) {
+        } else if ( config.isVmLocal( ) && !config.getStateMachine( ).isBusy( ) ) {
           State initialState = config.lookupState( );
           State nextState = config.lookupState( );
           if ( State.NOTREADY.equals( initialState ) || State.BROKEN.equals( initialState ) ) {
@@ -252,7 +252,7 @@ public class TopologyChanges {
         if ( !Bootstrap.isFinished( ) ) {
           LOG.debug( this.toString( ) + " aborted because bootstrap is not complete for service: " + config );
           return config;
-        } else if ( !config.lookupStateMachine( ).isBusy( ) ) {
+        } else if ( !config.getStateMachine( ).isBusy( ) ) {
           State initialState = config.lookupState( );
           State nextState = config.lookupState( );
           if ( State.NOTREADY.equals( initialState ) || State.BROKEN.equals( initialState ) ) {

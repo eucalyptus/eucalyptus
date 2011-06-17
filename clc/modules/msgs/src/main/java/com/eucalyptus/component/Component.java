@@ -253,10 +253,10 @@ public class Component implements HasName<Component> {
   /**
    * @param config
    * @return
-   * @throws NoSuchElementException
+   * @throws NoSuchServiceException
    * @see com.eucalyptus.component.Component.ServiceRegistry#lookup(com.eucalyptus.component.ServiceConfiguration)
    */
-  public Service lookupService( ServiceConfiguration config ) throws NoSuchElementException {
+  public Service lookupService( ServiceConfiguration config ) throws NoSuchServiceException {
     return this.serviceRegistry.lookup( config );
   }
   
@@ -544,7 +544,7 @@ public class Component implements HasName<Component> {
      */
     public Service lookup( ServiceConfiguration config ) throws NoSuchElementException {
       if ( !this.services.containsKey( config ) ) {
-        throw new NoSuchElementException( "Failed to lookup service corresponding to service configuration: " + config );
+        throw new NoSuchElementException( "Failed to lookup service corresponding to service configuration: " + config.getName( ) );
       } else {
         return this.services.get( config );
       }
