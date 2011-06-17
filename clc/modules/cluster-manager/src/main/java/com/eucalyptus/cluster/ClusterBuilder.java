@@ -81,24 +81,22 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
   
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
-    LOG.info( "Starting up cluster: " + config );
+    LOG.info( "Starting cluster: " + config );
     EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponentId( ).name( ), config.getName( ),
                       config.getUri( ).toASCIIString( ) ).info( );
     try {
-      if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
-        if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
-          Cluster newCluster = new Cluster( ( ClusterConfiguration ) config );//TODO:GRZE:fix the type issue here.
+      if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
+        Cluster newCluster = new Cluster( ( ClusterConfiguration ) config );//TODO:GRZE:fix the type issue here.
+        newCluster.start( );
+      } else {
+        try {
+          Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
+          Clusters.getInstance( ).deregister( config.getName( ) );
           newCluster.start( );
-        } else {
-          try {
-            Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
-            Clusters.getInstance( ).deregister( config.getName( ) );
-            newCluster.start( );
-          } catch ( NoSuchElementException ex ) {
-            Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
-            Clusters.getInstance( ).deregister( config.getName( ) );
-            newCluster.start( );
-          }
+        } catch ( NoSuchElementException ex ) {
+          Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
+          Clusters.getInstance( ).deregister( config.getName( ) );
+          newCluster.start( );
         }
       }
     } catch ( NoSuchElementException ex ) {
@@ -112,15 +110,13 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_ENABLED, config.getComponentId( ).name( ), config.getName( ),
                       config.getUri( ).toASCIIString( ) ).info( );
     try {
-      if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
-        try {
-          Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
-          Clusters.getInstance( ).enable( config.getName( ) );
-          newCluster.enable( );
-        } catch ( NoSuchElementException ex ) {
-          Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
-          newCluster.enable( );
-        }
+      try {
+        Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
+        Clusters.getInstance( ).enable( config.getName( ) );
+        newCluster.enable( );
+      } catch ( NoSuchElementException ex ) {
+        Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
+        newCluster.enable( );
       }
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex, ex );
@@ -134,16 +130,14 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_DISABLED, config.getComponentId( ).name( ), config.getName( ),
                       config.getUri( ).toASCIIString( ) ).info( );
     try {
-      if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
-        if ( Clusters.getInstance( ).contains( config.getName( ) ) ) {
-          try {
-            Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
-            Clusters.getInstance( ).disable( newCluster.getName( ) );
-            newCluster.disable( );
-          } catch ( NoSuchElementException ex ) {
-            Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
-            newCluster.disable( );
-          }
+      if ( Clusters.getInstance( ).contains( config.getName( ) ) ) {
+        try {
+          Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
+          Clusters.getInstance( ).disable( newCluster.getName( ) );
+          newCluster.disable( );
+        } catch ( NoSuchElementException ex ) {
+          Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
+          newCluster.disable( );
         }
       }
     } catch ( NoSuchElementException ex ) {

@@ -120,6 +120,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.CheckedListenableFuture;
@@ -549,31 +550,16 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     } catch ( Exception ex1 ) {
       LOG.error( ex1, ex1 );
     }
-//    this.configuration.lookupService( ).getEndpoint( ).start( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
     if ( !State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
       final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( Cluster.this, State.PENDING, State.AUTHENTICATING,
                                                                                                   State.STARTING,
                                                                                                   State.STARTING_NOTREADY, State.NOTREADY, State.DISABLED );
-      Exception error = null;
-      for ( int i = 0; i < Cluster.CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
         try {
-          try {
-            transition.call( ).get( );
-            error = null;
-            break;
-          } catch ( Exception ex ) {
-            LOG.error( ex );
-            error = ex;
-          }
-          TimeUnit.SECONDS.sleep( 1 );
-        } catch ( InterruptedException ex ) {
-          LOG.error( ex, ex );
+          transition.call( ).get( );
+        } catch ( Exception ex ) {
+          Logs.exhaust( ).error( ex, ex );
+          throw new ServiceRegistrationException( "Failed to call start() on cluster: " + this.configuration + " because of: " + ex.getMessage( ), ex );
         }
-      }
-      if ( error != null ) {
-        this.configuration.error( error );
-        throw new ServiceRegistrationException( "Failed to call start on cluster: " + this.configuration + " because of: " + error.getMessage( ), error );
-      }
     }
   }
   
@@ -588,29 +574,11 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                                     State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
                                                                                                     State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
         CheckedListenableFuture<Cluster> res = Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
-        Exception error = null;
-        for ( int i = 0; i < Cluster.CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
-          try {
-            try {
-              res.get( );
-              error = null;
-              break;
-            } catch ( Exception ex ) {
-              LOG.error( ex );
-              error = ex;
-            }
-            TimeUnit.SECONDS.sleep( 1 );
-          } catch ( InterruptedException ex ) {
-            Thread.currentThread( ).interrupt( );
-            LOG.error( ex, ex );
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
-            error = ex;
-          }
-        }
-        if ( error != null ) {
-          this.configuration.error( error );
-          throw new ServiceRegistrationException( "Failed to call enable() on cluster: " + this.configuration + " because of: " + error.getMessage( ), error );
+        try {
+          res.get( );
+        } catch ( Exception ex ) {
+          Logs.exhaust( ).error( ex, ex );
+          throw new ServiceRegistrationException( "Failed to call enable() on cluster: " + this.configuration + " because of: " + ex.getMessage( ), ex );
         }
       } catch ( NoSuchElementException ex ) {
         throw ex;
