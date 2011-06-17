@@ -68,6 +68,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -142,6 +143,8 @@ public class ServiceBootstrapper extends Bootstrapper {
           Future<?> runResult = Threads.lookup( ConfigurationService.class, ServiceBootstrapper.class ).submit( getTransitionRunnable( config, comp, future ) );
           try {
             runResult.get( 100, TimeUnit.MILLISECONDS );
+          } catch ( TimeoutException ex ) {
+            LOG.error( ex );
           } catch ( InterruptedException ex ) {
             LOG.error( ex , ex );
             Thread.currentThread( ).interrupt( );
@@ -168,6 +171,8 @@ public class ServiceBootstrapper extends Bootstrapper {
               } catch ( InterruptedException ex ) {
                 LOG.error( ex , ex );
               } catch ( ExecutionException ex ) {
+                LOG.error( ex , ex );
+              } catch ( TimeoutException ex ) {
                 LOG.error( ex , ex );
               }
             } catch ( Exception ex ) {
