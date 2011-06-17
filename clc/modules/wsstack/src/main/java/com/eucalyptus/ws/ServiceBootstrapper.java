@@ -139,8 +139,7 @@ public class ServiceBootstrapper extends Bootstrapper {
         final Component comp = config.lookupComponent( );
         try {
           final CheckedListenableFuture<ServiceConfiguration> future = comp.startTransition( config );
-          Runnable followRunner = getTransitionRunnable( config, comp, future );
-          Future<?> runResult = Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, config.getFullName( ).toString( ) ).submit( followRunner );
+          Future<?> runResult = Threads.lookup( ConfigurationService.class, ServiceBootstrapper.class ).submit( getTransitionRunnable( config, comp, future ) );
           try {
             runResult.get( 100, TimeUnit.MILLISECONDS );
           } catch ( InterruptedException ex ) {

@@ -109,6 +109,7 @@ public class ComponentRegistrationHandler {
         Runnable followRunner = new Runnable( ) {
           public void run( ) {
             try {
+              component.startTransition( newComponent ).get( );
               component.enableTransition( newComponent ).get( );
             } catch ( ServiceRegistrationException ex1 ) {
               LOG.error( ex1 , ex1 );
@@ -122,7 +123,7 @@ public class ComponentRegistrationHandler {
           }
         };
         try {
-          Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, newComponent.getFullName( ).toString( ) ).submit( followRunner ).get( 100, TimeUnit.MILLISECONDS );
+          Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class ).submit( followRunner ).get( 100, TimeUnit.MILLISECONDS );
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
         } catch ( TimeoutException ex ) {
