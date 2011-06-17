@@ -484,12 +484,11 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                                                   img.image_kernel_id, img.image_ramdisk_id );
                         break;
                 }
-                // TODO: Determine how to set the image availability. The
-                // data is in img.image_availability, but there is no setter.
                 initMetaClass(ii, ii.class);
                 ii.setImagePublic(img.image_is_public);
                 ii.setImageType(Image.Type.valueOf(img.image_type));
                 ii.setSignature(img.image_signature);
+                ii.setState( Image.State.valueOf(img.image_availability));
                 dbGen.add(ii);
                 dbGen.commit();
                 gen_conn.rows("""SELECT image_product_code_value FROM image_product_code
