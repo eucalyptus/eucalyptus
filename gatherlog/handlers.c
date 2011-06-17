@@ -210,22 +210,26 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
     } else {
       close(filedes[1]);
 
-      rc = read(filedes[0], buf, bufsize);
+      bzero(buf, bufsize);
+      rc = read(filedes[0], buf, bufsize - 1);
       if (rc && buf[0] != '\0') {
 	*outCCLog = strdup(buf);
       }
 
-      rc = read(filedes[0], buf, bufsize);
+      bzero(buf, bufsize);
+      rc = read(filedes[0], buf, bufsize - 1);
       if (rc && buf[0] != '\0') {
 	*outNCLog = strdup(buf);
       }
 
-      rc = read(filedes[0], buf, bufsize);
+      bzero(buf, bufsize);
+      rc = read(filedes[0], buf, bufsize - 1);
       if (rc && buf[0] != '\0') {
 	*outHTTPDLog = strdup(buf);
       }
 
-      rc = read(filedes[0], buf, bufsize);
+      bzero(buf, bufsize);
+      rc = read(filedes[0], buf, bufsize - 1);
       if (rc && buf[0] != '\0') {
 	*outAxis2Log = strdup(buf);
       }

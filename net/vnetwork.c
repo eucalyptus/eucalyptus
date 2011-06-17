@@ -193,7 +193,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
     if (domainname) {
       strncpy(vnetconfig->euca_domainname, domainname, 256);
     } else {
-      strncpy(vnetconfig->euca_domainname, "eucalyptus", strlen("eucalyptus"));
+      strncpy(vnetconfig->euca_domainname, "eucalyptus", strlen("eucalyptus") + 1);
     }
 
     if (localIp) {
