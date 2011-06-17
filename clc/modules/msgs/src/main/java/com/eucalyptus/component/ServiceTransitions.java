@@ -108,8 +108,8 @@ import com.google.common.collect.Iterables;
 
 public class ServiceTransitions {
   private static final int BOOTSTRAP_REMOTE_RETRY_INTERVAL_SECONDS = 1;                                           //TODO:GRZE:@Configurable
-  private static final int BOOTSTRAP_REMOTE_RETRIES        = 5;                                           //TODO:GRZE:@Configurable
-  static Logger            LOG                             = Logger.getLogger( ServiceTransitions.class );
+  private static final int BOOTSTRAP_REMOTE_RETRIES                = 5;                                           //TODO:GRZE:@Configurable
+  static Logger            LOG                                     = Logger.getLogger( ServiceTransitions.class );
   
   interface ServiceTransitionCallback {
     public void fire( ServiceConfiguration parent ) throws Throwable;
@@ -134,13 +134,24 @@ public class ServiceTransitions {
   static final CheckedListenableFuture<ServiceConfiguration> startTransitionChain( final ServiceConfiguration config ) {
     if ( !State.NOTREADY.equals( config.lookupState( ) ) && !State.DISABLED.equals( config.lookupState( ) ) && !State.ENABLED.equals( config.lookupState( ) ) ) {
       Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
-      if ( State.STOPPED.isIn( config ) || State.INITIALIZED.isIn( config ) || State.BROKEN.isIn( config ) ) {
+      if ( State.STOPPED.isIn( config ) ) {
         transition = Automata.sequenceTransitions( config,
-                                                   Component.State.BROKEN,
                                                    Component.State.INITIALIZED,
                                                    Component.State.LOADED,
                                                    Component.State.NOTREADY,
                                                    Component.State.DISABLED );
+      } else if ( State.INITIALIZED.isIn( config ) ) {
+        transition = Automata.sequenceTransitions( config,
+                                                   Component.State.LOADED,
+                                                   Component.State.NOTREADY,
+                                                   Component.State.DISABLED );
+      } else if ( State.BROKEN.isIn( config ) ) {
+        transition = Automata.sequenceTransitions( config,
+                                                     Component.State.BROKEN,
+                                                     Component.State.INITIALIZED,
+                                                     Component.State.LOADED,
+                                                     Component.State.NOTREADY,
+                                                     Component.State.DISABLED );
       } else {
         transition = Automata.sequenceTransitions( config, config.lookupState( ), Component.State.NOTREADY, Component.State.DISABLED );
       }
@@ -553,7 +564,7 @@ public class ServiceTransitions {
         if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
           parent.lookupComponent( ).getBootstrapper( ).check( );
           parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
-        } 
+        }
         parent.lookupComponent( ).getBootstrapper( ).disable( );
         parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
       }
