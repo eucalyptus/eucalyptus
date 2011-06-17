@@ -751,7 +751,7 @@ static int init (void)
 		nc_state.home[0] = '\0';
 		do_warn = 1;
 	} else {
-		strncpy(nc_state.home, tmp, MAX_PATH);
+		strncpy(nc_state.home, tmp, MAX_PATH - 1);
     }
 
 	/* set the minimum log for now */

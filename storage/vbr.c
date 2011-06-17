@@ -425,8 +425,13 @@ vbr_legacy ( // constructs VBRs for {image|kernel|ramdisk}x{Id|URL} entries (DEP
             { // create root partition VBR
                 virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
                 strncpy (vbr->resourceLocation, imageURL, sizeof (vbr->resourceLocation));
+                vbr->resourceLocation[sizeof(vbr->resourceLocation) - 1] = '\0';
+
                 strncpy (vbr->guestDeviceName, "sda1", sizeof (vbr->guestDeviceName));
+
                 strncpy (vbr->id, imageId, sizeof (vbr->id));
+                vbr->id[sizeof(vbr->id) - 1] = '\0';
+
                 strncpy (vbr->typeName, "machine", sizeof (vbr->typeName));
                 vbr->size = -1;
                 strncpy (vbr->formatName, "none", sizeof (vbr->formatName));

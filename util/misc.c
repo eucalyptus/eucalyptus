@@ -361,7 +361,7 @@ int check_directory(char *dir) {
       char tmp [4096];
       snprintf (tmp, 4096, "%s/", dir);
 
-      lstat (tmp, &mystat);
+      rc = lstat (tmp, &mystat);
       if (rc < 0)
           return 1;
 
