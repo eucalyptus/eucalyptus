@@ -64,6 +64,7 @@ package com.eucalyptus.bootstrap;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
@@ -311,34 +312,38 @@ public class Bootstrap {
   @SuppressWarnings( "deprecation" )
   public static void initBootstrappers( ) {
     for ( Bootstrapper bootstrap : BootstrapperDiscovery.getBootstrappers( ) ) {//these have all been checked at discovery time
-      Class<ComponentId> compType;
-      String bc = bootstrap.getClass( ).getCanonicalName( );
-      Bootstrap.Stage stage = bootstrap.getBootstrapStage( );
-      compType = bootstrap.getProvides( );
-      if( Bootstrap.checkDepends( bootstrap ) ) {
-        if ( ComponentId.class.equals( compType ) ) {
-          for ( Component c : Components.list( ) ) {
-            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + c.getName( ) ).info( );
-            c.getBootstrapper( ).addBootstrapper( bootstrap );
+      try {
+        Class<ComponentId> compType;
+        String bc = bootstrap.getClass( ).getCanonicalName( );
+        Bootstrap.Stage stage = bootstrap.getBootstrapStage( );
+        compType = bootstrap.getProvides( );
+        if( Bootstrap.checkDepends( bootstrap ) ) {
+          if ( ComponentId.class.equals( compType ) ) {
+            for ( Component c : Components.list( ) ) {
+              EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + c.getName( ) ).info( );
+              c.getBootstrapper( ).addBootstrapper( bootstrap );
+            }
+          } else if ( Empyrean.class.equals( compType ) ) {
+            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
+            stage.addBootstrapper( bootstrap );
           }
-        } else if ( Empyrean.class.equals( compType ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
-          stage.addBootstrapper( bootstrap );
-        }
-      } else if ( ComponentId.class.isAssignableFrom( compType ) && !Empyrean.class.equals( compType ) ) {
-        ComponentId comp;
-        try {
-          comp = compType.newInstance( );
-          Components.lookup( comp ).getBootstrapper( ).addBootstrapper( bootstrap );
-        } catch ( InstantiationException ex ) {
-          LOG.error( ex, ex );
+        } else if ( ComponentId.class.isAssignableFrom( compType ) && !Empyrean.class.equals( compType ) ) {
+          ComponentId comp;
+          try {
+            comp = compType.newInstance( );
+            Components.lookup( comp ).getBootstrapper( ).addBootstrapper( bootstrap );
+          } catch ( InstantiationException ex ) {
+            LOG.error( ex, ex );
 //          System.exit( 1 );
-        } catch ( IllegalAccessException ex ) {
-          LOG.error( ex, ex );
+          } catch ( IllegalAccessException ex ) {
+            LOG.error( ex, ex );
 //          System.exit( 1 );
+          }
+        } else {
+          LOG.error( new ClassCastException( "Fatal error attempting to register bootstrapper " + bootstrap.getClass( ).getCanonicalName( ) + ":  @Provides specifies a class which does not conform to ComponentId." ) );  
         }
-      } else {
-        LOG.error( new ClassCastException( "Fatal error attempting to register bootstrapper " + bootstrap.getClass( ).getCanonicalName( ) + ":  @Provides specifies a class which does not conform to ComponentId." ) );  
+      } catch ( Throwable ex ) {
+        LOG.error( ex , ex );
       }
     }
   }
