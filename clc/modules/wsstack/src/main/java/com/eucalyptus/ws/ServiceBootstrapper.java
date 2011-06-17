@@ -82,6 +82,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.ServiceTransitions;
 import com.eucalyptus.config.ConfigurationService;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
@@ -139,16 +140,8 @@ public class ServiceBootstrapper extends Bootstrapper {
       public boolean apply( final ServiceConfiguration config ) {
         final Component comp = config.lookupComponent( );
         try {
-          final CheckedListenableFuture<ServiceConfiguration> future = comp.startTransition( config );
-          Future<?> runResult = Threads.lookup( ConfigurationService.class, ServiceBootstrapper.class ).submit( getTransitionRunnable( config, comp, future ) );
-          try {
-            runResult.get( 100, TimeUnit.MILLISECONDS );
-          } catch ( TimeoutException ex ) {
-            LOG.error( ex );
-          } catch ( InterruptedException ex ) {
-            LOG.error( ex , ex );
-            Thread.currentThread( ).interrupt( );
-          }
+          final CheckedListenableFuture<ServiceConfiguration> future = ServiceTransitions.transitionChain( config, Component.State.NOTREADY );
+          Threads.lookup( ConfigurationService.class, ServiceBootstrapper.class ).submit( getTransitionRunnable( config, comp, future ) );
           return true;
         } catch ( Exception e ) {
           LOG.error( e, e );
@@ -163,16 +156,12 @@ public class ServiceBootstrapper extends Bootstrapper {
             try {
               future.get( );
               try {
-                comp.enableTransition( config ).get( 100, TimeUnit.MILLISECONDS );
-              } catch ( ServiceRegistrationException ex ) {
-                LOG.error( ex , ex );
+                ServiceTransitions.transitionChain( config, Component.State.ENABLED ).get( );
               } catch ( IllegalStateException ex ) {
                 LOG.error( ex , ex );
               } catch ( InterruptedException ex ) {
                 LOG.error( ex , ex );
               } catch ( ExecutionException ex ) {
-                LOG.error( ex , ex );
-              } catch ( TimeoutException ex ) {
                 LOG.error( ex , ex );
               }
             } catch ( Exception ex ) {
