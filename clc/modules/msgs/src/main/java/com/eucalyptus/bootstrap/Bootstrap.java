@@ -319,15 +319,15 @@ public class Bootstrap {
         compType = bootstrap.getProvides( );
         EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_INIT, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
         if( Bootstrap.checkDepends( bootstrap ) ) {
-          if ( ComponentId.class.equals( compType ) ) {
+          if ( Empyrean.class.equals( compType ) ) {
+            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
+            stage.addBootstrapper( bootstrap );
+          } else if ( ComponentId.class.equals( compType ) ) {
             for ( Component c : Components.list( ) ) {
               EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + c.getName( ) ).info( );
               c.getBootstrapper( ).addBootstrapper( bootstrap );
             }
-          } else if ( Empyrean.class.equals( compType ) ) {
-            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
-            stage.addBootstrapper( bootstrap );
-          }
+          } 
         } else if ( ComponentId.class.isAssignableFrom( compType ) && !Empyrean.class.equals( compType ) ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
           Components.lookup( compType ).getBootstrapper( ).addBootstrapper( bootstrap );
