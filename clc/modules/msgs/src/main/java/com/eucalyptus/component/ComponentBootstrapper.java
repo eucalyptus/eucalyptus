@@ -94,12 +94,12 @@ public class ComponentBootstrapper {
     if ( Stage.PrivilegedConfiguration.equals( bootstrapper.getBootstrapStage( ) ) ) {
       EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + bootstrapper.getBootstrapStage( ).toString( ),
                         this.component.getComponentId( ).name( ),
-                        bootstrapper.getClass( ).getName( ), 
+                        bootstrapper.getClass( ).getName( ),
                         "component=" + this.component.getComponentId( ).name( ) ).info( );
     } else {
       EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, "stage:" + bootstrapper.getBootstrapStage( ).toString( ),
                         this.component.getComponentId( ).name( ),
-                        bootstrapper.getClass( ).getName( ), 
+                        bootstrapper.getClass( ).getName( ),
                         "component=" + this.component.getComponentId( ).name( ) ).info( );
       this.bootstrappers.put( bootstrapper.getBootstrapStage( ), bootstrapper );
     }
@@ -107,10 +107,13 @@ public class ComponentBootstrapper {
   
   private void updateBootstrapDependencies( ) {
     try {
-      for ( Entry<Stage, Bootstrapper> entry : Iterables.concat( Lists.newArrayList( this.bootstrappers.entries( ) ), Lists.newArrayList( this.disabledBootstrappers.entries( ) ) ) ) {
-        Bootstrap.Stage stage = entry.getKey( );
-        Bootstrapper bootstrapper = entry.getValue( );
-        if ( entry.getValue( ).checkLocal( ) && entry.getValue( ).checkRemote( ) ) {
+      Iterable<Bootstrapper> currBootstrappers = Iterables.concat( Lists.newArrayList( this.bootstrappers.values( ) ),
+                                                                                 Lists.newArrayList( this.disabledBootstrappers.values( ) ) );
+      this.bootstrappers.clear( );
+      this.disabledBootstrappers.clear( );
+      for ( Bootstrapper bootstrapper : currBootstrappers ) {
+        Bootstrap.Stage stage = bootstrapper.getBootstrapStage( );
+        if ( bootstrapper.checkLocal( ) && bootstrapper.checkRemote( ) ) {
           this.enableBootstrapper( stage, bootstrapper );
         } else {
           this.disableBootstrapper( stage, bootstrapper );
@@ -140,7 +143,8 @@ public class ComponentBootstrapper {
     this.updateBootstrapDependencies( );
     for ( Stage s : Bootstrap.Stage.values( ) ) {
       for ( Bootstrapper b : this.bootstrappers.get( s ) ) {
-        EventRecord.here( this.component.getClass( ), transition, this.component.getComponentId( ).name( ), "stage", s.name( ), b.getClass( ).getCanonicalName( ) ).debug( );
+        EventRecord.here( this.component.getClass( ), transition, this.component.getComponentId( ).name( ), "stage", s.name( ),
+                          b.getClass( ).getCanonicalName( ) ).debug( );
         try {
           boolean result = checkedFunction.apply( b );
           if ( !result ) {
