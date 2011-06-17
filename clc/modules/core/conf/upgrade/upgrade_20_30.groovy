@@ -11,10 +11,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 
-// For keypairs
-import java.security.KeyPair;
-import org.bouncycastle.openssl.PEMReader;
-
 import javax.persistence.Column;
 import javax.persistence.Id;
 import javax.persistence.MappedSuperclass;
@@ -23,6 +19,11 @@ import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
 import org.mortbay.log.Log;
+
+// For cluster / node keypairs
+import java.security.KeyPair;
+import java.security.Security;
+import org.bouncycastle.openssl.PEMReader;
 
 // Auth
 import com.eucalyptus.auth.Accounts;
@@ -33,6 +34,11 @@ import com.eucalyptus.auth.principal.UserFullName;
 import java.security.cert.X509Certificate;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.crypto.util.PEMFiles;
+import com.eucalyptus.auth.entities.AccessKeyEntity;
+import com.eucalyptus.auth.entities.UserEntity;
+import com.eucalyptus.auth.entities.AccountEntity;
+import com.eucalyptus.auth.DatabaseAccountProxy;
+import com.eucalyptus.auth.DatabaseAuthUtils;
 
 // Config
 import com.eucalyptus.config.ClusterConfiguration;
@@ -108,15 +114,19 @@ import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.upgrade.UpgradeScript;
 import com.eucalyptus.util.Counters;
 
-import com.eucalyptus.records.LogFileRecord;
-
 class upgrade_20_30 extends AbstractUpgradeScript {
     static final String FROM_VERSION = "2.0.3";
     static final String TO_VERSION = "eee-3.0.0";
     private static Logger LOG = Logger.getLogger( upgrade_20_30.class );
     private static List<Class> entities = new ArrayList<Class>();
     private static Map<String, Class> entityMap = new HashMap<String, Class>();
+
+    // Map users to accounts, possible substituting characters to make them "safe"
     private static Map<String, String> safeUserMap = new HashMap<String, String>();
+    // Map users to userId of "admin" in their mapped account
+    private static Map<String, String> userIdMap = new HashMap<String, String>();
+    // Map account names to account ids
+    private static Map<String, String> accountIdMap = new HashMap<String, String>();
 
     public upgrade_20_30() {
         super(1);        
@@ -124,6 +134,8 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 
     @Override
     public Boolean accepts( String from, String to ) {
+        // We should support multiple from versions, but need
+        // to decide which ones. 2.0.[1-9](eee)? for example
         if(TO_VERSION.equals(to))
             return true;
         return false;
@@ -131,6 +143,8 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 
     @Override
     public void upgrade(File oldEucaHome, File newEucaHome) {
+        // Do this in stages and bail out if something goes seriously wrong.
+        // TODO: Perhaps we should raise an appropriate exception.
         if (!upgradeAuth()) {
             return;
         } else if (!upgradeNetwork()) {
@@ -190,19 +204,21 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     }
 
     private void doUpgrade(String contextName, Sql conn, String entityKey, Map<String, Method> setterMap) {
+        /* This is a generic function for handling "easy" upgrades, where
+         * simply initializing an object and setting the attributes from
+         * the old version of the object is sufficient.  In the 3.0 migration,
+         * this is often insufficient due to user -> account migration, among
+         * other things.
+         */
+
         List<GroovyRowResult> rowResults;
         try {
             rowResults = conn.rows("SELECT * FROM " + entityKey);
                         LOG.info("Got " + rowResults.size().toString() + " results from " + entityKey);
             EntityWrapper db =  EntityWrapper.get(entityMap.get(entityKey));
                         
-            // def columnsShown = 0;
             for (GroovyRowResult rowResult : rowResults) {
                 Set<String> columns = rowResult.keySet();
-                /* if (columnsShown != 1){
-                    LOG.info("Columns: " + columns);
-                    columnsShown = 1;
-                } */
                 Object dest;
                 try {
                     dest = ClassLoader.getSystemClassLoader().loadClass(entityMap.get(entityKey).getCanonicalName()).newInstance();
@@ -259,10 +275,10 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 // switching columns here makes the setterMap easier
                 // to construct.  We flip them back inside the setterMap 
                 // at the end of the function.
-                def columnMap = [ VM_TYPE_CPU:'metadata_vm_type_cpu',
-                    VM_TYPE_DISK:'metadata_vm_type_disk',
-                    VM_TYPE_MEMORY:'metadata_vm_type_memory',
-                    VM_TYPE_NAME:'metadata_vm_type_name' ];
+                def columnMap = [ vm_type_cpu:'metadata_vm_type_cpu',
+                    vm_type_disk:'metadata_vm_type_disk',
+                    vm_type_memory:'metadata_vm_type_memory',
+                    vm_type_name:'metadata_vm_type_name' ];
                 Set<String> origColumns = ((Map) firstRow).keySet();
                 Set<String> columnNames = origColumns.findAll{ columnMap.containsKey(it) }.collect{ columnMap[it] } +
                     origColumns.findAll{ !columnMap.containsKey(it) }.collect{ it };
@@ -344,6 +360,14 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     }
 
     public boolean upgradeAuth() {
+        /* This function upgrades images, snapshots, and volumes as well as
+         * users, because it was initially easier to map owners and users of
+         * those objects.  Now that there are HashMaps in the class, this
+         * could be split into smaller functions.  If this is done, it would
+         * be worthwhile to check for unmapped users, as there were situations
+         * in 2.0.x where user deletions left unowned objects under HSQLDB.
+         */
+
         def conn = StandalonePersistence.getConnection("eucalyptus_auth");
         def gen_conn = StandalonePersistence.getConnection("eucalyptus_general");
         def image_conn = StandalonePersistence.getConnection("eucalyptus_images");
@@ -351,21 +375,34 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         def walrus_conn = StandalonePersistence.getConnection("eucalyptus_walrus");
         conn.rows('SELECT * FROM auth_users').each {
             def account = null;
-            def userName = makeSafeUserName(it.auth_user_name);
+            def accountProxy = null;
+            def accountName = (it.auth_user_name == "admin") ? "eucalyptus" : makeSafeUserName(it.auth_user_name);
+            /* As of now, every user becomes "admin" in a different account.
+             * There are certainly issues with this approach, but there's
+             * not another obvious mapping into the new account hierarchy.
+             */
+            def userName = "admin"
             while (account == null) {
                 try { 
-                    println "adding account ${ userName }"
-                    account = Accounts.addAccount( userName );
-                    safeUserMap.put(it.auth_user_name, userName);
+                    println "adding account ${ accountName }"
+                    EntityWrapper<AccountEntity> dbAcct = EntityWrapper.get(AccountEntity.class);
+                    account = new AccountEntity(accountName);
+                    dbAcct.add(account);
+                    dbAcct.commit()
+                    accountProxy = new DatabaseAccountProxy(account);
+                    safeUserMap.put(it.auth_user_name, accountName);
+                    accountIdMap.put(accountName, accountProxy.getAccountNumber());
                 } catch (AuthException e) {
                     // The account already existed
                     userName = userName + "-";
+                    accountName = userName;
                 }
             }
             
-            def user = account.addUser( userName, "/", true/* skipRegistration */, true/* enabled */, null);
+            def user = accountProxy.addUser( userName, "/", true/* skipRegistration */, true/* enabled */, null);
             user.setPassword( it.auth_user_password );
             user.setToken(it.auth_user_token );
+            userIdMap.put(it.auth_user_name, user.getUserId());
             println "added " + account;
             conn.rows("""SELECT c.* FROM auth_users
                          JOIN auth_user_has_x509 on auth_users.id=auth_user_has_x509.auth_user_id
@@ -393,43 +430,62 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     info.put("ProjectPI", uInfo.user_project_pi_name);
                 user.setInfo( info );
             }
-            def ufn = UserFullName.getInstance(user);
+
+            EntityWrapper<UserEntity> dbUE = EntityWrapper.get(UserEntity.class);
+            def ue = DatabaseAuthUtils.getUniqueUser(dbUE, userName, accountName);
+            EntityWrapper<AccessKeyEntity> dbAuth = EntityWrapper.get(AccessKeyEntity.class);
+            AccessKeyEntity accessKey = new AccessKeyEntity();
+            initMetaClass(accessKey, accessKey.class);
+            accessKey.setAccess(it.auth_user_query_id);
+            accessKey.setSecretKey(it.auth_user_secretkey);
+            accessKey.setUser(ue);
+            accessKey.setActive(true);
+            dbAuth.add(accessKey);
+            dbAuth.commit();
             
+            def ufn = UserFullName.getInstance(user);
             gen_conn.rows("""SELECT * FROM Images WHERE image_owner_id=${ it.auth_user_name }""").each { img ->
                 EntityWrapper<ImageInfo> dbGen = EntityWrapper.get(ImageInfo.class);
                 println "Adding image ${img.image_name}"
                 def path = img.image_path.split("/");
-                // TODO:AGRIMM Need to make sure I get size / bundle size correctly here.
-                // Do I have to actually fetch and read the manifest?
-                /* 
+                // We cannot get the checksum or bundle size without reading
+                // the manifest, so leave them as null.
                 def imgSize = 1;
+                def bundleSize = null;
+                def ckSum = null;
+                def ckSumType = null;
                 def platform = Image.Platform.valueOf("linux");
-                def cachedImg = walrus_conn.firstRow("""SELECT size sz FROM ImageCache 
+                def cachedImg = walrus_conn.firstRow("""SELECT manifest_name,size sz FROM ImageCache 
                                                       WHERE bucket_name=${ path[0] }
                                                       AND manifest_name=${ path[1] }""");
                 if (cachedImg != null)
-                    cachedImg.sz.toInteger();
+                    imgSize = cachedImg.sz.toInteger();
                 if (img.image_platform != null)
                     platform = Image.Platform.valueOf(img.image_platform);
                 def ii = null;
                 switch ( img.image_type ) {
                     case "kernel":
                         ii = new KernelImageInfo( ufn, img.image_name, img.image_name, 
-                                                 "No Description", img.image_path, imgSize, 1,
-                                                 Image.Architecture.valueOf(img.image_arch), platform );
+                                                 "No Description", imgSize, 
+                                                 Image.Architecture.valueOf(img.image_arch), platform,
+                                                 img.image_path, bundleSize, ckSum, ckSumType );
                         break;
                     case "ramdisk":
                         ii = new RamdiskImageInfo( ufn, img.image_name, img.image_name,
-                                                  "No Description", img.image_path, imgSize, 1,
-                                                  Image.Architecture.valueOf(img.image_arch), platform );
+                                                  "No Description", imgSize, 
+                                                  Image.Architecture.valueOf(img.image_arch), platform,
+                                                  img.image_path, bundleSize, ckSum, ckSumType );
                         break;
                     case "machine":
                         ii = new MachineImageInfo( ufn, img.image_name, img.image_name,
-                                                  "No Description", img.image_path, imgSize, 1,
+                                                  "No Description", imgSize, 
                                                   Image.Architecture.valueOf(img.image_arch), platform,
+                                                  img.image_path, bundleSize, ckSum, ckSumType,
                                                   img.image_kernel_id, img.image_ramdisk_id );
                         break;
                 }
+                // TODO: Determine how to set the image availability. The
+                // data is in img.image_availability, but there is no setter.
                 initMetaClass(ii, ii.class);
                 ii.setImagePublic(img.image_is_public);
                 ii.setImageType(Image.Type.valueOf(img.image_type));
@@ -452,7 +508,6 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     dbLP.add(new LaunchPermission(ii, imgAuth.image_auth_name));
                     dbLP.commit();
                 }
-                */
             }
 
             image_conn.rows("""SELECT * FROM Volume WHERE username=${ it.auth_user_name }""").each { vol ->
@@ -479,23 +534,40 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     }
 
     public void initMetaClass(obj, theClass) {
+        /* This is the "magic" which ensures that objects are not incorrectly
+         * mapped to the LogFileRecord metaClass.  We believe this to be a
+         * bug in Groovy when used with JPA.
+         */
         def emc = new ExpandoMetaClass( theClass, false );
         emc.initialize();
         obj.metaClass = emc;
     }
 
     public String makeSafeUserName(String user_name) {
+        /* See http://docs.amazonwebservices.com/IAM/latest/UserGuide/LimitationsOnEntities.html
+         * This was originally for making safe usernames, but now it is used
+         * only for account names, so perhaps it should be relaxed.
+         * Duplicate and trailing hyphens must also be removed.
+         */
         return (user_name =~ /([^a-zA-Z0-9+=.,@-])/).replaceAll("-")
     }
 
     public boolean upgradeWalrus() {
+        def cfg_conn = StandalonePersistence.getConnection("eucalyptus_config");
+        cfg_conn.rows('SELECT * FROM config_walrus').each{
+            EntityWrapper<WalrusConfiguration> dbcfg = EntityWrapper.get(WalrusConfiguration.class);
+            WalrusConfiguration walrus = new WalrusConfiguration(it.config_component_name, it.config_component_hostname, it.config_component_port);
+            dbcfg.add(walrus);
+            dbcfg.commit();
+        }    
+
         def walrus_conn = StandalonePersistence.getConnection("eucalyptus_walrus");
         walrus_conn.rows('SELECT * FROM Buckets').each{
             println "Adding bucket: ${it.bucket_name}"
             
             EntityWrapper<BucketInfo> dbBucket = EntityWrapper.get(BucketInfo.class);
             try {
-                BucketInfo b = new BucketInfo(safeUserMap.get(it.owner_id),it.owner_id,it.bucket_name,it.bucket_creation_date);
+                BucketInfo b = new BucketInfo(accountIdMap.get(safeUserMap.get(it.owner_id)),userIdMap.get(it.owner_id),it.bucket_name,it.bucket_creation_date);
                 initMetaClass(b, b.class);
                 b.setLocation(it.bucket_location);
                 b.setGlobalRead(it.global_read);
@@ -514,7 +586,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     GrantInfo grantInfo = new GrantInfo();
                                         initMetaClass(grantInfo, grantInfo.class);
                     
-                    grantInfo.setUserId(safeUserMap.get(grant.user_id));
+                    grantInfo.setUserId(userIdMap.get(grant.user_id));
                     grantInfo.setGrantGroup(grant.grantGroup);
                     grantInfo.setCanWrite(grant.allow_write);
                     grantInfo.setCanRead(grant.allow_read);
@@ -537,7 +609,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 ObjectInfo objectInfo = new ObjectInfo(it.bucket_name, it.object_key);
                                 initMetaClass(objectInfo, objectInfo.class);
                 objectInfo.setObjectName(it.object_name);
-                objectInfo.setOwnerId(safeUserMap.get(it.owner_id));
+                objectInfo.setOwnerId(userIdMap.get(it.owner_id));
                 objectInfo.setGlobalRead(it.global_read);
                 objectInfo.setGlobalWrite(it.global_write);
                 objectInfo.setGlobalReadACP(it.global_read_acp);
@@ -557,7 +629,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     println "--> grant: ${it.object_name}/${grant.user_id}"
                     GrantInfo grantInfo = new GrantInfo();
                     initMetaClass(grantInfo, grantInfo.class);
-                    grantInfo.setUserId(safeUserMap.get(grant.user_id));
+                    grantInfo.setUserId(userIdMap.get(grant.user_id));
                     grantInfo.setGrantGroup(grant.grantGroup);
                     grantInfo.setCanWrite(grant.allow_write);
                     grantInfo.setCanRead(grant.allow_read);
@@ -588,19 +660,22 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     }
 
     public boolean upgradeNetwork() {
-        //Network rules
+        /* TODO: The system admin may not have a default network rules group.
+         * This means that no images can be launched from this account.
+         * Should a "default" one be created?
+         */ 
 
         def gen_conn = StandalonePersistence.getConnection("eucalyptus_general");
         gen_conn.rows('SELECT * FROM metadata_network_group').each {
             EntityWrapper<NetworkRulesGroup> dbGen = EntityWrapper.get(NetworkRulesGroup.class);
             try {
-                def userName = safeUserMap.get(it.metadata_user_name);
-                def account = Accounts.lookupAccountByName(userName);
+                def accountName = safeUserMap.get(it.metadata_user_name);
+                def account = Accounts.lookupAccountByName(accountName);
                 AccountFullName eucaAfn = new AccountFullName(account);
-                def rulesGroup = new NetworkRulesGroup(eucaAfn, userName + "_" + it.metadata_display_name,
+                def rulesGroup = new NetworkRulesGroup(eucaAfn, "${ accountName }_${ it.metadata_display_name }",
                                                        it.metadata_network_group_description);
                 initMetaClass(rulesGroup, rulesGroup.class);
-                println "Adding network rules for ${userName}/${it.metadata_display_name}";
+                println "Adding network rules for ${accountName}/${it.metadata_display_name}";
                 gen_conn.rows("""SELECT r.* 
                                  FROM metadata_network_group_has_rules 
                                  LEFT OUTER JOIN metadata_network_rule r 
@@ -654,49 +729,43 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             EntityWrapper<ClusterConfiguration> dbCluster = EntityWrapper.get(ClusterConfiguration.class);
             EntityWrapper<Partition> dbPart = EntityWrapper.get(Partition.class);
             try {
-                def clCert = config_auth.firstRow("SELECT * from auth_x509 x join auth_clusters ac ON ac.auth_cluster_x509_certificate=x.id where ac.auth_cluster_name=${it.config_component_name}");
-                def nodeCert = config_auth.firstRow("SELECT * from auth_x509 x join auth_clusters ac ON ac.auth_cluster_node_x509_certificate=x.id where ac.auth_cluster_name=${it.config_component_name}");
+                 def clCert = config_auth.firstRow("SELECT * from auth_x509 x join auth_clusters ac ON ac.auth_cluster_x509_certificate=x.id where ac.auth_cluster_name=${it.config_component_name}");
+                 def nodeCert = config_auth.firstRow("SELECT * from auth_x509 x join auth_clusters ac ON ac.auth_cluster_node_x509_certificate=x.id where ac.auth_cluster_name=${it.config_component_name}");
 
-                PEMReader pem = new PEMReader(new FileReader("${ oldHome }/var/lib/eucalyptus/keys/node-pk.pem"));
-                KeyPair nodeKeyPair = (KeyPair) pem.readObject();
-                pem.close();
-                pem = new PEMReader(new FileReader("${ oldHome }/var/lib/eucalyptus/keys/cluster-pk.pem"));
-                KeyPair clusterKeyPair = (KeyPair) pem.readObject();
-                pem.close();
-                Partition p = new Partition(it.config_component_name, 
-                                            clusterKeyPair, 
-                                            X509CertHelper.toCertificate(clCert.auth_x509_pem_certificate), 
-                                            nodeKeyPair, 
-                                            X509CertHelper.toCertificate(nodeCert.auth_x509_pem_certificate));
-                dbPart.persist(p);
-                dbPart.commit();
-            } catch (Throwable t) {
-                t.printStackTrace();
-                dbPart.rollback();
-                return false;
+                 Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+                 PEMReader pem = new PEMReader(new FileReader("${ oldHome }/var/lib/eucalyptus/keys/${ it.config_component_name }/node-pk.pem"));
+                 KeyPair nodeKeyPair = (KeyPair) pem.readObject();
+                 pem.close();
+                 pem = new PEMReader(new FileReader("${ oldHome }/var/lib/eucalyptus/keys/${ it.config_component_name }/cluster-pk.pem"));
+                 KeyPair clusterKeyPair = (KeyPair) pem.readObject();
+                 pem.close();
+                 Partition p = new Partition("PARTI01", 
+                                             clusterKeyPair, 
+                                             X509CertHelper.toCertificate(clCert.auth_x509_pem_certificate), 
+                                             nodeKeyPair, 
+                                             X509CertHelper.toCertificate(nodeCert.auth_x509_pem_certificate));
+                 dbPart.add(p);
+                 dbPart.commit();
+                 ClusterBuilder cbldr = new ClusterBuilder()
+                 ClusterConfiguration clcfg = cbldr.add("PARTI01", it.config_component_name, it.config_component_hostname, it.config_component_port);
+                 dbCluster.commit();
+            } finally {
+                 // NOOP -- should be doing catch / rollback here
             }
-            try {
-                ClusterBuilder cbldr = new ClusterBuilder()
-                ClusterConfiguration clcfg = cbldr.add(it.config_component_name, it.config_component_name, it.config_component_hostname, it.config_component_port);
-                dbCluster.commit();
-            } catch (Thrwoable t) {
-                t.printStackTrace();
-                dbCluster.rollback();
-                return false;
-            }
+        }
+        config_conn.rows('SELECT * FROM config_sc').each{
+            EntityWrapper<StorageControllerConfiguration> dbSC = EntityWrapper.get(StorageControllerConfiguration.class);
+            StorageControllerConfiguration sc = new StorageControllerConfiguration("PARTI01", it.config_component_name, it.config_component_hostname, it.config_component_port);
+            dbSC.add(sc);
+            dbSC.commit();
         }
     }   
 
     static {
+        // This is the list of entities which do not need special handling.
+
         entities.add(SshKeyPair.class);
         entities.add(VmType.class);
-
-        // eucalyptus_config -- needs work for partitioning / cert storage
-        /*
-        entities.add(ClusterConfiguration.class);
-        entities.add(StorageControllerConfiguration.class);
-        entities.add(WalrusConfiguration.class);
-        */
 
         // eucalyptus_dns
         entities.add(ARecordInfo.class);
@@ -718,11 +787,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         entities.add(StorageStatsInfo.class);
 
         // eucalyptus_walrus
-        // entities.add(BucketInfo.class);
-        // entities.add(GrantInfo.class);
         entities.add(ImageCacheInfo.class);
-        // entities.add(MetaDataInfo.class);
-        // entities.add(ObjectInfo.class);
         entities.add(TorrentInfo.class);
         entities.add(WalrusInfo.class);
         entities.add(WalrusSnapshotInfo.class);
