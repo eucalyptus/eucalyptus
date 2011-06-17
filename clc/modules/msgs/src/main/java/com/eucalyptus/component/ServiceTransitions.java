@@ -107,9 +107,9 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
 public class ServiceTransitions {
-  private static final int BOOTSTRAP_REMOTE_RETRY_INTERVAL_SECONDS = 1;                                           //TODO:GRZE:@Configurable
-  private static final int BOOTSTRAP_REMOTE_RETRIES                = 5;                                           //TODO:GRZE:@Configurable
-  static Logger            LOG                                     = Logger.getLogger( ServiceTransitions.class );
+  private static final int BOOTSTRAP_REMOTE_RETRY_INTERVAL_MSEC = 100;                                         //TODO:GRZE:@Configurable
+  private static final int BOOTSTRAP_REMOTE_RETRIES             = 5;                                           //TODO:GRZE:@Configurable
+  static Logger            LOG                                  = Logger.getLogger( ServiceTransitions.class );
   
   interface ServiceTransitionCallback {
     public void fire( ServiceConfiguration parent ) throws Throwable;
@@ -270,7 +270,7 @@ public class ServiceTransitions {
         return reply;
       } catch ( RetryableConnectionException ex ) {
         try {
-          TimeUnit.SECONDS.sleep( BOOTSTRAP_REMOTE_RETRY_INTERVAL_SECONDS );
+          TimeUnit.MILLISECONDS.sleep( BOOTSTRAP_REMOTE_RETRY_INTERVAL_MSEC );
         } catch ( InterruptedException ex1 ) {
           Thread.currentThread( ).interrupt( );
         }
@@ -280,7 +280,7 @@ public class ServiceTransitions {
         LOG.error( ex, ex );
         if ( ex.getCause( ) instanceof RetryableConnectionException ) {
           try {
-            TimeUnit.SECONDS.sleep( BOOTSTRAP_REMOTE_RETRY_INTERVAL_SECONDS );
+            TimeUnit.MILLISECONDS.sleep( BOOTSTRAP_REMOTE_RETRY_INTERVAL_MSEC );
           } catch ( InterruptedException ex1 ) {
             Thread.currentThread( ).interrupt( );
           }
