@@ -636,7 +636,7 @@ public class Component implements HasName<Component> {
      * @return
      */
     public boolean hasService( ServiceConfiguration config ) {
-      return this.services.containsKey( config.getFullName( ) );
+      return this.services.containsKey( config );
     }
   }
   
