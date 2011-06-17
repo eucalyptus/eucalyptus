@@ -366,9 +366,12 @@ public class Topology implements EventListener<Event> {
     @Override
     public String toString( ) {
       StringBuilder builder = new StringBuilder( );
-      builder.append( "ServiceKey:partition=" ).append( this.partition == null
-        ? "null"
-        : this.partition ).append( ":componentId=" ).append( this.componentId );
+      builder.append( "ServiceKey " ).append( this.componentId.name( ) ).append( ":" );
+      if( this.partition == null ) {
+        builder.append( "cloud-global-service" );
+      } else {
+        builder.append( "partition=" ).append( this.partition );
+      }
       return builder.toString( );
     }
     
