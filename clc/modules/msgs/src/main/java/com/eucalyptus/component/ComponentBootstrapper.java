@@ -140,7 +140,7 @@ public class ComponentBootstrapper {
     this.updateBootstrapDependencies( );
     for ( Stage s : Bootstrap.Stage.values( ) ) {
       for ( Bootstrapper b : this.bootstrappers.get( s ) ) {
-        EventRecord.here( this.component.getClass( ), transition, "stage", s.name( ), b.getClass( ).getCanonicalName( ) ).debug( );
+        EventRecord.here( this.component.getClass( ), transition, this.component.getComponentId( ).name( ), "stage", s.name( ), b.getClass( ).getCanonicalName( ) ).debug( );
         try {
           boolean result = checkedFunction.apply( b );
           if ( !result ) {
