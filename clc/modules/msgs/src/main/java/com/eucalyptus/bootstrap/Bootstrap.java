@@ -317,6 +317,7 @@ public class Bootstrap {
         String bc = bootstrap.getClass( ).getCanonicalName( );
         Bootstrap.Stage stage = bootstrap.getBootstrapStage( );
         compType = bootstrap.getProvides( );
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_INIT, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
         if( Bootstrap.checkDepends( bootstrap ) ) {
           if ( ComponentId.class.equals( compType ) ) {
             for ( Component c : Components.list( ) ) {
