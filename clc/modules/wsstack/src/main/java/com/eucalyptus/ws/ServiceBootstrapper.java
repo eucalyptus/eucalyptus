@@ -66,6 +66,8 @@ package com.eucalyptus.ws;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -138,7 +140,13 @@ public class ServiceBootstrapper extends Bootstrapper {
         try {
           final CheckedListenableFuture<ServiceConfiguration> future = comp.startTransition( config );
           Runnable followRunner = getTransitionRunnable( config, comp, future );
-          Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, config.getFullName( ).toString( ) ).submit( followRunner );
+          Future<?> runResult = Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, config.getFullName( ).toString( ) ).submit( followRunner );
+          try {
+            runResult.get( 100, TimeUnit.MILLISECONDS );
+          } catch ( InterruptedException ex ) {
+            LOG.error( ex , ex );
+            Thread.currentThread( ).interrupt( );
+          }
           return true;
         } catch ( Exception e ) {
           LOG.error( e, e );
@@ -153,7 +161,7 @@ public class ServiceBootstrapper extends Bootstrapper {
             try {
               future.get( );
               try {
-                comp.enableTransition( config ).get( );
+                comp.enableTransition( config ).get( 100, TimeUnit.MILLISECONDS );
               } catch ( ServiceRegistrationException ex ) {
                 LOG.error( ex , ex );
               } catch ( IllegalStateException ex ) {
@@ -164,29 +172,6 @@ public class ServiceBootstrapper extends Bootstrapper {
                 LOG.error( ex , ex );
               }
             } catch ( Exception ex ) {
-//              Throwable lastEx = ex;
-//              for( int i = 0; i < 5; i ++ ) {
-//                try {
-//                  comp.startTransition( config ).get( );
-//                  lastEx = null;
-//                  break;
-//                } catch ( ExecutionException ex1 ) {
-//                  LOG.error( ex1 , ex1 );
-//                  lastEx = ex1.getCause( );
-//                  continue;
-//                } catch ( InterruptedException ex1 ) {
-//                  LOG.error( ex1 , ex1 );
-//                  Thread.currentThread( ).interrupt( );
-//                  continue;
-//                } catch ( Exception ex1 ) {
-//                  LOG.error( ex1 , ex1 );
-//                  lastEx = ex1;
-//                  continue;
-//                }
-//              }
-//              if( lastEx != null ) {
-//                throw new UndeclaredThrowableException( lastEx );
-//              }
               LOG.error( ex, ex );
             }
           }

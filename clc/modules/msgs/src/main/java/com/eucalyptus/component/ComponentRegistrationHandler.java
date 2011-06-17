@@ -66,6 +66,8 @@ package com.eucalyptus.component;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ConfigurationService;
@@ -107,12 +109,7 @@ public class ComponentRegistrationHandler {
         Runnable followRunner = new Runnable( ) {
           public void run( ) {
             try {
-              component.startTransition( newComponent ).get( );
-              try {
-                component.enableTransition( newComponent );
-              } catch ( Exception ex ) {
-                LOG.error( ex, ex );
-              }
+              component.enableTransition( newComponent ).get( );
             } catch ( ServiceRegistrationException ex1 ) {
               LOG.error( ex1 , ex1 );
             } catch ( IllegalStateException ex1 ) {
@@ -121,11 +118,16 @@ public class ComponentRegistrationHandler {
               LOG.error( ex , ex );
             } catch ( InterruptedException ex ) {
               Thread.currentThread( ).interrupt( );
-              LOG.error( ex , ex );
             }
           }
         };
-        Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, newComponent.getFullName( ).toString( ) ).submit( followRunner );
+        try {
+          Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, newComponent.getFullName( ).toString( ) ).submit( followRunner ).get( 100, TimeUnit.MILLISECONDS );
+        } catch ( InterruptedException ex ) {
+          Thread.currentThread( ).interrupt( );
+        } catch ( TimeoutException ex ) {
+          LOG.error( ex , ex );
+        }
       } catch ( Throwable ex ) {
         builder.remove( newComponent );
         LOG.info( builder.getClass( ).getSimpleName( ) + ": enable failed because of: " + ex.getMessage( ) );
