@@ -366,7 +366,7 @@ public class Topology implements EventListener<Event> {
     @Override
     public String toString( ) {
       StringBuilder builder = new StringBuilder( );
-      builder.append( "EnabledService:partition=" ).append( this.partition == null
+      builder.append( "ServiceKey:partition=" ).append( this.partition == null
         ? "null"
         : this.partition ).append( ":componentId=" ).append( this.componentId );
       return builder.toString( );
@@ -457,7 +457,7 @@ public class Topology implements EventListener<Event> {
             }
           }
         } );
-        LOG.debug( "PARTITIONS ==============================\n" + Joiner.on( "\n\t" ).join( Topology.this.services.values( ) ) );
+        LOG.debug( "PARTITIONS ==============================\n" + Joiner.on( "\n\t" ).join( Topology.this.services.keySet( ) ) );
         LOG.debug( "PRIMARY =================================\n" + Joiner.on( "\n\t" ).join( Topology.this.services.values( ) ) );
         LOG.debug( "CHECK ===================================\n" + Joiner.on( "\n\t" ).join( checkServicesList ) );
         Predicate<Future<?>> futureIsDone = new Predicate<Future<?>>( ) {
