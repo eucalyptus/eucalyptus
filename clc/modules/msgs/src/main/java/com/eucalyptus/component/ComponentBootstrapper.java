@@ -107,7 +107,7 @@ public class ComponentBootstrapper {
   
   private void updateBootstrapDependencies( ) {
     try {
-      for ( Entry<Stage, Bootstrapper> entry : Iterables.concat( this.bootstrappers.entries( ), this.disabledBootstrappers.entries( ) ) ) {
+      for ( Entry<Stage, Bootstrapper> entry : Iterables.concat( Lists.newArrayList( this.bootstrappers.entries( ) ), Lists.newArrayList( this.disabledBootstrappers.entries( ) ) ) ) {
         Bootstrap.Stage stage = entry.getKey( );
         Bootstrapper bootstrapper = entry.getValue( );
         if ( entry.getValue( ).checkLocal( ) && entry.getValue( ).checkRemote( ) ) {
