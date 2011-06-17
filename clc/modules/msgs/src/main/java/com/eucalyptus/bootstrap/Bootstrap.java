@@ -344,14 +344,16 @@ public class Bootstrap {
     String bc = bootstrap.getClass( ).getCanonicalName( );
     if ( bootstrap.checkLocal( ) && bootstrap.checkRemote( ) ) {
       return true;
-    } else if( !bootstrap.checkLocal( ) ) {
-      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", 
-                        bootstrap.getDependsLocal( ).toString( ) ).info( );
-    } else if ( !bootstrap.checkRemote( ) ) {
-      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote",
-                        bootstrap.getDependsRemote( ).toString( ) ).info( );
-    } 
-    return false;
+    } else {
+      if( !bootstrap.checkLocal( ) ) {
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", 
+                          bootstrap.getDependsLocal( ).toString( ) ).info( );
+      } else if ( !bootstrap.checkRemote( ) ) {
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote",
+                          bootstrap.getDependsRemote( ).toString( ) ).info( );
+      }
+      return false;
+    }
   }
   
   /**
