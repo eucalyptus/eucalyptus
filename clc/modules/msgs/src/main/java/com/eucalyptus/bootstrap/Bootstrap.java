@@ -325,7 +325,7 @@ public class Bootstrap {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
           stage.addBootstrapper( bootstrap );
         }
-      } else if ( ComponentId.class.isAssignableFrom( compType ) ) {
+      } else if ( ComponentId.class.isAssignableFrom( compType ) && !Empyrean.class.equals( compType ) ) {
         ComponentId comp;
         try {
           comp = compType.newInstance( );
