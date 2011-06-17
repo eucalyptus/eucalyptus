@@ -457,7 +457,9 @@ public class Topology implements EventListener<Event> {
             }
           }
         } );
-        LOG.debug( "Preparing to CHECK the following configurations: " + Joiner.on( "\n\t" ).join( checkServicesList ) );
+        LOG.debug( "PARTITIONS ==============================\n" + Joiner.on( "\n\t" ).join( Topology.this.services.values( ) ) );
+        LOG.debug( "PRIMARY =================================\n" + Joiner.on( "\n\t" ).join( Topology.this.services.values( ) ) );
+        LOG.debug( "CHECK ===================================\n" + Joiner.on( "\n\t" ).join( checkServicesList ) );
         Predicate<Future<?>> futureIsDone = new Predicate<Future<?>>( ) {
           
           @Override
