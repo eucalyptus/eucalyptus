@@ -25,7 +25,7 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
 
   private Method lookupSetIdentifierMethod( ) {
     try {
-      Method setMethod = this.getDefiningClass( ).getMethod( this.identifiedMethodName, this.identifierField.getType( ) );
+      Method setMethod = this.getDefiningClass( ).getMethod( "set" + this.identifiedMethodName, this.identifierField.getType( ) );
       setMethod.setAccessible( true );
       return setMethod;
     } catch ( Exception ex ) {
