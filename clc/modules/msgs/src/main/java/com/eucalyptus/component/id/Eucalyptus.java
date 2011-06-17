@@ -63,8 +63,6 @@
 
 package com.eucalyptus.component.id;
 
-import java.util.ArrayList;
-import java.util.List;
 import com.eucalyptus.component.ComponentId;
 
 public class Eucalyptus extends ComponentId.Unpartioned {
@@ -80,15 +78,6 @@ public class Eucalyptus extends ComponentId.Unpartioned {
     return true;
   }
   
-  @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return new ArrayList( ) {
-      {
-        this.add( Eucalyptus.class );
-      }
-    };
-  }
-
   @Override
   public boolean isUserService( ) {
     return true;

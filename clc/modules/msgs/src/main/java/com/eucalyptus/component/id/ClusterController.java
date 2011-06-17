@@ -33,7 +33,7 @@ public class ClusterController extends ComponentId {
   private static ChannelPipelineFactory clusterPipeline;
   
   @Override
-  public ChannelPipelineFactory getClientPipeline( ) {
+  public ChannelPipelineFactory getClientPipeline( ) {//TODO:GRZE:fixme to use discovery
     return ( clusterPipeline = ( clusterPipeline != null
         ? clusterPipeline
           : helpGetClientPipeline( "com.eucalyptus.ws.client.pipeline.ClusterClientPipelineFactory" ) ) );
