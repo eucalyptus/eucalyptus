@@ -60,14 +60,15 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
           try {
             AsyncRequest.this.callbackSequence.fire( r );
           } catch ( Throwable ex ) {
-            AsyncRequest.this.result.setException( ex );
             LOG.error( ex, ex );
+            AsyncRequest.this.result.setException( ex );
           }
         } catch ( RuntimeException ex ) {
           LOG.error( ex, ex );
           AsyncRequest.this.result.setException( ex );
           AsyncRequest.this.callbackSequence.fireException( ex );
         } catch ( Exception ex ) {
+          LOG.error( ex, ex );
           AsyncRequest.this.result.setException( ex );
           AsyncRequest.this.callbackSequence.fireException( ex );
         }
@@ -161,6 +162,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       if( !this.result.isDone( ) ) {
         this.result.setException( ex );
       }
+      throw ex;
     }
     return this;
   }

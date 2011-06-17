@@ -489,7 +489,7 @@ public class Topology implements EventListener<Event> {
             LOG.debug( "Inspecting result of CHECK for: " + result.getKey( ) );
             LOG.error( ex, ex );
             Thread.currentThread( ).interrupt( );
-          } catch ( Exception ex ) {
+          } catch ( Throwable ex ) {
             Throwable e = ex;
             if ( ex instanceof ExecutionException ) {
               LOG.debug( "Error while inspecting result of CHECK for: \n\t" + result.getKey( ) + ": \n\t" + ex.getCause( ).getMessage( ) );
