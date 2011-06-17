@@ -217,7 +217,7 @@ public class ServiceChecks {
     } else if ( t instanceof CheckException ) {
       return new CheckException( correlationId, t, severity, config );
     } else {
-      return new CheckException( correlationId, t, Severity.DEBUG, config );
+      return new CheckException( correlationId, t, severity, config );
     }
   }
   
