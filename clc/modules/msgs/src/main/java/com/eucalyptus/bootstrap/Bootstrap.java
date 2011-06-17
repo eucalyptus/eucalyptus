@@ -338,7 +338,7 @@ public class Bootstrap {
 //          System.exit( 1 );
         }
       } else {
-        Exceptions.error( new ClassCastException( "Fatal error attempting to register bootstrapper " + bootstrap.getClass( ).getCanonicalName( ) + ":  @Provides specifies a class which does not conform to ComponentId." ) );  
+        LOG.error( new ClassCastException( "Fatal error attempting to register bootstrapper " + bootstrap.getClass( ).getCanonicalName( ) + ":  @Provides specifies a class which does not conform to ComponentId." ) );  
       }
     }
   }
