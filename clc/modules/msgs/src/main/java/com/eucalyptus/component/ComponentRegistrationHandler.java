@@ -109,7 +109,11 @@ public class ComponentRegistrationHandler {
         Runnable followRunner = new Runnable( ) {
           public void run( ) {
             try {
-              component.startTransition( newComponent ).get( );
+              try {
+                component.startTransition( newComponent ).get( );
+              } catch ( Exception ex ) {
+                LOG.error( ex , ex );
+              }
               component.enableTransition( newComponent ).get( );
             } catch ( ServiceRegistrationException ex1 ) {
               LOG.error( ex1 , ex1 );
