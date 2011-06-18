@@ -86,7 +86,7 @@ public class Callbacks {
     }
     
     private final void doFail( Throwable failure ) {
-      if ( ( failure instanceof ExecutionException ) && ( failure.getCause( ) != null ) ) {
+      while ( ( failure instanceof ExecutionException ) && ( failure.getCause( ) != null ) ) {
         failure = failure.getCause( );
       }
       if ( Callback.Checked.class.isAssignableFrom( this.callback.getClass( ) ) ) {
