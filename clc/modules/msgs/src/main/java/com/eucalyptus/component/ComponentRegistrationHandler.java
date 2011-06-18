@@ -65,7 +65,11 @@ package com.eucalyptus.component;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
@@ -74,11 +78,48 @@ import com.eucalyptus.config.ConfigurationService;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 
 public class ComponentRegistrationHandler {
   private static Logger LOG = Logger.getLogger( ComponentRegistrationHandler.class );
   
+  static class RegistrationWorker implements Runnable {
+    private final AtomicBoolean           running  = new AtomicBoolean( false );
+    private final BlockingQueue<Runnable> msgQueue = new LinkedBlockingQueue<Runnable>( );
+    private final ExecutorService         executor = Executors.newFixedThreadPool( 1 );
+    private static final RegistrationWorker worker = new RegistrationWorker( );
+    private RegistrationWorker( ) {
+
+    }
+    public static void submit( Runnable run ) {
+      worker.msgQueue.add( run );
+    }
+    @Override
+    public void run( ) {
+      if ( !this.running.compareAndSet( false, true ) ) {
+        return;
+      } else {
+        while ( this.running.get( ) ) {
+          Runnable event;
+          try {
+            if ( ( event = this.msgQueue.poll( 2000, TimeUnit.MILLISECONDS ) ) != null ) {
+              event.run( );
+            }
+          } catch ( InterruptedException e1 ) {
+            Thread.currentThread( ).interrupt( );
+            return;
+          } catch ( final Throwable e ) {
+            LOG.error( e, e );
+          }
+        }
+        LOG.debug( "Shutting down cluster message queue: " + Thread.currentThread( ).getName( ) );
+      }
+      
+    }
+  }
+  
   public static boolean register( final Component component, String part, String name, String hostName, Integer port ) throws ServiceRegistrationException {
+    
     final ServiceBuilder builder = component.getBuilder( );
     String partition = part;
     
@@ -95,7 +136,8 @@ public class ComponentRegistrationHandler {
       addr = InetAddress.getByName( hostName );
     } catch ( UnknownHostException ex1 ) {
       LOG.error( "Inavlid hostname: " + hostName + " failure: " + ex1.getMessage( ), ex1 );
-      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": registration failed because the hostname " + hostName + " is invalid: " + ex1.getMessage( ), ex1 );
+      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": registration failed because the hostname " + hostName + " is invalid: "
+                                              + ex1.getMessage( ), ex1 );
     }
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) + " for: " + partition + "." + name + "@" + hostName + ":" + port );
     if ( !builder.checkAdd( partition, name, hostName, port ) ) {
@@ -106,33 +148,7 @@ public class ComponentRegistrationHandler {
     try {
       final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
       try {
-        Runnable followRunner = new Runnable( ) {
-          public void run( ) {
-            try {
-              try {
-                component.startTransition( newComponent ).get( );
-              } catch ( Exception ex ) {
-                LOG.error( ex , ex );
-              }
-              component.enableTransition( newComponent ).get( );
-            } catch ( ServiceRegistrationException ex1 ) {
-              LOG.error( ex1 , ex1 );
-            } catch ( IllegalStateException ex1 ) {
-              LOG.error( ex1 , ex1 );
-            } catch ( ExecutionException ex ) {
-              LOG.error( ex , ex );
-            } catch ( InterruptedException ex ) {
-              Thread.currentThread( ).interrupt( );
-            }
-          }
-        };
-        try {
-          Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class ).submit( followRunner ).get( 5000, TimeUnit.MILLISECONDS );
-        } catch ( InterruptedException ex ) {
-          Thread.currentThread( ).interrupt( );
-        } catch ( TimeoutException ex ) {
-          LOG.error( ex , ex );
-        }
+        doServiceStart( newComponent );
       } catch ( Throwable ex ) {
         builder.remove( newComponent );
         LOG.info( builder.getClass( ).getSimpleName( ) + ": enable failed because of: " + ex.getMessage( ) );
@@ -144,6 +160,31 @@ public class ComponentRegistrationHandler {
       LOG.error( e, e );
       throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": registration failed with message: " + e.getMessage( ), e );
     }
+  }
+  
+  private static void doServiceStart( final ServiceConfiguration newComponent ) throws ExecutionException {
+    final Component component = newComponent.lookupComponent( );
+    Runnable followRunner = new Runnable( ) {
+      public void run( ) {
+        try {
+          try {
+            component.startTransition( newComponent ).get( );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+          component.enableTransition( newComponent ).get( );
+        } catch ( ServiceRegistrationException ex1 ) {
+          LOG.error( ex1, ex1 );
+        } catch ( IllegalStateException ex1 ) {
+          LOG.error( ex1, ex1 );
+        } catch ( ExecutionException ex ) {
+          LOG.error( ex, ex );
+        } catch ( InterruptedException ex ) {
+          Thread.currentThread( ).interrupt( );
+        }
+      }
+    };
+    RegistrationWorker.submit( followRunner );
   }
   
   public static boolean deregister( final Component component, String partition, String name ) throws ServiceRegistrationException, EucalyptusCloudException {
