@@ -233,15 +233,22 @@ public class TopologyChanges {
       public ServiceConfiguration apply( ServiceConfiguration config ) {
         try {
           ServiceKey serviceKey = ServiceKey.create( config );
-          Future<ServiceConfiguration> transition = ServiceTransitions.transitionChain( config, Component.State.DISABLED );
-          ServiceConfiguration result = transition.get( );
-          Topology.getInstance( ).getGuard( ).tryDisable( serviceKey, config );
-          return result;
-        } catch ( InterruptedException ex ) {
-          Thread.currentThread( ).interrupt( );
-          throw new UndeclaredThrowableException( ex );
+          try {
+            Future<ServiceConfiguration> transition = ServiceTransitions.transitionChain( config, Component.State.DISABLED );
+            ServiceConfiguration result = transition.get( );
+            return result;
+          } catch ( InterruptedException ex ) {
+            Thread.currentThread( ).interrupt( );
+            throw new UndeclaredThrowableException( ex );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+            throw new UndeclaredThrowableException( ex );
+          } finally {
+            Topology.getInstance( ).getGuard( ).tryDisable( serviceKey, config );
+            return config;
+          }
         } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+          LOG.error( ex , ex );
           throw new UndeclaredThrowableException( ex );
         }
       }
@@ -252,7 +259,7 @@ public class TopologyChanges {
         if ( !Bootstrap.isFinished( ) ) {
           LOG.debug( this.toString( ) + " aborted because bootstrap is not complete for service: " + config );
           return config;
-        } else if ( !config.getStateMachine( ).isBusy( ) ) {
+        } else {
           State initialState = config.lookupState( );
           State nextState = config.lookupState( );
           if ( State.NOTREADY.equals( initialState ) || State.BROKEN.equals( initialState ) ) {
@@ -273,8 +280,6 @@ public class TopologyChanges {
             LOG.error( ex, ex );
             throw new UndeclaredThrowableException( ex );
           }
-        } else {
-          return config;
         }
       }
     };
