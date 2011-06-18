@@ -236,7 +236,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       @Override
       public boolean apply( final Cluster input ) {
         if ( Component.State.ENABLED.equals( input.getConfiguration( ).lookupState( ) )
-             || Component.State.DISABLED.equals( input.getConfiguration( ).lookupState( ) ) 
+             || Component.State.DISABLED.equals( input.getConfiguration( ).lookupState( ) )
              || Component.State.NOTREADY.equals( input.getConfiguration( ).lookupState( ) ) ) {
           try {
             Clusters.getInstance( ).disable( input.getName( ) );
@@ -574,7 +574,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   }
   
   public void enable( ) throws ServiceRegistrationException {
-    if ( !State.ENABLED.equals( this.stateMachine.getState( ) ) ) {
+    if ( State.ENABLED.ordinal( ) > this.stateMachine.getState( ).ordinal( ) ) {
       try {
         final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.PENDING, State.AUTHENTICATING, State.STARTING,
                                                                                                     State.STARTING_NOTREADY, State.NOTREADY,
@@ -600,8 +600,13 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   }
   
   public void disable( ) throws ServiceRegistrationException {
-    final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
-    Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
+    if ( State.NOTREADY.equals( this.getStateMachine( ).getState( ) ) ) {
+      final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
+      Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
+    } else if ( State.ENABLED.equals( this.getStateMachine( ).getState( ) ) ) {
+      final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.NOTREADY, State.DISABLED );
+      Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
+    }
   }
   
   public void stop( ) throws ServiceRegistrationException {
