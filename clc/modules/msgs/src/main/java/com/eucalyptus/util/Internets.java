@@ -73,6 +73,7 @@ import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -149,7 +150,27 @@ public class Internets {
   
   public static List<NetworkInterface> getNetworkInterfaces( ) {
     try {
-      return Collections.list( NetworkInterface.getNetworkInterfaces( ) );
+      ArrayList<NetworkInterface> ifaces = Collections.list( NetworkInterface.getNetworkInterfaces( ) );
+      Collections.sort( ifaces, new Comparator<NetworkInterface>( ) {
+        
+        @Override
+        public int compare( NetworkInterface o1, NetworkInterface o2 ) {
+          int min1 = 0;
+          int min2 = 0;
+          for ( InterfaceAddress ifaceAddr : o1.getInterfaceAddresses( ) ) {
+            min1 = ( min1 > ifaceAddr.getNetworkPrefixLength( )
+              ? ifaceAddr.getNetworkPrefixLength( )
+              : min1 );
+          }
+          for ( InterfaceAddress ifaceAddr : o2.getInterfaceAddresses( ) ) {
+            min2 = ( min2 > ifaceAddr.getNetworkPrefixLength( )
+              ? ifaceAddr.getNetworkPrefixLength( )
+              : min2 );
+          }
+          return min2 - min1;//return a positive int when min1 has a shorter routing prefix
+        }
+      } );
+      return ifaces;
     } catch ( SocketException ex ) {
       LOG.error( ex, ex );
       throw new RuntimeException( "Getting list of network interfaces failed because of " + ex.getMessage( ), ex );
@@ -159,6 +180,9 @@ public class Internets {
   public static List<InetAddress> getAllInetAddresses( ) {
     List<InetAddress> addrs = Lists.newArrayList( );
     for ( NetworkInterface iface : Internets.getNetworkInterfaces( ) ) {
+      if ( "virbr0".equals( iface.getDisplayName( ) ) ) {
+        continue;
+      }
       for ( InterfaceAddress iaddr : iface.getInterfaceAddresses( ) ) {
         InetAddress addr = iaddr.getAddress( );
         if ( addr instanceof Inet4Address ) {
