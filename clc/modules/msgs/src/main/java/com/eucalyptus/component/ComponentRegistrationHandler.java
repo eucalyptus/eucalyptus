@@ -151,9 +151,13 @@ public class ComponentRegistrationHandler {
     try {
       final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
       try {
+        component.startTransition( newComponent ).get( );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+      }
+      try {
         doServiceStart( newComponent );
       } catch ( Throwable ex ) {
-        builder.remove( newComponent );
         LOG.info( builder.getClass( ).getSimpleName( ) + ": enable failed because of: " + ex.getMessage( ) );
       }
       return true;
