@@ -202,7 +202,8 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     ENABLED {
       @Override
       public boolean apply( final Cluster input ) {
-        if ( Component.State.DISABLED.equals( input.getConfiguration( ).lookupState( ) ) ) {
+        if ( Component.State.DISABLED.equals( input.getConfiguration( ).lookupState( ) )
+             || Component.State.ENABLED.equals( input.getConfiguration( ).lookupState( ) ) ) {
           try {
             AsyncRequests.newRequest( new EnableServiceCallback( input ) ).sendSync( input.configuration );
             return true;
@@ -210,10 +211,18 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             return input.filterExceptions( t );
           } finally {
             try {
-              Clusters.getInstance( ).enable( input.getName( ) );
-            } catch ( NoSuchElementException ex ) {
-              Clusters.getInstance( ).register( input );
-              LOG.error( ex, ex );
+              if ( !Clusters.getInstance( ).contains( input.getName( ) ) ) {
+                Clusters.getInstance( ).register( input );
+              } else {
+                try {
+                  Clusters.getInstance( ).enable( input.getName( ) );
+                } catch ( NoSuchElementException ex ) {
+                  Clusters.getInstance( ).register( input );
+                  LOG.error( ex, ex );
+                } catch ( Exception ex ) {
+                  LOG.error( ex, ex );
+                }
+              }
             } catch ( Exception ex ) {
               LOG.error( ex, ex );
             }
@@ -226,7 +235,9 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     DISABLED {
       @Override
       public boolean apply( final Cluster input ) {
-        if ( Component.State.ENABLED.equals( input.getConfiguration( ).lookupState( ) ) || Component.State.NOTREADY.equals( input.getConfiguration( ).lookupState( ) ) ) {
+        if ( Component.State.ENABLED.equals( input.getConfiguration( ).lookupState( ) )
+             || Component.State.DISABLED.equals( input.getConfiguration( ).lookupState( ) ) 
+             || Component.State.NOTREADY.equals( input.getConfiguration( ).lookupState( ) ) ) {
           try {
             Clusters.getInstance( ).disable( input.getName( ) );
           } catch ( Exception ex ) {
@@ -553,12 +564,12 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( Cluster.this, State.PENDING, State.AUTHENTICATING,
                                                                                                   State.STARTING,
                                                                                                   State.STARTING_NOTREADY, State.NOTREADY, State.DISABLED );
-        try {
-          transition.call( ).get( );
-        } catch ( Exception ex ) {
-          Logs.exhaust( ).error( ex, ex );
-          throw new ServiceRegistrationException( "Failed to call start() on cluster: " + this.configuration + " because of: " + ex.getMessage( ), ex );
-        }
+      try {
+        transition.call( ).get( );
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        throw new ServiceRegistrationException( "Failed to call start() on cluster: " + this.configuration + " because of: " + ex.getMessage( ), ex );
+      }
     }
   }
   
