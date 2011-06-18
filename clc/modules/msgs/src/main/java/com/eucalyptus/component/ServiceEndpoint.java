@@ -93,9 +93,9 @@ import com.google.common.collect.Lists;
 
 public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<MessagableService> {
   private static Logger                      LOG           = Logger.getLogger( ServiceEndpoint.class );
-  private static final int                   offerInterval = 2000;
-  private static final int                   pollInterval  = 2000;
-  private final MessagableService                      parent;
+  private static final int                   offerInterval = 2000;                                      //@Configurable
+  private static final int                   pollInterval  = 2000;                                      //@Configurable
+  private final MessagableService            parent;
   private final Boolean                      local;
   private final BlockingQueue<QueuedRequest> msgQueue;
   private final AtomicBoolean                running;
@@ -118,9 +118,10 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<M
     this.msgQueue = new LinkedBlockingQueue<QueuedRequest>( );
     this.workers = this.createPool( );
   }
-
+  
   private ThreadPool createPool( ) {
-    return Threads.lookup( this.parent.getComponentId( ).getClass( ), ServiceEndpoint.class, this.parent.getServiceConfiguration( ) + "-queue-" + UUID.randomUUID( ).toString( ) ).limitTo( NUM_WORKERS );
+    return Threads.lookup( this.parent.getComponentId( ).getClass( ), ServiceEndpoint.class,
+                           this.parent.getServiceConfiguration( ) + "-queue-" + UUID.randomUUID( ).toString( ) ).limitTo( NUM_WORKERS );
   }
   
   public Boolean isRunning( ) {
@@ -129,7 +130,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<M
   
   public void start( ) {
     if ( this.running.compareAndSet( false, true ) ) {
-      if( this.workers == null || this.workers.isShutdown( ) || this.workers.isTerminated( ) ) {
+      if ( this.workers == null || this.workers.isShutdown( ) || this.workers.isTerminated( ) ) {
         this.workers = this.createPool( );
       }
       for ( int i = 0; i < NUM_WORKERS; i++ ) {

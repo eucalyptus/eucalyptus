@@ -260,11 +260,11 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
     try {
       final Cluster cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
-      final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vm.getPartition( ) );
       vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
         @Override
         public boolean apply( AttachedVolume arg0 ) {
           try {
+            final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vm.getPartition( ) );
             vm.removeVolumeAttachment( arg0.getVolumeId( ) );
             Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
             scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );

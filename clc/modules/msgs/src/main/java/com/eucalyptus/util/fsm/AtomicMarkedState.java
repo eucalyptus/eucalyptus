@@ -244,7 +244,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
       }
       return result;
     } catch ( Throwable t ) {
-      this.rollback( t );
+      this.error( t );
       throw Exceptions.debug( new IllegalStateException( String.format( "Failed to apply transition %s because leave() threw an exception: %s",
                                                                         transitionName.toString( ), t.getMessage( ) ), t ) );
     }

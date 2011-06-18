@@ -115,7 +115,7 @@ public class Partitions {
     }
   }
   public static Partition lookup( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( config.getComponentId( ).isPartitioned( ) ) {
+    if ( config.getComponentId( ).isPartitioned( ) && config.getComponentId( ).isRegisterable( ) ) {
       final String partitionName = config.getPartition( );
       EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
       Partition p = null;

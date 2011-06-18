@@ -153,32 +153,28 @@ public class TopologyChanges {
       @Override
       public ServiceConfiguration apply( ServiceConfiguration config ) {
         if ( !Bootstrap.isFinished( ) ) {
-          LOG.debug( this.toString( ) + " aborted because bootstrap is not complete" );
+          LOG.debug( this.toString( ) + " aborted because bootstrap is not complete for service: " + config );
           return config;
-        } else if ( config.isVmLocal( ) && !config.lookupStateMachine( ).isBusy( ) ) {
+        } else if ( config.isVmLocal( ) && !config.getStateMachine( ).isBusy( ) ) {
           State initialState = config.lookupState( );
           State nextState = config.lookupState( );
-          if ( initialState.ordinal( ) < State.NOTREADY.ordinal( ) ) {
-            return config;
-          } else if ( State.NOTREADY.equals( initialState ) ) {
+          if ( State.NOTREADY.equals( initialState ) || State.BROKEN.equals( initialState ) ) {
             nextState = State.DISABLED;
+          } else if ( initialState.ordinal( ) < State.NOTREADY.ordinal( ) ) {
+            return config;
           }
           try {
-            LOG.debug( this.toString( ) + " attempting check for: " + config + " trying " + initialState + "->" + nextState );
-            Future<ServiceConfiguration> result = config.lookupStateMachine( ).transition( initialState );
-            State endState = result.get( ).lookupState( );
-            LOG.debug( this.toString( ) + " completed for: " + result + " trying " + initialState + "->" + nextState + " ended in: " + endState );
-            return result.get( );
+            Future<ServiceConfiguration> result = ServiceTransitions.transitionChain( config, nextState );//TODO:GRZE:OMGFIXME timeout here.
+            ServiceConfiguration endConfig = result.get( );
+            State endState = endConfig.lookupState( );
+            LOG.debug( this.toString( ) + " completed for: " + endConfig + " trying " + initialState + "->" + nextState + " ended in: " + endState );
+            return endConfig;
           } catch ( InterruptedException ex ) {
             Thread.currentThread( ).interrupt( );
             return config;
           } catch ( Exception ex ) {
             LOG.error( ex, ex );
-//            if( ServiceExceptions.filterExceptions( config, ex ) ) {
             throw new UndeclaredThrowableException( ex );
-//            } else {
-//              return config;
-//            }
           }
         } else {
           return config;
@@ -237,15 +233,22 @@ public class TopologyChanges {
       public ServiceConfiguration apply( ServiceConfiguration config ) {
         try {
           ServiceKey serviceKey = ServiceKey.create( config );
-          Future<ServiceConfiguration> transition = ServiceTransitions.transitionChain( config, Component.State.DISABLED );
-          ServiceConfiguration result = transition.get( );
-          Topology.getInstance( ).getGuard( ).tryDisable( serviceKey, config );
-          return result;
-        } catch ( InterruptedException ex ) {
-          Thread.currentThread( ).interrupt( );
-          throw new UndeclaredThrowableException( ex );
+          try {
+            Future<ServiceConfiguration> transition = ServiceTransitions.transitionChain( config, Component.State.DISABLED );
+            ServiceConfiguration result = transition.get( );
+            return result;
+          } catch ( InterruptedException ex ) {
+            Thread.currentThread( ).interrupt( );
+            throw new UndeclaredThrowableException( ex );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+            throw new UndeclaredThrowableException( ex );
+          } finally {
+            Topology.getInstance( ).getGuard( ).tryDisable( serviceKey, config );
+            return config;
+          }
         } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+          LOG.error( ex , ex );
           throw new UndeclaredThrowableException( ex );
         }
       }
@@ -254,20 +257,20 @@ public class TopologyChanges {
       @Override
       public ServiceConfiguration apply( ServiceConfiguration config ) {
         if ( !Bootstrap.isFinished( ) ) {
+          LOG.debug( this.toString( ) + " aborted because bootstrap is not complete for service: " + config );
           return config;
-        } else if ( !config.lookupStateMachine( ).isBusy( ) ) {
+        } else {
           State initialState = config.lookupState( );
           State nextState = config.lookupState( );
-          if ( initialState.ordinal( ) < State.NOTREADY.ordinal( ) ) {
-            return config;
-          } else if ( State.NOTREADY.equals( initialState ) ) {
+          if ( State.NOTREADY.equals( initialState ) || State.BROKEN.equals( initialState ) ) {
             nextState = State.DISABLED;
+          } else if ( initialState.ordinal( ) < State.NOTREADY.ordinal( ) ) {
+            return config;
           }
           try {
-            LOG.debug( this.toString( ) + " attempting check for: " + config + " trying " + initialState + "->" + nextState );
-            Future<ServiceConfiguration> result = config.lookupStateMachine( ).transition( nextState );
+            Future<ServiceConfiguration> result = ServiceTransitions.transitionChain( config, nextState );
             ServiceConfiguration endConfig = result.get( );
-            State endState = result.get( ).lookupState( );
+            State endState = endConfig.lookupState( );
             LOG.debug( this.toString( ) + " completed for: " + endConfig + " trying " + initialState + "->" + nextState + " ended in: " + endState );
             return endConfig;
           } catch ( InterruptedException ex ) {
@@ -277,8 +280,6 @@ public class TopologyChanges {
             LOG.error( ex, ex );
             throw new UndeclaredThrowableException( ex );
           }
-        } else {
-          return config;
         }
       }
     };

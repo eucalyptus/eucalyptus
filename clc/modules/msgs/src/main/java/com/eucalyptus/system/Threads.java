@@ -168,7 +168,7 @@ public class Threads {
       this.creationPoint = Thread.currentThread( ).getStackTrace( );
       this.name = groupPrefix;
       this.group = new ThreadGroup( this.name );
-      this.pool = Executors.newCachedThreadPool( );
+      this.pool = Executors.newCachedThreadPool( this );
       Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
         @Override
         public void run( ) {

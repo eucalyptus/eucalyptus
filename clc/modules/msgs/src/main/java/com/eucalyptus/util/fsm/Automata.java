@@ -71,6 +71,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.util.HasFullName;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Joiner;
@@ -128,12 +129,16 @@ public class Automata {
               res.get( );
               return res;
             } catch ( final IllegalStateException ex ) {
+              Logs.exhaust( ).error( ex, ex );
               return Futures.predestinedFailedFuture( ex );
             } catch ( final ExistingTransitionException ex ) {
+              Logs.exhaust( ).error( ex, ex );
               return Futures.predestinedFailedFuture( ex.getCause( ) );
             } catch ( final UndeclaredThrowableException ex ) {
+              Logs.exhaust( ).error( ex, ex );
               return Futures.predestinedFailedFuture( ex.getCause( ) );
             } catch ( final Throwable ex ) {
+              Logs.exhaust( ).error( ex, ex );
               return Futures.predestinedFailedFuture( ex );
             }
           }

@@ -73,7 +73,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
   public boolean fire( final ServiceConfiguration config, final Q request ) {
     if ( !this.request.compareAndSet( null, request ) ) {
       LOG.warn( "Duplicate write attempt for request: " + this.request.get( ).getClass( ).getSimpleName( ) );
-      return true;
+      return false;
     } else {
       final SocketAddress serviceSocketAddress = config.getSocketAddress( );
       final ChannelPipelineFactory factory = config.getComponentId( ).getClientPipeline( );
@@ -127,7 +127,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
               } else {
                 AsyncRequestHandler.this.teardown( future.getCause( ) );
               }
-            } catch ( RuntimeException ex ) {
+            } catch ( Exception ex ) {
               LOG.error( ex, ex );
               AsyncRequestHandler.this.teardown( future.getCause( ) );
             }
@@ -185,6 +185,8 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
         }
 //REVIEW: this is likely not needed.        LOG.error( this.connectFuture.getCause( ).getMessage( ) );
       }
+    } else {
+      this.response.setException( t );
     }
   }
   
