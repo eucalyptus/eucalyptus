@@ -124,32 +124,28 @@ public class ServiceContextManager {
     this.canHasWrite = this.canHas.writeLock( );
     executor.submit( new Runnable( ) {
       public void run( ) {
-        if ( !ServiceContextManager.this.running.compareAndSet( false, true ) ) {
-          return;
-        } else {
-          while ( ServiceContextManager.this.running.get( ) ) {
-            ServiceConfiguration event;
-            try {
-              if ( ( event = ServiceContextManager.this.queue.poll( 2000, TimeUnit.MILLISECONDS ) ) != null ) {
-                if( event.isVmLocal( ) ) {
-                  if ( ServiceContextManager.this.canHasWrite.tryLock( ) ) {
-                    try {
-                      ServiceContextManager.this.update( );
-                    } catch ( Throwable ex ) {
-                      LOG.error( ex, ex );
-                    } finally {
-                      ServiceContextManager.this.canHasWrite.unlock( );
-                    }
+        while ( ServiceContextManager.this.running.get( ) ) {
+          ServiceConfiguration event;
+          try {
+            if ( ( event = ServiceContextManager.this.queue.poll( 2000, TimeUnit.MILLISECONDS ) ) != null ) {
+              if ( event.isVmLocal( ) ) {
+                if ( ServiceContextManager.this.canHasWrite.tryLock( ) ) {
+                  try {
+                    ServiceContextManager.this.update( );
+                  } catch ( Throwable ex ) {
+                    LOG.error( ex, ex );
+                  } finally {
+                    ServiceContextManager.this.canHasWrite.unlock( );
                   }
                 }
               }
-            } catch ( InterruptedException e1 ) {
-              Thread.currentThread( ).interrupt( );
-              ServiceContextManager.this.running.set( false );
-              return;
-            } catch ( final Throwable e ) {
-              LOG.error( e, e );
             }
+          } catch ( InterruptedException e1 ) {
+            Thread.currentThread( ).interrupt( );
+            ServiceContextManager.this.running.set( false );
+            return;
+          } catch ( final Throwable e ) {
+            LOG.error( e, e );
           }
         }
       }
