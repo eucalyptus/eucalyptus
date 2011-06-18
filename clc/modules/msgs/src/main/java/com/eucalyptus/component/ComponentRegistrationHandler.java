@@ -84,16 +84,19 @@ public class ComponentRegistrationHandler {
   private static Logger LOG = Logger.getLogger( ComponentRegistrationHandler.class );
   
   static class RegistrationWorker implements Runnable {
-    private final AtomicBoolean           running  = new AtomicBoolean( false );
-    private final BlockingQueue<Runnable> msgQueue = new LinkedBlockingQueue<Runnable>( );
-    private final ExecutorService         executor = Executors.newFixedThreadPool( 1 );
-    private static final RegistrationWorker worker = new RegistrationWorker( );
+    private final AtomicBoolean             running  = new AtomicBoolean( false );
+    private final BlockingQueue<Runnable>   msgQueue = new LinkedBlockingQueue<Runnable>( );
+    private final ExecutorService           executor = Executors.newFixedThreadPool( 1 );
+    private static final RegistrationWorker worker   = new RegistrationWorker( );
+    
     private RegistrationWorker( ) {
-
+      this.executor.submit( this );
     }
+    
     public static void submit( Runnable run ) {
       worker.msgQueue.add( run );
     }
+    
     @Override
     public void run( ) {
       if ( !this.running.compareAndSet( false, true ) ) {
