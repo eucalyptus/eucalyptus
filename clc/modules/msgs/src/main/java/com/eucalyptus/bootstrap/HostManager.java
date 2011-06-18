@@ -106,9 +106,9 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   public static HostManager                   singleton;
   
   static class HostMembershipWorker implements Runnable {
-    private final AtomicBoolean             running  = new AtomicBoolean( false );
-    private final BlockingQueue<Runnable>   msgQueue = new LinkedBlockingQueue<Runnable>( );
-    private final ExecutorService           executor = Executors.newFixedThreadPool( 1 );
+    private final AtomicBoolean               running  = new AtomicBoolean( true );
+    private final BlockingQueue<Runnable>     msgQueue = new LinkedBlockingQueue<Runnable>( );
+    private final ExecutorService             executor = Executors.newFixedThreadPool( 1 );
     private static final HostMembershipWorker worker   = new HostMembershipWorker( );
     
     private HostMembershipWorker( ) {
@@ -121,25 +121,20 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     
     @Override
     public void run( ) {
-      if ( !this.running.compareAndSet( false, true ) ) {
-        return;
-      } else {
-        while ( this.running.get( ) ) {
-          Runnable event;
-          try {
-            if ( ( event = this.msgQueue.poll( 2000, TimeUnit.MILLISECONDS ) ) != null ) {
-              event.run( );
-            }
-          } catch ( InterruptedException e1 ) {
-            Thread.currentThread( ).interrupt( );
-            return;
-          } catch ( final Throwable e ) {
-            LOG.error( e, e );
+      while ( this.running.get( ) ) {
+        Runnable event;
+        try {
+          if ( ( event = this.msgQueue.poll( 2000, TimeUnit.MILLISECONDS ) ) != null ) {
+            event.run( );
           }
+        } catch ( InterruptedException e1 ) {
+          Thread.currentThread( ).interrupt( );
+          return;
+        } catch ( final Throwable e ) {
+          LOG.error( e, e );
         }
-        LOG.debug( "Shutting down component registration request queue: " + Thread.currentThread( ).getName( ) );
       }
-      
+      LOG.debug( "Shutting down component registration request queue: " + Thread.currentThread( ).getName( ) );
     }
   }
   
@@ -221,7 +216,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
       }
       LOG.debug( "Received updated host information: " + recvHost );
       Host hostEntry = Hosts.updateHost( view, recvHost );
-      if( Bootstrap.isCloudController( ) ) {
+      if ( Bootstrap.isCloudController( ) ) {
         HostManager.this.broadcastAddresses( );
       }
     }
@@ -275,7 +270,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     }
     LOG.info( "-> view: " + this.currentView.getReference( ) );
     LOG.info( "-> mark: " + this.currentView.isMarked( ) );
-    if( !Bootstrap.isCloudController( ) ) {
+    if ( !Bootstrap.isCloudController( ) ) {
       HostManager.this.broadcastAddresses( );
     }
   }
