@@ -175,7 +175,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   private final ClusterConfiguration                     configuration;
   private final FullName                                 fullName;
   private final ConcurrentNavigableMap<String, NodeInfo> nodeMap;
-  private final BlockingQueue<Throwable>                 errors                       = new LinkedBlockingDeque<Throwable>( );
+//  private final BlockingQueue<Throwable>                 errors                       = new LinkedBlockingDeque<Throwable>( );
   private final BlockingQueue<Throwable>                 pendingErrors                = new LinkedBlockingDeque<Throwable>( );
   private final ClusterState                             state;
   private final ClusterNodeState                         nodeState;
@@ -363,7 +363,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         
         this.from( State.STOPPED ).to( State.PENDING ).error( State.PENDING ).on( Transition.PRESTART ).run( noop );
         this.from( State.PENDING ).to( State.AUTHENTICATING ).error( State.PENDING ).on( Transition.AUTHENTICATE ).run( LogRefresh.CERTS );
-        this.from( State.AUTHENTICATING ).to( State.STARTING ).error( State.PENDING ).on( Transition.START ).run( noop /*Cluster.ComponentStatePredicates.STARTED */);
+        this.from( State.AUTHENTICATING ).to( State.STARTING ).error( State.PENDING ).on( Transition.START ).run( noop );
         this.from( State.STARTING ).to( State.STARTING_NOTREADY ).error( State.PENDING ).on( Transition.START_CHECK ).run( Refresh.SERVICEREADY );
         this.from( State.STARTING_NOTREADY ).to( State.NOTREADY ).error( State.PENDING ).on( Transition.STARTING_SERVICES ).run( Refresh.SERVICEREADY );
         
@@ -395,9 +395,9 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   }
   
   public void clearExceptions( ) {
-    if ( !this.errors.isEmpty( ) ) {
+    if ( !this.pendingErrors.isEmpty( ) ) {
       List<Throwable> currentErrors = Lists.newArrayList( );
-      this.errors.drainTo( currentErrors );
+      this.pendingErrors.drainTo( currentErrors );
       for ( Throwable t : currentErrors ) {
         Throwable filtered = Exceptions.filterStackTrace( t );
         LOG.error( "Clearing error: " + filtered.getMessage( ), filtered );
@@ -900,11 +900,11 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       LOG.error( t );
     } else if ( fin instanceof FailedRequestException ) {
       LOG.error( fin, fin );
-      this.errors.add( fin );
+      this.pendingErrors.add( fin );
     } else if ( ( fin instanceof ConnectionException ) || ( fin instanceof IOException ) ) {
       LOG.error( this.getName( ) + ": Error communicating with cluster: " + fin.getMessage( ) );
       LOG.trace( fin, fin );
-      this.errors.add( fin );
+      this.pendingErrors.add( fin );
     } else {
       LOG.error( fin, fin );
     }
