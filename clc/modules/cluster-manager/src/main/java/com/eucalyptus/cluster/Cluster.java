@@ -579,7 +579,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             fail = new ServiceRegistrationException( "Failed to call enable() on cluster: " + this.configuration + " because of: " + ex.getMessage( ), ex );
           }
         }
-        if( fail == null ) {
+        if( fail != null ) {
           throw fail;
         }
       } catch ( NoSuchElementException ex ) {
