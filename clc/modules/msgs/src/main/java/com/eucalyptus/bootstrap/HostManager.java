@@ -231,9 +231,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     }
     LOG.info( "-> view: " + this.currentView.getReference( ) );
     LOG.info( "-> mark: " + this.currentView.isMarked( ) );
-    if ( !Bootstrap.isCloudController( ) ) {
-      HostManager.this.broadcastAddresses( );
-    }
+    HostManager.this.broadcastAddresses( );
   }
   
   private void broadcastAddresses( ) {
