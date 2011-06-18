@@ -483,7 +483,7 @@ public class Component implements HasName<Component> {
     private final ConcurrentMap<ServiceConfiguration, Service> services     = Maps.newConcurrentMap( );
     
     public boolean hasLocalService( ) {
-      return !Component.this.identity.runLimitedServices( ) && ( this.localService.get( ) != null && !( this.localService.get( ) instanceof MissingService ) );
+      return !Component.this.isRunningRemoteMode( ) && ( this.localService.get( ) != null && !( this.localService.get( ) instanceof MissingService ) );
     }
     
     public Service getLocalService( ) {
