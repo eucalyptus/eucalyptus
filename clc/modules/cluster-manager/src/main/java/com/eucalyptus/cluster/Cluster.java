@@ -175,7 +175,6 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   private final ClusterConfiguration                     configuration;
   private final FullName                                 fullName;
   private final ConcurrentNavigableMap<String, NodeInfo> nodeMap;
-//  private final BlockingQueue<Throwable>                 errors                       = new LinkedBlockingDeque<Throwable>( );
   private final BlockingQueue<Throwable>                 pendingErrors                = new LinkedBlockingDeque<Throwable>( );
   private final ClusterState                             state;
   private final ClusterNodeState                         nodeState;
@@ -907,6 +906,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       this.pendingErrors.add( fin );
     } else {
       LOG.error( fin, fin );
+      this.pendingErrors.add( fin );
     }
     return false;
   }
