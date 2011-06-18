@@ -69,11 +69,12 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.Logger;
@@ -92,10 +93,6 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.Hertz;
-import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.Logs;
@@ -103,7 +100,6 @@ import com.eucalyptus.util.Templates;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 
 public class ServiceContextManager {
   private static Logger                                CONFIG_LOG        = Logger.getLogger( "Configs" );
@@ -114,18 +110,19 @@ public class ServiceContextManager {
   private final ConcurrentNavigableMap<String, String> endpointToService = new ConcurrentSkipListMap<String, String>( );
   private final ConcurrentNavigableMap<String, String> serviceToEndpoint = new ConcurrentSkipListMap<String, String>( );
   private final List<ComponentId>                      enabledCompIds    = Lists.newArrayList( );
-  private final AtomicBoolean             running  = new AtomicBoolean( true );
+  private final AtomicBoolean                          running           = new AtomicBoolean( true );
   private final ReentrantReadWriteLock                 canHas            = new ReentrantReadWriteLock( );
   private final Lock                                   canHasWrite;
   private final Lock                                   canHasRead;
   private final BlockingQueue<ServiceConfiguration>    queue             = new LinkedBlockingQueue<ServiceConfiguration>( );
   private MuleContext                                  context;
   private MuleClient                                   client;
+  private ExecutorService                              executor          = Executors.newFixedThreadPool( 1 );
   
   private ServiceContextManager( ) {
     this.canHasRead = this.canHas.readLock( );
     this.canHasWrite = this.canHas.writeLock( );
-    Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
+    executor.submit( new Runnable( ) {
       public void run( ) {
         if ( !ServiceContextManager.this.running.compareAndSet( false, true ) ) {
           return;
@@ -159,31 +156,6 @@ public class ServiceContextManager {
     } );
   }
   
-  private Future<?> doUpdate( ) {
-    if ( Bootstrap.isFinished( ) ) {
-      Future<?> ret = null;
-      Threads.lookup( Empyrean.class, ServiceContextManager.class ).submit( new Runnable( ) {
-        @Override
-        public void run( ) {
-          if ( ServiceContextManager.this.canHasWrite.tryLock( ) ) {
-            try {
-              ServiceContextManager.this.update( );
-            } catch ( Throwable ex ) {
-              LOG.error( ex, ex );
-            } finally {
-              ServiceContextManager.this.canHasWrite.unlock( );
-            }
-          }
-        }
-      } );
-      return ret != null
-        ? ret
-        : Futures.predestinedFuture( null );
-    } else {
-      return Futures.predestinedFuture( null );
-    }
-  }
-  
   private List<ComponentId> shouldReload( ) {
     List<Component> components = Components.whichAreEnabledLocally( );
     List<ComponentId> currentComponentIds = Components.toIds( components );
@@ -199,6 +171,7 @@ public class ServiceContextManager {
   public static final void restartSync( ) {
     restartSync( Components.lookup( Empyrean.class ).getLocalServiceConfiguration( ) );
   }
+  
   public static final void restartSync( ServiceConfiguration config ) {
     singleton.queue.add( config );
   }
