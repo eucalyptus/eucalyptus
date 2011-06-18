@@ -188,7 +188,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       @Override
       public boolean apply( final Cluster input ) {
         try {
-          AsyncRequests.newRequest( new StartServiceCallback( input ) ).dispatch( input.configuration ).get( );
+          AsyncRequests.newRequest( new StartServiceCallback( input ) ).sendSync( input.configuration );
           return true;
         } catch ( Throwable t ) {
           return input.filterExceptions( t );
