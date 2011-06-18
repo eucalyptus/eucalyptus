@@ -432,8 +432,8 @@ public class Topology implements EventListener<Event> {
             }
           }
         } );
-        LOG.debug( "PARTITIONS ==============================\n\t" + Joiner.on( "\n\t" ).join( Topology.this.services.keySet( ) ) );
-        LOG.debug( "PRIMARY =================================\n\t" + Joiner.on( "\n\t" ).join( Topology.this.services.values( ) ) );
+        LOG.debug( "PARTITIONS ==============================\n" + Joiner.on( "\n\t" ).join( Topology.this.services.keySet( ) ) );
+        LOG.debug( "PRIMARY =================================\n" + Joiner.on( "\n\t" ).join( Topology.this.services.values( ) ) );
         Predicate<Future<?>> futureIsDone = new Predicate<Future<?>>( ) {
           
           @Override
@@ -478,8 +478,8 @@ public class Topology implements EventListener<Event> {
             LOG.error( ex, ex );
           }
         }
-        LOG.debug( "CHECK ===================================\n\t" + Joiner.on( "\n\t" ).join( checkedServices ) );
-        LOG.debug( "DISABLED ================================\n\t" + Joiner.on( "\n\t" ).join( disabledServices ) );
+        LOG.debug( "CHECK ===================================\n" + Joiner.on( "\n\t" ).join( checkedServices ) );
+        LOG.debug( "DISABLED ================================\n" + Joiner.on( "\n\t" ).join( disabledServices ) );
         if ( Bootstrap.isCloudController( ) ) {
           List<ServiceConfiguration> failoverServicesList = ServiceConfigurations.collect( new Predicate<ServiceConfiguration>( ) {
             

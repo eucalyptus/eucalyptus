@@ -368,7 +368,6 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       {
         final TransitionAction<Cluster> noop = Transitions.noop( );
         
-        in( State.DISABLED ).run( ErrorStateListeners.FLUSHPENDING );
         this.from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( noop );
         
         this.from( State.STOPPED ).to( State.PENDING ).error( State.PENDING ).on( Transition.PRESTART ).run( noop );
