@@ -515,10 +515,8 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Throwable {
-//        if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
-//          parent.lookupComponent( ).getBootstrapper( ).check( );
-//          parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
-//        }
+        parent.lookupComponent( ).getBootstrapper( ).check( );
+        parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
         parent.lookupComponent( ).getBootstrapper( ).enable( );
         parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
       }
