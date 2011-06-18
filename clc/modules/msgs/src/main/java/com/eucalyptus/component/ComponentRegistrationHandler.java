@@ -78,6 +78,7 @@ import com.eucalyptus.config.ConfigurationService;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Logs;
 import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 
 public class ComponentRegistrationHandler {
@@ -150,6 +151,9 @@ public class ComponentRegistrationHandler {
     
     try {
       final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
+      Partition p = Partitions.lookup( newComponent );
+      Logs.exhaust( ).info( p.getCertificate( ) );
+      Logs.exhaust( ).info( p.getNodeCertificate( ) );
       try {
         component.startTransition( newComponent ).get( );
       } catch ( Exception ex ) {
