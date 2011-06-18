@@ -90,7 +90,7 @@ public class Callbacks {
       if ( this.callback instanceof Callback.Checked ) {
           ( ( Checked ) this.callback ).fireException( failure );
       } else if ( this.callback instanceof Callback.Completion ) {
-        ( ( Callback.Completion ) this.callback ).fire( );
+        ( ( Callback.Completion ) this.callback ).fireException( failure );
       }
     }
     
