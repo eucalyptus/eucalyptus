@@ -124,8 +124,10 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
       while ( this.running.get( ) ) {
         Runnable event;
         try {
-          if ( ( event = this.msgQueue.poll( 2000, TimeUnit.MILLISECONDS ) ) != null ) {
+          if ( ( event = this.msgQueue.poll( 10000, TimeUnit.MILLISECONDS ) ) != null ) {
             event.run( );
+          } else {
+            HostManager.singleton.broadcastAddresses( );
           }
         } catch ( InterruptedException e1 ) {
           Thread.currentThread( ).interrupt( );
@@ -283,7 +285,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
       HostMembershipWorker.submit( new Runnable( ) {
         @Override
         public void run( ) {
-          for ( int i = 0; i < 10 || !HostManager.this.isReady( ); i++ ) {
+          for ( int i = 0; i < 5; i++ ) {
             try {
               for ( final Address addr : view.getMembers( ) ) {
                 if ( ( HostManager.this.membershipChannel.getAddress( ) != null ) && ( !HostManager.this.membershipChannel.getAddress( ).equals( addr ) ) ) {
