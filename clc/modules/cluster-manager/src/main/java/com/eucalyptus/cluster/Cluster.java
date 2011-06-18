@@ -567,12 +567,20 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                                     State.ENABLING_NET, State.ENABLING_VMS,
                                                                                                     State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
                                                                                                     State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
-        CheckedListenableFuture<Cluster> res = Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
-        try {
-          res.get( );
-        } catch ( Exception ex ) {
-          Logs.exhaust( ).error( ex, ex );
-          throw new ServiceRegistrationException( "Failed to call enable() on cluster: " + this.configuration + " because of: " + ex.getMessage( ), ex );
+        ServiceRegistrationException fail = null;
+        for( int i = 0; i < CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
+          CheckedListenableFuture<Cluster> res = Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
+          try {
+            res.get( );
+            fail = null;
+            break;
+          } catch ( Exception ex ) {
+            Logs.exhaust( ).error( ex, ex );
+            fail = new ServiceRegistrationException( "Failed to call enable() on cluster: " + this.configuration + " because of: " + ex.getMessage( ), ex );
+          }
+        }
+        if( fail == null ) {
+          throw fail;
         }
       } catch ( NoSuchElementException ex ) {
         throw ex;

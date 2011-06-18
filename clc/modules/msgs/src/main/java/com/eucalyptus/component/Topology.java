@@ -99,7 +99,7 @@ public class Topology implements EventListener<Event> {
   private static Logger                                         LOG          = Logger.getLogger( Topology.class );
   private static final Topology                                 singleton    = new Topology( );                   //TODO:GRZE:handle differently for remote case?
   private Integer                                               currentEpoch = 0;
-  private final TransitionGuard                                 guard;
+  private TransitionGuard                                       guard;
   private final ConcurrentMap<ServiceKey, ServiceConfiguration> services     = Maps.newConcurrentMap( );
   
   private Topology( ) {
@@ -401,7 +401,9 @@ public class Topology implements EventListener<Event> {
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
-    builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( Bootstrap.isCloudController( ) ? "cloud" : "remote" );
+    builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( Bootstrap.isCloudController( )
+      ? "cloud"
+      : "remote" );
     return builder.toString( );
   }
   
