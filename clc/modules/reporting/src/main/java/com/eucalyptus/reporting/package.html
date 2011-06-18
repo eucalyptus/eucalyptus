@@ -3,9 +3,9 @@
 based upon those statistics. It tracks statistics for instance usage, EBS
 usage, and S3 usage.
 
-<p>The reporting mechanism gathers information by means of events which
-are sent from various components of Eucalyptus, to the reporting mechanism.
-Events are sent from the CLC and Walrus, and contain information regarding
+<p>The reporting mechanism gathers information by means of events which are
+sent from various components of Eucalyptus. Events are sent from the CLC and
+Walrus, to the reporting mechanism. Events contain information regarding
 things like instance usage, EBS usage, and S3 usage. Instance events are
 sent periodically (once every 20 seconds) whereas EBS and S3 events are
 sent every time something notable happens within storage (for example,
