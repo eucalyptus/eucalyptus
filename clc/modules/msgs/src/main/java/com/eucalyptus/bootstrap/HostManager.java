@@ -232,20 +232,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     LOG.info( "-> view: " + this.currentView.getReference( ) );
     LOG.info( "-> mark: " + this.currentView.isMarked( ) );
     if ( !Bootstrap.isCloudController( ) ) {
-      Threads.lookup( Empyrean.class, HostManager.class, "broadcastAddresses" ).submit( new Runnable( ) {
-        
-        @Override
-        public void run( ) {
-          for ( int i = 0; i < 10 && !HostManager.this.isReady( ); i++ ) {
-            try {
-              TimeUnit.SECONDS.sleep( 2 );
-            } catch ( InterruptedException ex ) {
-              LOG.error( ex, ex );
-            }
-            HostManager.this.broadcastAddresses( );
-          }
-        }
-      } );
+      HostManager.this.broadcastAddresses( );
     }
   }
   
