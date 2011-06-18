@@ -165,6 +165,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   public void receive( Message msg ) {
     View view = this.currentView.getReference( );
     if ( view != null ) {
+      HostManager.this.broadcastAddresses( );
       LOG.debug( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
       Host recvHost = ( Host ) msg.getObject( );
       if ( !Bootstrap.isFinished( ) ) {
@@ -180,7 +181,6 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
       }
       LOG.debug( "Received updated host information: " + recvHost );
       Host hostEntry = Hosts.updateHost( view, recvHost );
-      HostManager.this.broadcastAddresses( );
     }
   }
   
