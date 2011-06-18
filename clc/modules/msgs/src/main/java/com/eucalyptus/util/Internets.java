@@ -150,7 +150,14 @@ public class Internets {
   
   public static List<NetworkInterface> getNetworkInterfaces( ) {
     try {
-      ArrayList<NetworkInterface> ifaces = Collections.list( NetworkInterface.getNetworkInterfaces( ) );
+      List<NetworkInterface> ifaces = Collections.list( NetworkInterface.getNetworkInterfaces( ) );
+      ifaces = Lists.newArrayList( Iterables.filter( ifaces, new Predicate<NetworkInterface>( ) {
+        
+        @Override
+        public boolean apply( NetworkInterface input ) {
+          return !input.getName( ).contains( "virbr0" ) && !input.getDisplayName( ).contains( "virbr0" );
+        }
+      } ) );
       Collections.sort( ifaces, new Comparator<NetworkInterface>( ) {
         
         @Override
@@ -180,9 +187,6 @@ public class Internets {
   public static List<InetAddress> getAllInetAddresses( ) {
     List<InetAddress> addrs = Lists.newArrayList( );
     for ( NetworkInterface iface : Internets.getNetworkInterfaces( ) ) {
-      if ( "virbr0".equals( iface.getDisplayName( ) ) ) {
-        continue;
-      }
       for ( InterfaceAddress iaddr : iface.getInterfaceAddresses( ) ) {
         InetAddress addr = iaddr.getAddress( );
         if ( addr instanceof Inet4Address ) {
