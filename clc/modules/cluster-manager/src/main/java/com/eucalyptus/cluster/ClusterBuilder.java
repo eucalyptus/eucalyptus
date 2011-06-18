@@ -58,13 +58,13 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     ClusterConfiguration config = this.newInstance( partitionName, name, host, port );
     try {
       Partition part = Partitions.lookup( config );
-      ServiceConfigurations.getInstance( ).store( config );
       part.syncKeysToDisk( );
+      ServiceConfigurations.getInstance( ).store( config );
     } catch ( ServiceRegistrationException ex ) {
-      Partitions.maybeRemove( config.getPartition( ) );
+//      Partitions.maybeRemove( config.getPartition( ) );//TODO:GRZE:restore
       throw ex;
     } catch ( Throwable ex ) {
-      Partitions.maybeRemove( config.getPartition( ) );
+//      Partitions.maybeRemove( config.getPartition( ) );//TODO:GRZE:restore
       LOG.error( ex, ex );
       throw new ServiceRegistrationException( String.format( "Unexpected error caused cluster registration to fail for: partition=%s name=%s host=%s port=%d",
                                                              partitionName, name, host, port ), ex );

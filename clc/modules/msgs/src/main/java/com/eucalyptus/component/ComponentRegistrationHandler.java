@@ -129,7 +129,7 @@ public class ComponentRegistrationHandler {
     
     if ( !component.getComponentId( ).isPartitioned( ) ) {
       partition = name;
-    } else if ( component.getComponentId( ).isCloudLocal( ) ) {
+    } else if ( !component.getComponentId( ).isPartitioned( ) && component.getComponentId( ).isCloudLocal( ) ) {
       partition = Components.lookup( Eucalyptus.class ).getComponentId( ).name( );
     } else if ( partition == null ) {
       LOG.error( "BUG: Provided partition is null.  Using the service name as the partition name for the time being." );
