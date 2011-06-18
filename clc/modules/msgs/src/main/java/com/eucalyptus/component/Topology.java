@@ -459,6 +459,7 @@ public class Topology implements EventListener<Event> {
         for ( Map.Entry<ServiceConfiguration, Future<ServiceConfiguration>> result : futures.entrySet( ) ) {
           try {
             ServiceConfiguration resultConfig = result.getValue( ).get( );
+            checkedServices.add( resultConfig );
           } catch ( InterruptedException ex ) {
             LOG.error( ex, ex );
             Thread.currentThread( ).interrupt( );
@@ -492,7 +493,7 @@ public class Topology implements EventListener<Event> {
                   return false;
                 } else if ( disabledServices.contains( arg0 ) ) {
                   return false;
-                } else if ( !Component.State.DISABLED.isIn( arg0 ) ) {
+                } else if ( !Component.State.NOTREADY.isIn( arg0 ) ) {
                   return false;
                 } else if ( !Topology.this.services.containsKey( key ) ) {
                   return false;
