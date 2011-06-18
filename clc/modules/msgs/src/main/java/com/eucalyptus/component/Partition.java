@@ -277,11 +277,14 @@ public class Partition extends AbstractPersistent {
   public void syncKeysToDisk( ) {
     this.writePartitionKeyFiles( );
   }
-
+  
   @PostUpdate
   @PostPersist
   private void writePartitionKeyFiles( ) {
     File keyDir = SubDirectory.KEYS.getChildFile( this.getName( ) );
+    if( !keyDir.exists( ) && !keyDir.mkdir( ) ) {
+      throw new RuntimeException( "Failed to create directory for partition credentials: " + this );
+    }
     X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( );
     FileWriter out = null;
     try {
@@ -299,14 +302,16 @@ public class Partition extends AbstractPersistent {
       LOG.error( ex, ex );
       throw new RuntimeException( "Failed to write partition credentials to disk: " + this, ex );
     } finally {
-      if ( out != null ) try {
-        out.close( );
+      if ( out != null ) {
+        try {
+          out.close( );
         } catch ( IOException e ) {
-        LOG.error( e, e );
+          LOG.error( e, e );
         }
+      }
     }
   }
-
+  
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
