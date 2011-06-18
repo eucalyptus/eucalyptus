@@ -201,7 +201,7 @@ public class Component implements HasName<Component> {
    * @return true if the component has not been explicitly marked as remote.
    */
   public Boolean isRunningRemoteMode( ) {
-    return this.identity.runLimitedServices( ) || !this.isAvailableLocally( );
+    return this.identity.runLimitedServices( );
   }
   
   public NavigableSet<ServiceConfiguration> lookupServiceConfigurations( ) {

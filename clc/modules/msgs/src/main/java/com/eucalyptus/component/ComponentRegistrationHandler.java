@@ -116,7 +116,7 @@ public class ComponentRegistrationHandler {
             LOG.error( e, e );
           }
         }
-        LOG.debug( "Shutting down cluster message queue: " + Thread.currentThread( ).getName( ) );
+        LOG.debug( "Shutting down component registration request queue: " + Thread.currentThread( ).getName( ) );
       }
       
     }

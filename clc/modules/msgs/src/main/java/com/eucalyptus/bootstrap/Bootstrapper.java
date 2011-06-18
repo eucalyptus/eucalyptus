@@ -183,9 +183,10 @@ public abstract class Bootstrapper {
         dependsLocal = Lists.newArrayList( );
         for ( Class compIdClass : Ats.from( this.getClass( ) ).get( DependsLocal.class ).value( ) ) {
           if ( !ComponentId.class.isAssignableFrom( compIdClass ) ) {
-            LOG.error( "Ignoring specified @Depends which does not use ComponentId" );
+            LOG.error( "Ignoring specified @Depends which does not extend ComponentId: " + compIdClass );
           } else {
             try {
+              LOG.trace( "Adding @Depends to " + this.getClass( ) + ": " + compIdClass );
               dependsLocal.add( ( ComponentId ) compIdClass.newInstance( ) );
             } catch ( InstantiationException ex ) {
               LOG.error( ex, ex );

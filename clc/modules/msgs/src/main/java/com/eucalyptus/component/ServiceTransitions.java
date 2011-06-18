@@ -606,9 +606,7 @@ public class ServiceTransitions {
     SERVICE_CONTEXT_RESTART {
       @Override
       public void fire( final ServiceConfiguration parent ) {
-        if ( parent.isVmLocal( ) ) {
-          ServiceContextManager.restartSync( );
-        }
+        ServiceContextManager.restartSync( parent );
       }
     },
     PIPELINES_ADD {
