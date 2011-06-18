@@ -239,20 +239,6 @@ public class Topology implements EventListener<Event> {
     } ) );
   }
   
-//  public static ServiceConfiguration lookup( final Class<? extends ComponentId> compIdClass ) {
-//    ComponentId compId = ComponentIds.lookup( compIdClass );
-//    return Topology.lookup( compId, null );
-//  }
-//  
-//  public static ServiceConfiguration lookup( final ComponentId compId ) {
-//    return Topology.lookup( compId, null );
-//  }
-//  
-//  public static ServiceConfiguration lookup( final ComponentId compId, final String partition ) throws IllegalArgumentException, NoSuchElementException {
-//    ServiceKey serviceKey = ServiceKey.create( compId, partition );
-//    return Topology.getInstance( ).lookup( serviceKey );
-//  }
-//  
   private ServiceConfiguration lookup( final ServiceKey serviceKey ) {
     return this.services.get( serviceKey );
   }
@@ -332,17 +318,6 @@ public class Topology implements EventListener<Event> {
         return new ServiceKey( config.getComponentId( ), p );
       } else {
         return new ServiceKey( config.getComponentId( ) );
-      }
-    }
-    
-    public static ServiceKey create( final ComponentId compId, final String partition ) throws IllegalArgumentException, NoSuchElementException {
-      if ( compId.isPartitioned( ) && partition == null ) {
-        throw new IllegalArgumentException( "Cannot lookup a partitioned component when no partition is specified: " + compId );
-      } else if ( compId.isPartitioned( ) ) {
-        Partition p = Partitions.lookup( partition );
-        return new ServiceKey( compId, p );
-      } else {
-        return new ServiceKey( compId );
       }
     }
     

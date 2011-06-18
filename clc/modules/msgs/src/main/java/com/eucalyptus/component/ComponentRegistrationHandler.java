@@ -155,11 +155,6 @@ public class ComponentRegistrationHandler {
       Logs.exhaust( ).info( p.getCertificate( ) );
       Logs.exhaust( ).info( p.getNodeCertificate( ) );
       try {
-        component.startTransition( newComponent ).get( );
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
-      }
-      try {
         doServiceStart( newComponent );
       } catch ( Throwable ex ) {
         LOG.info( builder.getClass( ).getSimpleName( ) + ": enable failed because of: " + ex.getMessage( ) );
