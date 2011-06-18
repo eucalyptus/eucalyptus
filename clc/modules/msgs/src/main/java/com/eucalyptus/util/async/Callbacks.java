@@ -1,7 +1,6 @@
 package com.eucalyptus.util.async;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
 import com.eucalyptus.empyrean.Empyrean;
@@ -86,20 +85,11 @@ public class Callbacks {
     }
     
     private final void doFail( Throwable failure ) {
-      while ( ( failure instanceof ExecutionException ) && ( failure.getCause( ) != null ) ) {
-        failure = failure.getCause( );
-      }
-      if ( Callback.Checked.class.isAssignableFrom( this.callback.getClass( ) ) ) {
-        try {
-          this.LOG.trace( EventRecord.here( this.callback.getClass( ), EventType.CALLBACK, "fireException(" + failure.getClass( ).getSimpleName( ) + ")",
-                                            failure.getMessage( ) )/*, Exceptions.filterStackTrace( failure, 2 )*/);
+      this.LOG.trace( EventRecord.here( BasicCallbackProcessor.class, EventType.CALLBACK, this.callback.getClass( ).toString( ), "fireException(" + failure.getClass( ).getSimpleName( ) + ")" ) );
+      this.LOG.trace( failure.getMessage( ), failure );
+      if ( this.callback instanceof Callback.Checked ) {
           ( ( Checked ) this.callback ).fireException( failure );
-        } catch ( final Throwable t ) {
-          this.LOG.error( "BUG: an error occurred while trying to process an error.  Previous error was: " + failure.getMessage( ), t );
-        }
-      } else if ( Callback.Completion.class.isAssignableFrom( this.callback.getClass( ) ) ) {
-        this.LOG.trace( EventRecord.here( this.callback.getClass( ), EventType.CALLBACK, "fire(" + failure.getClass( ).getSimpleName( ) + ")",
-                                          failure.getMessage( ) )/*, Exceptions.filterStackTrace( failure, 2 )*/);
+      } else if ( this.callback instanceof Callback.Completion ) {
         ( ( Callback.Completion ) this.callback ).fire( );
       }
     }
@@ -114,7 +104,8 @@ public class Callbacks {
   @SuppressWarnings( "unchecked" )
   public static Runnable addListenerHandler( final CheckedListenableFuture<?> future, final Callback<?> listener ) {
     Runnable r;
-    future.addListener( r = new Callbacks.BasicCallbackProcessor( future, listener ), Threads.lookup( Empyrean.class, Callbacks.class, BasicCallbackProcessor.class.toString( ) ) );
+    future.addListener( r = new Callbacks.BasicCallbackProcessor( future, listener ),
+                        Threads.lookup( Empyrean.class, Callbacks.class, BasicCallbackProcessor.class.toString( ) ) );
     return r;
   }
   
