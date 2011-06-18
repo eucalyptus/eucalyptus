@@ -94,37 +94,38 @@ import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 public class ServiceBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
   
-  static class RegistrationWorker implements Runnable {
-    private final AtomicBoolean             running  = new AtomicBoolean( false );
+  static class ServiceBootstrapWorker implements Runnable {
+    private final AtomicBoolean             running  = new AtomicBoolean( true );
     private final BlockingQueue<Runnable>   msgQueue = new LinkedBlockingQueue<Runnable>( );
-    private final ExecutorService           executor = Executors.newFixedThreadPool( 1 );
-    private static final RegistrationWorker worker   = new RegistrationWorker( );
+    private final ExecutorService           executor = Executors.newFixedThreadPool( 20 );
+    private static final ServiceBootstrapWorker worker   = new ServiceBootstrapWorker( );
     
-    private RegistrationWorker( ) {
-      this.executor.submit( this );
+    private ServiceBootstrapWorker( ) {
+      for ( int i = 0; i < 20; i++ ) {
+        this.executor.submit( this );
+      }
     }
     
+    public static void markFinished( ) {
+      worker.running.set( false );
+    }
     public static void submit( Runnable run ) {
       worker.msgQueue.add( run );
     }
     
     @Override
     public void run( ) {
-      if ( !this.running.compareAndSet( false, true ) ) {
-        return;
-      } else {
-        while ( this.running.get( ) ) {
-          Runnable event;
-          try {
-            if ( ( event = this.msgQueue.poll( 2000, TimeUnit.MILLISECONDS ) ) != null ) {
-              event.run( );
-            }
-          } catch ( InterruptedException e1 ) {
-            Thread.currentThread( ).interrupt( );
-            return;
-          } catch ( final Throwable e ) {
-            LOG.error( e, e );
+      while ( !this.msgQueue.isEmpty( ) || this.running.get( ) ) {
+        Runnable event;
+        try {
+          if ( ( event = this.msgQueue.poll( 2000, TimeUnit.MILLISECONDS ) ) != null ) {
+            event.run( );
           }
+        } catch ( InterruptedException e1 ) {
+          Thread.currentThread( ).interrupt( );
+          return;
+        } catch ( final Throwable e ) {
+          LOG.error( e, e );
         }
         LOG.debug( "Shutting down component registration request queue: " + Thread.currentThread( ).getName( ) );
       }
@@ -175,7 +176,7 @@ public class ServiceBootstrapper extends Bootstrapper {
       @Override
       public boolean apply( final ServiceConfiguration config ) {
         final Component comp = config.lookupComponent( );
-        RegistrationWorker.submit( new Runnable( ) {
+        ServiceBootstrapWorker.submit( new Runnable( ) {
           @Override
           public void run( ) {
             try {
@@ -197,6 +198,7 @@ public class ServiceBootstrapper extends Bootstrapper {
         return true;
       }
     } );
+    ServiceBootstrapWorker.markFinished( );
     return true;
   }
   

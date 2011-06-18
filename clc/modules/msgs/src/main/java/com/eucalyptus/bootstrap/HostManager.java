@@ -105,13 +105,13 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   private final AtomicMarkableReference<View> currentView = new AtomicMarkableReference<View>( null, true );
   public static HostManager                   singleton;
   
-  static class RegistrationWorker implements Runnable {
+  static class HostMembershipWorker implements Runnable {
     private final AtomicBoolean             running  = new AtomicBoolean( false );
     private final BlockingQueue<Runnable>   msgQueue = new LinkedBlockingQueue<Runnable>( );
     private final ExecutorService           executor = Executors.newFixedThreadPool( 1 );
-    private static final RegistrationWorker worker   = new RegistrationWorker( );
+    private static final HostMembershipWorker worker   = new HostMembershipWorker( );
     
-    private RegistrationWorker( ) {
+    private HostMembershipWorker( ) {
       this.executor.submit( this );
     }
     
@@ -285,7 +285,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     if ( view == null ) {
       return;
     } else {
-      RegistrationWorker.submit( new Runnable( ) {
+      HostMembershipWorker.submit( new Runnable( ) {
         @Override
         public void run( ) {
           for ( int i = 0; i < 10 || !HostManager.this.isReady( ); i++ ) {
