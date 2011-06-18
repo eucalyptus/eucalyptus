@@ -104,9 +104,6 @@ public class Topology implements EventListener<Event> {
   
   private Topology( ) {
     super( );
-    this.guard = ( Bootstrap.isCloudController( )
-      ? cloudControllerGuard( )
-      : remoteGuard( ) );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
   
@@ -158,11 +155,11 @@ public class Topology implements EventListener<Event> {
       public T call( ) throws Exception {
         Long serviceStart = System.currentTimeMillis( );
         Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), callable.toString( ) )
-                   .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) ) );
+                                          .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) ) );
         T result = callable.call( );
         Long finish = System.currentTimeMillis( );
         Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), callable.toString( ) )
-                   .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) ) );
+                                          .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) ) );
         return result;
       }
     } );
@@ -177,11 +174,11 @@ public class Topology implements EventListener<Event> {
       public ServiceConfiguration call( ) throws Exception {
         Long serviceStart = System.currentTimeMillis( );
         Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
-                   .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) ) );
+                                          .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) ) );
         ServiceConfiguration result = function.apply( config );
         Long finish = System.currentTimeMillis( );
         Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
-                   .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) ) );
+                                          .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) ) );
         return result;
       }
     } );
@@ -339,7 +336,7 @@ public class Topology implements EventListener<Event> {
     public String toString( ) {
       StringBuilder builder = new StringBuilder( );
       builder.append( "ServiceKey " ).append( this.componentId.name( ) ).append( ":" );
-      if( this.partition == null ) {
+      if ( this.partition == null ) {
         builder.append( "cloud-global-service" );
       } else {
         builder.append( "partition=" ).append( this.partition );
@@ -396,13 +393,15 @@ public class Topology implements EventListener<Event> {
   }
   
   public TransitionGuard getGuard( ) {
-    return this.guard;
+    return ( Bootstrap.isCloudController( )
+      ? cloudControllerGuard( )
+      : remoteGuard( ) );
   }
   
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
-    builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( this.guard.getClass( ).getSimpleName( ) );
+    builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( Bootstrap.isCloudController( ) ? "cloud" : "remote" );
     return builder.toString( );
   }
   
@@ -489,11 +488,11 @@ public class Topology implements EventListener<Event> {
                 ServiceKey key = ServiceKey.create( arg0 );
                 if ( !Bootstrap.isCloudController( ) ) {
                   return false;
-                } else if( disabledServices.contains( arg0 ) ) {
+                } else if ( disabledServices.contains( arg0 ) ) {
                   return false;
-                } else if( !Component.State.DISABLED.isIn( arg0 ) ) {
+                } else if ( !Component.State.DISABLED.isIn( arg0 ) ) {
                   return false;
-                } else if( !Topology.this.services.containsKey( key ) ) {
+                } else if ( !Topology.this.services.containsKey( key ) ) {
                   return false;
                 } else {
                   return true;
