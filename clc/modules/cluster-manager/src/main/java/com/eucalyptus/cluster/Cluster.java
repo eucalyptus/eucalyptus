@@ -187,70 +187,55 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       
       @Override
       public boolean apply( final Cluster input ) {
-        if ( Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupState( ).ordinal( ) ) {
-          try {
-            AsyncRequests.newRequest( new StartServiceCallback( input ) ).dispatch( input.configuration ).get( );
-            return true;
-          } catch ( Throwable t ) {
-            return input.filterExceptions( t );
-          }
-        } else {
-          return false;
+        try {
+          AsyncRequests.newRequest( new StartServiceCallback( input ) ).dispatch( input.configuration ).get( );
+          return true;
+        } catch ( Throwable t ) {
+          return input.filterExceptions( t );
         }
       }
     },
     ENABLED {
       @Override
       public boolean apply( final Cluster input ) {
-        if ( Component.State.DISABLED.equals( input.getConfiguration( ).lookupState( ) )
-             || Component.State.ENABLED.equals( input.getConfiguration( ).lookupState( ) ) ) {
+        try {
+          AsyncRequests.newRequest( new EnableServiceCallback( input ) ).sendSync( input.configuration );
+          return true;
+        } catch ( Throwable t ) {
+          return input.filterExceptions( t );
+        } finally {
           try {
-            AsyncRequests.newRequest( new EnableServiceCallback( input ) ).sendSync( input.configuration );
-            return true;
-          } catch ( Throwable t ) {
-            return input.filterExceptions( t );
-          } finally {
-            try {
-              if ( !Clusters.getInstance( ).contains( input.getName( ) ) ) {
+            if ( !Clusters.getInstance( ).contains( input.getName( ) ) ) {
+              Clusters.getInstance( ).register( input );
+            } else {
+              try {
+                Clusters.getInstance( ).enable( input.getName( ) );
+              } catch ( NoSuchElementException ex ) {
                 Clusters.getInstance( ).register( input );
-              } else {
-                try {
-                  Clusters.getInstance( ).enable( input.getName( ) );
-                } catch ( NoSuchElementException ex ) {
-                  Clusters.getInstance( ).register( input );
-                  LOG.error( ex, ex );
-                } catch ( Exception ex ) {
-                  LOG.error( ex, ex );
-                }
+                LOG.error( ex, ex );
+              } catch ( Exception ex ) {
+                LOG.error( ex, ex );
               }
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
             }
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
           }
-        } else {
-          return false;
         }
       }
     },
     DISABLED {
       @Override
       public boolean apply( final Cluster input ) {
-        if ( Component.State.ENABLED.equals( input.getConfiguration( ).lookupState( ) )
-             || Component.State.DISABLED.equals( input.getConfiguration( ).lookupState( ) )
-             || Component.State.NOTREADY.equals( input.getConfiguration( ).lookupState( ) ) ) {
-          try {
-            Clusters.getInstance( ).disable( input.getName( ) );
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
-          }
-          try {
-            AsyncRequests.newRequest( new DisableServiceCallback( input ) ).sendSync( input.configuration );
-            return true;
-          } catch ( Throwable t ) {
-            return input.filterExceptions( t );
-          }
-        } else {
-          return false;
+        try {
+          Clusters.getInstance( ).disable( input.getName( ) );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+        try {
+          AsyncRequests.newRequest( new DisableServiceCallback( input ) ).sendSync( input.configuration );
+          return true;
+        } catch ( Throwable t ) {
+          return input.filterExceptions( t );
         }
       }
     };
