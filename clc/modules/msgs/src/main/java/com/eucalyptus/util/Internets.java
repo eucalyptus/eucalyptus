@@ -291,7 +291,7 @@ public class Internets {
     if ( addr == null ) return true;
     try {
       Boolean result = addr.isAnyLocalAddress( );
-      result |= Iterables.any( Collections.list( NetworkInterface.getNetworkInterfaces( ) ), new Predicate<NetworkInterface>( ) {
+      result |= Iterables.any( Internets.getNetworkInterfaces( ), new Predicate<NetworkInterface>( ) {
         @Override
         public boolean apply( NetworkInterface arg0 ) {
           return Iterables.any( arg0.getInterfaceAddresses( ), new Predicate<InterfaceAddress>( ) {

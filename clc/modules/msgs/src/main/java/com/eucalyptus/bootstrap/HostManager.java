@@ -180,6 +180,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
       }
       LOG.debug( "Received updated host information: " + recvHost );
       Host hostEntry = Hosts.updateHost( view, recvHost );
+      HostManager.this.broadcastAddresses( );
     }
   }
   
