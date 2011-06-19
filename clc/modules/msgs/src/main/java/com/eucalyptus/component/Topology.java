@@ -535,10 +535,12 @@ public class Topology implements EventListener<Event> {
                   return false;
                 } else if ( disabledServices.contains( arg0 ) ) {
                   return false;
-                } else if ( !Component.State.NOTREADY.isIn( arg0 ) ) {
+                } else if ( Component.State.NOTREADY.isIn( arg0 ) ) {
+                  return false;
+                } else if ( Topology.this.services.containsKey( key ) && arg0.equals( Topology.this.services.get( key ) ) ) {
                   return false;
                 } else if ( !Topology.this.services.containsKey( key ) ) {
-                  return false;
+                  return true;
                 } else {
                   return true;
                 }
