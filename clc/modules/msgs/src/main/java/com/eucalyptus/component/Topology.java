@@ -255,11 +255,11 @@ public class Topology implements EventListener<Event> {
   }
   
   interface TransitionGuard {
-    boolean tryEnable( final ServiceKey serviceKey, final ServiceConfiguration config ) throws ServiceRegistrationException;
+    boolean tryEnable( final ServiceConfiguration config ) throws ServiceRegistrationException;
     
     boolean nextEpoch( );
     
-    boolean tryDisable( final ServiceKey serviceKey, final ServiceConfiguration config ) throws ServiceRegistrationException;
+    boolean tryDisable( final ServiceConfiguration config ) throws ServiceRegistrationException;
   }
   
   private TransitionGuard cloudControllerGuard( ) {
@@ -272,7 +272,8 @@ public class Topology implements EventListener<Event> {
       }
       
       @Override
-      public boolean tryEnable( final ServiceKey serviceKey, final ServiceConfiguration config ) throws ServiceRegistrationException {
+      public boolean tryEnable( final ServiceConfiguration config ) throws ServiceRegistrationException {
+        final ServiceKey serviceKey = ServiceKey.create( config );
         ServiceConfiguration curr = Topology.this.services.putIfAbsent( serviceKey, config );
         if ( curr != null && !curr.equals( config ) ) {
           return false;
@@ -285,7 +286,8 @@ public class Topology implements EventListener<Event> {
       }
       
       @Override
-      public boolean tryDisable( final ServiceKey serviceKey, final ServiceConfiguration config ) {
+      public boolean tryDisable( final ServiceConfiguration config ) throws ServiceRegistrationException {
+        final ServiceKey serviceKey = ServiceKey.create( config );
         return ( Topology.this.services.remove( serviceKey, config ) || !config.equals( Topology.this.services.get( serviceKey ) ) ) && this.nextEpoch( );
       }
       
@@ -301,7 +303,8 @@ public class Topology implements EventListener<Event> {
       }
       
       @Override
-      public boolean tryEnable( final ServiceKey serviceKey, final ServiceConfiguration config ) throws ServiceRegistrationException {
+      public boolean tryEnable( final ServiceConfiguration config ) throws ServiceRegistrationException {
+        final ServiceKey serviceKey = ServiceKey.create( config );
         ServiceConfiguration curr = Topology.this.services.put( serviceKey, config );
         if ( curr != null && !curr.equals( config ) ) {
           return false;
@@ -313,7 +316,8 @@ public class Topology implements EventListener<Event> {
       }
       
       @Override
-      public boolean tryDisable( final ServiceKey serviceKey, final ServiceConfiguration config ) {
+      public boolean tryDisable( final ServiceConfiguration config ) throws ServiceRegistrationException {
+        final ServiceKey serviceKey = ServiceKey.create( config );
         return ( Topology.this.services.remove( serviceKey, config ) || !config.equals( Topology.this.services.get( serviceKey ) ) ) && this.nextEpoch( );
       }
     };
@@ -447,8 +451,8 @@ public class Topology implements EventListener<Event> {
             }
           }
         } );
-        LOG.debug( "PARTITIONS ==============================\n" + Joiner.on( "\n\t" ).join( Topology.this.services.keySet( ) ) );
-        LOG.debug( "PRIMARY =================================\n" + Joiner.on( "\n\t" ).join( Topology.this.services.values( ) ) );
+        Logs.exhaust().debug( "PARTITIONS ==============================\n" + Joiner.on( "\n\t" ).join( Topology.this.services.keySet( ) ) );
+        Logs.exhaust().debug( "PRIMARY =================================\n" + Joiner.on( "\n\t" ).join( Topology.this.services.values( ) ) );
         Predicate<Future<?>> futureIsDone = new Predicate<Future<?>>( ) {
           
           @Override
@@ -487,15 +491,15 @@ public class Topology implements EventListener<Event> {
             }
             try {
               disabledServices.add( result.getKey( ) );
-              Topology.this.getGuard( ).tryDisable( ServiceKey.create( result.getKey( ) ), result.getKey( ) );
+              Topology.this.getGuard( ).tryDisable( result.getKey( ) );
             } catch ( ServiceRegistrationException ex1 ) {
               LOG.error( ex1, ex1 );
             }
             LOG.error( ex, ex );
           }
         }
-        LOG.debug( "CHECK ===================================\n" + Joiner.on( "\n\t" ).join( checkedServices ) );
-        LOG.debug( "DISABLED ================================\n" + Joiner.on( "\n\t" ).join( disabledServices ) );
+        Logs.exhaust().debug( "CHECK ===================================\n" + Joiner.on( "\n\t" ).join( checkedServices ) );
+        Logs.exhaust().debug( "DISABLED ================================\n" + Joiner.on( "\n\t" ).join( disabledServices ) );
         if ( Bootstrap.isCloudController( ) ) {
           List<ServiceConfiguration> failoverServicesList = ServiceConfigurations.collect( new Predicate<ServiceConfiguration>( ) {
             

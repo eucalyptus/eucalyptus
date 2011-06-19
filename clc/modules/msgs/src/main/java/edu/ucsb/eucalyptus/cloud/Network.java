@@ -180,7 +180,7 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
   }
 
   private NetworkToken getClusterToken( String cluster ) {
-    NetworkToken newToken = new NetworkToken( cluster, this.fullName.getAccountNumber( ), this.networkName, this.uuid, this.vlan.get( ) );
+    NetworkToken newToken = new NetworkToken( cluster, this.account, this.networkName, this.uuid, this.vlan.get( ) );
     NetworkToken token = this.clusterTokens.putIfAbsent( cluster, newToken );
     if ( token == null ) {
       return newToken;

@@ -120,11 +120,11 @@ public class TopologyChanges {
       public ServiceConfiguration apply( ServiceConfiguration config ) {
         try {
           ServiceKey serviceKey = ServiceKey.create( config );
-          if ( Topology.getInstance( ).getGuard( ).tryEnable( serviceKey, config ) ) {
+          if ( Topology.getInstance( ).getGuard( ).tryEnable( config ) ) {
             try {
               return ServiceTransitions.transitionChain( config, Component.State.ENABLED ).get( );
             } catch ( Exception ex ) {
-              Topology.getInstance( ).getGuard( ).tryDisable( serviceKey, config );
+              Topology.getInstance( ).getGuard( ).tryDisable( config );
               throw ex;
             }
           } else {
@@ -146,7 +146,7 @@ public class TopologyChanges {
           ServiceKey serviceKey = ServiceKey.create( config );
           Future<ServiceConfiguration> transition = ServiceTransitions.transitionChain( config, Component.State.DISABLED );
           ServiceConfiguration result = transition.get( );
-          Topology.getInstance( ).getGuard( ).tryDisable( serviceKey, config );
+          Topology.getInstance( ).getGuard( ).tryDisable( config );
           return result;
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
@@ -238,17 +238,15 @@ public class TopologyChanges {
       public ServiceConfiguration apply( ServiceConfiguration config ) {
         try {
           ServiceKey serviceKey = ServiceKey.create( config );
-          if ( Topology.getInstance( ).getGuard( ).tryEnable( serviceKey, config ) ) {
-            CheckedListenableFuture<ServiceConfiguration> transition = ServiceTransitions.transitionChain( config, Component.State.ENABLED );
+          if ( Topology.getInstance( ).getGuard( ).tryEnable( config ) ) {
             try {
-              return transition.get( );
+              return ServiceTransitions.transitionChain( config, Component.State.ENABLED ).get( );
             } catch ( Exception ex ) {
-              Topology.getInstance( ).getGuard( ).tryDisable( serviceKey, config );
+              Topology.getInstance( ).getGuard( ).tryDisable( config );
               throw ex;
             }
           } else {
-            CheckedListenableFuture<ServiceConfiguration> transition = ServiceTransitions.transitionChain( config, Component.State.DISABLED );
-            return transition.get( );
+            return ServiceTransitions.transitionChain( config, Component.State.DISABLED ).get( );
           }
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
@@ -277,7 +275,7 @@ public class TopologyChanges {
         } finally {
           if ( serviceKey != null ) {
             try {
-              Topology.getInstance( ).getGuard( ).tryDisable( serviceKey, config );
+              Topology.getInstance( ).getGuard( ).tryDisable( config );
             } catch ( ServiceRegistrationException ex ) {
               LOG.error( ex, ex );
             }
