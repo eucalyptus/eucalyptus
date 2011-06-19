@@ -117,11 +117,11 @@ public class CreateVmInstances {
   private int getVmAllocationNumber( Allocation allocInfo ) {
     int vmNum = 0;
     for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-//      if ( Clusters.getInstance( ).hasNetworking( ) ) {
-//        vmNum += token.getPrimaryNetwork( ).getIndexes( ).size( );
-//      } else {
+      if ( Clusters.getInstance( ).hasNetworking( ) ) {
+        vmNum += token.getPrimaryNetwork( ).getIndexes( ).size( );
+      } else {
         vmNum += token.getAmount( );
-//      }
+      }
     }
     return vmNum;
   }
