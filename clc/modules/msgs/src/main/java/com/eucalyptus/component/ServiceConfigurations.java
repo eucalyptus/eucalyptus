@@ -42,7 +42,7 @@ public class ServiceConfigurations {
             Logs.exhaust( ).debug( "ServiceConfigurations.collect( ) rejected config " + config + " for predicate: " + predicate.getClass( ) );
           }
         } catch ( Exception ex ) {
-          Logs.exhaust( ).debug( "ServiceConfigurations.collect( ) failed for config " + config + " using predicate: " + predicate.getClass( ) );
+          Logs.exhaust( ).debug( "ServiceConfigurations.collect( ) failed for config " + config + " using predicate: " + predicate.getClass( ) + " because of " + ex.getMessage( ) );
           LOG.error( ex , ex );
         }
       }

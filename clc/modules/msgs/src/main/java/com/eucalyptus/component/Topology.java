@@ -535,23 +535,29 @@ public class Topology implements EventListener<Event> {
         Logs.exhaust( ).debug( "CHECK ===================================\n" + Joiner.on( "\n\t" ).join( checkedServices ) );
         Logs.exhaust( ).debug( "DISABLED ================================\n" + Joiner.on( "\n\t" ).join( disabledServices ) );
         if ( Bootstrap.isCloudController( ) ) {
-          List<ServiceConfiguration> failoverServicesList = ServiceConfigurations.collect( new Predicate<ServiceConfiguration>( ) {
+          final Predicate<ServiceConfiguration> predicate = new Predicate<ServiceConfiguration>( ) {
             
             @Override
             public boolean apply( ServiceConfiguration arg0 ) {
               try {
                 ServiceKey key = ServiceKey.create( arg0 );
                 if ( !Bootstrap.isCloudController( ) ) {
+                  Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": not cloud controller." );
                   return false;
                 } else if ( disabledServices.contains( arg0 ) ) {
+                  Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": service was just DISABLED." );
                   return false;
                 } else if ( Component.State.NOTREADY.isIn( arg0 ) ) {
+                  Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": service is NOTREADY." );
                   return false;
                 } else if ( Topology.this.services.containsKey( key ) && arg0.equals( Topology.this.services.get( key ) ) ) {
+                  Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": service is ENABLED." );
                   return false;
                 } else if ( !Topology.this.services.containsKey( key ) ) {
+                  Logs.exhaust( ).debug( "FAILOVER-ACCEPT: " + arg0 + ": service for partition: " + key );
                   return true;
                 } else {
+                  Logs.exhaust( ).debug( "FAILOVER-ACCEPT: " + arg0 );
                   return true;
                 }
               } catch ( ServiceRegistrationException ex ) {
@@ -559,7 +565,8 @@ public class Topology implements EventListener<Event> {
                 return false;
               }
             }
-          } );
+          };
+          List<ServiceConfiguration> failoverServicesList = ServiceConfigurations.collect( predicate );
           Logs.exhaust( ).debug( "FAILOVER ================================\n" + Joiner.on( "\n\t" ).join( failoverServicesList ) );
           for ( ServiceConfiguration config : failoverServicesList ) {
             try {
