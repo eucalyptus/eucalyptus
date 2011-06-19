@@ -66,7 +66,6 @@ package com.eucalyptus.component;
 import java.net.InetSocketAddress;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
-import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -94,19 +93,6 @@ public class BasicService extends AbstractService implements Service {
     super( );
     this.serviceConfiguration = serviceConfiguration;
     this.stateMachine = new ServiceState( this.serviceConfiguration );
-    try {
-      this.stateMachine.transition( State.INITIALIZED );
-    } catch ( IllegalStateException ex ) {
-      LOG.error( ex, ex );
-      throw new ServiceRegistrationException( "Initializing service " + this.serviceConfiguration + " failed because of: " + ex.getMessage( ), ex );
-    } catch ( NoSuchElementException ex ) {
-      LOG.error( ex, ex );
-      throw new ServiceRegistrationException( "Initializing service " + this.serviceConfiguration + " failed because of: " + ex.getMessage( ), ex );
-    } catch ( ExistingTransitionException ex ) {
-      LOG.error( ex, ex );
-      throw new ServiceRegistrationException( "Initializing service " + this.serviceConfiguration + " failed because of: " + ex.getMessage( ), ex );
-    }
-    
     ListenerRegistry.getInstance( ).register( ClockTick.class, this );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
@@ -173,12 +159,7 @@ public class BasicService extends AbstractService implements Service {
   
   @Override
   public Dispatcher getDispatcher( ) {
-    throw new RuntimeException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
-  }
-  
-  @Override
-  public ServiceEndpoint getEndpoint( ) {
-    throw new RuntimeException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
+    throw new IllegalStateException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
   }
   
   @Override
@@ -200,45 +181,6 @@ public class BasicService extends AbstractService implements Service {
   public final void fireEvent( Event event ) {
     if ( event instanceof LifecycleEvent ) {
       super.fireLifecycleEvent( event );
-    } else if ( event instanceof Hertz && Bootstrap.isFinished( ) && ( ( Hertz ) event ).isAsserted( 10l ) ) {
-      final ServiceConfiguration config = this.getServiceConfiguration( );
-      if ( config.lookupComponent( ).hasService( config ) ) {
-        if ( Component.State.STOPPED.ordinal( ) < config.lookupState( ).ordinal( ) ) {
-          try {
-            Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
-              @Override
-              public void run( ) {
-                if ( !Bootstrap.isFinished( ) ) {
-                  return;
-                } else {
-                  try {
-                    if ( Component.State.ENABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.DISABLED.isIn( config ) ) {
-                      config.lookupComponent( ).enableTransition( config ).get( );
-                    } else if ( Component.State.DISABLED.equals( config.lookupService( ).getGoal( ) ) && Component.State.ENABLED.isIn( config ) ) {
-                      config.lookupComponent( ).disableTransition( config ).get( );
-                    } else if ( BasicService.this.stateMachine.getState( ).ordinal( ) > State.NOTREADY.ordinal( ) ) {
-                      BasicService.this.stateMachine.transition( BasicService.this.stateMachine.getState( ) ).get( );
-                    } else if ( State.NOTREADY.isIn( BasicService.this.getServiceConfiguration( ) ) ) {
-                      config.lookupComponent( ).disableTransition( config ).get( );
-                    }
-                  } catch ( Throwable ex ) {
-                    LOG.debug( "CheckRunner caught an exception: " + ex );
-                    BasicService.this.getServiceConfiguration( ).info( ex );
-                  }
-                }
-              }
-            } ).get( );
-          } catch ( InterruptedException ex ) {
-            Thread.currentThread( ).interrupt( );
-          } catch ( ExecutionException ex ) {
-            config.error( ex.getCause( ) );
-            //          config.lookupService( ).setGoal( Component.State.DISABLED );
-          }
-        } else {
-          ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
-          ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
-        }
-      }
     }
   }
   
@@ -306,9 +248,15 @@ public class BasicService extends AbstractService implements Service {
     return this.stateMachine;
   }
   
+  /**
+   * @see com.eucalyptus.component.Service#start()
+   */
   @Override
-  public void cleanUp( ) {
-    ListenerRegistry.getInstance( ).register( ClockTick.class, this );
-    ListenerRegistry.getInstance( ).register( Hertz.class, this );
-  }
+  public void start( ) {}
+  
+  /**
+   * @see com.eucalyptus.component.Service#stop()
+   */
+  @Override
+  public void stop( ) {}
 }

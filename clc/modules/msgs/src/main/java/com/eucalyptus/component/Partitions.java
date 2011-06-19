@@ -101,9 +101,21 @@ public class Partitions {
       return false;
     }
   }
-  
+
+  public static Partition lookup( String partitionName ) throws NoSuchElementException {
+    EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
+    Partition p = null;
+    try {
+      p = db.getUnique( Partition.newInstanceNamed( partitionName ) );
+      db.commit( );
+      return p;
+    } catch ( EucalyptusCloudException ex1 ) {
+      db.rollback( );
+      throw new NoSuchElementException( "Failed to lookup partition for " + partitionName );
+    }
+  }
   public static Partition lookup( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( config.getComponentId( ).isPartitioned( ) ) {
+    if ( config.getComponentId( ).isPartitioned( ) && config.getComponentId( ).isRegisterable( ) ) {
       final String partitionName = config.getPartition( );
       EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
       Partition p = null;

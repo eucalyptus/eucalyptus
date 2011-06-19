@@ -72,6 +72,8 @@
 #include <curl/curl.h>
 #include <curl/easy.h>
 #include <pthread.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #if defined(HAVE_ZLIB_H)
 #include <zlib.h>
 #endif
@@ -356,7 +358,7 @@ char * walrus_get_digest (const char * url)
        return digest_path;
     }
 
-    int tmp_fd = mkstemp (digest_path);
+    int tmp_fd = safe_mkstemp (digest_path);
     if (tmp_fd<0) {
         logprintfl (EUCAERROR, "{%u} error: failed to create a digest file %s\n", (unsigned int)pthread_self(), digest_path);
     } else {

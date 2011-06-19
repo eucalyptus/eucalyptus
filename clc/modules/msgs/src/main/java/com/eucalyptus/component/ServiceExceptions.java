@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,74 +61,85 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.context;
+package com.eucalyptus.component;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.ServiceChecks.CheckException;
+import com.eucalyptus.component.ServiceChecks.Severity;
+import com.eucalyptus.component.Topology.ServiceKey;
+import com.google.common.base.Predicate;
 
-@Provides( Empyrean.class )
-@RunDuring( Bootstrap.Stage.CloudServiceInit )
-public class ServiceBootstrapper extends Bootstrapper {
-  private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
+public class ServiceExceptions {
   
-  public ServiceBootstrapper( ) {}
+  private static Logger LOG = Logger.getLogger( ServiceExceptions.class );
   
-  @Override
-  public boolean load( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public boolean start( ) throws Exception {
-    try {
-      ServiceContextManager.restartSync( );
+  enum NoopErrorFilter implements Predicate<Throwable> {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( final Throwable input ) {
+      LOG.error( input, input );
       return true;
-    } catch ( Exception ex ) {
-      LOG.error( ex , ex );
-      throw ex;
+    }
+    
+  }
+    
+  /**
+   * @param parent
+   * @param ex
+   * @param failureAction
+   * @return true if the error is fatal and the transition should be aborted
+   */
+  public static final boolean filterExceptions( final ServiceConfiguration parent, final Throwable ex, final Predicate<Throwable> failureAction ) {
+    LOG.error( "Transition failed on " + parent.lookupComponent( ).getName( ) + " due to " + ex.toString( ), ex );
+    if ( ex instanceof CheckException ) {//go through all the exceptions and look for things with Severity greater than or equal to ERROR
+      CheckException checkExHead = ( CheckException ) ex;
+      for ( CheckException checkEx : checkExHead ) {
+        LifecycleEvents.fireExceptionEvent( parent, checkEx.getSeverity( ), checkEx );
+      }
+      for ( CheckException checkEx : checkExHead ) {
+        if( checkEx.getSeverity( ).ordinal( ) >= Severity.ERROR.ordinal( ) ) {
+          try {
+            failureAction.apply( ex );
+          } catch ( Exception ex1 ) {
+            LOG.error( ex1, ex1 );
+          }
+          return true;
+        }
+      }
+      return false;
+    } else {//treat generic exceptions as always being Severity.ERROR
+      LifecycleEvents.fireExceptionEvent( parent, Severity.ERROR, ex );
+      try {
+        failureAction.apply( ex );
+      } catch ( Exception ex1 ) {
+        LOG.error( ex1, ex1 );
+      }
+      return true;
     }
   }
   
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    return true;
+  public static final boolean filterExceptions( final ServiceConfiguration parent, final Throwable ex ) {
+    return filterExceptions( parent, ex, NoopErrorFilter.INSTANCE );
   }
   
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    return true;
+  public static final Predicate<Throwable> maybeDisableService( final ServiceConfiguration parent ) {
+    return new Predicate<Throwable>( ) {
+      
+      @Override
+      public boolean apply( final Throwable ex ) {
+        if ( State.ENABLED.isIn( parent ) && ( parent.isVmLocal( ) || ( Bootstrap.isCloudController( ) && parent.isHostLocal( ) ) ) ) {
+          try {
+            Topology.disable( parent );
+          } catch ( ServiceRegistrationException ex1 ) {
+            LOG.error( "Transition failed on " + parent.lookupComponent( ).getName( ) + " due to " + ex.toString( ), ex );
+          }
+        }
+        return true;
+      }
+      
+    };
   }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    return true;
-  }
-  
 }

@@ -106,7 +106,7 @@
 			<inbound>
 				<inbound-endpoint ref="StorageReplyQueueWS" />
 			</inbound>
-			<component class="edu.ucsb.eucalyptus.ic.StorageReplyQueue" />
+      <component class="com.eucalyptus.ws.util.ReplyQueue"/>
 		</service>
 
 	</model>

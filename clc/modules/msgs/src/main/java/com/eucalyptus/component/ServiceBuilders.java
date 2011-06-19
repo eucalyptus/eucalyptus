@@ -61,71 +61,87 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.bootstrap;
+package com.eucalyptus.component;
 
-import java.util.List;
+import java.lang.reflect.Modifier;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.Host;
-import com.eucalyptus.component.Hosts;
-import com.eucalyptus.empyrean.DescribeServicesResponseType;
-import com.eucalyptus.empyrean.DescribeServicesType;
-import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.empyrean.ServiceStatusType;
-import com.eucalyptus.event.ClockTick;
-import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.MessageCallback;
-import com.eucalyptus.util.async.Request;
-import com.eucalyptus.util.async.SubjectMessageCallback;
-import com.google.common.base.Function;
+import com.eucalyptus.bootstrap.Handles;
+import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+import com.eucalyptus.system.Ats;
+import com.google.common.collect.Maps;
+public class ServiceBuilders {
+  private static Logger LOG = Logger.getLogger( ServiceBuilders.class );
+  private static Map<Class,ServiceBuilder<? extends ServiceConfiguration>> builders = Maps.newConcurrentMap( );
+  private static Map<ComponentId,ServiceBuilder<? extends ServiceConfiguration>> componentBuilders = Maps.newConcurrentMap( );
 
-public class HostStateMonitor implements EventListener<Event> {
-  private static Logger LOG = Logger.getLogger( HostStateMonitor.class );
-  class ServiceCallback extends SubjectMessageCallback<Host, DescribeServicesType, DescribeServicesResponseType> {
+  public static class ServiceBuilderDiscovery extends ServiceJarDiscovery {
     
-    public ServiceCallback( Host target ) {
-      this.setSubject( target );
-      this.setRequest( new DescribeServicesType( ) );
+    @Override
+    public Double getPriority( ) {
+      return 0.2;
     }
     
     @Override
-    public void fire( DescribeServicesResponseType msg ) {
-      for( ServiceStatusType status : msg.getServiceStatuses( ) ) {
-        LOG.info( LogUtil.dumpObject( status ) );
+    public boolean processClass( Class candidate ) throws Throwable {
+      if( ServiceBuilder.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) ) && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
+        /** GRZE: this implies that service builder is a singleton **/
+        ServiceBuilder b = ( ServiceBuilder ) candidate.newInstance( );
+        if( Ats.from( candidate ).has( DiscoverableServiceBuilder.class ) ) {
+          DiscoverableServiceBuilder at = Ats.from( candidate ).get( DiscoverableServiceBuilder.class );
+          for( Class c : at.value( ) ) {
+            ComponentId compId = (ComponentId) c.newInstance( );
+            ServiceBuilders.addBuilder( compId, b );
+          }
+        }
+        if( Ats.from( candidate ).has( Handles.class ) ) {
+          for( Class c : Ats.from( candidate ).get( Handles.class ).value( ) ) {
+            ServiceBuilders.addBuilder( c, b );
+          }
+        }
+        return true;
+      } else {
+        return false;
       }
     }
     
   }
+
   
-  @Override
-  public void fireEvent( Event event ) {
-    if ( event instanceof ClockTick ) {
-      Hosts.collect( new Function<Host, Request>( ) {
-        @Override
-        public Request apply( final Host target ) {
-          try {
-            if( target.getServiceConfiguration( ) != null ) { 
-              final Request req = AsyncRequests.newRequest( new ServiceCallback( target ) );
-              Threads.lookup( Empyrean.class, HostStateMonitor.class ).submit( new Runnable( ) {
-                
-                @Override
-                public void run( ) {
-                  req.dispatch( target.getServiceConfiguration( ) );
-                }
-              } );
-              return req;
-            } else {
-              return null;
-            }
-          } catch ( Exception ex ) {
-            LOG.error( ex , ex );
-            return null;
-          }
-        }
-      } );
-    }
+  static void addBuilder( Class c, ServiceBuilder b ) {
+    LOG.info( "Registered service builder for " + c.getSimpleName( ) + " -> " + b.getClass( ).getCanonicalName( ) );
+    builders.put( c, b );
   }
+
+  public static void addBuilder( ComponentId c, ServiceBuilder b ) {
+    LOG.info( "Registered service builder for " + c.name( ) + " -> " + b.getClass( ).getCanonicalName( ) );
+    componentBuilders.put( c, b );
+  }
+
+  public static Set<Entry<Class,ServiceBuilder<? extends ServiceConfiguration>>> entrySet( ) {
+    return builders.entrySet( );
+  }
+
+  public static ServiceBuilder<? extends ServiceConfiguration> handles( Class handlesType ) {
+    return builders.get( handlesType );
+  }
+
+  public static ServiceBuilder<? extends ServiceConfiguration> lookup( ComponentId componentId ) {
+    if( !componentBuilders.containsKey( componentId ) ) {
+      Component comp = Components.lookup( componentId );
+      componentBuilders.put( componentId, new DummyServiceBuilder( comp ) );
+    }
+    return componentBuilders.get( componentId );
+  }  
+
+  public static ServiceBuilder<? extends ServiceConfiguration> lookup( Class<? extends ComponentId> componentIdClass ) {
+    try {
+      return lookup( componentIdClass.newInstance( ) );
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
+      throw new RuntimeException( ex );
+    }
+  }  
 }

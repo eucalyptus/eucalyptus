@@ -64,19 +64,25 @@ package com.eucalyptus.bootstrap;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.id.Any;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.SubDirectory;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
+import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.ws.EmpyreanService;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -306,46 +312,48 @@ public class Bootstrap {
   @SuppressWarnings( "deprecation" )
   public static void initBootstrappers( ) {
     for ( Bootstrapper bootstrap : BootstrapperDiscovery.getBootstrappers( ) ) {//these have all been checked at discovery time
-      Class<ComponentId> compType;
-      String bc = bootstrap.getClass( ).getCanonicalName( );
-      Bootstrap.Stage stage = bootstrap.getBootstrapStage( );
-      compType = bootstrap.getProvides( );
-      if ( Any.class.equals( compType ) ) {
-        for ( Component c : Components.list( ) ) {
-          if ( !bootstrap.checkLocal( ) ) {
-            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal",
-                              bootstrap.getDependsLocal( ).toString( ) ).info( );
-          } else if ( !bootstrap.checkRemote( ) ) {
-            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote",
-                              bootstrap.getDependsRemote( ).toString( ) ).info( );
-          } else {
-            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + c.getName( ) ).info( );
-            c.getBootstrapper( ).addBootstrapper( bootstrap );
-          }
-        }
-      } else if ( Empyrean.class.equals( compType ) ) {
-        if ( !bootstrap.checkLocal( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", bootstrap.getDependsLocal( ).toString( ) ).info( );
-        } else if ( !bootstrap.checkRemote( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote",
-                            bootstrap.getDependsRemote( ).toString( ) ).info( );
-        } else {
+      try {
+        Class<ComponentId> compType;
+        String bc = bootstrap.getClass( ).getCanonicalName( );
+        Bootstrap.Stage stage = bootstrap.getBootstrapStage( );
+        compType = bootstrap.getProvides( );
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_INIT, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
+        if ( ComponentId.class.isAssignableFrom( compType ) && !Empyrean.class.equals( compType ) && !ComponentId.class.equals( compType ) ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
-          stage.addBootstrapper( bootstrap );
+          Components.lookup( compType ).getBootstrapper( ).addBootstrapper( bootstrap );
+        } else if ( Bootstrap.checkDepends( bootstrap ) ) {
+          if ( Empyrean.class.equals( compType ) ) {
+            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
+            stage.addBootstrapper( bootstrap );
+          } else if ( ComponentId.class.equals( compType ) ) {
+            for ( Component c : Components.list( ) ) {
+              EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + c.getName( ) ).info( );
+              c.getBootstrapper( ).addBootstrapper( bootstrap );
+            }
+          }
+        } else {
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, stage.name( ), bc, "component=" + compType.getSimpleName( ),
+                            "localDepends=" + bootstrap.checkLocal( ), "remoteDepends=" + bootstrap.checkRemote( ) ).info( );
         }
-      } else {
-        ComponentId comp;
-        try {
-          comp = compType.newInstance( );
-          Components.lookup( comp ).getBootstrapper( ).addBootstrapper( bootstrap );
-        } catch ( InstantiationException ex ) {
-          LOG.error( ex, ex );
-          System.exit( 1 );
-        } catch ( IllegalAccessException ex ) {
-          LOG.error( ex, ex );
-          System.exit( 1 );
-        }
+      } catch ( Throwable ex ) {
+        LOG.error( ex, ex );
       }
+    }
+  }
+  
+  private static boolean checkDepends( Bootstrapper bootstrap ) {
+    String bc = bootstrap.getClass( ).getCanonicalName( );
+    if ( bootstrap.checkLocal( ) && bootstrap.checkRemote( ) ) {
+      return true;
+    } else {
+      if ( !bootstrap.checkLocal( ) ) {
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal",
+                          bootstrap.getDependsLocal( ).toString( ) ).info( );
+      } else if ( !bootstrap.checkRemote( ) ) {
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote",
+                          bootstrap.getDependsRemote( ).toString( ) ).info( );
+      }
+      return false;
     }
   }
   
@@ -407,10 +415,11 @@ public class Bootstrap {
   }
   
   public static Boolean isCloudController( ) {
-    return true;//TODO:GRZE:URGENT NOW NOW NOW NOW
+    return SubDirectory.DB.hasChild( "data", "ibdata1" ) || !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) );
   }
   
-  private static List<String> bindAddrs = parseBindAddrs( );  
+  private static List<String> bindAddrs = parseBindAddrs( );
+  
   public static List<String> parseBindAddrs( ) {
     if ( bindAddrs != null ) {
       return bindAddrs;
@@ -432,8 +441,9 @@ public class Bootstrap {
       }
     }
   }
-
-  private static List<String> bootstrapHosts = parseBootstrapHosts( );  
+  
+  private static List<String> bootstrapHosts = parseBootstrapHosts( );
+  
   public static List<String> parseBootstrapHosts( ) {
     if ( bootstrapHosts != null ) {
       return bootstrapHosts;
@@ -550,11 +560,12 @@ public class Bootstrap {
   public static int INIT_RETRIES = 5;
   
   public static void applyTransition( Component component, Component.Transition transition ) {
-    if ( component.getLocalServiceConfiguration( ).lookupStateMachine( ).isLegalTransition( transition ) ) {
+    StateMachine<ServiceConfiguration, State, Transition> fsm = component.getLocalServiceConfiguration( ).getStateMachine( );
+    if ( fsm.isLegalTransition( transition ) ) {
       for ( int i = 0; i < INIT_RETRIES; i++ ) {
         try {
           EventRecord.caller( Bootstrap.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ), component.getComponentId( ) ).info( );
-          component.getLocalServiceConfiguration( ).lookupStateMachine( ).transitionByName( transition );
+          fsm.transitionByName( transition ).get( );
           break;
         } catch ( ExistingTransitionException ex ) {
           LOG.error( ex );

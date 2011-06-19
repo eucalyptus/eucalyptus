@@ -199,11 +199,11 @@ public class EuareWebBackend {
       User user = Accounts.lookupUserById( userId );
       EuarePermission.authorizeModifyUserPassword( requestUser, user.getAccount( ), user );
       // Anyone want to change some other people's password must authenticate himself first
-      if ( !requestUser.getPassword( ).equals( Crypto.generateHashedPassword( oldPass ) ) ) {
+      if ( Strings.isNullOrEmpty( requestUser.getPassword( ) ) || !requestUser.getPassword( ).equals( Crypto.generateHashedPassword( oldPass ) ) ) {
         throw new EucalyptusServiceException( "You can not be authenticated to change user password" );
       }
       String newEncrypted = Crypto.generateHashedPassword( newPass );
-      if ( user.getPassword( ).equals( newEncrypted ) ) {
+      if ( !Strings.isNullOrEmpty( user.getPassword( ) ) && user.getPassword( ).equals( newEncrypted ) ) {
         throw new EucalyptusServiceException( "New password is the same as old one" );
       }
       if ( newEncrypted.equals( Crypto.generateHashedPassword( user.getName( ) ) ) ) {
@@ -1344,7 +1344,7 @@ public class EuareWebBackend {
   }
 
   public static ArrayList<String> processAccountSignups( User requestUser, ArrayList<String> accountNames, boolean approve, String backendUrl ) throws EucalyptusServiceException {
-    if ( EuarePermission.allowProcessAccountSignup( requestUser ) ) {
+    if ( !EuarePermission.allowProcessAccountSignup( requestUser ) ) {
       throw new EucalyptusServiceException( "Operation is not authorized" );
     }
     ArrayList<String> success = Lists.newArrayList( );

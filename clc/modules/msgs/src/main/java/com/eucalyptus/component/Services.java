@@ -63,30 +63,11 @@
 
 package com.eucalyptus.component;
 
-import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 
 public class Services {
-  @TypeMapper( { ServiceConfiguration.class, ServiceId.class } )
-  public enum ServiceIdMapper implements Function<ServiceConfiguration, ServiceId> {
-    INSTANCE;
-    
-    @Override
-    public ServiceId apply( final ServiceConfiguration input ) {
-      return new ServiceId( ) {
-        {
-          this.setUuid( input.getFullName( ).toString( ) );
-          this.setPartition( input.getPartition( ) );
-          this.setFullName( input.getFullName( ).toString( ) );
-          this.setName( input.getName( ) );
-          this.setType( input.getComponentId( ).getName( ) );
-          this.setUri( input.getComponentId( ).makeExternalRemoteUri( input.getHostName( ), input.getPort( ) ).toString( ) );
-        }
-      };
-    }
-  }
   
   @TypeMapper( { ServiceCheckRecord.class, ServiceStatusDetail.class } )
   public enum ServiceCheckRecordMapper implements Function<ServiceCheckRecord, ServiceStatusDetail> {
@@ -94,7 +75,7 @@ public class Services {
     @Override
     public ServiceStatusDetail apply( final ServiceCheckRecord input ) {
       return new ServiceStatusDetail( ) {
-        { 
+        {
           this.setSeverity( input.getSeverity( ).toString( ) );
           this.setUuid( input.getUuid( ) );
           this.setTimestamp( input.getTimestamp( ).toString( ) );
@@ -108,40 +89,22 @@ public class Services {
     }
   }
   
-  @TypeMapper( from = ServiceConfiguration.class, to = Service.class )
-  public enum ServiceMapper implements Function<ServiceConfiguration, Service> {
-    INSTANCE;
-    
-    @Override
-    public Service apply( final ServiceConfiguration input ) {
-      return input.lookupComponent( ).lookupService( input );
-    }
-    
-  }
-  
   @TypeMapper
   public enum ServiceBuilderMapper implements Function<ServiceConfiguration, ServiceBuilder<? extends ServiceConfiguration>> {
     INSTANCE;
     
     @Override
     public ServiceBuilder<? extends ServiceConfiguration> apply( final ServiceConfiguration input ) {
-      return ServiceBuilderRegistry.lookup( input.getComponentId( ) );
+      return ServiceBuilders.lookup( input.getComponentId( ) );
     }
     
   }
   
   static Service newServiceInstance( ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( config.isVmLocal( ) && config.lookupComponent( ).isAvailableLocally( ) ) {
-      return config.getComponentId( ).hasDispatcher( )
-        ? new MessagableService( config )
-        : new BasicService( config );
-    } else if ( config.isVmLocal( ) && !config.lookupComponent( ).isAvailableLocally( ) ) {
-      return new BasicService.Broken( config );
-    } else /** if( !config.isLocal() ) **/
-    {
-      return config.getComponentId( ).hasDispatcher( )
-        ? new MessagableService( config )
-        : new BasicService( config );//TODO:GRZE:fix this up.
-    }
+//    if ( config.isVmLocal( ) && !config.lookupComponent( ).isAvailableLocally( ) ) {
+//      return new BasicService.Broken( config );
+//    } else {
+      return new MessagableService( config );
+//    }
   }
 }

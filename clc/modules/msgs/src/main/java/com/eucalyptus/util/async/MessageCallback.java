@@ -3,6 +3,7 @@ package com.eucalyptus.util.async;
 import java.util.concurrent.atomic.AtomicReference;
 import java.lang.IllegalStateException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.principal.FakePrincipals;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class MessageCallback<Q extends BaseMessage, R extends BaseMessage> implements RemoteCallback<Q, R> {
@@ -15,6 +16,9 @@ public abstract class MessageCallback<Q extends BaseMessage, R extends BaseMessa
 
   protected MessageCallback( Q request ) {
     super( );
+    if( request.getUserId( ) == null ) {
+      request.setUser( FakePrincipals.SYSTEM_USER );
+    }
     this.request.set( request );
   }
   

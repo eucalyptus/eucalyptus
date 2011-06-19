@@ -68,10 +68,12 @@ import java.net.URISyntaxException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import org.jgroups.util.UUID;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -91,9 +93,9 @@ import com.google.common.collect.Lists;
 
 public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<MessagableService> {
   private static Logger                      LOG           = Logger.getLogger( ServiceEndpoint.class );
-  private static final int                   offerInterval = 2000;
-  private static final int                   pollInterval  = 2000;
-  private final MessagableService                      parent;
+  private static final int                   offerInterval = 2000;                                      //@Configurable
+  private static final int                   pollInterval  = 2000;                                      //@Configurable
+  private final MessagableService            parent;
   private final Boolean                      local;
   private final BlockingQueue<QueuedRequest> msgQueue;
   private final AtomicBoolean                running;
@@ -114,7 +116,12 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<M
     }
     this.running = new AtomicBoolean( false );
     this.msgQueue = new LinkedBlockingQueue<QueuedRequest>( );
-    this.workers = Threads.lookup( parent.getComponentId( ).getClass( ), ServiceEndpoint.class, uri.getHost( ) + "-queue" ).limitTo( NUM_WORKERS );
+    this.workers = this.createPool( );
+  }
+  
+  private ThreadPool createPool( ) {
+    return Threads.lookup( this.parent.getComponentId( ).getClass( ), ServiceEndpoint.class,
+                           this.parent.getServiceConfiguration( ) + "-queue-" + UUID.randomUUID( ).toString( ) ).limitTo( NUM_WORKERS );
   }
   
   public Boolean isRunning( ) {
@@ -123,6 +130,9 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<M
   
   public void start( ) {
     if ( this.running.compareAndSet( false, true ) ) {
+      if ( this.workers == null || this.workers.isShutdown( ) || this.workers.isTerminated( ) ) {
+        this.workers = this.createPool( );
+      }
       for ( int i = 0; i < NUM_WORKERS; i++ ) {
         this.workers.execute( new ServiceEndpointWorker( ) );
       }
@@ -131,7 +141,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<M
   
   public void enqueue( final Request request ) {//FIXME: for now request is already wrapped in messaging state.
     if ( !this.running.get( ) ) {
-      throw new RuntimeException( "Endpoint is currently not operational." );
+      throw new RejectedExecutionException( "Endpoint is currently not running: " + this.parent.getServiceConfiguration( ).getFullName( ) );
     } else {
       QueuedRequest event = new QueuedRequest( request );
       EventRecord.caller( ServiceEndpoint.class, EventType.MSG_PENDING, this.parent.getName( ), event.getCallback( ).getClass( ).getSimpleName( ) ).info( );

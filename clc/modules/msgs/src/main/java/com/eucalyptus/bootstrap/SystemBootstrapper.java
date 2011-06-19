@@ -334,7 +334,7 @@ public class SystemBootstrapper {
         banner += prefix + c.getName( ) + SEP + localConfig.toString( );
         banner += prefix + c.getName( ) + SEP + localConfig.lookupBuilder( ).toString( );
         banner += prefix + c.getName( ) + SEP + localConfig.getComponentId( ).toString( );
-        banner += prefix + c.getName( ) + SEP + localConfig.lookupStateMachine( ).getState( ).toString( );
+        banner += prefix + c.getName( ) + SEP + localConfig.lookupState( ).toString( );
       }
     }
     banner += headerHeader + String.format( headerFormat, "Detected Interfaces" ) + headerFooter;

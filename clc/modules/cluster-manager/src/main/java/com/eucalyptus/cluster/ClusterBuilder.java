@@ -9,6 +9,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.DiscoverableServiceBuilder;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.ServiceChecks;
 import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
@@ -57,13 +58,13 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     ClusterConfiguration config = this.newInstance( partitionName, name, host, port );
     try {
       Partition part = Partitions.lookup( config );
-      ServiceConfigurations.getInstance( ).store( config );
       part.syncKeysToDisk( );
+      ServiceConfigurations.getInstance( ).store( config );
     } catch ( ServiceRegistrationException ex ) {
-      Partitions.maybeRemove( config.getPartition( ) );
+//      Partitions.maybeRemove( config.getPartition( ) );//TODO:GRZE:restore
       throw ex;
     } catch ( Throwable ex ) {
-      Partitions.maybeRemove( config.getPartition( ) );
+//      Partitions.maybeRemove( config.getPartition( ) );//TODO:GRZE:restore
       LOG.error( ex, ex );
       throw new ServiceRegistrationException( String.format( "Unexpected error caused cluster registration to fail for: partition=%s name=%s host=%s port=%d",
                                                              partitionName, name, host, port ), ex );
@@ -80,24 +81,22 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
   
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
-    LOG.info( "Starting up cluster: " + config );
+    LOG.info( "Starting cluster: " + config );
     EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponentId( ).name( ), config.getName( ),
                       config.getUri( ).toASCIIString( ) ).info( );
     try {
-      if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
-        if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
-          Cluster newCluster = new Cluster( ( ClusterConfiguration ) config );//TODO:GRZE:fix the type issue here.
+      if ( !Clusters.getInstance( ).contains( config.getName( ) ) ) {
+        Cluster newCluster = new Cluster( ( ClusterConfiguration ) config );//TODO:GRZE:fix the type issue here.
+        newCluster.start( );
+      } else {
+        try {
+          Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
+          Clusters.getInstance( ).deregister( config.getName( ) );
           newCluster.start( );
-        } else {
-          try {
-            Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
-            Clusters.getInstance( ).deregister( config.getName( ) );
-            newCluster.start( );
-          } catch ( NoSuchElementException ex ) {
-            Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
-            Clusters.getInstance( ).deregister( config.getName( ) );
-            newCluster.start( );
-          }
+        } catch ( NoSuchElementException ex ) {
+          Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
+          Clusters.getInstance( ).deregister( config.getName( ) );
+          newCluster.start( );
         }
       }
     } catch ( NoSuchElementException ex ) {
@@ -111,15 +110,13 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_ENABLED, config.getComponentId( ).name( ), config.getName( ),
                       config.getUri( ).toASCIIString( ) ).info( );
     try {
-      if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
-        try {
-          Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
-          Clusters.getInstance( ).enable( config.getName( ) );
-          newCluster.enable( );
-        } catch ( NoSuchElementException ex ) {
-          Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
-          newCluster.enable( );
-        }
+      try {
+        Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
+        Clusters.getInstance( ).enable( config.getName( ) );
+        newCluster.enable( );
+      } catch ( NoSuchElementException ex ) {
+        Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
+        newCluster.enable( );
       }
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex, ex );
@@ -133,16 +130,14 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_DISABLED, config.getComponentId( ).name( ), config.getName( ),
                       config.getUri( ).toASCIIString( ) ).info( );
     try {
-      if ( Components.lookup( Eucalyptus.class ).isEnabledLocally( ) ) {
-        if ( Clusters.getInstance( ).contains( config.getName( ) ) ) {
-          try {
-            Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
-            Clusters.getInstance( ).disable( newCluster.getName( ) );
-            newCluster.disable( );
-          } catch ( NoSuchElementException ex ) {
-            Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
-            newCluster.disable( );
-          }
+      if ( Clusters.getInstance( ).contains( config.getName( ) ) ) {
+        try {
+          Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
+          Clusters.getInstance( ).disable( newCluster.getName( ) );
+          newCluster.disable( );
+        } catch ( NoSuchElementException ex ) {
+          Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
+          newCluster.disable( );
         }
       }
     } catch ( NoSuchElementException ex ) {
@@ -170,7 +165,14 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     try {
       Clusters.lookup( config ).check( );
     } catch ( NoSuchElementException ex ) {
-      LOG.error( ex );
+      LOG.error( ex, ex );
+      throw ex;
+    } catch ( IllegalStateException ex ) {
+      LOG.error( ex, ex );
+      throw ServiceChecks.Severity.ERROR.transform( config, ex );
+    } catch ( Throwable ex ) {
+      LOG.error( ex, ex );
+      throw ServiceChecks.Severity.FATAL.transform( config, ex );
     }
   }
   

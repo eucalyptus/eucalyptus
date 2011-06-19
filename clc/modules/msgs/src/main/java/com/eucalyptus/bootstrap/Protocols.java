@@ -63,7 +63,9 @@
 
 package com.eucalyptus.bootstrap;
 
+import java.net.UnknownHostException;
 import java.util.List;
+import org.apache.log4j.Logger;
 import org.jgroups.conf.ClassConfigurator;
 import org.jgroups.protocols.BARRIER;
 import org.jgroups.protocols.FC;
@@ -82,10 +84,13 @@ import org.jgroups.protocols.pbcast.NAKACK;
 import org.jgroups.protocols.pbcast.STABLE;
 import org.jgroups.protocols.pbcast.STATE_TRANSFER;
 import org.jgroups.stack.Protocol;
+import com.eucalyptus.util.Internets;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 public class Protocols {
+  
+  private static Logger LOG = Logger.getLogger( Protocols.class );
   public static short PROTOCOL_ID = 512;
   
   private static String registerProtocol( Protocol p ) {
@@ -109,7 +114,12 @@ public class Protocols {
                                                                    UDP protocol = new UDP( );
                                                                    protocol.setMulticastAddress( MembershipConfiguration.getMulticastInetAddress( ) );
                                                                    protocol.setMulticastPort( MembershipConfiguration.getMulticastPort( ) );
-                                                                   protocol.setBindToAllInterfaces( true );
+                                                                   try {
+                                                                    protocol.setBindAddress( Internets.localHostAddress( ) );
+                                                                  } catch ( UnknownHostException ex ) {
+                                                                    LOG.error( ex , ex );
+                                                                  }
+//                                                                   protocol.setBindToAllInterfaces( true );
                                                                    protocol.setDiscardIncompatiblePackets( true );
                                                                    protocol.setMaxBundleSize( 60000 );
                                                                    protocol.setMaxBundleTimeout( 30 );

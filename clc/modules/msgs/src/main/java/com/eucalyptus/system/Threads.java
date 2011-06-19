@@ -99,8 +99,10 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
 import org.jgroups.util.ThreadFactory;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 
 public class Threads {
@@ -155,6 +157,7 @@ public class Threads {
     private final String      name;
     private ExecutorService   pool;
     private Integer           numThreads  = -1;
+    private final StackTraceElement[] creationPoint;
     
     private ThreadPool( final String groupPrefix, final Integer threadCount ) {
       this( groupPrefix );
@@ -162,9 +165,10 @@ public class Threads {
     }
     
     private ThreadPool( final String groupPrefix ) {
+      this.creationPoint = Thread.currentThread( ).getStackTrace( );
       this.name = groupPrefix;
       this.group = new ThreadGroup( this.name );
-      this.pool = Executors.newCachedThreadPool( );
+      this.pool = Executors.newCachedThreadPool( this );
       Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
         @Override
         public void run( ) {
@@ -230,16 +234,13 @@ public class Threads {
     public List<Runnable> free( ) {
       List<Runnable> ret = Lists.newArrayList( );
       for ( final Runnable r : ( ret = this.pool.shutdownNow( ) ) ) {
-        LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Discarded pending task: " + r.getClass( ) + " [" + r.toString( ) + "]" );
+        LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Pending task: " + r.getClass( ) + " [" + r.toString( ) + "]" );
       }
       try {
-        while ( !this.pool.awaitTermination( 1, TimeUnit.SECONDS ) ) {
+        for( int i = 0; i < 10 && !this.pool.awaitTermination( 1, TimeUnit.SECONDS ); i++ ) {
           LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Waiting for pool to shutdown." );
-          if ( this.pool instanceof ThreadPoolExecutor ) {
-            final ThreadPoolExecutor tpe = ( ThreadPoolExecutor ) this.pool;
-            for ( final Runnable r : tpe.getQueue( ).toArray( EMPTY ) ) {
-              LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - " + r.getClass( ) );
-            }
+          if( i > 2 ) {
+            LOG.warn( Joiner.on( "\n\t\t" ).join( this.creationPoint ) ); 
           }
         }
       } catch ( final InterruptedException e ) {
