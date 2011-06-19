@@ -435,7 +435,13 @@ public class Topology implements EventListener<Event> {
     @Override
     public int compareTo( ServiceKey that ) {
       if( this.componentId.equals( that.componentId ) ) {
-        return this.partition.compareTo( that.partition );
+        if( this.partition == null && that.partition == null) {
+          return 0;
+        } else if( this.partition != null ) {
+          return this.partition.compareTo( that.partition );
+        } else {
+          return -1;
+        }
       } else {
         return this.componentId.compareTo( that.componentId );
       }
