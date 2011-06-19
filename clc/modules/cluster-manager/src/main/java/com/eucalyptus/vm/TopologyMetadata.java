@@ -103,7 +103,7 @@ public class TopologyMetadata implements Function<MetadataRequest, ByteArray> {
             if( VmState.RUNNING.ordinal( ) < vm.getState( ).ordinal( ) ) continue;
             Network network = vm.getNetworks( ).get( 0 );
             try {
-              network = NetworkGroupUtil.getUserNetworkRulesGroup( Accounts.lookupAccountFullNameById( network.getAccountId( ) ), network.getNetworkName( ) ).getVmNetwork( );
+              network = NetworkGroupUtil.getUserNetworkRulesGroup( Accounts.lookupAccountFullNameById( network.getAccount( ).getAccountNumber( ) ), network.getNetworkName( ) ).getVmNetwork( );
               networks.put( network.getName( ), vm.getPrivateAddress( ) );
               if ( !rules.containsKey( network.getName( ) ) ) {
                 

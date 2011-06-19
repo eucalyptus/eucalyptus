@@ -171,9 +171,6 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
   public AccountFullName getAccount( ) {
     return this.account;
   }
-  public String getAccountId( ) {
-    return this.account.getAccountNumber( );
-  }
 
   public ConcurrentNavigableMap<Integer, NetworkIndexState> getNetworkIndexes( ) {
     return this.networkIndexes;
