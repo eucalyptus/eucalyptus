@@ -66,7 +66,6 @@ package com.eucalyptus.component;
 import java.net.InetAddress;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -87,7 +86,6 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
 import com.eucalyptus.util.Logs;
-import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -203,6 +201,22 @@ public class Topology implements EventListener<Event> {
         return result;
       }
     } );
+  }
+  
+  public static Future<ServiceConfiguration> stop( final ServiceConfiguration config ) throws ServiceRegistrationException {
+    if ( Bootstrap.isCloudController( ) ) {
+      return Topology.getInstance( ).submitExternal( config, CloudTopologyCallables.STOP );
+    } else {
+      return Topology.getInstance( ).submitExternal( config, RemoteTopologyCallables.STOP );
+    }
+  }
+  
+  public static Future<ServiceConfiguration> start( final ServiceConfiguration config ) throws ServiceRegistrationException {
+    if ( Bootstrap.isCloudController( ) ) {
+      return Topology.getInstance( ).submitExternal( config, CloudTopologyCallables.START );
+    } else {
+      return Topology.getInstance( ).submitExternal( config, RemoteTopologyCallables.START );
+    }
   }
   
   public static Future<ServiceConfiguration> enable( final ServiceConfiguration config ) throws ServiceRegistrationException {
@@ -506,6 +520,7 @@ public class Topology implements EventListener<Event> {
               }
             }
           } );
+          LOG.debug( "FAILOVER ================================\n" + Joiner.on( "\n\t" ).join( failoverServicesList ) );
           for ( ServiceConfiguration config : failoverServicesList ) {
             try {
               Topology.getInstance( ).submitExternal( config, CloudTopologyCallables.ENABLE ).get( );
@@ -522,4 +537,5 @@ public class Topology implements EventListener<Event> {
       }
     } );
   }
+  
 }

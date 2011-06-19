@@ -335,11 +335,7 @@ public class Component implements HasName<Component> {
     }
   }
   
-  public CheckedListenableFuture<ServiceConfiguration> disableTransition( ServiceConfiguration config ) {
-    return ServiceTransitions.transitionChain( config, State.DISABLED );
-  }
-  
-  public CheckedListenableFuture<ServiceConfiguration> stopTransition( final ServiceConfiguration configuration ) {
+  Future<ServiceConfiguration> stopTransition( final ServiceConfiguration configuration ) {
     return ServiceTransitions.transitionChain( configuration, State.STOPPED );
   }
   
@@ -368,11 +364,7 @@ public class Component implements HasName<Component> {
     }
   }
   
-  public Future<ServiceConfiguration> enableTransition( final ServiceConfiguration configuration ) throws IllegalStateException, ServiceRegistrationException {
-    return Topology.getInstance( ).enable( configuration );
-  }
-  
-  public CheckedListenableFuture<ServiceConfiguration> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException, ServiceRegistrationException {
+  Future<ServiceConfiguration> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException, ServiceRegistrationException {
     Service service = null;
     if ( this.serviceRegistry.hasService( configuration ) ) {
       service = this.serviceRegistry.lookup( configuration );
