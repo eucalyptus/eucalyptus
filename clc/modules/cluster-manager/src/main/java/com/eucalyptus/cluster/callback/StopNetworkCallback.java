@@ -85,8 +85,8 @@ public class StopNetworkCallback extends BroadcastCallback<StopNetworkType,StopN
 
   public StopNetworkCallback( final NetworkToken networkToken ) {
     this.token = networkToken;
-    StopNetworkType msg = new StopNetworkType( this.token.getAccountId(), this.token.getNetworkName(), this.token.getVlan() ).regarding( );
-    msg.setUserId( this.token.getAccountId() );
+    StopNetworkType msg = new StopNetworkType( this.token.getAccountNumber(), this.token.getNetworkName(), this.token.getVlan() ).regarding( );
+    msg.setUserId( this.token.getAccountNumber() );
     this.setRequest( msg );
   }
 

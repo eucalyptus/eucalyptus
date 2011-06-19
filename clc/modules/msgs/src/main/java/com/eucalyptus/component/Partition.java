@@ -95,7 +95,7 @@ import com.eucalyptus.system.SubDirectory;
 @PersistenceContext( name = "eucalyptus_config" )
 @Table( name = "config_partition" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class Partition extends AbstractPersistent {
+public class Partition extends AbstractPersistent implements Comparable<Partition> {
   private static Logger LOG = Logger.getLogger( Partition.class );
   @Column( name = "config_partition_name", unique = true )
   String                name;
@@ -317,6 +317,14 @@ public class Partition extends AbstractPersistent {
     StringBuilder builder = new StringBuilder( );
     builder.append( "Partition:name=" ).append( this.name ).append( ":cc-cert-serial=" ).append( this.getCertificate( ).getSerialNumber( ) ).append( ":nc-cert-serial=" ).append( this.getNodeCertificate( ).getSerialNumber( ) );
     return builder.toString( );
+  }
+
+  /**
+   * @see java.lang.Comparable#compareTo(java.lang.Object)
+   */
+  @Override
+  public int compareTo( Partition that ) {
+    return this.name.compareTo( that.name );
   }
   
 }

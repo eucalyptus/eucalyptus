@@ -72,6 +72,8 @@ import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.component.ServiceConfigurations;
@@ -181,7 +183,8 @@ public class ClusterState {
   }
   
   public NetworkToken extantAllocation( String accountId, String networkName, String networkUuid, int vlan ) throws NetworkAlreadyExistsException {
-    NetworkToken netToken = new NetworkToken( this.clusterName, accountId, networkName, networkUuid, vlan );
+    AccountFullName accountFn = Accounts.lookupAccountFullNameById( accountId );
+    NetworkToken netToken = new NetworkToken( this.clusterName, accountFn, networkName, networkUuid, vlan );
     if ( !ClusterState.availableVlans.remove( vlan ) ) {
       throw new NetworkAlreadyExistsException( );
     }

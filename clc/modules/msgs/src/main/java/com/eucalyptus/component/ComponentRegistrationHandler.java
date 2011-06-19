@@ -174,19 +174,19 @@ public class ComponentRegistrationHandler {
       public void run( ) {
         try {
           try {
-            component.startTransition( newComponent ).get( );
+            Topology.getInstance( ).start( newComponent ).get( );
           } catch ( Exception ex ) {
             LOG.error( ex, ex );
           }
-          component.enableTransition( newComponent ).get( );
+          Topology.getInstance( ).enable( newComponent );//.get()
         } catch ( ServiceRegistrationException ex1 ) {
           LOG.error( ex1, ex1 );
         } catch ( IllegalStateException ex1 ) {
           LOG.error( ex1, ex1 );
-        } catch ( ExecutionException ex ) {
-          LOG.error( ex, ex );
-        } catch ( InterruptedException ex ) {
-          Thread.currentThread( ).interrupt( );
+//        } catch ( ExecutionException ex ) {
+//          LOG.error( ex, ex );
+//        } catch ( InterruptedException ex ) {
+//          Thread.currentThread( ).interrupt( );
         }
       }
     };
@@ -219,7 +219,7 @@ public class ComponentRegistrationHandler {
       Runnable followRunner = new Runnable( ) {
         public void run( ) {
           try {
-            component.stopTransition( conf ).get( );
+            Topology.getInstance( ).stop( conf ).get();
             for ( int i = 0; i < 3; i++ ) {
               try {
                 component.destroyTransition( conf );
