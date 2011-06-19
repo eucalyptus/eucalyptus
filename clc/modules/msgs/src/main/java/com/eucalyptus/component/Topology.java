@@ -548,7 +548,7 @@ public class Topology implements EventListener<Event> {
               }
             }
           } );
-          LOG.debug( "FAILOVER ================================\n" + Joiner.on( "\n\t" ).join( failoverServicesList ) );
+          Logs.exhaust( ).debug( "FAILOVER ================================\n" + Joiner.on( "\n\t" ).join( failoverServicesList ) );
           for ( ServiceConfiguration config : failoverServicesList ) {
             try {
               Topology.getInstance( ).submitExternal( config, CloudTopologyCallables.ENABLE ).get( );
