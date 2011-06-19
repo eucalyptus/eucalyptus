@@ -347,7 +347,7 @@ public class Topology implements EventListener<Event> {
     };
   }
   
-  public static class ServiceKey {
+  public static class ServiceKey implements Comparable<ServiceKey> {
     private final Partition   partition;
     private final ComponentId componentId;
     
@@ -431,6 +431,16 @@ public class Topology implements EventListener<Event> {
       }
       return true;
     }
+
+    @Override
+    public int compareTo( ServiceKey that ) {
+      if( this.componentId.equals( that.componentId ) ) {
+        return this.partition.compareTo( that.partition );
+      } else {
+        return this.componentId.compareTo( that.componentId );
+      }
+    }
+
     
   }
   
