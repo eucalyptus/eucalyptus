@@ -399,7 +399,8 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   
   private void fireClockTick( final Hertz tick ) {
     try {
-      boolean initialized = this.configuration.lookupState( ).ordinal( ) > Component.State.LOADED.ordinal( );
+      Component.State systemState = this.configuration.lookupState( ); 
+      boolean initialized = systemState.ordinal( ) > Component.State.LOADED.ordinal( );
       if ( !this.stateMachine.isBusy( ) ) {
         Callable<CheckedListenableFuture<Cluster>> transition = null;
         switch ( this.stateMachine.getState( ) ) {
@@ -418,9 +419,9 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             }
             break;
           case DISABLED:
-            if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_DISABLED ) && Component.State.DISABLED.isIn( this.configuration ) ) {
+            if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_DISABLED ) && Component.State.DISABLED.equals( systemState ) ) {
               transition = Automata.sequenceTransitions( this, State.DISABLED, State.DISABLED );
-            } else if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_DISABLED ) && Component.State.ENABLED.isIn( this.configuration ) ) {
+            } else if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_DISABLED ) && Component.State.ENABLED.equals( systemState ) ) {
               transition = Automata.sequenceTransitions( this, State.ENABLING, State.ENABLING_RESOURCES, State.ENABLING_NET, State.ENABLING_VMS,
                                                          State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO, State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
             }
@@ -439,6 +440,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         if ( transition != null ) {
           try {
             Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
+            this.clearExceptions( );
           } catch ( Exception ex ) {
             LOG.error( ex, ex );
           }
@@ -580,6 +582,8 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         }
       } catch ( NoSuchElementException ex ) {
         throw ex;
+      } catch ( ServiceRegistrationException ex ) {
+        throw ex;
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
         throw new ServiceRegistrationException( "Failed to call enable() on cluster: " + this.configuration + " because of: " + ex.getMessage( ), ex );
@@ -588,12 +592,19 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   }
   
   public void disable( ) throws ServiceRegistrationException {
-    if ( State.NOTREADY.equals( this.getStateMachine( ).getState( ) ) ) {
-      final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
-      Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
-    } else if ( State.ENABLED.equals( this.getStateMachine( ).getState( ) ) ) {
-      final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.NOTREADY, State.DISABLED );
-      Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
+    try {
+      if ( State.NOTREADY.equals( this.getStateMachine( ).getState( ) ) ) {
+        final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
+        Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
+      } else if ( State.ENABLED.equals( this.getStateMachine( ).getState( ) ) ) {
+        final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.NOTREADY, State.DISABLED );
+        Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
+      }
+    } catch ( InterruptedException ex ) {
+      Thread.currentThread( ).interrupt( );
+    } catch ( ExecutionException ex ) {
+      Logs.exhaust( ).debug( ex, ex );
+      throw new ServiceRegistrationException( "Failed to disable cluster because of: " + ex.getMessage( ), ex );
     }
   }
   

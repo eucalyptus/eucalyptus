@@ -471,7 +471,7 @@ public class Topology implements EventListener<Event> {
    */
   @Override
   public void fireEvent( Event event ) {
-    if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 5l ) ) {
+    if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 15l ) ) {
       this.runChecks( );
     }
   }
