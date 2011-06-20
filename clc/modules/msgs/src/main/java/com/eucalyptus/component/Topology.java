@@ -507,8 +507,8 @@ public class Topology implements EventListener<Event> {
                 LOG.error( ex );
               } catch ( TimeoutException ex ) {
               }
-              return arg0.isDone( );
             }
+            return arg0.isDone( );
           }
         };
         Map<ServiceConfiguration, Future<ServiceConfiguration>> futures = Maps.newHashMap( );
