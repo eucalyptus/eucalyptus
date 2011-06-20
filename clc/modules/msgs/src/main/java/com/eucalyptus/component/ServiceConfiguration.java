@@ -44,10 +44,10 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
 
   public abstract ComponentId getComponentId( );
   
-  public abstract Service lookupService( );
+  public abstract Service lookupService( ) throws NoSuchServiceException;
   
   public abstract ServiceBuilder lookupBuilder( );
-  
+
   public void fatal( Throwable t );
   
   public void error( Throwable t );

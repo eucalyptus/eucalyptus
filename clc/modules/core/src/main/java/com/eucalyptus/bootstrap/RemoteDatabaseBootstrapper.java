@@ -72,16 +72,16 @@ import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.Internets;
 
-@Provides(Empyrean.class)
-@RunDuring(Bootstrap.Stage.DatabaseInit)
-@DependsRemote(Eucalyptus.class)
+@Provides( Empyrean.class )
+@RunDuring( Bootstrap.Stage.DatabaseInit )
+@DependsRemote( Eucalyptus.class )
 public class RemoteDatabaseBootstrapper extends Bootstrapper implements DatabaseBootstrapper {
   private static Logger LOG = Logger.getLogger( RemoteDatabaseBootstrapper.class );
+  
   @Override
-
   public boolean load( ) throws Exception {
     try {
-      if ( Internets.testReachability( Components.lookup(Database.class).getUri( ).getHost( ) ) ) {
+      if ( Internets.testReachability( Components.lookup( Database.class ).getUri( ).getHost( ) ) ) {
         LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
       } else {
         LOG.error( "Failed with invalid DB address" );
@@ -97,24 +97,22 @@ public class RemoteDatabaseBootstrapper extends Bootstrapper implements Database
       LOG.debug( e1, e1 );
       System.exit( 123 );
     }
-
+    
     return true;
   }
-
+  
   @Override
   public boolean start( ) throws Exception {
     return true;
   }
-
+  
   @Override
   public boolean isRunning( ) {
     return true;//TODO: track remote connectionf failures.
   }
-
+  
   @Override
-  public void hup( ) {
-  }
-
+  public void hup( ) {}
   
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
@@ -123,7 +121,7 @@ public class RemoteDatabaseBootstrapper extends Bootstrapper implements Database
   public boolean enable( ) throws Exception {
     return true;
   }
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
    */
@@ -131,13 +129,13 @@ public class RemoteDatabaseBootstrapper extends Bootstrapper implements Database
   public boolean stop( ) throws Exception {
     return true;
   }
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
    */
   @Override
   public void destroy( ) throws Exception {}
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
    */
@@ -145,7 +143,7 @@ public class RemoteDatabaseBootstrapper extends Bootstrapper implements Database
   public boolean disable( ) throws Exception {
     return true;
   }
-
+  
   /**
    * @see com.eucalyptus.bootstrap.Bootstrapper#check()
    */
@@ -153,5 +151,5 @@ public class RemoteDatabaseBootstrapper extends Bootstrapper implements Database
   public boolean check( ) throws Exception {
     return true;
   }
-
+  
 }

@@ -64,6 +64,10 @@
 package com.eucalyptus.bootstrap;
 
 import java.net.InetAddress;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import org.apache.log4j.Logger;
@@ -85,14 +89,13 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Host;
 import com.eucalyptus.component.Hosts;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
+import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 
 public class HostManager implements Receiver, ExtendedMembershipListener, EventListener {
   private static Logger                       LOG         = Logger.getLogger( HostManager.class );
@@ -101,6 +104,41 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   private final String                        membershipGroupName;
   private final AtomicMarkableReference<View> currentView = new AtomicMarkableReference<View>( null, true );
   public static HostManager                   singleton;
+  
+  static class HostMembershipWorker implements Runnable {
+    private final AtomicBoolean               running  = new AtomicBoolean( true );
+    private final BlockingQueue<Runnable>     msgQueue = new LinkedBlockingQueue<Runnable>( );
+    private final ExecutorService             executor = Executors.newFixedThreadPool( 1 );
+    private static final HostMembershipWorker worker   = new HostMembershipWorker( );
+    
+    private HostMembershipWorker( ) {
+      this.executor.submit( this );
+    }
+    
+    public static void submit( Runnable run ) {
+      worker.msgQueue.add( run );
+    }
+    
+    @Override
+    public void run( ) {
+      while ( this.running.get( ) ) {
+        Runnable event;
+        try {
+          if ( ( event = this.msgQueue.poll( 10000, TimeUnit.MILLISECONDS ) ) != null ) {
+            event.run( );
+          } else {
+            HostManager.singleton.broadcastAddresses( );
+          }
+        } catch ( InterruptedException e1 ) {
+          Thread.currentThread( ).interrupt( );
+          return;
+        } catch ( final Throwable e ) {
+          LOG.error( e, e );
+        }
+      }
+      LOG.debug( "Shutting down component registration request queue: " + Thread.currentThread( ).getName( ) );
+    }
+  }
   
   private HostManager( ) {
     this.membershipChannel = HostManager.buildChannel( );
@@ -180,6 +218,9 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
       }
       LOG.debug( "Received updated host information: " + recvHost );
       Host hostEntry = Hosts.updateHost( view, recvHost );
+      if ( Bootstrap.isCloudController( ) ) {
+        HostManager.this.broadcastAddresses( );
+      }
     }
   }
   
@@ -232,18 +273,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     LOG.info( "-> view: " + this.currentView.getReference( ) );
     LOG.info( "-> mark: " + this.currentView.isMarked( ) );
     if ( !Bootstrap.isCloudController( ) ) {
-      Threads.lookup( Empyrean.class, HostManager.class, "broadcastAddresses" ).submit( new Runnable( ) {
-        
-        @Override
-        public void run( ) {
-          try {
-            TimeUnit.SECONDS.sleep( 2 );
-          } catch ( InterruptedException ex ) {
-            LOG.error( ex, ex );
-          }
-          HostManager.this.broadcastAddresses( );
-        }
-      } );
+      HostManager.this.broadcastAddresses( );
     }
   }
   
@@ -252,22 +282,34 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     if ( view == null ) {
       return;
     } else {
-      Threads.lookup( Empyrean.class, HostMembershipBootstrapper.class ).submit( new Runnable( ) {
+      HostMembershipWorker.submit( new Runnable( ) {
         @Override
         public void run( ) {
-          
-          for ( final Address addr : view.getMembers( ) ) {
-            if ( ( HostManager.this.membershipChannel.getAddress( ) != null ) && ( !HostManager.this.membershipChannel.getAddress( ).equals( addr ) ) ) {
-              Host localHost = Hosts.localHost( );
-              LOG.info( "Broadcasting local address info for viewId=" + view.getViewId( ) + " to: " + addr + " with host info: " + localHost );
-              try {
-                HostManager.this.membershipChannel.send( new Message( addr, null, localHost ) );
-              } catch ( ChannelNotConnectedException ex ) {
-                LOG.error( ex, ex );
-              } catch ( ChannelClosedException ex ) {
-                LOG.error( ex, ex );
+          for ( int i = 0; i < 5; i++ ) {
+            try {
+              for ( final Address addr : view.getMembers( ) ) {
+                if ( ( HostManager.this.membershipChannel.getAddress( ) != null ) && ( !HostManager.this.membershipChannel.getAddress( ).equals( addr ) ) ) {
+                  Host localHost = Hosts.localHost( );
+                  LOG.info( "Broadcasting local address info for viewId=" + view.getViewId( ) + " to: " + addr + " with host info: " + localHost );
+                  try {
+                    HostManager.this.membershipChannel.send( new Message( addr, null, localHost ) );
+                  } catch ( ChannelNotConnectedException ex ) {
+                    LOG.error( ex, ex );
+                  } catch ( ChannelClosedException ex ) {
+                    LOG.error( ex, ex );
+                  }
+                }
               }
+              try {
+                TimeUnit.SECONDS.sleep( 2 );
+              } catch ( InterruptedException ex1 ) {
+                LOG.error( ex1, ex1 );
+                Thread.currentThread( ).interrupt( );
+              }
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
             }
+            
           }
         }
       } );

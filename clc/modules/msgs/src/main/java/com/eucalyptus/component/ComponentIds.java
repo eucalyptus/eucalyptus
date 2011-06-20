@@ -79,7 +79,7 @@ public class ComponentIds {
   private static final Map<Class, ComponentId> compIdMap        = new HashMap<Class, ComponentId>( );
   
   public static boolean shouldBootstrapLocally( ComponentId c ) {
-    boolean cloudLocal = Bootstrap.isCloudController( ) && c.isCloudLocal( );
+    boolean cloudLocal = Bootstrap.isCloudController( ) && c.isCloudLocal( ) && !c.isRegisterable( );
     boolean alwaysLocal = c.isAlwaysLocal( );
     boolean isBootrapperItself = Empyrean.class.equals( c );
     return cloudLocal || alwaysLocal || isBootrapperItself;

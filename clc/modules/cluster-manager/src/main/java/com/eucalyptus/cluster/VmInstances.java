@@ -214,7 +214,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
 //              EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ).debug( );
 //            }
             if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
-              StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getAccountId( ), net.getNetworkName( ), net.getUuid( ),
+              StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getAccount( ), net.getNetworkName( ), net.getUuid( ),
                                                                                        net.getVlan( ) ) );
               for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
                 AsyncRequests.newRequest( stopNet.newInstance( ) ).dispatch( c.getConfiguration( ) );
@@ -260,11 +260,11 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
     try {
       final Cluster cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
-      final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vm.getPartition( ) );
       vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
         @Override
         public boolean apply( AttachedVolume arg0 ) {
           try {
+            final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vm.getPartition( ) );
             vm.removeVolumeAttachment( arg0.getVolumeId( ) );
             Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
             scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );

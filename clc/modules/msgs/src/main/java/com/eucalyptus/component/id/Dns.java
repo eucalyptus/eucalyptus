@@ -79,7 +79,7 @@ public class Dns extends ComponentId.Unpartioned {
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
     return new ArrayList( ) {
       {
-        this.add( Empyrean.class );
+        this.add( Eucalyptus.class );
       }
     };
   }

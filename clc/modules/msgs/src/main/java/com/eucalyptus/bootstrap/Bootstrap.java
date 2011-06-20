@@ -64,6 +64,7 @@ package com.eucalyptus.bootstrap;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
@@ -311,50 +312,48 @@ public class Bootstrap {
   @SuppressWarnings( "deprecation" )
   public static void initBootstrappers( ) {
     for ( Bootstrapper bootstrap : BootstrapperDiscovery.getBootstrappers( ) ) {//these have all been checked at discovery time
-      Class<ComponentId> compType;
-      String bc = bootstrap.getClass( ).getCanonicalName( );
-      Bootstrap.Stage stage = bootstrap.getBootstrapStage( );
-      compType = bootstrap.getProvides( );
-      if( Bootstrap.checkDepends( bootstrap ) ) {
-        if ( ComponentId.class.equals( compType ) ) {
-          for ( Component c : Components.list( ) ) {
-            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + c.getName( ) ).info( );
-            c.getBootstrapper( ).addBootstrapper( bootstrap );
-          }
-        } else if ( Empyrean.class.equals( compType ) ) {
+      try {
+        Class<ComponentId> compType;
+        String bc = bootstrap.getClass( ).getCanonicalName( );
+        Bootstrap.Stage stage = bootstrap.getBootstrapStage( );
+        compType = bootstrap.getProvides( );
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_INIT, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
+        if ( ComponentId.class.isAssignableFrom( compType ) && !Empyrean.class.equals( compType ) && !ComponentId.class.equals( compType ) ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
-          stage.addBootstrapper( bootstrap );
+          Components.lookup( compType ).getBootstrapper( ).addBootstrapper( bootstrap );
+        } else if ( Bootstrap.checkDepends( bootstrap ) ) {
+          if ( Empyrean.class.equals( compType ) ) {
+            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
+            stage.addBootstrapper( bootstrap );
+          } else if ( ComponentId.class.equals( compType ) ) {
+            for ( Component c : Components.list( ) ) {
+              EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + c.getName( ) ).info( );
+              c.getBootstrapper( ).addBootstrapper( bootstrap );
+            }
+          }
+        } else {
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, stage.name( ), bc, "component=" + compType.getSimpleName( ),
+                            "localDepends=" + bootstrap.checkLocal( ), "remoteDepends=" + bootstrap.checkRemote( ) ).info( );
         }
-      } else if ( ComponentId.class.isAssignableFrom( compType ) ) {
-        ComponentId comp;
-        try {
-          comp = compType.newInstance( );
-          Components.lookup( comp ).getBootstrapper( ).addBootstrapper( bootstrap );
-        } catch ( InstantiationException ex ) {
-          LOG.error( ex, ex );
-//          System.exit( 1 );
-        } catch ( IllegalAccessException ex ) {
-          LOG.error( ex, ex );
-//          System.exit( 1 );
-        }
-      } else {
-        Exceptions.error( new ClassCastException( "Fatal error attempting to register bootstrapper " + bootstrap.getClass( ).getCanonicalName( ) + ":  @Provides specifies a class which does not conform to ComponentId." ) );  
+      } catch ( Throwable ex ) {
+        LOG.error( ex, ex );
       }
     }
   }
-
+  
   private static boolean checkDepends( Bootstrapper bootstrap ) {
     String bc = bootstrap.getClass( ).getCanonicalName( );
-    if ( !bootstrap.checkLocal( ) ) {
-      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", 
-                        bootstrap.getDependsLocal( ).toString( ) ).info( );
-      return false;
-    } else if ( !bootstrap.checkRemote( ) ) {
-      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote",
-                        bootstrap.getDependsRemote( ).toString( ) ).info( );
-      return false;
-    } else {
+    if ( bootstrap.checkLocal( ) && bootstrap.checkRemote( ) ) {
       return true;
+    } else {
+      if ( !bootstrap.checkLocal( ) ) {
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal",
+                          bootstrap.getDependsLocal( ).toString( ) ).info( );
+      } else if ( !bootstrap.checkRemote( ) ) {
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote",
+                          bootstrap.getDependsRemote( ).toString( ) ).info( );
+      }
+      return false;
     }
   }
   
@@ -419,7 +418,8 @@ public class Bootstrap {
     return SubDirectory.DB.hasChild( "data", "ibdata1" ) || !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) );
   }
   
-  private static List<String> bindAddrs = parseBindAddrs( );  
+  private static List<String> bindAddrs = parseBindAddrs( );
+  
   public static List<String> parseBindAddrs( ) {
     if ( bindAddrs != null ) {
       return bindAddrs;
@@ -441,8 +441,9 @@ public class Bootstrap {
       }
     }
   }
-
-  private static List<String> bootstrapHosts = parseBootstrapHosts( );  
+  
+  private static List<String> bootstrapHosts = parseBootstrapHosts( );
+  
   public static List<String> parseBootstrapHosts( ) {
     if ( bootstrapHosts != null ) {
       return bootstrapHosts;
@@ -559,7 +560,7 @@ public class Bootstrap {
   public static int INIT_RETRIES = 5;
   
   public static void applyTransition( Component component, Component.Transition transition ) {
-    StateMachine<ServiceConfiguration, State, Transition> fsm = component.getLocalServiceConfiguration( ).lookupStateMachine( );
+    StateMachine<ServiceConfiguration, State, Transition> fsm = component.getLocalServiceConfiguration( ).getStateMachine( );
     if ( fsm.isLegalTransition( transition ) ) {
       for ( int i = 0; i < INIT_RETRIES; i++ ) {
         try {

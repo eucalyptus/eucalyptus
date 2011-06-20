@@ -165,7 +165,7 @@ public class ServiceHackeryHandler extends SimpleChannelHandler {
   private void mangleAdminDescribe( final MappingHttpMessage request, final BaseMessage msg, final User user ) {//TODO:ASAP:GRZE fix this mangling somewhere else.
     final String userAgent = request.getHeader( HttpHeaders.Names.USER_AGENT );
     if ( ( userAgent != null ) && userAgent.matches( ".*EucalyptusAdminAccess" ) && msg.getClass( ).getSimpleName( ).startsWith( "Describe" ) ) {
-      msg.markUnprivileged( );
+      msg.markUnprivileged( );//TODO:GRZE:FIXME this doesn't do what it used to
     }
   }
   
