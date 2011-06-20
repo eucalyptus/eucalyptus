@@ -313,7 +313,7 @@ public class Topology implements EventListener<Event> {
       @Override
       public boolean tryDisable( final ServiceConfiguration config ) throws ServiceRegistrationException {
         final ServiceKey serviceKey = ServiceKey.create( config );
-        return ( Topology.this.services.remove( serviceKey, config ) || !config.equals( Topology.this.services.get( serviceKey ) ) ) && this.nextEpoch( );
+        return !config.equals( Topology.this.services.get( serviceKey ) ) || ( Topology.this.services.remove( serviceKey, config ) && this.nextEpoch( ) );
       }
       
     };
