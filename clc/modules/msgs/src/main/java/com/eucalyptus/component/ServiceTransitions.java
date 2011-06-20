@@ -96,6 +96,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Logs;
+import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
@@ -105,6 +106,7 @@ import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.async.RetryableConnectionException;
 import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.TransitionAction;
+import com.eucalyptus.util.fsm.TransitionException;
 import com.eucalyptus.ws.util.PipelineRegistry;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -321,6 +323,7 @@ public class ServiceTransitions {
       } catch ( Throwable ex ) {
         if ( ServiceExceptions.filterExceptions( parent, ex ) ) {
           transitionCallback.fireException( ex );
+//          throw new TransitionException( ex );
         } else {
           transitionCallback.fire( );
         }
