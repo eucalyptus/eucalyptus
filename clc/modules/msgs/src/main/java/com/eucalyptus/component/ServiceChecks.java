@@ -217,7 +217,7 @@ public class ServiceChecks {
     } else if ( t instanceof CheckException ) {
       return new CheckException( correlationId, t, severity, config );
     } else {
-      return new CheckException( correlationId, t, Severity.DEBUG, config );
+      return new CheckException( correlationId, t, severity, config );
     }
   }
   
@@ -246,7 +246,7 @@ public class ServiceChecks {
         ? this.uuid
         : correlationId );
       this.timestamp = new Date( );
-      this.eventState = config.lookupStateMachine( ).getState( );
+      this.eventState = config.lookupState( );
       this.eventEpoch = Topology.epoch( );
     }
     

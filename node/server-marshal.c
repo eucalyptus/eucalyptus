@@ -78,6 +78,7 @@ void adb_InitService(void) {
 }
 
 adb_ncAssignAddressResponse_t* ncAssignAddressMarshal (adb_ncAssignAddress_t* ncAssignAddress, const axutil_env_t *env) {
+  pthread_mutex_lock(&ncHandlerLock);
   adb_ncAssignAddressType_t * input          = adb_ncAssignAddress_get_ncAssignAddress(ncAssignAddress, env);
   adb_ncAssignAddressResponse_t * response   = adb_ncAssignAddressResponse_create(env);
   adb_ncAssignAddressResponseType_t * output = adb_ncAssignAddressResponseType_create(env);
@@ -114,6 +115,7 @@ adb_ncAssignAddressResponse_t* ncAssignAddressMarshal (adb_ncAssignAddress_t* nc
   
   // set response to output
   adb_ncAssignAddressResponse_set_ncAssignAddressResponse(response, env, output);  
+  pthread_mutex_unlock(&ncHandlerLock);
   return response;
 }
 
@@ -626,6 +628,11 @@ adb_ncTerminateInstanceResponse_t* ncTerminateInstanceMarshal (adb_ncTerminateIn
         if (error) {
             logprintfl (EUCAERROR, "ERROR: doTerminateInstance() failed error=%d\n", error);
             adb_ncTerminateInstanceResponseType_set_return(output, env, AXIS2_FALSE);
+            adb_ncTerminateInstanceResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_ncTerminateInstanceResponseType_set_userId(output, env, meta.userId);
+
+            // set operation-specific fields in output
+            adb_ncTerminateInstanceResponseType_set_instanceId(output, env, instanceId);
 
         } else {
             // set standard fields in output

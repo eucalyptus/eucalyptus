@@ -320,13 +320,19 @@ public class OverlayManager implements LogicalStorageManager {
 	}
 
 	private void checkVolumesDir() {
-		File volumeDir = new File(DirectStorageInfo.getStorageInfo().getVolumesDir());
-		if(!volumeDir.exists()) {
-			if(!volumeDir.mkdirs()) {
-				LOG.fatal("Unable to make volume root directory: " + DirectStorageInfo.getStorageInfo().getVolumesDir());
+		String volumesDir = DirectStorageInfo.getStorageInfo().getVolumesDir();
+		File volumes = new File(volumesDir);
+		if(!volumes.exists()) {
+			if(!volumes.mkdirs()) {
+				LOG.fatal("Unable to make volume root directory: " + volumesDir);
 			}
-		} else if(!volumeDir.canWrite()) {
-			LOG.fatal("Cannot write to volume root directory: " + DirectStorageInfo.getStorageInfo().getVolumesDir());
+		} else if(!volumes.canWrite()) {
+			LOG.fatal("Cannot write to volume root directory: " + volumesDir);
+		}
+		try {
+			SystemUtil.setEucaReadWriteOnly(volumesDir);
+		} catch (EucalyptusCloudException ex) {
+			LOG.fatal(ex);
 		}
 	}
 

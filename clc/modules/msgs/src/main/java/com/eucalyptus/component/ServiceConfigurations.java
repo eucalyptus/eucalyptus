@@ -18,6 +18,7 @@ import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
@@ -35,9 +36,13 @@ public class ServiceConfigurations {
       for( ServiceConfiguration config : comp.lookupServiceConfigurations( ) ) {
         try {
           if( predicate.apply( config ) ) {
+            Logs.exhaust( ).debug( "ServiceConfigurations.collect( ) accepted config " + config + " for predicate: " + predicate.getClass( ) );
             configs.add( config );
+          } else {
+            Logs.exhaust( ).debug( "ServiceConfigurations.collect( ) rejected config " + config + " for predicate: " + predicate.getClass( ) );
           }
         } catch ( Exception ex ) {
+          Logs.exhaust( ).debug( "ServiceConfigurations.collect( ) failed for config " + config + " using predicate: " + predicate.getClass( ) + " because of " + ex.getMessage( ) );
           LOG.error( ex , ex );
         }
       }
@@ -85,7 +90,7 @@ public class ServiceConfigurations {
           this.setServiceId( TypeMappers.transform( config, ServiceId.class ) );
           this.setLocalEpoch( Topology.epoch( ) );
           try {
-            this.setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
+            this.setLocalState( config.lookupState( ).toString( ) );
           } catch ( Exception ex ) {
             this.setLocalState( "n/a: " + ex.getMessage( ) );
           }

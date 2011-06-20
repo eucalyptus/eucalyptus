@@ -75,6 +75,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.NoSuchComponentException;
+import com.eucalyptus.component.NoSuchServiceException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
@@ -98,7 +99,11 @@ public class StorageUtil {
     
   public static void dispatchAll( BaseMessage message ) throws EucalyptusCloudException {
     for( ServiceConfiguration service : Components.lookup(Storage.class).enabledServices( ) ) {
-      service.lookupService( ).getDispatcher( ).dispatch( message );
+      try {
+        service.lookupService( ).getDispatcher( ).dispatch( message );
+      } catch ( NoSuchServiceException ex ) {
+        LOG.error( ex , ex );
+      }
     }
   }
 

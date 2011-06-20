@@ -201,7 +201,7 @@ public class Component implements HasName<Component> {
    * @return true if the component has not been explicitly marked as remote.
    */
   public Boolean isRunningRemoteMode( ) {
-    return this.isAvailableLocally( ) && this.identity.runLimitedServices( );
+    return this.identity.runLimitedServices( );
   }
   
   public NavigableSet<ServiceConfiguration> lookupServiceConfigurations( ) {
@@ -253,10 +253,10 @@ public class Component implements HasName<Component> {
   /**
    * @param config
    * @return
-   * @throws NoSuchElementException
+   * @throws NoSuchServiceException
    * @see com.eucalyptus.component.Component.ServiceRegistry#lookup(com.eucalyptus.component.ServiceConfiguration)
    */
-  public Service lookupService( ServiceConfiguration config ) throws NoSuchElementException {
+  public Service lookupService( ServiceConfiguration config ) throws NoSuchServiceException {
     return this.serviceRegistry.lookup( config );
   }
   
@@ -335,11 +335,7 @@ public class Component implements HasName<Component> {
     }
   }
   
-  public CheckedListenableFuture<ServiceConfiguration> disableTransition( ServiceConfiguration config ) {
-    return ServiceTransitions.transitionChain( config, State.DISABLED );
-  }
-  
-  public CheckedListenableFuture<ServiceConfiguration> stopTransition( final ServiceConfiguration configuration ) {
+  Future<ServiceConfiguration> stopTransition( final ServiceConfiguration configuration ) {
     return ServiceTransitions.transitionChain( configuration, State.STOPPED );
   }
   
@@ -368,11 +364,7 @@ public class Component implements HasName<Component> {
     }
   }
   
-  public Future<ServiceConfiguration> enableTransition( final ServiceConfiguration configuration ) throws IllegalStateException, ServiceRegistrationException {
-    return Topology.getInstance( ).enable( configuration );
-  }
-  
-  public CheckedListenableFuture<ServiceConfiguration> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException, ServiceRegistrationException {
+  Future<ServiceConfiguration> startTransition( final ServiceConfiguration configuration ) throws IllegalStateException, ServiceRegistrationException {
     Service service = null;
     if ( this.serviceRegistry.hasService( configuration ) ) {
       service = this.serviceRegistry.lookup( configuration );
@@ -483,7 +475,7 @@ public class Component implements HasName<Component> {
     private final ConcurrentMap<ServiceConfiguration, Service> services     = Maps.newConcurrentMap( );
     
     public boolean hasLocalService( ) {
-      return !Component.this.identity.runLimitedServices( ) && ( this.localService.get( ) != null && !( this.localService.get( ) instanceof MissingService ) );
+      return !Component.this.isRunningRemoteMode( ) && ( this.localService.get( ) != null && !( this.localService.get( ) instanceof MissingService ) );
     }
     
     public Service getLocalService( ) {
@@ -544,7 +536,7 @@ public class Component implements HasName<Component> {
      */
     public Service lookup( ServiceConfiguration config ) throws NoSuchElementException {
       if ( !this.services.containsKey( config ) ) {
-        throw new NoSuchElementException( "Failed to lookup service corresponding to service configuration: " + config );
+        throw new NoSuchElementException( "Failed to lookup service corresponding to service configuration: " + config.getName( ) );
       } else {
         return this.services.get( config );
       }
@@ -636,7 +628,7 @@ public class Component implements HasName<Component> {
      * @return
      */
     public boolean hasService( ServiceConfiguration config ) {
-      return this.services.containsKey( config.getFullName( ) );
+      return this.services.containsKey( config );
     }
   }
   

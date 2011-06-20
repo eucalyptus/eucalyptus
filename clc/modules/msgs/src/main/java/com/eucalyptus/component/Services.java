@@ -64,6 +64,7 @@
 package com.eucalyptus.component;
 
 import com.eucalyptus.empyrean.ServiceStatusDetail;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 
@@ -79,25 +80,14 @@ public class Services {
           this.setSeverity( input.getSeverity( ).toString( ) );
           this.setUuid( input.getUuid( ) );
           this.setTimestamp( input.getTimestamp( ).toString( ) );
-          this.setMessage( input.getMessage( ) );
-          this.setStackTrace( input.getStackTrace( ) );
+          this.setMessage( input.getMessage( ) != null ? input.getMessage( ) : "No summary information available." );
+          this.setStackTrace( input.getStackTrace( ) != null ? input.getStackTrace( ) : Exceptions.string( new RuntimeException( "Error while mapping service event record:  No stack information available" ) ) );
           this.setServiceFullName( input.getServiceFullName( ) );
           this.setServiceHost( input.getServiceHost( ) );
           this.setServiceName( input.getServiceName( ) );
         }
       };
     }
-  }
-  
-  @TypeMapper( from = ServiceConfiguration.class, to = Service.class )
-  public enum ServiceMapper implements Function<ServiceConfiguration, Service> {
-    INSTANCE;
-    
-    @Override
-    public Service apply( final ServiceConfiguration input ) {
-      return input.lookupComponent( ).lookupService( input );
-    }
-    
   }
   
   @TypeMapper

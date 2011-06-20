@@ -94,46 +94,34 @@ public class ServiceExceptions {
    */
   public static final boolean filterExceptions( final ServiceConfiguration parent, final Throwable ex, final Predicate<Throwable> failureAction ) {
     LOG.error( "Transition failed on " + parent.lookupComponent( ).getName( ) + " due to " + ex.toString( ), ex );
-    boolean foundError = false;
     if ( ex instanceof CheckException ) {//go through all the exceptions and look for things with Severity greater than or equal to ERROR
       CheckException checkExHead = ( CheckException ) ex;
       for ( CheckException checkEx : checkExHead ) {
-        switch ( checkEx.getSeverity( ) ) {
-          case ERROR:
-          case URGENT:
-          case FATAL:
-            if ( !foundError ) {
-              foundError = true;
-              try {
-                failureAction.apply( ex );
-              } catch ( Exception ex1 ) {
-                LOG.error( ex1, ex1 );
-              }
-            }
-            break;
-          case DEBUG:
-          case INFO:
-          case WARNING:
-            break;
+        LifecycleEvents.fireExceptionEvent( parent, checkEx.getSeverity( ), checkEx );
+      }
+      for ( CheckException checkEx : checkExHead ) {
+        if( checkEx.getSeverity( ).ordinal( ) >= Severity.ERROR.ordinal( ) ) {
+          try {
+            failureAction.apply( ex );
+          } catch ( Exception ex1 ) {
+            LOG.error( ex1, ex1 );
+          }
+          return true;
         }
       }
-      parent.error( checkExHead );
+      return false;
     } else {//treat generic exceptions as always being Severity.ERROR
-      foundError = true;
+      LifecycleEvents.fireExceptionEvent( parent, Severity.ERROR, ex );
       try {
         failureAction.apply( ex );
       } catch ( Exception ex1 ) {
         LOG.error( ex1, ex1 );
       }
-      parent.error( ex );
+      return true;
     }
-    return foundError;
   }
   
   public static final boolean filterExceptions( final ServiceConfiguration parent, final Throwable ex ) {
-    if( ex instanceof InterruptedException ) {
-      Thread.currentThread( ).interrupt( );
-    }
     return filterExceptions( parent, ex, NoopErrorFilter.INSTANCE );
   }
   
