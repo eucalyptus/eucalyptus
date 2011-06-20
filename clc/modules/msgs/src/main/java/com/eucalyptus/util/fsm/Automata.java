@@ -124,11 +124,14 @@ public class Automata {
           
           @Override
           public CheckedListenableFuture<P> call( ) {
+            S fromState = fsm.getState( );
             try {
               CheckedListenableFuture<P> res = fsm.transition( toState );
               res.get( );
+              Logs.exhaust( ).debug( fsm.toString( ) + " transitioned from " + fromState + "->" + toState );
               return res;
             } catch ( final IllegalStateException ex ) {
+              Logs.exhaust( ).debug( fsm.toString( ) + " failed transitioned from " + fromState + "->" + toState );
               Logs.exhaust( ).error( ex, ex );
               throw ex;
 //              return Futures.predestinedFailedFuture( ex );
