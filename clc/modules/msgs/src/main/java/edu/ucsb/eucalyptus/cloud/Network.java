@@ -171,16 +171,13 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
   public AccountFullName getAccount( ) {
     return this.account;
   }
-  public String getAccountId( ) {
-    return this.account.getAccountNumber( );
-  }
 
   public ConcurrentNavigableMap<Integer, NetworkIndexState> getNetworkIndexes( ) {
     return this.networkIndexes;
   }
 
   private NetworkToken getClusterToken( String cluster ) {
-    NetworkToken newToken = new NetworkToken( cluster, this.fullName.getAccountNumber( ), this.networkName, this.uuid, this.vlan.get( ) );
+    NetworkToken newToken = new NetworkToken( cluster, this.account, this.networkName, this.uuid, this.vlan.get( ) );
     NetworkToken token = this.clusterTokens.putIfAbsent( cluster, newToken );
     if ( token == null ) {
       return newToken;

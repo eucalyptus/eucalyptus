@@ -45,6 +45,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
@@ -96,7 +97,7 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
   }
   
   public void addListener( Runnable listener ) {
-    addListener( listener, Threads.currentThreadExecutor( ) );
+    addListener( listener, Threads.lookup( Empyrean.class, AbstractListenableFuture.class ) );
   }
   
   /**
@@ -115,7 +116,7 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
    */
   @Override
   public <T> CheckedListenableFuture<T> addListener( Callable<T> listener ) {
-    return addListener( listener, Threads.currentThreadExecutor( ) );
+    return addListener( listener, Threads.lookup( Empyrean.class, AbstractListenableFuture.class ) );
   }
   
   @Override

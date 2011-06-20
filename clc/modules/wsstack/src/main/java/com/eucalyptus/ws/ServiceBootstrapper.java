@@ -64,6 +64,12 @@
 package com.eucalyptus.ws;
 
 import java.util.NoSuchElementException;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -72,23 +78,60 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.ComponentRegistrationHandler;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.config.ConfigurationService;
+import com.eucalyptus.component.ServiceTransitions;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
 public class ServiceBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( ServiceBootstrapper.class );
+  
+  static class ServiceBootstrapWorker implements Runnable {
+    private final AtomicBoolean             running  = new AtomicBoolean( true );
+    private final BlockingQueue<Runnable>   msgQueue = new LinkedBlockingQueue<Runnable>( );
+    private final ExecutorService           executor = Executors.newFixedThreadPool( 20 );
+    private static final ServiceBootstrapWorker worker   = new ServiceBootstrapWorker( );
+    
+    private ServiceBootstrapWorker( ) {
+      for ( int i = 0; i < 20; i++ ) {
+        this.executor.submit( this );
+      }
+    }
+    
+    public static void markFinished( ) {
+      worker.running.set( false );
+    }
+    public static void submit( Runnable run ) {
+      worker.msgQueue.add( run );
+    }
+    
+    @Override
+    public void run( ) {
+      while ( !this.msgQueue.isEmpty( ) || this.running.get( ) ) {
+        Runnable event;
+        try {
+          if ( ( event = this.msgQueue.poll( 2000, TimeUnit.MILLISECONDS ) ) != null ) {
+            event.run( );
+          }
+        } catch ( InterruptedException e1 ) {
+          Thread.currentThread( ).interrupt( );
+          return;
+        } catch ( final Throwable e ) {
+          LOG.error( e, e );
+        }
+        LOG.debug( "Shutting down component registration request queue: " + Thread.currentThread( ).getName( ) );
+      }
+      
+    }
+  }
   
   enum ShouldLoad implements Predicate<ServiceConfiguration> {
     INSTANCE {
@@ -96,7 +139,7 @@ public class ServiceBootstrapper extends Bootstrapper {
       @Override
       public boolean apply( final ServiceConfiguration config ) {
         boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( ) || Bootstrap.isCloudController( );
-        LOG.debug( "ServiceBootstrapper.shouldLoad("+config.toString( )+"):" + ret );
+        LOG.debug( "ServiceBootstrapper.shouldLoad(" + config.toString( ) + "):" + ret );
         return ret;
       }
     };
@@ -133,26 +176,29 @@ public class ServiceBootstrapper extends Bootstrapper {
       @Override
       public boolean apply( final ServiceConfiguration config ) {
         final Component comp = config.lookupComponent( );
-        try {
-          final CheckedListenableFuture<ServiceConfiguration> future = comp.startTransition( config );
-          Runnable followRunner = new Runnable( ) {
-            @Override
-            public void run( ) {
+        ServiceBootstrapWorker.submit( new Runnable( ) {
+          @Override
+          public void run( ) {
+            try {
+              ServiceTransitions.transitionChain( config, Component.State.NOTREADY ).get( );
               try {
-                future.get( );
-                comp.enableTransition( config );
-              } catch ( Exception ex ) {
+                ServiceTransitions.transitionChain( config, Component.State.ENABLED ).get( );
+              } catch ( IllegalStateException ex ) {
+                LOG.error( ex, ex );
+              } catch ( InterruptedException ex ) {
+                LOG.error( ex, ex );
+              } catch ( ExecutionException ex ) {
                 LOG.error( ex, ex );
               }
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
             }
-          };
-          Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, config.getFullName( ).toString( ) ).submit( followRunner );
-        } catch ( Exception e ) {
-          LOG.error( e, e );
-        }
-        return false;
+          }
+        } );
+        return true;
       }
     } );
+    ServiceBootstrapWorker.markFinished( );
     return true;
   }
   
@@ -165,8 +211,8 @@ public class ServiceBootstrapper extends Bootstrapper {
           for ( ServiceConfiguration config : Iterables.filter( builder.list( ), ShouldLoad.INSTANCE ) ) {
             try {
               predicate.apply( config );
-            } catch ( Exception ex ) {
-              LOG.error( ex , ex );
+            } catch ( Throwable ex ) {
+              LOG.error( ex, ex );
             }
           }
         } catch ( ServiceRegistrationException ex ) {

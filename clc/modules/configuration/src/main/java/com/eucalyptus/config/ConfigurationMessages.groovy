@@ -111,12 +111,12 @@ public class RegisterComponentType extends ConfigurationMessage {
     this.port = port;
   }
 }
-public class RegisterComponentResponseType extends ConfigurationMessage implements HasSideEffect {}
+public class RegisterComponentResponseType extends ConfigurationMessage {}
 public class DeregisterComponentType extends ConfigurationMessage {
   String name;
   String partition;
 }
-public class DeregisterComponentResponseType extends ConfigurationMessage implements HasSideEffect {}
+public class DeregisterComponentResponseType extends ConfigurationMessage {}
 
 public class DescribeComponentsType extends ConfigurationMessage {
   Boolean verbose = Boolean.FALSE;

@@ -71,6 +71,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.empyrean.ServiceStatusType;
+import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.Arrays;
@@ -162,7 +163,7 @@ public class ServiceChecks {
         public List<CheckException> apply( ServiceStatusType input ) {
           List<CheckException> exs = Lists.newArrayList( );
           for ( String detail : input.getDetails( ) ) {
-            ServiceConfiguration config = Components.Functions.serviceIdToServiceConfiguration( ).apply( input.getServiceId( ) );
+            ServiceConfiguration config = TypeMappers.transform( input.getServiceId( ), ServiceConfiguration.class );
             CheckException ex = newServiceCheckException( correlationId, Severity.ERROR, config, new ServiceStateException( detail ) );
             exs.add( ex );
           }
@@ -216,7 +217,7 @@ public class ServiceChecks {
     } else if ( t instanceof CheckException ) {
       return new CheckException( correlationId, t, severity, config );
     } else {
-      return new CheckException( correlationId, t, Severity.DEBUG, config );
+      return new CheckException( correlationId, t, severity, config );
     }
   }
   
@@ -245,7 +246,7 @@ public class ServiceChecks {
         ? this.uuid
         : correlationId );
       this.timestamp = new Date( );
-      this.eventState = config.lookupStateMachine( ).getState( );
+      this.eventState = config.lookupState( );
       this.eventEpoch = Topology.epoch( );
     }
     
@@ -281,12 +282,12 @@ public class ServiceChecks {
         
         @Override
         public boolean hasNext( ) {
-          return this.curr.other != null;
+          return this.curr != null && this.curr.other != null;
         }
         
         @Override
         public CheckException next( ) {
-          return this.curr.other;
+          return this.curr = this.curr.other;
         }
         
         @Override

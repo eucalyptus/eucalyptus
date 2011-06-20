@@ -198,7 +198,7 @@ public class LifecycleEvents {
     private final Component.State serviceState;
     
     ServiceStateEvent( ServiceConfiguration config, CheckException... exs ) {
-      this( Topology.epoch( ), config.lookupStateMachine( ).getState( ).toString( ), config, exs );
+      this( Topology.epoch( ), config.lookupState( ).toString( ), config, exs );
     }
     
     ServiceStateEvent( int serviceEpoch, String serviceState, ServiceConfiguration config, CheckException... exs ) {
@@ -258,7 +258,11 @@ public class LifecycleEvents {
         event = handleErrorEvent( config, correlationId, checkEx );
         break;
     }
-    config.lookupService( ).fireEvent( event );
+    try {
+      config.lookupService( ).fireEvent( event );
+    } catch ( NoSuchServiceException ex ) {
+      LOG.error( ex , ex );
+    }
   }
   
   private static ServiceErrorEvent handleErrorEvent( ServiceConfiguration config, String correlationId, CheckException checkEx ) {
