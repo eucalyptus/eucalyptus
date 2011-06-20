@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,82 +53,81 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.system;
 
-import java.io.File;
-import org.apache.log4j.Logger;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
-import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
+/*
+ * Hibernate, Relational Persistence for Idiomatic Java
+ *
+ * Copyright (c) 2007, Red Hat Middleware LLC or third-party contributors as
+ * indicated by the @author tags or express copyright attribution
+ * statements applied by the authors. Â All third-party contributions are
+ * distributed under license by Red Hat Middleware LLC.
+ *
+ * This copyrighted material is made available to anyone wishing to use, modify,
+ * copy, or redistribute it subject to the terms and conditions of the GNU
+ * Lesser General Public License, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this distribution; if not, write to:
+ * Free Software Foundation, Inc.
+ * 51 Franklin Street, Fifth Floor
+ * Boston, MA  02110-1301  USA
+ */
+/**
+ * {@link JBossCacheRegionFactory} that uses
+ * {@link MultiplexingCacheInstanceManager} as its
+ * {@link #getCacheInstanceManager() CacheInstanceManager}.
+ * <p>
+ * Supports separate JBoss Cache instances for entity, collection, query
+ * and timestamp caching, with the expectation that a single JGroups resource 
+ * (i.e. a multiplexed channel or a shared transport channel) will be shared 
+ * between the caches. JBoss Cache instances are created from a factory.
+ * </p>
+ * <p>
+ * This version instantiates the factory itself. See 
+ * {@link MultiplexingCacheInstanceManager} for configuration details. 
+ * </p>
+ *
+ * @deprecated Favor Infinispan integration; see HHH-5489 for details.
+ *
+ * @author Brian Stansberry
+ * @version $Revision$
+ */
 
-public enum BaseDirectory {
-  HOME( "euca.home" ), VAR( "euca.var.dir" ), CONF( "euca.conf.dir" ), LIB( "euca.lib.dir" ), LOG( "euca.log.dir" );
-  private static Logger LOGG = Logger.getLogger( BaseDirectory.class );
-  
-  private String        key;
-  
-  BaseDirectory( final String key ) {
-    this.key = key;
-  }
-  
-  public boolean check( ) {
-    if ( System.getProperty( this.key ) == null ) {
-      LOGG.fatal( "System property '" + this.key + "' must be set." );
-      return false;
+package com.eucalyptus.bootstrap;
+
+import java.util.Properties;
+import org.hibernate.cache.jbc.builder.MultiplexingCacheInstanceManager;
+import org.hibernate.cache.jbc2.JBossCacheRegionFactory;
+public class CacheRegionFactory extends JBossCacheRegionFactory {
+
+    /**
+     * FIXME Per the RegionFactory class Javadoc, this constructor version
+     * should not be necessary.
+     * 
+     * @param props The configuration properties
+     */
+    public CacheRegionFactory(Properties props) {
+        this();
     }
-    this.create( );
-    return true;
-  }
-  
-  @Override
-  public String toString( ) {
-    return System.getProperty( this.key );
-  }
-  
-  public File getFile( ) {
-    return new File( this.toString( ) );
-  }
-  
-  public void create( ) {
-    final File dir = new File( this.toString( ) );
-    if ( !dir.exists( ) ) {
-      EventRecord.here( SubDirectory.class, EventType.SYSTEM_DIR_CREATE, this.name( ), this.toString( ) ).info( );
-      if( dir.mkdirs( ) ) {
-        this.assertPermissions( );
-      }
+
+    /**
+     * Create a new MultiplexedJBossCacheRegionFactory.
+     * 
+     */
+    public CacheRegionFactory() {
+        super(new MultiplexingCacheInstanceManager());
     }
-  }
-  
-  public File getChildFile( String... path ) {
-    return new File( getChildPath( path ) );
-  }
-  
-  public String getChildPath( String... args ) {
-    String ret = this.toString( );
-    for ( String s : args ) {
-      ret += File.separator + s;
-    }
-    return ret;
-  }
-  
-  private void assertPermissions( ) {
-    try {
-      GroovyUtil.exec( "chown " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
-    } catch ( ScriptExecutionFailedException ex ) {
-      LOGG.error( ex, ex );
-    }
-    try {
-      GroovyUtil.exec( "chmod og+rwX " + this.toString( ) );
-    } catch ( ScriptExecutionFailedException ex ) {
-      LOGG.error( ex, ex );
-    }
-  }
+
 }
