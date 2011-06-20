@@ -63,6 +63,7 @@
 
 package com.eucalyptus.component;
 
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -198,7 +199,7 @@ public class ServiceTransitions {
                                                  Component.State.DISABLED,
                                                  Component.State.DISABLED );
     } else {
-      Exceptions.trace( "Fauled to find transition to requested state DISABLED from " + config.lookupState( ) + " for: " + config.toString( ) );
+      Exceptions.trace( "Failed to find transition to requested state DISABLED from " + config.lookupState( ) + " for: " + config.toString( ) );
     }
     return executeTransition( config, transition );
   }
@@ -214,7 +215,7 @@ public class ServiceTransitions {
     } else if ( State.DISABLED.equals( currState ) || State.NOTREADY.equals( currState ) ) {
       transition = Automata.sequenceTransitions( config, currState, Component.State.STOPPED );
     } else {
-      Exceptions.trace( "Fauled to find transition to requested state STOPPED from " + config.lookupState( ) + " for: " + config.toString( ) );
+      Exceptions.trace( "Failed to find transition to requested state STOPPED from " + config.lookupState( ) + " for: " + config.toString( ) );
     }
     return executeTransition( config, transition );
   }
@@ -227,7 +228,7 @@ public class ServiceTransitions {
                                                  Component.State.DISABLED,
                                                  Component.State.STOPPED );
     } else {
-      Exceptions.trace( "Fauled to find transition to requested state DESTROY from " + config.lookupState( ) + " for: " + config.toString( ) );
+      Exceptions.trace( "Failed to find transition to requested state DESTROY from " + config.lookupState( ) + " for: " + config.toString( ) );
     }
     return executeTransition( config, transition );
   }
@@ -286,7 +287,7 @@ public class ServiceTransitions {
     } catch ( Throwable ex ) {
       if ( ServiceExceptions.filterExceptions( parent, ex ) ) {
         transitionCallback.fireException( ex );
-        throw new RuntimeException( ex );
+        throw new UndeclaredThrowableException( ex );
       } else {
         transitionCallback.fire( );
       }

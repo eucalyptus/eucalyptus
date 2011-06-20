@@ -152,18 +152,17 @@ public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T ex
     if ( this.action == null ) {
       throw new IllegalStateException( "Attempt to apply delegated transition before it is defined." );
     } else {
-      this.fireListeners( Phases.leave, new Predicate<TransitionListener<P>>( ) {
-        @Override
-        public boolean apply( TransitionListener<P> listener ) {
-          listener.leave( parent );
-          return true;
-        }
-      }, parent );
       try {
         this.action.leave( parent, transitionCallback );
+        this.fireListeners( Phases.leave, new Predicate<TransitionListener<P>>( ) {
+          @Override
+          public boolean apply( TransitionListener<P> listener ) {
+            listener.leave( parent );
+            return true;
+          }
+        }, parent );
       } catch ( Exception ex ) {
         LOG.error( ex , ex );
-        transitionCallback.fireException( ex );
       }
     }
   }

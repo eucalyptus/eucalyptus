@@ -165,8 +165,7 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     try {
       Clusters.lookup( config ).check( );
     } catch ( NoSuchElementException ex ) {
-      LOG.error( ex, ex );
-      throw ex;
+      throw ServiceChecks.Severity.ERROR.transform( config, ex );
     } catch ( IllegalStateException ex ) {
       LOG.error( ex, ex );
       throw ServiceChecks.Severity.ERROR.transform( config, ex );
