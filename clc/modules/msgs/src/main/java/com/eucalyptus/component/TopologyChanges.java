@@ -320,6 +320,8 @@ public class TopologyChanges {
           } catch ( InterruptedException ex ) {
             Thread.currentThread( ).interrupt( );
             throw new UndeclaredThrowableException( ex );
+          } catch ( UndeclaredThrowableException ex ) {
+            throw ex;
           } catch ( Exception ex ) {
             LOG.debug( this.toString( ) + " failed for: " + config + " trying " + initialState + "->" + nextState + " because of: " + ex.getMessage( ), ex );
             throw new UndeclaredThrowableException( ex );
