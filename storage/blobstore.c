@@ -452,7 +452,7 @@ static int open_and_lock (const char * path,
                 ERR (BLOBSTORE_ERROR_NOMEM, NULL);
                 return -1;
             }
-            strncpy (path_lock->path, path, sizeof(path_lock->path));
+            safe_strncpy (path_lock->path, path, sizeof(path_lock->path));
             pthread_rwlock_init (&(path_lock->lock), NULL);
             pthread_mutex_init (&(path_lock->mutex), NULL);
             * next_ptr = path_lock; // add at the end of LL
@@ -621,7 +621,7 @@ static int read_store_metadata (blobstore * bs)
     char * val;
     if ((val = get_val (buf, "id"))==NULL) 
         return -1; 
-    strncpy (bs->id, val, sizeof (bs->id)); 
+    safe_strncpy (bs->id, val, sizeof (bs->id)); 
     free (val);
 
     if ((val = get_val (buf, "limit"))==NULL) return -1; 
@@ -716,7 +716,7 @@ blobstore * blobstore_open ( const char * path,
         ERR (BLOBSTORE_ERROR_NOMEM, NULL);
         goto out;
     }
-    strncpy (bs->path, path, sizeof(bs->path)); // TODO: canonicalize path
+    safe_strncpy (bs->path, path, sizeof(bs->path)); // TODO: canonicalize path
     char meta_path [PATH_MAX];
     snprintf (meta_path, sizeof(meta_path), "%s/%s", bs->path, BLOBSTORE_METADATA_FILE);
 
@@ -850,12 +850,12 @@ static int set_blockblob_metadata_path (blockblob_path_t path_t, const blobstore
 
     char name [32];
     switch (path_t) {
-    case BLOCKBLOB_PATH_BLOCKS:   strncpy (name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_BLOCKS],   sizeof (name)); break;
-    case BLOCKBLOB_PATH_DM:       strncpy (name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_DM],       sizeof (name)); break;
-    case BLOCKBLOB_PATH_DEPS:     strncpy (name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_DEPS],     sizeof (name)); break;
-    case BLOCKBLOB_PATH_LOOPBACK: strncpy (name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_LOOPBACK], sizeof (name)); break;
-    case BLOCKBLOB_PATH_SIG:      strncpy (name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_SIG],      sizeof (name)); break;
-    case BLOCKBLOB_PATH_REFS:     strncpy (name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_REFS],     sizeof (name)); break;
+    case BLOCKBLOB_PATH_BLOCKS:   safe_strncpy (name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_BLOCKS],   sizeof (name)); break;
+    case BLOCKBLOB_PATH_DM:       safe_strncpy (name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_DM],       sizeof (name)); break;
+    case BLOCKBLOB_PATH_DEPS:     safe_strncpy (name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_DEPS],     sizeof (name)); break;
+    case BLOCKBLOB_PATH_LOOPBACK: safe_strncpy (name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_LOOPBACK], sizeof (name)); break;
+    case BLOCKBLOB_PATH_SIG:      safe_strncpy (name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_SIG],      sizeof (name)); break;
+    case BLOCKBLOB_PATH_REFS:     safe_strncpy (name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_REFS],     sizeof (name)); break;
     default:
         ERR (BLOBSTORE_ERROR_INVAL, "invalid path_t");
         return -1;
@@ -1202,7 +1202,7 @@ static void set_device_path (blockblob * bb)
     
     if (dm_devs_size>0) { // .dm is there => set device_path to the device-mapper path
         snprintf (bb->device_path, sizeof(bb->device_path), DM_FORMAT, dm_devs [dm_devs_size-1]); // main device is the last one
-        strncpy (bb->dm_name, dm_devs [dm_devs_size-1], sizeof (bb->dm_name));
+        safe_strncpy (bb->dm_name, dm_devs [dm_devs_size-1], sizeof (bb->dm_name));
         for (int i=0; i<dm_devs_size; i++) {
             free (dm_devs [i]);
         }
@@ -1212,7 +1212,7 @@ static void set_device_path (blockblob * bb)
         _err_off(); // do not care if loopback file does not exist
         read_blockblob_metadata_path (BLOCKBLOB_PATH_LOOPBACK, bb->store, bb->id, lo_dev, sizeof (lo_dev));
         _err_on();
-        strncpy (bb->device_path, lo_dev, sizeof (bb->device_path));
+        safe_strncpy (bb->device_path, lo_dev, sizeof (bb->device_path));
     }
 }
 
@@ -1263,8 +1263,8 @@ static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob **
         tail_bb = & (bb->next);
         // fill out the struct
         bb->store = bs;
-        strncpy (bb->id, blob_id, sizeof(bb->id));
-        strncpy (bb->blocks_path, entry_path, sizeof(bb->blocks_path));
+        safe_strncpy (bb->id, blob_id, sizeof(bb->id));
+        safe_strncpy (bb->blocks_path, entry_path, sizeof(bb->blocks_path));
         set_device_path (bb); // read .dm and .loopback and set bb->device_path accordingly
         bb->size_bytes = sb.st_size;
         bb->last_accessed = sb.st_atime;
@@ -1380,7 +1380,7 @@ int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** res
             goto free;
         }
 
-        strncpy (bm->id, abb->id, sizeof (bm->id));
+        safe_strncpy (bm->id, abb->id, sizeof (bm->id));
         bm->size_bytes = abb->size_bytes;
         bm->in_use = abb->in_use;
         bm->last_accessed = abb->last_accessed;
@@ -1485,7 +1485,7 @@ blockblob * blockblob_open ( blobstore * bs,
     
     bb->store = bs;
     if (id) {
-        strncpy (bb->id, id, sizeof(bb->id));
+        safe_strncpy (bb->id, id, sizeof(bb->id));
     } else {
         gen_id (bb->id, sizeof(bb->id));
     }
@@ -2277,7 +2277,7 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
     }
 
     if (mapped_or_snapshotted) { // we must use the device mapper
-        strncpy (bb->dm_name, dm_base, sizeof(bb->dm_name));
+        safe_strncpy (bb->dm_name, dm_base, sizeof(bb->dm_name));
         dev_names [devices] = strdup (dm_base);
         dm_tables [devices] = main_dm_table;
         devices++;

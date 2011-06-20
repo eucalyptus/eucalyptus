@@ -280,7 +280,7 @@ static void add_to_cache (const char * cached_path, const long long file_size_by
         return;
     }
 
-    strncpy (e->path, cached_path, BUFSIZE);
+    safe_strncpy (e->path, cached_path, BUFSIZE);
     e->size_mb = file_size_mb;
     e->next = NULL;
     e->prev = NULL;

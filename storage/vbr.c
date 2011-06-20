@@ -512,11 +512,11 @@ static void update_vbr_with_backing_info (artifact * a)
 
     assert (a->bb);
     if (! a->must_be_file && strlen (blockblob_get_dev (a->bb))) {
-        strncpy (vbr->backingPath, blockblob_get_dev (a->bb), sizeof (vbr->backingPath));
+        safe_strncpy (vbr->backingPath, blockblob_get_dev (a->bb), sizeof (vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_BLOCK;
     } else {
         assert (blockblob_get_file (a->bb));
-        strncpy (vbr->backingPath, blockblob_get_file (a->bb), sizeof (vbr->backingPath));
+        safe_strncpy (vbr->backingPath, blockblob_get_file (a->bb), sizeof (vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_FILE;
     }
     vbr->size = a->bb->size_bytes;
@@ -1012,13 +1012,13 @@ artifact * art_alloc (const char * id, const char * sig, long long size_bytes, b
 
     static int seq = 0;
     a->seq = ++seq; // not thread safe, but seq's are just for debugging
-    strncpy (a->instanceId, current_instanceId, sizeof (a->instanceId)); // for logging
+    safe_strncpy (a->instanceId, current_instanceId, sizeof (a->instanceId)); // for logging
     logprintfl (EUCADEBUG, "[%s] allocated artifact %03d|%s size=%lld vbr=%u cache=%d file=%d\n", a->instanceId,  seq, id, size_bytes, vbr, may_be_cached, must_be_file);
 
     if (id)
-        strncpy (a->id, id, sizeof (a->id));
+        safe_strncpy (a->id, id, sizeof (a->id));
     if (sig)
-        strncpy (a->sig, sig, sizeof (a->sig));
+        safe_strncpy (a->sig, sig, sizeof (a->sig));
     a->size_bytes = size_bytes;
     a->may_be_cached = may_be_cached;
     a->must_be_file = must_be_file;
@@ -1126,9 +1126,9 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean do_make_work_c
 
         artifact * a2 = NULL;
         char art_id [48];
-        strncpy (art_id, a->id, sizeof (art_id));
+        safe_strncpy (art_id, a->id, sizeof (art_id));
         char art_sig [ART_SIG_MAX];
-        strncpy (art_sig, a->sig, sizeof (art_sig));
+        safe_strncpy (art_sig, a->sig, sizeof (art_sig));
 
         if (sshkey) { // if SSH key is included, recalculate sig and ID
             if (strlen(sshkey) > sizeof(a->sshkey)) {
@@ -1302,7 +1302,7 @@ free:
 // (same effect as passing it into vbr_alloc_tree)
 void art_set_instanceId (const char * instanceId) 
 {
-    strncpy (current_instanceId, instanceId, sizeof (current_instanceId));
+    safe_strncpy (current_instanceId, instanceId, sizeof (current_instanceId));
 }
 
 artifact * // returns pointer to the root of artifact tree or NULL on error
@@ -1314,7 +1314,7 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                 const char * instanceId) // ID of the instance (for logging purposes only)
 {
     if (instanceId)
-        strncpy (current_instanceId, instanceId, sizeof (current_instanceId));
+        safe_strncpy (current_instanceId, instanceId, sizeof (current_instanceId));
 
     // sort vbrs into prereq [] and parts[] so they can be approached in the right order
     virtualBootRecord * prereq_vbrs [EUCA_MAX_VBRS];
@@ -1493,7 +1493,7 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
     if (work_prefix && strlen (work_prefix))
         snprintf (id_work, sizeof (id_work), "%s/%s", work_prefix, a->id);
     else 
-        strncpy (id_work, a->id, sizeof (id_work));
+        safe_strncpy (id_work, a->id, sizeof (id_work));
     
     // see if a file and if it exists
     if (a->id_is_path) {
@@ -1716,9 +1716,9 @@ static void add_vbr (virtualMachine * vm,
     virtualBootRecord * vbr = vm->virtualBootRecord + vm->virtualBootRecordLen++;
     vbr->size = size;
     if (formatName)
-        strncpy (vbr->formatName, formatName, sizeof (vbr->formatName));
+        safe_strncpy (vbr->formatName, formatName, sizeof (vbr->formatName));
     if (id)
-        strncpy (vbr->id, id, sizeof (vbr->id));
+        safe_strncpy (vbr->id, id, sizeof (vbr->id));
     vbr->format = format;
     vbr->type = type;
     vbr->locationType = locationType;
@@ -1726,7 +1726,7 @@ static void add_vbr (virtualMachine * vm,
     vbr->partitionNumber = partitionNumber;
     vbr->guestDeviceBus = guestDeviceBus;
     if (preparedResourceLocation)
-        strncpy (vbr->preparedResourceLocation, preparedResourceLocation, sizeof (vbr->preparedResourceLocation));
+        safe_strncpy (vbr->preparedResourceLocation, preparedResourceLocation, sizeof (vbr->preparedResourceLocation));
 }
 
 static int next_instances_slot = 0;
@@ -1741,7 +1741,7 @@ static int provision_vm (const char * id, const char * sshkey, const char * eki,
 {
     pthread_mutex_lock (&competitors_mutex);
     virtualMachine * vm = &(vm_slots [next_instances_slot]); // we don't use vm_slots[] pointers in code
-    strncpy (vm_ids [next_instances_slot], id, PATH_MAX);
+    safe_strncpy (vm_ids [next_instances_slot], id, PATH_MAX);
     next_instances_slot++;
     pthread_mutex_unlock (&competitors_mutex);
 
@@ -1752,7 +1752,7 @@ static int provision_vm (const char * id, const char * sshkey, const char * eki,
     add_vbr (vm, VBR_SIZE, NC_FORMAT_EXT3, "ext3", "none", NC_RESOURCE_EPHEMERAL, NC_LOCATION_NONE, 0, 3, BUS_TYPE_SCSI, NULL);
     add_vbr (vm, VBR_SIZE, NC_FORMAT_SWAP, "swap", "none", NC_RESOURCE_SWAP,      NC_LOCATION_NONE, 0, 2, BUS_TYPE_SCSI, NULL);
 
-    strncpy (current_instanceId, strstr (id, "/") + 1, sizeof (current_instanceId));
+    safe_strncpy (current_instanceId, strstr (id, "/") + 1, sizeof (current_instanceId));
     artifact * sentinel = vbr_alloc_tree (vm, FALSE, do_make_work_copy, sshkey, id);
     if (sentinel == NULL) {
         printf ("error: vbr_alloc_tree failed id=%s\n", id);

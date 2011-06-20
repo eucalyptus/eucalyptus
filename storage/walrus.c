@@ -117,7 +117,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     int code = ERROR;
     char url [BUFSIZE];
 
-    strncpy (url, requested_url, BUFSIZE);
+    safe_strncpy (url, requested_url, BUFSIZE);
 #if defined(CAN_GZIP)
     if (do_compress)
         snprintf (url, BUFSIZE, "%s%s", requested_url, "?IsCompressed=true");

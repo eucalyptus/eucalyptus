@@ -459,7 +459,7 @@ disk_item * alloc_disk_item (const char * id, const long long content_size, cons
         logprintfl (EUCAERROR, "error: out of memory in alloc_disk_item()\n");
         return di;
     }
-    strncpy (di->id, id, EUCA_MAX_PATH);
+    safe_strncpy (di->id, id, EUCA_MAX_PATH);
     if (cache_item) {
         snprintf (di->base, EUCA_MAX_PATH, "%s/%s",      get_cache_dir(), di->id);
         snprintf (di->path, EUCA_MAX_PATH, "%s/content", di->base);

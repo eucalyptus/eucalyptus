@@ -253,7 +253,7 @@ void change_state(	ncInstance *instance,
         return;
     }
 
-    strncpy(instance->stateName, instance_state_names[instance->stateCode], CHAR_BUFFER_SIZE);
+    safe_strncpy(instance->stateName, instance_state_names[instance->stateCode], CHAR_BUFFER_SIZE);
     if (old_state != state) {
         logprintfl (EUCADEBUG, "[%s] state change for instance: %s -> %s (%s)\n",
                     instance->instanceId, 
