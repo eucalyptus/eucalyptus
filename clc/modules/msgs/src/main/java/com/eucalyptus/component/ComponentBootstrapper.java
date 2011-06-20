@@ -75,85 +75,95 @@ import com.eucalyptus.util.CheckedFunction;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.fsm.TransitionException;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
 
 public class ComponentBootstrapper {
-  private static Logger LOG = Logger.getLogger( ComponentBootstrapper.class );
-  private final Multimap<Bootstrap.Stage, Bootstrapper> bootstrappers = ArrayListMultimap.create( );
-  private final Multimap<Bootstrap.Stage, Bootstrapper> disabledBootstrappers = ArrayListMultimap.create( );
-  private final Component component; 
+  private static Logger                                 LOG = Logger.getLogger( ComponentBootstrapper.class );
+  private final Multimap<Bootstrap.Stage, Bootstrapper> bootstrappers;
+  private final Multimap<Bootstrap.Stage, Bootstrapper> disabledBootstrappers;
+  private final Component                               component;
   
   ComponentBootstrapper( Component component ) {
     super( );
     this.component = component;
+    Multimap<Bootstrap.Stage, Bootstrapper> a = ArrayListMultimap.create( );
+    this.bootstrappers = Multimaps.synchronizedMultimap( a );
+    Multimap<Bootstrap.Stage, Bootstrapper> b = ArrayListMultimap.create( );
+    this.disabledBootstrappers = Multimaps.synchronizedMultimap( b );
   }
   
-  public void addBootstrapper( Bootstrapper b ) {
-    EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, b.getBootstrapStage( ).name( ), b.getClass( ).getName( ), "component=" + this.component.getName( ) ).info( );
-//    if( this.component.isAvailableLocally( ) ) {
-      this.bootstrappers.put( b.getBootstrapStage( ), b );
-//    }
+  public void addBootstrapper( Bootstrapper bootstrapper ) {
+    if ( Stage.PrivilegedConfiguration.equals( bootstrapper.getBootstrapStage( ) ) ) {
+      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + bootstrapper.getBootstrapStage( ).toString( ),
+                        this.component.getComponentId( ).name( ),
+                        bootstrapper.getClass( ).getName( ),
+                        "component=" + this.component.getComponentId( ).name( ) ).info( );
+    } else {
+      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, "stage:" + bootstrapper.getBootstrapStage( ).toString( ),
+                        this.component.getComponentId( ).name( ),
+                        bootstrapper.getClass( ).getName( ),
+                        "component=" + this.component.getComponentId( ).name( ) ).info( );
+      this.bootstrappers.put( bootstrapper.getBootstrapStage( ), bootstrapper );
+    }
   }
-
-  private void updateBootstrapDependencies( ) {    
+  
+  private void updateBootstrapDependencies( ) {
     try {
-      for ( Entry<Stage, Bootstrapper> entry : Lists.newArrayList( this.bootstrappers.entries( ) ) ) {
-        if ( !entry.getValue( ).checkLocal( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + entry.getKey( ), this.component.getComponentId( ).name( ),
-                            "Depends.local=" + entry.getValue( ).getDependsRemote( ).toString( ), "Component=" + this.component.getComponentId( ).name( ) + "=remote" ).info( );
-          Bootstrap.Stage stage = entry.getKey( );
-          Bootstrapper bootstrapper = entry.getValue( );
-          this.bootstrappers.remove( entry.getKey( ), entry.getValue( ) );
-          this.disabledBootstrappers.put( stage, bootstrapper );
-        } else if ( !entry.getValue( ).checkRemote( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + entry.getKey( ), this.component.getComponentId( ).name( ),
-                            "Depends.remote=" + entry.getValue( ).getDependsRemote( ).toString( ), "Component=" + this.component.getComponentId( ).name( ) + "=local" ).info( );
-          Bootstrap.Stage stage = entry.getKey( );
-          Bootstrapper bootstrapper = entry.getValue( );
-          this.bootstrappers.remove( entry.getKey( ), entry.getValue( ) );
-          this.disabledBootstrappers.put( stage, bootstrapper );
-        }
-      }
-      for ( Entry<Stage, Bootstrapper> entry : Lists.newArrayList( this.disabledBootstrappers.entries( ) ) ) {
-        Bootstrapper b = entry.getValue( );
-        if ( entry.getValue( ).checkLocal( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, "stage:" , entry.getKey( ).toString( ), b.getClass( ).getName( ), "component=" + this.component.getComponentId( ).name( ) ).info( );
-          Bootstrap.Stage stage = entry.getKey( );
-          Bootstrapper bootstrapper = entry.getValue( );
-          this.disabledBootstrappers.remove( entry.getKey( ), entry.getValue( ) );
-          this.bootstrappers.put( stage, bootstrapper );
-        } else if ( entry.getValue( ).checkRemote( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, "stage:" , entry.getKey( ).toString( ), b.getClass( ).getName( ), "component=" + this.component.getComponentId( ).name( ) ).info( );
-          Bootstrap.Stage stage = entry.getKey( );
-          Bootstrapper bootstrapper = entry.getValue( );
-          this.disabledBootstrappers.remove( entry.getKey( ), entry.getValue( ) );
-          this.bootstrappers.put( stage, bootstrapper );
+      Iterable<Bootstrapper> currBootstrappers = Iterables.concat( Lists.newArrayList( this.bootstrappers.values( ) ),
+                                                                                 Lists.newArrayList( this.disabledBootstrappers.values( ) ) );
+      this.bootstrappers.clear( );
+      this.disabledBootstrappers.clear( );
+      for ( Bootstrapper bootstrapper : currBootstrappers ) {
+        Bootstrap.Stage stage = bootstrapper.getBootstrapStage( );
+        if ( bootstrapper.checkLocal( ) && bootstrapper.checkRemote( ) ) {
+          this.enableBootstrapper( stage, bootstrapper );
+        } else {
+          this.disableBootstrapper( stage, bootstrapper );
         }
       }
     } catch ( Exception ex ) {
-      LOG.error( ex , ex );
-    }    
+      LOG.error( ex, ex );
+    }
   }
-
+  
+  private void enableBootstrapper( Bootstrap.Stage stage, Bootstrapper bootstrapper ) {
+    EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_MARK_ENABLED, "stage:", stage.toString( ), this.component.getComponentId( ).name( ),
+                      bootstrapper.getClass( ).getName( ), "component=" + this.component.getComponentId( ).name( ) ).info( );
+    this.disabledBootstrappers.remove( stage, bootstrapper );
+    this.bootstrappers.put( stage, bootstrapper );
+  }
+  
+  private void disableBootstrapper( Bootstrap.Stage stage, Bootstrapper bootstrapper ) {
+    EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_MARK_DISABLED, "stage:" + stage.toString( ), this.component.getComponentId( ).name( ),
+                      bootstrapper.getClass( ).getName( ), "component=" + this.component.getComponentId( ).name( ) ).info( );
+    this.bootstrappers.remove( stage, bootstrapper );
+    this.disabledBootstrappers.put( stage, bootstrapper );
+  }
+  
   private boolean doTransition( EventType transition, CheckedFunction<Bootstrapper, Boolean> checkedFunction ) {
     String name = transition.name( ).replaceAll( ".*_", "" ).toLowerCase( );
     this.updateBootstrapDependencies( );
     for ( Stage s : Bootstrap.Stage.values( ) ) {
-      for ( Bootstrapper b : this.bootstrappers.get( s ) ) {
-        EventRecord.here( Bootstrap.class, transition, this.component.getName( ), "stage", s.name( ), b.getClass( ).getCanonicalName( ) ).debug( );
+      for ( Bootstrapper b : Lists.newArrayList( this.bootstrappers.get( s ) ) ) {
+        EventRecord.here( this.component.getClass( ), transition, this.component.getComponentId( ).name( ), "stage", s.name( ),
+                          b.getClass( ).getCanonicalName( ) ).debug( );
         try {
           boolean result = checkedFunction.apply( b );
           if ( !result ) {
-            throw Exceptions.error( new TransitionException( b.getClass( ).getSimpleName( ) + " returned 'false' from " + name + "( ): terminating bootstrap for component: " + this.component.getName( ) ) );
+            throw Exceptions.error( new TransitionException( b.getClass( ).getSimpleName( ) + " returned 'false' from " + name
+                                                             + "( ): terminating bootstrap for component: " + this.component.getName( ) ) );
           }
         } catch ( Throwable e ) {
-          throw Exceptions.error( new TransitionException( b.getClass( ).getSimpleName( ) + " returned '" + e.getMessage( ) + "' from " + name + "( ): terminating bootstrap for component: " + this.component.getName( ), e ) );
+          throw Exceptions.error( new TransitionException( b.getClass( ).getSimpleName( ) + " returned '" + e.getMessage( ) + "' from " + name
+                                                           + "( ): terminating bootstrap for component: " + this.component.getName( ), e ) );
         }
-      }      
+      }
     }
     return true;
-
+    
   }
   
   public boolean load( ) {
@@ -162,41 +172,40 @@ public class ComponentBootstrapper {
       public Boolean apply( Bootstrapper arg0 ) throws Exception {
         return arg0.load( );
       }
-    });
+    } );
     return true;
   }
-
+  
   public boolean start( ) {
     this.doTransition( EventType.BOOTSTRAPPER_START, new CheckedFunction<Bootstrapper, Boolean>( ) {
       @Override
       public Boolean apply( Bootstrapper arg0 ) throws Exception {
         return arg0.start( );
       }
-    });
+    } );
     return true;
   }
-
+  
   public boolean enable( ) {
     this.doTransition( EventType.BOOTSTRAPPER_ENABLE, new CheckedFunction<Bootstrapper, Boolean>( ) {
       @Override
       public Boolean apply( Bootstrapper arg0 ) throws Exception {
         return arg0.enable( );
       }
-    });
+    } );
     return true;
   }
-
+  
   public boolean stop( ) {
     this.doTransition( EventType.BOOTSTRAPPER_STOP, new CheckedFunction<Bootstrapper, Boolean>( ) {
       @Override
       public Boolean apply( Bootstrapper arg0 ) throws Exception {
         return arg0.stop( );
       }
-    });
-
+    } );
     return true;
   }
-
+  
   public void destroy( ) {
     this.doTransition( EventType.BOOTSTRAPPER_DESTROY, new CheckedFunction<Bootstrapper, Boolean>( ) {
       @Override
@@ -204,32 +213,32 @@ public class ComponentBootstrapper {
         arg0.destroy( );
         return true;
       }
-    });
+    } );
   }
-
+  
   public boolean disable( ) {
     this.doTransition( EventType.BOOTSTRAPPER_DISABLE, new CheckedFunction<Bootstrapper, Boolean>( ) {
       @Override
       public Boolean apply( Bootstrapper arg0 ) throws Exception {
         return arg0.disable( );
       }
-    });
-
+    } );
+    
     return true;
   }
-
+  
   public boolean check( ) {
     this.doTransition( EventType.BOOTSTRAPPER_CHECK, new CheckedFunction<Bootstrapper, Boolean>( ) {
       @Override
       public Boolean apply( Bootstrapper arg0 ) throws Exception {
         return arg0.check( );
       }
-    });
+    } );
     return true;
   }
-
+  
   public List<Bootstrapper> getBootstrappers( ) {
     return Lists.newArrayList( this.bootstrappers.values( ) );
   }
-
+  
 }

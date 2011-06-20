@@ -14,7 +14,7 @@ public class Transitions {
   private static Logger LOG = Logger.getLogger( Transitions.class );
   
   private static TransitionException exceptionOnCondition( String message, Predicate p ) {
-    return new TransitionException( "Transition rejected because constraint check is false: " + message + " for class " + p.getClass( ).getCanonicalName( ) );
+    return new TransitionException( "Transition rejected because constraint check is false: " + message + " for class " + p.getClass( ) );
   }
   
   public static <P extends HasName<P>> TransitionListener<P> callbackAsListener( final Callback<P> p ) {

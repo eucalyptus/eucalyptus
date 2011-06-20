@@ -42,20 +42,20 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
     this.getSubject( ).getState( ).setAddressCapacity( reply.getAddrsPerNet( ) );
     this.getSubject( ).getState( ).setMode( reply.getUseVlans( ) );
     for ( NetworkInfoType netInfo : reply.getActiveNetworks( ) ) {
+      AccountFullName accountFn = Accounts.lookupAccountFullNameById( netInfo.getAccountId( ) );
       Network net = null;
       try {
         net = Networks.getInstance( ).lookup( netInfo.getAccountId( ) + "-" + netInfo.getNetworkName( ) );
         if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
-          NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), netInfo.getAccountId( ), netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
+          NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), accountFn, netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
           netToken = net.addTokenIfAbsent( netToken );
         }
       } catch ( NoSuchElementException e1 ) {
         try {
-          AccountFullName accountFn = Accounts.lookupAccountFullNameByUserId( netInfo.getAccountId( ) );
           if( accountFn != null ) {
             net = new Network( accountFn, netInfo.getNetworkName( ), netInfo.getUuid( ) );
             if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
-              NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), netInfo.getAccountId( ), netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
+              NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), accountFn, netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
               netToken = net.addTokenIfAbsent( netToken );
             }
           }

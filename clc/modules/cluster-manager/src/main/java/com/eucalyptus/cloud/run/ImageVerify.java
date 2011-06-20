@@ -65,6 +65,10 @@ package com.eucalyptus.cloud.run;
 
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -82,7 +86,6 @@ public class ImageVerify {
     Partition partition = allocInfo.getPartition( );
     BootableSet bootSet = Emis.newBootableSet( vmType, partition, imageId );
     allocInfo.setBootableSet( bootSet );
-    
     return allocInfo;
   }
   

@@ -10,8 +10,12 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmTypeAvailability;
+import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -55,26 +59,33 @@ public class NodeResourceAllocator implements ResourceAllocator {
       if ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < minAmount ) {
         throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
       } else {
-        for ( ClusterNodeState state : Lists.transform( authorizedClusters, new Function<Cluster, ClusterNodeState>( ) {
-          @Override
-          public ClusterNodeState apply( Cluster arg0 ) {
-            return arg0.getNodeState( );
-          }
-        } ) ) {
-          try {
-            int tryAmount = ( remaining > state.getAvailability( vmTypeName ).getAvailable( ) )
-              ? state.getAvailability( vmTypeName ).getAvailable( )
-              : remaining;
-            
-            ResourceToken token = allocInfo.requestResourceToken( state, vmTypeName, tryAmount, maxAmount );
-            remaining -= token.getAmount( );
-          } catch ( Throwable t ) {
-            if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) || remaining > 0 ) {
-              allocInfo.releaseAllocationTokens( );
-              throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
-            } else {
-              LOG.error( t, t );
-              throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
+        for ( Cluster cluster : authorizedClusters ) {
+          if( remaining <= 0 ) {
+            break;
+          } else {
+            ClusterNodeState state = cluster.getNodeState( );
+            try {
+              if ( allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {
+                try {
+                  ServiceConfiguration sc = Partitions.lookupService( Storage.class, cluster.getConfiguration( ).getPartition( ) );
+                } catch ( Exception ex ) {
+                  throw new NotEnoughResourcesAvailable( "Not enough resources: " + ex.getMessage( ), ex );
+                }
+              }
+              int tryAmount = ( remaining > state.getAvailability( vmTypeName ).getAvailable( ) )
+                ? state.getAvailability( vmTypeName ).getAvailable( )
+                : remaining;
+              
+              ResourceToken token = allocInfo.requestResourceToken( state, vmTypeName, tryAmount, maxAmount );
+              remaining -= token.getAmount( );
+            } catch ( Throwable t ) {
+              if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) || remaining > 0 ) {
+                allocInfo.releaseAllocationTokens( );
+                throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
+              } else {
+                LOG.error( t, t );
+                throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
+              }
             }
           }
         }

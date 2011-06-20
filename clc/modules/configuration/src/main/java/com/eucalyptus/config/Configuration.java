@@ -77,6 +77,7 @@ import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -177,26 +178,7 @@ public class Configuration {
     final Component component = Components.oneWhichHandles( request.getClass( ) );
     final ServiceBuilder builder = component.getBuilder( );
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
-    if ( "state".equals( request.getAttribute( ) ) ) {
-      ServiceConfiguration conf;
-      try {
-        conf = builder.lookupByName( request.getName( ) );
-      } catch ( final ServiceRegistrationException e ) {
-        LOG.info( builder.getClass( ).getSimpleName( ) + ": lookupByName failed." );
-        LOG.error( e, e );
-        throw e;
-      }
-      if ( "enable".startsWith( request.getValue( ).toLowerCase( ) ) ) {
-        try {
-          builder.getComponent( ).enableTransition( conf ).get( );
-        } catch ( final Exception ex ) {
-          LOG.error( ex, ex );
-          throw new EucalyptusCloudException( ex.getMessage( ), ex );
-        }
-      } else if ( "disable".startsWith( request.getValue( ).toLowerCase( ) ) ) {
-        builder.getComponent( ).disableTransition( conf );
-      }
-    }
+    LOG.error( "Nothing to do while processing: " + request );
     return reply;
   }
   

@@ -8,7 +8,8 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.util.Logs;
 
-@Entity @javax.persistence.Entity
+@Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_records" )
 @Table( name = "records_logs" )
 @DiscriminatorValue( value = "base" )
@@ -20,12 +21,13 @@ public class LogFileRecord extends BaseRecord {
   public LogFileRecord( ) {
     super( );
   }
-
+  
   public LogFileRecord( EventClass eventClass, EventType type, Class creator, StackTraceElement callerStack, String userId, String correlationId, String other ) {
     super( type, eventClass, creator, callerStack, userId, correlationId, other );
     if ( Logs.EXTREME ) {
       if ( callerStack != null && callerStack.getFileName( ) != null ) {
-        this.caller = String.format( "   [%s.%s.%s]", callerStack.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), callerStack.getMethodName( ), callerStack.getLineNumber( ) );
+        this.caller = String.format( "   [%s.%s.%s]", callerStack.getFileName( ).replaceAll( "\\.\\w*\\b", "" ), callerStack.getMethodName( ),
+                                     callerStack.getLineNumber( ) );
       } else {
         this.caller = "unknown";
       }
@@ -35,7 +37,7 @@ public class LogFileRecord extends BaseRecord {
   public String getCaller( ) {
     return this.caller;
   }
-
+  
   @Override
   public String toString( ) {
     if ( Logs.EXTREME ) {
@@ -48,7 +50,7 @@ public class LogFileRecord extends BaseRecord {
                                              : "" ),
                                        this.getType( ) );
       StringBuilder ret = new StringBuilder( );
-      ret.append( leadIn );
+      ret.append( leadIn ).append( ":" ).append( this.getCaller( ) );
       for ( Object o : this.getOthers( ) ) {
         if ( o == null ) continue;
         if ( BaseRecord.NEXT.equals( o ) ) {
