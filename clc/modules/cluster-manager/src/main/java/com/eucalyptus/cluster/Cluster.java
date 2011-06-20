@@ -215,11 +215,12 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       @Override
       public boolean apply( final Cluster input ) {
         try {
-          Clusters.getInstance( ).disable( input );
           AsyncRequests.newRequest( new DisableServiceCallback( input ) ).sendSync( input.configuration );
           return true;
         } catch ( Throwable t ) {
           return input.filterExceptions( t );
+        } finally {
+          Clusters.getInstance( ).disable( input );
         }
       }
     };
@@ -347,8 +348,8 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.PENDING ) {
       {
         final TransitionAction<Cluster> noop = Transitions.noop( );
-        this.in( Cluster.State.DISABLED ).run( Cluster.ServiceStateDispatch.DISABLED ).run( ErrorStateListeners.FLUSHPENDING );
-        this.in( Cluster.State.ENABLED ).run( Cluster.ServiceStateDispatch.ENABLED ).run( ErrorStateListeners.CHECKPENDING );
+        this.in( Cluster.State.DISABLED ).run( Cluster.ServiceStateDispatch.DISABLED );
+        this.in( Cluster.State.ENABLED ).run( Cluster.ServiceStateDispatch.ENABLED );
         this.from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( noop );
         
         this.from( State.STOPPED ).to( State.PENDING ).error( State.PENDING ).on( Transition.PRESTART ).run( noop );
@@ -359,7 +360,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         
         this.from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.NOTREADYCHECK ).run( Refresh.SERVICEREADY );
         
-        this.from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLEDCHECK ).run( Refresh.SERVICEREADY );
+        this.from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLEDCHECK ).addListener( ErrorStateListeners.FLUSHPENDING ) .run( Refresh.SERVICEREADY );
         this.from( State.DISABLED ).to( State.ENABLING ).error( State.DISABLED ).on( Transition.ENABLE ).run( Cluster.ServiceStateDispatch.ENABLED );
         this.from( State.DISABLED ).to( State.STOPPED ).error( State.PENDING ).on( Transition.STOP ).run( noop );
         
@@ -378,7 +379,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         this.from( State.ENABLED_ADDRS ).to( State.ENABLED_RSC ).error( State.NOTREADY ).on( Transition.ENABLED_RSC ).run( Refresh.RESOURCES );
         this.from( State.ENABLED_RSC ).to( State.ENABLED_NET ).error( State.NOTREADY ).on( Transition.ENABLED_NET ).run( Refresh.NETWORKS );
         this.from( State.ENABLED_NET ).to( State.ENABLED_VMS ).error( State.NOTREADY ).on( Transition.ENABLED_VMS ).run( Refresh.INSTANCES );
-        this.from( State.ENABLED_VMS ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLED ).run( noop );
+        this.from( State.ENABLED_VMS ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLED ).run( ErrorStateListeners.FLUSHPENDING );
         
       }
     }.newAtomicMarkedState( );
@@ -390,10 +391,10 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       this.pendingErrors.drainTo( currentErrors );
       for ( Throwable t : currentErrors ) {
         Throwable filtered = Exceptions.filterStackTrace( t );
-        LOG.error( "Clearing error: " + filtered.getMessage( ), filtered );
+        LOG.debug( this.configuration + ": Clearing error: " + filtered.getMessage( ), filtered );
       }
     } else {
-      LOG.trace( this.toString( ) + " has no pending errors to clear." );
+      LOG.debug( this.configuration + ": no pending errors to clear." );
     }
   }
   
