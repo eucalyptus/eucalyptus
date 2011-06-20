@@ -99,6 +99,14 @@ public class ServiceExceptions {
       for ( CheckException checkEx : checkExHead ) {
         LifecycleEvents.fireExceptionEvent( parent, checkEx.getSeverity( ), checkEx );
       }
+      if( checkExHead.getSeverity( ).ordinal( ) >= Severity.ERROR.ordinal( ) ) {
+        try {
+          failureAction.apply( ex );
+        } catch ( Exception ex1 ) {
+          LOG.error( ex1, ex1 );
+        }
+        return true;
+      }
       for ( CheckException checkEx : checkExHead ) {
         if( checkEx.getSeverity( ).ordinal( ) >= Severity.ERROR.ordinal( ) ) {
           try {
