@@ -321,7 +321,6 @@ public class ServiceTransitions {
       } catch ( Throwable ex ) {
         if ( ServiceExceptions.filterExceptions( parent, ex ) ) {
           transitionCallback.fireException( ex );
-          throw new RuntimeException( ex );
         } else {
           transitionCallback.fire( );
         }
