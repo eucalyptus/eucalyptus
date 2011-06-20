@@ -200,10 +200,10 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       public boolean apply( final Cluster input ) {
         try {
           AsyncRequests.newRequest( new EnableServiceCallback( input ) ).sendSync( input.configuration );
-          if ( !Clusters.getInstance( ).contains( input.getName( ) ) ) {
+          try {
+            Clusters.getInstance( ).enable( input );
+          } catch ( NoSuchElementException ex ) {
             Clusters.getInstance( ).register( input );
-          } else {
-            Clusters.getInstance( ).enable( input.getName( ) );
           }
           return true;
         } catch ( Throwable t ) {
@@ -215,7 +215,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       @Override
       public boolean apply( final Cluster input ) {
         try {
-          Clusters.getInstance( ).disable( input.getName( ) );
+          Clusters.getInstance( ).disable( input );
           AsyncRequests.newRequest( new DisableServiceCallback( input ) ).sendSync( input.configuration );
           return true;
         } catch ( Throwable t ) {
@@ -318,12 +318,23 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   }
   
   enum ErrorStateListeners implements Callback<Cluster> {
-    FLUSHPENDING;
-    @Override
-    public void fire( Cluster t ) {
-      LOG.debug( "Clearing error logs for: " + t );
-      t.clearExceptions( );
-    }
+    FLUSHPENDING {
+      @Override
+      public void fire( Cluster t ) {
+        LOG.debug( "Clearing error logs for: " + t );
+        t.clearExceptions( );
+      }
+    },
+    CHECKPENDING {
+      @Override
+      public void fire( Cluster t ) {
+        if( !t.pendingErrors.isEmpty( ) ) {
+          Logs.exhaust( ).error( t.pendingErrors );
+        }
+        LOG.debug( "Clearing error logs for: " + t );
+        t.clearExceptions( );
+      }
+    };
   };
   
   public Cluster( final ClusterConfiguration configuration ) {
@@ -337,7 +348,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       {
         final TransitionAction<Cluster> noop = Transitions.noop( );
         this.in( Cluster.State.DISABLED ).run( Cluster.ServiceStateDispatch.DISABLED ).run( ErrorStateListeners.FLUSHPENDING );
-        this.in( Cluster.State.ENABLED ).run( Cluster.ServiceStateDispatch.ENABLED ).run( ErrorStateListeners.FLUSHPENDING );
+        this.in( Cluster.State.ENABLED ).run( Cluster.ServiceStateDispatch.ENABLED ).run( ErrorStateListeners.CHECKPENDING );
         this.from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( noop );
         
         this.from( State.STOPPED ).to( State.PENDING ).error( State.PENDING ).on( Transition.PRESTART ).run( noop );
@@ -553,7 +564,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
                                                                                                     State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
                                                                                                     State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
         ServiceRegistrationException fail = null;
-        for( int i = 0; i < CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
+        for ( int i = 0; i < CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
           CheckedListenableFuture<Cluster> res = Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
           try {
             res.get( );
@@ -564,7 +575,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             fail = new ServiceRegistrationException( "Failed to call enable() on cluster: " + this.configuration + " because of: " + ex.getMessage( ), ex );
           }
         }
-        if( fail != null ) {
+        if ( fail != null ) {
           throw fail;
         }
       } catch ( NoSuchElementException ex ) {
@@ -911,11 +922,11 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     currentErrors.addAll( this.pendingErrors );
     if ( !currentErrors.isEmpty( ) ) {
       CheckException ex = ServiceChecks.Severity.ERROR.transform( this.configuration, currentErrors );
-      ServiceStateDispatch.DISABLED.apply( this );
       throw ex;
-    } else if ( currentState.ordinal( ) < State.DISABLED.ordinal( ) || ( State.DISABLED.equals( currentState ) && Component.State.ENABLED.equals( externalState ) ) ) {
+    } else if ( currentState.ordinal( ) < State.DISABLED.ordinal( )
+                || ( State.DISABLED.equals( currentState ) && Component.State.ENABLED.equals( externalState ) ) ) {
       IllegalStateException ex = new IllegalStateException( "Cluster is currently " + currentState + ":  please see logs for additional information." );
-      ServiceStateDispatch.DISABLED.apply( this );
+      this.pendingErrors.add( ex );
       throw ServiceChecks.Severity.ERROR.transform( this.configuration, ex );
     }
   }
