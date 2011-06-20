@@ -115,7 +115,7 @@ public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T ex
           throw new TransitionListenerException( entry.getValue( ).getClass( ).getSimpleName( ) + "." + phase + "( ) returned false." );
         }
       } catch ( Throwable t ) {
-        LOG.error( t, t );
+        Logs.exhaust( ).error( t, t );
         return false;
       }
     }
@@ -163,7 +163,7 @@ public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T ex
         }, parent );
       } catch ( Throwable ex ) {
         Logs.exhaust( ).error( ex , ex );
-        throw new TransitionException( ex );
+        transitionCallback.fireException( new TransitionException( ex ) );
       }
     }
   }

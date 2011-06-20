@@ -260,7 +260,7 @@ public class ServiceTransitions {
     }
   }
   
-  private static void processTransition( final ServiceConfiguration parent, final Completion transitionCallback, final TransitionActions transitionAction ) throws Throwable {
+  private static void processTransition( final ServiceConfiguration parent, final TransitionActions transitionAction ) throws Throwable {
     ServiceTransitionCallback trans = null;
     try {
       if ( parent.isVmLocal( ) || ( parent.isHostLocal( ) && Bootstrap.isCloudController( ) ) ) {
@@ -317,7 +317,7 @@ public class ServiceTransitions {
                         parent.getFullName( ).toString( ),
                         parent.toString( ) ).debug( );
       try {
-        ServiceTransitions.processTransition( parent, transitionCallback, this );
+        ServiceTransitions.processTransition( parent, this );
       } catch ( Throwable ex ) {
         if ( ServiceExceptions.filterExceptions( parent, ex ) ) {
           transitionCallback.fireException( ex );
