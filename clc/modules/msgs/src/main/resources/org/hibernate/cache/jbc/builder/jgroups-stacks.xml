@@ -36,7 +36,6 @@
                  mcast_addr="${jgroups.udp.mcast_addr:228.10.10.10}"
                  mcast_port="${jgroups.udp.mcast_port:45588}"
                  bind_addr="${jgroups.udp.bind_addr:0.0.0.0}"
-                 bind_port="${jgroups.udp.bind_port:8778}"
                  tos="8"
                  ucast_recv_buf_size="20000000"
                  ucast_send_buf_size="640000"
