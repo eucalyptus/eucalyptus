@@ -352,7 +352,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.PENDING ) {
       {
         final TransitionAction<Cluster> noop = Transitions.noop( );
-        
+        this.in( Cluster.State.DISABLED ).run( Cluster.ComponentStatePredicates.DISABLED );
         this.from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( noop );
         
         this.from( State.STOPPED ).to( State.PENDING ).error( State.PENDING ).on( Transition.PRESTART ).run( noop );
@@ -920,13 +920,16 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   }
   
   public void check( ) throws CheckException, IllegalStateException {
+    Cluster.State currentState = this.stateMachine.getState( );
+    Component.State externalState = this.configuration.lookupState( );
     List<Throwable> currentErrors = Lists.newArrayList( );
     currentErrors.addAll( this.pendingErrors );
     if ( !currentErrors.isEmpty( ) ) {
       CheckException ex = ServiceChecks.Severity.ERROR.transform( this.configuration, currentErrors );
       throw ex;
-    } else if ( this.stateMachine.getState( ).ordinal( ) < State.DISABLED.ordinal( ) ) {
-      throw new IllegalStateException( "Cluster is currently NOTREADY:  please see logs for additional information" );
+    } else if ( currentState.ordinal( ) < State.DISABLED.ordinal( ) || ( State.DISABLED.equals( currentState ) && Component.State.ENABLED.equals( externalState ) ) ) {
+      IllegalStateException ex = new IllegalStateException( "Cluster is currently " + currentState + ":  please see logs for additional information." );
+      throw ServiceChecks.Severity.ERROR.transform( this.configuration, ex );
     }
   }
   

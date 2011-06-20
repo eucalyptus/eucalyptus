@@ -244,10 +244,11 @@ public abstract class AbstractNamedRegistry<TYPE extends HasName<? super TYPE>> 
     this.canHas.writeLock( ).lock( );
     try {
       TYPE obj = null;
-      if ( ( obj = this.activeMap.remove( name ) ) == null ) {
+      if ( ( obj = this.activeMap.remove( name ) ) == null  && !this.disabledMap.containsKey( name ) ) {
         throw new NoSuchElementException( "Can't find registered object: " + name + " in " + this.getClass( ).getSimpleName( ) );
-      } 
-      this.disabledMap.putIfAbsent( obj.getName( ), obj );
+      } else {
+        this.disabledMap.putIfAbsent( obj.getName( ), obj );
+      }
     } finally {
       this.canHas.writeLock( ).unlock( );
     }
@@ -261,10 +262,11 @@ public abstract class AbstractNamedRegistry<TYPE extends HasName<? super TYPE>> 
     this.canHas.writeLock( ).lock( );
     try {
       TYPE obj = null;
-      if ( ( obj = this.disabledMap.remove( name ) ) == null ) {
+      if ( ( obj = this.disabledMap.remove( name ) ) == null && !this.activeMap.containsKey( name ) ) {
         throw new NoSuchElementException( "Can't find registered object: " + name + " in " + this.getClass( ).getSimpleName( ) );
-      } 
-      this.activeMap.putIfAbsent( obj.getName( ), obj );
+      } else {
+        this.activeMap.putIfAbsent( obj.getName( ), obj );
+      }
     } finally {
       this.canHas.writeLock( ).unlock( );
     }
