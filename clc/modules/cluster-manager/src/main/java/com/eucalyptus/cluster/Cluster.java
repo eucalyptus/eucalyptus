@@ -420,7 +420,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             }
             break;
           case DISABLED:
-            if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_DISABLED ) && Component.State.DISABLED.equals( systemState ) ) {
+            if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_DISABLED ) && ( Component.State.DISABLED.equals( systemState ) || Component.State.NOTREADY.equals( systemState ) ) ) {
               transition = Automata.sequenceTransitions( this, State.DISABLED, State.DISABLED );
             } else if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_DISABLED ) && Component.State.ENABLED.equals( systemState ) ) {
               transition = Automata.sequenceTransitions( this, State.ENABLING, State.ENABLING_RESOURCES, State.ENABLING_NET, State.ENABLING_VMS,
