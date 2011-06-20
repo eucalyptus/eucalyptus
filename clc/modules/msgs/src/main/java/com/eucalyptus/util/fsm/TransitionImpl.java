@@ -161,8 +161,9 @@ public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T ex
             return true;
           }
         }, parent );
-      } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+      } catch ( Throwable ex ) {
+        Logs.exhaust( ).error( ex , ex );
+        throw new TransitionException( ex );
       }
     }
   }

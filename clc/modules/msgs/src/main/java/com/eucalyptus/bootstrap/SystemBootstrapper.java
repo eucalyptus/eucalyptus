@@ -134,8 +134,7 @@ public class SystemBootstrapper {
 
   private static void initializeSystem( ) {
     try {
-      GroovyUtil.exec( "com.eucalyptus.component.auth.SystemCredentialProvider.initializeCredentials( );" );
-      GroovyUtil.exec( "com.eucalyptus.bootstrap.MysqlDatabaseBootstrapper.initializeDatabase( );" );
+      GroovyUtil.evaluateScript( "initialize_cloud.groovy" );
       System.exit( 0 );
     } catch ( Throwable ex ) {
       LOG.error( ex , ex );

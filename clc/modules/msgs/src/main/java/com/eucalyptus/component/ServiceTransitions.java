@@ -95,6 +95,7 @@ import com.eucalyptus.empyrean.StopServiceType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
@@ -259,7 +260,7 @@ public class ServiceTransitions {
     }
   }
   
-  private static void processTransition( final ServiceConfiguration parent, final Completion transitionCallback, final TransitionActions transitionAction ) {
+  private static void processTransition( final ServiceConfiguration parent, final Completion transitionCallback, final TransitionActions transitionAction ) throws Throwable {
     ServiceTransitionCallback trans = null;
     try {
       if ( parent.isVmLocal( ) || ( parent.isHostLocal( ) && Bootstrap.isCloudController( ) ) ) {
@@ -283,14 +284,9 @@ public class ServiceTransitions {
         LOG.debug( "Executing transition: " + trans.getClass( ) + "." + transitionAction.name( ) + " for " + parent );
         trans.fire( parent );
       }
-      transitionCallback.fire( );
     } catch ( Throwable ex ) {
-      if ( ServiceExceptions.filterExceptions( parent, ex ) ) {
-        transitionCallback.fireException( ex );
-        throw new UndeclaredThrowableException( ex );
-      } else {
-        transitionCallback.fire( );
-      }
+      Logs.exhaust( ).error( ex, ex );
+      throw ex;
     }
   }
   
@@ -320,7 +316,16 @@ public class ServiceTransitions {
                         parent.lookupState( ).toString( ),
                         parent.getFullName( ).toString( ),
                         parent.toString( ) ).debug( );
-      ServiceTransitions.processTransition( parent, transitionCallback, this );
+      try {
+        ServiceTransitions.processTransition( parent, transitionCallback, this );
+      } catch ( Throwable ex ) {
+        if ( ServiceExceptions.filterExceptions( parent, ex ) ) {
+          transitionCallback.fireException( ex );
+          throw new RuntimeException( ex );
+        } else {
+          transitionCallback.fire( );
+        }
+      }
     }
     
     @Override
@@ -484,7 +489,7 @@ public class ServiceTransitions {
           parent.lookupComponent( ).getBootstrapper( ).check( );
           parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
         } catch ( Throwable ex ) {
-          LOG.error( ex, ex );
+          Logs.exhaust( ).error( ex, ex );
           throw ex;
         }
       }
