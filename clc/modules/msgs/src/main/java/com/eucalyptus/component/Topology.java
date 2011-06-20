@@ -508,8 +508,8 @@ public class Topology implements EventListener<Event> {
           try {
             TimeUnit.MILLISECONDS.sleep( 100 );
           } catch ( InterruptedException ex ) {
-            LOG.error( ex, ex );
             Thread.currentThread( ).interrupt( );
+            return;
           }
         }
         final List<ServiceConfiguration> disabledServices = Lists.newArrayList( );
