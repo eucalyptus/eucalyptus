@@ -272,6 +272,10 @@ public abstract class AbstractNamedRegistry<TYPE extends HasName<? super TYPE>> 
     }
   }
   
+  public boolean contains( TYPE obj ) {
+    return this.contains( obj.getName( ) );
+  }
+
   public boolean contains( String name ) {
     this.canHas.readLock( ).lock( );
     try {
