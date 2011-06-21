@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,109 +61,11 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package edu.ucsb.eucalyptus.cloud;
+import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.bootstrap.MysqlDatabaseBootstrapper;
+import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+import com.eucalyptus.component.ComponentDiscovery;
 
-import java.util.NavigableSet;
-import java.util.concurrent.ConcurrentSkipListSet;
-import com.eucalyptus.auth.principal.AccountFullName;
-
-public class NetworkToken implements Comparable {
-  private final String networkUuid;
-  private final String networkName;
-  
-  public String getNetworkUuid( ) {
-    return this.networkUuid;
-  }
-  
-  public String getNetworkName( ) {
-    return this.networkName;
-  }
-  
-  private final String          cluster;
-  private final Integer         vlan;
-  private NavigableSet<Integer> indexes = new ConcurrentSkipListSet<Integer>( );
-  private final String          name;
-  private final AccountFullName accountFullName;
-  
-  public NetworkToken( final String cluster, final AccountFullName accountFullName, final String networkName, final String networkUuid, final int vlan ) {
-    this.networkName = networkName;
-    this.networkUuid = networkUuid;
-    this.cluster = cluster;
-    this.vlan = vlan;
-    this.accountFullName = accountFullName;
-    this.name = this.accountFullName.getAccountNumber( ) + "-" + this.networkName;
-  }
-  
-  public String getCluster( ) {
-    return this.cluster;
-  }
-  
-  public Integer getVlan( ) {
-    return this.vlan;
-  }
-  
-  public String getAccountNumber( ) {
-    return this.accountFullName.getAccountNumber( );
-  }
-  
-  public AccountFullName getAccountFullName( ) {
-    return this.accountFullName;
-  }
-
-  public String getName( ) {
-    return this.name;
-  }
-  
-  @Override
-  public String toString( ) {
-    return String.format( "NetworkToken:%s:cluster=%s:vlan=%s:indexes=%s", this.name, this.cluster, this.vlan, this.indexes );
-  }
-  
-  @Override
-  public boolean equals( final Object o ) {
-    if ( this == o ) return true;
-    if ( !( o instanceof NetworkToken ) ) return false;
-    NetworkToken that = ( NetworkToken ) o;
-    
-    if ( !this.cluster.equals( that.cluster ) ) return false;
-    if ( !this.networkName.equals( that.networkName ) ) return false;
-    if ( !this.accountFullName.getAccountNumber( ).equals( that.accountFullName.getAccountNumber( ) ) ) return false;
-    
-    return true;
-  }
-  
-  @Override
-  public int hashCode( ) {
-    int result;
-    
-    result = networkName.hashCode( );
-    result = 31 * result + cluster.hashCode( );
-    result = 31 * result + accountFullName.getAccountNumber( ).hashCode( );
-    return result;
-  }
-  
-  @Override
-  public int compareTo( Object o ) {
-    NetworkToken that = ( NetworkToken ) o;
-    return ( !this.cluster.equals( that.cluster ) && ( this.vlan.equals( that.vlan ) ) )
-      ? this.vlan - that.vlan
-      : this.cluster.compareTo( that.cluster );
-  }
-  
-  public void removeIndex( Integer index ) {
-    this.indexes.remove( index );
-  }
-  
-  public void allocateIndex( Integer nextIndex ) {
-    this.indexes.add( nextIndex );
-  }
-  
-  public boolean isEmpty( ) {
-    return this.indexes.isEmpty( );
-  }
-  
-  public NavigableSet<Integer> getIndexes( ) {
-    return this.indexes;
-  }
-  
-}
+ServiceJarDiscovery.runDiscovery( new ComponentDiscovery( ) );
+SystemCredentialProvider.initializeCredentials( );
+MysqlDatabaseBootstrapper.initializeDatabase( );

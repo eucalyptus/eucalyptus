@@ -78,16 +78,21 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
 
 public class ComponentBootstrapper {
-  private static Logger                                 LOG                   = Logger.getLogger( ComponentBootstrapper.class );
-  private final Multimap<Bootstrap.Stage, Bootstrapper> bootstrappers         = ArrayListMultimap.create( );
-  private final Multimap<Bootstrap.Stage, Bootstrapper> disabledBootstrappers = ArrayListMultimap.create( );
+  private static Logger                                 LOG = Logger.getLogger( ComponentBootstrapper.class );
+  private final Multimap<Bootstrap.Stage, Bootstrapper> bootstrappers;
+  private final Multimap<Bootstrap.Stage, Bootstrapper> disabledBootstrappers;
   private final Component                               component;
   
   ComponentBootstrapper( Component component ) {
     super( );
     this.component = component;
+    Multimap<Bootstrap.Stage, Bootstrapper> a = ArrayListMultimap.create( );
+    this.bootstrappers = Multimaps.synchronizedMultimap( a );
+    Multimap<Bootstrap.Stage, Bootstrapper> b = ArrayListMultimap.create( );
+    this.disabledBootstrappers = Multimaps.synchronizedMultimap( b );
   }
   
   public void addBootstrapper( Bootstrapper bootstrapper ) {
@@ -142,7 +147,7 @@ public class ComponentBootstrapper {
     String name = transition.name( ).replaceAll( ".*_", "" ).toLowerCase( );
     this.updateBootstrapDependencies( );
     for ( Stage s : Bootstrap.Stage.values( ) ) {
-      for ( Bootstrapper b : this.bootstrappers.get( s ) ) {
+      for ( Bootstrapper b : Lists.newArrayList( this.bootstrappers.get( s ) ) ) {
         EventRecord.here( this.component.getClass( ), transition, this.component.getComponentId( ).name( ), "stage", s.name( ),
                           b.getClass( ).getCanonicalName( ) ).debug( );
         try {

@@ -92,37 +92,43 @@ public enum BaseDirectory {
   public String toString( ) {
     return System.getProperty( this.key );
   }
-
-  public File getFile() {
+  
+  public File getFile( ) {
     return new File( this.toString( ) );
   }
   
   public void create( ) {
     final File dir = new File( this.toString( ) );
-    if ( !dir.exists( ) ) { 
-      EventRecord.here( SubDirectory.class, EventType.SYSTEM_DIR_CREATE, this.name(), this.toString( ) ).info( );
+    if ( !dir.exists( ) ) {
+      EventRecord.here( SubDirectory.class, EventType.SYSTEM_DIR_CREATE, this.name( ), this.toString( ) ).info( );
       if( dir.mkdirs( ) ) {
-        this.assertPermissions( ); 
+        this.assertPermissions( );
       }
     }
   }
+  
+  public File getChildFile( String... path ) {
+    return new File( getChildPath( path ) );
+  }
+  
   public String getChildPath( String... args ) {
     String ret = this.toString( );
-    for( String s : args ) {
+    for ( String s : args ) {
       ret += File.separator + s;
     }
     return ret;
   }
+  
   private void assertPermissions( ) {
     try {
       GroovyUtil.exec( "chown " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
-      LOGG.error( ex , ex );
+      LOGG.error( ex, ex );
     }
     try {
-      GroovyUtil.exec( "chmod +rwX " + this.toString( ) );
+      GroovyUtil.exec( "chmod og+rwX " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
-      LOGG.error( ex , ex );
+      LOGG.error( ex, ex );
     }
   }
 }

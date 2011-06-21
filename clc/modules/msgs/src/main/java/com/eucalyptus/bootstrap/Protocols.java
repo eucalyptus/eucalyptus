@@ -90,8 +90,8 @@ import com.google.common.collect.Lists;
 
 public class Protocols {
   
-  private static Logger LOG = Logger.getLogger( Protocols.class );
-  public static short PROTOCOL_ID = 512;
+  private static Logger LOG         = Logger.getLogger( Protocols.class );
+  public static short   PROTOCOL_ID = 512;
   
   private static String registerProtocol( Protocol p ) {
     if ( ClassConfigurator.getProtocolId( p.getClass( ) ) == 0 ) {
@@ -115,11 +115,12 @@ public class Protocols {
                                                                    protocol.setMulticastAddress( MembershipConfiguration.getMulticastInetAddress( ) );
                                                                    protocol.setMulticastPort( MembershipConfiguration.getMulticastPort( ) );
                                                                    try {
-                                                                    protocol.setBindAddress( Internets.localHostAddress( ) );
-                                                                  } catch ( UnknownHostException ex ) {
-                                                                    LOG.error( ex , ex );
-                                                                  }
-//                                                                   protocol.setBindToAllInterfaces( true );
+                                                                     protocol.setBindAddress( Internets.localHostAddress( ) );
+                                                                     protocol.setBindPort( 8773 );
+                                                                     protocol.setBindToAllInterfaces( false );
+                                                                   } catch ( UnknownHostException ex ) {
+                                                                     LOG.error( ex, ex );
+                                                                   }
                                                                    protocol.setDiscardIncompatiblePackets( true );
                                                                    protocol.setMaxBundleSize( 60000 );
                                                                    protocol.setMaxBundleTimeout( 30 );

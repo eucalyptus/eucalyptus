@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,109 +61,73 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package edu.ucsb.eucalyptus.cloud;
+/*
+ * Hibernate, Relational Persistence for Idiomatic Java
+ *
+ * Copyright (c) 2007, Red Hat Middleware LLC or third-party contributors as
+ * indicated by the @author tags or express copyright attribution
+ * statements applied by the authors. Â All third-party contributions are
+ * distributed under license by Red Hat Middleware LLC.
+ *
+ * This copyrighted material is made available to anyone wishing to use, modify,
+ * copy, or redistribute it subject to the terms and conditions of the GNU
+ * Lesser General Public License, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this distribution; if not, write to:
+ * Free Software Foundation, Inc.
+ * 51 Franklin Street, Fifth Floor
+ * Boston, MA  02110-1301  USA
+ */
+/**
+ * {@link JBossCacheRegionFactory} that uses
+ * {@link MultiplexingCacheInstanceManager} as its
+ * {@link #getCacheInstanceManager() CacheInstanceManager}.
+ * <p>
+ * Supports separate JBoss Cache instances for entity, collection, query
+ * and timestamp caching, with the expectation that a single JGroups resource 
+ * (i.e. a multiplexed channel or a shared transport channel) will be shared 
+ * between the caches. JBoss Cache instances are created from a factory.
+ * </p>
+ * <p>
+ * This version instantiates the factory itself. See 
+ * {@link MultiplexingCacheInstanceManager} for configuration details. 
+ * </p>
+ *
+ * @deprecated Favor Infinispan integration; see HHH-5489 for details.
+ *
+ * @author Brian Stansberry
+ * @version $Revision$
+ */
 
-import java.util.NavigableSet;
-import java.util.concurrent.ConcurrentSkipListSet;
-import com.eucalyptus.auth.principal.AccountFullName;
+package com.eucalyptus.bootstrap;
 
-public class NetworkToken implements Comparable {
-  private final String networkUuid;
-  private final String networkName;
-  
-  public String getNetworkUuid( ) {
-    return this.networkUuid;
-  }
-  
-  public String getNetworkName( ) {
-    return this.networkName;
-  }
-  
-  private final String          cluster;
-  private final Integer         vlan;
-  private NavigableSet<Integer> indexes = new ConcurrentSkipListSet<Integer>( );
-  private final String          name;
-  private final AccountFullName accountFullName;
-  
-  public NetworkToken( final String cluster, final AccountFullName accountFullName, final String networkName, final String networkUuid, final int vlan ) {
-    this.networkName = networkName;
-    this.networkUuid = networkUuid;
-    this.cluster = cluster;
-    this.vlan = vlan;
-    this.accountFullName = accountFullName;
-    this.name = this.accountFullName.getAccountNumber( ) + "-" + this.networkName;
-  }
-  
-  public String getCluster( ) {
-    return this.cluster;
-  }
-  
-  public Integer getVlan( ) {
-    return this.vlan;
-  }
-  
-  public String getAccountNumber( ) {
-    return this.accountFullName.getAccountNumber( );
-  }
-  
-  public AccountFullName getAccountFullName( ) {
-    return this.accountFullName;
-  }
+import java.util.Properties;
+import org.hibernate.cache.jbc.builder.MultiplexingCacheInstanceManager;
+import org.hibernate.cache.jbc2.JBossCacheRegionFactory;
+public class CacheRegionFactory extends JBossCacheRegionFactory {
 
-  public String getName( ) {
-    return this.name;
-  }
-  
-  @Override
-  public String toString( ) {
-    return String.format( "NetworkToken:%s:cluster=%s:vlan=%s:indexes=%s", this.name, this.cluster, this.vlan, this.indexes );
-  }
-  
-  @Override
-  public boolean equals( final Object o ) {
-    if ( this == o ) return true;
-    if ( !( o instanceof NetworkToken ) ) return false;
-    NetworkToken that = ( NetworkToken ) o;
-    
-    if ( !this.cluster.equals( that.cluster ) ) return false;
-    if ( !this.networkName.equals( that.networkName ) ) return false;
-    if ( !this.accountFullName.getAccountNumber( ).equals( that.accountFullName.getAccountNumber( ) ) ) return false;
-    
-    return true;
-  }
-  
-  @Override
-  public int hashCode( ) {
-    int result;
-    
-    result = networkName.hashCode( );
-    result = 31 * result + cluster.hashCode( );
-    result = 31 * result + accountFullName.getAccountNumber( ).hashCode( );
-    return result;
-  }
-  
-  @Override
-  public int compareTo( Object o ) {
-    NetworkToken that = ( NetworkToken ) o;
-    return ( !this.cluster.equals( that.cluster ) && ( this.vlan.equals( that.vlan ) ) )
-      ? this.vlan - that.vlan
-      : this.cluster.compareTo( that.cluster );
-  }
-  
-  public void removeIndex( Integer index ) {
-    this.indexes.remove( index );
-  }
-  
-  public void allocateIndex( Integer nextIndex ) {
-    this.indexes.add( nextIndex );
-  }
-  
-  public boolean isEmpty( ) {
-    return this.indexes.isEmpty( );
-  }
-  
-  public NavigableSet<Integer> getIndexes( ) {
-    return this.indexes;
-  }
-  
+    /**
+     * FIXME Per the RegionFactory class Javadoc, this constructor version
+     * should not be necessary.
+     * 
+     * @param props The configuration properties
+     */
+    public CacheRegionFactory(Properties props) {
+        this();
+    }
+
+    /**
+     * Create a new MultiplexedJBossCacheRegionFactory.
+     * 
+     */
+    public CacheRegionFactory() {
+        super(new MultiplexingCacheInstanceManager());
+    }
+
 }

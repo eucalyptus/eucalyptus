@@ -115,7 +115,7 @@ public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T ex
           throw new TransitionListenerException( entry.getValue( ).getClass( ).getSimpleName( ) + "." + phase + "( ) returned false." );
         }
       } catch ( Throwable t ) {
-        LOG.error( t, t );
+        Logs.exhaust( ).error( t, t );
         return false;
       }
     }
@@ -152,18 +152,18 @@ public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T ex
     if ( this.action == null ) {
       throw new IllegalStateException( "Attempt to apply delegated transition before it is defined." );
     } else {
-      this.fireListeners( Phases.leave, new Predicate<TransitionListener<P>>( ) {
-        @Override
-        public boolean apply( TransitionListener<P> listener ) {
-          listener.leave( parent );
-          return true;
-        }
-      }, parent );
       try {
         this.action.leave( parent, transitionCallback );
-      } catch ( Exception ex ) {
-        LOG.error( ex , ex );
-        transitionCallback.fireException( ex );
+        this.fireListeners( Phases.leave, new Predicate<TransitionListener<P>>( ) {
+          @Override
+          public boolean apply( TransitionListener<P> listener ) {
+            listener.leave( parent );
+            return true;
+          }
+        }, parent );
+      } catch ( Throwable ex ) {
+        Logs.exhaust( ).error( ex , ex );
+        transitionCallback.fireException( new TransitionException( ex ) );
       }
     }
   }

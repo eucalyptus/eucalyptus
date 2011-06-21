@@ -80,7 +80,7 @@ public class AsyncRequests {
         
         @Override
         public void fire( B msg ) {
-          LOG.debug( msg );
+          LOG.debug( msg.toSimpleString( ) );
         }
       } ).sendSync( config );
     } catch ( ExecutionException ex ) {
