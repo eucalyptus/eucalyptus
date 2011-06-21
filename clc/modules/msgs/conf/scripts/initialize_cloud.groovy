@@ -1,3 +1,5 @@
+import com.eucalyptus.system.DirectoryBootstrapper;
+
 /*******************************************************************************
  * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
@@ -84,9 +86,10 @@ import com.mysql.management.MysqldResource
 
 Logger LOG = Logger.getLogger( initialize_cloud.class );
 
-[ new ComponentDiscovery( ), new ServiceBuilderDiscovery( ), new PersistenceContextDiscovery( ) ].each{
+[ ComponentDiscovery( ), new ServiceBuilderDiscovery( ), new PersistenceContextDiscovery( ) ].each{
   ServiceJarDiscovery.runDiscovery(  it );
 }
+new DirectoryBootstrapper( ).load( );
 SystemCredentialProvider.initialize( );
 Component dbComp = Components.lookup( Database.class );
 try {
