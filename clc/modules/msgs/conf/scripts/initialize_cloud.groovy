@@ -84,7 +84,9 @@ import com.mysql.management.MysqldResource
 
 Logger LOG = Logger.getLogger( initialize_cloud.class );
 
-ServiceJarDiscovery.runDiscovery( new ComponentDiscovery( ), new ServiceBuilderDiscovery( ), new PersistenceContextDiscovery( ) );
+[ new ComponentDiscovery( ), new ServiceBuilderDiscovery( ), new PersistenceContextDiscovery( ) ].each{
+  ServiceJarDiscovery.runDiscovery(  it );
+}
 SystemCredentialProvider.initialize( );
 Component dbComp = Components.lookup( Database.class );
 try {
