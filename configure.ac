@@ -112,8 +112,8 @@ fi
 # Fix the paths for includes and libraries
 if test -n "${AXIS2C_HOME}" ; then
         if test -d "${AXIS2C_HOME}"/include ; then
-                for x in `ls ${AXIS2C_HOME}/include`; do
-                        INCLUDES="${INCLUDES} -I${AXIS2C_HOME}/include/$x"
+                for x in ${AXIS2C_HOME}/include/axis2-* ${AXIS2C_HOME}/include/rampart-*; do
+                        INCLUDES="${INCLUDES} -I$x"
                 done
         fi
         if test -d "${AXIS2C_HOME}"/lib ; then
