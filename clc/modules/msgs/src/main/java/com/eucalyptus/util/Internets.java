@@ -79,6 +79,8 @@ import java.util.Comparator;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -99,6 +101,16 @@ public class Internets {
     InetAddress laddr = null;
     if ( !Bootstrap.parseBindAddrs( ).isEmpty( ) ) {
       laddr = lookupBindAddresses( );
+    }
+    if ( laddr == null ) {
+      try {
+        String localAddr = ( String ) GroovyUtil.eval( "hi=\"ip -o route get 4.2.2.1\".execute();hi.waitFor();hi.text.replaceAll(\".*src *\",\"\").replaceAll(\" .*\",\"\")" );
+        laddr = InetAddress.getByName( localAddr );
+      } catch ( ScriptExecutionFailedException ex ) {
+        LOG.error( ex , ex );
+      } catch ( UnknownHostException ex ) {
+        LOG.error( ex , ex );
+      }
     }
     if ( laddr == null ) {
       laddr = Internets.getAllInetAddresses( ).get( 0 );
