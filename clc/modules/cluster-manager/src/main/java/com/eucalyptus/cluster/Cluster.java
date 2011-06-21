@@ -182,7 +182,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   private boolean                                        hasClusterCert               = false;
   private boolean                                        hasNodeCert                  = false;
   
-  enum ComponentStatePredicates implements Predicate<Cluster> {
+  enum ServiceStateDispatch implements Predicate<Cluster> {
     STARTED {
       
       @Override
@@ -200,26 +200,14 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       public boolean apply( final Cluster input ) {
         try {
           AsyncRequests.newRequest( new EnableServiceCallback( input ) ).sendSync( input.configuration );
+          if ( !Clusters.getInstance( ).contains( input.getName( ) ) ) {
+            Clusters.getInstance( ).register( input );
+          } else {
+            Clusters.getInstance( ).enable( input.getName( ) );
+          }
           return true;
         } catch ( Throwable t ) {
           return input.filterExceptions( t );
-        } finally {
-          try {
-            if ( !Clusters.getInstance( ).contains( input.getName( ) ) ) {
-              Clusters.getInstance( ).register( input );
-            } else {
-              try {
-                Clusters.getInstance( ).enable( input.getName( ) );
-              } catch ( NoSuchElementException ex ) {
-                Clusters.getInstance( ).register( input );
-                LOG.error( ex, ex );
-              } catch ( Exception ex ) {
-                LOG.error( ex, ex );
-              }
-            }
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
-          }
         }
       }
     },
@@ -228,10 +216,6 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       public boolean apply( final Cluster input ) {
         try {
           Clusters.getInstance( ).disable( input.getName( ) );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-        }
-        try {
           AsyncRequests.newRequest( new DisableServiceCallback( input ) ).sendSync( input.configuration );
           return true;
         } catch ( Throwable t ) {
@@ -352,7 +336,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.PENDING ) {
       {
         final TransitionAction<Cluster> noop = Transitions.noop( );
-        
+        this.in( Cluster.State.DISABLED ).run( Cluster.ServiceStateDispatch.DISABLED );
         this.from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( noop );
         
         this.from( State.STOPPED ).to( State.PENDING ).error( State.PENDING ).on( Transition.PRESTART ).run( noop );
@@ -364,10 +348,10 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         this.from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.NOTREADYCHECK ).run( Refresh.SERVICEREADY );
         
         this.from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLEDCHECK ).run( Refresh.SERVICEREADY );
-        this.from( State.DISABLED ).to( State.ENABLING ).error( State.DISABLED ).on( Transition.ENABLE ).run( Cluster.ComponentStatePredicates.ENABLED );
+        this.from( State.DISABLED ).to( State.ENABLING ).error( State.DISABLED ).on( Transition.ENABLE ).run( Cluster.ServiceStateDispatch.ENABLED );
         this.from( State.DISABLED ).to( State.STOPPED ).error( State.PENDING ).on( Transition.STOP ).run( noop );
         
-        this.from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLE ).run( Cluster.ComponentStatePredicates.DISABLED );
+        this.from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLE ).run( Cluster.ServiceStateDispatch.DISABLED );
         
         this.from( State.ENABLING ).to( State.ENABLING_RESOURCES ).error( State.NOTREADY ).on( Transition.ENABLING_RESOURCES ).run( Refresh.RESOURCES );
         this.from( State.ENABLING_RESOURCES ).to( State.ENABLING_NET ).error( State.NOTREADY ).on( Transition.ENABLING_NET ).run( Refresh.NETWORKS );
@@ -920,13 +904,18 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   }
   
   public void check( ) throws CheckException, IllegalStateException {
+    Cluster.State currentState = this.stateMachine.getState( );
+    Component.State externalState = this.configuration.lookupState( );
     List<Throwable> currentErrors = Lists.newArrayList( );
     currentErrors.addAll( this.pendingErrors );
     if ( !currentErrors.isEmpty( ) ) {
       CheckException ex = ServiceChecks.Severity.ERROR.transform( this.configuration, currentErrors );
+      ServiceStateDispatch.DISABLED.apply( this );
       throw ex;
-    } else if ( this.stateMachine.getState( ).ordinal( ) < State.DISABLED.ordinal( ) ) {
-      throw new IllegalStateException( "Cluster is currently NOTREADY:  please see logs for additional information" );
+    } else if ( currentState.ordinal( ) < State.DISABLED.ordinal( ) || ( State.DISABLED.equals( currentState ) && Component.State.ENABLED.equals( externalState ) ) ) {
+      IllegalStateException ex = new IllegalStateException( "Cluster is currently " + currentState + ":  please see logs for additional information." );
+      ServiceStateDispatch.DISABLED.apply( this );
+      throw ServiceChecks.Severity.ERROR.transform( this.configuration, ex );
     }
   }
   

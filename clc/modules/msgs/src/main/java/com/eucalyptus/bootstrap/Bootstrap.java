@@ -467,7 +467,7 @@ public class Bootstrap {
   }
   
   public static boolean isInitializeSystem( ) {
-    return Boolean.TRUE.parseBoolean( System.getProperty( "euca.initialize" ) );
+    return System.getProperty( "euca.initialize" ) != null;
   }
   
   /**

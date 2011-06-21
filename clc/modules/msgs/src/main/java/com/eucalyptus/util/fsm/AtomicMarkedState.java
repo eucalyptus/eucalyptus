@@ -358,12 +358,8 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     public void fire( ) {
       try {
         this.transition.enter( AtomicMarkedState.this.parent );
+        this.transition.after( AtomicMarkedState.this.parent );
         AtomicMarkedState.this.commit( );
-        try {
-          this.transition.after( AtomicMarkedState.this.parent );
-        } catch ( Throwable t ) {
-          LOG.error( t, t );
-        }
       } catch ( Throwable t ) {
         AtomicMarkedState.this.error( t );
       }

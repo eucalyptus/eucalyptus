@@ -130,16 +130,17 @@ public class Automata {
               return res;
             } catch ( final IllegalStateException ex ) {
               Logs.exhaust( ).error( ex, ex );
-              return Futures.predestinedFailedFuture( ex );
+              throw ex;
+//              return Futures.predestinedFailedFuture( ex );
             } catch ( final ExistingTransitionException ex ) {
               Logs.exhaust( ).error( ex, ex );
-              return Futures.predestinedFailedFuture( ex.getCause( ) );
+              throw new UndeclaredThrowableException( ex.getCause( ) );
             } catch ( final UndeclaredThrowableException ex ) {
               Logs.exhaust( ).error( ex, ex );
-              return Futures.predestinedFailedFuture( ex.getCause( ) );
+              throw ex;
             } catch ( final Throwable ex ) {
               Logs.exhaust( ).error( ex, ex );
-              return Futures.predestinedFailedFuture( ex );
+              throw new UndeclaredThrowableException( ex );
             }
           }
         } );

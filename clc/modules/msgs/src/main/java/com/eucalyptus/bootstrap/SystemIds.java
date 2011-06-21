@@ -87,6 +87,10 @@ public class SystemIds {
     return createCloudUniqueName( "cloud" );
   }
   
+  public static String cacheName( ) {
+    return createCloudUniqueName( "cache" );
+  }
+  
   public static String membershipGroupName( ) {
     return createCloudUniqueName( "membership" );
   }
