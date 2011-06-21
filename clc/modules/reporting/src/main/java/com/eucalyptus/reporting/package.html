@@ -31,10 +31,12 @@ aggregating statistics, and so on.
      keyed by a (user,account,cluster,avail_zone,timestamp) tuple, and mapped
      to the DB using hibernate. A UsageSnapshot consists of a <i>SnapshotKey</i>
      object and a <i>UsageData</i> object.</li>
- <li><i>SnapshotKey</i> - A key for usage snapshots. Consists of (user,account,
+ <ul>
+  <li><i>SnapshotKey</i> - A key for usage snapshots. Consists of (user,account,
      cluster,avail_zone,timestamp).</li>
- <li><i>UsageData</i> - Statistics of usage (like disk bandwidth used or S3
+  <li><i>UsageData</i> - Statistics of usage (like disk bandwidth used or S3
      objects used) at a single moment in time.</li>
+ </ul>
  <li><i>UsageSummary</i> - Contains aggregated resource usage over an
      extended period of time. Aggregates several UsageSnapshots.</li>
  <li><i>UsageLog</i> - A singleton object which allows retrieval of statistics
