@@ -61,94 +61,73 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component;
+/*
+ * Hibernate, Relational Persistence for Idiomatic Java
+ *
+ * Copyright (c) 2007, Red Hat Middleware LLC or third-party contributors as
+ * indicated by the @author tags or express copyright attribution
+ * statements applied by the authors. Â All third-party contributions are
+ * distributed under license by Red Hat Middleware LLC.
+ *
+ * This copyrighted material is made available to anyone wishing to use, modify,
+ * copy, or redistribute it subject to the terms and conditions of the GNU
+ * Lesser General Public License, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this distribution; if not, write to:
+ * Free Software Foundation, Inc.
+ * 51 Franklin Street, Fifth Floor
+ * Boston, MA  02110-1301  USA
+ */
+/**
+ * {@link JBossCacheRegionFactory} that uses
+ * {@link MultiplexingCacheInstanceManager} as its
+ * {@link #getCacheInstanceManager() CacheInstanceManager}.
+ * <p>
+ * Supports separate JBoss Cache instances for entity, collection, query
+ * and timestamp caching, with the expectation that a single JGroups resource 
+ * (i.e. a multiplexed channel or a shared transport channel) will be shared 
+ * between the caches. JBoss Cache instances are created from a factory.
+ * </p>
+ * <p>
+ * This version instantiates the factory itself. See 
+ * {@link MultiplexingCacheInstanceManager} for configuration details. 
+ * </p>
+ *
+ * @deprecated Favor Infinispan integration; see HHH-5489 for details.
+ *
+ * @author Brian Stansberry
+ * @version $Revision$
+ */
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.component.Component.State;
-import com.eucalyptus.component.ServiceChecks.CheckException;
-import com.eucalyptus.component.ServiceChecks.Severity;
-import com.eucalyptus.component.Topology.ServiceKey;
-import com.google.common.base.Predicate;
+package com.eucalyptus.bootstrap;
 
-public class ServiceExceptions {
-  
-  private static Logger LOG = Logger.getLogger( ServiceExceptions.class );
-  
-  enum NoopErrorFilter implements Predicate<Throwable> {
-    INSTANCE;
-    
-    @Override
-    public boolean apply( final Throwable input ) {
-      LOG.error( input, input );
-      return true;
+import java.util.Properties;
+import org.hibernate.cache.jbc.builder.MultiplexingCacheInstanceManager;
+import org.hibernate.cache.jbc2.JBossCacheRegionFactory;
+public class CacheRegionFactory extends JBossCacheRegionFactory {
+
+    /**
+     * FIXME Per the RegionFactory class Javadoc, this constructor version
+     * should not be necessary.
+     * 
+     * @param props The configuration properties
+     */
+    public CacheRegionFactory(Properties props) {
+        this();
     }
-    
-  }
-    
-  /**
-   * @param parent
-   * @param ex
-   * @param failureAction
-   * @return true if the error is fatal and the transition should be aborted
-   */
-  public static final boolean filterExceptions( final ServiceConfiguration parent, final Throwable ex, final Predicate<Throwable> failureAction ) {
-    if ( ex instanceof CheckException ) {//go through all the exceptions and look for things with Severity greater than or equal to ERROR
-      CheckException checkExHead = ( CheckException ) ex;
-      LOG.error( "Transition failed on " + parent.lookupComponent( ).getName( ) + " " + checkExHead.getSeverity( ) + " due to " + ex.toString( ), ex );
-      for ( CheckException checkEx : checkExHead ) {
-        LifecycleEvents.fireExceptionEvent( parent, checkEx.getSeverity( ), checkEx );
-      }
-      if( checkExHead.getSeverity( ).ordinal( ) >= Severity.ERROR.ordinal( ) ) {
-        try {
-          failureAction.apply( ex );
-        } catch ( Exception ex1 ) {
-          LOG.error( ex1, ex1 );
-        }
-        return true;
-      }
-      for ( CheckException checkEx : checkExHead ) {
-        if( checkEx.getSeverity( ).ordinal( ) >= Severity.ERROR.ordinal( ) ) {
-          try {
-            failureAction.apply( ex );
-          } catch ( Exception ex1 ) {
-            LOG.error( ex1, ex1 );
-          }
-          return true;
-        }
-      }
-      return false;
-    } else {//treat generic exceptions as always being Severity.ERROR
-      LOG.error( "Transition failed on " + parent.lookupComponent( ).getName( ) + " due to " + ex.toString( ), ex );
-      LifecycleEvents.fireExceptionEvent( parent, Severity.ERROR, ex );
-      try {
-        failureAction.apply( ex );
-      } catch ( Exception ex1 ) {
-        LOG.error( ex1, ex1 );
-      }
-      return true;
+
+    /**
+     * Create a new MultiplexedJBossCacheRegionFactory.
+     * 
+     */
+    public CacheRegionFactory() {
+        super(new MultiplexingCacheInstanceManager());
     }
-  }
-  
-  public static final boolean filterExceptions( final ServiceConfiguration parent, final Throwable ex ) {
-    return filterExceptions( parent, ex, NoopErrorFilter.INSTANCE );
-  }
-  
-  public static final Predicate<Throwable> maybeDisableService( final ServiceConfiguration parent ) {
-    return new Predicate<Throwable>( ) {
-      
-      @Override
-      public boolean apply( final Throwable ex ) {
-        if ( State.ENABLED.isIn( parent ) && ( parent.isVmLocal( ) || ( Bootstrap.isCloudController( ) && parent.isHostLocal( ) ) ) ) {
-          try {
-            Topology.disable( parent );
-          } catch ( ServiceRegistrationException ex1 ) {
-            LOG.error( "Transition failed on " + parent.lookupComponent( ).getName( ) + " due to " + ex.toString( ), ex );
-          }
-        }
-        return true;
-      }
-      
-    };
-  }
+
 }

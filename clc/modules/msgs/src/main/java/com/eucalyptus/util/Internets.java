@@ -98,38 +98,44 @@ public class Internets {
   private static InetAddress determineLocalAddress( ) {
     InetAddress laddr = null;
     if ( !Bootstrap.parseBindAddrs( ).isEmpty( ) ) {
-      List<InetAddress> locallyBoundAddrs = Internets.getAllInetAddresses( );
-      boolean err = false;
-      for ( String addrStr : Bootstrap.parseBindAddrs( ) ) {
-        try {
-          InetAddress next = InetAddress.getByName( addrStr );
-          laddr = ( laddr == null )
-            ? next
-            : laddr;
-          NetworkInterface iface = NetworkInterface.getByInetAddress( next );
-          if ( locallyBoundAddrs.contains( locallyBoundAddrs ) ) {
-            localHostAddrList.add( next );
-            LOG.info( "Identified local bind address: " + addrStr + " on interface " + iface.toString( ) );
-          } else {
-            LOG.error( "Ignoring --bind-addr=" + addrStr + " as it is not bound to a local interface.\n  Known addresses are: "
-                       + Joiner.on( ", " ).join( locallyBoundAddrs ) );
-          }
-        } catch ( UnknownHostException ex ) {
-          LOG.fatal( "Invalid argument given for --bind-addr=" + addrStr + " " + ex.getMessage( ) );
-          LOG.debug( ex, ex );
-          err = true;
-        } catch ( SocketException ex ) {
-          LOG.fatal( "Invalid argument given for --bind-addr=" + addrStr + " " + ex.getMessage( ) );
-          LOG.debug( ex, ex );
-          err = true;
-        }
-        if ( err ) {
-          System.exit( 1 );
-        }
-      }
+      laddr = lookupBindAddresses( );
     }
     if ( laddr == null ) {
       laddr = Internets.getAllInetAddresses( ).get( 0 );
+    }
+    return laddr;
+  }
+
+  private static InetAddress lookupBindAddresses( ) {
+    InetAddress laddr = null;
+    List<InetAddress> locallyBoundAddrs = Internets.getAllInetAddresses( );
+    boolean err = false;
+    for ( String addrStr : Bootstrap.parseBindAddrs( ) ) {
+      try {
+        InetAddress next = InetAddress.getByName( addrStr );
+        laddr = ( laddr == null )
+          ? next
+          : laddr;
+        NetworkInterface iface = NetworkInterface.getByInetAddress( next );
+        if ( locallyBoundAddrs.contains( locallyBoundAddrs ) ) {
+          localHostAddrList.add( next );
+          LOG.info( "Identified local bind address: " + addrStr + " on interface " + iface.toString( ) );
+        } else {
+          LOG.error( "Ignoring --bind-addr=" + addrStr + " as it is not bound to a local interface.\n  Known addresses are: "
+                     + Joiner.on( ", " ).join( locallyBoundAddrs ) );
+        }
+      } catch ( UnknownHostException ex ) {
+        LOG.fatal( "Invalid argument given for --bind-addr=" + addrStr + " " + ex.getMessage( ) );
+        LOG.debug( ex, ex );
+        err = true;
+      } catch ( SocketException ex ) {
+        LOG.fatal( "Invalid argument given for --bind-addr=" + addrStr + " " + ex.getMessage( ) );
+        LOG.debug( ex, ex );
+        err = true;
+      }
+      if ( err ) {
+        System.exit( 1 );
+      }
     }
     return laddr;
   }
@@ -194,7 +200,7 @@ public class Internets {
                && !addr.isLoopbackAddress( )
                && !addr.isLinkLocalAddress( )
                && !addr.isSiteLocalAddress( )
-               && !addr.getHostAddress( ).startsWith( "192.168.122." ) ) {
+               && !addr.getHostAddress( ).contains( "192.168.122." ) ) {
             addrs.add( addr );
           }
         }
@@ -206,7 +212,7 @@ public class Internets {
                && !addr.isLoopbackAddress( )
                && !addr.isLinkLocalAddress( )
                && !addrs.contains( addr.getHostAddress( ) )
-               && !addr.getHostAddress( ).startsWith( "192.168.122." ) ) {
+               && !addr.getHostAddress( ).contains( "192.168.122." ) ) {
             addrs.add( addr );
           }
         }

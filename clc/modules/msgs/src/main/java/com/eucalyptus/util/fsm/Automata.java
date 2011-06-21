@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -124,22 +124,26 @@ public class Automata {
           
           @Override
           public CheckedListenableFuture<P> call( ) {
+            S fromState = fsm.getState( );
             try {
               CheckedListenableFuture<P> res = fsm.transition( toState );
               res.get( );
+              Logs.exhaust( ).debug( fsm.toString( ) + " transitioned from " + fromState + "->" + toState );
               return res;
             } catch ( final IllegalStateException ex ) {
+              Logs.exhaust( ).debug( fsm.toString( ) + " failed transitioned from " + fromState + "->" + toState );
               Logs.exhaust( ).error( ex, ex );
-              return Futures.predestinedFailedFuture( ex );
+              throw ex;
+//              return Futures.predestinedFailedFuture( ex );
             } catch ( final ExistingTransitionException ex ) {
               Logs.exhaust( ).error( ex, ex );
-              return Futures.predestinedFailedFuture( ex.getCause( ) );
+              throw new UndeclaredThrowableException( ex.getCause( ) );
             } catch ( final UndeclaredThrowableException ex ) {
               Logs.exhaust( ).error( ex, ex );
-              return Futures.predestinedFailedFuture( ex.getCause( ) );
+              throw ex;
             } catch ( final Throwable ex ) {
               Logs.exhaust( ).error( ex, ex );
-              return Futures.predestinedFailedFuture( ex );
+              throw new UndeclaredThrowableException( ex );
             }
           }
         } );

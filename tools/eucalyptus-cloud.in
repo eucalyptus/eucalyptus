@@ -173,6 +173,26 @@ read_ws_list() {
 	done
 }
 
+do_upgrade() {
+        while IFS=: read -r a b; do
+                OLD_EUCA_VERSION=$a
+                OLD_EUCA_PATH=$b
+        done < $EUCALYPTUS/etc/eucalyptus/eucalyptus.upgrade
+        #Attempt db upgrade
+        echo "Attempting database upgrade from $OLD_EUCA_VERSION at $OLD_EUCA_PATH..."
+	$EUCALYPTUS/usr/share/eucalyptus/euca_upgrade --old $OLD_EUCA_PATH --new $EUCALYPTUS --db
+	case "$?" in
+	0) 
+        	echo "done."
+		rm -f $EUCALYPTUS/etc/eucalyptus/eucalyptus.upgrade
+		;;
+        1)	
+		echo "Upgrade failed. Aborting start."
+		exit 1
+		;;
+	esac
+}
+
 do_start() {
 	if [ -z "$CLOUD_OPTS" ]; then
 		local CLOUD_OPTS="--log-level=INFO"
@@ -241,6 +261,11 @@ do_start() {
 		NAME="none"
 		return 0
 	fi
+
+        #Check if we need to upgrade
+        if [ -e $EUCALYPTUS/etc/eucalyptus/eucalyptus.upgrade ]; then
+                do_upgrade
+        fi
 
     # try log4j for a bit, see if anyone panics. $EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
 	ulimit -n 4096

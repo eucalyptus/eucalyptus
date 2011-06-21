@@ -12,7 +12,7 @@ import groovy.sql.Sql;
 import com.eucalyptus.upgrade.AbstractUpgradeScript;
 import com.eucalyptus.upgrade.StandalonePersistence;
 import com.eucalyptus.entities.PersistenceContexts;
-import com.eucalyptus.entities.Counters;
+import com.eucalyptus.util.Counters;
 import com.eucalyptus.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
