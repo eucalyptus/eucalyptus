@@ -400,7 +400,13 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   
   private void fireClockTick( final Hertz tick ) {
     try {
-      Component.State systemState = this.configuration.lookupState( ); 
+      Component.State systemState;
+      try {
+        systemState = this.configuration.lookupState( );
+      } catch ( NoSuchElementException ex1 ) {
+        this.stop( );
+        return;
+      } 
       boolean initialized = systemState.ordinal( ) > Component.State.LOADED.ordinal( );
       if ( !this.stateMachine.isBusy( ) ) {
         Callable<CheckedListenableFuture<Cluster>> transition = null;
@@ -536,23 +542,23 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   }
   
   public void start( ) throws ServiceRegistrationException {
-    Clusters.getInstance( ).registerDisabled( this );
     try {
+      Clusters.getInstance( ).registerDisabled( this );
       ListenerRegistry.getInstance( ).register( ClockTick.class, Cluster.this );
       ListenerRegistry.getInstance( ).register( Hertz.class, Cluster.this );
-    } catch ( Exception ex1 ) {
-      LOG.error( ex1, ex1 );
-    }
-    if ( !State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
-      final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( Cluster.this, State.PENDING, State.AUTHENTICATING,
-                                                                                                  State.STARTING,
-                                                                                                  State.STARTING_NOTREADY, State.NOTREADY, State.DISABLED );
-      try {
-        transition.call( ).get( );
-      } catch ( Exception ex ) {
-        Logs.exhaust( ).error( ex, ex );
-        throw new ServiceRegistrationException( "Failed to call start() on cluster: " + this.configuration + " because of: " + ex.getMessage( ), ex );
+      if ( !State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
+        final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( Cluster.this, State.PENDING, State.AUTHENTICATING,
+                                                                                                    State.STARTING,
+                                                                                                    State.STARTING_NOTREADY, State.NOTREADY, State.DISABLED );
+        try {
+          transition.call( ).get( );
+        } catch ( Exception ex ) {
+          Logs.exhaust( ).error( ex, ex );
+          throw new ServiceRegistrationException( "Failed to call start() on cluster: " + this.configuration + " because of: " + ex.getMessage( ), ex );
+        }
       }
+    } catch ( Exception ex ) {
+      this.stop( );
     }
   }
   
@@ -611,11 +617,17 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   
   public void stop( ) throws ServiceRegistrationException {
     final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.DISABLED, State.STOPPED );
-    Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
-    ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
-    ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
-//    this.configuration.lookupService( ).getEndpoint( ).stop( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
-    Clusters.getInstance( ).deregister( this.getName( ) );
+    try {
+      Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
+    } catch ( InterruptedException ex ) {
+      Thread.currentThread( ).interrupt( );
+    } catch ( ExecutionException ex ) {
+      LOG.error( ex , ex );
+    } finally {
+      ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
+      ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
+      Clusters.getInstance( ).deregister( this.getName( ) );
+    }
   }
   
   @Override

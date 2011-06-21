@@ -106,9 +106,9 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
     return new StateMachineBuilder<ServiceConfiguration, State, Transition>( this.parent, State.PRIMORDIAL ) {
       {
         in( State.ENABLED ).run( ServiceTransitions.StateCallbacks.PIPELINES_ADD );
-        out( State.DISABLED ).run( ServiceTransitions.StateCallbacks.PIPELINES_REMOVE );
-        in( State.LOADED ).run( ServiceTransitions.StateCallbacks.ENDPOINT_START ).run( ServiceTransitions.StateCallbacks.PROPERTIES_ADD );
+        in( State.LOADED ).run( ServiceTransitions.StateCallbacks.ENDPOINT_START );
         in( State.STOPPED ).run( ServiceTransitions.StateCallbacks.ENDPOINT_STOP ).run( ServiceTransitions.StateCallbacks.PROPERTIES_REMOVE );
+        in( State.NOTREADY ).run( ServiceTransitions.StateCallbacks.PROPERTIES_REMOVE );
         from( State.PRIMORDIAL ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.INITIALIZING ).run( noop );
         from( State.PRIMORDIAL ).to( State.BROKEN ).error( State.BROKEN ).on( Transition.FAILED_TO_PREPARE ).run( noop );
         from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).on( Transition.LOADING ).run( ServiceTransitions.TransitionActions.LOAD );
