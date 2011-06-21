@@ -77,13 +77,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import org.apache.http.conn.util.InetAddressUtils;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.net.InetAddresses;
 
 public class Internets {
   private static Logger                  LOG               = Logger.getLogger( Internets.class );
@@ -101,11 +105,24 @@ public class Internets {
       laddr = lookupBindAddresses( );
     }
     if ( laddr == null ) {
+      try {
+        String localAddr = ( String ) GroovyUtil.eval( "hi=\"ip -o route get 4.2.2.1\".execute();hi.waitFor();hi.text" );
+        String[] parts = localAddr.replaceAll( ".*src *", "" ).split( " " );
+        if ( parts.length >= 1 ) {
+          laddr = InetAddresses.forString( parts[0] );
+        }
+      } catch ( ScriptExecutionFailedException ex ) {
+        LOG.error( ex, ex );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+      }
+    }
+    if ( laddr == null ) {
       laddr = Internets.getAllInetAddresses( ).get( 0 );
     }
     return laddr;
   }
-
+  
   private static InetAddress lookupBindAddresses( ) {
     InetAddress laddr = null;
     List<InetAddress> locallyBoundAddrs = Internets.getAllInetAddresses( );

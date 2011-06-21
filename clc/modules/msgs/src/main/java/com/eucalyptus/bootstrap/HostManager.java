@@ -185,18 +185,18 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   }
   
   private static JChannel buildChannel( ) {
-    final JChannel channel = new JChannel( false );
-    channel.setName( Internets.localhostIdentifier( ) );
-    ProtocolStack stack = new ProtocolStack( );
-    channel.setProtocolStack( stack );
-    stack.addProtocols( Protocols.getMembershipProtocolStack( ) );
     try {
+      final JChannel channel = new JChannel( false );
+      channel.setName( Internets.localhostIdentifier( ) );
+      ProtocolStack stack = new ProtocolStack( );
+      channel.setProtocolStack( stack );
+      stack.addProtocols( Protocols.getMembershipProtocolStack( ) );
       stack.init( );
+      return channel;
     } catch ( Exception ex ) {
       LOG.fatal( ex, ex );
-      System.exit( 1 );
+      throw new RuntimeException( ex );
     }
-    return channel;
   }
   
   @Override
