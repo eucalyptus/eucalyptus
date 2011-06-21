@@ -61,7 +61,7 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.config
+package com.eucalyptus.cloud;
 
 import java.io.Serializable;
 import javax.persistence.Transient;
@@ -75,6 +75,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.hibernate.annotations.Entity
 import com.eucalyptus.component.ComponentPart
 import com.eucalyptus.component.id.Eucalyptus
+import com.eucalyptus.config.ComponentConfiguration
 
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_config")
@@ -86,7 +87,7 @@ public class EucalyptusConfiguration extends ComponentConfiguration implements S
   private static String DEFAULT_SERVICE_PATH = "/services/Eucalyptus";
   public EucalyptusConfiguration( ) {
   }
-  public EucalyptusConfiguration( String name, String hostName, Integer port ) {
-    super( "eucalyptus", name, hostName, port, DEFAULT_SERVICE_PATH );
+  public EucalyptusConfiguration( String name, String hostName ) {
+    super( "eucalyptus", name, hostName, "8773", DEFAULT_SERVICE_PATH );
   }
 }
