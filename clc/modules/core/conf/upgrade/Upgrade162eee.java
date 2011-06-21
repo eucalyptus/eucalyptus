@@ -2,7 +2,7 @@ import edu.ucsb.eucalyptus.cloud.entities.AOEMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ARecordInfo;
 import edu.ucsb.eucalyptus.cloud.entities.CNAMERecordInfo;
-import edu.ucsb.eucalyptus.cloud.entities.ClusterInfo;
+// import edu.ucsb.eucalyptus.cloud.entities.ClusterInfo;
 import edu.ucsb.eucalyptus.cloud.entities.DirectStorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
@@ -21,8 +21,8 @@ import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusStatsInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ZoneInfo;
-import edu.ucsb.eucalyptus.cloud.state.AbstractIsomorph;
-import edu.ucsb.eucalyptus.cloud.state.State;
+// import edu.ucsb.eucalyptus.cloud.state.AbstractIsomorph;
+// import edu.ucsb.eucalyptus.cloud.state.State;
 import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
 
@@ -52,9 +52,9 @@ import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Counters;
+import com.eucalyptus.util.Counters;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.SshKeyPair;
+import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.upgrade.AbstractUpgradeScript;
 import com.eucalyptus.upgrade.StandalonePersistence;
@@ -118,7 +118,7 @@ class Upgrade162eee extends AbstractUpgradeScript {
 		List<GroovyRowResult> rowResults;
 		try {
 			rowResults = conn.rows("SELECT * FROM " + entityKey);
-			EntityWrapper db =  new EntityWrapper(contextName);
+			EntityWrapper db =  EntityWrapper.get(contextName);
 			for (GroovyRowResult rowResult : rowResults) {
 				Set<String> columns = rowResult.keySet();
 				Object dest;
@@ -140,9 +140,9 @@ class Upgrade162eee extends AbstractUpgradeScript {
 						Object o = rowResult.get(column);
 						if(o != null) {
 							try {
-								if(dest instanceof AbstractIsomorph && (setter.getName().equals("setState"))) {
+								/* if(dest instanceof AbstractIsomorph && (setter.getName().equals("setState"))) {
 									o = State.valueOf((String)o);
-								}
+								} */
 								if(dest instanceof Volume && (setter.getName().equals("setRemoteDevice"))) {
 									((Volume)dest).setRemoteDevice(null);
 								} else {
@@ -281,7 +281,7 @@ class Upgrade162eee extends AbstractUpgradeScript {
 
 		entities.add(ImageInfo.class);
 		entities.add(Address.class);
-		entities.add(ClusterInfo.class);
+		// entities.add(ClusterInfo.class);
 
 		entities.add(Counters.class);
 

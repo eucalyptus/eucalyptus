@@ -53,70 +53,27 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-
 package com.eucalyptus.bootstrap;
 
-import java.util.concurrent.TimeUnit;
-import org.apache.log4j.Logger;
-import com.eucalyptus.component.Hosts;
-import com.eucalyptus.empyrean.Empyrean;
+import java.util.Properties;
+import org.hibernate.cache.jbc.JBossCacheRegionFactory;
+import org.hibernate.cache.jbc.builder.SharedCacheInstanceManager;
 
-@Provides( Empyrean.class )
-@RunDuring( Bootstrap.Stage.RemoteConfiguration )
-public class HostMembershipBootstrapper extends Bootstrapper {
-  private static Logger LOG = Logger.getLogger( HostMembershipBootstrapper.class );
+public class CacheRegionFactory extends JBossCacheRegionFactory {
   
-  @Override
-  public boolean load( ) throws Exception {
-    try {
-      HostManager.getInstance( );
-      LOG.info( "Started membership channel " + HostManager.getMembershipGroupName( ) );
-      while( !HostManager.isReady( ) ) {
-        TimeUnit.SECONDS.sleep( 1 );
-        LOG.info( "Waiting for system view with database..." );
-      }
-      LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
-      return true;
-    } catch ( Exception ex ) {
-      LOG.fatal( ex, ex );
-      BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
-      return false;
-    }
+  public CacheRegionFactory( Properties props ) {
+    this( );
   }
   
-  @Override
-  public boolean start( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public boolean enable( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public boolean stop( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  @Override
-  public boolean disable( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public boolean check( ) throws Exception {
-    return true;
+  public CacheRegionFactory( ) {
+    super( new SharedCacheInstanceManager( ) );
   }
   
 }

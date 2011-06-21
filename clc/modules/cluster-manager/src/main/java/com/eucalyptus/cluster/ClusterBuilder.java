@@ -23,6 +23,7 @@ import com.eucalyptus.config.ModifyClusterAttributeType;
 import com.eucalyptus.config.RegisterClusterType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.Logs;
 
 @DiscoverableServiceBuilder( ClusterController.class )
 @Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class, ModifyClusterAttributeType.class } )
@@ -112,7 +113,6 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     try {
       try {
         Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
-        Clusters.getInstance( ).enable( config.getName( ) );
         newCluster.enable( );
       } catch ( NoSuchElementException ex ) {
         Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
@@ -133,7 +133,6 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
       if ( Clusters.getInstance( ).contains( config.getName( ) ) ) {
         try {
           Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
-          Clusters.getInstance( ).disable( newCluster.getName( ) );
           newCluster.disable( );
         } catch ( NoSuchElementException ex ) {
           Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
@@ -165,13 +164,12 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     try {
       Clusters.lookup( config ).check( );
     } catch ( NoSuchElementException ex ) {
-      LOG.error( ex, ex );
-      throw ex;
+      throw ServiceChecks.Severity.ERROR.transform( config, ex );
     } catch ( IllegalStateException ex ) {
-      LOG.error( ex, ex );
+      Logs.exhaust( ).error( ex, ex );
       throw ServiceChecks.Severity.ERROR.transform( config, ex );
     } catch ( Throwable ex ) {
-      LOG.error( ex, ex );
+      Logs.exhaust( ).error( ex, ex );
       throw ServiceChecks.Severity.FATAL.transform( config, ex );
     }
   }

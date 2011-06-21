@@ -61,94 +61,21 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component;
+package com.eucalyptus.cloud;
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.component.Component.State;
-import com.eucalyptus.component.ServiceChecks.CheckException;
-import com.eucalyptus.component.ServiceChecks.Severity;
-import com.eucalyptus.component.Topology.ServiceKey;
-import com.google.common.base.Predicate;
+import com.eucalyptus.config.DeregisterComponentResponseType
+import com.eucalyptus.config.DeregisterComponentType
+import com.eucalyptus.config.DescribeComponentsResponseType
+import com.eucalyptus.config.DescribeComponentsType
+import com.eucalyptus.config.ModifyComponentAttributeResponseType
+import com.eucalyptus.config.ModifyComponentAttributeType
+import com.eucalyptus.config.RegisterComponentResponseType
 
-public class ServiceExceptions {
-  
-  private static Logger LOG = Logger.getLogger( ServiceExceptions.class );
-  
-  enum NoopErrorFilter implements Predicate<Throwable> {
-    INSTANCE;
-    
-    @Override
-    public boolean apply( final Throwable input ) {
-      LOG.error( input, input );
-      return true;
-    }
-    
-  }
-    
-  /**
-   * @param parent
-   * @param ex
-   * @param failureAction
-   * @return true if the error is fatal and the transition should be aborted
-   */
-  public static final boolean filterExceptions( final ServiceConfiguration parent, final Throwable ex, final Predicate<Throwable> failureAction ) {
-    if ( ex instanceof CheckException ) {//go through all the exceptions and look for things with Severity greater than or equal to ERROR
-      CheckException checkExHead = ( CheckException ) ex;
-      LOG.error( "Transition failed on " + parent.lookupComponent( ).getName( ) + " " + checkExHead.getSeverity( ) + " due to " + ex.toString( ), ex );
-      for ( CheckException checkEx : checkExHead ) {
-        LifecycleEvents.fireExceptionEvent( parent, checkEx.getSeverity( ), checkEx );
-      }
-      if( checkExHead.getSeverity( ).ordinal( ) >= Severity.ERROR.ordinal( ) ) {
-        try {
-          failureAction.apply( ex );
-        } catch ( Exception ex1 ) {
-          LOG.error( ex1, ex1 );
-        }
-        return true;
-      }
-      for ( CheckException checkEx : checkExHead ) {
-        if( checkEx.getSeverity( ).ordinal( ) >= Severity.ERROR.ordinal( ) ) {
-          try {
-            failureAction.apply( ex );
-          } catch ( Exception ex1 ) {
-            LOG.error( ex1, ex1 );
-          }
-          return true;
-        }
-      }
-      return false;
-    } else {//treat generic exceptions as always being Severity.ERROR
-      LOG.error( "Transition failed on " + parent.lookupComponent( ).getName( ) + " due to " + ex.toString( ), ex );
-      LifecycleEvents.fireExceptionEvent( parent, Severity.ERROR, ex );
-      try {
-        failureAction.apply( ex );
-      } catch ( Exception ex1 ) {
-        LOG.error( ex1, ex1 );
-      }
-      return true;
-    }
-  }
-  
-  public static final boolean filterExceptions( final ServiceConfiguration parent, final Throwable ex ) {
-    return filterExceptions( parent, ex, NoopErrorFilter.INSTANCE );
-  }
-  
-  public static final Predicate<Throwable> maybeDisableService( final ServiceConfiguration parent ) {
-    return new Predicate<Throwable>( ) {
-      
-      @Override
-      public boolean apply( final Throwable ex ) {
-        if ( State.ENABLED.isIn( parent ) && ( parent.isVmLocal( ) || ( Bootstrap.isCloudController( ) && parent.isHostLocal( ) ) ) ) {
-          try {
-            Topology.disable( parent );
-          } catch ( ServiceRegistrationException ex1 ) {
-            LOG.error( "Transition failed on " + parent.lookupComponent( ).getName( ) + " due to " + ex.toString( ), ex );
-          }
-        }
-        return true;
-      }
-      
-    };
-  }
-}
+public class RegisterEucalyptusType extends RegisterComponentResponseType {}
+public class RegisterEucalyptusResponseType extends RegisterComponentResponseType {}
+public class DeregisterEucalyptusType extends DeregisterComponentType {}
+public class DeregisterEucalyptusResponseType extends DeregisterComponentResponseType {}
+public class ModifyEucalyptusAttributeType extends ModifyComponentAttributeType{}
+public class ModifyEucalyptusAttributeResponseType extends ModifyComponentAttributeResponseType {}
+public class DescribeEucalyptusType extends DescribeComponentsType {}
+public class DescribeEucalyptusResponseType extends DescribeComponentsResponseType {}

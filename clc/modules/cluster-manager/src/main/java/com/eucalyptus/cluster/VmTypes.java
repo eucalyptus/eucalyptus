@@ -92,6 +92,15 @@ public class VmTypes {
     }
   };
 
+  public enum InstanceStoreWindowsVmTypeInfoMapper implements Function<VmType, VmTypeInfo> {
+    INSTANCE;
+    
+    @Override
+    public VmTypeInfo apply( VmType arg0 ) {
+      return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "hda" );
+    }
+  };
+
   @TypeMapper
   public enum BlockStorageVmTypeInfoMapper implements Function<VmType, VmTypeInfo> {
     INSTANCE;

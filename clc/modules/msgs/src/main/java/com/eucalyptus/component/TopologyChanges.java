@@ -288,6 +288,9 @@ public class TopologyChanges {
       @Override
       public ServiceConfiguration apply( ServiceConfiguration input ) {
         try {
+          if ( Component.State.ENABLED.isIn( input ) ) {
+            DISABLE.apply( input );
+          }
           return input.lookupComponent( ).stopTransition( input ).get( );
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
@@ -320,8 +323,10 @@ public class TopologyChanges {
           } catch ( InterruptedException ex ) {
             Thread.currentThread( ).interrupt( );
             throw new UndeclaredThrowableException( ex );
+          } catch ( UndeclaredThrowableException ex ) {
+            throw ex;
           } catch ( Exception ex ) {
-            LOG.error( ex, ex );
+            LOG.debug( this.toString( ) + " failed for: " + config + " trying " + initialState + "->" + nextState + " because of: " + ex.getMessage( ), ex );
             throw new UndeclaredThrowableException( ex );
           }
         }
@@ -330,7 +335,7 @@ public class TopologyChanges {
     
     @Override
     public String toString( ) {
-      return this.getClass( ).getSimpleName( ) + "." + this.name( );
+      return this.getClass( ).toString( ) + "." + this.name( );
     }
     
   }
