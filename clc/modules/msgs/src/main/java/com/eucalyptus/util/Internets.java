@@ -77,6 +77,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import org.apache.http.conn.util.InetAddressUtils;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
@@ -86,6 +87,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.net.InetAddresses;
 
 public class Internets {
   private static Logger                  LOG               = Logger.getLogger( Internets.class );
@@ -105,10 +107,10 @@ public class Internets {
     if ( laddr == null ) {
       try {
         String localAddr = ( String ) GroovyUtil.eval( "hi=\"ip -o route get 4.2.2.1\".execute();hi.waitFor();hi.text.replaceAll(\".*src *\",\"\").replaceAll(\" .*\",\"\")" );
-        laddr = InetAddress.getByName( localAddr );
+        laddr = InetAddresses.forString( localAddr );
       } catch ( ScriptExecutionFailedException ex ) {
         LOG.error( ex , ex );
-      } catch ( UnknownHostException ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex , ex );
       }
     }
