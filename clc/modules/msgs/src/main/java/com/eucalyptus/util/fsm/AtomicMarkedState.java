@@ -145,9 +145,6 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
    */
   private void commit( ) {
     LOG.debug( "Transition commit(): " + this.currentTransition.get( ) );
-    if ( Logs.EXTREME ) {
-      Logs.exhaust( ).error( Joiner.on( "\n\t\t" ).join( Thread.currentThread( ).getStackTrace( ) ) );
-    }
     if ( !this.state.isMarked( ) ) {
       IllegalStateException ex = Exceptions.trace( new IllegalStateException( "commit() called when there is no currently pending transition: "
                                                                               + this.toString( ) ) );
@@ -191,9 +188,6 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
   
   private void rollback( Throwable t ) {
     LOG.debug( "Transition rollback(): " + this.toString( ) );
-    if ( Logs.EXTREME ) {
-      Logs.exhaust( ).error( Joiner.on( "\n\t\t" ).join( Thread.currentThread( ).getStackTrace( ) ) );
-    }
     if ( !this.state.isMarked( ) ) {
       Exceptions.debug( new IllegalStateException( "rollback() called when there is no currently pending transition: " + this.toString( ) ) );
     } else {
