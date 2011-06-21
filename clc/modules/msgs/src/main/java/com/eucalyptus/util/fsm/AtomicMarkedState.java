@@ -170,9 +170,6 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
   
   private void error( Throwable t ) {
     LOG.debug( "Transition error(): " + this.toString( ) );
-    if ( Logs.EXTREME ) {
-      Logs.exhaust( ).error( Joiner.on( "\n\t\t" ).join( Thread.currentThread( ).getStackTrace( ) ) );
-    }
     if ( !this.state.isMarked( ) ) {
       IllegalStateException ex = Exceptions.debug( new IllegalStateException( "error() called when there is no currently pending transition: "
                                                                               + this.toString( ), t ) );
@@ -362,11 +359,15 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
         this.transition.after( AtomicMarkedState.this.parent );
         AtomicMarkedState.this.commit( );
       } catch ( Throwable t ) {
-        AtomicMarkedState.this.error( t );
+        this.fireException( t );
       }
     }
     
     public void fireException( Throwable t ) {
+      if( Logs.EXTREME ) {
+        Logs.exhaust( ).trace( Exceptions.string( this.startStackTrace ) );
+        Logs.exhaust( ).trace( Exceptions.string( this.endStackTrace ) );
+      }
       AtomicMarkedState.this.error( t );
     }
     
@@ -396,13 +397,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
       sb.append( EventType.TRANSITION ).append( " " ).append( this.name ).append( " Active" ).append( this.transition != null
         ? this.transition.toString( )
         : "null" ).append( " id=" ).append( this.id ).append( " startTime=" ).append( new Date( this.startTime ) );
-      Logs.exhaust( ).info( sb.toString( ) );
-      if ( this.startStackTrace != null ) {
-        Logs.exhaust( ).info( Exceptions.string( this.startStackTrace ) );
-      }
-      if ( this.endStackTrace != null ) {
-        Logs.exhaust( ).info( Exceptions.string( this.endStackTrace ) );
-      }
+      Logs.exhaust( ).trace( sb.toString( ) );
       return sb.toString( );
     }
   }
