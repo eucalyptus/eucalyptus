@@ -242,11 +242,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
   private final CheckedListenableFuture<P> afterLeave( final T transitionName, final ActiveTransition tid ) throws IllegalStateException {
     try {
       CheckedListenableFuture<P> result = tid.leave( );
-      try {
-        this.fireOutListeners( tid.getTransitionRule( ).getFromState( ) );
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
-      }
+      this.fireOutListeners( tid.getTransitionRule( ).getFromState( ) );
       return result;
     } catch ( Throwable t ) {
       this.error( t );
