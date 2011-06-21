@@ -106,12 +106,13 @@ public class Internets {
     }
     if ( laddr == null ) {
       try {
-        String localAddr = ( String ) GroovyUtil.eval( "hi=\"ip -o route get 4.2.2.1\".execute();hi.waitFor();hi.text.replaceAll(\".*src *\",\"\").replaceAll(\" .*\",\"\")" );
+        String localAddr = ( String ) GroovyUtil.eval( "hi=\"ip -o route get 4.2.2.1\".execute();hi.waitFor();hi.text" );
+        localAddr = localAddr.replaceAll( ".*src *", "" ).replaceAll( " .*", "" );
         laddr = InetAddresses.forString( localAddr );
       } catch ( ScriptExecutionFailedException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     }
     if ( laddr == null ) {
@@ -119,7 +120,7 @@ public class Internets {
     }
     return laddr;
   }
-
+  
   private static InetAddress lookupBindAddresses( ) {
     InetAddress laddr = null;
     List<InetAddress> locallyBoundAddrs = Internets.getAllInetAddresses( );
