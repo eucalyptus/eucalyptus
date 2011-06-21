@@ -64,7 +64,6 @@ package com.eucalyptus.bootstrap;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
@@ -79,7 +78,6 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.SubDirectory;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.StateMachine;
@@ -182,6 +180,8 @@ public class Bootstrap {
     SystemCredentialsInit, /* <-- this means system credentials, not user. */
     RemoteConfiguration,
     DatabaseInit,
+    PoolInit,
+    PersistenceInit,
     RemoteServicesInit,
     UserCredentialsInit,
     CloudServiceInit,
