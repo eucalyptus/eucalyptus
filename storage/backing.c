@@ -104,7 +104,7 @@ int init_backing_store (const char * conf_instances_path, unsigned int conf_work
         logprintfl (EUCAERROR, "error: INSTANCE_PATH not specified\n");
         return ERROR;
     }
-    strncpy (instances_path, conf_instances_path, sizeof (instances_path));
+    safe_strncpy (instances_path, conf_instances_path, sizeof (instances_path));
     if (check_directory (instances_path)) {
 	    logprintfl (EUCAERROR, "error: INSTANCE_PATH (%s) does not exist!\n", instances_path);
         return ERROR;
@@ -142,10 +142,10 @@ int init_backing_store (const char * conf_instances_path, unsigned int conf_work
 static void update_vbr_with_backing_info (virtualBootRecord * vbr, blockblob * bb, int allow_block_dev)
 {
     if (allow_block_dev && strlen (blockblob_get_dev (bb))) {
-        strncpy (vbr->backingPath, blockblob_get_dev (bb), sizeof (vbr->backingPath));
+        safe_strncpy (vbr->backingPath, blockblob_get_dev (bb), sizeof (vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_BLOCK;
     } else {
-        strncpy (vbr->backingPath, blockblob_get_file (bb), sizeof (vbr->backingPath));
+        safe_strncpy (vbr->backingPath, blockblob_get_file (bb), sizeof (vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_FILE;
     }
 }
@@ -409,7 +409,7 @@ static int create_vbr_backing (ncInstance * instance, virtualBootRecord * vbr, i
             goto i_error;
 		} 
         // update VBR with device location
-        strncpy (vbr->backingPath, dev, sizeof (vbr->backingPath));
+        safe_strncpy (vbr->backingPath, dev, sizeof (vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_BLOCK;
         ret = OK;
 
@@ -822,7 +822,7 @@ ncInstance * load_instance_struct (const char * instanceId)
 	    logprintfl (EUCADEBUG, "load_instance_struct: out of memory for instance struct\n");
 	    return NULL;
     }
-    strncpy (instance->instanceId, instanceId, sizeof (instance->instanceId));
+    safe_strncpy (instance->instanceId, instanceId, sizeof (instance->instanceId));
 
     // we don't know userId, so we'll look for instanceId in every user's
     // directory (we're assuming that instanceIds are unique in the system)
@@ -841,7 +841,7 @@ ncInstance * load_instance_struct (const char * instanceId)
         
         snprintf(tmp_path, sizeof (tmp_path), "%s/%s/%s", user_paths, dir_entry->d_name, instance->instanceId);
         if (stat(tmp_path, &mystat)==0) {
-            strncpy (instance->userId, dir_entry->d_name, sizeof (instance->userId));
+            safe_strncpy (instance->userId, dir_entry->d_name, sizeof (instance->userId));
             break; // found it
         }
     }

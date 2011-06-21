@@ -97,7 +97,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
     bzero(vnetconfig, sizeof(vnetConfig));
     // always need 'mode' set
     if (mode) {
-      strncpy(vnetconfig->mode, mode, 32);
+      safe_strncpy(vnetconfig->mode, mode, 32);
     } else {
       logprintfl(EUCAERROR, "vnetInit(): VNET_MODE is not set\n");
       return(1);
@@ -182,18 +182,18 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
       return(1);
     }
     
-    if (macPrefix) strncpy(vnetconfig->macPrefix, macPrefix, 5);
-    if (path) strncpy(vnetconfig->path, path, MAX_PATH);
-    if (eucahome) strncpy(vnetconfig->eucahome, eucahome, MAX_PATH);
-    if (pubInterface) strncpy(vnetconfig->pubInterface, pubInterface, 32);
-    if (bridgedev) strncpy(vnetconfig->bridgedev, bridgedev, 32);
-    if (daemon) strncpy(vnetconfig->dhcpdaemon, daemon, MAX_PATH);
-    if (privInterface) strncpy(vnetconfig->privInterface, privInterface, 32);
-    if (dhcpuser) strncpy(vnetconfig->dhcpuser, dhcpuser, 32);
+    if (macPrefix) safe_strncpy(vnetconfig->macPrefix, macPrefix, 5);
+    if (path) safe_strncpy(vnetconfig->path, path, MAX_PATH);
+    if (eucahome) safe_strncpy(vnetconfig->eucahome, eucahome, MAX_PATH);
+    if (pubInterface) safe_strncpy(vnetconfig->pubInterface, pubInterface, 32);
+    if (bridgedev) safe_strncpy(vnetconfig->bridgedev, bridgedev, 32);
+    if (daemon) safe_strncpy(vnetconfig->dhcpdaemon, daemon, MAX_PATH);
+    if (privInterface) safe_strncpy(vnetconfig->privInterface, privInterface, 32);
+    if (dhcpuser) safe_strncpy(vnetconfig->dhcpuser, dhcpuser, 32);
     if (domainname) {
-      strncpy(vnetconfig->euca_domainname, domainname, 256);
+      safe_strncpy(vnetconfig->euca_domainname, domainname, 256);
     } else {
-      strncpy(vnetconfig->euca_domainname, "eucalyptus", strlen("eucalyptus"));
+      strncpy(vnetconfig->euca_domainname, "eucalyptus", strlen("eucalyptus") + 1);
     }
 
     if (localIp) {
@@ -1017,9 +1017,9 @@ int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *uuid, char *user, char *
   
   if (param_check("vnetSetVlan", vnetconfig, vlan, user, network)) return(1);
 
-  strncpy(vnetconfig->users[vlan].userName, user, 48);
-  strncpy(vnetconfig->users[vlan].netName, network, 32);
-  if (uuid) strncpy(vnetconfig->users[vlan].uuid, uuid, 48);
+  safe_strncpy(vnetconfig->users[vlan].userName, user, 48);
+  safe_strncpy(vnetconfig->users[vlan].netName, network, 32);
+  if (uuid) safe_strncpy(vnetconfig->users[vlan].uuid, uuid, 48);
   
   return(0);
 }
@@ -1282,7 +1282,7 @@ int vnetAddDev(vnetConfig *vnetconfig, char *dev) {
     }
   }
   if (foundone >= 0) {
-    strncpy(vnetconfig->etherdevs[foundone], dev, 16);
+    safe_strncpy(vnetconfig->etherdevs[foundone], dev, 16);
   }
   return(0);
 }

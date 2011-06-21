@@ -529,7 +529,7 @@ doDetachVolume(	struct nc_state_t *nc,
 static void change_createImage_state (ncInstance * instance, createImage_progress state)
 {
     instance->createImageTaskState = state;
-    strncpy (instance->createImageTaskStateName, createImage_progress_names [state], CHAR_BUFFER_SIZE);
+    safe_strncpy (instance->createImageTaskStateName, createImage_progress_names [state], CHAR_BUFFER_SIZE);
 }
 
 // helper for cleaning up 
@@ -681,7 +681,7 @@ doCreateImage(	struct nc_state_t *nc,
 static void change_bundling_state (ncInstance * instance, bundling_progress state)
 {
 	instance->bundleTaskState = state;
-	strncpy (instance->bundleTaskStateName, bundling_progress_names [state], CHAR_BUFFER_SIZE);
+	safe_strncpy (instance->bundleTaskStateName, bundling_progress_names [state], CHAR_BUFFER_SIZE);
 }
 
 /*

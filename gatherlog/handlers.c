@@ -210,22 +210,26 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
     } else {
       close(filedes[1]);
 
-      rc = read(filedes[0], buf, bufsize);
+      bzero(buf, bufsize);
+      rc = read(filedes[0], buf, bufsize - 1);
       if (rc && buf[0] != '\0') {
 	*outCCLog = strdup(buf);
       }
 
-      rc = read(filedes[0], buf, bufsize);
+      bzero(buf, bufsize);
+      rc = read(filedes[0], buf, bufsize - 1);
       if (rc && buf[0] != '\0') {
 	*outNCLog = strdup(buf);
       }
 
-      rc = read(filedes[0], buf, bufsize);
+      bzero(buf, bufsize);
+      rc = read(filedes[0], buf, bufsize - 1);
       if (rc && buf[0] != '\0') {
 	*outHTTPDLog = strdup(buf);
       }
 
-      rc = read(filedes[0], buf, bufsize);
+      bzero(buf, bufsize);
+      rc = read(filedes[0], buf, bufsize - 1);
       if (rc && buf[0] != '\0') {
 	*outAxis2Log = strdup(buf);
       }
@@ -288,7 +292,8 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert) {
     if (fd >= 0) {
       bzero(buf, bufsize);
       lseek(fd, -1 * bufsize, SEEK_END);
-      rc = read(fd, buf, bufsize);
+      // make sure that buf is NULL terminated
+      rc = read(fd, buf, bufsize - 1);
       if (rc > 0) {
 	*outNCCert = base64_enc((unsigned char *)buf, strlen(buf));
       }
