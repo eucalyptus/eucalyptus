@@ -145,11 +145,12 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
    */
   private void commit( ) {
     LOG.debug( "Transition commit(): " + this.currentTransition.get( ) );
-    if( Logs.EXTREME ) {
+    if ( Logs.EXTREME ) {
       Logs.exhaust( ).error( Joiner.on( "\n\t\t" ).join( Thread.currentThread( ).getStackTrace( ) ) );
     }
     if ( !this.state.isMarked( ) ) {
-      IllegalStateException ex = Exceptions.trace( new IllegalStateException( "commit() called when there is no currently pending transition: " + this.toString( ) ) );
+      IllegalStateException ex = Exceptions.trace( new IllegalStateException( "commit() called when there is no currently pending transition: "
+                                                                              + this.toString( ) ) );
       LOG.error( ex, ex );
       throw ex;
     } else {
@@ -161,18 +162,20 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
       } else {
         this.state.set( tr.getTransitionRule( ).getToState( ), false );
       }
-      EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE, "set(" + this.parent.toString( ) + ":" + this.parent.getClass( ).getCanonicalName( ) + ")" ).trace( );
+      EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE,
+                          "set(" + this.parent.toString( ) + ":" + this.parent.getClass( ).getCanonicalName( ) + ")" ).trace( );
       tr.getTransitionFuture( ).set( this.parent );
     }
   }
   
-  private void error(Throwable t ) {
+  private void error( Throwable t ) {
     LOG.debug( "Transition error(): " + this.toString( ) );
-    if( Logs.EXTREME ) {
+    if ( Logs.EXTREME ) {
       Logs.exhaust( ).error( Joiner.on( "\n\t\t" ).join( Thread.currentThread( ).getStackTrace( ) ) );
     }
     if ( !this.state.isMarked( ) ) {
-      IllegalStateException ex = Exceptions.debug( new IllegalStateException( "error() called when there is no currently pending transition: " + this.toString( ), t ) );
+      IllegalStateException ex = Exceptions.debug( new IllegalStateException( "error() called when there is no currently pending transition: "
+                                                                              + this.toString( ), t ) );
       LOG.error( ex, ex );
       throw ex;
     } else {
@@ -189,9 +192,9 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     }
   }
   
-  private void rollback(Throwable t ) {
+  private void rollback( Throwable t ) {
     LOG.debug( "Transition rollback(): " + this.toString( ) );
-    if( Logs.EXTREME ) {
+    if ( Logs.EXTREME ) {
       Logs.exhaust( ).error( Joiner.on( "\n\t\t" ).join( Thread.currentThread( ).getStackTrace( ) ) );
     }
     if ( !this.state.isMarked( ) ) {
@@ -205,6 +208,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
   protected void fireInListeners( S state ) {
     for ( Callback<P> cb : AtomicMarkedState.this.inStateListeners.get( state ) ) {
       try {
+        Logs.exhaust( ).debug( "Firing state-in listener: " + cb.getClass( ) + " for " + this.toString( ) );
         cb.fire( this.parent );
       } catch ( Throwable t ) {
         Exceptions.debug( "Firing state-in listeners failed for :" + cb.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( t ) );
@@ -215,6 +219,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
   protected void fireOutListeners( S state ) {
     for ( Callback<P> cb : AtomicMarkedState.this.outStateListeners.get( state ) ) {
       try {
+        Logs.exhaust( ).debug( "Firing state-in listener: " + cb.getClass( ) + " for " + this.toString( ) );
         cb.fire( this.parent );
       } catch ( Throwable t ) {
         Exceptions.debug( "Firing state-out listeners failed for :" + cb.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( t ) );
@@ -237,11 +242,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
   private final CheckedListenableFuture<P> afterLeave( final T transitionName, final ActiveTransition tid ) throws IllegalStateException {
     try {
       CheckedListenableFuture<P> result = tid.leave( );
-      try {
-        this.fireOutListeners( tid.getTransitionRule( ).getFromState( ) );
-      } catch ( Exception ex ) {
-        LOG.error( ex , ex );
-      }
+      this.fireOutListeners( tid.getTransitionRule( ).getFromState( ) );
       return result;
     } catch ( Throwable t ) {
       this.error( t );
@@ -333,7 +334,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     private Long                             endTime          = 0l;
     private final TransitionAction<P>        transition;
     private final Throwable                  startStackTrace;
-    private Throwable                  endStackTrace;
+    private Throwable                        endStackTrace;
     private final CheckedListenableFuture<P> transitionFuture = Futures.newGenericeFuture( );
     private TransitionRule<S, T>             rule;
     
@@ -354,7 +355,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     CheckedListenableFuture<P> getTransitionFuture( ) {
       return this.transitionFuture;
     }
-
+    
     public void fire( ) {
       try {
         this.transition.enter( AtomicMarkedState.this.parent );
@@ -396,16 +397,16 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
         ? this.transition.toString( )
         : "null" ).append( " id=" ).append( this.id ).append( " startTime=" ).append( new Date( this.startTime ) );
       Logs.exhaust( ).info( sb.toString( ) );
-      if( this.startStackTrace != null ) {
+      if ( this.startStackTrace != null ) {
         Logs.exhaust( ).info( Exceptions.string( this.startStackTrace ) );
       }
-      if( this.endStackTrace != null ) {
+      if ( this.endStackTrace != null ) {
         Logs.exhaust( ).info( Exceptions.string( this.endStackTrace ) );
       }
       return sb.toString( );
     }
   }
-
+  
   public P getParent( ) {
     return this.parent;
   }

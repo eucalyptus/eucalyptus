@@ -72,6 +72,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.TopologyChanges.CloudTopologyCallables;
@@ -312,7 +313,7 @@ public class Topology implements EventListener<Event> {
       @Override
       public boolean tryDisable( final ServiceConfiguration config ) throws ServiceRegistrationException {
         final ServiceKey serviceKey = ServiceKey.create( config );
-        return ( Topology.this.services.remove( serviceKey, config ) || !config.equals( Topology.this.services.get( serviceKey ) ) ) && this.nextEpoch( );
+        return !config.equals( Topology.this.services.get( serviceKey ) ) || ( Topology.this.services.remove( serviceKey, config ) && this.nextEpoch( ) );
       }
       
     };
@@ -470,7 +471,7 @@ public class Topology implements EventListener<Event> {
    */
   @Override
   public void fireEvent( Event event ) {
-    if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 5l ) ) {
+    if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 15l ) ) {
       this.runChecks( );
     }
   }
@@ -497,6 +498,16 @@ public class Topology implements EventListener<Event> {
           
           @Override
           public boolean apply( Future<?> arg0 ) {
+            if( !arg0.isDone( ) ) {
+              try {
+                arg0.get( 100, TimeUnit.MILLISECONDS );
+              } catch ( InterruptedException ex ) {
+                Thread.currentThread( ).interrupt( );
+              } catch ( ExecutionException ex ) {
+                LOG.error( ex );
+              } catch ( TimeoutException ex ) {
+              }
+            }
             return arg0.isDone( );
           }
         };
@@ -504,14 +515,7 @@ public class Topology implements EventListener<Event> {
         for ( ServiceConfiguration config : checkServicesList ) {
           futures.put( config, Topology.getInstance( ).submitExternal( config, TopologyChanges.checkFunction( ) ) );
         }
-        for ( int i = 0; i < 100 && !Iterables.all( futures.values( ), futureIsDone ); i++ ) {
-          try {
-            TimeUnit.MILLISECONDS.sleep( 100 );
-          } catch ( InterruptedException ex ) {
-            Thread.currentThread( ).interrupt( );
-            return;
-          }
-        }
+        for ( int i = 0; i < 100 && !Iterables.all( futures.values( ), futureIsDone ); i++ );
         final List<ServiceConfiguration> disabledServices = Lists.newArrayList( );
         final List<ServiceConfiguration> checkedServices = Lists.newArrayList( );
         for ( Map.Entry<ServiceConfiguration, Future<ServiceConfiguration>> result : futures.entrySet( ) ) {
@@ -522,13 +526,7 @@ public class Topology implements EventListener<Event> {
             LOG.error( ex, ex );
             Thread.currentThread( ).interrupt( );
           } catch ( Throwable ex ) {
-            Throwable e = ex;
-            if ( ex instanceof ExecutionException ) {
-              LOG.debug( "Error while inspecting result of CHECK for: \n\t" + result.getKey( ) + ": \n\t" + ex.getCause( ).getMessage( ) );
-              e = ex.getCause( );
-            } else {
-              LOG.debug( "Error while inspecting result of CHECK for: \n\t" + result.getKey( ) + ": \n\t" + ex.getMessage( ) );
-            }
+            LOG.debug( "Error while inspecting result of CHECK for: \n\t" + result.getKey( ) + ": \n\t" + ex.getMessage( ) );
             try {
               disabledServices.add( result.getKey( ) );
               Topology.this.getGuard( ).tryDisable( result.getKey( ) );

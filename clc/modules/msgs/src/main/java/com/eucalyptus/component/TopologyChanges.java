@@ -288,6 +288,9 @@ public class TopologyChanges {
       @Override
       public ServiceConfiguration apply( ServiceConfiguration input ) {
         try {
+          if ( Component.State.ENABLED.isIn( input ) ) {
+            DISABLE.apply( input );
+          }
           return input.lookupComponent( ).stopTransition( input ).get( );
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
