@@ -596,7 +596,7 @@ public class Component implements HasName<Component> {
                           ( config.isVmLocal( ) || config.isHostLocal( ) )
                             ? "local"
                             : "remote",
-                          config.getName( ), config.getUri( ) ).info( );
+                          config.toString( ) ).info( );
       Logs.exhaust( ).debug( "Registered service " + ret + " for configuration: " + config );
       return ret;
     }
