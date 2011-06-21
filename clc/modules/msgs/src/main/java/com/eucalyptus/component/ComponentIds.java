@@ -82,7 +82,8 @@ public class ComponentIds {
     boolean cloudLocal = Bootstrap.isCloudController( ) && c.isCloudLocal( ) && !c.isRegisterable( );
     boolean alwaysLocal = c.isAlwaysLocal( );
     boolean isBootrapperItself = Empyrean.class.equals( c );
-    return cloudLocal || alwaysLocal || isBootrapperItself;
+    boolean isCloudItself = Eucalyptus.class.equals( c );
+    return cloudLocal || alwaysLocal || isBootrapperItself || isCloudItself;
   }
   
   public static List<ComponentId> listLocallyRynning( ) {//TODO:GRZE:FIXME: isRunningLocally check shoudl be sufficient... replace with Component.
