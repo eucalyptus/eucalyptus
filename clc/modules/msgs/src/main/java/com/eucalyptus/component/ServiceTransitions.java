@@ -198,6 +198,10 @@ public class ServiceTransitions {
       transition = Automata.sequenceTransitions( config,
                                                  Component.State.DISABLED,
                                                  Component.State.DISABLED );
+    } else if ( State.NOTREADY.isIn( config ) ) {
+      transition = Automata.sequenceTransitions( config,
+                                                 Component.State.NOTREADY,
+                                                 Component.State.DISABLED );
     } else {
       Exceptions.trace( "Failed to find transition to requested state DISABLED from " + config.lookupState( ) + " for: " + config.toString( ) );
     }
