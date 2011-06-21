@@ -93,8 +93,6 @@ public class BasicService extends AbstractService implements Service {
     super( );
     this.serviceConfiguration = serviceConfiguration;
     this.stateMachine = new ServiceState( this.serviceConfiguration );
-    ListenerRegistry.getInstance( ).register( ClockTick.class, this );
-    ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
   
   static class Broken extends BasicService {

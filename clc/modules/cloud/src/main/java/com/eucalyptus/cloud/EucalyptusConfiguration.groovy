@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -60,96 +60,39 @@
  *******************************************************************************
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.bootstrap;
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.id.Database;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.crypto.util.SslSetup;
-import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
-import com.eucalyptus.util.Internets;
+package com.eucalyptus.cloud;
 
-@Provides( Empyrean.class )
-@RunDuring( Bootstrap.Stage.DatabaseInit )
-@DependsRemote( Eucalyptus.class )
-public class RemoteDatabaseBootstrapper extends Bootstrapper implements DatabaseBootstrapper {
-  private static Logger LOG = Logger.getLogger( RemoteDatabaseBootstrapper.class );
-  
-  @Override
-  public boolean load( ) throws Exception {
-    try {
-      if ( Internets.testReachability( Components.lookup( Database.class ).getUri( ).getHost( ) ) ) {
-        LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
-      } else {
-        LOG.error( "Failed with invalid DB address" );
-        System.exit( -1 );
-      }
-    } catch ( Throwable e ) {
-      LOG.error( "Failed with invalid DB address" );
-    }
-    try {
-      GroovyUtil.evaluateScript( "after_database.groovy" );
-    } catch ( ScriptExecutionFailedException e1 ) {
-      LOG.error( "Failed to initialize persistence layer" );
-      LOG.debug( e1, e1 );
-      System.exit( 123 );
-    }
-    
-    return true;
+import java.io.Serializable;
+import javax.persistence.Transient;
+import org.hibernate.annotations.Entity;
+import java.io.Serializable
+import javax.persistence.PersistenceContext
+import javax.persistence.Table
+import javax.persistence.Transient
+import org.hibernate.annotations.Cache
+import org.hibernate.annotations.CacheConcurrencyStrategy
+import org.hibernate.annotations.Entity
+import com.eucalyptus.bootstrap.Bootstrap
+import com.eucalyptus.component.ComponentPart
+import com.eucalyptus.component.id.Eucalyptus
+import com.eucalyptus.config.ComponentConfiguration
+
+@Entity @javax.persistence.Entity
+@PersistenceContext(name="eucalyptus_config")
+@Table( name = "config_eucalyptus" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@ComponentPart(Eucalyptus.class)
+public class EucalyptusConfiguration extends ComponentConfiguration implements Serializable {
+  @Transient
+  private static String DEFAULT_SERVICE_PATH = "/services/Eucalyptus";
+  public EucalyptusConfiguration( ) {
   }
-  
-  @Override
-  public boolean start( ) throws Exception {
-    return true;
+  public EucalyptusConfiguration( String name, String hostName ) {
+    super( "eucalyptus", name, hostName, 8773, DEFAULT_SERVICE_PATH );
   }
-  
   @Override
-  public boolean isRunning( ) {
-    return true;//TODO: track remote connectionf failures.
+  public Boolean isVmLocal( ) {
+    return Bootstrap.isCloudController( );
   }
-  
-  @Override
-  public void hup( ) {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    return true;
-  }
-  
 }

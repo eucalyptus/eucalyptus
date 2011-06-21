@@ -66,8 +66,6 @@ package com.eucalyptus.component;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component.State;
@@ -86,7 +84,6 @@ import com.eucalyptus.empyrean.EmpyreanMessage;
 import com.eucalyptus.empyrean.EnableServiceResponseType;
 import com.eucalyptus.empyrean.EnableServiceType;
 import com.eucalyptus.empyrean.ServiceId;
-import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.empyrean.StartServiceResponseType;
 import com.eucalyptus.empyrean.StartServiceType;
@@ -101,7 +98,6 @@ import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
-import com.eucalyptus.util.async.RetryableConnectionException;
 import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.ws.util.PipelineRegistry;
@@ -109,8 +105,6 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
 public class ServiceTransitions {
-  private static final int BOOTSTRAP_REMOTE_RETRY_INTERVAL_MSEC = 100;                                         //TODO:GRZE:@Configurable
-  private static final int BOOTSTRAP_REMOTE_RETRIES             = 5;                                           //TODO:GRZE:@Configurable
   static Logger            LOG                                  = Logger.getLogger( ServiceTransitions.class );
   
   interface ServiceTransitionCallback {
