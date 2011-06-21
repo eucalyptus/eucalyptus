@@ -182,13 +182,13 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       @Override
       public boolean apply( final Cluster input ) {
         try {
-          if( !State.ENABLED.equals( input.getConfiguration( ).getStateMachine( ) ) ) {
+          if ( !State.ENABLED.equals( input.getConfiguration( ).getStateMachine( ) ) ) {
             AsyncRequests.newRequest( new EnableServiceCallback( input ) ).sendSync( input.configuration );
           }
           Clusters.getInstance( ).register( input );
           return true;
         } catch ( Throwable t ) {
-          if( !input.filterExceptions( t ) ) {
+          if ( !input.filterExceptions( t ) ) {
             return false;
           } else {
             Clusters.getInstance( ).register( input );
@@ -201,7 +201,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       @Override
       public boolean apply( final Cluster input ) {
         try {
-          if( State.ENABLED.equals( input.getConfiguration( ).getStateMachine( ) ) ) {
+          if ( State.ENABLED.equals( input.getConfiguration( ).getStateMachine( ) ) ) {
             AsyncRequests.newRequest( new DisableServiceCallback( input ) ).sendSync( input.configuration );
           }
           return true;
@@ -925,7 +925,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       CheckException ex = ServiceChecks.Severity.ERROR.transform( this.configuration, currentErrors );
       throw ex;
     } else if ( currentState.ordinal( ) < State.DISABLED.ordinal( )
-                || ( Cluster.State.DISABLED.ordinal( ) >= currentState.ordinal( ) && Component.State.ENABLED.equals( externalState ) ) ) {
+                || ( Component.State.ENABLED.equals( externalState ) && Cluster.State.ENABLING.ordinal( ) < currentState.ordinal( ) ) ) {
       IllegalStateException ex = new IllegalStateException( "Cluster is currently " + currentState + ":  please see logs for additional information." );
       this.pendingErrors.add( ex );
       throw ServiceChecks.Severity.ERROR.transform( this.configuration, ex );
