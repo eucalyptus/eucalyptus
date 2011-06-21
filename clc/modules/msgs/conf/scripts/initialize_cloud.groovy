@@ -86,7 +86,7 @@ import com.mysql.management.MysqldResource
 
 Logger LOG = Logger.getLogger( initialize_cloud.class );
 
-[ ComponentDiscovery( ), new ServiceBuilderDiscovery( ), new PersistenceContextDiscovery( ) ].each{
+[ new ComponentDiscovery( ), new ServiceBuilderDiscovery( ), new PersistenceContextDiscovery( ) ].each{
   ServiceJarDiscovery.runDiscovery(  it );
 }
 new DirectoryBootstrapper( ).load( );
