@@ -88,6 +88,6 @@ public class EucalyptusConfiguration extends ComponentConfiguration implements S
   public EucalyptusConfiguration( ) {
   }
   public EucalyptusConfiguration( String name, String hostName ) {
-    super( "eucalyptus", name, hostName, "8773", DEFAULT_SERVICE_PATH );
+    super( "eucalyptus", name, hostName, 8773, DEFAULT_SERVICE_PATH );
   }
 }
