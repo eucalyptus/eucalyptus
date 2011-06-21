@@ -107,8 +107,10 @@ public class Internets {
     if ( laddr == null ) {
       try {
         String localAddr = ( String ) GroovyUtil.eval( "hi=\"ip -o route get 4.2.2.1\".execute();hi.waitFor();hi.text" );
-        localAddr = localAddr.replaceAll( ".*src *", "" ).replaceAll( " .*", "" );
-        laddr = InetAddresses.forString( localAddr );
+        String[] parts = localAddr.replaceAll( ".*src *", "" ).split( " " );
+        if ( parts.length >= 1 ) {
+          laddr = InetAddresses.forString( parts[0] );
+        }
       } catch ( ScriptExecutionFailedException ex ) {
         LOG.error( ex, ex );
       } catch ( Exception ex ) {
