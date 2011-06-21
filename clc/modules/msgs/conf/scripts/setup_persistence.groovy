@@ -81,6 +81,7 @@ String real_jdbc_driver = 'com.mysql.jdbc.Driver';
 String pool_db_driver = 'net.sf.hajdbc.sql.Driver';
 String pool_db_url = 'jdbc:ha-jdbc:eucalyptus';
 String db_pass = SystemIds.databasePassword( );
+System.setProperty("jgroups.udp.bind_addr",Internets.localHostAddress());
 
 default_hiber_config = [
       'hibernate.archive.autodetection': 'jar, class, hbm',
@@ -120,9 +121,10 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
         'hibernate.cache.use_second_level_cache': 'true',
         'hibernate.cache.use_query_cache': 'true',
         'hibernate.cache.jbc.query.localonly': 'true',
-        'hibernate.cache.region.factory_class': 'org.hibernate.cache.jbc.SharedJBossCacheRegionFactory',
+        'hibernate.cache.region.factory_class': 'com.eucalyptus.bootstrap.CacheRegionFactory',
         'hibernate.cache.region.jbc2.cfg.shared': 'eucalyptus_jboss_cache.xml',
-        'hibernate.cache.jbc.cfg.jgroups.stacks': 'eucalyptus_jgroups_cache.xml',
+        'hibernate.cache.region.jbc2.cfg.multiplexer.stacks': 'eucalyptus_cache_jgroups.xml',
+        'hibernate.cache.jbc.cfg.jgroups.stacks': 'eucalyptus_cache_jgroups.xml',
         'hibernate.cache.region_prefix': "eucalyptus_${context_name}_cache",
         'hibernate.cache.use_minimal_puts': 'true',
         'hibernate.cache.use_structured_entries': 'true',
