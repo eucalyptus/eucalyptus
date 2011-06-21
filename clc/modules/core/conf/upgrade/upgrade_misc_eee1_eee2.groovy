@@ -1,5 +1,5 @@
 import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.config.VMwareBrokerConfiguration;
+import com.eucalyptus.broker.vmware.VMwareBrokerConfiguration;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -13,12 +13,12 @@ import org.mortbay.log.Log;
 import groovy.sql.Sql;
 import com.eucalyptus.upgrade.AbstractUpgradeScript;
 import com.eucalyptus.upgrade.StandalonePersistence;
-import com.eucalyptus.entities.IpRange;
-import com.eucalyptus.entities.NetworkPeer;
-import com.eucalyptus.entities.NetworkRule;
-import com.eucalyptus.entities.NetworkRulesGroup;
+import com.eucalyptus.network.IpRange;
+import com.eucalyptus.network.NetworkPeer;
+import com.eucalyptus.network.NetworkRule;
+import com.eucalyptus.network.NetworkRulesGroup;
 import com.eucalyptus.entities.PersistenceContexts;
-import com.eucalyptus.entities.Counters;
+import com.eucalyptus.util.Counters;
 import com.eucalyptus.entities.EntityWrapper;
 import edu.ucsb.eucalyptus.cloud.entities.*;
 import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
