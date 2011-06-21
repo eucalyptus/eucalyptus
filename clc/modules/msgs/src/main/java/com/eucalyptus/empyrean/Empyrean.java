@@ -156,7 +156,7 @@ public class Empyrean extends ComponentId.Unpartioned {
   
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.PoolInit )
-  public class DatabasePoolBootstrapper extends Bootstrapper {
+  public static class DatabasePoolBootstrapper extends Bootstrapper {
     
     @Override
     public boolean load( ) throws Exception {
