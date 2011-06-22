@@ -1019,6 +1019,9 @@ artifact * art_alloc (const char * id, const char * sig, long long size_bytes, b
     a->must_be_file = must_be_file;
     a->creator = creator;
     a->vbr = vbr;
+    a->do_tune_fs = FALSE;
+    if (vbr && (vbr->type==NC_RESOURCE_IMAGE && vbr->partitionNumber>0 )) //this is hacky
+        a->do_tune_fs = TRUE;
 
     return a;
 }
@@ -1152,8 +1155,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean do_make_work_c
         if (a2) {
             if (sshkey)
                 strncpy (a2->sshkey, sshkey, sizeof (a2->sshkey)-1 );
-            if (vbr->type==NC_RESOURCE_IMAGE)
-                a2->do_tune_fs = TRUE;
+
             if (art_add_dep (a2, a) == OK) {
                 a = a2;
             } else {
@@ -1359,7 +1361,7 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                 virtualBootRecord * vbr = parts [i][j][k];
                 const char * use_sshkey = NULL;
                 if (vbr) { // either a disk (k==0) or a partition (k>0)
-                    if (vbr->type==NC_RESOURCE_IMAGE) { // only inject SSH key into an EMI
+                    if (vbr->type==NC_RESOURCE_IMAGE && k > 0) { // only inject SSH key into an EMI which has a single partition (whole disk)
                         use_sshkey = sshkey;
                     }
                     disk_arts [k] = art_alloc_vbr (vbr, do_make_work_copy, FALSE, use_sshkey);
@@ -1370,11 +1372,7 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                     if (vbr->type == NC_RESOURCE_EBS) // EBS-backed instances need no additional artifacts
                         continue;
                     if (k==0) { // if this is a disk artifact, insert a work copy in front of it
-                        if (vm->virtualBootRecordLen==EUCA_MAX_VBRS) {
-                            logprintfl (EUCAERROR, "[%s] error: out of room in the virtual boot record while adding disk %d on bus %d\n", instanceId, j, i);
-                            goto out;
-                        }
-                        disk_arts [k] = art_alloc_disk (&(vm->virtualBootRecord [vm->virtualBootRecordLen]), 
+                        disk_arts [k] = art_alloc_disk (vbr, 
                                                         prereq_arts, total_prereq_arts, 
                                                         NULL, 0, 
                                                         disk_arts [k], 
@@ -1384,7 +1382,6 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                             arts_free (disk_arts, EUCA_MAX_PARTITIONS);
                             goto free;
                         }   
-                        vm->virtualBootRecordLen++;
                     } else { // k>0
                         partitions++; 
                     }
