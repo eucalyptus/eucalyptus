@@ -42,13 +42,13 @@ class Initialize(object):
 
     def main(self):
         if self.debug:
-            cmd_string = DebugInitCommand % (config['EUCALYPTUS'],
-                                             config['EUCA_USER'],
-                                             config['EUCALYPTUS'])
+            cmd_string = DebugInitCommand % (self.config['EUCALYPTUS'],
+                                             self.config['EUCA_USER'],
+                                             self.config['EUCALYPTUS'])
         else:
-            cmd_string = InitCommand % (config['EUCALYPTUS'],
-                                        config['EUCA_USER'],
-                                        config['EUCALYPTUS'])
+            cmd_string = InitCommand % (self.config['EUCALYPTUS'],
+                                        self.config['EUCA_USER'],
+                                        self.config['EUCALYPTUS'])
         cmd = Command(cmd_string)
         if self.debug:
             if cmd.status:
