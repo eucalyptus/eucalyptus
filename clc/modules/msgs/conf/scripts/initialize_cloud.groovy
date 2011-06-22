@@ -25,7 +25,7 @@ Logger LOG = Logger.getLogger( Bootstrap.class );
 new DirectoryBootstrapper( ).load( );
 ServiceJarDiscovery.doSingleDiscovery(  new ComponentDiscovery( ) );
 [ new ServiceBuilderDiscovery( ), new PersistenceContextDiscovery( ) ].each{
-  ServiceJarDiscovery.runDiscovery( s );
+  ServiceJarDiscovery.runDiscovery( it );
 }
 SystemCredentialProvider.initialize( );
 Component dbComp = Components.lookup( Database.class );
