@@ -32,7 +32,7 @@ from eucadmin.command import Command
 
 InitCommand = """%s/usr/sbin/eucalyptus-cloud -u %s -h %s --initialize"""
 
-DebugInitCommand = """%s/usr/sbin/eucalyptus-cloud -u %s -h %s --initialize --log-level=EXTREME --debug --L console"""
+DebugInitCommand = """%s/usr/sbin/eucalyptus-cloud -u %s -h %s --initialize --log-level=EXTREME --debug -L console"""
 
 class Initialize(object):
 
@@ -49,6 +49,8 @@ class Initialize(object):
             cmd_string = InitCommand % (self.config['EUCALYPTUS'],
                                         self.config['EUCA_USER'],
                                         self.config['EUCALYPTUS'])
+        if 'CLOUD_OPTS' in self.config:
+            cmd_string += ' %s' % self.config['CLOUD_OPTS']
         cmd = Command(cmd_string)
         if self.debug:
             if cmd.status:
