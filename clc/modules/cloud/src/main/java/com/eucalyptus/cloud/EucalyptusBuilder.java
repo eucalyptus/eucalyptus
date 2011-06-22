@@ -18,7 +18,8 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Internets;
 
 @DiscoverableServiceBuilder( Eucalyptus.class )
-@Handles( { RegisterEucalyptusType.class, DeregisterEucalyptusType.class, DescribeEucalyptusType.class, EucalyptusConfiguration.class, ModifyEucalyptusAttributeType.class } )
+@Handles( { RegisterEucalyptusType.class, DeregisterEucalyptusType.class, DescribeEucalyptusType.class, EucalyptusConfiguration.class,
+           ModifyEucalyptusAttributeType.class } )
 public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfiguration> {
   static Logger LOG = Logger.getLogger( EucalyptusBuilder.class );
   
@@ -34,12 +35,11 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   
   @Override
   public EucalyptusConfiguration newInstance( String partition, String name, String host, Integer port ) {
-    InetAddress addr;
     try {
-      addr = InetAddress.getByName( host );
+      InetAddress.getByName( host );
       return new EucalyptusConfiguration( host, host );
     } catch ( UnknownHostException e ) {
-      return this.newInstance( );
+      return new EucalyptusConfiguration( Internets.localHostAddress( ), Internets.localHostAddress( ) );
     }
   }
   
