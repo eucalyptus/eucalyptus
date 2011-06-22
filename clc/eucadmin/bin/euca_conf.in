@@ -569,10 +569,8 @@ class EucaConf(object):
                                      'var/lib/eucalyptus/keys')
                 path2 = os.path.join(path1, self.options.partition_name)
                 cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
-                req = cls([path1, path2], path1, self.options.host_name,
-                          ['node-cert.pem', 'cluster-cert.pem',
-                           'cluster-pk.pem', 'node-pk.pem',
-                           'vtunpass', 'cloud-cert.pem'],
+                req = cls([path1, path2], path1,
+                          self.options.host_name, ['euca.p12'],
                           use_rsync=(not self.options.no_rsync),
                           use_scp=(not self.options.no_scp))
                 req.sync()

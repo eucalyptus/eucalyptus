@@ -30,9 +30,9 @@
 
 from eucadmin.command import Command
 
-InitCommand = """sudo %s/usr/sbin/eucalyptus-cloud -u %s -h %s --initialize"""
+InitCommand = """%s/usr/sbin/eucalyptus-cloud -u %s -h %s --initialize"""
 
-DebugInitCommand = """sudo %s/usr/sbin/eucalyptus-cloud -u %s -h %s --initialize --log-level=EXTREME --debug --L console"""
+DebugInitCommand = """%s/usr/sbin/eucalyptus-cloud -u %s -h %s --initialize --log-level=EXTREME --debug --L console"""
 
 class Initialize(object):
 
@@ -53,9 +53,11 @@ class Initialize(object):
         if self.debug:
             if cmd.status:
                 print 'Initialize command failed'
-                print '\tStatus=%d' % cmd.status
-                print '\tOutput:'
-                print cmd.stdout
-                print cmd.stderr
+            else:
+                print 'Initialize command succeeded'
+            print '\tStatus=%d' % cmd.status
+            print '\tOutput:'
+            print cmd.stdout
+            print cmd.stderr
         return 0
             
