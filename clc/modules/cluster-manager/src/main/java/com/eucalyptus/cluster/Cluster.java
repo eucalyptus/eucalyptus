@@ -925,8 +925,8 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       CheckException ex = ServiceChecks.Severity.ERROR.transform( this.configuration, currentErrors );
       throw ex;
     } else if ( currentState.ordinal( ) < State.DISABLED.ordinal( )
-                || ( Component.State.ENABLED.equals( externalState ) && Cluster.State.ENABLING.ordinal( ) < currentState.ordinal( ) ) ) {
-      IllegalStateException ex = new IllegalStateException( "Cluster is currently " + currentState + ":  please see logs for additional information." );
+                || ( Component.State.ENABLED.equals( externalState ) && Cluster.State.ENABLING.ordinal( ) >= currentState.ordinal( ) ) ) {
+      IllegalStateException ex = new IllegalStateException( "Cluster is currently reported as " + externalState + " but is really " + currentState + ":  please see logs for additional information." );
       this.pendingErrors.add( ex );
       throw ServiceChecks.Severity.ERROR.transform( this.configuration, ex );
     }
