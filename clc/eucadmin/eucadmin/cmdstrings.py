@@ -81,9 +81,13 @@ Commands = {
         'commands' : [(re.compile('OpenSSL 1\.0\..*'), """echo -n eucalyptus | openssl dgst -sha256 -sign %s/var/lib/eucalyptus/keys/cloud-pk.pem -hex"""),
                       (re.compile('.*'), """echo -n eucalyptus | openssl dgst -sha256 -sign %s/var/lib/eucalyptus/keys/cloud-pk.pem -hex | cut -d' ' -f2""")]
         },
-    'mysql' : {
+    'mysql_get_token' : {
         'get_version_fn' : get_mysql_version,
         'commands' : [(re.compile('.*'), """echo "select u.auth_user_token from auth_user u inner join auth_group_has_users gu on u.id=gu.auth_user_id join auth_group g on gu.auth_group_id=g.id join auth_account a on g.auth_group_owning_account=a.id where a.auth_account_name='%s' and g.auth_group_name='_%s';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=%s eucalyptus_auth | tail -n1 """)]
+        },
+    'mysql_get_accesskey_secretkey' : {
+        'get_version_fn' : get_mysql_version,
+        'commands' : [(re.compile('.*'), """  echo "select k.auth_access_key_query_id, k.auth_access_key_key from auth_access_key k inner join auth_user u on k.auth_access_key_owning_user=u.id join auth_group_has_users gu on u.id=gu.auth_user_id join auth_group g on gu.auth_group_id=g.id join auth_account a on g.auth_group_owning_account=a.id where a.auth_account_name='%s' and g.auth_group_name='_%s' and k.auth_access_key_active=1;" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=%s eucalyptus_auth  | tail -n1""")]
         }
     }
 
