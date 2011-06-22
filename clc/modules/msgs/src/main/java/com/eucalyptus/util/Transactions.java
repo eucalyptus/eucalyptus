@@ -88,6 +88,15 @@ public class Transactions {
     } );
   }
   
+  public static <T> List<T> findAll( T search ) throws ExecutionException {
+    return each( search, new Callback<T>( ) {
+      
+      @Override
+      public void fire( T t ) {}
+    } );
+  }
+
+  
   public static <T> boolean delete( T search, Predicate<T> c ) throws ExecutionException {
     assertThat( search, notNullValue( ) );
     EntityWrapper<T> db = Transactions.joinOrCreate( search );
@@ -225,5 +234,6 @@ public class Transactions {
     }
     return res;
   }
+
 
 }
