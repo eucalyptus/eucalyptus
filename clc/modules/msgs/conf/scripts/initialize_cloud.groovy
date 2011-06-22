@@ -23,8 +23,9 @@ import com.mysql.management.MysqldResource
 
 Logger LOG = Logger.getLogger( Bootstrap.class );
 new DirectoryBootstrapper( ).load( );
-[ new ComponentDiscovery( ), new ServiceBuilderDiscovery( ), new PersistenceContextDiscovery( ) ].each{
-  ServiceJarDiscovery.doSingleDiscovery(  it );
+ServiceJarDiscovery.doSingleDiscovery(  new ComponentDiscovery( ) );
+[ new ServiceBuilderDiscovery( ), new PersistenceContextDiscovery( ) ].each{
+  ServiceJarDiscovery.runDiscovery( s );
 }
 SystemCredentialProvider.initialize( );
 Component dbComp = Components.lookup( Database.class );
