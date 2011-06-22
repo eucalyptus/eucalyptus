@@ -1,4 +1,4 @@
-// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-                                                                                                                               // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:                                                                                                                                               
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-                                                                                                     // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:                                                                                                                                               
 /*
   Copyright (c) 2010  Eucalyptus Systems, Inc.	
 
@@ -186,11 +186,23 @@ int gen_instance_xml (const ncInstance * instance)
         xmlNodePtr disks = _NODE(instanceNode, "disks");
         for (int i=0; i<EUCA_MAX_VBRS && i<instance->params.virtualBootRecordLen; i++) {
             const virtualBootRecord * vbr = &(instance->params.virtualBootRecord[i]);
+            // skip empty entries, if any
+            if (vbr==NULL)
+                continue;
+            // skip anything without a device on the guest, e.g., kernel and ramdisk
             if (!strcmp ("none", vbr->guestDeviceName)) 
                 continue;
-            if (instance->combinePartitions && vbr->partitionNumber > 0) // skip partitions when making disks
-                continue;
-
+            // for Linux instances on Xen, partitions can be used directly, so disks can be skipped
+            if (strstr (instance->platform, "linux") && strstr (instance->hypervisorType, "xen")) {
+                if (vbr->partitionNumber == 0) {
+                    continue;
+                }
+            } else { // on all other os + hypervisor combinations, disks are used, so partitions must be skipped
+                if (vbr->partitionNumber > 0) {
+                    continue;
+                }
+            }
+            
             xmlNodePtr disk = _ELEMENT(disks, "diskPath", vbr->backingPath);
             _ATTRIBUTE(disk, "targetDeviceType", libvirtDevTypeNames[vbr->guestDeviceType]);
             _ATTRIBUTE(disk, "targetDeviceName", vbr->guestDeviceName);

@@ -70,7 +70,7 @@
   <include path="aws-image-attr.xml" />
   <include path="aws-ips-10-08-31.xml" />
   <include path="aws-keypairs-10-08-31.xml" />
-  <include path="aws-security-10-08-31.xml" />
+  <include path="aws-security-11-01-01.xml" />
   <include path="aws-zones-10-08-31.xml" />
   <include path="aws-regions-10-08-31.xml" />
   <include path="aws-ebs-volumes-10-08-31.xml" />

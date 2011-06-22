@@ -87,6 +87,9 @@ class EucaConf(object):
         self.config = None
         self.specified_options = {}
         self.parser = optparse.OptionParser()
+        self.parser.add_option('--initialize', action='store_true',
+                               dest='initialize', default=False,
+                               help='Do one-time initialize of CLC')
         self.parser.add_option('--heartbeat', action='store', type='string',
                                help='get heartbeat data for <host>')
         self.parser.add_option('--synckey', action='store_true',
@@ -122,6 +125,17 @@ class EucaConf(object):
                                action='append', type='string',
                                dest='dereg_nodes', metavar='"host host..."',
                                help='remove nodes from EUCALYPTUS')
+        self.parser.add_option('--register-cloud',
+                               action='callback',  callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name',
+                                                           'host_name']},
+                               help='add new clc to EUCALYPTUS')
+        self.parser.add_option('--deregister-cloud',
+                               action='callback', callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name']},
+                               help='remove clc from EUCALYPTUS')
         self.parser.add_option('--register-cluster',
                                action='callback',  callback=self.reg_callback,
                                callback_kwargs={'needs' : ['partition_name',
@@ -171,6 +185,9 @@ class EucaConf(object):
         self.parser.add_option('--list-walruses', action='store_true',
                                dest='list_walruses', default=False,
                                help='list registered walrus(es)')
+        self.parser.add_option('--list-clouds', action='store_true',
+                               dest='list_clouds', default=False,
+                               help='list registered CLCs')
         self.parser.add_option('--list-clusters', action='store_true',
                                dest='list_clusters', default=False,
                                help='list registered CCs')
@@ -417,6 +434,13 @@ class EucaConf(object):
             if name.startswith('do_') and inspect.ismethod(method):
                 method()
 
+    def do_initialize(self):
+        if self.options.initialize:
+            cls = boto.utils.find_class('eucamin.initialize',
+                                        'Initialize')
+            obj = cls(self.config)
+            sys.exit(obj.main())
+
     def do_get_credentials(self):
         if self.options.get_credentials:
             cls = boto.utils.find_class('eucadmin.getcredentials',
@@ -490,6 +514,11 @@ class EucaConf(object):
                       'eucadmin.describewalruses',
                       'DescribeWalruses')
 
+    def do_list_clouds(self):
+        self._do_list('list_clouds',
+                      'eucadmin.describeclouds',
+                      'DescribeClouds')
+
     def do_list_clusters(self):
         self._do_list('list_clusters',
                       'eucadmin.describeclusters',
@@ -530,6 +559,21 @@ class EucaConf(object):
         data = req.main(partition=partition, name=component_name,
                         port=port, host=host)
         req.cli_formatter(data)
+
+    def do_register_cloud(self):
+        if hasattr(self.options, 'register_cloud'):
+            self._do_register('eucadmin.registercloud',
+                              'RegisterCloud', '8773')
+            if not self.options.no_sync:
+                path1 = os.path.join(self.config['EUCALYPTUS'],
+                                     'var/lib/eucalyptus/keys')
+                path2 = os.path.join(path1, self.options.partition_name)
+                cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
+                req = cls([path1, path2], path1,
+                          self.options.host_name, ['euca.p12'],
+                          use_rsync=(not self.options.no_rsync),
+                          use_scp=(not self.options.no_scp))
+                req.sync()
 
     def do_register_cluster(self):
         if hasattr(self.options, 'register_cluster'):
@@ -594,6 +638,11 @@ class EucaConf(object):
             data = req.main(partition=self.options.partition_name,
                             name=self.options.component_name)
             req.cli_formatter(data)
+
+    def do_deregister_cloud(self):
+        self._do_deregister('deregister_cloud',
+                            'eucadmin.deregistercloud',
+                            'DeregisterCloud')
 
     def do_deregister_cluster(self):
         self._do_deregister('deregister_cluster',
