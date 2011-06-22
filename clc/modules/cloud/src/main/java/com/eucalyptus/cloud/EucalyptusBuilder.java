@@ -1,5 +1,7 @@
 package com.eucalyptus.cloud;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
@@ -13,6 +15,7 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.Internets;
 
 @DiscoverableServiceBuilder( Eucalyptus.class )
 @Handles( { RegisterEucalyptusType.class, DeregisterEucalyptusType.class, DescribeEucalyptusType.class, EucalyptusConfiguration.class, ModifyEucalyptusAttributeType.class } )
@@ -21,11 +24,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   
   @Override
   public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
-    if ( !Partitions.testPartitionCredentialsDirectory( partition ) ) {
-      throw new ServiceRegistrationException( "Eucalyptus registration failed because the key directory cannot be created." );
-    } else {
-      return super.checkAdd( partition, name, host, port );
-    }
+    return super.checkAdd( partition, name, host, port );
   }
   
   @Override
@@ -35,7 +34,13 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   
   @Override
   public EucalyptusConfiguration newInstance( String partition, String name, String host, Integer port ) {
-    return new EucalyptusConfiguration( name, host );
+    InetAddress addr;
+    try {
+      addr = InetAddress.getByName( host );
+      return new EucalyptusConfiguration( host, host );
+    } catch ( UnknownHostException e ) {
+      return this.newInstance( );
+    }
   }
   
   @Override
