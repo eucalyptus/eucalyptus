@@ -63,7 +63,7 @@ class ConfigFile(dict):
         fp = open(self.path)
         for line in fp.readlines():
             if not line.startswith('#'):
-                t = line.split('=')
+                t = line.split('=', 1)
                 if len(t) == 2:
                     self[t[0]] = t[1].strip('"\n ')
         fp.close()
