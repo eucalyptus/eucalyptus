@@ -190,6 +190,8 @@ int gen_instance_xml (const ncInstance * instance)
                 continue;
             if (instance->combinePartitions && vbr->partitionNumber > 0) // skip partitions when making disks
                 continue;
+	    if (!instance->combinePartitions && vbr->partitionNumber == 0) // skip disks (partitionNumber==0) when not combining partitions
+		continue;
 
             xmlNodePtr disk = _ELEMENT(disks, "diskPath", vbr->backingPath);
             _ATTRIBUTE(disk, "targetDeviceType", libvirtDevTypeNames[vbr->guestDeviceType]);
