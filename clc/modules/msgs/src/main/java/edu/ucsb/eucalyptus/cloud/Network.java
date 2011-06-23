@@ -95,7 +95,7 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
     return this.networkName;
   }
 
-  private static final Integer MIN_ADDR = 2;
+  private static final Integer MIN_ADDR = 8;
   private static final Integer MAX_ADDR = 4096;
   private static Logger        LOG      = Logger.getLogger( Network.class );
   
@@ -112,7 +112,7 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
   private final ConcurrentMap<String, NetworkToken> clusterTokens = new ConcurrentHashMap<String, NetworkToken>( );
   
   private static class AddressRange {
-    Integer min = 2;
+    Integer min = 8;
     Integer max = 4096;
   }
   
