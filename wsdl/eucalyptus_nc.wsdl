@@ -48,9 +48,9 @@
 	<xs:element nillable="false" minOccurs="0" name="userId" type="xs:string"/>
 	<xs:element nillable="true" minOccurs="0" maxOccurs="1" name="statusMessage" type="xs:string"/>
 	<xs:element nillable="false" minOccurs="0" maxOccurs="1" name="return" type="xs:boolean"/>
-	<xs:element nillable="true" minOccurs="0" maxOccurs="1" name="nodeName" type="xs:string"/>
         <xs:element nillable="false" minOccurs="0" maxOccurs="1" name="epoch" type="xs:int"/>
         <xs:element maxOccurs="unbounded" minOccurs="0" name="services" type="tns:serviceInfoType"/>
+	<xs:element nillable="true" minOccurs="0" maxOccurs="1" name="nodeName" type="xs:string"/>
       </xs:sequence>
     </xs:complexType>
     
@@ -258,6 +258,7 @@
 	<xs:extension base="tns:eucalyptusMessage">
 	  <xs:sequence>
 	    <xs:element name="instanceId" type="xs:string" />
+	    <xs:element name="force" type="xs:boolean" />
 	  </xs:sequence>
 	</xs:extension>
       </xs:complexContent>

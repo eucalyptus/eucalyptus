@@ -2,6 +2,7 @@ package com.eucalyptus.webui.client.service;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.List;
 
 public class CategoryTag implements Serializable {
 
@@ -30,7 +31,7 @@ public class CategoryTag implements Serializable {
     this.items = items;
   }
 
-  public ArrayList<CategoryItem> getItems( ) {
+  public List<CategoryItem> getItems( ) {
     return items;
   }
   

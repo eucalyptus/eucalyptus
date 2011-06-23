@@ -67,18 +67,16 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.NoSuchComponentException;
+import com.eucalyptus.component.NoSuchServiceException;
 import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.EntityWrapper;
@@ -100,8 +98,12 @@ public class StorageUtil {
   private static Logger LOG = Logger.getLogger( StorageUtil.class );
     
   public static void dispatchAll( BaseMessage message ) throws EucalyptusCloudException {
-    for( Service service : Components.lookup(Storage.class).enabledServices( ) ) {
-      service.getDispatcher( ).dispatch( message );
+    for( ServiceConfiguration service : Components.lookup(Storage.class).enabledServices( ) ) {
+      try {
+        service.lookupService( ).getDispatcher( ).dispatch( message );
+      } catch ( NoSuchServiceException ex ) {
+        LOG.error( ex , ex );
+      }
     }
   }
 
@@ -161,7 +163,7 @@ public class StorageUtil {
           }
           reply.add( aVolume );
         }
-      } catch ( NoSuchComponentException ex ) {
+      } catch ( NoSuchElementException ex ) {
         LOG.error( ex , ex );
       } catch ( NumberFormatException ex ) {
         LOG.error( ex , ex );

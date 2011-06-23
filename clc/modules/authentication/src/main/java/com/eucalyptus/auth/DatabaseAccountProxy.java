@@ -19,7 +19,7 @@ import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.TransactionException;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
@@ -54,15 +54,24 @@ public class DatabaseAccountProxy implements Account {
   @Override
   public void setName( final String name ) throws AuthException {
     try {
-      Transactions.one( AccountEntity.newInstanceWithAccountNumber( this.delegate.getAccountNumber( ) ), new Tx<AccountEntity>( ) {
-        public void fire( AccountEntity t ) throws Throwable {
-          t.setName( name );
-        }
-      } );
-    } catch ( TransactionException e ) {
-      Debugging.logError( LOG, e, "Failed to setName for " + this.delegate );
-      throw new AuthException( e );
-    }    
+      // try finding the account with the same name to change to
+      ( new DatabaseAuthProvider( ) ).lookupAccountByName( name );
+    } catch ( AuthException ae ) {
+      try {
+        // not found
+        Transactions.one( AccountEntity.newInstanceWithAccountNumber( this.delegate.getAccountNumber( ) ), new Tx<AccountEntity>( ) {
+          public void fire( AccountEntity t ) throws Throwable {
+            t.setName( name );
+          }
+        } );
+      } catch ( Exception e ) {
+        Debugging.logError( LOG, e, "Failed to setName for " + this.delegate );
+        throw new AuthException( e );
+      }
+      return;
+    }
+    // found
+    throw new AuthException( "Can not change to a name already in use: " + name );
   }
 
   @Override
@@ -124,7 +133,7 @@ public class DatabaseAccountProxy implements Account {
     UserEntity newUser = new UserEntity( userName );
     newUser.setPath( path );
     newUser.setEnabled( enabled );
-    newUser.setPasswordExpires( System.currentTimeMillis( ) + 1000 * 60 * 60 * 24 * 365L );
+    newUser.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
     if ( skipRegistration ) {
       newUser.setRegistrationStatus( User.RegistrationStatus.CONFIRMED );
     } else {
@@ -134,7 +143,7 @@ public class DatabaseAccountProxy implements Account {
       newUser.getInfo( ).putAll( info );
     }
     newUser.setToken( Crypto.generateSessionToken( userName ) );
-    newUser.setConfirmationCode( Crypto.generateSessionToken( userName ) );
+    //newUser.setConfirmationCode( Crypto.generateSessionToken( userName ) );
     GroupEntity newGroup = new GroupEntity( DatabaseAuthUtils.getUserGroupName( userName ) );
     newGroup.setUserGroup( true );
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );

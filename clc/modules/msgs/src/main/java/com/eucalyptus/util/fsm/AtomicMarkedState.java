@@ -9,65 +9,62 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
+import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.util.async.Futures;
+import com.eucalyptus.util.fsm.Automata.State;
+import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 
-public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extends Enum<T>> implements StateMachine<P, S, T> {
-  private static Logger                                   LOG                  = Logger.getLogger( AtomicMarkedState.class );
-  private final P                                         parent;
-  private final String                                    name;
+public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T extends Automata.Transition> implements StateMachine<P, S, T> {
+  private static Logger                                      LOG                  = Logger.getLogger( AtomicMarkedState.class );
+  private final P                                            parent;
+  private final String                                       name;
   
-  private final S                                         startState;
-  private final ImmutableList<S>                          immutableStates;
-  private final Multimap<S, Callback<P>>                  inStateListeners     = ArrayListMultimap.create( );
-  private final Multimap<S, Callback<P>>                  outStateListeners    = ArrayListMultimap.create( );
+  private final S                                            startState;
+  private final ImmutableList<S>                             immutableStates;
+  private final Multimap<S, Callback<P>>                     inStateListeners     = ArrayListMultimap.create( );
+  private final Multimap<S, Callback<P>>                     outStateListeners    = ArrayListMultimap.create( );
   
-  private volatile ImmutableList<TransitionImpl<P, S, T>> immutableTransitions = null;
-  private final Multimap<T, TransitionImpl<P, S, T>>      transitions          = ArrayListMultimap.create( );
-  private final Map<S, Map<S, TransitionImpl<P, S, T>>>   stateTransitions;
+  private volatile ImmutableList<TransitionHandler<P, S, T>> immutableTransitions = null;
+  private final Multimap<T, TransitionHandler<P, S, T>>      transitions          = ArrayListMultimap.create( );
+  private final Map<S, Map<S, TransitionHandler<P, S, T>>>   stateTransitions;
   
-  private final AtomicMarkableReference<S>                state;
-  private final AtomicLong                                id                   = new AtomicLong( 0l );
-  private final AtomicReference<ActiveTransition>         currentTransition    = new AtomicReference<ActiveTransition>( null );
+  private final AtomicMarkableReference<S>                   state;
+  private final AtomicLong                                   id                   = new AtomicLong( 0l );
+  private final AtomicReference<ActiveTransition>            currentTransition    = new AtomicReference<ActiveTransition>( null );
   
-  public AtomicMarkedState( S startState, P parent, Set<TransitionImpl<P, S, T>> transitions, //
+  public AtomicMarkedState( S startState, P parent, Set<TransitionHandler<P, S, T>> transitions, //
                             Multimap<S, Callback<P>> inStateListeners, Multimap<S, Callback<P>> outStateListeners ) {
     this.startState = startState;
     this.name = String.format( "State-%s-%s", parent.getClass( ).getSimpleName( ), parent.getName( ) );
     this.parent = parent;
-    final S[] states = this.startState.getDeclaringClass( ).getEnumConstants( );
-    this.stateTransitions = new HashMap<S, Map<S, TransitionImpl<P, S, T>>>( ) {
+    final S[] states = State.asEnum.getEnumConstants( startState );
+    this.stateTransitions = new HashMap<S, Map<S, TransitionHandler<P, S, T>>>( ) {
       {
         for ( S s : states ) {
-          this.put( s, new HashMap<S, TransitionImpl<P, S, T>>( ) );
+          this.put( s, new HashMap<S, TransitionHandler<P, S, T>>( ) );
         }
       }
     };
     this.immutableStates = ImmutableList.of( states );
     this.state = new AtomicMarkableReference<S>( this.startState, false );
     this.immutableTransitions = ImmutableList.copyOf( transitions );
-    for ( TransitionImpl<P, S, T> t : transitions ) {
+    for ( TransitionHandler<P, S, T> t : transitions ) {
       this.transitions.put( t.getName( ), t );
-      this.stateTransitions.get( t.getFromState( ) ).put( t.getToState( ), t );
+      this.stateTransitions.get( t.getRule( ).getFromState( ) ).put( t.getRule( ).getToState( ), t );
     }
     this.inStateListeners.putAll( inStateListeners );
     this.outStateListeners.putAll( outStateListeners );
   }
   
-  /**
-   * TODO: DOCUMENT
-   * 
-   * @see com.eucalyptus.util.fsm.StateMachine#isLegalTransition(T)
-   * @param transitionName
-   * @return
-   */
   @Override
   public boolean isLegalTransition( T transitionName ) {
     try {
@@ -78,20 +75,11 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     }
   }
   
-  /**
-   * TODO: DOCUMENT
-   * 
-   * @see com.eucalyptus.util.fsm.StateMachine#startTransition(T)
-   * @param transitionName
-   * @return
-   * @throws IllegalStateException
-   * @throws ExistingTransitionException
-   */
   @Override
-  public CheckedListenableFuture<P> startTransition( T transitionName ) throws IllegalStateException, ExistingTransitionException {
+  public CheckedListenableFuture<P> transitionByName( T transitionName ) throws IllegalStateException, ExistingTransitionException {
     if ( this.state.isMarked( ) ) {
       throw new ExistingTransitionException( "Transition request transition=" + transitionName + " rejected because of an ongoing transition: "
-                                             + this.currentTransition.get( ) );
+                                             + this.toString( ) );
     } else if ( !this.transitions.containsKey( transitionName ) ) {
       throw new NoSuchElementException( "No such transition named: " + transitionName.toString( ) + ". Known transitions: " + this.getTransitions( ) );
     } else {
@@ -102,20 +90,11 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     }
   }
   
-  /**
-   * TODO: DOCUMENT
-   * 
-   * @see com.eucalyptus.util.fsm.StateMachine#startTransitionTo(S)
-   * @param nextState
-   * @return
-   * @throws IllegalStateException
-   * @throws ExistingTransitionException
-   */
   @Override
-  public CheckedListenableFuture<P> startTransitionTo( S nextState ) throws IllegalStateException, ExistingTransitionException {
+  public CheckedListenableFuture<P> transition( S nextState ) throws IllegalStateException, ExistingTransitionException {
     if ( this.state.isMarked( ) ) {
       throw new ExistingTransitionException( "Transition request state=" + nextState + " rejected because of an ongoing transition: "
-                                             + this.currentTransition.get( ) );
+                                             + this.toString( ) );
     } else if ( !this.stateTransitions.get( this.state.getReference( ) ).containsKey( nextState ) ) {
       throw new NoSuchElementException( "No transition to " + nextState.toString( ) + " from current state " + this.toString( ) + ". Known transitions: "
                                         + this.getTransitions( ) );
@@ -135,29 +114,25 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
    * @throws ExistingTransitionException
    */
   protected ActiveTransition request( T transitionName ) throws ExistingTransitionException {
-    TransitionImpl<P, S, T> transition = lookupTransition( transitionName );
+    TransitionHandler<P, S, T> transition = lookupTransition( transitionName );
     TransitionRule<S, T> rule = transition.getRule( );
-    if ( !this.currentTransition.compareAndSet( null, new ActiveTransition( this.id.incrementAndGet( ), rule, transition ) ) ) {
+    if ( !this.state.compareAndSet( rule.getFromState( ), rule.getFromState( ), rule.getFromStateMark( ), true ) ) {
       throw new ExistingTransitionException( "Transition request " + transitionName + " rejected because of an ongoing transition: "
-                                             + this.currentTransition.get( ) );
-    } else if ( !this.state.compareAndSet( rule.getFromState( ), rule.getToState( ), rule.getFromStateMark( ), true ) ) {
-      this.id.decrementAndGet( );
-      this.currentTransition.set( null );
-      throw new IllegalStateException( "Failed to validate expected preconditions for transition: " + transition.getRule( ).toString( )
-                                       + " for current state: " + this.toString( ) );
+                                             + this.toString( ) );
     } else {
+      this.currentTransition.set( new ActiveTransition( this.id.incrementAndGet( ), rule, transition ) );
       return this.currentTransition.get( );
     }
   }
   
-  private TransitionImpl<P, S, T> lookupTransition( T transitionName ) {
+  private TransitionHandler<P, S, T> lookupTransition( T transitionName ) {
     if ( !this.transitions.containsKey( transitionName ) ) {
       throw new NoSuchElementException( "No such transition: " + transitionName );
     }
     S fromState = null;
     boolean[] mark = new boolean[1];
-    for ( TransitionImpl<P, S, T> transition : this.transitions.get( transitionName ) ) {
-      if ( transition.getFromState( ).equals( fromState = this.state.get( mark ) ) && transition.getFromStateMark( ) == mark[0] ) {
+    for ( TransitionHandler<P, S, T> transition : this.transitions.get( transitionName ) ) {
+      if ( transition.getRule( ).getFromState( ).equals( fromState = this.state.get( mark ) ) && transition.getRule( ).getFromStateMark( ) == mark[0] ) {
         return transition;
       }
     }
@@ -170,78 +145,64 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
    */
   private void commit( ) {
     LOG.debug( "Transition commit(): " + this.currentTransition.get( ) );
-    if ( this.currentTransition.get( ) == null ) {
-      Exceptions.trace( new IllegalStateException( "commit() called when there is no currently pending transition: " + this.toString( ) ) );
+    if ( !this.state.isMarked( ) ) {
+      IllegalStateException ex = Exceptions.trace( new IllegalStateException( "commit() called when there is no currently pending transition: "
+                                                                              + this.toString( ) ) );
+      LOG.error( ex, ex );
+      throw ex;
     } else {
-      ActiveTransition tr = this.currentTransition.get( );
-      boolean doFireInListeners = !this.state.getReference( ).equals( tr.getTransitionRule( ).getFromState( ) );
-      if ( !this.state.compareAndSet( tr.getTransitionRule( ).getToState( ), tr.getTransitionRule( ).getToState( ), true,
-                                      tr.getTransitionRule( ).getToStateMark( ) ) ) {
-        this.state.set( this.state.getReference( ), false );
-        Exceptions.trace( new IllegalStateException( "Failed to apply toState for the transition: " + tr.toString( ) + " for current state: "
-                                                              + this.toString( ) ) );
-      }
-      this.currentTransition.set( null );
-      if ( doFireInListeners ) {
+      ActiveTransition tr = this.currentTransition.getAndSet( null );
+      this.state.set( tr.getTransitionRule( ).getToState( ), tr.getTransitionRule( ).getToStateMark( ) );
+      if ( !tr.getTransitionRule( ).getFromState( ).equals( tr.getTransitionRule( ).getToState( ) ) ) {
+        this.state.set( tr.getTransitionRule( ).getToState( ), false );
         this.fireInListeners( tr.getTransitionRule( ).getToState( ) );
+      } else {
+        this.state.set( tr.getTransitionRule( ).getToState( ), false );
       }
+      EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE,
+                          "set(" + this.parent.toString( ) + ":" + this.parent.getClass( ).getCanonicalName( ) + ")" ).trace( );
+      tr.getTransitionFuture( ).set( this.parent );
     }
   }
   
-  private void error( ) {
-    LOG.debug( "Transition error(): " + this.currentTransition.get( ) );
-    if ( this.currentTransition.get( ) == null ) {
-      Exceptions.trace( new IllegalStateException( "error() called when there is no currently pending transition: " + this.toString( ) ) );
+  private void error( Throwable t ) {
+    LOG.debug( "Transition error(): " + this.toString( ) );
+    if ( !this.state.isMarked( ) ) {
+      IllegalStateException ex = Exceptions.debug( new IllegalStateException( "error() called when there is no currently pending transition: "
+                                                                              + this.toString( ), t ) );
+      LOG.error( ex, ex );
+      throw ex;
     } else {
-      ActiveTransition tr = this.currentTransition.get( );
-      if ( !this.state.compareAndSet( tr.getTransitionRule( ).getToState( ), tr.getTransitionRule( ).getErrorState( ), true,
-                                      tr.getTransitionRule( ).getErrorStateMark( ) ) ) {
-        this.state.set( this.state.getReference( ), false );
-        Exceptions.trace( new IllegalStateException( "Failed to apply toState for the transition: " + tr.toString( ) + " for current state: "
-                                                              + this.toString( ) ) );
-      }
-      if ( !this.state.getReference( ).equals( tr.getTransitionRule( ).getErrorState( ) ) ) {
-        this.currentTransition.set( null );
+      ActiveTransition tr = this.currentTransition.getAndSet( null );
+      this.state.set( tr.getTransitionRule( ).getErrorState( ), tr.getTransitionRule( ).getErrorStateMark( ) );
+      if ( !tr.getTransitionRule( ).getFromState( ).equals( tr.getTransitionRule( ).getErrorState( ) ) ) {
         this.state.set( tr.getTransitionRule( ).getErrorState( ), false );
         this.fireInListeners( tr.getTransitionRule( ).getErrorState( ) );
       } else {
-        this.currentTransition.set( null );
         this.state.set( tr.getTransitionRule( ).getErrorState( ), false );
       }
+      EventRecord.caller( this.getClass( ), EventType.TRANSITION_FUTURE, "setException(" + t.getClass( ).getCanonicalName( ) + "): " + t.getMessage( ) ).trace( );
+      tr.getTransitionFuture( ).setException( t );
     }
   }
   
-  private void rollback( ) {
-    LOG.debug( "Transition debug(): " + this.currentTransition.get( ) );
-    if ( this.currentTransition.get( ) == null ) {
-      if ( this.state.isMarked( ) ) {
-        this.state.set( this.state.getReference( ), false );
-      }
-      Exceptions.trace( new IllegalStateException( "rollback() called when there is no currently pending transition: " + this.toString( ) ) );
+  private void rollback( Throwable t ) {
+    LOG.debug( "Transition rollback(): " + this.toString( ) );
+    if ( !this.state.isMarked( ) ) {
+      Exceptions.debug( new IllegalStateException( "rollback() called when there is no currently pending transition: " + this.toString( ) ) );
     } else {
-      ActiveTransition tr = this.currentTransition.get( );
-      if ( !this.state.compareAndSet( tr.getTransitionRule( ).getToState( ), tr.getTransitionRule( ).getFromState( ), true,
-                                      tr.getTransitionRule( ).getFromStateMark( ) ) ) {
-        Exceptions.trace( new IllegalStateException( "Failed to apply toState for the transition: " + tr.toString( ) + " for current state: "
-                                                              + this.toString( ) ) );
-      }
-      if ( !this.state.getReference( ).equals( tr.getTransitionRule( ).getFromState( ) ) ) {
-        this.state.set( tr.getTransitionRule( ).getFromState( ), false );
-        this.currentTransition.set( null );
-        this.fireInListeners( tr.getTransitionRule( ).getFromState( ) );
-      } else {
-        this.state.set( tr.getTransitionRule( ).getFromState( ), false );
-        this.currentTransition.set( null );
-      }
+      ActiveTransition tr = this.currentTransition.getAndSet( null );
+      this.state.set( tr.getTransitionRule( ).getFromState( ), false );
     }
   }
   
   protected void fireInListeners( S state ) {
     for ( Callback<P> cb : AtomicMarkedState.this.inStateListeners.get( state ) ) {
       try {
+        Logs.exhaust( ).debug( "Firing state-in listener: " + cb.getClass( ) + " for " + this.toString( ) );
         cb.fire( this.parent );
       } catch ( Throwable t ) {
-        Exceptions.trace( "Firing state-in listeners failed for :" + cb.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( t ) );
+        Exceptions.debug( "Firing state-in listeners failed for :" + cb.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( t ) );
       }
     }
   }
@@ -249,9 +210,10 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
   protected void fireOutListeners( S state ) {
     for ( Callback<P> cb : AtomicMarkedState.this.outStateListeners.get( state ) ) {
       try {
+        Logs.exhaust( ).debug( "Firing state-in listener: " + cb.getClass( ) + " for " + this.toString( ) );
         cb.fire( this.parent );
       } catch ( Throwable t ) {
-        Exceptions.trace( "Firing state-out listeners failed for :" + cb.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( t ) );
+        Exceptions.debug( "Firing state-out listeners failed for :" + cb.getClass( ).getCanonicalName( ), Exceptions.filterStackTrace( t ) );
       }
     }
   }
@@ -270,11 +232,12 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
   
   private final CheckedListenableFuture<P> afterLeave( final T transitionName, final ActiveTransition tid ) throws IllegalStateException {
     try {
+      CheckedListenableFuture<P> result = tid.leave( );
       this.fireOutListeners( tid.getTransitionRule( ).getFromState( ) );
-      return tid.leave( );
+      return result;
     } catch ( Throwable t ) {
-      this.rollback( );
-      throw Exceptions.trace( new IllegalStateException( String.format( "Failed to apply transition %s because leave() threw an exception: %s",
+      this.error( t );
+      throw Exceptions.debug( new IllegalStateException( String.format( "Failed to apply transition %s because leave() threw an exception: %s",
                                                                         transitionName.toString( ), t.getMessage( ) ), t ) );
     }
   }
@@ -286,8 +249,8 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     } catch ( ExistingTransitionException t ) {
       throw t;
     } catch ( Throwable t ) {
-      this.rollback( );
-      throw Exceptions.trace( new IllegalStateException( String.format( "Failed to apply transition %s because request() threw an exception.",
+      this.rollback( t );
+      throw Exceptions.debug( new IllegalStateException( String.format( "Failed to apply transition %s because request() threw an exception.",
                                                                         transitionName.toString( ) ), t ) );
     }
     return tid;
@@ -333,7 +296,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
    * @return
    */
   @Override
-  public ImmutableList<TransitionImpl<P, S, T>> getTransitions( ) {
+  public ImmutableList<TransitionHandler<P, S, T>> getTransitions( ) {
     return immutableTransitions;
   }
   
@@ -343,11 +306,9 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
    */
   public String toString( ) {
     ActiveTransition t = this.currentTransition.get( );
-    return String.format( "State:name=%s:state=%s:mark=%s:transition=%s", this.name, this.state.getReference( ), this.state.isMarked( ), ( Logs.EXTREME
-      ? ( t != null
+    return String.format( "State:name=%s:state=%s:mark=%s:transition=%s", this.name, this.state.getReference( ), this.state.isMarked( ), ( t != null
         ? t.toString( )
-        : "idle" )
-      : "" ) );
+        : "idle" ) );
   }
   
   /**
@@ -364,55 +325,9 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     private Long                             endTime          = 0l;
     private final TransitionAction<P>        transition;
     private final Throwable                  startStackTrace;
-    private final Throwable                  endStackTrace    = new RuntimeException( );
-    private final CheckedListenableFuture<P> transitionFuture = new TransitionFuture<P>( );
+    private Throwable                        endStackTrace;
+    private final CheckedListenableFuture<P> transitionFuture = Futures.newGenericeFuture( );
     private TransitionRule<S, T>             rule;
-    
-    public void fire( ) {
-      try {
-        this.transition.enter( AtomicMarkedState.this.parent );
-        try {
-          this.teardown( );
-          AtomicMarkedState.this.commit( );
-        } catch ( IllegalStateException t ) {
-          LOG.trace( t, t );
-        }
-      } catch ( Throwable t ) {
-        LOG.error( t, t );
-        this.teardown( );
-        AtomicMarkedState.this.rollback( );
-        this.transitionFuture.setException( t );
-      }
-      try {
-        this.transition.after( AtomicMarkedState.this.parent );
-        this.transitionFuture.set( AtomicMarkedState.this.parent );
-      } catch ( Throwable t ) {
-        this.transitionFuture.setException( t );
-        LOG.error( t, t );
-      }
-    }
-    
-    private void teardown( ) {
-      if ( Logs.TRACE ) {
-        RuntimeException ex = new RuntimeException( );
-        if ( this.endTime != 0l ) {
-          LOG.error( "Transition being committed for a second time!" );
-          LOG.error( "FIRST: " + Exceptions.filterStackTraceElements( this.endStackTrace ), this.endStackTrace );
-          LOG.error( "SECOND: " + Exceptions.filterStackTraceElements( ex ), ex );
-        } else {
-          this.endTime = System.nanoTime( );
-          this.endStackTrace.setStackTrace( Exceptions.filterStackTraceElements( new RuntimeException( ) ).toArray( new StackTraceElement[] {} ) );
-          LOG.trace( this );
-        }
-      } else if ( Logs.EXTREME ) {
-        LOG.error( this.toString( ) );
-      }
-    }
-    
-    public void fireException( Throwable t ) {
-      this.teardown( );
-      AtomicMarkedState.this.error( );
-    }
     
     public ActiveTransition( Long id, TransitionRule<S, T> rule, TransitionAction<P> transition ) {
       this.id = id;
@@ -421,11 +336,33 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
       this.rule = rule;
       this.transition = transition;
       this.name = AtomicMarkedState.this.getName( ) + "-" + this.rule.getName( ) + "-" + id;
-      if ( Logs.DEBUG ) {
-        this.startStackTrace = Exceptions.filterStackTrace( new RuntimeException( ) );
+      if ( Logs.EXTREME ) {
+        this.startStackTrace = Exceptions.filterStackTrace( new RuntimeException( ), 20 );
       } else {
         this.startStackTrace = null;
       }
+    }
+    
+    CheckedListenableFuture<P> getTransitionFuture( ) {
+      return this.transitionFuture;
+    }
+    
+    public void fire( ) {
+      try {
+        this.transition.enter( AtomicMarkedState.this.parent );
+        this.transition.after( AtomicMarkedState.this.parent );
+        AtomicMarkedState.this.commit( );
+      } catch ( Throwable t ) {
+        this.fireException( t );
+      }
+    }
+    
+    public void fireException( Throwable t ) {
+      if( Logs.EXTREME ) {
+        Logs.exhaust( ).trace( Exceptions.string( this.startStackTrace ) );
+        Logs.exhaust( ).trace( Exceptions.string( this.endStackTrace ) );
+      }
+      AtomicMarkedState.this.error( t );
     }
     
     public final Long getId( ) {
@@ -451,12 +388,15 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Enum<S>, T extend
     
     public String toString( ) {
       StringBuilder sb = new StringBuilder( );
-      sb.append( EventType.TRANSITION ).append( this.name ).append( " Active" ).append( this.transition != null
+      sb.append( EventType.TRANSITION ).append( " " ).append( this.name ).append( " Active" ).append( this.transition != null
         ? this.transition.toString( )
         : "null" ).append( " id=" ).append( this.id ).append( " startTime=" ).append( new Date( this.startTime ) );
-      Logs.exhaust( ).info( sb.toString( ) );
-      Logs.exhaust( ).info( Exceptions.string( this.startStackTrace ) );
+      Logs.exhaust( ).trace( sb.toString( ) );
       return sb.toString( );
     }
+  }
+  
+  public P getParent( ) {
+    return this.parent;
   }
 }

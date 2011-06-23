@@ -55,7 +55,7 @@
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -72,6 +72,8 @@
 #include <curl/curl.h>
 #include <curl/easy.h>
 #include <pthread.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #if defined(HAVE_ZLIB_H)
 #include <zlib.h>
 #endif
@@ -120,28 +122,26 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     if (do_compress)
         snprintf (url, BUFSIZE, "%s%s", requested_url, "?IsCompressed=true");
 #endif
-    logprintfl (EUCAINFO, "{%u} walrus_request(): downloading %s\n", (unsigned int)pthread_self(), outfile);
-    logprintfl (EUCAINFO, "                  from %s\n", url);
 
     /* isolate the PATH in the URL as it will be needed for signing */
     char * url_path;
     if (strncasecmp (url, "http://", 7)!=0) {
-        logprintfl (EUCAERROR, "{%u} walrus_request(): URL must start with http://...\n");
+        logprintfl (EUCAERROR, "{%u} walrus_request: URL must start with http://...\n");
         return code;
     }
     if ((url_path=strchr(url+7, '/'))==NULL) { /* find first '/' after hostname */
-        logprintfl (EUCAERROR, "{%u} walrus_request(): URL has no path\n");
+        logprintfl (EUCAERROR, "{%u} walrus_request: URL has no path\n");
         return code;
     }
 
     if (euca_init_cert()) {
-        logprintfl (EUCAERROR, "{%u} walrus_request(): failed to initialize certificate\n");
+        logprintfl (EUCAERROR, "{%u} walrus_request: failed to initialize certificate\n");
         return code;
     }
 
     int fd = open (outfile, O_CREAT | O_WRONLY); // we do not truncate the file
     if (fd==-1 || lseek (fd, 0, SEEK_SET)==-1) {
-        logprintfl (EUCAERROR, "{%u} walrus_request(): failed to open %s for writing\n", (unsigned int)pthread_self(), outfile);
+        logprintfl (EUCAERROR, "{%u} walrus_request: failed to open %s for writing\n", (unsigned int)pthread_self(), outfile);
         return code;
     }
 
@@ -149,7 +149,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     CURLcode result;
     curl = curl_easy_init ();
     if (curl==NULL) {
-        logprintfl (EUCAERROR, "{%u} walrus_request(): could not initialize libcurl\n");
+        logprintfl (EUCAERROR, "{%u} walrus_request: could not initialize libcurl\n");
         close(fd);
         return code;
     }
@@ -166,7 +166,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
         curl_easy_setopt (curl, CURLOPT_NOBODY, 1L);
     } else {
         close(fd);
-        logprintfl (EUCAERROR, "{%u} walrus_request(): invalid HTTP verb %s\n", (unsigned int)pthread_self(), verb);
+        logprintfl (EUCAERROR, "{%u} walrus_request: invalid HTTP verb %s\n", (unsigned int)pthread_self(), verb);
         return ERROR; /* TODO: dealloc structs before returning! */
     }
 
@@ -213,7 +213,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     assert (strlen(cert64_str)+11<=BUFSIZE);
     char cert_hdr [BUFSIZE];
     snprintf (cert_hdr, BUFSIZE, "EucaCert: %s", cert64_str);
-    logprintfl (EUCADEBUG2, "{%u} walrus_request(): base64 certificate, %s\n", (unsigned int)pthread_self(), get_string_stats(cert64_str));
+    logprintfl (EUCADEBUG2, "{%u} walrus_request: base64 certificate, %s\n", (unsigned int)pthread_self(), get_string_stats(cert64_str));
     headers = curl_slist_append (headers, cert_hdr);
     free (cert64_str);
     free (cert_str);
@@ -230,9 +230,11 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 
     curl_easy_setopt (curl, CURLOPT_HTTPHEADER, headers); /* register headers */
     if (walrus_op) {
-        logprintfl (EUCADEBUG, "{%u} walrus_request(): writing %s/%s output to %s on '%s'\n", (unsigned int)pthread_self(), verb, walrus_op, outfile, date_str);
+        logprintfl (EUCADEBUG, "{%u} walrus_request: writing %s/%s output\n", (unsigned int)pthread_self(), verb, walrus_op);
+        logprintfl (EUCADEBUG, "{%u}                 from %s\n", (unsigned int)pthread_self(), url);
+        logprintfl (EUCADEBUG, "{%u}                 to %s\n", (unsigned int)pthread_self(), outfile);
     } else {
-        logprintfl (EUCADEBUG, "{%u} walrus_request(): writing %s output to %s on '%s'\n", (unsigned int)pthread_self(), verb, outfile, date_str);
+        logprintfl (EUCADEBUG, "{%u} walrus_request: writing %s output to %s\n", (unsigned int)pthread_self(), verb, outfile);
     }
     int retries = TOTAL_RETRIES;
     int timeout = FIRST_TIMEOUT;
@@ -256,7 +258,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 #endif
 
         result = curl_easy_perform (curl); /* do it */
-        logprintfl (EUCADEBUG, "{%u} walrus_request(): wrote %ld bytes in %ld writes\n", (unsigned int)pthread_self(), params.total_wrote, params.total_calls);
+        logprintfl (EUCADEBUG, "{%u} walrus_request: wrote %ld bytes in %ld writes\n", (unsigned int)pthread_self(), params.total_wrote, params.total_calls);
 
 #if defined(CAN_GZIP)
         if (do_compress) {
@@ -268,7 +270,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 #endif
 
         if (result) { // curl error (connection or transfer failed)
-            logprintfl (EUCAERROR,     "{%u} walrus_request(): %s (%d)\n", (unsigned int)pthread_self(), error_msg, result);
+            logprintfl (EUCAERROR,     "{%u} walrus_request: %s (%d)\n", (unsigned int)pthread_self(), error_msg, result);
 
         } else {
             long httpcode;
@@ -277,15 +279,15 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 
             switch (httpcode) {
             case 200L: /* all good */
-                logprintfl (EUCAINFO, "{%u} walrus_request(): saved image in %s\n", (unsigned int)pthread_self(), outfile);
+                logprintfl (EUCAINFO, "{%u} walrus_request: to %s\n", (unsigned int)pthread_self(), outfile);
                 code = OK;
                 break;
             case 408L: /* timeout, retry */
-                logprintfl (EUCAWARN, "{%u} walrus_request(): server responded with HTTP code %ld (timeout)\n", (unsigned int)pthread_self(), httpcode);
+                logprintfl (EUCAWARN, "{%u} walrus_request: server responded with HTTP code %ld (timeout)\n", (unsigned int)pthread_self(), httpcode);
                 //logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
                 break;
             default: /* some kind of error */
-                logprintfl (EUCAERROR, "{%u} walrus_request(): server responded with HTTP code %ld\n", (unsigned int)pthread_self(), httpcode);
+                logprintfl (EUCAERROR, "{%u} walrus_request: server responded with HTTP code %ld\n", (unsigned int)pthread_self(), httpcode);
                 //logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
                 retries=0;
             }
@@ -303,7 +305,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     close (fd);
 
     if ( code != OK ) {
-        logprintfl (EUCAINFO, "{%u} walrus_request(): due to error, removing %s\n", (unsigned int)pthread_self(), outfile);
+        logprintfl (EUCAINFO, "{%u} walrus_request: due to error, removing %s\n", (unsigned int)pthread_self(), outfile);
         remove (outfile);
     }
 
@@ -350,7 +352,13 @@ char * walrus_get_digest (const char * url)
 {
     char * digest_str = NULL;
     char * digest_path = strdup ("/tmp/walrus-digest-XXXXXX");
-    int tmp_fd = mkstemp (digest_path);
+
+    if(!digest_path) {
+       logprintfl (EUCAERROR, "{%u} error: failed to strdup digest path\n", (unsigned int)pthread_self());
+       return digest_path;
+    }
+
+    int tmp_fd = safe_mkstemp (digest_path);
     if (tmp_fd<0) {
         logprintfl (EUCAERROR, "{%u} error: failed to create a digest file %s\n", (unsigned int)pthread_self(), digest_path);
     } else {
@@ -363,6 +371,9 @@ char * walrus_get_digest (const char * url)
             digest_str = file2strn (digest_path, 100000);
         }
         unlink (digest_path);
+    }
+    if(digest_path) {
+        free(digest_path);
     }
     return digest_str;
 }
@@ -436,19 +447,19 @@ static void zerr (int ret, char * where)
 {
     switch (ret) {
     case Z_ERRNO:
-        logprintfl (EUCAERROR, "{%u} error: %s(): zlib: failed to write\n", (unsigned int)pthread_self(), where);
+        logprintfl (EUCAERROR, "{%u} error: %s: zlib: failed to write\n", (unsigned int)pthread_self(), where);
         break;
     case Z_STREAM_ERROR:
-        logprintfl (EUCAERROR, "{%u} error: %s(): zlib: invalid compression level\n", (unsigned int)pthread_self(), where);
+        logprintfl (EUCAERROR, "{%u} error: %s: zlib: invalid compression level\n", (unsigned int)pthread_self(), where);
         break;
     case Z_DATA_ERROR:
-        logprintfl (EUCAERROR, "{%u} error: %s(): zlib: invalid or incomplete deflate data\n", (unsigned int)pthread_self(), where);
+        logprintfl (EUCAERROR, "{%u} error: %s: zlib: invalid or incomplete deflate data\n", (unsigned int)pthread_self(), where);
         break;
     case Z_MEM_ERROR:
-        logprintfl (EUCAERROR, "{%u} error: %s(): zlib: out of memory\n", (unsigned int)pthread_self(), where);
+        logprintfl (EUCAERROR, "{%u} error: %s: zlib: out of memory\n", (unsigned int)pthread_self(), where);
         break;
     case Z_VERSION_ERROR:
-        logprintfl (EUCAERROR, "{%u} error: %s(): zlib: zlib version mismatch!\n", (unsigned int)pthread_self(), where);
+        logprintfl (EUCAERROR, "{%u} error: %s: zlib: zlib version mismatch!\n", (unsigned int)pthread_self(), where);
     }
 }
 
@@ -482,7 +493,7 @@ static size_t write_data_zlib (void *buffer, size_t size, size_t nmemb, void *pa
 
         unsigned have = CHUNK - strm->avail_out;
         if (write (fd, out, have) != have) {
-            logprintfl (EUCAERROR, "{%u} error: write_data_zlib(): failed to write\n", (unsigned int)pthread_self());
+            logprintfl (EUCAERROR, "{%u} error: write_data_zlib: failed to write\n", (unsigned int)pthread_self());
             inflateEnd(strm);
             return Z_ERRNO;
         }

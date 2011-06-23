@@ -132,7 +132,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
     try {
       final HttpRequest request = ( HttpRequest ) e.getMessage( );
       if ( Logs.EXTREME && request instanceof MappingHttpMessage ) {
-        ((MappingHttpMessage)request).logMessage( );
+        ( ( MappingHttpMessage ) request ).logMessage( );
       }
       final ChannelPipeline pipeline = ctx.getPipeline( );
       FilteredPipeline filteredPipeline = PipelineRegistry.getInstance( ).find( request );
@@ -151,11 +151,11 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
     final Channel ch = e.getChannel( );
     final Throwable cause = e.getCause( );
     try {
-      if( ch != null ) {
+      if ( ch != null ) {
         Contexts.clear( Contexts.lookup( ch ) );
       }
     } catch ( Throwable ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     }
     if ( cause instanceof ReadTimeoutException ) {//TODO:ASAP:GRZE: wth are all these exception types?!?! ONLY WebServicesException caught; else wrap.
       LOG.debug( cause, cause );
@@ -179,19 +179,20 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
   }
   
   private void sendError( final ChannelHandlerContext ctx, final HttpResponseStatus status, Throwable t ) {
+    Logs.exhaust( ).error( t, t );
     final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, status );
     response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
-    if ( Logs.DEBUG ) {
+    if ( Logs.EXTREME ) {
       ByteArrayOutputStream os = new ByteArrayOutputStream( );
       PrintWriter out = new PrintWriter( os );
       t.printStackTrace( out );
-      response.setContent( ChannelBuffers.copiedBuffer( "Failure: " + status.toString( ) + "\r\n" + t.getMessage( ) + "\r\n" + os.toString( ) + "\r\n", "UTF-8" ) );      
+      response.setContent( ChannelBuffers.copiedBuffer( "Failure: " + status.toString( ) + "\r\n" + t.getMessage( ) + "\r\n" + os.toString( ) + "\r\n", "UTF-8" ) );
     } else {
       response.setContent( ChannelBuffers.copiedBuffer( "Failure: " + status.toString( ) + "\r\n" + t.getMessage( ), "UTF-8" ) );
     }
     ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
     writeFuture.addListener( ChannelFutureListener.CLOSE );
-    if( ctx.getChannel( ).isConnected( ) ) {
+    if ( ctx.getChannel( ).isConnected( ) ) {
       Channels.write( ctx, writeFuture, response );
     }
   }

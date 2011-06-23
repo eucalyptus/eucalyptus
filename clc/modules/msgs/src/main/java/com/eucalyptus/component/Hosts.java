@@ -64,32 +64,28 @@
 package com.eucalyptus.component;
 
 import java.net.InetAddress;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
 import org.jgroups.View;
 import com.eucalyptus.bootstrap.HostManager;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Mbeans;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 
 public class Hosts {
   private static final Logger                       LOG     = Logger.getLogger( Hosts.class );
   private static final ConcurrentMap<Address, Host> hostMap = new ConcurrentHashMap<Address, Host>( );
 
-  public static <T> List<T> collect( Function<Host,? extends T> function ) {
-    return Lists.transform( Lists.newArrayList( hostMap.values( ) ), function );
-  }
-  
   public static Host getHostByAddress( InetAddress addr ) {
     for ( Host h : hostMap.values( ) ) {
       if ( h.getHostAddresses( ).contains( addr ) ) {
@@ -136,20 +132,22 @@ public class Hosts {
           ServiceConfiguration ephemeralConfig = ServiceConfigurations.createEphemeral( empyrean, addr );
           if( !empyrean.hasService( ephemeralConfig ) ) {
             try {
+              ServiceConfiguration config = empyrean.initRemoteService( addr );
               empyrean.loadService( ephemeralConfig ).get();
-              ServiceConfiguration config = empyrean.lookupService( ephemeralConfig ).getServiceConfiguration( );
               entry = new Host( currentView.getViewId( ), updatedHost.getGroupsId( ), updatedHost.hasDatabase( ), updatedHost.getHostAddresses( ), config );
+              Host temp = hostMap.putIfAbsent( entry.getGroupsId( ), entry );
+              entry = ( temp != null ) ? temp : entry;
               Mbeans.register( entry );
             } catch ( ServiceRegistrationException ex ) {
               LOG.error( ex , ex );
             } catch ( ExecutionException ex ) {
               LOG.error( ex , ex );
             } catch ( InterruptedException ex ) {
+              Thread.currentThread( ).interrupt( );
               LOG.error( ex , ex );
             }
           }
         }
-        hostMap.put( entry.getGroupsId( ), entry );
       }
       /** determine hosts to remove in this view **/
 //      List<Address> removeMembers = Lists.newArrayList( hostMap.keySet( ) );

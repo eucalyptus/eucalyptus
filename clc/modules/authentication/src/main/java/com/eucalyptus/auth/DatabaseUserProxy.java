@@ -28,7 +28,7 @@ import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.TransactionException;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
@@ -55,7 +55,7 @@ public class DatabaseUserProxy implements User {
           sb.append( t.toString( ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to toString for " + this.delegate );
     }
     return sb.toString( );
@@ -73,22 +73,31 @@ public class DatabaseUserProxy implements User {
 
   @Override
   public void setName( String name ) throws AuthException {
-    EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
     try {
-      UserEntity user = db.getUnique( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ) );
-      user.setName( name );
-      for ( GroupEntity g : user.getGroups( ) ) {
-        if ( g.isUserGroup( ) ) {
-          g.setName( DatabaseAuthUtils.getUserGroupName( name ) );
-          break;
+      // try looking up the user with same name
+      this.getAccount( ).lookupUserByName( name );
+    } catch ( AuthException e ) {
+      // not found
+      EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
+      try {
+        UserEntity user = db.getUnique( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ) );
+        user.setName( name );
+        for ( GroupEntity g : user.getGroups( ) ) {
+          if ( g.isUserGroup( ) ) {
+            g.setName( DatabaseAuthUtils.getUserGroupName( name ) );
+            break;
+          }
         }
+        db.commit( );
+      } catch ( Throwable t ) {
+        Debugging.logError( LOG, t, "Failed to setName for " + this.delegate );
+        db.rollback( );
+        throw new AuthException( t );
       }
-      db.commit( );
-    } catch ( Throwable e ) {
-      Debugging.logError( LOG, e, "Failed to setName for " + this.delegate );
-      db.rollback( );
-      throw new AuthException( e );
+      return;
     }
+    // found
+    throw new AuthException( "Can not change to a name already in use: " + name );
   }
 
   @Override
@@ -104,7 +113,7 @@ public class DatabaseUserProxy implements User {
           t.setPath( path );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setPath for " + this.delegate );
       throw new AuthException( e );
     }
@@ -123,7 +132,7 @@ public class DatabaseUserProxy implements User {
           t.setRegistrationStatus( stat );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setRegistrationStatus for " + this.delegate );
       throw new AuthException( e );
     }
@@ -142,7 +151,7 @@ public class DatabaseUserProxy implements User {
           t.setEnabled( enabled );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setEnabled for " + this.delegate );
       throw new AuthException( e );
     }
@@ -161,7 +170,7 @@ public class DatabaseUserProxy implements User {
           t.setToken( token );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setToken for " + this.delegate );
       throw new AuthException( e );
     }
@@ -185,7 +194,7 @@ public class DatabaseUserProxy implements User {
           t.setConfirmationCode( code );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setConfirmationCode for " + this.delegate );
       throw new AuthException( e );
     }
@@ -209,7 +218,7 @@ public class DatabaseUserProxy implements User {
           t.setPassword( password );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setPassword for " + this.delegate );
       throw new AuthException( e );
     }
@@ -233,7 +242,7 @@ public class DatabaseUserProxy implements User {
           t.setPasswordExpires( time );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setPasswordExpires for " + this.delegate );
       throw new AuthException( e );
     }
@@ -248,7 +257,7 @@ public class DatabaseUserProxy implements User {
           results.add( t.getInfo( ).get( key ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getInfo for " + this.delegate );
       throw new AuthException( e );
     }
@@ -264,7 +273,7 @@ public class DatabaseUserProxy implements User {
           results.putAll( t.getInfo( ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getInfo for " + this.delegate );
       throw new AuthException( e );
     }
@@ -279,7 +288,7 @@ public class DatabaseUserProxy implements User {
           t.getInfo( ).put( key, value );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setInfo for " + this.delegate );
       throw new AuthException( e );
     }
@@ -294,7 +303,7 @@ public class DatabaseUserProxy implements User {
           t.getInfo( ).putAll( newInfo );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to setInfo for " + this.delegate );
       throw new AuthException( e );
     }
@@ -311,7 +320,7 @@ public class DatabaseUserProxy implements User {
           }
         }
       } );      
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getKeys for " + this.delegate );
       throw new AuthException( e );      
     }
@@ -377,7 +386,7 @@ public class DatabaseUserProxy implements User {
           }
         }
       } );      
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getCertificates for " + this.delegate );
       throw new AuthException( e );      
     }
@@ -445,7 +454,7 @@ public class DatabaseUserProxy implements User {
           }
         }
       } );      
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getGroups for " + this.delegate );
       throw new AuthException( e );      
     }
@@ -464,7 +473,7 @@ public class DatabaseUserProxy implements User {
           results.add( new DatabaseAccountProxy( t.getGroups( ).get( 0 ).getAccount( ) ) );
         }
       } );
-    } catch ( TransactionException e ) {
+    } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to getAccount for " + this.delegate );
       throw new AuthException( e );
     }

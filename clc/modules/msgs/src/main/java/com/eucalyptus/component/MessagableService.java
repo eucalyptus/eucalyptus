@@ -66,22 +66,16 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.Collection;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.event.Event;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasParent;
-import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Request;
-import com.eucalyptus.util.fsm.ExistingTransitionException;
+import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.ws.client.ServiceDispatcher;
-import edu.emory.mathcs.backport.java.util.Arrays;
 
-public class MessagableService implements Service {
+public class MessagableService extends AbstractService implements Service {
   public static String          LOCAL_HOSTNAME = "@localhost";
   private final ServiceEndpoint endpoint;
   private final Dispatcher      localDispatcher;
@@ -90,22 +84,22 @@ public class MessagableService implements Service {
   
   /** ASAP:FIXME:GRZE **/
   
-  MessagableService( Service baseService ) {
+  MessagableService( final Service baseService ) {
     this.serviceDelegate = baseService;
     URI remoteUri;
-    if ( this.getServiceConfiguration( ).isLocal( ) ) {
-      remoteUri = this.getComponentId( ).makeRemoteUri( "127.0.0.1", this.getComponentId( ).getPort( ) );
+    if ( this.getServiceConfiguration( ).isVmLocal( ) ) {
+      remoteUri = this.getComponentId( ).makeInternalRemoteUri( "127.0.0.1", this.getComponentId( ).getPort( ) );
     } else {
-      remoteUri = this.getComponentId( ).makeRemoteUri( this.getServiceConfiguration( ).getHostName( ), this.getServiceConfiguration( ).getPort( ) );
+      remoteUri = this.getComponentId( ).makeInternalRemoteUri( this.getServiceConfiguration( ).getHostName( ), this.getServiceConfiguration( ).getPort( ) );
     }
-    this.endpoint = new ServiceEndpoint( this, true, baseService.getServiceConfiguration( ).isLocal( )
+    this.endpoint = new ServiceEndpoint( this, true, baseService.getServiceConfiguration( ).isVmLocal( )
       ? this.getComponentId( ).getLocalEndpointUri( )
       : remoteUri );//TODO:GRZE: fix remote/local swaps
     this.localDispatcher = ServiceDispatcher.makeLocal( this.getServiceConfiguration( ) );
     this.remoteDispatcher = ServiceDispatcher.makeRemote( this.getServiceConfiguration( ) );
   }
   
-  MessagableService( ServiceConfiguration config ) {
+  MessagableService( final ServiceConfiguration config ) throws ServiceRegistrationException {
     this( new BasicService( config ) );
   }
   
@@ -122,14 +116,8 @@ public class MessagableService implements Service {
                           this.getComponentId( ), this.getName( ), this.endpoint, this.getServiceConfiguration( ) );
   }
   
-  /** ASAP:FIXME:GRZE **/
   @Override
-  public List<String> getDetails( ) {
-    return Arrays.asList( this.toString( ).split( "\n" ) );
-  }
-  
-  @Override
-  public void enqueue( Request request ) {
+  public void enqueue( final Request request ) {
     this.endpoint.enqueue( request );
   }
   
@@ -139,23 +127,8 @@ public class MessagableService implements Service {
   }
   
   @Override
-  public boolean equals( Object obj ) {
+  public boolean equals( final Object obj ) {
     return this.serviceDelegate.equals( obj );
-  }
-  
-  @Override
-  public final String getName( ) {
-    return this.serviceDelegate.getName( );
-  }
-  
-  @Override
-  public State getState( ) {
-    return this.serviceDelegate.getState( );
-  }
-  
-  @Override
-  public final ServiceId getServiceId( ) {
-    return this.serviceDelegate.getServiceId( );
   }
   
   @Override
@@ -174,11 +147,6 @@ public class MessagableService implements Service {
   }
   
   @Override
-  public int compareTo( Service that ) {
-    return this.serviceDelegate.compareTo( that );
-  }
-  
-  @Override
   public ServiceConfiguration getServiceConfiguration( ) {
     return this.serviceDelegate.getServiceConfiguration( );
   }
@@ -194,22 +162,7 @@ public class MessagableService implements Service {
   }
   
   @Override
-  public FullName getFullName( ) {
-    return this.serviceDelegate.getFullName( );
-  }
-  
-  @Override
-  public String getPartition( ) {
-    return this.serviceDelegate.getPartition( );
-  }
-  
-  @Override
-  public Component getParent( ) {
-    return this.serviceDelegate.getParent( );
-  }
-  
-  @Override
-  public boolean checkTransition( Transition transition ) {
+  public boolean checkTransition( final Transition transition ) {
     return this.serviceDelegate.checkTransition( transition );
   }
   
@@ -219,31 +172,56 @@ public class MessagableService implements Service {
   }
   
   @Override
-  public CheckedListenableFuture<ServiceConfiguration> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    return this.serviceDelegate.transition( transition );
-  }
-  
-  @Override
-  public CheckedListenableFuture<ServiceConfiguration> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    return this.serviceDelegate.transition( state );
-  }
-  
-  @Override
-  public CheckedListenableFuture<ServiceConfiguration> transitionSelf( ) {
-    return this.serviceDelegate.transitionSelf( );
-  }
-
-  public void setGoal( State state ) {
+  public void setGoal( final State state ) {
     this.serviceDelegate.setGoal( state );
   }
-
+  
+  @Override
   public InetSocketAddress getSocketAddress( ) {
     return this.serviceDelegate.getSocketAddress( );
   }
+  
+  @Override
+  public void fireEvent( final Event event ) {
+    this.serviceDelegate.fireEvent( event );
+  }
+  
+  @Override
+  public String getName( ) {
+    return this.serviceDelegate.getName( );
+  }
+  
+  @Override
+  public String getPartition( ) {
+    return this.serviceDelegate.getPartition( );
+  }
+  
+  @Override
+  public FullName getFullName( ) {
+    return this.serviceDelegate.getFullName( );
+  }
+  
+  @Override
+  public int compareTo( final ServiceConfiguration o ) {
+    return this.serviceDelegate.compareTo( o );
+  }
+  
+  public Collection<ServiceCheckRecord> getDetails( ) {
+    return this.serviceDelegate.getDetails( );
+  }
+  
+  public StateMachine<ServiceConfiguration, State, Transition> getStateMachine( ) {
+    return this.serviceDelegate.getStateMachine( );
+  }
+  
+  @Override
+  public void start( ) {
+    this.endpoint.start( );
+  }
 
   @Override
-  public ServiceEndpoint getEndpoint( ) {
-    return this.endpoint;
+  public void stop( ) {
+    this.endpoint.stop( );
   }
   
 }

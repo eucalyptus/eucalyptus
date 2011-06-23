@@ -63,7 +63,6 @@
 
 package com.eucalyptus.entities;
 
-import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -78,8 +77,6 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
   @NaturalId
   @Column( name = "metadata_display_name" )
   protected String displayName;
-  @Column( name = "metadata_creation_time" )
-  private Date     creationTime;
   
   public AbstractStatefulPersistent( ) {
     super( );
@@ -133,14 +130,6 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
     this.displayName = displayName;
   }
   
-  public Date getCreationTime( ) {
-    return this.creationTime;
-  }
-  
-  public void setCreationTime( Date creationTime ) {
-    this.creationTime = creationTime;
-  }
-
   public final String getName( ) {
     return this.getDisplayName( );
   }

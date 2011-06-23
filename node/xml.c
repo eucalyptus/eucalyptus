@@ -1,4 +1,4 @@
-// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-                                                                                                                               // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:                                                                                                                                               
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-                                                                                                     // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:                                                                                                                                               
 /*
   Copyright (c) 2010  Eucalyptus Systems, Inc.	
 
@@ -53,7 +53,7 @@
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -115,6 +115,16 @@ static void init (void)
     pthread_mutex_unlock (&xml_mutex);
 }
 
+// verify that the path for kernel/ramdisk is reasonable
+static int path_check (const char * path, const char * name) // TODO: further checking?
+{
+    if (strstr (path, "/dev/") == path) {
+        logprintfl (EUCAERROR, "internal error: path to %s points to a device %s\n", name, path);
+        return 1;
+    }
+    return 0;
+}
+
 // Encodes instance metadata (contained in ncInstance struct) in XML
 // and writes it to file instance->xmlFilePath (/path/to/instance/instance.xml)
 // That file gets processed through tools/libvirt.xsl (/etc/eucalyptus/libvirt.xsl)
@@ -123,6 +133,7 @@ int gen_instance_xml (const ncInstance * instance)
 {
     INIT();
 
+    int ret = 1;
     pthread_mutex_lock (&xml_mutex);
     xmlDocPtr doc = xmlNewDoc (BAD_CAST "1.0");
     xmlNodePtr instanceNode = xmlNewNode (NULL, BAD_CAST "instance");
@@ -134,46 +145,79 @@ int gen_instance_xml (const ncInstance * instance)
         _ATTRIBUTE(hypervisor, "capability", hypervsorCapabilityTypeNames[instance->hypervisorCapability]);
     }
     _ELEMENT(instanceNode, "name", instance->instanceId);
+    _ELEMENT(instanceNode, "uuid", instance->uuid);
+    _ELEMENT(instanceNode, "reservation", instance->reservationId);
+    _ELEMENT(instanceNode, "user", instance->userId);
+    _ELEMENT(instanceNode, "dnsName", instance->dnsName);
+    _ELEMENT(instanceNode, "privateDnsName", instance->privateDnsName);
+    _ELEMENT(instanceNode, "instancePath", instance->instancePath);
     if (instance->params.kernel) {
-        _ELEMENT(instanceNode, "kernel", instance->params.kernel->backingPath);
+        char * path = instance->params.kernel->backingPath;
+        if (path_check (path, "kernel")) goto free; // sanity check 
+        _ELEMENT(instanceNode, "kernel", path);
     }
     if (instance->params.ramdisk) {
-        _ELEMENT(instanceNode, "ramdisk", instance->params.ramdisk->backingPath);
+        char * path = instance->params.ramdisk->backingPath;
+        if (path_check (path, "ramdisk")) goto free; // sanity check
+        _ELEMENT(instanceNode, "ramdisk", path);
     }
     _ELEMENT(instanceNode, "consoleLogPath", instance->consoleFilePath);
+    _ELEMENT(instanceNode, "userData", instance->userData);
+    _ELEMENT(instanceNode, "launchIndex", instance->launchIndex);
+    
     char cores_s  [10]; snprintf (cores_s,  sizeof (cores_s),  "%d", instance->params.cores);  _ELEMENT(instanceNode, "cores", cores_s);
     char memory_s [10]; snprintf (memory_s, sizeof (memory_s), "%d", instance->params.mem * 1024); _ELEMENT(instanceNode, "memoryKB", memory_s);
 
+    { // SSH-key related
+        xmlNodePtr key = _NODE(instanceNode, "key");
+        _ATTRIBUTE(key, "isKeyInjected", _BOOL(instance->do_inject_key));
+        _ATTRIBUTE(key, "sshKey", instance->keyName);
+    }
+
     { // OS-related specs
         xmlNodePtr os = _NODE(instanceNode, "os");
+        _ATTRIBUTE(os, "platform", instance->platform);
         _ATTRIBUTE(os, "virtioRoot", _BOOL(nc_state.config_use_virtio_root));
         _ATTRIBUTE(os, "virtioDisk", _BOOL(nc_state.config_use_virtio_disk));
         _ATTRIBUTE(os, "virtioNetwork", _BOOL(nc_state.config_use_virtio_net));
     }
 
-    /* TODO: implement 'features' section with ACPI (et al?)
-    {
-        xmlNodePtr features = _NODE(instanceNode, "features");
-        _NODE(features, "acpi");
-    }
-    */
-
     { // disks specification
         xmlNodePtr disks = _NODE(instanceNode, "disks");
         for (int i=0; i<EUCA_MAX_VBRS && i<instance->params.virtualBootRecordLen; i++) {
             const virtualBootRecord * vbr = &(instance->params.virtualBootRecord[i]);
+            // skip empty entries, if any
+            if (vbr==NULL)
+                continue;
+            // skip anything without a device on the guest, e.g., kernel and ramdisk
             if (!strcmp ("none", vbr->guestDeviceName)) 
                 continue;
-            if (instance->combinePartitions && vbr->partitionNumber > 0) // skip partitions when making disks
-                continue;
-            if (!instance->combinePartitions && vbr->partitionNumber == 0) // skip disks (partitionNumber==0) when not combining partitions
-                continue;
-
+            // for Linux instances on Xen, partitions can be used directly, so disks can be skipped
+            if (strstr (instance->platform, "linux") && strstr (instance->hypervisorType, "xen")) {
+                if (vbr->partitionNumber == 0) {
+                    continue;
+                }
+            } else { // on all other os + hypervisor combinations, disks are used, so partitions must be skipped
+                if (vbr->partitionNumber > 0) {
+                    continue;
+                }
+            }
+            
             xmlNodePtr disk = _ELEMENT(disks, "diskPath", vbr->backingPath);
             _ATTRIBUTE(disk, "targetDeviceType", libvirtDevTypeNames[vbr->guestDeviceType]);
             _ATTRIBUTE(disk, "targetDeviceName", vbr->guestDeviceName);
+            if (nc_state.config_use_virtio_root) {
+                char virtiostr[SMALL_CHAR_BUFFER_SIZE];
+                snprintf(virtiostr, SMALL_CHAR_BUFFER_SIZE, "%s", vbr->guestDeviceName);
+                virtiostr[0] = 'v';
+                _ATTRIBUTE(disk, "targetDeviceNameVirtio", virtiostr);
+                _ATTRIBUTE(disk, "targetDeviceBusVirtio", "virtio");     
+            }
             _ATTRIBUTE(disk, "targetDeviceBus", libvirtBusTypeNames[vbr->guestDeviceBus]);
             _ATTRIBUTE(disk, "sourceType", libvirtSourceTypeNames[vbr->backingType]);
+        }
+        if (strlen (instance->floppyFilePath)) {
+            _ELEMENT(disks, "floppyPath", instance->floppyFilePath);
         }
     }
 
@@ -182,7 +226,6 @@ int gen_instance_xml (const ncInstance * instance)
         xmlNodePtr nic =  _NODE(nics, "nic");
         _ATTRIBUTE(nic, "bridgeDeviceName", instance->params.guestNicDeviceName);
         _ATTRIBUTE(nic, "mac", instance->ncnet.privateMac);
-        _ATTRIBUTE(nic, "modelType", libvirtNicTypeNames[instance->params.nicType]);
     }
 
     mode_t old_umask = umask (~BACKING_FILE_PERM); // ensure the generated XML file has the right perms
@@ -190,11 +233,13 @@ int gen_instance_xml (const ncInstance * instance)
     xmlSaveFormatFileEnc (instance->xmlFilePath, doc, "UTF-8", 1);
     umask (old_umask);
 
-    logprintfl (EUCAINFO, "wrote instanceNode XML to %s\n", instance->xmlFilePath);
+    logprintfl (EUCAINFO, "[%s] wrote instance XML to %s\n", instance->instanceId, instance->xmlFilePath);
+    ret = 0;
+ free:
     xmlFreeDoc(doc);
     pthread_mutex_unlock (&xml_mutex);
 
-    return 0;
+    return ret;
 }
 
 static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * inputXmlPath, const char * outputXmlPath);

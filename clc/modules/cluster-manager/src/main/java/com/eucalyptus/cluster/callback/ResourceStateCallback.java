@@ -12,11 +12,11 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
   private static Logger LOG = Logger.getLogger( ResourceStateCallback.class );
   
   public ResourceStateCallback( ) {
-    this.setRequest( new DescribeResourcesType( ) {
+    super( new DescribeResourcesType( ) {
       {
         regarding( );
         for ( VmType v : VmTypes.list( ) ) {
-          getInstanceTypes( ).add( v.getAsVmTypeInfo( ) );
+          getInstanceTypes( ).add( VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( v ) );
         }
       }
     } );

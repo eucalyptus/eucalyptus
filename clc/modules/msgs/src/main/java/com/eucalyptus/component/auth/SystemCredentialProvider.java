@@ -194,10 +194,10 @@ public class SystemCredentialProvider extends Bootstrapper {
   
   @Override
   public boolean load( ) throws Exception {
-    return initializeCredentials( );
+    return initialize( );
   }
 
-  public static boolean initializeCredentials( ) {
+  public static boolean initialize( ) {
     try {
       if ( !SystemCredentialProvider.check( ComponentIds.lookup( Eucalyptus.class ) ) ) {
         SystemCredentialProvider.init( ComponentIds.lookup( Eucalyptus.class ) );

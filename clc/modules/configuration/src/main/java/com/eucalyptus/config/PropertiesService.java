@@ -66,9 +66,7 @@ package com.eucalyptus.config;
 import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.id.Any;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.google.common.collect.Lists;
 
 public class PropertiesService extends ComponentId.Unpartioned {
   
@@ -82,17 +80,17 @@ public class PropertiesService extends ComponentId.Unpartioned {
   }
   
   @Override
-  public Boolean hasDispatcher( ) {
-    return true;
+  public List<Class<? extends ComponentId>> serviceDependencies( ) {
+    return new ArrayList<Class<? extends ComponentId>>( ) {
+      {
+        this.add( Eucalyptus.class );
+      }
+    };
   }
   
   @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return new ArrayList( ) {
-      {
-        this.add( Any.class );
-      }
-    };
+  public boolean isAdminService( ) {
+    return true;
   }
   
 }

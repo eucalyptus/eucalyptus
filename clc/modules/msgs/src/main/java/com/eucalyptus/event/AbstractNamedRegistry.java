@@ -94,11 +94,23 @@ public abstract class AbstractNamedRegistry<TYPE extends HasName<? super TYPE>> 
   public Set<String> getDisabledKeys( ) {
     return this.disabledMap.keySet( );
   }
+
+  public boolean isRegistered( TYPE that ) {
+    return this.isRegistered( that.getName( ) );
+  }
   
+  public boolean isRegisteredDisabled( TYPE that ) {
+    return this.isRegisteredDisabled( that.getName( ) );
+  }
+
   public boolean isRegistered( String key ) {
     return this.activeMap.containsKey( key );
   }
   
+  public boolean isRegisteredDisabled( String key ) {
+    return this.disabledMap.containsKey( key );
+  }
+
   public Collection<TYPE> getEntries( ) {
     return this.activeMap.values( );
   }
@@ -210,7 +222,7 @@ public abstract class AbstractNamedRegistry<TYPE extends HasName<? super TYPE>> 
       this.canHas.readLock( ).unlock( );
     }
   }
-  
+
   public TYPE lookup( String name ) throws NoSuchElementException {
     this.canHas.readLock( ).lock( );
     try {
@@ -224,32 +236,46 @@ public abstract class AbstractNamedRegistry<TYPE extends HasName<? super TYPE>> 
     }
   }
   
+  public void disable( TYPE that ) throws NoSuchElementException {
+    this.disable( that.getName( ) );
+  }
+
   public void disable( String name ) {
     this.canHas.writeLock( ).lock( );
     try {
       TYPE obj = null;
-      if ( ( obj = this.activeMap.remove( name ) ) == null ) {
+      if ( ( obj = this.activeMap.remove( name ) ) == null  && ( ( obj = this.disabledMap.remove( name ) ) == null ) ) {
         throw new NoSuchElementException( "Can't find registered object: " + name + " in " + this.getClass( ).getSimpleName( ) );
-      } 
-      this.disabledMap.putIfAbsent( obj.getName( ), obj );
+      } else {
+        this.disabledMap.putIfAbsent( obj.getName( ), obj );
+      }
     } finally {
       this.canHas.writeLock( ).unlock( );
     }
   }
   
+  public void enable( TYPE that ) throws NoSuchElementException {
+    this.enable( that.getName( ) );
+  }
+
   public void enable( String name ) throws NoSuchElementException {
     this.canHas.writeLock( ).lock( );
     try {
       TYPE obj = null;
-      if ( ( obj = this.disabledMap.remove( name ) ) == null ) {
+      if ( ( obj = this.disabledMap.remove( name ) ) == null && ( ( obj = this.activeMap.remove( name ) ) == null ) ) {
         throw new NoSuchElementException( "Can't find registered object: " + name + " in " + this.getClass( ).getSimpleName( ) );
-      } 
-      this.activeMap.putIfAbsent( obj.getName( ), obj );
+      } else {
+        this.activeMap.putIfAbsent( obj.getName( ), obj );
+      }
     } finally {
       this.canHas.writeLock( ).unlock( );
     }
   }
   
+  public boolean contains( TYPE obj ) {
+    return this.contains( obj.getName( ) );
+  }
+
   public boolean contains( String name ) {
     this.canHas.readLock( ).lock( );
     try {

@@ -28,36 +28,15 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-from boto.roboto.awsqueryrequest import AWSQueryRequest
-from boto.roboto.param import Param
-import eucadmin
+import eucadmin.describerequest
 
-class DescribeArbitrators(AWSQueryRequest):
-  
-    ServicePath = '/services/Configuration'
-    ServiceClass = eucadmin.EucAdmin
-    Description = 'Get arbitrator'
+class DescribeArbitrators(eucadmin.describerequest.DescribeRequest):
 
-    def __init__(self, **args):
-        AWSQueryRequest.__init__(self, **args)
-        self.list_markers = ['euca:registered']
-        self.item_markers = ['euca:item']
-  
-    def get_connection(self, **args):
-        if self.connection is None:
-            args['path'] = self.ServicePath
-            self.connection = self.ServiceClass(**args)
-        return self.connection
-      
-    def cli_formatter(self, data):
-        arbitrators = getattr(data, 'euca:registered')
-        fmt = 'ARBITRATOR\t%s\t%s'
-        for a in arbitrators:
-            print fmt % (a['euca:name'], a['euca:partition'])
-
-    def main(self, **args):
-        return self.send(**args)
-
-    def main_cli(self):
-        self.do_cli()
+    ServiceName = 'Arbitrator'
     
+    def cli_formatter(self, data):
+        services = getattr(data, 'euca:registered')
+        fmt = '%s\t%s\t%s'
+        for s in services:
+            print fmt % (self.ServiceName.upper(),
+                         a['euca:name'], a['euca:partition'])

@@ -1,177 +1,229 @@
 package com.eucalyptus.util;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
-
-import javax.persistence.EntityManager;
-
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.async.Callback;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 
 public class Transactions {
-  private static Logger LOG = Logger.getLogger( Transactions.class );
+  private static Logger                        LOG  = Logger.getLogger( Transactions.class );
+  private static ThreadLocal<EntityWrapper<?>> dbtl = new ThreadLocal<EntityWrapper<?>>( );
+//  
+//  public static <T> EntityWrapper<T> join( ) {
+//    return ( EntityWrapper<T> ) dbtl.get( );
+//  }
   
-  public static <T> T one( T search, JoinTx<T>... txs ) throws TransactionException {
-    if ( search == null ) {
-      TransactionException ex = new TransactionException( "A search object must be supplied" );
-      LOG.warn( ex.getMessage( ), ex );
-      throw ex;
-    }
-    EntityWrapper<T> db = EntityWrapper.get( search );
+  /**
+   * TODO:GRZE: make this friendly wrt multiple types
+   * 
+   * @param <T>
+   * @param search
+   * @return
+   */
+  private static <T> EntityWrapper<T> joinOrCreate( T search ) {
+    EntityWrapper<T> db;
+//    if ( dbtl.get( ) != null ) {
+//      try {
+//        db = ( EntityWrapper<T> ) dbtl.get( );
+//      } catch ( Exception ex ) {
+//        db = dbtl.get( ).recast( ( Class<T> ) search.getClass( ) );
+//      }
+//    } else {
+      db = EntityWrapper.get( search );
+      dbtl.set( db );
+//    }
+    return db;
+  }
+  
+  public static <T> List<T> each( T search, Callback<T> c ) {
+    assertThat( search, notNullValue( ) );
+    EntityWrapper<T> db = Transactions.joinOrCreate( search );
     try {
-      T entity = db.getUnique( search );
-      for ( JoinTx<T> c : txs ) {
-        c.fire( db, entity );
+      List<T> res = db.query( search );
+      for ( T t : res ) {
+        c.fire( t );
       }
       db.commit( );
-      return entity;
-    } catch ( EucalyptusCloudException e ) {
+      return res;
+    } catch ( UndeclaredThrowableException e ) {
       db.rollback( );
-      throw new TransactionException( e.getMessage( ), e );
+      LOG.error( e, e );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      LOG.error( e, e );
+    } finally {
+      dbtl.remove( );
+    }
+    return Lists.newArrayList( );
+  }
+  
+  @Deprecated
+  public static <T> T one( T search, final Tx<T> c ) throws ExecutionException {
+    return one( search, new Callback<T>( ) {
+      
+      @Override
+      public void fire( T t ) {
+        try {
+          c.fire( t );
+        } catch ( Throwable ex ) {
+          throw new UndeclaredThrowableException( ex );
+        }
+      }
+    } );
+  }
+  
+  public static <T> T find( T search ) throws ExecutionException {
+    return one( search, new Callback<T>( ) {
+      
+      @Override
+      public void fire( T t ) {}
+    } );
+  }
+  
+  public static <T> boolean delete( T search, Predicate<T> c ) throws ExecutionException {
+    assertThat( search, notNullValue( ) );
+    EntityWrapper<T> db = Transactions.joinOrCreate( search );
+    try {
+      T entity = db.getUnique( search );
+      boolean r = false;
+      if( r = c.apply( entity ) ) {
+        db.delete( entity );
+        db.commit( );
+        return true;
+      } else {
+        db.commit( );
+        return false;
+      }
+    } catch ( UndeclaredThrowableException e ) {
+      db.rollback( );
+      throw new TransactionException( e.getCause( ).getMessage( ), e.getCause( ) );
     } catch ( Throwable e ) {
       db.rollback( );
       LOG.error( e, e );
       throw new TransactionFireException( e.getMessage( ), e );
+    } finally {
+      dbtl.remove( );
     }
   }
-  
-  public static <T> T one( T search, Tx<T> c ) throws TransactionException {
-    if ( search == null ) {
-      TransactionException ex = new TransactionException( "A search object must be supplied" );
-      LOG.warn( ex.getMessage( ), ex );
-      throw ex;
-    }
-    EntityWrapper<T> db = EntityWrapper.get( search );
+
+  public static <T> T one( T search, Callback<T> c ) throws ExecutionException {
+    assertThat( search, notNullValue( ) );
+    EntityWrapper<T> db = Transactions.joinOrCreate( search );
     try {
       T entity = db.getUnique( search );
       c.fire( entity );
       db.commit( );
       return entity;
-    } catch ( EucalyptusCloudException e ) {
+    } catch ( UndeclaredThrowableException e ) {
       db.rollback( );
-      throw new TransactionException( e.getMessage( ), e );
+      throw new TransactionException( e.getCause( ).getMessage( ), e.getCause( ) );
     } catch ( Throwable e ) {
       db.rollback( );
       LOG.error( e, e );
       throw new TransactionFireException( e.getMessage( ), e );
+    } finally {
+      dbtl.remove( );
     }
   }
   
-  public static <T> T save( T saveMe ) throws TransactionException {
+  public static <S, T> S oneTransform( T search, Function<T, S> c ) throws ExecutionException {
+    assertThat( search, notNullValue( ) );
+    EntityWrapper<T> db = Transactions.joinOrCreate( search );
+    try {
+      T entity = db.getUnique( search );
+      S res = c.apply( entity );
+      db.commit( );
+      return res;
+    } catch ( UndeclaredThrowableException e ) {
+      db.rollback( );
+      throw new TransactionException( e.getCause( ).getMessage( ), e.getCause( ) );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      LOG.error( e, e );
+      throw new TransactionFireException( e.getMessage( ), e );
+    } finally {
+      dbtl.remove( );
+    }
+  }
+  
+  public static <S, T> S transform( T search, Function<T, S> c ) throws ExecutionException {//TODO:GRZE:adjust these to use callbacks
+    assertThat( search, notNullValue( ) );
+    EntityWrapper<T> db = Transactions.joinOrCreate( search );
+    try {
+      T entity = db.getUnique( search );
+      S res = c.apply( entity );
+      db.commit( );
+      return res;
+    } catch ( UndeclaredThrowableException e ) {
+      db.rollback( );
+      throw new TransactionException( e.getCause( ).getMessage( ), e.getCause( ) );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      LOG.error( e, e );
+      throw new TransactionFireException( e.getMessage( ), e );
+    } finally {
+      dbtl.remove( );
+    }
+  }
+  
+  public static <T> T save( T saveMe ) throws ExecutionException {
     return save( saveMe, null );
   }
   
-  public static <T> T save( T saveMe, Tx<T> c ) throws TransactionException {
-    EntityWrapper<T> db = EntityWrapper.get( saveMe );
+  public static <T> T save( T saveMe, Callback<T> c ) throws ExecutionException {
+    EntityWrapper<T> db = Transactions.joinOrCreate( saveMe );
     try {
-      db.add( saveMe );
-      T entity = saveMe; //db.getUnique( saveMe );//TODO:GRZE:OMGFIXME wrong
+      T entity = db.merge( saveMe );
       if ( c != null ) {
         c.fire( entity );
       }
       db.commit( );
       return entity;
-    } catch ( EucalyptusCloudException e ) {
+    } catch ( UndeclaredThrowableException e ) {
       db.rollback( );
-      throw new TransactionException( e.getMessage( ), e );
+      throw new TransactionException( e.getCause( ).getMessage( ), e.getCause( ) );
     } catch ( Throwable e ) {
       db.rollback( );
       LOG.error( e, e );
       throw new TransactionFireException( e.getMessage( ), e );
+    } finally {
+      dbtl.remove( );
     }
   }
   
-  public static <T> List<T> many( T search, Tx<T> c ) throws TransactionException {
-    if ( search == null ) {
-      TransactionException ex = new TransactionException( "A search object must be supplied" );
-      LOG.warn( ex.getMessage( ), ex );
-      throw ex;
-    }
-    EntityWrapper<T> db = EntityWrapper.get( search );
-    try {
-      List<T> res = db.query( search );
-      for ( T entity : res ) {
-        c.fire( entity );
-      }
-      db.commit( );
-      return res;
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback( );
-      throw new TransactionException( e.getMessage( ), e );
-    } catch ( Throwable e ) {
-      LOG.error( e, e );
-      throw new TransactionFireException( e.getMessage( ), e );
-    }
+  public static <T> List<T> filter( T search, Predicate<T> condition ) {
+    return filteredTransform( search, condition, (Function<T,T>) Functions.identity( ) );
   }
-
-  public static <T> List<T> filter( T search, Predicate<T> c ) throws TransactionException {
-    if ( search == null ) {
-      TransactionException ex = new TransactionException( "A search object must be supplied" );
-      LOG.warn( ex.getMessage( ), ex );
-      throw ex;
-    }
-    EntityWrapper<T> db = EntityWrapper.get( search );
+  
+  public static <T, O> List<O> filteredTransform( T search, Predicate<T> condition, Function<T, O> transform ) {
+    assertThat( search, notNullValue( ) );
+    assertThat( condition, notNullValue( ) );
+    assertThat( transform, notNullValue( ) );
+    List<O> res = Lists.newArrayList( );
+    EntityWrapper<T> db = Transactions.joinOrCreate( search );
     try {
-      List<T> res = Lists.newArrayList( );
       List<T> queryResults = db.query( search );
-      for( T t : queryResults ) {
-        if( c.apply( t ) ) {
-          res.add( t );
+      for ( T t : queryResults ) {
+        if ( condition.apply( t ) ) {
+          res.add( transform.apply( t ) );
         }
       }
       db.commit( );
-      return res;
     } catch ( Throwable e ) {
       db.rollback( );
       LOG.error( e, e );
-      throw new TransactionFireException( e.getMessage( ), e );
+    } finally {
+      dbtl.remove( );
     }
+    return res;
   }
 
-  public static <T> List<T> list( T search, Tx<List<T>> c ) throws TransactionException {
-    if ( search == null ) {
-      TransactionException ex = new TransactionException( "A search object must be supplied" );
-      LOG.warn( ex.getMessage( ), ex );
-      throw ex;
-    }
-    EntityWrapper<T> db = EntityWrapper.get( search );
-    try {
-      List<T> res = db.query( search );
-      c.fire( res );
-      db.commit( );
-      return res;
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback( );
-      throw new TransactionException( e.getMessage( ), e );
-    } catch ( Throwable e ) {
-      db.rollback( );
-      LOG.error( e, e );
-      throw new TransactionFireException( e.getMessage( ), e );
-    }
-  }
-  
-//  public static <T> T one( Class<T> type, String id, Tx<T> c ) throws TransactionException {
-//    if ( id == null ) {
-//      TransactionException ex = new TransactionException( "An search ID must be supplied" );
-//      LOG.warn( ex.getMessage( ), ex );
-//      throw ex;
-//    }
-//    EntityWrapper<T> db = EntityWrapper.get( type );
-//    EntityManager em = db.getEntityManager( );
-//    try {
-//      T entity = em.find( type, id );
-//      c.fire( entity );
-//      db.commit( );
-//      return entity;
-//    } catch ( EucalyptusCloudException e ) {
-//      db.rollback( );
-//      throw new TransactionException( e.getMessage( ), e );
-//    } catch ( Throwable e ) {
-//      db.rollback( );
-//      LOG.error( e, e );
-//      throw new TransactionFireException( e.getMessage( ), e );
-//    }
-//  }
-  
 }

@@ -75,23 +75,25 @@ import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
-import com.eucalyptus.util.fsm.TransitionListener;
+import com.eucalyptus.util.fsm.TransitionAction;
+import com.eucalyptus.util.fsm.TransitionHandler;
 import com.eucalyptus.util.fsm.Transitions;
-import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 
-public class ServiceState {
-  static Logger                                                       LOG     = Logger.getLogger( ServiceState.class );
-  private final StateMachine<ServiceConfiguration, State, Transition> stateMachine;
-  private final ServiceConfiguration                                  parent;
-  private Component.State                                             goal    = Component.State.ENABLED;               //TODO:GRZE:OMGFIXME
-  private final NavigableSet<String>                                  details = new ConcurrentSkipListSet<String>( );
+public class ServiceState implements StateMachine<ServiceConfiguration, Component.State, Component.Transition> {
+  static Logger                                                                           LOG     = Logger.getLogger( ServiceState.class );
+  private final StateMachine<ServiceConfiguration, Component.State, Component.Transition> stateMachine;
+  private final ServiceConfiguration                                                      parent;
+  private Component.State                                                                 goal    = Component.State.DISABLED;              //TODO:GRZE:OMGFIXME
+  private final NavigableSet<String>                                                      details = new ConcurrentSkipListSet<String>( );
   
-  public ServiceState( ServiceConfiguration parent ) {
+  public ServiceState( final ServiceConfiguration parent ) {
     this.parent = parent;
     this.stateMachine = this.buildStateMachine( );
   }
   
-  public State getState( ) {
+  @Override
+  public Component.State getState( ) {
     return this.stateMachine.getState( );
   }
   
@@ -99,33 +101,39 @@ public class ServiceState {
     return this.details.toString( );
   }
   
-  private StateMachine<ServiceConfiguration, State, Transition> buildStateMachine( ) {
-    
+  private StateMachine<ServiceConfiguration, Component.State, Component.Transition> buildStateMachine( ) {
+    final TransitionAction<ServiceConfiguration> noop = Transitions.noop( );
     return new StateMachineBuilder<ServiceConfiguration, State, Transition>( this.parent, State.PRIMORDIAL ) {
       {
-        in( State.ENABLED ).run( ServiceTransitions.restartServiceContext ).run( ServiceTransitions.addPipelines )/*.run( ServiceTransitions.startEndpoint )*/;
-        in( State.DISABLED ).run( ServiceTransitions.restartServiceContext ).run( ServiceTransitions.removePipelines )/*.run( ServiceTransitions.stopEndpoint )*/;
-        on( Transition.INITIALIZING ).from( State.PRIMORDIAL ).to( State.INITIALIZED ).error( State.BROKEN ).noop( );
-        on( Transition.LOADING ).from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).run( ServiceTransitions.LOAD_TRANSITION );
-        on( Transition.STARTING ).from( State.LOADED ).to( State.NOTREADY ).error( State.BROKEN ).run( ServiceTransitions.START_TRANSITION );
-        on( Transition.ENABLING ).from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).run( ServiceTransitions.ENABLE_TRANSITION );
-        on( Transition.DISABLING ).from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).run( ServiceTransitions.DISABLE_TRANSITION );
-        on( Transition.STOPPING ).from( State.DISABLED ).to( State.STOPPED ).error( State.NOTREADY ).run( ServiceTransitions.STOP_TRANSITION );
-        on( Transition.DESTROYING ).from( State.STOPPED ).to( State.LOADED ).error( State.BROKEN ).run( ServiceTransitions.DESTROY_TRANSITION );
-        on( Transition.READY_CHECK ).from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).run( ServiceTransitions.CHECK_TRANSITION );
-        on( Transition.DISABLED_CHECK ).from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).run( ServiceTransitions.CHECK_TRANSITION );
-        on( Transition.ENABLED_CHECK ).from( State.ENABLED ).to( State.ENABLED ).error( State.NOTREADY ).run( ServiceTransitions.CHECK_TRANSITION );
+        in( State.ENABLED ).run( ServiceTransitions.StateCallbacks.PIPELINES_ADD );
+        in( State.LOADED ).run( ServiceTransitions.StateCallbacks.ENDPOINT_START );
+        in( State.STOPPED ).run( ServiceTransitions.StateCallbacks.ENDPOINT_STOP ).run( ServiceTransitions.StateCallbacks.PROPERTIES_REMOVE );
+        in( State.NOTREADY ).run( ServiceTransitions.StateCallbacks.PROPERTIES_REMOVE );
+        from( State.PRIMORDIAL ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.INITIALIZING ).run( noop );
+        from( State.PRIMORDIAL ).to( State.BROKEN ).error( State.BROKEN ).on( Transition.FAILED_TO_PREPARE ).run( noop );
+        from( State.INITIALIZED ).to( State.LOADED ).error( State.BROKEN ).on( Transition.LOADING ).run( ServiceTransitions.TransitionActions.LOAD );
+        from( State.LOADED ).to( State.NOTREADY ).error( State.BROKEN ).on( Transition.STARTING ).addListener( ServiceTransitions.StateCallbacks.FIRE_START_EVENT ).run( ServiceTransitions.TransitionActions.START );
+        from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.READY_CHECK ).run( ServiceTransitions.TransitionActions.CHECK );
+        from( State.DISABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLING ).addListener( ServiceTransitions.StateCallbacks.SERVICE_CONTEXT_RESTART ).addListener( ServiceTransitions.StateCallbacks.FIRE_ENABLE_EVENT ).run( ServiceTransitions.TransitionActions.ENABLE );
+        from( State.DISABLED ).to( State.STOPPED ).error( State.NOTREADY ).on( Transition.STOPPING ).addListener( ServiceTransitions.StateCallbacks.FIRE_STOP_EVENT ).run( ServiceTransitions.TransitionActions.STOP );
+        from( State.NOTREADY ).to( State.STOPPED ).error( State.NOTREADY ).on( Transition.STOPPING_NOTREADY ).addListener( ServiceTransitions.StateCallbacks.FIRE_STOP_EVENT ).run( ServiceTransitions.TransitionActions.STOP );
+        from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLED_CHECK ).run( ServiceTransitions.TransitionActions.CHECK );
+        from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLING ).addListener( ServiceTransitions.StateCallbacks.SERVICE_CONTEXT_RESTART ).addListener( ServiceTransitions.StateCallbacks.FIRE_DISABLE_EVENT ).run( ServiceTransitions.TransitionActions.DISABLE );
+        from( State.ENABLED ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLED_CHECK ).run( ServiceTransitions.TransitionActions.CHECK );
+        from( State.STOPPED ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.DESTROYING ).run( ServiceTransitions.TransitionActions.DESTROY );
+        from( State.BROKEN ).to( State.INITIALIZED ).error( State.BROKEN ).on( Transition.RELOADING ).run( noop );
       }
     }.newAtomicMarkedState( );
   }
   
-  public CheckedListenableFuture<ServiceConfiguration> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
+  @Override
+  public CheckedListenableFuture<ServiceConfiguration> transitionByName( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
     if ( !this.parent.lookupComponent( ).isAvailableLocally( ) ) {
       throw new IllegalStateException( "Failed to perform service transition " + transition + " for " + this.parent.getName( )
                                        + " because it is not available locally." );
     }
     try {
-      return this.stateMachine.startTransition( transition );
+      return this.stateMachine.transitionByName( transition );
     } catch ( IllegalStateException ex ) {
       throw Exceptions.trace( ex );
     } catch ( NoSuchElementException ex ) {
@@ -138,9 +146,10 @@ public class ServiceState {
     }
   }
   
-  public CheckedListenableFuture<ServiceConfiguration> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
+  @Override
+  public CheckedListenableFuture<ServiceConfiguration> transition( Component.State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
     try {
-      return this.stateMachine.startTransitionTo( state );
+      return this.stateMachine.transition( state );
     } catch ( IllegalStateException ex ) {
       throw Exceptions.trace( ex );
     } catch ( NoSuchElementException ex ) {
@@ -156,7 +165,7 @@ public class ServiceState {
   public CheckedListenableFuture<ServiceConfiguration> transitionSelf( ) {
     try {
       if ( this.checkTransition( Transition.READY_CHECK ) ) {//this is a special case of a transition which does not return to itself on a successful check
-        return this.transition( Transition.READY_CHECK );
+        return this.transitionByName( Transition.READY_CHECK );
       } else {
         return this.transition( this.getState( ) );
       }
@@ -175,16 +184,37 @@ public class ServiceState {
     return this.goal;
   }
   
-  void setGoal( Component.State goal ) {
+  void setGoal( final Component.State goal ) {
     this.goal = goal;
   }
   
+  @Override
   public boolean isBusy( ) {
     return this.stateMachine.isBusy( );
   }
   
-  public boolean checkTransition( Transition transition ) {
+  protected boolean checkTransition( Transition transition ) {
     return this.parent.lookupComponent( ).isAvailableLocally( ) && this.stateMachine.isLegalTransition( transition );
+  }
+  
+  @Override
+  public ImmutableList<State> getStates( ) {
+    return this.stateMachine.getStates( );
+  }
+  
+  @Override
+  public ImmutableList<TransitionHandler<ServiceConfiguration, State, Transition>> getTransitions( ) {
+    return this.stateMachine.getTransitions( );
+  }
+  
+  @Override
+  public boolean isLegalTransition( Transition transitionName ) {
+    return this.stateMachine.isLegalTransition( transitionName );
+  }
+  
+  @Override
+  public ServiceConfiguration getParent( ) {
+    return this.stateMachine.getParent( );
   }
   
 }

@@ -10,13 +10,16 @@ import com.eucalyptus.webui.client.service.SearchResult;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.view.DetailView;
+import com.eucalyptus.webui.client.view.FooterView;
 import com.eucalyptus.webui.client.view.HasValueWidget;
 import com.eucalyptus.webui.client.view.ConfigView;
+import com.eucalyptus.webui.client.view.FooterView.StatusType;
+import com.eucalyptus.webui.client.view.LogView.LogType;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
-public class ConfigActivity extends AbstractSearchResultActivity implements ConfigView.Presenter, DetailView.Presenter {
+public class ConfigActivity extends AbstractSearchActivity implements ConfigView.Presenter, DetailView.Presenter {
   
-  public static final String TITLE = "SYSTEM CONFIGURATIONS";
+  public static final String TITLE = "SERVICE COMPONENTS";
   
   private static final Logger LOG = Logger.getLogger( ConfigActivity.class.getName( ) );
 
@@ -65,37 +68,35 @@ public class ConfigActivity extends AbstractSearchResultActivity implements Conf
     } else {
       LOG.log( Level.INFO, "Selection changed to " + selection );
       this.clientFactory.getShellView( ).showDetail( DETAIL_PANE_SIZE );
-      showSelectedDetails( );
+      showSingleSelectedDetails( selection );
     }
-  }
-
-  private void showSelectedDetails( ) {
-    ArrayList<SearchResultFieldDesc> descs = new ArrayList<SearchResultFieldDesc>( );
-    descs.addAll( cache.getDescs( ) );
-    descs.addAll( currentSelected.getExtraFieldDescs( ) );
-    this.clientFactory.getShellView( ).getDetailView( ).showData( descs, currentSelected.getRow( ) );          
   }
 
   @Override
-  public void saveValue( ArrayList<HasValueWidget> values ) {
+  public void saveValue( ArrayList<String> keys, ArrayList<HasValueWidget> values ) {
     if ( values == null || values.size( ) < 1 || this.currentSelected == null ) {
-      LOG.log( Level.WARNING, "No valid values or empty selection" );
+      clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Must select a single service component to change value", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
     }
-    LOG.log( Level.INFO, "Saving: " + values );
-    SearchResultRow result = new SearchResultRow( );
+    final SearchResultRow result = new SearchResultRow( );
     result.setExtraFieldDescs( this.currentSelected.getExtraFieldDescs( ) );
     for ( int i = 0; i < values.size( ); i++ ) {
       result.addField( values.get( i ).getValue( ) );
     }
+    
+    this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Changing service configuration ...", 0 );
+    
     this.clientFactory.getBackendService( ).setConfiguration( this.clientFactory.getLocalSession( ).getSession( ), result, new AsyncCallback<Void>( ) {
 
       @Override
       public void onFailure( Throwable cause ) {
-        LOG.log( Level.WARNING, "Failed to set configuration.", cause );
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to change service configuration", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to change service configuration: " + result );
       }
 
       @Override
       public void onSuccess( Void arg0 ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, "Service configuration changed", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "Successfully changed service configuration: " + result );        
         clientFactory.getShellView( ).getDetailView( ).disableSave( );
         reloadCurrentRange( );
       }

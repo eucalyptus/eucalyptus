@@ -18,31 +18,34 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentMessage;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
-import com.eucalyptus.empyrean.ServiceInfoType;
+import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.system.Ats;
+import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 
 public class BaseMessage {
   @Transient
-  private static Logger              LOG          = Logger.getLogger( BaseMessage.class );
-  private String                     correlationId;
-  private String                     userId;
-  private String                     effectiveUserId;
-  private Boolean                    _return      = true;
-  private String                     statusMessage;
-  private Integer                    epoch        = currentEpoch++;
-  private ArrayList<ServiceInfoType> services     = Lists.newArrayList( );
-  private static Integer             currentEpoch = 0;
+  private static Logger        LOG      = Logger.getLogger( BaseMessage.class );
+  private String               correlationId;
+  private String               userId;
+  private String               effectiveUserId;
+  private Boolean              _return  = true;
+  private String               statusMessage;
+  private Integer              _epoch;//NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
+  private ArrayList<ServiceId> _services = Lists.newArrayList( );//NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
   
   public BaseMessage( ) {
     super( );
@@ -65,7 +68,8 @@ public class BaseMessage {
   
   public String getCorrelationId( ) {
     if ( this.correlationId == null ) {
-      Logger.getLogger( "EXHAUST" ).error( Exceptions.filterStackTrace( new RuntimeException( "Creating UUID for message which did not have it set correctly: " + this.getClass( ) ) ) );
+      Logger.getLogger( "EXHAUST" ).error( Exceptions.filterStackTrace( new RuntimeException( "Creating UUID for message which did not have it set correctly: "
+                                                                                              + this.getClass( ) ) ) );
       return ( this.correlationId = UUID.randomUUID( ).toString( ) );
     } else {
       return this.correlationId;
@@ -147,14 +151,14 @@ public class BaseMessage {
   
   public <TYPE extends BaseMessage> TYPE regarding( BaseMessage msg, String subCorrelationId ) {
     String corrId = null;
-    if( msg == null ) {
+    if ( msg == null ) {
       this.correlationId = UUID.randomUUID( ).toString( );
     } else {
       corrId = msg.correlationId;
     }
-    if( subCorrelationId == null ) {
+    if ( subCorrelationId == null ) {
       subCorrelationId = String.format( "%f", Math.random( ) ).substring( 2 );
-    }    
+    }
     this.userId = FakePrincipals.SYSTEM_USER_ERN.getUserName( );
     this.effectiveUserId = FakePrincipals.SYSTEM_USER_ERN.getUserName( );
     this.correlationId = corrId + "-" + subCorrelationId;
@@ -195,7 +199,12 @@ public class BaseMessage {
    */
   public String toString( String namespace ) {
     ByteArrayOutputStream temp = new ByteArrayOutputStream( );
-    Class targetClass = this.getClass( );
+    Class targetClass = Classes.findAncestor( this, new Predicate<Class>( ) {
+      @Override
+      public boolean apply( Class arg0 ) {
+        return !arg0.isAnonymousClass( );
+      }
+    } );
     try {
       IBindingFactory bindingFactory = BindingDirectory.getFactory( namespace, targetClass );
       IMarshallingContext mctx = bindingFactory.createMarshallingContext( );
@@ -241,29 +250,38 @@ public class BaseMessage {
   /**
    * @return the epoch
    */
-  public Integer getBaseEpoch( ) {
-    return this.epoch;
+  public Integer get_epoch( ) {
+    return this._epoch;
   }
   
   /**
    * @param epoch the epoch to set
    */
-  public void setBaseEpoch( Integer epoch ) {
-    this.epoch = epoch;
+  public void set_epoch( Integer epoch ) {
+    this._epoch = epoch;
   }
   
   /**
    * @return the services
    */
-  public ArrayList<ServiceInfoType> getBaseServices( ) {
-    return this.services;
+  public ArrayList<ServiceId> get_services( ) {
+    return this._services;
+  }
+
+  /**
+   * @deprecated use get_services( ) as needed, this old name presents a potential naming conflict
+   * @see #get_services()
+   */
+  @Deprecated
+  public ArrayList<ServiceId> getBaseServices( ) {
+    return this._services;
   }
   
   /**
    * @param services the services to set
    */
-  public void setBaseServices( ArrayList<ServiceInfoType> services ) {
-    this.services = services;
+  public void set_services( ArrayList<ServiceId> services ) {
+    this._services = services;
   }
   
   /**

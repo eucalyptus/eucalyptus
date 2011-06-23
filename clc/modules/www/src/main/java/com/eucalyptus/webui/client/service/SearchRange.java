@@ -18,6 +18,13 @@ public class SearchRange implements Serializable {
     this.setAscending( true );
   }
 
+  public SearchRange( int sortField ) {
+    this.setStart( 0 );
+    this.setLength( 15 );
+    this.setSortField( sortField );
+    this.setAscending( true );
+  }
+  
   public SearchRange( int start, int length ) {
     this.setStart( start );
     this.setLength( length );

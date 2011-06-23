@@ -67,7 +67,6 @@ import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.util.Internets;
-import com.google.common.collect.Lists;
 
 public class NodeController extends ComponentId {
   
@@ -82,17 +81,12 @@ public class NodeController extends ComponentId {
   
   @Override
   public String getLocalEndpointName( ) {
-    return String.format( getUriPattern(), Internets.localhost( ), this.getPort( ) );
+    return String.format( getUriPattern(), Internets.localHostAddress( ), this.getPort( ) );
   }
   
   @Override
   public String getUriPattern( ) {
     return "http://%s:%d/axis2/services/EucalyptusCC";
-  }
-  
-  @Override
-  public Boolean hasDispatcher( ) {
-    return false;
   }
   
   @Override

@@ -66,34 +66,26 @@ package com.eucalyptus.component;
 import java.net.InetSocketAddress;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.Collection;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.auth.SystemCredentialProvider;
-import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.empyrean.ServiceId;
-import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.event.Hertz;
-import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasParent;
-import com.eucalyptus.util.async.CheckedListenableFuture;
-import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.async.Request;
-import com.eucalyptus.util.fsm.ExistingTransitionException;
+import com.eucalyptus.util.fsm.StateMachine;
+import com.eucalyptus.util.fsm.StateMachineBuilder;
 
-public class MissingService implements Service {
-  private static Logger              LOG  = Logger.getLogger( MissingService.class );
+public class MissingService extends AbstractService implements Service {
+  private static Logger              LOG = Logger.getLogger( MissingService.class );
   private final ServiceConfiguration serviceConfiguration;
+  private final StateMachineBuilder<ServiceConfiguration, State, Transition> stateMachine;
   
   MissingService( ServiceConfiguration serviceConfiguration ) {
     this.serviceConfiguration = serviceConfiguration;
+    this.stateMachine = new StateMachineBuilder<ServiceConfiguration, State, Transition>( serviceConfiguration, State.BROKEN );
+
   }
   
   @Override
@@ -102,27 +94,8 @@ public class MissingService implements Service {
   }
   
   @Override
-  public Component.State getState( ) {
-    return Component.State.MISSING;
-  }
-  
-  /** TODO:GRZE: clean this up **/
-  @Override
-  public final ServiceId getServiceId( ) {
-    return new ServiceId( ) {
-      {
-        this.setUuid( MissingService.this.serviceConfiguration.getFullName( ).toString( ) );
-        this.setPartition( MissingService.this.serviceConfiguration.getPartition( ) );
-        this.setName( MissingService.this.serviceConfiguration.getName( ) );
-        this.setType( MissingService.this.serviceConfiguration.getComponentId( ).getName( ) );
-        this.setUri( MissingService.this.serviceConfiguration.getUri( ).toString( ) );
-      }
-    };
-  }
-  
-  @Override
   public Boolean isLocal( ) {
-    return this.serviceConfiguration.isLocal( );
+    return this.serviceConfiguration.isVmLocal( );
   }
   
   @Override
@@ -141,16 +114,8 @@ public class MissingService implements Service {
    * @return
    */
   @Override
-  public int compareTo( Service that ) {
-    if ( this.getServiceConfiguration( ).getPartition( ).equals( that.getServiceConfiguration( ).getPartition( ) ) ) {
-      if ( that.getState( ).ordinal( ) == this.getState( ).ordinal( ) ) {
-        return this.getName( ).compareTo( that.getName( ) );
-      } else {
-        return that.getState( ).ordinal( ) - this.getState( ).ordinal( );
-      }
-    } else {
-      return this.getServiceConfiguration( ).getPartition( ).compareTo( that.getServiceConfiguration( ).getPartition( ) );
-    }
+  public int compareTo( ServiceConfiguration that ) {
+    return this.serviceConfiguration.compareTo( that );
   }
   
   /**
@@ -186,28 +151,17 @@ public class MissingService implements Service {
   public String getPartition( ) {
     return this.serviceConfiguration.getPartition( );
   }
-  
-  @Override
-  public Component getParent( ) {
-    return this.getComponent( );
-  }
-  
+    
   @Override
   public Dispatcher getDispatcher( ) {
-    throw new RuntimeException(this.serviceConfiguration + " does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
+    throw new IllegalStateException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
   }
   
   @Override
-  public List<String> getDetails( ) {
-    throw new RuntimeException(this.serviceConfiguration + " does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
+  public Collection<ServiceCheckRecord> getDetails( ) {
+    throw new IllegalStateException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
   }
   
-
-  @Override
-  public ServiceEndpoint getEndpoint( ) {
-    throw new RuntimeException(this.serviceConfiguration + " does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
-  }
-
   @Override
   public void enqueue( Request request ) {
     LOG.error( "Discarding request submitted to a basic service: " + request );
@@ -224,26 +178,33 @@ public class MissingService implements Service {
   }
   
   @Override
-  public CheckedListenableFuture<ServiceConfiguration> transition( Transition transition ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    return Futures.predestinedFuture( this.serviceConfiguration );
-  }
-  
-  @Override
-  public CheckedListenableFuture<ServiceConfiguration> transition( State state ) throws IllegalStateException, NoSuchElementException, ExistingTransitionException {
-    return Futures.predestinedFuture( this.serviceConfiguration );
-  }
-  
-  @Override
-  public CheckedListenableFuture<ServiceConfiguration> transitionSelf( ) {
-    return Futures.predestinedFuture( this.serviceConfiguration );
-  }
-  
-  @Override
   public InetSocketAddress getSocketAddress( ) {
-    throw new RuntimeException(this.serviceConfiguration + " does not support the operation: " + Thread.currentThread().getStackTrace()[1] );
+    throw new RuntimeException( this.serviceConfiguration + " does not support the operation: " + Thread.currentThread( ).getStackTrace( )[1] );
   }
-
+  
   @Override
   public void setGoal( State state ) {}
+  
+  @Override
+  public void fireEvent( Event event ) {
+    LOG.debug( "MissingService " + this.serviceConfiguration + "ignored the event: " + event );
+  }
+  
+  @Override
+  public StateMachine<ServiceConfiguration, State, Transition> getStateMachine( ) {
+    return null;
+  }
+
+  /**
+   * @see com.eucalyptus.component.Service#start()
+   */
+  @Override
+  public void start( ) {}
+
+  /**
+   * @see com.eucalyptus.component.Service#stop()
+   */
+  @Override
+  public void stop( ) {}
   
 }

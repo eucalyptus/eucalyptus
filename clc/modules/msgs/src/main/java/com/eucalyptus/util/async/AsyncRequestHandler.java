@@ -1,11 +1,9 @@
 package com.eucalyptus.util.async;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -34,18 +32,8 @@ import org.jboss.netty.handler.timeout.IdleStateHandler;
 import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
-import com.eucalyptus.component.MessagableService;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.ServiceEndpoint;
-import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.component.id.Walrus;
-import com.eucalyptus.empyrean.ServiceInfoType;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.EventClass;
@@ -85,7 +73,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
   public boolean fire( final ServiceConfiguration config, final Q request ) {
     if ( !this.request.compareAndSet( null, request ) ) {
       LOG.warn( "Duplicate write attempt for request: " + this.request.get( ).getClass( ).getSimpleName( ) );
-      return true;
+      return false;
     } else {
       final SocketAddress serviceSocketAddress = config.getSocketAddress( );
       final ChannelPipelineFactory factory = config.getComponentId( ).getClientPipeline( );
@@ -110,26 +98,11 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
             try {
               if ( future.isSuccess( ) ) {
 //TODO:GRZE: better logging here                LOG.debug( "Connected as: " + future.getChannel( ).getLocalAddress( ) );
-              final String localhostAddr = ((InetSocketAddress)future.getChannel( ).getLocalAddress( )).getAddress( ).getHostAddress( );
-              if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
-                List<ServiceInfoType> serviceInfos = new ArrayList<ServiceInfoType>( ) {
-                  {
-                    addAll( Components.lookup( Eucalyptus.class ).getServiceSnapshot( localhostAddr ) );
-                    addAll( Components.lookup( Walrus.class ).getServiceSnapshot( localhostAddr ) );
-                    for ( ServiceInfoType s : Components.lookup( Storage.class ).getServiceSnapshot( localhostAddr ) ) {
-                      if ( config.getPartition( ).equals( s.getPartition( ) ) ) {
-                        add( s );
-                      }
-                    }
-                    for ( ServiceInfoType s : Components.lookup( ClusterController.class ).getServiceSnapshot( localhostAddr ) ) {
-                      if ( config.getPartition( ).equals( s.getPartition( ) ) ) {
-                        add( s );
-                      }
-                    }
-                  }
-                };
-                AsyncRequestHandler.this.request.get( ).getBaseServices( ).addAll( serviceInfos );
-              }
+                final InetAddress localAddr = ( ( InetSocketAddress ) future.getChannel( ).getLocalAddress( ) ).getAddress( );
+                if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
+                  AsyncRequestHandler.this.request.get( ).set_epoch( Topology.epoch( ) );
+                  AsyncRequestHandler.this.request.get( ).get_services( ).addAll( Topology.partitionRelativeView( config.lookupPartition( ), localAddr ) );
+                }
                 EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPEN, request.getClass( ).getSimpleName( ),
                                   request.getCorrelationId( ), serviceSocketAddress.toString( ), "" + future.getChannel( ).getLocalAddress( ),
                                   "" + future.getChannel( ).getRemoteAddress( ) ).trace( );
@@ -154,8 +127,8 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
               } else {
                 AsyncRequestHandler.this.teardown( future.getCause( ) );
               }
-            } catch ( RuntimeException ex ) {
-              LOG.error( ex , ex );
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
               AsyncRequestHandler.this.teardown( future.getCause( ) );
             }
           }
@@ -168,22 +141,23 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
       }
     }
   }
-
+  
   private void teardown( Throwable t ) {
     if ( t != null && !this.response.isDone( ) ) {
       LOG.debug( "RESULT:" + t.getMessage( ) + ":REQUEST:" + ( ( request.get( ) != null )
         ? request.get( ).toSimpleString( )
         : "REQUEST IS NULL" ) );
       if ( t instanceof RetryableConnectionException ) {
-
+        LOG.error( t.getMessage( ) );
       } else if ( t instanceof ConnectionException ) {
-
+        LOG.error( t.getMessage( ) );
       } else if ( t instanceof IOException ) {
-
+        LOG.error( t.getMessage( ) );
       }
       this.response.setException( t );
     } else if ( t != null && this.response.isDone( ) ) {
       LOG.error( t.getMessage( ) );
+      this.response.setException( t );
     }
     if ( this.connectFuture != null ) {
       if ( this.connectFuture.isDone( ) && this.connectFuture.isSuccess( ) ) {
@@ -211,6 +185,8 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
         }
 //REVIEW: this is likely not needed.        LOG.error( this.connectFuture.getCause( ).getMessage( ) );
       }
+    } else {
+      this.response.setException( t );
     }
   }
   

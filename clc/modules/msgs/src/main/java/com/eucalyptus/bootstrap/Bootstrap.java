@@ -62,30 +62,27 @@
  */
 package com.eucalyptus.bootstrap;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Component.State;
+import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.id.Any;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
+import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.ws.EmpyreanService;
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 /**
@@ -103,19 +100,17 @@ import com.google.common.collect.Lists;
  * Implementors of {@link Bootstrapper} must declare which {@link Bootstrap.Stage} they are to be
  * executed by specifying the {@link RunDuring} annotation.
  * 
- * NOTE: It is worth noting that the {@link #start()}-phase is <b>NOT</b> executed for the
- * {@link EmpyreanService.Stage.PrivilegedConfiguration} stage. Since privileges must be dropped
+ * NOTE: It is worth noting that the {@link #start()}-phase is <b>NOT</b> executed for the {@link EmpyreanService.Stage.PrivilegedConfiguration} stage. Since
+ * privileges must be dropped
  * after {@link EmpyreanService.Stage.PrivilegedConfiguration}.{@link #load()} the bootstrappers
  * would no
  * longer have the indicated privileges.
  * 
- * After a call to {@link #transition()} the current stage can be obtained from
- * {@link #getCurrentStage()}.
+ * After a call to {@link #transition()} the current stage can be obtained from {@link #getCurrentStage()}.
  * 
- * Once {@link EmpyreanService.Stage.Final} is reached for {@link SystemBootstrapper#load()} the
- * {@link #getCurrentStage()} is reset to be {@link EmpyreanService.Stage.SystemInit} and
- * {@link SystemBootstrapper#start()} proceeds. Upon completing {@link SystemBootstrapper#start()}
- * the state forever remains {@link EmpyreanService.Stage.Final}.
+ * Once {@link EmpyreanService.Stage.Final} is reached for {@link SystemBootstrapper#load()} the {@link #getCurrentStage()} is reset to be
+ * {@link EmpyreanService.Stage.SystemInit} and {@link SystemBootstrapper#start()} proceeds. Upon completing {@link SystemBootstrapper#start()} the state
+ * forever remains {@link EmpyreanService.Stage.Final}.
  * return {@link EmpyreanService.Stage.Final}.
  * 
  * @see Bootstrap.Stage
@@ -138,16 +133,15 @@ public class Bootstrap {
    * Each phase consists of iterating through each {@link Bootstrap.Stage} and executing the
    * associated bootstrappers accordingly.
    * 
-   * NOTE: It is worth noting that the {@link #start()}-phase is <b>NOT</b> executed for the
-   * {@link EmpyreanService.Stage.PrivilegedConfiguration} stage. Since privileges must be dropped
+   * NOTE: It is worth noting that the {@link #start()}-phase is <b>NOT</b> executed for the {@link EmpyreanService.Stage.PrivilegedConfiguration} stage. Since
+   * privileges must be dropped
    * after {@link EmpyreanService.Stage.PrivilegedConfiguration}.{@link #load()} the bootstrappers
    * would no
    * longer have the indicated privileges.
    * 
-   * Once {@link EmpyreanService.Stage.Final} is reached for {@link SystemBootstrapper#load()} the
-   * {@link #getCurrentStage()} is reset to be {@link EmpyreanService.Stage.SystemInit} and
-   * {@link SystemBootstrapper#start()} proceeds. Upon completing {@link SystemBootstrapper#start()}
-   * the state forever remains {@link EmpyreanService.Stage.Final}.
+   * Once {@link EmpyreanService.Stage.Final} is reached for {@link SystemBootstrapper#load()} the {@link #getCurrentStage()} is reset to be
+   * {@link EmpyreanService.Stage.SystemInit} and {@link SystemBootstrapper#start()} proceeds. Upon completing {@link SystemBootstrapper#start()} the state
+   * forever remains {@link EmpyreanService.Stage.Final}.
    * return {@link EmpyreanService.Stage.Final}.
    * 
    * @see PrivilegedConfiguration#start()
@@ -186,6 +180,8 @@ public class Bootstrap {
     SystemCredentialsInit, /* <-- this means system credentials, not user. */
     RemoteConfiguration,
     DatabaseInit,
+    PoolInit,
+    PersistenceInit,
     RemoteServicesInit,
     UserCredentialsInit,
     CloudServiceInit,
@@ -288,6 +284,7 @@ public class Bootstrap {
   private static Boolean starting     = false;
   private static Boolean finished     = false;
   private static Stage   currentStage = Stage.SystemInit;
+  private static Boolean shutdown     = false;
   
   /**
    * @return Bootstrap.currentStage
@@ -315,46 +312,48 @@ public class Bootstrap {
   @SuppressWarnings( "deprecation" )
   public static void initBootstrappers( ) {
     for ( Bootstrapper bootstrap : BootstrapperDiscovery.getBootstrappers( ) ) {//these have all been checked at discovery time
-      Class<ComponentId> compType;
-      String bc = bootstrap.getClass( ).getCanonicalName( );
-      Bootstrap.Stage stage = bootstrap.getBootstrapStage( );
-      compType = bootstrap.getProvides( );
-      if ( Any.class.equals( compType ) ) {
-        for ( Component c : Components.list( ) ) {
-          if ( !bootstrap.checkLocal( ) ) {
-            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal",
-                              bootstrap.getDependsLocal( ).toString( ) ).info( );
-          } else if ( !bootstrap.checkRemote( ) ) {
-            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote",
-                              bootstrap.getDependsRemote( ).toString( ) ).info( );
-          } else {
-            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + c.getName( ) ).info( );
-            c.getBootstrapper( ).addBootstrapper( bootstrap );
-          }
-        }
-      } else if ( Empyrean.class.equals( compType ) ) {
-        if ( !bootstrap.checkLocal( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal", bootstrap.getDependsLocal( ).toString( ) ).info( );
-        } else if ( !bootstrap.checkRemote( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote",
-                            bootstrap.getDependsRemote( ).toString( ) ).info( );
-        } else {
+      try {
+        Class<ComponentId> compType;
+        String bc = bootstrap.getClass( ).getCanonicalName( );
+        Bootstrap.Stage stage = bootstrap.getBootstrapStage( );
+        compType = bootstrap.getProvides( );
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_INIT, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
+        if ( ComponentId.class.isAssignableFrom( compType ) && !Empyrean.class.equals( compType ) && !ComponentId.class.equals( compType ) ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
-          stage.addBootstrapper( bootstrap );
+          Components.lookup( compType ).getBootstrapper( ).addBootstrapper( bootstrap );
+        } else if ( Bootstrap.checkDepends( bootstrap ) ) {
+          if ( Empyrean.class.equals( compType ) ) {
+            EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + compType.getSimpleName( ) ).info( );
+            stage.addBootstrapper( bootstrap );
+          } else if ( ComponentId.class.equals( compType ) ) {
+            for ( Component c : Components.list( ) ) {
+              EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, stage.name( ), bc, "component=" + c.getName( ) ).info( );
+              c.getBootstrapper( ).addBootstrapper( bootstrap );
+            }
+          }
+        } else {
+          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, stage.name( ), bc, "component=" + compType.getSimpleName( ),
+                            "localDepends=" + bootstrap.checkLocal( ), "remoteDepends=" + bootstrap.checkRemote( ) ).info( );
         }
-      } else {
-        ComponentId comp;
-        try {
-          comp = compType.newInstance( );
-          Components.lookup( comp ).getBootstrapper( ).addBootstrapper( bootstrap );
-        } catch ( InstantiationException ex ) {
-          LOG.error( ex, ex );
-          System.exit( 1 );
-        } catch ( IllegalAccessException ex ) {
-          LOG.error( ex, ex );
-          System.exit( 1 );
-        }
+      } catch ( Throwable ex ) {
+        LOG.error( ex, ex );
       }
+    }
+  }
+  
+  private static boolean checkDepends( Bootstrapper bootstrap ) {
+    String bc = bootstrap.getClass( ).getCanonicalName( );
+    if ( bootstrap.checkLocal( ) && bootstrap.checkRemote( ) ) {
+      return true;
+    } else {
+      if ( !bootstrap.checkLocal( ) ) {
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsLocal",
+                          bootstrap.getDependsLocal( ).toString( ) ).info( );
+      } else if ( !bootstrap.checkRemote( ) ) {
+        EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, currentStage.name( ), bc, "DependsRemote",
+                          bootstrap.getDependsRemote( ).toString( ) ).info( );
+      }
+      return false;
     }
   }
   
@@ -362,13 +361,11 @@ public class Bootstrap {
    * Subsequent calls to {@link #transition()} trigger the transition through the two-phase
    * (load/start) iteration through the {@link Bootstrap.Stage}s.
    * 
-   * After a call to {@link #transition()} the current stage can be obtained from
-   * {@link #getCurrentStage()}.
+   * After a call to {@link #transition()} the current stage can be obtained from {@link #getCurrentStage()}.
    * 
-   * Once {@link EmpyreanService.Stage.Final} is reached for {@link SystemBootstrapper#load()} the
-   * {@link #getCurrentStage()} is reset to be {@link EmpyreanService.Stage.SystemInit} and
-   * {@link SystemBootstrapper#start()} proceeds. Upon completing {@link SystemBootstrapper#start()}
-   * the state forever remains {@link EmpyreanService.Stage.Final}.
+   * Once {@link EmpyreanService.Stage.Final} is reached for {@link SystemBootstrapper#load()} the {@link #getCurrentStage()} is reset to be
+   * {@link EmpyreanService.Stage.SystemInit} and {@link SystemBootstrapper#start()} proceeds. Upon completing {@link SystemBootstrapper#start()} the state
+   * forever remains {@link EmpyreanService.Stage.Final}.
    * return {@link EmpyreanService.Stage.Final}.
    * 
    * @return currentStage either the same as before, or the next {@link Bootstrap.Stage}.
@@ -413,8 +410,64 @@ public class Bootstrap {
     return finished;
   }
   
+  public static Boolean isShuttingDown( ) {
+    return shutdown;
+  }
+  
   public static Boolean isCloudController( ) {
-    return true;//TODO:GRZE:URGENT NOW NOW NOW NOW
+    return SubDirectory.DB.hasChild( "data", "ibdata1" ) || !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) );
+  }
+  
+  private static List<String> bindAddrs = parseBindAddrs( );
+  
+  public static List<String> parseBindAddrs( ) {
+    if ( bindAddrs != null ) {
+      return bindAddrs;
+    } else {
+      synchronized ( Bootstrap.class ) {
+        if ( bindAddrs == null ) {
+          bindAddrs = Lists.newArrayList( );
+          String fs = "euca.bind.addr.%d";
+          String next = String.format( fs, 1 );
+          for ( int i = 1; i < 255; next = String.format( fs, i++ ) ) {
+            if ( System.getProperty( next ) != null ) {
+              bindAddrs.add( System.getProperty( next ) );
+            } else {
+              break;
+            }
+          }
+        }
+        return bindAddrs;
+      }
+    }
+  }
+  
+  private static List<String> bootstrapHosts = parseBootstrapHosts( );
+  
+  public static List<String> parseBootstrapHosts( ) {
+    if ( bootstrapHosts != null ) {
+      return bootstrapHosts;
+    } else {
+      synchronized ( Bootstrap.class ) {
+        if ( bootstrapHosts == null ) {
+          bootstrapHosts = Lists.newArrayList( );
+          String fs = "euca.bootstrap.host.%d";
+          String next = String.format( fs, 1 );
+          for ( int i = 1; i < 255; next = String.format( fs, i++ ) ) {
+            if ( System.getProperty( next ) != null ) {
+              bootstrapHosts.add( System.getProperty( next ) );
+            } else {
+              break;
+            }
+          }
+        }
+        return bootstrapHosts;
+      }
+    }
+  }
+  
+  public static boolean isInitializeSystem( ) {
+    return System.getProperty( "euca.initialize" ) != null;
   }
   
   /**
@@ -429,14 +482,13 @@ public class Bootstrap {
    * The following steps are performed in order.
    * 
    * <ol>
-   * <li><b>Component configurations</b>: Load the component configuration files from the local jar
-   * files. This determines which services it is possible to start in the <tt>local</tt> context.</li>
+   * <li><b>Component configurations</b>: Load the component configuration files from the local jar files. This determines which services it is possible to
+   * start in the <tt>local</tt> context.</li>
    * 
    * <li><b>Print configurations</b>: The configuration is printed for review.</li>
    * 
-   * <li><b>Discovery ({@link ServiceJarDiscovery}</b>: First, find all instantiable descendants of
-   * {@code ServiceJarDiscovery}. Second, execute each discovery implementation. <b>NOTE:</b> This
-   * step finds the available bootstrappers but does not evaluate their dependency constraints.</li>
+   * <li><b>Discovery ({@link ServiceJarDiscovery}</b>: First, find all instantiable descendants of {@code ServiceJarDiscovery}. Second, execute each discovery
+   * implementation. <b>NOTE:</b> This step finds the available bootstrappers but does not evaluate their dependency constraints.</li>
    * 
    * <li><b>Print configurations</b>: The configuration is printed for review.</li>
    * <li><b>Print configurations</b>: The configuration is printed for review.</li>
@@ -450,8 +502,16 @@ public class Bootstrap {
    * 
    * @throws Throwable
    */
-  public static void initialize( ) throws Throwable {
+  public static void init( ) throws Throwable {
     
+    Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
+      
+      @Override
+      public void run( ) {
+        Bootstrap.shutdown = Boolean.TRUE;
+      }
+      
+    } );
     /**
      * run discovery to find (primarily) bootstrappers, msg typs, bindings, util-providers, etc. See
      * the descendants of {@link ServiceJarDiscovery}.
@@ -500,11 +560,12 @@ public class Bootstrap {
   public static int INIT_RETRIES = 5;
   
   public static void applyTransition( Component component, Component.Transition transition ) {
-    if ( component.getLocalService( ).checkTransition( transition ) ) {
+    StateMachine<ServiceConfiguration, State, Transition> fsm = component.getLocalServiceConfiguration( ).getStateMachine( );
+    if ( fsm.isLegalTransition( transition ) ) {
       for ( int i = 0; i < INIT_RETRIES; i++ ) {
         try {
           EventRecord.caller( Bootstrap.class, EventType.COMPONENT_INFO, transition.name( ), component.getName( ), component.getComponentId( ) ).info( );
-          component.getLocalService( ).transition( transition );
+          fsm.transitionByName( transition ).get( );
           break;
         } catch ( ExistingTransitionException ex ) {
           LOG.error( ex );

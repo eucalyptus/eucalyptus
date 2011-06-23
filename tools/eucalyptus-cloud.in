@@ -84,11 +84,6 @@ NAME=""
 ANT="`which ant 2> /dev/null`"
 EUCA_USER="eucalyptus"
 
-# available services
-WALRUS_WS="N"
-CLOUD_WS="N"
-STORAGE_WS="N"
-
 if [ "$EUID" != "0" ]; then
 	echo "Eucalyptus init scripts must be run as root."
 	exit 1
@@ -140,37 +135,24 @@ export EUCALYPTUS
 
 pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
 
-# read in the services which should be running
-read_ws_list() {
-	STORAGE_WS="N"
-	WALRUS_WS="N"
-	VMWAREBROKER_WS="N"
-	CLOUD_WS="N"	
-	NAME=""
-
-	for x in `cat $EUCALYPTUS/var/lib/eucalyptus/services 2> /dev/null` ; do
-		case $x in
-		walrus)
-			WALRUS_WS="Y"
-			NAME="walrus $NAME"
-			;;
-		sc) 
-			STORAGE_WS="Y"
-			NAME="sc $NAME"
-			;;
-		vmwarebroker)
-			VMWAREBROKER_WS="Y"
-			NAME="vmwarebroker $NAME"
-			;;
-		cloud)
-			CLOUD_WS="Y"
-			NAME="cloud $NAME"
-			;;
-		*)
-			echo "Unknown service! ($x)"
-			;;
-		esac
-	done
+do_upgrade() {
+        while IFS=: read -r a b; do
+                OLD_EUCA_VERSION=$a
+                OLD_EUCA_PATH=$b
+        done < $EUCALYPTUS/etc/eucalyptus/eucalyptus.upgrade
+        #Attempt db upgrade
+        echo "Attempting database upgrade from $OLD_EUCA_VERSION at $OLD_EUCA_PATH..."
+	$EUCALYPTUS/usr/share/eucalyptus/euca_upgrade --old $OLD_EUCA_PATH --new $EUCALYPTUS --db
+	case "$?" in
+	0) 
+        	echo "done."
+		rm -f $EUCALYPTUS/etc/eucalyptus/eucalyptus.upgrade
+		;;
+        1)	
+		echo "Upgrade failed. Aborting start."
+		exit 1
+		;;
+	esac
 }
 
 do_start() {
@@ -197,50 +179,10 @@ do_start() {
 		CLOUD_OPTS="$CLOUD_OPTS --disable-iscsi"
 	fi
 
-	# enabled services
-	if [ "$STORAGE_WS" != "Y" ]; then
-		if [ "$DISABLE_EBS" != "Y" ]; then
-			CLOUD_OPTS="$CLOUD_OPTS --disable-storage"
-		fi
-	else
-		if [ "$DISABLE_EBS" = "Y" ]; then
-			echo "DISABLE_EBS is set in eucalyptus.conf: not starting the sc"
-		else
-			if ! $EUCALYPTUS/usr/sbin/euca_conf --check sc ; then
-				exit 1
-			fi
-		fi
-	fi
-	if [ "$WALRUS_WS" != "Y" ]; then
-		CLOUD_OPTS="$CLOUD_OPTS --disable-walrus"
-	else
-		if ! $EUCALYPTUS/usr/sbin/euca_conf --check walrus ; then
-			exit 1
-		fi
-	fi
-	if [ "$VMWAREBROKER_WS" != "Y" ]; then
-		CLOUD_OPTS="$CLOUD_OPTS --disable-vmwarebroker"
-	else
-    		if ! $EUCALYPTUS/usr/sbin/euca_conf --check vmwarebroker ; then
-			exit 1
-		fi
-		if ! $EUCALYPTUS/usr/lib/eucalyptus/euca_imager fsck ; then
-		    exit 1
-		fi
-	fi
-	if [ "$CLOUD_WS" != "Y" ]; then
-		CLOUD_OPTS="$CLOUD_OPTS --disable-cloud"
-	else
-		if ! $EUCALYPTUS/usr/sbin/euca_conf --check cloud ; then
-			exit 1
-		fi
-	fi
-
-	if [ "${STORAGE_WS}${CLOUD_WS}${WALRUS_WS}${VMWAREBROKER_WS}" = "NNNN" ]; then
-		# nothing to start
-		NAME="none"
-		return 0
-	fi
+        #Check if we need to upgrade
+        if [ -e $EUCALYPTUS/etc/eucalyptus/eucalyptus.upgrade ]; then
+                do_upgrade
+        fi
 
     # try log4j for a bit, see if anyone panics. $EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
 	ulimit -n 4096
@@ -298,13 +240,12 @@ fi
 
 # set the library path correctly
 export VDDK_HOME="@VDDK_HOME@"
-export LD_LIBRARY_PATH="$EUCALYPTUS/usr/lib/eucalyptus:$VDDK_HOME/lib:$VDDK_HOME/lib/vmware-vix-disklib/lib32:$VDDK_HOME/lib/vmware-vix-disklib/lib64/" # to ensure euca_imager finds VDDK libs
-export PATH="$EUCALYPTUS/usr/lib/eucalyptus:$PATH" # to ensure euca_imager has euca_rootwrap
+
+# moved these to the euca_imager wrapper itself
+#export LD_LIBRARY_PATH="$EUCALYPTUS/usr/lib/eucalyptus:$VDDK_HOME/lib:$VDDK_HOME/lib/vmware-vix-disklib/lib32:$VDDK_HOME/lib/vmware-vix-disklib/lib64/" # to ensure euca_imager finds VDDK libs
+#export PATH="$EUCALYPTUS/usr/lib/eucalyptus:$PATH" # to ensure euca_imager has euca_rootwrap
 
 #VERBOSE="yes"
-
-# read services to start
-read_ws_list
 
 case "$1" in
   start)

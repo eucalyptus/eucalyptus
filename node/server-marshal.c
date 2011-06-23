@@ -78,6 +78,7 @@ void adb_InitService(void) {
 }
 
 adb_ncAssignAddressResponse_t* ncAssignAddressMarshal (adb_ncAssignAddress_t* ncAssignAddress, const axutil_env_t *env) {
+  pthread_mutex_lock(&ncHandlerLock);
   adb_ncAssignAddressType_t * input          = adb_ncAssignAddress_get_ncAssignAddress(ncAssignAddress, env);
   adb_ncAssignAddressResponse_t * response   = adb_ncAssignAddressResponse_create(env);
   adb_ncAssignAddressResponseType_t * output = adb_ncAssignAddressResponseType_create(env);
@@ -114,6 +115,7 @@ adb_ncAssignAddressResponse_t* ncAssignAddressMarshal (adb_ncAssignAddress_t* nc
   
   // set response to output
   adb_ncAssignAddressResponse_set_ncAssignAddressResponse(response, env, output);  
+  pthread_mutex_unlock(&ncHandlerLock);
   return response;
 }
 
@@ -606,6 +608,13 @@ adb_ncTerminateInstanceResponse_t* ncTerminateInstanceMarshal (adb_ncTerminateIn
 
     // get operation-specific fields from input
     axis2_char_t * instanceId = adb_ncTerminateInstanceType_get_instanceId(input, env);
+    axis2_bool_t forceBool = adb_ncTerminateInstanceType_get_force(input, env);
+    int force=0;
+    if (forceBool == AXIS2_TRUE) {
+      force = 1;
+    } else {
+      force = 0;
+    }
 
     //    eventlog("NC", userId, correlationId, "TerminateInstance", "begin");
     { // do it
@@ -614,11 +623,16 @@ adb_ncTerminateInstanceResponse_t* ncTerminateInstanceMarshal (adb_ncTerminateIn
 	EUCA_MESSAGE_UNMARSHAL(ncTerminateInstanceType, input, (&meta));
         int shutdownState, previousState;
 
-        int error = doTerminateInstance (&meta, instanceId, &shutdownState, &previousState);
+        int error = doTerminateInstance (&meta, instanceId, force, &shutdownState, &previousState);
     
         if (error) {
             logprintfl (EUCAERROR, "ERROR: doTerminateInstance() failed error=%d\n", error);
             adb_ncTerminateInstanceResponseType_set_return(output, env, AXIS2_FALSE);
+            adb_ncTerminateInstanceResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_ncTerminateInstanceResponseType_set_userId(output, env, meta.userId);
+
+            // set operation-specific fields in output
+            adb_ncTerminateInstanceResponseType_set_instanceId(output, env, instanceId);
 
         } else {
             // set standard fields in output
@@ -707,7 +721,13 @@ adb_ncDetachVolumeResponse_t* ncDetachVolumeMarshal (adb_ncDetachVolume_t* ncDet
     axis2_char_t * volumeId = adb_ncDetachVolumeType_get_volumeId(input, env);
     axis2_char_t * remoteDev = adb_ncDetachVolumeType_get_remoteDev(input, env);
     axis2_char_t * localDev = adb_ncDetachVolumeType_get_localDev(input, env);
-    int force = adb_ncDetachVolumeType_get_force(input, env);
+    int force=0;
+    axis2_bool_t forceBool = adb_ncDetachVolumeType_get_force(input, env);
+    if (forceBool == AXIS2_TRUE) {
+      force = 1;
+    } else {
+      force = 0;
+    }
 
     //    eventlog("NC", userId, correlationId, "DetachVolume", "begin");
     { // do it

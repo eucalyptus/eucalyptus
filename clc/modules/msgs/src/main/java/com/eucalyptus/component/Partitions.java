@@ -67,6 +67,7 @@ import java.io.File;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.NavigableSet;
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.entities.EntityWrapper;
@@ -87,20 +88,49 @@ public class Partitions {
 //      Partitions.remove( partitionName );
 //    }
   }
-
-  public static Partition lookup( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    final String partitionName = config.getPartition( );
+  
+  public static boolean exists( final String partitionName ) {
     EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
     Partition p = null;
     try {
       p = db.getUnique( Partition.newInstanceNamed( partitionName ) );
       db.commit( );
+      return true;
     } catch ( EucalyptusCloudException ex1 ) {
       db.rollback( );
-      LOG.warn( "Failed to lookup partition for " + config + ".  Generating new partition configuration." );
-      p = Partitions.generatePartition( config );
+      return false;
     }
-    return p;
+  }
+
+  public static Partition lookup( String partitionName ) throws NoSuchElementException {
+    EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
+    Partition p = null;
+    try {
+      p = db.getUnique( Partition.newInstanceNamed( partitionName ) );
+      db.commit( );
+      return p;
+    } catch ( EucalyptusCloudException ex1 ) {
+      db.rollback( );
+      throw new NoSuchElementException( "Failed to lookup partition for " + partitionName );
+    }
+  }
+  public static Partition lookup( final ServiceConfiguration config ) throws ServiceRegistrationException {
+    if ( config.getComponentId( ).isPartitioned( ) && config.getComponentId( ).isRegisterable( ) ) {
+      final String partitionName = config.getPartition( );
+      EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
+      Partition p = null;
+      try {
+        p = db.getUnique( Partition.newInstanceNamed( partitionName ) );
+        db.commit( );
+      } catch ( EucalyptusCloudException ex1 ) {
+        db.rollback( );
+        LOG.warn( "Failed to lookup partition for " + config + ".  Generating new partition configuration." );
+        p = Partitions.generatePartition( config );
+      }
+      return p;
+    } else {
+      return Partition.fakePartition( config.getComponentId( ) );
+    }
   }
   
   private static Partition generatePartition( ServiceConfiguration config ) throws ServiceRegistrationException {
@@ -135,8 +165,7 @@ public class Partitions {
   }
   
   public static boolean testPartitionCredentialsDirectory( String name ) {
-    String directory = SubDirectory.KEYS.toString( ) + File.separator + name;
-    File keyDir = new File( directory );
+    File keyDir = SubDirectory.KEYS.getChildFile( name );
     if ( !keyDir.exists( ) ) {
       try {
         return keyDir.mkdir( ) && keyDir.canWrite( );
@@ -149,12 +178,13 @@ public class Partitions {
   }
   
   @Deprecated
-  public static ServiceConfiguration lookupService( Class<? extends ComponentId> compClass, String partition ) throws NoSuchServiceException {
+  public static ServiceConfiguration lookupService( Class<? extends ComponentId> compClass, String partition ) {
     NavigableSet<ServiceConfiguration> services = Components.lookup( compClass ).enabledPartitionServices( partition );
-    if( services.isEmpty( ) ) {
-      throw new NoSuchServiceException( "Failed to find service of type: " + compClass.getSimpleName( ) + " in partition: " + partition );
+    if ( services.isEmpty( ) ) {
+      throw new NoSuchElementException( "Failed to find service of type: " + compClass.getSimpleName( ) + " in partition: " + partition );
     } else {
       return services.first( );
     }
   }
+
 }

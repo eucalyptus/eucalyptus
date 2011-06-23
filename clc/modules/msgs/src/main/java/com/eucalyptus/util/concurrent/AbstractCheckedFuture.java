@@ -37,7 +37,6 @@
 package com.eucalyptus.util.concurrent;
 
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -131,5 +130,9 @@ public abstract class AbstractCheckedFuture<V, E extends Exception>
   
   public void addListener(Runnable listener, ExecutorService exec) {
     delegate.addListener(listener, exec);
+  }
+
+  public void addListener( Runnable listener ) {
+    this.delegate.addListener( listener );
   }
 }

@@ -80,13 +80,7 @@
   <endpoint name="SnapshotWS" address="vm://Snapshot" synchronous="false" />
   <endpoint name="KeyPairWS" address="vm://KeyPair" synchronous="false" />
   <endpoint name="GroupsWS" address="vm://Groups" synchronous="false" />
-  <!--vm request verification pipeline-->
-  <endpoint name="StartVerifyWS" address="vm://VmVerify" synchronous="false" />
-  <endpoint name="ImageVerifyWS" address="vm://ImageVerify" synchronous="false" />
-  <endpoint name="KeyPairVerifyWS" address="vm://KeyPairVerify" synchronous="false" />
-  <endpoint name="GroupsVerifyWS" address="vm://GroupsVerify" synchronous="false" />
-  <endpoint name="VmTypeVerifyWS" address="vm://VmTypeVerify" synchronous="false" />
-  <endpoint name="FinishedVerifyWS" address="vm://VmVerified" synchronous="false" />
+
   <!--run-time system state services-->
   <endpoint name="ClusterEndpointWS" address="vm://ClusterEndpoint" synchronous="false" />
   <endpoint name="ClusterSinkWS" address="vm://ClusterSink" synchronous="false" />

@@ -8,7 +8,9 @@ option "user"                  u   "User to drop privs to after starting."      
 option "home"                  h   "Eucalyptus home directory."                        string  typestr="DIRECTORY"       default="@prefix@/"     no
 
 option "initialize"            -   "Perform first-time setup.  This is run one time (only!) on the first cloud controller before the first time it is run." flag                              off
-option "bind-addr"             b   "Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address."  string  typestr="IP_ADDRESS"                            optional multiple
+option "bind-addr"             i   "Bind the specified local address.  Can be specified multiple times, but the first one is used as the advertised address.  The default behaviour is to listen on the any address while determining the user facing local address based on default route and netmask size."  string  typestr="HOSTNAME"                            optional multiple
+option "bootstrap-host"        b   "Host to be used for bootstrapping group membership.  Many can be provided.  Note this should only be necessary when UDP multicast is not available." string  typestr="HOSTNAME"                            optional multiple
+option "force-remote-bootstrap" -  "Force the system to boot as a remote component."   flag                              off                   hidden
                                                                                        
 option "define"                D   "Set system properties."                            string                                                  optional multiple
 option "fork"                  f   "Fork and daemonize Eucalyptus."                    flag                              off
@@ -17,7 +19,6 @@ option "pidfile"               -   "Location for the pidfile."                  
 ######                   #       #                                                    #       #                         #                      #      #           
 ###### long-opt          # short # description                                        # type  # type desc.              # default value        # req. # extras... 
 section "Logging Configuration"  #                                                    #       #                         #                      #      #
-option "verbose"               v   "DEPRECATEDVerbose bootstrapper output."            flag                              off                            hidden # DEPRECATED
 option "log-level"             l   "Control the log level for console output."         string  typestr="FILENAME"        default="INFO"          no
 option "log-appender"          L   "Control the destination for console output."       string  typestr="APPENDERNAME"    default="console-log"   no
 option "exhaustive"            x   "Exhaustive logging of all connections."            flag                              off
@@ -43,7 +44,9 @@ section "Java Options"   #       #                                              
 option "java-home"             j   "Alternative way to specify JAVA_HOME."             string  typestr="DIRECTORY"       default="@JAVA_HOME@"   no
 option "jvm-name"              -   "Which JVM type to run (see jvm.cfg)."              string  typestr="JVMNAME"         default="-server"       no     hidden
 option "jvm-args"              X   "Arguments to pass to the JVM."                     string                                                  optional multiple
+option "jmx"                   -   "Launch with JMX enabled."                          flag                              off
 option "debug"                 d   "Launch with debugger enabled."                     flag                              off
+option "verbose"               v   "Launch the JVM w/ verbose output flags."           flag                              off
 option "debug-port"            -   "Set the port to use for the debugger."             int                               default="5005"          no     dependon="debug"
 option "debug-suspend"         -   "Force debugger to wait at main()."                 flag                              off                            dependon="debug"          
 ######                   #       #                                                    #       #                         #                      #      #           

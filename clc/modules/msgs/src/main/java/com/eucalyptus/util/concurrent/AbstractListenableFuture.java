@@ -33,20 +33,26 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *******************************************************************************/
+ *******************************************************************************
+ * @author Sven Mawson
+ * @author chris grzegorczyk <grze@eucalyptus.com> Adopted and repurposed to support callable chaining.
+ */
 package com.eucalyptus.util.concurrent;
 
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executor;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
-import com.google.common.collect.Lists;
+import com.eucalyptus.util.Assertions;
+import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.util.async.Futures;
+import com.google.common.util.concurrent.ExecutionList;
 
 /**
  * <p>
@@ -59,22 +65,24 @@ import com.google.common.collect.Lists;
  * 
  * <p>
  * This class uses the {@link AbstractFuture} class to implement the {@code ListenableFuture}
- * interface and simply delegates the {@link #addListener(Runnable, Executor)} and {@link #done()}
- * methods to it.
+ * interface and simply delegates the {@link #addListener(Runnable, ExecutorService)} and
+ * {@link #done()} methods to it.
  * 
  * @author Sven Mawson
- * @since 1
+ * @author chris grzegorczyk <grze@eucalyptus.com> Adopted and repurposed to support callable
+ *         chaining.
  */
-public abstract class AbstractListenableFuture<V>
-    extends AbstractFuture<V> implements ListenableFuture<V> {
-  enum State{ PENDING, RUNNING, DONE };
-  private static Logger           LOG       = Logger.getLogger( AbstractListenableFuture.class );
-  protected final BlockingQueue<Runnable> listeners = new LinkedBlockingQueue<Runnable>( );
-  private static final Runnable DONE = new Runnable() {public void run( ) {}};
-
+public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> implements ListenableFuture<V> {
+  private static Logger                           LOG       = Logger.getLogger( AbstractListenableFuture.class );
+  protected final ConcurrentLinkedQueue<Runnable> listeners = new ConcurrentLinkedQueue<Runnable>( );
+  private final AtomicBoolean                     finished  = new AtomicBoolean( false );
+  private static final Runnable                   DONE      = new Runnable( ) {
+                                                              public void run( ) {}
+                                                            };
+  
   protected <T> void add( ExecPair<T> pair ) {
     this.listeners.add( pair );
-    if( this.listeners.contains( DONE ) ) {
+    if ( this.finished.get( ) ) {
       EventRecord.here( pair.getClass( ), EventType.FUTURE, "run(" + pair.toString( ) + ")" ).debug( );
       this.listeners.remove( pair );
       pair.run( );
@@ -83,27 +91,41 @@ public abstract class AbstractListenableFuture<V>
     }
   }
   
-  /*
-   * Adds a listener/executor pair to execution list to execute when this task
-   * is completed.
-   */
   public void addListener( final Runnable listener, ExecutorService exec ) {
     ExecPair<Object> pair = new ExecPair<Object>( listener, exec );
     add( pair );
   }
   
   public void addListener( Runnable listener ) {
-    addListener( listener, Threads.currentThreadExecutor( ) );
+    addListener( listener, Threads.lookup( Empyrean.class, AbstractListenableFuture.class ) );
   }
   
-  /*
-   * Override the done method to execute the execution list.
+  /**
+   * @see com.eucalyptus.util.concurrent.ListenableFuture#addListener(java.util.concurrent.Callable,
+   *      ExecutorService)
    */
+  @Override
+  public <V> CheckedListenableFuture<V> addListener( Callable<V> listener, ExecutorService executor ) {
+    ExecPair<V> pair = new ExecPair<V>( listener, executor );
+    this.add( pair );
+    return pair.getFuture( );
+  }
+  
+  /**
+   * @see com.eucalyptus.util.concurrent.ListenableFuture#addListener(java.util.concurrent.Callable)
+   */
+  @Override
+  public <T> CheckedListenableFuture<T> addListener( Callable<T> listener ) {
+    return addListener( listener, Threads.lookup( Empyrean.class, AbstractListenableFuture.class ) );
+  }
+  
   @Override
   protected void done( ) {
     this.listeners.add( DONE );
-    while( this.listeners.peek( ) != DONE ) {
-      this.listeners.poll( ).run( );
+    if( this.finished.compareAndSet( false, true ) ) {
+      while ( this.listeners.peek( ) != DONE ) {
+        this.listeners.poll( ).run( );
+      }
     }
   }
   
@@ -115,6 +137,67 @@ public abstract class AbstractListenableFuture<V>
   @Override
   public boolean setException( Throwable throwable ) {
     return super.setException( throwable );
+  }
+  
+  class ExecPair<V> implements Runnable {
+    private Callable<V>                      callable;
+    private Runnable                         runnable;
+    private final CheckedListenableFuture<V> future = Futures.newGenericeFuture( );
+    private final ExecutorService            executor;
+    
+    ExecPair( Callable callable, ExecutorService executor ) {
+      Assertions.assertNotNull( callable, "Callable was null." );
+      Assertions.assertNotNull( executor, "ExecutorService was null." );
+      
+      this.callable = callable;
+      this.executor = executor;
+    }
+    
+    ExecPair( final Runnable runnable, ExecutorService executor ) {
+      Assertions.assertNotNull( runnable, "Runnable was null." );
+      Assertions.assertNotNull( executor, "ExecutorService was null." );
+      
+      this.runnable = runnable;
+      this.executor = executor;
+    }
+    
+    @Override
+    public void run( ) {
+      try {
+        if ( this.runnable != null ) {
+          EventRecord.here( runnable.getClass( ), EventType.FUTURE, "run(" + runnable.toString( ) + ")" ).debug( );
+          this.executor.submit( this.runnable, null ).get( );
+          this.future.set( null );
+        } else {
+          EventRecord.here( callable.getClass( ), EventType.FUTURE, "call(" + callable.toString( ) + ")" ).debug( );
+          this.future.set( this.executor.submit( callable ).get( ) );
+        }
+      } catch ( InterruptedException ex ) {
+        LOG.error( ex, ex );
+        Thread.currentThread( ).interrupt( );
+        this.future.setException( ex );
+      } catch ( ExecutionException ex ) {
+        LOG.error( ex, ex );
+        this.future.setException( ex.getCause( ) );
+      } catch ( Throwable ex ) {
+        LOG.error( ex, ex );
+        this.future.setException( ex.getCause( ) );
+      }
+    }
+    
+    CheckedListenableFuture<V> getFuture( ) {
+      return this.future;
+    }
+    
+    protected ExecutorService getExecutor( ) {
+      return this.executor;
+    }
+    
+    @Override
+    public String toString( ) {
+      return String.format( "ExecPair:callable=%s:runnable=%s", this.callable, this.runnable );
+    }
+    
   }
   
 }

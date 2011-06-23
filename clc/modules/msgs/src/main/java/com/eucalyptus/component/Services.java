@@ -63,14 +63,49 @@
 
 package com.eucalyptus.component;
 
+import com.eucalyptus.empyrean.ServiceStatusDetail;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.TypeMapper;
+import com.google.common.base.Function;
+
 public class Services {
-  public static Service newServiceInstance( ServiceConfiguration config ) {
-    if( config.isLocal( ) && config.lookupComponent( ).isAvailableLocally( ) ) {
-      return config.getComponentId( ).hasDispatcher( ) ? new MessagableService( config ) : new BasicService( config );
-    } else if( config.isLocal( ) && !config.lookupComponent( ).isAvailableLocally( ) ) {
-      return new MissingService( config );
-    } else /**if( !config.isLocal() )**/ {
-      return config.getComponentId( ).hasDispatcher( ) ? new MessagableService( config ) : new BasicService( config );//TODO:GRZE:fix this up.
+  
+  @TypeMapper( { ServiceCheckRecord.class, ServiceStatusDetail.class } )
+  public enum ServiceCheckRecordMapper implements Function<ServiceCheckRecord, ServiceStatusDetail> {
+    INSTANCE;
+    @Override
+    public ServiceStatusDetail apply( final ServiceCheckRecord input ) {
+      return new ServiceStatusDetail( ) {
+        {
+          this.setSeverity( input.getSeverity( ).toString( ) );
+          this.setUuid( input.getUuid( ) );
+          this.setTimestamp( input.getTimestamp( ).toString( ) );
+          this.setMessage( input.getMessage( ) != null ? input.getMessage( ) : "No summary information available." );
+          this.setStackTrace( input.getStackTrace( ) != null ? input.getStackTrace( ) : Exceptions.string( new RuntimeException( "Error while mapping service event record:  No stack information available" ) ) );
+          this.setServiceFullName( input.getServiceFullName( ) );
+          this.setServiceHost( input.getServiceHost( ) );
+          this.setServiceName( input.getServiceName( ) );
+        }
+      };
     }
+  }
+  
+  @TypeMapper
+  public enum ServiceBuilderMapper implements Function<ServiceConfiguration, ServiceBuilder<? extends ServiceConfiguration>> {
+    INSTANCE;
+    
+    @Override
+    public ServiceBuilder<? extends ServiceConfiguration> apply( final ServiceConfiguration input ) {
+      return ServiceBuilders.lookup( input.getComponentId( ) );
+    }
+    
+  }
+  
+  static Service newServiceInstance( ServiceConfiguration config ) throws ServiceRegistrationException {
+//    if ( config.isVmLocal( ) && !config.lookupComponent( ).isAvailableLocally( ) ) {
+//      return new BasicService.Broken( config );
+//    } else {
+      return new MessagableService( config );
+//    }
   }
 }

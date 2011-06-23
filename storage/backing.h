@@ -55,7 +55,7 @@
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -70,4 +70,4 @@ int init_backing_store (const char * conf_instances_path, unsigned int conf_work
 int create_instance_backing (ncInstance * instance);
 int save_instance_struct (const ncInstance * instance);
 ncInstance * load_instance_struct (const char * instanceId);
-int destroy_instance_backing (ncInstance * instance, int destroy_files);
+int destroy_instance_backing (ncInstance * instance, int do_destroy_files);

@@ -63,7 +63,6 @@
 package com.eucalyptus.cluster;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,12 +76,15 @@ import org.mule.api.lifecycle.Startable;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.sla.ClusterAllocator;
-import com.eucalyptus.util.async.Callbacks;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.vm.VmType;
-import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
@@ -91,7 +93,6 @@ import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
@@ -100,7 +101,6 @@ import edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeRegionsType;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
 import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
-import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 import edu.ucsb.eucalyptus.msgs.RegionInfoType;
 
 public class ClusterEndpoint implements Startable {
@@ -135,9 +135,9 @@ public class ClusterEndpoint implements Startable {
     Clusters.getInstance( );
   }
   
-  public void enqueue( VmAllocationInfo vmAllocInfo ) {
-    for ( ResourceToken t : vmAllocInfo.getAllocationTokens( ) ) {
-      ClusterAllocator.create( t, vmAllocInfo );
+  public void enqueue( Allocation allocInfo ) {
+    for ( ResourceToken t : allocInfo.getAllocationTokens( ) ) {
+      ClusterAllocator.create( t, allocInfo );
     }
     RequestContext.getEventContext( ).setStopFurtherProcessing( true );
   }
@@ -362,11 +362,13 @@ public class ClusterEndpoint implements Startable {
   public DescribeRegionsResponseType DescribeRegions( DescribeRegionsType request ) {//TODO:GRZE:URGENT fix the behaviour here.
     DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
     SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
-    reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", SystemConfiguration.getCloudUrl( ) ) );
+    reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", Internets.localHostInetAddress( ).getCanonicalHostName( ) ) );
     try {
-      reply.getRegionInfo( ).add( new RegionInfoType(
-                                                      "Walrus",
-                                                      Components.lookup( "walrus" ).lookupService( "walrus" ).getServiceConfiguration( ).getUri( ).toASCIIString( ) ) );
+      Component walrus = Components.lookup( Walrus.class );
+      NavigableSet<ServiceConfiguration> configs = walrus.lookupServiceConfigurations( );
+      if( !configs.isEmpty( ) && Component.State.ENABLED.isIn( configs.first( ) ) ) {
+        reply.getRegionInfo( ).add( new RegionInfoType( walrus.getComponentId( ).name( ), configs.first( ).getUri( ).toASCIIString( ) ) );
+      }
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex, ex );
     }

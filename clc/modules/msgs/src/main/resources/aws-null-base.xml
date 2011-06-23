@@ -64,5 +64,5 @@
   -->
 
 <binding force-classes="true" add-constructors="true">
-    <mapping class="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" abstract="true"/>
+  <mapping class="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" abstract="true" />
 </binding>

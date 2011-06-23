@@ -55,7 +55,7 @@
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -70,9 +70,13 @@
 
 #define BLOBSTORE_MAX_PATH 1024
 #define MAX_BLOCKMAP_SIZE 32
-#define MAX_DM_NAME 32
-#define MAX_DM_PATH (MAX_DM_NAME+12)
-#define MAX_DM_LINE (MAX_DM_PATH*2+40)
+#define MAX_DM_NAME 128                // e.g. euca-819312998196-i-4336096F-prt-00512swap-ac8d5670
+#define MAX_DM_PATH (MAX_DM_NAME+12)   // e.g. /dev/mapper/euca-819312998196-i-4336096F-prt-00512swap-ac8d5670 
+#define MAX_DM_LINE (MAX_DM_PATH*2+40) // e.g. 0 1048576 snapshot $DM1 $DM2 p 16
+
+// default permissions for blosbstore content
+#define BLOBSTORE_DIRECTORY_PERM 0771 // the '1' is there so libvirt/KVM on Maverick do not stumble on permissions
+#define BLOBSTORE_FILE_PERM 0660
 
 // flags for *_open() calls
 #define BLOBSTORE_FLAG_RDWR     00001
@@ -181,13 +185,26 @@ typedef struct _blockmap {
     unsigned long long len_blocks;
 } blockmap;
 
-// blockstore operations
+typedef struct _blockblob_meta {
+    char id [BLOBSTORE_MAX_PATH]; // ID of the blob (used as part of file/directory name)
+    unsigned long long size_bytes; // size of the blob in bytes
+    unsigned int in_use; // flags showing how the blockblob is being used (OPENED, LOCKED, LINKED)
+    time_t last_accessed; // timestamp of last access
+    time_t last_modified; // timestamp of last modification
+
+    struct _blockblob_meta * next;
+    struct _blockblob_meta * prev;
+} blockblob_meta;
+
+// blobstore operations
 
 blobstore * blobstore_open ( const char * path, 
                              unsigned long long limit_blocks, // on create: 0 is not valid; on open: 0 = any size
                              blobstore_format_t format,
                              blobstore_revocation_t revocation_policy,
                              blobstore_snapshot_t snapshot_policy);
+int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** results ); // returns a list of blockblobs matching an expression
+int blobstore_delete_regex (blobstore * bs, const char * regex); // delete all blobs in blobstore that match regex, return number deleted or -1 if error
 int blobstore_close ( blobstore * bs ); // releases a reference, allowing others to change some parameters (revocation policy) or delete the store, and frees the blobstore handle
 int blobstore_delete ( blobstore * bs ); // if no outside references to store or blobs exist, and no blobs are protected, deletes the blobs, the store metadata, and frees the blobstore handle
 int blobstore_get_error ( void ); // returns code of the last error 
@@ -195,6 +212,9 @@ const char * blobstore_get_last_msg (); // returns last message logged inside bl
 const char * blobstore_get_last_trace(); // returns last error stack trace logged inside blobstore
 const char * blobstore_get_error_str ( blobstore_error_t error ); // description of the error
 void blobstore_set_error_function ( void (* fn) (const char * msg)); // sets the function that will be handed error messages (instead of sending them to stdout)
+
+int blobstore_init (void);
+int blobstore_cleanup (void);
 
 // blockblob operations
 

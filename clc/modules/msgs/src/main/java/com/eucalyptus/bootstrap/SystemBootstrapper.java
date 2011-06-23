@@ -70,22 +70,17 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Logs;
-import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Functions;
-import com.google.common.base.Joiner;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 
@@ -117,53 +112,14 @@ public class SystemBootstrapper {
   public SystemBootstrapper( ) {}
   
   public boolean init( ) throws Exception {
+    Logs.init( );
+    Security.addProvider( new BouncyCastleProvider( ) );
     try {
-      Logs.EXTREME = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
-      Logs.TRACE = "TRACE".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || Logs.EXTREME;
-      Logs.DEBUG = "DEBUG".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || Logs.TRACE;
-      if ( Logs.EXTREME ) {
-        System.setProperty( "euca.log.level", "TRACE" );
-        System.setProperty( "euca.exhaust.level", "TRACE" );
-        System.setProperty( "euca.log.exhaustive.user", "TRACE" );
-        System.setProperty( "euca.log.exhaustive.db", "TRACE" );
-        System.setProperty( "euca.log.exhaustive.external", "TRACE" );
-        System.setProperty( "euca.log.exhaustive.user", "TRACE" );
-        System.setProperty( "euca.log.exhaustive.user", "TRACE" );
+      if( !Bootstrap.isInitializeSystem( ) ) {
+        Bootstrap.init( );
+        Bootstrap.Stage stage = Bootstrap.transition( );
+        stage.load( );
       }
-      
-      System.setOut( new PrintStream( System.out ) {
-        public void print( final String string ) {
-          if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
-            LOG.info( SystemBootstrapper.class + " " + EventType.STDOUT + " " + ( string == null
-              ? "null"
-              : string.replaceAll( "\n$", "" ) ) );
-          }
-        }
-      }
-
-      );
-      
-      System.setErr( new PrintStream( System.err ) {
-        public void print( final String string ) {
-          if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
-            LOG.error( SystemBootstrapper.class + " " + EventType.STDERR + " " + ( string == null
-              ? "null"
-              : string.replaceAll( "\n$", "" ) ) );
-          }
-        }
-      }
-            );
-      
-      LOG.info( LogUtil.subheader( "Starting system with debugging set as: " + Joiner.on( "\n" ).join( Logs.class.getDeclaredFields( ) ) ) );
-      Security.addProvider( new BouncyCastleProvider( ) );
-    } catch ( Throwable t ) {
-      t.printStackTrace( );
-      System.exit( 1 );
-    }
-    try {
-      Bootstrap.initialize( );
-      Bootstrap.Stage stage = Bootstrap.transition( );
-      stage.load( );
       return true;
     } catch ( BootstrapException e ) {
       e.printStackTrace( );
@@ -175,26 +131,40 @@ public class SystemBootstrapper {
       return false;
     }
   }
+
+  private static void initializeSystem( ) {
+    try {
+      GroovyUtil.evaluateScript( "initialize_cloud.groovy" );
+      System.exit( 0 );
+    } catch ( Throwable ex ) {
+      LOG.error( ex , ex );
+      System.exit( 1 );
+    }
+  }
   
   public boolean load( ) throws Throwable {
-    try {
-      // TODO: validation-api
-      /** @NotNull */
-      Bootstrap.Stage stage = Bootstrap.transition( );
-      do {
-        stage.load( );
-      } while ( ( stage = Bootstrap.transition( ) ) != null );
-    } catch ( BootstrapException e ) {
-      e.printStackTrace( );
-      throw e;
-    } catch ( Throwable t ) {
-      t.printStackTrace( );
-      LOG.fatal( t, t );
-      System.exit( 1 );
-      throw t;
-    }
-    for ( Component c : Components.whichCanLoad( ) ) {
-      Bootstrap.applyTransition( c, Component.Transition.LOADING );
+    if( Bootstrap.isInitializeSystem( ) ) {
+      SystemBootstrapper.initializeSystem( );
+    } else {
+      try {
+        // TODO: validation-api
+        /** @NotNull */
+        Bootstrap.Stage stage = Bootstrap.transition( );
+        do {
+          stage.load( );
+        } while ( ( stage = Bootstrap.transition( ) ) != null );
+      } catch ( BootstrapException e ) {
+        e.printStackTrace( );
+        throw e;
+      } catch ( Throwable t ) {
+        t.printStackTrace( );
+        LOG.fatal( t, t );
+        System.exit( 1 );
+        throw t;
+      }
+      for ( Component c : Components.whichCanLoad( ) ) {
+        Bootstrap.applyTransition( c, Component.Transition.LOADING );
+      }
     }
     return true;
   }
@@ -359,11 +329,11 @@ public class SystemBootstrapper {
     banner += headerHeader + String.format( headerFormat, "Local Services" ) + headerFooter;
     for ( Component c : Components.list( ) ) {
       if ( c.hasLocalService( ) ) {
-        ServiceConfiguration localConfig = c.getLocalService( ).getServiceConfiguration( );
+        ServiceConfiguration localConfig = c.getLocalServiceConfiguration( );
         banner += prefix + c.getName( ) + SEP + localConfig.toString( );
         banner += prefix + c.getName( ) + SEP + localConfig.lookupBuilder( ).toString( );
         banner += prefix + c.getName( ) + SEP + localConfig.getComponentId( ).toString( );
-        banner += prefix + c.getName( ) + SEP + localConfig.lookupService( ).getState( ).toString( );
+        banner += prefix + c.getName( ) + SEP + localConfig.lookupState( ).toString( );
       }
     }
     banner += headerHeader + String.format( headerFormat, "Detected Interfaces" ) + headerFooter;

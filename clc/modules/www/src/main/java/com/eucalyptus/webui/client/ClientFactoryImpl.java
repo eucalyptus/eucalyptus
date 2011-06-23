@@ -9,10 +9,26 @@ import com.eucalyptus.webui.client.session.LocalSessionImpl;
 import com.eucalyptus.webui.client.session.SessionData;
 import com.eucalyptus.webui.client.view.AccountView;
 import com.eucalyptus.webui.client.view.AccountViewImpl;
-import com.eucalyptus.webui.client.view.DetailView;
-import com.eucalyptus.webui.client.view.DetailViewImpl;
+import com.eucalyptus.webui.client.view.ActionResultView;
+import com.eucalyptus.webui.client.view.ActionResultViewImpl;
+import com.eucalyptus.webui.client.view.CertView;
+import com.eucalyptus.webui.client.view.CertViewImpl;
+import com.eucalyptus.webui.client.view.ConfirmationView;
+import com.eucalyptus.webui.client.view.ConfirmationViewImpl;
+import com.eucalyptus.webui.client.view.DownloadView;
+import com.eucalyptus.webui.client.view.DownloadViewImpl;
 import com.eucalyptus.webui.client.view.ErrorSinkView;
 import com.eucalyptus.webui.client.view.ErrorSinkViewImpl;
+import com.eucalyptus.webui.client.view.GroupView;
+import com.eucalyptus.webui.client.view.GroupViewImpl;
+import com.eucalyptus.webui.client.view.ImageView;
+import com.eucalyptus.webui.client.view.ImageViewImpl;
+import com.eucalyptus.webui.client.view.InputView;
+import com.eucalyptus.webui.client.view.InputViewImpl;
+import com.eucalyptus.webui.client.view.ItemView;
+import com.eucalyptus.webui.client.view.ItemViewImpl;
+import com.eucalyptus.webui.client.view.KeyView;
+import com.eucalyptus.webui.client.view.KeyViewImpl;
 import com.eucalyptus.webui.client.view.LoadingAnimationView;
 import com.eucalyptus.webui.client.view.LoadingAnimationViewImpl;
 import com.eucalyptus.webui.client.view.LoadingProgressView;
@@ -21,12 +37,18 @@ import com.eucalyptus.webui.client.view.LoginView;
 import com.eucalyptus.webui.client.view.LoginViewImpl;
 import com.eucalyptus.webui.client.view.ConfigView;
 import com.eucalyptus.webui.client.view.ConfigViewImpl;
+import com.eucalyptus.webui.client.view.PolicyView;
+import com.eucalyptus.webui.client.view.PolicyViewImpl;
 import com.eucalyptus.webui.client.view.ReportView;
 import com.eucalyptus.webui.client.view.ReportViewImpl;
+import com.eucalyptus.webui.client.view.RightScaleView;
+import com.eucalyptus.webui.client.view.RightScaleViewImpl;
 import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.ShellViewImpl;
 import com.eucalyptus.webui.client.view.StartView;
 import com.eucalyptus.webui.client.view.StartViewImpl;
+import com.eucalyptus.webui.client.view.UserView;
+import com.eucalyptus.webui.client.view.UserViewImpl;
 import com.eucalyptus.webui.client.view.VmTypeView;
 import com.eucalyptus.webui.client.view.VmTypeViewImpl;
 import com.google.gwt.activity.shared.ActivityManager;
@@ -69,7 +91,22 @@ public class ClientFactoryImpl implements ClientFactory {
 	private AccountView accountView;
 	private VmTypeView vmTypeView;
 	private ReportView reportView;
+	private GroupView groupView;
+	private UserView userView;
+	private PolicyView policyView;
+	private KeyView keyView;
+	private CertView certView;
+	private ImageView imageView;
+	private ActionResultView actionResultView;
 
+	// Dialogs
+	private ConfirmationView confirmationView;
+	private InputView inputView;
+	
+	// Snippets
+	private RightScaleView rightscaleView;
+	private DownloadView downloadView;
+	
   @Override
   public LocalSession getLocalSession( ) {
     return localSession;
@@ -217,6 +254,99 @@ public class ClientFactoryImpl implements ClientFactory {
   @Override
   public SessionData getSessionData( ) {
     return sessionData;
+  }
+
+  @Override
+  public GroupView getGroupView( ) {
+    if ( groupView == null ) {
+      groupView = new GroupViewImpl( );
+    }
+    return groupView;
+  }
+
+  @Override
+  public UserView getUserView( ) {
+    if ( userView == null ) {
+      userView = new UserViewImpl( );
+    }
+    return userView;
+  }
+
+  @Override
+  public PolicyView getPolicyView( ) {
+    if ( policyView == null ) {
+      policyView = new PolicyViewImpl( );
+    }
+    return policyView;
+  }
+
+  @Override
+  public KeyView getKeyView( ) {
+    if ( keyView == null ) {
+      keyView = new KeyViewImpl( );
+    }
+    return keyView;
+  }
+
+  @Override
+  public CertView getCertView( ) {
+    if ( certView == null ) {
+      certView = new CertViewImpl( );
+    }
+    return certView;
+  }
+
+  @Override
+  public ImageView getImageView( ) {
+    if ( imageView == null ) {
+      imageView = new ImageViewImpl( );
+    }
+    return imageView;
+  }
+
+  @Override
+  public ConfirmationView getConfirmationView( ) {
+    if ( confirmationView == null ) {
+      confirmationView = new ConfirmationViewImpl( );
+    }
+    return confirmationView;
+  }
+
+  @Override
+  public InputView getInputView( ) {
+    if ( inputView == null ) {
+      inputView = new InputViewImpl( );
+    }
+    return inputView;
+  }
+
+  @Override
+  public ActionResultView getActionResultView( ) {
+    if ( actionResultView == null ) {
+      actionResultView = new ActionResultViewImpl( );
+    }
+    return actionResultView;
+  }
+
+  @Override
+  public RightScaleView getRightScaleView( ) {
+    if ( rightscaleView == null ) {
+      rightscaleView = new RightScaleViewImpl( );
+    }
+    return rightscaleView;
+  }
+
+  @Override
+  public DownloadView getDownloadView( ) {
+    if ( downloadView == null ) {
+      downloadView = new DownloadViewImpl( );
+    }
+    return downloadView;
+  }
+
+  @Override
+  public ItemView createItemView( ) {
+    return new ItemViewImpl( );
   }
   
 }

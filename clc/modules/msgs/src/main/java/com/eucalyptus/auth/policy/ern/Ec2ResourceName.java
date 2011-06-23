@@ -20,24 +20,14 @@ public class Ec2ResourceName extends Ern {
     return sb.toString( );
   }
   
-  public String getType( ) {
-    return type;
-  }
-
-  public String getId( ) {
-    return this.id;
-  }
-
   @Override
   public String getResourceType( ) {
-    // TODO Auto-generated method stub
-    return null;
+    return this.vendor + ":" + this.type;
   }
 
   @Override
   public String getResourceName( ) {
-    // TODO Auto-generated method stub
-    return null;
+    return this.id;
   }
   
 }

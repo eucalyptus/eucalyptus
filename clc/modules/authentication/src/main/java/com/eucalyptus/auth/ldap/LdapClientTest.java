@@ -13,20 +13,22 @@ public class LdapClientTest {
 
   public static void main( String[] args ) throws Exception {
     LdapIntegrationConfiguration lic = new LdapIntegrationConfiguration( );
-    lic.setServerUrl( "ldap://localhost" );
+    lic.setServerUrl( "ldap://eucahost-4-21.eucalyptus" );
     lic.setAuthMethod( "simple" );
-    lic.setAuthPrincipal( "cn=EucalyptusManager,dc=eucalyptus,dc=com" );
-    lic.setAuthCredentials( "zoomzoom" );
-    lic.setGroupBaseDn( "ou=Groups,dc=eucalyptus,dc=com" );
-    lic.setUserBaseDn( "ou=People,dc=eucalyptus,dc=com" );
+    lic.setAuthPrincipal( "cn=admin,dc=test-eucalyptus,dc=com" );
+    lic.setAuthCredentials( "pwd*4admin" );
+    lic.setUseSsl( true );
+    lic.setGroupBaseDn( "ou=Groups,dc=test-eucalyptus,dc=com" );
+    lic.setUserBaseDn( "ou=People,dc=test-eucalyptus,dc=com" );
     
     LdapClient client = new LdapClient( lic );
-    NamingEnumeration<SearchResult> results = client.search( lic.getUserBaseDn( ), "objectClass=inetOrgPerson", new String[]{ "displayName" } );
+    NamingEnumeration<SearchResult> results = client.search( "dc=test-eucalyptus,dc=com", "objectClass=inetOrgPerson", new String[]{ "displayName" } );
     while ( results.hasMore( ) ) {
       SearchResult r = results.next( );
       System.out.println( r.getNameInNamespace( ) + " -- " + r.getAttributes( ) );
     }
     
+    /*
     System.out.println( "" );
     
     LdapContext context = client.getContext( );
@@ -37,6 +39,7 @@ public class LdapClientTest {
     } catch ( NamingException e ) {
       e.printStackTrace( );
     }
+    */
   }
   
 }

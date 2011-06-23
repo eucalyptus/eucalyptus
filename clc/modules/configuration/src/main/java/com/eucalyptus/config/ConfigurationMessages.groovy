@@ -63,11 +63,11 @@
  */
 package com.eucalyptus.config;
 
-import java.util.ArrayList;
-import com.eucalyptus.component.ComponentMessage;
-import com.eucalyptus.util.HasSideEffect;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+import java.util.ArrayList
+import com.eucalyptus.component.ComponentMessage
+import com.eucalyptus.util.HasSideEffect
+import edu.ucsb.eucalyptus.msgs.BaseMessage
+import edu.ucsb.eucalyptus.msgs.EucalyptusData
 
 @ComponentMessage(ConfigurationService.class)
 public class ConfigurationMessage extends BaseMessage {
@@ -77,26 +77,14 @@ public class ConfigurationMessage extends BaseMessage {
   }
 }
 public class ComponentInfoType extends EucalyptusData {
+  String type;
   String partition;
   String name;
   String hostName;
+  String fullName;
   String state;//really an enum
-  String detail;//TODO: remove me.
+  String detail;
   public ComponentInfoType(){}
-  public ComponentInfoType(String partition, String name, String host, String state, List<String> details){
-    this.partition = partition; 
-    this.name = name; 
-    this.state = state; 
-    this.hostName = host;
-    this.detail = details.toString( );
-  }
-  public ComponentInfoType(String partition, String name, String host, String state, String detail){
-    this.partition = partition; 
-    this.name = name; 
-    this.state = state; 
-    this.hostName = host;
-    this.detail = detail;
-  }
 }
 
 public class NodeComponentInfoType extends EucalyptusData {
@@ -123,14 +111,16 @@ public class RegisterComponentType extends ConfigurationMessage {
     this.port = port;
   }
 }
-public class RegisterComponentResponseType extends ConfigurationMessage implements HasSideEffect {}
+public class RegisterComponentResponseType extends ConfigurationMessage {}
 public class DeregisterComponentType extends ConfigurationMessage {
   String name;
   String partition;
 }
-public class DeregisterComponentResponseType extends ConfigurationMessage implements HasSideEffect {}
+public class DeregisterComponentResponseType extends ConfigurationMessage {}
 
-public class DescribeComponentsType extends ConfigurationMessage {}
+public class DescribeComponentsType extends ConfigurationMessage {
+  Boolean verbose = Boolean.FALSE;
+}
 public class DescribeComponentsResponseType extends ConfigurationMessage {
   ArrayList<ComponentInfoType> registered = new ArrayList<ComponentInfoType>();
 }

@@ -68,33 +68,34 @@ import java.net.URISyntaxException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jgroups.util.UUID;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
 import com.eucalyptus.util.Assertions;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.HasParent;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.NOOP;
 import com.eucalyptus.util.async.Request;
+import com.eucalyptus.util.fsm.TransitionException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<MessagableService> {
   private static Logger                      LOG           = Logger.getLogger( ServiceEndpoint.class );
-  private static final int                   offerInterval = 2000;
-  private static final int                   pollInterval  = 2000;
-  private final MessagableService                      parent;
+  private static final int                   offerInterval = 2000;                                      //@Configurable
+  private static final int                   pollInterval  = 2000;                                      //@Configurable
+  private final MessagableService            parent;
   private final Boolean                      local;
   private final BlockingQueue<QueuedRequest> msgQueue;
   private final AtomicBoolean                running;
@@ -111,11 +112,16 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<M
       uri.parseServerAuthority( );
     } catch ( URISyntaxException e ) {
       LOG.error( e, e );
-      throw new ServiceTransitionException( "Failed to initalize service: " + parent + " because of: " + e.getMessage( ), e );
+      throw new TransitionException( "Failed to initalize service: " + parent + " because of: " + e.getMessage( ), e );
     }
     this.running = new AtomicBoolean( false );
     this.msgQueue = new LinkedBlockingQueue<QueuedRequest>( );
-    this.workers = Threads.lookup( parent.getComponentId( ).getClass( ), ServiceEndpoint.class, uri.getHost( ) + "-queue" ).limitTo( NUM_WORKERS );
+    this.workers = this.createPool( );
+  }
+  
+  private ThreadPool createPool( ) {
+    return Threads.lookup( this.parent.getComponentId( ).getClass( ), ServiceEndpoint.class,
+                           this.parent.getServiceConfiguration( ) + "-queue-" + UUID.randomUUID( ).toString( ) ).limitTo( NUM_WORKERS );
   }
   
   public Boolean isRunning( ) {
@@ -124,6 +130,9 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<M
   
   public void start( ) {
     if ( this.running.compareAndSet( false, true ) ) {
+      if ( this.workers == null || this.workers.isShutdown( ) || this.workers.isTerminated( ) ) {
+        this.workers = this.createPool( );
+      }
       for ( int i = 0; i < NUM_WORKERS; i++ ) {
         this.workers.execute( new ServiceEndpointWorker( ) );
       }
@@ -132,16 +141,14 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<M
   
   public void enqueue( final Request request ) {//FIXME: for now request is already wrapped in messaging state.
     if ( !this.running.get( ) ) {
-      throw new RuntimeException( "Endpoint is currently not operational." );
+      throw new RejectedExecutionException( "Endpoint is currently not running: " + this.parent.getServiceConfiguration( ).getFullName( ) );
     } else {
       QueuedRequest event = new QueuedRequest( request );
       EventRecord.caller( ServiceEndpoint.class, EventType.MSG_PENDING, this.parent.getName( ), event.getCallback( ).getClass( ).getSimpleName( ) ).info( );
       if ( !this.filter( event ) ) {
         try {
           while ( !this.msgQueue.offer( event, this.offerInterval, TimeUnit.MILLISECONDS ) );
-          if ( Logs.TRACE ) {
-            Exceptions.trace( event.getRequest( ).getRequest( ).toSimpleString( ) );
-          }
+          Logs.extreme( ).trace( event.getRequest( ).getRequest( ).toSimpleString( ) );
         } catch ( final InterruptedException e ) {
           LOG.debug( e, e );
           Thread.currentThread( ).interrupt( );
@@ -185,7 +192,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<M
   
   public void stop( ) {
     this.running.set( false );
-    this.workers.shutdownNow( );
+    this.workers.shutdownNow( ); //TODO:GRZE:FIXME there is a potential conflict here between releasing the threads and the incorrect state of the threadpool in the case where it has been shut down by a previou s deregister operation.
   }
   
   public MessagableService getParent( ) {

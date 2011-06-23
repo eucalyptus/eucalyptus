@@ -145,7 +145,7 @@ int doStartService(ncMetadata *ccMeta) {
   // this is actually a NOP
   sem_mywait(CONFIG);
   config->kick_enabled = 0;
-  ccChangeState(LOADED);
+  ccChangeState(DISABLED);
   sem_mypost(CONFIG);
   
   logprintfl(EUCAINFO, "StartService(): done\n");
@@ -186,10 +186,13 @@ int doEnableService(ncMetadata *ccMeta) {
   logprintfl(EUCADEBUG, "EnableService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
   sem_mywait(CONFIG);
-  // tell monitor thread to (re)enable
-  config->kick_network = 1;
-  config->kick_dhcp = 1;
-  config->kick_enabled = 1;
+  if (config->ccState != ENABLED) {
+    // tell monitor thread to (re)enable
+    config->kick_network = 1;
+    config->kick_dhcp = 1;
+    config->kick_enabled = 1;
+    ccChangeState(ENABLED);
+  }
   sem_mypost(CONFIG);  
 
   logprintfl(EUCAINFO, "EnableService(): done\n");
@@ -283,6 +286,10 @@ int instIpSync(ccInstance *inst, void *in) {
     logprintfl(EUCAERROR, "instIpSync(): CC and NC vlans differ instanceId=%s CCvlan=%d NCvlan=%d\n", inst->instanceId, inst->ccnet.vlan, inst->ncnet.vlan);
   }
   inst->ccnet.vlan = inst->ncnet.vlan;
+  if (!vnetconfig->networks[inst->ccnet.vlan].active) {
+    logprintfl(EUCAWARN, "instIpSync(): detected instance from NC that is running in a currently inactive network; will attempt to re-activate network '%d'\n", inst->ccnet.vlan);
+    ret++;
+  }
 
   // networkIndex cases
   if (inst->ccnet.networkIndex != inst->ncnet.networkIndex) {
@@ -363,10 +370,14 @@ int instNetReassignAddrs(ccInstance *inst, void *in) {
   }
 
   logprintfl(EUCADEBUG, "instNetReassignAddrs(): instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);
-  rc = vnetReassignAddress(vnetconfig, "UNSET", inst->ccnet.publicIp, inst->ccnet.privateIp);
-  if (rc) {
-    logprintfl(EUCAERROR, "instNetReassignAddrs(): cannot reassign address\n");
-    ret = 1;
+  if (!strcmp(inst->ccnet.publicIp, "0.0.0.0") || !strcmp(inst->ccnet.privateIp, "0.0.0.0")) {
+    logprintfl(EUCAWARN, "instNetReassignAddrs(): ignoring instance with unset publicIp/privateIp\n");
+  } else { 
+    rc = vnetReassignAddress(vnetconfig, "UNSET", inst->ccnet.publicIp, inst->ccnet.privateIp);
+    if (rc) {
+      logprintfl(EUCAERROR, "instNetReassignAddrs(): cannot reassign address\n");
+      ret = 1;
+    }
   }
 
   return(0);

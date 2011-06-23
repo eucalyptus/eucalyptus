@@ -63,44 +63,70 @@
 
 package com.eucalyptus.component;
 
-import java.util.Arrays;
-import java.util.List;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.FullName;
-import com.google.common.collect.Lists;
+import com.google.common.base.Joiner;
 
 public class ComponentFullName implements FullName {
-  public final static String VENDOR = "euca";
-  private final ComponentId  componentId;
-  private final String       partition;
-  private final String       name;
-  private final String       qName;
-  private final String       authority;
-  private final String       relativeId;
+  public final static String  VENDOR = "euca";
+  private final ComponentId   componentId;
+  private final ComponentId   realComponentId;
+  private final String        partition;
+  private final String        name;
+  private final String        qName;
+  private final String        authority;
+  private final String        relativeId;
+  private final static String PREFIX = "arn:euca";
   
   ComponentFullName( ComponentId componentType, String partition, String name, String... pathPartsArray ) {
     Assertions.assertNotNull( componentType );
     Assertions.assertNotNull( partition );
     Assertions.assertNotNull( name );
-    this.componentId = componentType;
-    this.partition = partition;
+    
+    this.realComponentId = componentType;
     this.name = name;
-    List<String> temp = Lists.newArrayList( );
-    if ( componentType != null ) {
-      temp.add( componentType.name( ) );
-    } else {
-      temp.add( ComponentIds.lookup( Eucalyptus.class ).name( ) );
+    
+    boolean hasParentComponent = !this.realComponentId.serviceDependencies( ).isEmpty( );
+    ComponentId tempComponentId = Empyrean.INSTANCE;
+    String tempPartition = "";
+    if ( hasParentComponent || this.realComponentId.isPartitioned( ) ) {
+      if( this.realComponentId.isCloudLocal( ) ) {
+        tempComponentId = Eucalyptus.INSTANCE;
+      } else if ( this.realComponentId.isAlwaysLocal( ) ) {
+        tempComponentId = Empyrean.INSTANCE;
+      }
+      tempPartition = partition;
+    } else if ( !hasParentComponent && !this.realComponentId.isPartitioned( ) ) {
+      tempComponentId = this.realComponentId;
+      tempPartition = this.realComponentId.name( );
+    } else if ( !this.realComponentId.isPartitioned( ) && hasParentComponent ) {
+      ComponentId parentId = ComponentIds.lookup( this.realComponentId.serviceDependencies( ).get( 0 ) );
+      if ( parentId.getClass( ).equals( Eucalyptus.class ) ) {
+        tempComponentId = Eucalyptus.INSTANCE;
+        tempPartition = tempComponentId.name( );
+      } else {
+        tempComponentId = Empyrean.INSTANCE;
+        tempPartition = tempComponentId.name( );
+      }
     }
-    temp.add( name );
-    temp.addAll( Arrays.asList( pathPartsArray ) );
-    this.authority = new StringBuilder( ).append( PREFIX ).append( SEP ).append( VENDOR ).append( SEP ).append( partition ).append( SEP ).append( this.componentId.getName( ) ).append( SEP ).toString( );
-    StringBuilder rId = new StringBuilder( );
-    for ( String pathPart : pathPartsArray ) {
-      rId.append( SEP_PATH.substring( 0, rId.length( ) == 0 ? 0 : 1 ) ).append( pathPart );
-    }
-    this.relativeId = rId.toString( );
+    this.componentId = tempComponentId;
+    this.partition = tempPartition;
+    
+    String displayPartition = ( this.componentId.name( ).equals( this.partition ) )
+      ? ""
+      : this.partition;
+    String displayCompType = ( this.realComponentId.equals( this.componentId ) )
+      ? ""
+      : this.realComponentId.name( );
+    this.authority = Joiner.on( SEP ).join( PREFIX, this.componentId.name( ), displayPartition, displayCompType, this.name );
+    this.relativeId = Joiner.on( SEP_PATH ).join( pathPartsArray );
     this.qName = this.authority + this.relativeId;
+  }
+  
+  ComponentFullName( ServiceConfiguration config, String... parts ) {
+    this( config.getComponentId( ), config.getPartition( ), config.getName( ), parts );
   }
   
   @Override
@@ -190,7 +216,7 @@ public class ComponentFullName implements FullName {
   public String getUniqueId( ) {
     return this.qName;
   }
-
+  
   @Override
   public String getFullyQualifiedName( ) {
     return this.toString( );

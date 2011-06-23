@@ -2,7 +2,7 @@ package com.eucalyptus.util.fsm;
 
 import com.eucalyptus.util.Mappable;
 
-public interface TransitionRule<S extends Enum<S>, T extends Enum<T>> extends Mappable<TransitionRule<S, T>, T> {
+public interface TransitionRule<S extends Automata.State, T extends Automata.Transition> extends Mappable<TransitionRule<S, T>, T> {
   
   /**
    * @return the fromState

@@ -66,9 +66,9 @@ package com.eucalyptus.component.id;
 import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
-import com.google.common.collect.Lists;
 
 public class Euare extends ComponentId.Unpartioned {
+  public static Euare INSTANCE = new Euare( );
   @Override
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
     return   new ArrayList( ) {
@@ -79,7 +79,7 @@ public class Euare extends ComponentId.Unpartioned {
   }
   
   @Override
-  public Boolean hasDispatcher( ) {
+  public boolean isUserService( ) {
     return true;
   }
   

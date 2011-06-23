@@ -63,41 +63,39 @@
 
 package com.eucalyptus.images;
 
-import javax.persistence.Column;
-import javax.persistence.DiscriminatorColumn;
-import javax.persistence.DiscriminatorType;
 import javax.persistence.DiscriminatorValue;
-import org.hibernate.annotations.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.Inheritance;
-import javax.persistence.InheritanceType;
 import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.Image;
 
-@Entity @javax.persistence.Entity
+@Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "ramdisk" )
-public class RamdiskImageInfo extends ImageInfo {
-
+public class RamdiskImageInfo extends PutGetImageInfo {
+  
   public RamdiskImageInfo( ) {
-    super( );
-    this.setImageType( Image.Type.ramdisk );
+    super( Image.Type.ramdisk );
   }
-
-  public RamdiskImageInfo( String imageId ) {
-    super( imageId );
-    this.setImageType( Image.Type.ramdisk );
+  
+  public RamdiskImageInfo( final String imageId ) {
+    super( Image.Type.ramdisk, imageId );
   }
-
-  public RamdiskImageInfo( UserFullName userFullName, String imageId, String imageLocation, Architecture arch, Platform platform ) {
-    super( userFullName, imageId, imageLocation, arch, platform );
-    this.setImageType( Image.Type.ramdisk );
+  
+  public RamdiskImageInfo( final UserFullName userFullName, final String imageId, 
+                           final String imageName, final String imageDescription, final Long imageSizeBytes,
+                           final Architecture arch, final Platform platform,
+                           final String imageLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType ) {
+    super( userFullName, imageId, Image.Type.ramdisk, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum, imageChecksumType );
   }
-
+  
+  @Override
+  public String getManifestLocation( ) {
+    return super.getManifestLocation( );
+  }
+  
 }

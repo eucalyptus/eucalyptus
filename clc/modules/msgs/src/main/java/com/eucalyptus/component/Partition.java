@@ -90,29 +90,29 @@ import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.SubDirectory;
 
-@Entity @javax.persistence.Entity
-@PersistenceContext(name="eucalyptus_config")
+@Entity
+@javax.persistence.Entity
+@PersistenceContext( name = "eucalyptus_config" )
 @Table( name = "config_partition" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class Partition extends AbstractPersistent {
+public class Partition extends AbstractPersistent implements Comparable<Partition> {
   private static Logger LOG = Logger.getLogger( Partition.class );
-  @Column(name="config_partition_name", unique=true)
-  String name;
+  @Column( name = "config_partition_name", unique = true )
+  String                name;
   @Lob
-  @Column(name="config_partition_x509_certificate")
-  private String pemCertificate;
+  @Column( name = "config_partition_x509_certificate" )
+  private String        pemCertificate;
   @Lob
-  @Column(name="config_partition_node_x509_certificate")
-  private String pemNodeCertificate;
+  @Column( name = "config_partition_node_x509_certificate" )
+  private String        pemNodeCertificate;
   @Lob
-  @Column(name="config_partition_kp")
-  private String pemPrivateKey;
+  @Column( name = "config_partition_kp" )
+  private String        pemPrivateKey;
   @Lob
-  @Column(name="config_partition_node_kp")
-  private String pemNodePrivateKey;
+  @Column( name = "config_partition_node_kp" )
+  private String        pemNodePrivateKey;
   
-  public Partition( ) {
-  }
+  public Partition( ) {}
   
   private Partition( String name ) {
     this.name = name;
@@ -121,7 +121,30 @@ public class Partition extends AbstractPersistent {
   public static Partition newInstanceNamed( String partitionName ) {
     return new Partition( partitionName );
   }
-
+  
+  public class Fake extends Partition {
+    
+    public Fake( String name, KeyPair keyPair, X509Certificate certificate ) {
+      super( name, keyPair, certificate, keyPair, certificate );
+    }
+    
+  }
+  
+  public static Partition fakePartition( final ComponentId compId ) {
+    if ( compId.isPartitioned( ) ) {
+      throw new IllegalArgumentException( "Provided compId is partitioned: " + compId.getFullName( ) );
+    } else {
+      if ( !compId.hasCredentials( ) ) {
+        ComponentId p = ComponentIds.lookup( compId.getPartition( ) );
+        return new Partition( ).new Fake( compId.getPartition( ), SystemCredentialProvider.getCredentialProvider( p ).getKeyPair( ),
+                                          SystemCredentialProvider.getCredentialProvider( p ).getCertificate( ) );
+      } else {
+        return new Partition( ).new Fake( compId.getPartition( ), SystemCredentialProvider.getCredentialProvider( compId ).getKeyPair( ),
+                                          SystemCredentialProvider.getCredentialProvider( compId ).getCertificate( ) );
+      }
+    }
+  }
+  
   public Partition( String name, KeyPair keyPair, X509Certificate certificate, KeyPair nodeKeyPair, X509Certificate nodeCertificate ) {
     this.name = name;
     this.pemCertificate = PEMFiles.fromCertificate( certificate );
@@ -129,26 +152,25 @@ public class Partition extends AbstractPersistent {
     this.pemPrivateKey = PEMFiles.fromKeyPair( keyPair );
     this.pemNodePrivateKey = PEMFiles.fromKeyPair( nodeKeyPair );
   }
-
-
+  
   public X509Certificate getNodeCertificate( ) {
     return PEMFiles.toCertificate( this.getPemNodeCertificate( ) );
   }
-
+  
   public X509Certificate getCertificate( ) {
     return PEMFiles.toCertificate( this.getPemCertificate( ) );
   }
-
+  
   public PrivateKey getNodePrivateKey( ) {
     return PEMFiles.toKeyPair( this.getPemNodePrivateKey( ) ).getPrivate( );
   }
-
+  
   public PrivateKey getPrivateKey( ) {
     return PEMFiles.toKeyPair( this.getPemPrivateKey( ) ).getPrivate( );
   }
-
+  
   @PrePersist
-  void prepareKeyDirectory() {
+  void prepareKeyDirectory( ) {
     File keyDir = SubDirectory.KEYS.getChildFile( this.name );
     LOG.info( "Creating key directory: " + keyDir.getAbsolutePath( ) );
     if ( !keyDir.exists( ) && !keyDir.mkdir( ) ) {
@@ -157,46 +179,49 @@ public class Partition extends AbstractPersistent {
   }
   
   /**
-   * This removes the key directory link for related components.  This is temporary, do not plan on using it.
+   * This removes the key directory link for related components. This is temporary, do not plan on
+   * using it.
+   * 
    * @param config
    */
   @Deprecated
   public void link( ServiceConfiguration config ) {
     File keyLink = SubDirectory.KEYS.getChildFile( config.getName( ) );
-    if( !keyLink.exists( ) ) {
-      LOG.debug( "Creating key directory link for " + config.getFullName( ) + " at " + keyLink.getAbsolutePath( ) ); 
+    if ( !keyLink.exists( ) ) {
+      LOG.debug( "Creating key directory link for " + config.getFullName( ) + " at " + keyLink.getAbsolutePath( ) );
       try {
         GroovyUtil.exec( "ln -sf " + SubDirectory.KEYS.getChildFile( this.name ).getAbsolutePath( ) + " " + keyLink.getAbsolutePath( ) );
         try {
           LOG.debug( "Created key directory link: " + keyLink.getAbsolutePath( ) + " -> " + keyLink.getCanonicalPath( ) );
-        } catch ( IOException ex ) {
-        } 
+        } catch ( IOException ex ) {}
       } catch ( ScriptExecutionFailedException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     } else {
-      LOG.debug( "Skipped creating key directory link for " + config.getFullName( ) + " because it already exists at " + keyLink.getAbsolutePath( ) ); 
+      LOG.debug( "Skipped creating key directory link for " + config.getFullName( ) + " because it already exists at " + keyLink.getAbsolutePath( ) );
     }
   }
-
+  
   /**
-   * This removes the key directory link for related components.  This is temporary, do not plan on using it.
+   * This removes the key directory link for related components. This is temporary, do not plan on
+   * using it.
+   * 
    * @param config
    */
   @Deprecated
   public void unlink( ServiceConfiguration config ) {
-    LOG.info( "Removing key directory link for " + config ); 
+    LOG.info( "Removing key directory link for " + config );
     SubDirectory.KEYS.getChildFile( config.getName( ) ).delete( );
   }
-
+  
   protected String getPemCertificate( ) {
     return this.pemCertificate;
   }
-
+  
   protected void setPemCertificate( String clusterCertificate ) {
     this.pemCertificate = clusterCertificate;
   }
-
+  
   protected String getPemNodeCertificate( ) {
     return this.pemNodeCertificate;
   }
@@ -204,35 +229,35 @@ public class Partition extends AbstractPersistent {
   protected void setPemNodeCertificate( String nodeCertificate ) {
     this.pemNodeCertificate = nodeCertificate;
   }
-
+  
   public String getName( ) {
     return this.name;
   }
-
+  
   protected void setName( String name ) {
     this.name = name;
   }
-
+  
   protected String getPemPrivateKey( ) {
     return this.pemPrivateKey;
   }
-
+  
   protected void setPemPrivateKey( String pemPrivateKey ) {
     this.pemPrivateKey = pemPrivateKey;
   }
-
+  
   protected String getPemNodePrivateKey( ) {
     return this.pemNodePrivateKey;
   }
-
+  
   protected void setPemNodePrivateKey( String pemNodePrivateKey ) {
     this.pemNodePrivateKey = pemNodePrivateKey;
   }
-
+  
   @PostRemove
   private void removePartitionKeyFiles( ) {
     LOG.info( String.format( "Removing credentials for the partition=%s.", this.getName( ) ) );
-    File keyDir = SubDirectory.KEYS.getChildFile(this.getName( ) );
+    File keyDir = SubDirectory.KEYS.getChildFile( this.getName( ) );
     if ( keyDir.exists( ) ) {
       for ( File f : keyDir.listFiles( ) ) {
         if ( f.delete( ) ) {
@@ -249,10 +274,17 @@ public class Partition extends AbstractPersistent {
     }
   }
   
+  public void syncKeysToDisk( ) {
+    this.writePartitionKeyFiles( );
+  }
+  
   @PostUpdate
   @PostPersist
   private void writePartitionKeyFiles( ) {
     File keyDir = SubDirectory.KEYS.getChildFile( this.getName( ) );
+    if( !keyDir.exists( ) && !keyDir.mkdir( ) ) {
+      throw new RuntimeException( "Failed to create directory for partition credentials: " + this );
+    }
     X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( );
     FileWriter out = null;
     try {
@@ -270,12 +302,29 @@ public class Partition extends AbstractPersistent {
       LOG.error( ex, ex );
       throw new RuntimeException( "Failed to write partition credentials to disk: " + this, ex );
     } finally {
-      if ( out != null ) try {
-        out.close( );
+      if ( out != null ) {
+        try {
+          out.close( );
         } catch ( IOException e ) {
-        LOG.error( e, e );
+          LOG.error( e, e );
         }
+      }
     }
   }
+  
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "Partition:name=" ).append( this.name ).append( ":cc-cert-serial=" ).append( this.getCertificate( ).getSerialNumber( ) ).append( ":nc-cert-serial=" ).append( this.getNodeCertificate( ).getSerialNumber( ) );
+    return builder.toString( );
+  }
 
+  /**
+   * @see java.lang.Comparable#compareTo(java.lang.Object)
+   */
+  @Override
+  public int compareTo( Partition that ) {
+    return this.name.compareTo( that.name );
+  }
+  
 }

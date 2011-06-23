@@ -136,29 +136,27 @@ public class Accounts {
     }
     throw new AuthException( "No active access key for " + user );
   }
+  
+  public static User lookupUserByConfirmationCode( String code ) throws AuthException {
+    return Accounts.getAccountProvider( ).lookupUserByConfirmationCode( code );
+  }
 
-  /**
-   * @deprecated TEMPORARY
-   */
-  @Deprecated
-  public static UserFullName lookupUserFullNameById( String userId ) {
-    try {
-      return UserFullName.getInstance( Accounts.lookupUserById( userId ) );
-    } catch ( AuthException ex ) {
-      throw new RuntimeException( "Failed to identify user with id " + userId + " something has gone seriously wrong.", ex );
+  public static String getUserFullName( User user ) {
+    if ( "/".equals( user.getPath( ) ) ) {
+      return "/" + user.getName( );
+    } else {
+      return user.getPath( ) + "/" + user.getName( );
     }
   }
-  /**
-   * @deprecated TEMPORARY
-   */
-  @Deprecated
-  public static UserFullName lookupUserFullNameByName( String userName ) {
-    try {
-      return UserFullName.getInstance( Accounts.lookupUserById( userName ) );
-    } catch ( AuthException ex ) {
-      throw new RuntimeException( "Failed to identify user with name " + userName + " something has gone seriously wrong.", ex );
+  
+  public static String getGroupFullName( Group group ) {
+    if ( "/".equals( group.getPath( ) ) ) {
+      return "/" + group.getName( );
+    } else {
+      return group.getPath( ) + "/" + group.getName( );
     }
   }
+  
   /**
    * @deprecated TEMPORARY
    */
@@ -174,17 +172,6 @@ public class Accounts {
    * @deprecated TEMPORARY
    */
   @Deprecated
-  public static AccountFullName lookupAccountFullNameByUserName( String userName ) {
-    try {
-      return AccountFullName.getInstance( Accounts.lookupUserByName( userName ).getAccount( ) );
-    } catch ( AuthException ex ) {
-      throw new RuntimeException( "Failed to identify user with id " + userName + " something has gone seriously wrong.", ex );
-    }
-  }
-  /**
-   * @deprecated TEMPORARY
-   */
-  @Deprecated
   public static AccountFullName lookupAccountFullNameById( String accountId ) {
     try {
       return AccountFullName.getInstance( Accounts.lookupAccountById( accountId ) );
@@ -192,20 +179,4 @@ public class Accounts {
       throw new RuntimeException( "Failed to identify user with id " + accountId + " something has gone seriously wrong.", ex );
     }
   }
-  /**
-   * @deprecated TEMPORARY
-   */
-  @Deprecated
-  public static Account lookupAccount( User user ) {
-    if( FakePrincipals.NOBODY_USER.equals( user ) ) {
-      return FakePrincipals.NOBODY_ACCOUNT;
-    } else {
-      try {
-        return user.getAccount( );
-      } catch ( AuthException ex ) {
-        return FakePrincipals.NOBODY_ACCOUNT;
-      }
-    }
-  }
-  
 }

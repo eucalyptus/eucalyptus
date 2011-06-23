@@ -65,14 +65,22 @@ package com.eucalyptus.empyrean;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapException;
+import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.HostManager;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.id.Any;
-import com.google.common.collect.Lists;
+import com.eucalyptus.component.Hosts;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 
 public class Empyrean extends ComponentId.Unpartioned {
   
-  public static final Empyrean INCOGNITO = new Empyrean( ); //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
-                                                            
+  public static final Empyrean INSTANCE = new Empyrean( ); //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
+                                                           
   @Override
   public String getPartition( ) {
     return this.name( );
@@ -88,17 +96,152 @@ public class Empyrean extends ComponentId.Unpartioned {
   }
   
   @Override
-  public Boolean hasDispatcher( ) {
-    return true;
-  }
-  
-  @Override
   public Boolean hasCredentials( ) {
     return true;
   }
   
   @Override
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return new ArrayList() {{ add( Any.class ); }};
+    return new ArrayList( ) {
+      {
+        add( Empyrean.class );
+      }
+    };
   }
- }
+  
+  @Override
+  public boolean isAdminService( ) {
+    return true;
+  }
+  
+  @Provides( Empyrean.class )
+  @RunDuring( Bootstrap.Stage.PersistenceInit )
+  public static class PersistenceContextBootstrapper extends Bootstrapper {
+    private static Logger LOG = Logger.getLogger( PersistenceContextBootstrapper.class );
+    
+    @Override
+    public boolean load( ) throws Exception {
+      GroovyUtil.evaluateScript( "setup_persistence.groovy" );
+      return true;
+    }
+    
+    @Override
+    public boolean start( ) throws Exception {
+      return true;
+    }
+    
+    @Override
+    public boolean enable( ) throws Exception {
+      return true;
+    }
+    
+    @Override
+    public boolean stop( ) throws Exception {
+      return true;
+    }
+    
+    @Override
+    public void destroy( ) throws Exception {}
+    
+    @Override
+    public boolean disable( ) throws Exception {
+      return true;
+    }
+    
+    @Override
+    public boolean check( ) throws Exception {
+      return true;
+    }
+  }
+  
+  @Provides( Empyrean.class )
+  @RunDuring( Bootstrap.Stage.PoolInit )
+  public static class DatabasePoolBootstrapper extends Bootstrapper {
+    
+    @Override
+    public boolean load( ) throws Exception {
+      GroovyUtil.evaluateScript( "setup_dbpool.groovy" );
+      return true;
+    }
+    
+    @Override
+    public boolean start( ) throws Exception {
+      return true;
+    }
+    
+    @Override
+    public boolean enable( ) throws Exception {
+      return true;
+    }
+    
+    @Override
+    public boolean stop( ) throws Exception {
+      return true;
+    }
+    
+    @Override
+    public void destroy( ) throws Exception {}
+    
+    @Override
+    public boolean disable( ) throws Exception {
+      return true;
+    }
+    
+    @Override
+    public boolean check( ) throws Exception {
+      return true;
+    }
+  }
+  
+  @Provides( Empyrean.class )
+  @RunDuring( Bootstrap.Stage.RemoteConfiguration )
+  public static class HostMembershipBootstrapper extends Bootstrapper {
+    private static final Logger LOG = Logger.getLogger( Empyrean.HostMembershipBootstrapper.class );
+    @Override
+    public boolean load( ) throws Exception {
+      try {
+        HostManager.getInstance( );
+        LOG.info( "Started membership channel " + HostManager.getMembershipGroupName( ) );
+        while ( !HostManager.isReady( ) ) {
+          TimeUnit.SECONDS.sleep( 1 );
+          LOG.info( "Waiting for system view with database..." );
+        }
+        LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
+        return true;
+      } catch ( Exception ex ) {
+        LOG.fatal( ex, ex );
+        BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
+        return false;
+      }
+    }
+    
+    @Override
+    public boolean start( ) throws Exception {
+      return true;
+    }
+    
+    @Override
+    public boolean enable( ) throws Exception {
+      return true;
+    }
+    
+    @Override
+    public boolean stop( ) throws Exception {
+      return true;
+    }
+    
+    @Override
+    public void destroy( ) throws Exception {}
+    
+    @Override
+    public boolean disable( ) throws Exception {
+      return true;
+    }
+    
+    @Override
+    public boolean check( ) throws Exception {
+      return true;
+    }
+    
+  }
+}

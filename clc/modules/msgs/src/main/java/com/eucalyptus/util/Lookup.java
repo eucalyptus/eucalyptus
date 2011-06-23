@@ -65,9 +65,6 @@ package com.eucalyptus.util;
 
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.context.Context;
 
 public interface Lookup<T extends HasOwningAccount> {
 

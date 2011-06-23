@@ -65,39 +65,38 @@ package com.eucalyptus.vm;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.VmInstances;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
 
 public class VmReplyTransform {
 
-  public RunInstancesResponseType allocate( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException
+  public RunInstancesResponseType allocate( Allocation allocInfo ) throws EucalyptusCloudException
   {
-    RunInstancesResponseType reply = vmAllocInfo.getReply();
+    RunInstancesResponseType reply = allocInfo.getRequest().getReply( );
     Context ctx = Contexts.lookup( );
 
     List<String> networkNames = new ArrayList<String>();
-    for( Network vmNet : vmAllocInfo.getNetworks() ) networkNames.add( vmNet.getName() );
-
-    ReservationInfoType reservation = new ReservationInfoType( vmAllocInfo.getReservationId(),
+    if ( allocInfo.getNetworks() != null ) {
+      for( Network vmNet : allocInfo.getNetworks() ) networkNames.add( vmNet.getName() );
+    }
+    ReservationInfoType reservation = new ReservationInfoType( allocInfo.getReservationId(),
                                                                ctx.getUserFullName().getNamespace( ),
                                                                networkNames );
 
-    for( ResourceToken allocToken : vmAllocInfo.getAllocationTokens() )
+    for( ResourceToken allocToken : allocInfo.getAllocationTokens() )
       for( String instId : allocToken.getInstanceIds() ) {
         reservation.getInstancesSet().add( VmInstances.getInstance().lookup( instId ).getAsRunningInstanceItemType( ) );
       }
 
     reply.setRsvInfo( reservation );
-    return vmAllocInfo.getReply();
+    return reply;
   }
 
 }

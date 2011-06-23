@@ -78,8 +78,8 @@ public class TerminateCallback extends MessageCallback<TerminateInstancesType,Te
   private String        instanceId;
   
   public TerminateCallback( String instanceId ) {
+    super( new TerminateInstancesType( instanceId ) );
     this.instanceId = instanceId;
-    super.setRequest( new TerminateInstancesType( instanceId ) );
   }
   
   @Override

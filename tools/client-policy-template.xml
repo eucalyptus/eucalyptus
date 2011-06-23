@@ -36,9 +36,8 @@
             </wsp:Policy>
           </sp:Layout>
 
-	  <!-- <sp:IncludeTimestamp/> -->
+	  <sp:IncludeTimestamp/> 
           <sp:OnlySignEntireHeadersAndBody/>
-	  <!-- <sp:EncryptSignature/> -->
         </wsp:Policy>
       </sp:AsymmetricBinding>
 
@@ -50,6 +49,7 @@
       </sp:Wss10>
 
       <sp:SignedParts xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+	<sp:Body/>
         <sp:Header Namespace="http://www.w3.org/2005/08/addressing"/>
       </sp:SignedParts>
 
@@ -57,6 +57,7 @@
 	<rampc:ReceiverCertificate>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/SERVER-CERT</rampc:ReceiverCertificate>
 	<rampc:Certificate>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/CLIENT-CERT</rampc:Certificate>
 	<rampc:PrivateKey>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/CLIENT-KEY</rampc:PrivateKey>
+	<rampc:ClockSkewBuffer>20</rampc:ClockSkewBuffer>
 	<!-- <rampc:TimeToLive>14400</rampc:TimeToLive> -->
 	<!--
 	    <rampc:User>CLIENT-USERNAME</rampc:User>

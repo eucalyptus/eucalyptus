@@ -83,27 +83,7 @@ import edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType;
 
 
 public class WalrusUtil {
-	private static String ipAddress;
 
-	static {
-		ipAddress = "127.0.0.1";
-		List<NetworkInterface> ifaces = null;
-		try {
-			ifaces = Collections.list( NetworkInterface.getNetworkInterfaces() );
-			for ( NetworkInterface iface : ifaces ) {
-				try {
-					if ( !iface.isLoopback() && !iface.isVirtual() && iface.isUp() ) {
-						for ( InetAddress iaddr : Collections.list( iface.getInetAddresses() ) ) {
-							if ( !iaddr.isSiteLocalAddress() && !( iaddr instanceof Inet6Address) ) {
-								ipAddress = iaddr.getHostAddress();
-								break;
-							}
-						}
-					}
-				} catch ( SocketException e1 ) {}
-			}	
-		} catch ( SocketException e1 ) {}
-	}
   public static BaseMessage convertErrorMessage(ExceptionResponseType errorMessage) {
     Throwable ex = errorMessage.getException();
     String correlationId = errorMessage.getCorrelationId( );
@@ -126,7 +106,7 @@ public class WalrusUtil {
     EucalyptusMessage errMsg;
     if(ex instanceof WalrusException) {
 			WalrusException e = (WalrusException) ex;
-			errMsg = new WalrusErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId, ipAddress, e.getLogData());
+			errMsg = new WalrusErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId, Internets.localHostAddress( ), e.getLogData());
 			errMsg.setCorrelationId( correlationId );
 			return errMsg;
 		} else {

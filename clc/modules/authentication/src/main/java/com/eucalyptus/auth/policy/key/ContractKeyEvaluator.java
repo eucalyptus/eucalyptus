@@ -10,25 +10,21 @@ public class ContractKeyEvaluator {
   
   private static final Logger LOG = Logger.getLogger( ContractKeyEvaluator.class );
 
-  private Map<String, Contract> contracts;
+  private Map<Contract.Type, Contract> contracts;
   
-  public ContractKeyEvaluator( ) {
-    this.contracts = Maps.newHashMap( );
-  }
-  
-  public ContractKeyEvaluator( Map<String, Contract> contracts ) {
+  public ContractKeyEvaluator( Map<Contract.Type, Contract> contracts ) {
     this.contracts = contracts;
   }
   
   public void addContract( ContractKey contractKey, Set<String> values ) {
     Contract update = contractKey.getContract( values.toArray( new String[0] ) );
-    Contract current = contracts.get( update.getName( ) );
+    Contract current = contracts.get( update.getType( ) );
     if ( current == null || contractKey.isBetter( current, update ) ) {
-      contracts.put( update.getName( ), update );
+      contracts.put( update.getType( ), update );
     }
   }
   
-  public Map<String, Contract> getContracts( ) {
+  public Map<Contract.Type, Contract> getContracts( ) {
     return this.contracts;
   }
   

@@ -68,6 +68,7 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -154,8 +155,11 @@ public class ClusterNodeState {
       if( token.getInstanceIds( ).size( ) > index ) {
         childToken.getInstanceIds( ).add( token.getInstanceIds( ).get( index ) );
       }
+      if( token.getInstanceUuids( ).size( ) > index ) {
+        childToken.getInstanceUuids( ).add( token.getInstanceUuids( ).get( index ) );
+      }
       if( primaryNet != null ) {
-        NetworkToken childNet = new NetworkToken( primaryNet.getCluster( ), primaryNet.getAccountId( ), primaryNet.getNetworkName( ), primaryNet.getNetworkUuid( ), primaryNet.getVlan( ) );
+        NetworkToken childNet = new NetworkToken( primaryNet.getCluster( ), primaryNet.getAccountFullName( ), primaryNet.getNetworkName( ), primaryNet.getNetworkUuid( ), primaryNet.getVlan( ) );
         childNet.getIndexes( ).add( primaryNet.getIndexes( ).pollFirst( ) );
         childToken.getNetworkTokens( ).add( childNet );
       }

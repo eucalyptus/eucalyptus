@@ -55,7 +55,7 @@
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -67,6 +67,7 @@
 #include "misc.h" // bolean
 #include "ipc.h" // sem
 
+#define MBR_BLOCKS 63 // the size of "DOS-compatibility region" partially used by 'grub'
 #define SECTOR_SIZE 512
 
 int diskutil_init (void);
@@ -86,9 +87,11 @@ int diskutil_sectors (const char * path, const int part, long long * first, long
 int diskutil_mount (const char * dev, const char * mnt_pt);
 int diskutil_umount (const char * dev);
 int diskutil_write2file (const char * file, const char * str);
+int diskutil_grub (const char * path, const char * mnt_pt, const int part, const char * kernel, const char * ramdisk);
 int diskutil_grub_files (const char * mnt_pt, const int part, const char * kernel, const char * ramdisk);
 int diskutil_grub_mbr (const char * path, const int part);
-int diskutil_ch (const char * path, const char * user, const int perms);
+int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt);
+int diskutil_ch (const char * path, const char * user, const char * group, const int perms);
 int diskutil_mkdir (const char * path);
 int diskutil_cp (const char * from, const char * to);
 long long round_up_sec   (long long bytes);

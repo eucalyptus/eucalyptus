@@ -63,9 +63,6 @@
  */
 package com.eucalyptus.images;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
@@ -83,30 +80,22 @@ import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.ImageUserGroup;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cloud.Image.Architecture;
+import com.eucalyptus.cloud.Image.StaticDiskImage;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Lookups;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.VmInfo;
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType;
-import edu.ucsb.eucalyptus.msgs.ImageDetails;
 import edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType;
 import edu.ucsb.eucalyptus.msgs.ModifyImageAttributeType;
 import edu.ucsb.eucalyptus.msgs.RegisterImageType;
@@ -196,11 +185,11 @@ public class ImageUtil {
     return size;
   }
   
-  public static void checkStoredImage( final ImageInfo imgInfo ) throws EucalyptusCloudException {
+  public static void checkStoredImage( final Image.StaticDiskImage imgInfo ) throws EucalyptusCloudException {
     if ( imgInfo != null ) try {
       Document inputSource = null;
       try {
-        String[] imagePathParts = imgInfo.getImageLocation( ).split( "/" );
+        String[] imagePathParts = imgInfo.getManifestLocation( ).split( "/" );
         inputSource = WalrusUtil.getManifestData( imgInfo.getOwner( ), imagePathParts[0], imagePathParts[1] );
       } catch ( EucalyptusCloudException e ) {
         throw e;
@@ -211,18 +200,19 @@ public class ImageUtil {
       try {
         signature = ( String ) xpath.evaluate( "/manifest/signature/text()", inputSource, XPathConstants.STRING );
       } catch ( XPathExpressionException e ) {}
-      if ( imgInfo.getSignature( ) != null && !imgInfo.getSignature( ).equals( signature ) ) throw new EucalyptusCloudException(
-                                                                                                                                 "Manifest signature has changed since registration." );
-      LOG.info( "Triggering caching: " + imgInfo.getImageLocation( ) );
+      if ( imgInfo.getSignature( ) != null && !imgInfo.getSignature( ).equals( signature ) ) throw new EucalyptusCloudException( "Manifest signature has changed since registration." );
+      LOG.info( "Triggering caching: " + imgInfo.getManifestLocation( ) );
       try {
-        WalrusUtil.triggerCaching( imgInfo );
+        if( imgInfo instanceof Image.StaticDiskImage ) {
+          WalrusUtil.triggerCaching( ( StaticDiskImage ) imgInfo );
+        }
       } catch ( Exception e ) {}
       } catch ( EucalyptusCloudException e ) {
       LOG.error( e );
-      LOG.error( "Failed bukkit check! Invalidating registration: " + imgInfo.getImageLocation( ) );
+      LOG.error( "Failed bukkit check! Invalidating registration: " + imgInfo.getManifestLocation( ) );
       //TODO: we need to consider if this is a good semantic or not, it can have ugly side effects
       //        invalidateImageById( imgInfo.getImageId() );
-      throw new EucalyptusCloudException( "Failed check! Invalidating registration: " + imgInfo.getImageLocation( ) );
+      throw new EucalyptusCloudException( "Failed check! Invalidating registration: " + imgInfo.getManifestLocation( ) );
       }
   }
   
@@ -319,13 +309,6 @@ public class ImageUtil {
     }
     if ( !isSet( kernelId ) ) kernelId = null;
     return kernelId;
-  }
-  
-  public static String[] getImagePathParts( String imageLocation ) throws EucalyptusCloudException {
-    String[] imagePathParts = imageLocation.split( "/" );
-    if ( imagePathParts.length != 2 ) throw new EucalyptusCloudException(
-                                                                          "Image registration failed:  Invalid image location." );
-    return imagePathParts;
   }
   
   public static void checkBucketAcl( RegisterImageType request, String[] imagePathParts ) throws EucalyptusCloudException {

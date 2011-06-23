@@ -112,8 +112,8 @@ fi
 # Fix the paths for includes and libraries
 if test -n "${AXIS2C_HOME}" ; then
         if test -d "${AXIS2C_HOME}"/include ; then
-                for x in `ls ${AXIS2C_HOME}/include`; do
-                        INCLUDES="${INCLUDES} -I${AXIS2C_HOME}/include/$x"
+                for x in ${AXIS2C_HOME}/include/axis2-* ${AXIS2C_HOME}/include/rampart-*; do
+                        INCLUDES="${INCLUDES} -I$x"
                 done
         fi
         if test -d "${AXIS2C_HOME}"/lib ; then
@@ -262,12 +262,12 @@ AC_CHECK_FUNCS([bzero dup2 ftruncate gettimeofday mkdir pow select strchr strdup
 
 # Time to substitute and generate the files
 AC_CONFIG_FILES([Makedefs
+                 clc/eucadmin/bin/euca_conf:clc/eucadmin/bin/euca_conf.in
+                 clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in
+                 clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in
                  tools/eucalyptus-cc:tools/eucalyptus-cc.in
-                 tools/eucalyptus-nc:tools/eucalyptus-nc.in
-		 clc/eucadmin/bin/euca_conf:clc/eucadmin/bin/euca_conf.in
-		 clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in
                  tools/eucalyptus-cloud:tools/eucalyptus-cloud.in
-                 clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in])
+                 tools/eucalyptus-nc:tools/eucalyptus-nc.in])
 
 AC_DEFINE_UNQUOTED(EUCA_VERSION, "$EUCA_VERSION")
 
