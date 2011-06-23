@@ -474,24 +474,14 @@ class EucaConf(object):
             sys.exit(0)
 
     def do_enable(self):
-        if (self.options.enable_whats):
-            for enable_what in self.options.enable_whats:
-                if enable_what not in EnableableServices:
-                    print 'enable requires one of %s' % EnableableServices
-                    sys.exit(1)
-                cls = boto.utils.find_class('eucadmin.enable', 'Enable')
-                req = cls(self.config, enable_what, True)
-                req.main()
+        if self.options.enable_whats:
+            # This is now a no-op.  Just return success.
+            sys.exit(0)
 
     def do_disable(self):
-        if (self.options.disable_whats):
-            for disable_what in self.options.disable_whats:
-                if disable_what not in EnableableServices:
-                    print 'disable requires one of %s' % EnableableServices
-                    sys.exit(1)
-                cls = boto.utils.find_class('eucadmin.enable', 'Enable')
-                req = cls(self.config, disable_what, False)
-                req.main()
+        if self.options.disable_whats:
+            # This is now a no-op.  Just return success.
+            sys.exit(0)
 
     def do_heartbeat(self):
         if self.options.heartbeat:
@@ -503,7 +493,14 @@ class EucaConf(object):
         if getattr(self.options, option_name):
             cls = boto.utils.find_class(module_name, class_name)
             req = cls(debug=self.debug)
-            data = req.main()
+            try:
+                data = req.main()
+            except NoCredentialsError:
+                url = 'http://localhost:8773/services/Eucalyptus'
+                ak, sk = self._get_accesskey_secretkey(url)
+                req = cls(aws_access_key_id=ak, aws_secret_access_key=sk,
+                          url=url, debug=self.debug)
+                data = req.main()
             req.cli_formatter(data)
 
     def do_list_nodes(self):
@@ -546,6 +543,17 @@ class EucaConf(object):
                       'eucadmin.describeservices',
                       'DescribeServices')
 
+    def _get_accesskey_secretkey(self, url):
+        print 'No credentials found, attempting local registration'
+        gc_cls = boto.utils.find_class('eucadmin.getcredentials',
+                                       'GetCredentials')
+        obj = gc_cls(euca_home=self.config['EUCALYPTUS'],
+                     account=self.options.cred_account,
+                     user=self.options.cred_user,
+                     zipfile='notused')
+        s = obj.get_accesskey_secretkey()
+        return s.split('\t')
+        
     def _do_register(self, module_name, class_name, port_option):
         partition = self.options.partition_name
         component_name = self.options.component_name
@@ -561,23 +569,14 @@ class EucaConf(object):
         try:
             data = req.main(partition=partition, name=component_name,
                             port=port, host=host)
-            req.cli_formatter(data)
         except NoCredentialsError:
-            print 'No credentials found, attempting local registration'
             url = 'http://localhost:8773/services/Eucalyptus'
-            gc_cls = boto.utils.find_class('eucadmin.getcredentials',
-                                           'GetCredentials')
-            obj = gc_cls(euca_home=self.config['EUCALYPTUS'],
-                         account=self.options.cred_account,
-                         user=self.options.cred_user,
-                         zipfile='notused')
-            s = obj.get_accesskey_secretkey()
-            ak, sk = s.split('\t')
+            ak, sk = self._get_accesskey_secretkey(url)
             req = cls(aws_access_key_id=ak, aws_secret_access_key=sk,
                       url=url, debug=self.debug)
             data = req.main(partition=partition, name=component_name,
                             port=port, host=host)
-            req.cli_formatter(data)
+        req.cli_formatter(data)
 
     def do_register_cloud(self):
         if hasattr(self.options, 'register_cloud'):
@@ -654,8 +653,16 @@ class EucaConf(object):
         if hasattr(self.options, option_name):
             cls = boto.utils.find_class(module_name, class_name)
             req = cls(debug=self.debug)
-            data = req.main(partition=self.options.partition_name,
-                            name=self.options.component_name)
+            try:
+                data = req.main(partition=self.options.partition_name,
+                                name=self.options.component_name)
+            except NoCredentialsError:
+                url = 'http://localhost:8773/services/Eucalyptus'
+                ak, sk = self._get_accesskey_secretkey(url)
+                req = cls(aws_access_key_id=ak, aws_secret_access_key=sk,
+                          url=url, debug=self.debug)
+                data = req.main(partition=self.options.partition_name,
+                                name=self.options.component_name)
             req.cli_formatter(data)
 
     def do_deregister_cloud(self):
