@@ -28,41 +28,10 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-from boto.roboto.awsqueryrequest import AWSQueryRequest
-from boto.roboto.param import Param
-import eucadmin
+import eucadmin.describerequest
 
-class DescribeWalruses(AWSQueryRequest):
-  
-    ServicePath = '/services/Configuration'
-    ServiceClass = eucadmin.EucAdmin
-    Description = 'Describe walruses'
+class DescribeWalruses(eucadmin.describerequest.DescribeRequest):
 
-    def __init__(self, **args):
-        AWSQueryRequest.__init__(self, **args)
-        self.list_markers = ['euca:registered']
-        self.item_markers = ['euca:item']
-  
-    def get_connection(self, **args):
-        if self.connection is None:
-            args['path'] = self.ServicePath
-            self.connection = self.ServiceClass(**args)
-        return self.connection
-      
-    def cli_formatter(self, data):
-        walruses = getattr(data, 'euca:registered')
-        fmt = 'WALRUS\t%-15.15s\t%-15.15s\t%-25s\t%s\t%s'
-        for w in walruses:
-            if w.get('euca:hostName', None) != 'detail':
-                print fmt % (w.get('euca:partition', None),
-                             w.get('euca:name', None),
-                             w.get('euca:hostName', None),
-                             w.get('euca:state', None),
-                             w.get('euca:detail', None))
-
-    def main(self, **args):
-        return self.send(**args)
-
-    def main_cli(self):
-        self.do_cli()
+    ServiceName = 'Walrus'
+    
     

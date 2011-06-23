@@ -28,39 +28,10 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-from boto.roboto.awsqueryrequest import AWSQueryRequest
-from boto.roboto.param import Param
-import eucadmin
+import eucadmin.describerequest
 
-class DescribeStorageControllers(AWSQueryRequest):
-  
-    ServicePath = '/services/Configuration'
-    ServiceClass = eucadmin.EucAdmin
-    Description = 'Describe storage controllers'
+class DescribeStorageControllers(eucadmin.describerequest.DescribeRequest):
 
-    def __init__(self, **args):
-        AWSQueryRequest.__init__(self, **args)
-        self.list_markers = ['euca:registered']
-        self.item_markers = ['euca:item']
-  
-    def get_connection(self, **args):
-        if self.connection is None:
-            args['path'] = self.ServicePath
-            self.connection = self.ServiceClass(**args)
-        return self.connection
-      
-    def cli_formatter(self, data):
-        data = getattr(data, 'euca:registered')
-        for sc in data:
-            print 'STORAGE\t%s\t%s\t%s\t%s\t%s' % (sc['euca:partition'],
-                                                   sc['euca:name'],
-                                                   sc['euca:hostName'],
-                                                   sc['euca:state'],
-                                                   sc['euca:detail'])
-
-    def main(self, **args):
-        return self.send(**args)
-
-    def main_cli(self):
-        self.do_cli()
+    ServiceName = 'StorageController'
+    
     

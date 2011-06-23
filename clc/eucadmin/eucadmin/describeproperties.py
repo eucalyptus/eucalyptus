@@ -28,34 +28,19 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-from boto.roboto.awsqueryrequest import AWSQueryRequest
-from boto.roboto.param import Param
-import eucadmin
+import eucadmin.describerequest
 
-class DescribeProperties(AWSQueryRequest):
+class DescribeProperties(eucadmin.describerequest.DescribeRequest):
 
-    ServicePath = '/services/Properties'
-    ServiceClass = eucadmin.EucAdmin
-    Description = 'Get properties'
-
+    ServiceName = 'Property'
+    
     def __init__(self, **args):
-        AWSQueryRequest.__init__(self, **args)
+        eucadmin.describerequest.DescribeRequest.__init__(self, **args)
         self.list_markers = ['euca:properties']
         self.item_markers = ['euca:item']
   
-    def get_connection(self, **args):
-        if self.connection is None:
-            args['path'] = self.ServicePath
-            self.connection = self.ServiceClass(**args)
-        return self.connection
-      
     def cli_formatter(self, data):
         props = getattr(data, 'euca:properties')
         for prop in props:
             print 'PROPERTY\t%s\t%s' % (prop['euca:name'], prop['euca:value'])
 
-    def main(self, **args):
-        return self.send(**args)
-
-    def main_cli(self):
-        self.do_cli()
