@@ -80,9 +80,9 @@ public class ComponentIds {
   
   public static boolean shouldBootstrapLocally( ComponentId c ) {
     boolean cloudLocal = Bootstrap.isCloudController( ) && c.isCloudLocal( ) && !c.isRegisterable( );
+    boolean isCloudItself = Bootstrap.isCloudController( ) && Eucalyptus.class.equals( c.getClass( ) );
     boolean alwaysLocal = c.isAlwaysLocal( );
     boolean isBootrapperItself = Empyrean.class.equals( c.getClass( ) );
-    boolean isCloudItself = Eucalyptus.class.equals( c.getClass( ) );
     return cloudLocal || alwaysLocal || isBootrapperItself || isCloudItself;
   }
   
