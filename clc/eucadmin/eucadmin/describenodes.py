@@ -28,27 +28,12 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-from boto.roboto.awsqueryrequest import AWSQueryRequest
-from boto.roboto.param import Param
-import eucadmin
+import eucadmin.describerequest
 
-class DescribeNodes(AWSQueryRequest):
-  
-    ServicePath = '/services/Configuration'
-    ServiceClass = eucadmin.EucAdmin
-    Description = 'Describe nodes'
+class DescribeNodes(eucadmin.describerequest.DescribeRequest):
 
-    def __init__(self, **args):
-        AWSQueryRequest.__init__(self, **args)
-        self.list_markers = ['euca:registered']
-        self.item_markers = ['euca:item']
-  
-    def get_connection(self, **args):
-        if self.connection is None:
-            args['path'] = self.ServicePath
-            self.connection = self.ServiceClass(**args)
-        return self.connection
-      
+    ServiceName = 'Node'
+    
     def cli_formatter(self, data):
         nodes = getattr(data, 'euca:registered')
         fmt = 'NODE\t%s\t%s'
@@ -56,9 +41,3 @@ class DescribeNodes(AWSQueryRequest):
             print fmt % (n.get('euca:name', None),
                          n.get('euca:clusterName', None))
 
-    def main(self, **args):
-        return self.send(**args)
-
-    def main_cli(self):
-        self.do_cli()
-    

@@ -28,19 +28,41 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-import eucadmin.describerequest
+from boto.roboto.awsqueryrequest import AWSQueryRequest
+from boto.roboto.param import Param
+import eucadmin
 
-class DescribeEucalyptus(eucadmin.describerequest.DescribeRequest):
+class DeregisterRequest(AWSQueryRequest):
 
-    ServiceName = 'Cloud'
-    
+    ServiceName = ''
+    ServicePath = '/services/Configuration'
+    ServiceClass = eucadmin.EucAdmin
+    Description = 'Deregister a %s' % ServiceName
+    Params = [Param(name='Partition',
+                    short_name='P',
+                    long_name='partition',
+                    ptype='string',
+                    optional=True,
+                    doc='Partition for the %s' % ServiceName)]
+    Args = [Param(name='Name',
+                  long_name='name',
+                  ptype='string',
+                  optional=False,
+                  doc='The %s name' % ServiceName)]
+
+    def get_connection(self, **args):
+        if self.connection is None:
+            args['path'] = self.ServicePath
+            self.connection = self.ServiceClass(**args)
+        return self.connection
+      
     def cli_formatter(self, data):
-        clouds = getattr(data, 'euca:registered')
-        for cloud in clouds:
-            print 'CLOUDS\t%s\t%s\t%s\t%s\t%s' % (cluster['euca:partition'],
-                                                  cluster['euca:name'],
-                                                  cluster['euca:hostName'],
-                                                  cluster['euca:state'],
-                                                  cluster['euca:detail'])
+        response = getattr(data, 'euca:_return')
+        print 'RESPONSE %s' % response
 
+    def main(self, **args):
+        return self.send(**args)
+
+    def main_cli(self):
+        self.do_cli()
     
