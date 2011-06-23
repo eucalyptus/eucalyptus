@@ -146,7 +146,7 @@ public class NetworkInfoType extends EucalyptusData {
   String userId;
   ArrayList<String> allocatedAddresses = new ArrayList<String>();
   public String toString( ) {
-    return "NetworkInfoType ${accountId} ${networkName} ${vlan} ${allocatedAddresses}";
+    return "NetworkInfoType ${userId} ${networkName} ${vlan} ${allocatedAddresses}";
   }
 }
 
