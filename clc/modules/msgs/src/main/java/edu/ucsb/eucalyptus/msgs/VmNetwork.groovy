@@ -119,6 +119,8 @@ public class DescribeNetworksType extends EucalyptusMessage {
 public class DescribeNetworksResponseType extends EucalyptusMessage {
   Integer useVlans;
   String mode;
+  Integer addrIndexMin;
+  Integer addrIndexMax;
   Integer vlanMin;
   Integer vlanMax;
   String vnetSubnet;

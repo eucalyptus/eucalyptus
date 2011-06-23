@@ -88,6 +88,8 @@
     <value name="mode" field="mode" usage="required" />
     <value name="useVlans" field="useVlans" usage="required" />
     <value name="addrsPerNet" field="addrsPerNet" usage="optional" />
+    <value name="addrIndexMin" field="addrIndexMin" usage="optional" />
+    <value name="addrIndexMax" field="addrIndexMax" usage="optional" />
     <value name="vlanMin" field="vlanMin" usage="optional" />
     <value name="vlanMax" field="vlanMax" usage="optional" />
     <value name="vnetSubnet" field="vnetSubnet" usage="optional" />
