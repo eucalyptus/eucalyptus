@@ -32,7 +32,7 @@ from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
 import eucadmin
 
-class RegisterCloud(AWSQueryRequest):
+class RegisterEucalyptus(AWSQueryRequest):
   
     ServicePath = '/services/Configuration'
     ServiceClass = eucadmin.EucAdmin
@@ -54,7 +54,7 @@ class RegisterCloud(AWSQueryRequest):
                     short_name='p',
                     long_name='port',
                     ptype='integer',
-                    default=8774,
+                    default=8773,
                     optional=True,
                     doc='Port for the cloud')
               ]

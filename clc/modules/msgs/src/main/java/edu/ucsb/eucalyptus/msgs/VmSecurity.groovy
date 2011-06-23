@@ -114,6 +114,8 @@ public class DescribeSecurityGroupsResponseType extends VmSecurityMessage {
 public class DescribeSecurityGroupsType extends VmSecurityMessage {
   @HttpParameterMapping (parameter = "GroupName")
   ArrayList<String> securityGroupSet = new ArrayList<String>();
+  @HttpParameterMapping (parameter = "GroupId")
+  ArrayList<String> securityGroupIdSet = new ArrayList<String>();
   @HttpParameterMapping (parameter = "FilterSet")
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }

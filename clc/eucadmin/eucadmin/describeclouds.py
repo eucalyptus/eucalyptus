@@ -32,7 +32,7 @@ from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
 import eucadmin
 
-class DescribeClouds(AWSQueryRequest):
+class DescribeRegister(AWSQueryRequest):
   
     ServicePath = '/services/Configuration'
     ServiceClass = eucadmin.EucAdmin
