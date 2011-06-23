@@ -52,6 +52,15 @@ class Check(object):
         self.check_dirs()
         self.check_vmware()
 
+    def common(self):
+        """
+        This method performs a subset of the check operations
+        that are common to all services.
+        """
+        self.check_rootwrap()
+        self.check_eucauser()
+        self.check_dirs()
+
     def check_rootwrap(self):
         # check for existence of rootwrap
         rootwrap = os.path.join(self.config['EUCALYPTUS'], RootWrapPath)
