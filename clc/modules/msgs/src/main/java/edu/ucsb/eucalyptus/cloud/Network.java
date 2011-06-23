@@ -76,6 +76,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.FullName;
@@ -106,7 +107,7 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
   private final AtomicInteger                       vlan          = new AtomicInteger( 0 );
   private final String                              name;
   private final String                              networkName;
-  private final AccountFullName                     account;
+  private final UserFullName                     userFullName;
   private final List<PacketFilterRule>              rules         = new ArrayList<PacketFilterRule>( );
   private final ConcurrentMap<String, NetworkToken> clusterTokens = new ConcurrentHashMap<String, NetworkToken>( );
   
@@ -123,12 +124,12 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
   private final SortedSetMultimap<String, NetworkToken>            activeNetworks         = Multimaps.synchronizedSortedSetMultimap( volatileActiveNetworks );
   private final FQDN                                               fullName;
   
-  public Network( final AccountFullName owner, final String networkName, final String uuid ) {
+  public Network( final UserFullName ownerUserFullName, final String networkName, final String uuid ) {
     this.uuid = uuid;
-    this.account = owner;
-    this.fullName = new FQDN( owner );
+    this.userFullName = ownerUserFullName;
+    this.fullName = new FQDN( ownerUserFullName );
     this.networkName = networkName;
-    this.name = this.account.getAccountNumber( ) + "-" + this.networkName;
+    this.name = this.userFullName.getAccountNumber( ) + "-" + this.networkName;
     this.networkIndexes = new ConcurrentSkipListMap<Integer, NetworkIndexState>( ) {
       {
         for ( int i = MIN_ADDR; i < MAX_ADDR; i++ ) {
@@ -137,8 +138,8 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
       }
     };
   }
-  public Network( final AccountFullName owner, final String networkName, final String uuid, List<PacketFilterRule> pfRules ) {
-    this( owner, networkName, uuid );
+  public Network( final UserFullName ownerUserFullName, final String networkName, final String uuid, List<PacketFilterRule> pfRules ) {
+    this( ownerUserFullName, networkName, uuid );
     this.rules.addAll( pfRules );
   }
   
@@ -168,8 +169,8 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
     }
   }
   
-  public AccountFullName getAccount( ) {
-    return this.account;
+  public UserFullName getUserFullName( ) {
+    return this.userFullName;
   }
 
   public ConcurrentNavigableMap<Integer, NetworkIndexState> getNetworkIndexes( ) {
@@ -177,7 +178,7 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
   }
 
   private NetworkToken getClusterToken( String cluster ) {
-    NetworkToken newToken = new NetworkToken( cluster, this.account, this.networkName, this.uuid, this.vlan.get( ) );
+    NetworkToken newToken = new NetworkToken( cluster, this.userFullName, this.networkName, this.uuid, this.vlan.get( ) );
     NetworkToken token = this.clusterTokens.putIfAbsent( cluster, newToken );
     if ( token == null ) {
       return newToken;
@@ -292,7 +293,7 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
   }
   
   class FQDN extends AccountFullName implements FullName {
-    FQDN( AccountFullName owner ) {
+    FQDN( UserFullName owner ) {
       super( owner, "security-group", Network.this.networkName );
     }
   }
@@ -314,7 +315,7 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
   
   @Override
   public FullName getOwner( ) {
-    return this.account;
+    return this.userFullName;
   }
   public String getUuid( ) {
     return this.uuid;
@@ -324,7 +325,7 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
   }
   @Override
   public String getOwnerAccountId( ) {
-    return this.account.getAccountNumber( );
+    return this.userFullName.getAccountNumber( );
   }
 
 }

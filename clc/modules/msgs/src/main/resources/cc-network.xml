@@ -39,7 +39,7 @@
     <value name="uuid" field="uuid" usage="required" />
     <value name="vlan" field="vlan" />
     <value name="netName" field="networkName" />
-    <value name="userName" field="accountId" />
+    <value name="userName" field="userId" />
     <structure usage="optional">
       <collection field="allocatedAddresses" factory="org.jibx.runtime.Utility.arrayListFactory">
         <value name="activeAddrs" type="java.lang.String" />
