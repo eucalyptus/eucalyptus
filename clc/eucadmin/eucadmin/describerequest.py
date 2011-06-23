@@ -28,19 +28,44 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-import eucadmin.describerequest
+from boto.roboto.awsqueryrequest import AWSQueryRequest
+from boto.roboto.param import Param
+import eucadmin
 
-class DescribeEucalyptus(eucadmin.describerequest.DescribeRequest):
+class DescribeRequest(AWSQueryRequest):
 
-    ServiceName = 'Cloud'
-    
+    ServiceNaem = ''
+    ServicePath = '/services/Configuration'
+    ServiceClass = eucadmin.EucAdmin
+    Description = 'List %s services' % ServiceName
+
+    def __init__(self, **args):
+        AWSQueryRequest.__init__(self, **args)
+        self.list_markers = ['euca:registered']
+        self.item_markers = ['euca:item']
+  
+    def get_connection(self, **args):
+        if self.connection is None:
+            args['path'] = self.ServicePath
+            self.connection = self.ServiceClass(**args)
+        return self.connection
+      
     def cli_formatter(self, data):
-        clouds = getattr(data, 'euca:registered')
-        for cloud in clouds:
-            print 'CLOUDS\t%s\t%s\t%s\t%s\t%s' % (cluster['euca:partition'],
-                                                  cluster['euca:name'],
-                                                  cluster['euca:hostName'],
-                                                  cluster['euca:state'],
-                                                  cluster['euca:detail'])
+        services = getattr(data, 'euca:registered')
+        fmt = '%s\t%-15.15s\t%-15.15s\t%-25s\t%s\t%s'
+        for s in services:
+            if s.get('euca:hostName', None) != 'detail':
+                print fmt % (
+                    self.ServiceName.upper(),
+                    s.get('euca:partition', None),
+                    s.get('euca:name', None),
+                    s.get('euca:hostName', None),
+                    s.get('euca:state', None),
+                    s.get('euca:detail', None))
 
+    def main(self, **args):
+        return self.send(**args)
+
+    def main_cli(self):
+        self.do_cli()
     

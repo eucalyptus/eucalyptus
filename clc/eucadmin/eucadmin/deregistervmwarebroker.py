@@ -28,40 +28,9 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-from boto.roboto.awsqueryrequest import AWSQueryRequest
-from boto.roboto.param import Param
-import eucadmin
+import eucadmin.deregisterrequest
 
-class DeregisterVMwareBroker(AWSQueryRequest):
-  
-    ServicePath = '/services/Configuration'
-    ServiceClass = eucadmin.EucAdmin
-    Description = 'Deregister VMware broker'
-    Params = [Param(name='Partition',
-                    short_name='P',
-                    long_name='partition',
-                    ptype='string',
-                    optional=True,
-                    doc='Partition for the VMware broker')]
-    Args = [Param(name='Name',
-                  long_name='name',
-                  ptype='string',
-                  optional=False,
-                  doc='The VMWare broker name')]
+class DeregisterVMwareBroker(eucadmin.deregisterrequest.DeregisterRequest):
 
-    def get_connection(self, **args):
-        if self.connection is None:
-            args['path'] = self.ServicePath
-            self.connection = self.ServiceClass(**args)
-        return self.connection
-      
-    def cli_formatter(self, data):
-        response = getattr(data, 'euca:_return')
-        print 'RESPONSE %s' % response
-
-    def main(self, **args):
-        return self.send(**args)
-
-    def main_cli(self):
-        self.do_cli()
+    ServiceName = 'VMwareBroker'
     

@@ -28,27 +28,12 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-from boto.roboto.awsqueryrequest import AWSQueryRequest
-from boto.roboto.param import Param
-import eucadmin
+import eucadmin.describerequest
 
-class DescribeComponents(AWSQueryRequest):
-  
-    ServicePath = '/services/Configuration'
-    ServiceClass = eucadmin.EucAdmin
-    Description = 'Get components'
+class DescribeComponents(eucadmin.describerequest.DescribeRequest):
 
-    def __init__(self, **args):
-        AWSQueryRequest.__init__(self, **args)
-        self.list_markers = ['euca:registered']
-        self.item_markers = ['euca:item']
-  
-    def get_connection(self, **args):
-        if self.connection is None:
-            args['path'] = self.ServicePath
-            self.connection = self.ServiceClass(**args)
-        return self.connection
-      
+    ServiceName = 'Component'
+    
     def cli_formatter(self, data):
         components = getattr(data, 'euca:registered')
         fmt = 'COMPONENT\t%-15.15s\t%-15.15s\t%-25s\t%s\t%s\t%s'
@@ -61,9 +46,4 @@ class DescribeComponents(AWSQueryRequest):
                              c.get('euca:state', None),
                              c.get('euca:detail', None))
 
-    def main(self, **args):
-        return self.send(**args)
-
-    def main_cli(self):
-        self.do_cli()
     
