@@ -85,7 +85,7 @@ public class SoapMarshallingHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( SoapMarshallingHandler.class );
 
   @Override
-  public void incomingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
+  public void incomingMessage( final MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpMessage ) {
       MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
       String content = httpMessage.getContent( ).toString( "UTF-8" );

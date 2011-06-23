@@ -80,7 +80,7 @@ import com.eucalyptus.http.MappingHttpRequest;
 public class QueryTimestampHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( QueryTimestampHandler.class );
   @Override
-  public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws AuthenticationException {
+  public void incomingMessage( MessageEvent event ) throws AuthenticationException {
     if ( event.getMessage( ) instanceof MappingHttpRequest ) {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
       Map<String, String> parameters = httpRequest.getParameters( );

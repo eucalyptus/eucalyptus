@@ -39,7 +39,7 @@
     <value name="uuid" field="uuid" usage="required" />
     <value name="vlan" field="vlan" />
     <value name="netName" field="networkName" />
-    <value name="userName" field="accountId" />
+    <value name="userName" field="userId" />
     <structure usage="optional">
       <collection field="allocatedAddresses" factory="org.jibx.runtime.Utility.arrayListFactory">
         <value name="activeAddrs" type="java.lang.String" />
@@ -88,6 +88,8 @@
     <value name="mode" field="mode" usage="required" />
     <value name="useVlans" field="useVlans" usage="required" />
     <value name="addrsPerNet" field="addrsPerNet" usage="optional" />
+    <value name="addrIndexMin" field="addrIndexMin" usage="optional" />
+    <value name="addrIndexMax" field="addrIndexMax" usage="optional" />
     <value name="vlanMin" field="vlanMin" usage="optional" />
     <value name="vlanMax" field="vlanMax" usage="optional" />
     <value name="vnetSubnet" field="vnetSubnet" usage="optional" />

@@ -92,11 +92,11 @@ public class ServiceHackeryHandler extends SimpleChannelHandler {
   
   public ServiceHackeryHandler( ) {}
   
-  @Override
-  public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {//FIXME: handle exceptions cleanly.
-    LOG.trace( ctx.getChannel( ), e.getCause( ) );
-    Channels.fireExceptionCaught( ctx.getChannel( ), e.getCause( ) );
-  }
+//  @Override
+//  public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {//FIXME: handle exceptions cleanly.
+//    LOG.trace( ctx.getChannel( ), e.getCause( ) );
+//    Channels.fireExceptionCaught( ctx.getChannel( ), e.getCause( ) );
+//  }
   
   @SuppressWarnings( "unchecked" )
   @Override
