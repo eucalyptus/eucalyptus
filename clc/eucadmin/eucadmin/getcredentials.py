@@ -37,12 +37,6 @@ import os
 import time
 import boto.utils
 
-OpenSSLCmd = """openssl pkcs12 -in %s -name eucalyptus -name "eucalyptus" -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes | grep -A30 "friendlyName: eucalyptus" | grep -A26 "BEGIN RSA" >  %s """
-
-MySQLCmd = """echo "select u.auth_user_token from auth_user u inner join auth_group_has_users gu on u.id=gu.auth_user_id join auth_group g on gu.auth_group_id=g.id join auth_account a on g.auth_group_owning_account=a.id where a.auth_account_name='%s' and g.auth_group_name='_%s';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=%s eucalyptus_auth | tail -n1 """
-
-DBPassCmd = """echo -n eucalyptus | openssl dgst -sha256 -sign %s/var/lib/eucalyptus/keys/cloud-pk.pem -hex"""
-
 GetCertURL = 'https://localhost:8443/getX509?account=%s&user=%s&code=%s'
 
 EucaP12File = '%s/var/lib/eucalyptus/keys/euca.p12'
@@ -88,7 +82,7 @@ class GetCredentials(AWSQueryRequest):
     def get_token(self, num_retries=10):
         i = 0
         while i < num_retries:
-            cmd_string = get_cmdstring('mysql')
+            cmd_string = get_cmdstring('mysql_get_token')
             cmd = Command(cmd_string % (self.account, self.user, self.db_pass))
             self.token = cmd.stdout.strip()
             if self.token:
