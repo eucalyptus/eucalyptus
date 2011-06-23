@@ -182,7 +182,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       @Override
       public boolean apply( final Cluster input ) {
         try {
-          if ( !State.ENABLED.equals( input.getConfiguration( ).getStateMachine( ) ) ) {
+          if ( State.ENABLED.ordinal( ) > input.stateMachine.getState( ).ordinal( ) ) {
             AsyncRequests.newRequest( new EnableServiceCallback( input ) ).sendSync( input.configuration );
           }
           Clusters.getInstance( ).register( input );

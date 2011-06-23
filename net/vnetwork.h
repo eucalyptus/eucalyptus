@@ -127,6 +127,8 @@ typedef struct vnetConfig_t {
   int enabled;
   int initialized;
   int numaddrs;
+  int addrIndexMin;
+  int addrIndexMax;
   int max_vlan;
   tunnelData tunnels;
   char etherdevs[NUMBER_OF_VLANS][16];

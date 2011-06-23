@@ -219,6 +219,8 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	vnetconfig->numaddrs = atoi(numberofaddrs);
       }
     }
+    vnetconfig->addrIndexMin = NUMBER_OF_CCS;
+    vnetconfig->addrIndexMax = vnetconfig->numaddrs-2;
     
     if (network) vnetconfig->nw = dot2hex(network);
     if (netmask) vnetconfig->nm = dot2hex(netmask);
@@ -305,6 +307,8 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	  if (vnetconfig->numaddrs > NUMBER_OF_PUBLIC_IPS) {
 	    vnetconfig->numaddrs = NUMBER_OF_PUBLIC_IPS;
 	  }
+	  vnetconfig->addrIndexMin = NUMBER_OF_CCS;
+	  vnetconfig->addrIndexMax = vnetconfig->numaddrs-2;
 	}
       }
     } else {
@@ -462,13 +466,13 @@ int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx) 
   }
   
   if (idx < 0) {
-    start = 2;
-    stop = vnetconfig->numaddrs-2;
-  } else if (idx >= 2 && idx <= (vnetconfig->numaddrs-2)) {
+    start = vnetconfig->addrIndexMin;
+    stop = vnetconfig->addrIndexMax;
+  } else if (idx >= vnetconfig->addrIndexMin && idx <= (vnetconfig->addrIndexMax)) {
     start = idx;
     stop = idx;
   } else {
-    logprintfl(EUCAERROR, "vnetAddHost(): index out of bounds: idx=%d, min=2 max=%d\n", idx, vnetconfig->numaddrs-2);
+    logprintfl(EUCAERROR, "vnetAddHost(): index out of bounds: idx=%d, min=%d max=%d\n", idx, vnetconfig->addrIndexMin, vnetconfig->addrIndexMax);
     return(1);
   }
 
@@ -518,7 +522,7 @@ int vnetDelHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
   
   done=0;
   //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
-  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
+  for (i=vnetconfig->addrIndexMin; i<=vnetconfig->addrIndexMax && !done; i++) {
     //    if ( (!mac || !strcmp(vnetconfig->networks[vlan].addrs[i].mac, mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
     if ( (!mac || !machexcmp(mac, vnetconfig->networks[vlan].addrs[i].mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
       bzero(&(vnetconfig->networks[vlan].addrs[i]), sizeof(netEntry));
@@ -544,13 +548,13 @@ int vnetRefreshHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int i
   }
 
   if (idx < 0) {
-    start = 2;
-    stop = vnetconfig->numaddrs-2;
-  } else if (idx >= 2 && idx <= (vnetconfig->numaddrs-2)) {
+    start = vnetconfig->addrIndexMin;
+    stop = vnetconfig->addrIndexMax;
+  } else if (idx >= vnetconfig->addrIndexMin && idx <= (vnetconfig->addrIndexMax)) {
     start = idx;
     stop = idx;
   } else {
-    logprintfl(EUCAERROR, "vnetRefreshHost(): index out of bounds: idx=%d, min=2 max=%d\n", idx, vnetconfig->numaddrs-2);
+    logprintfl(EUCAERROR, "vnetRefreshHost(): index out of bounds: idx=%d, min=%d max=%d\n", idx, vnetconfig->addrIndexMin, vnetconfig->addrIndexMax);
     return(1);
   }
   
@@ -596,7 +600,7 @@ int vnetEnableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
   
   done=0;
   //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
-  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
+  for (i=vnetconfig->addrIndexMin; i<=vnetconfig->addrIndexMax && !done; i++) {
     //    if ( (!mac || !strcmp(vnetconfig->networks[vlan].addrs[i].mac, mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
     if ( (!mac || !machexcmp(mac, vnetconfig->networks[vlan].addrs[i].mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
       vnetconfig->networks[vlan].addrs[i].active=1;
@@ -619,7 +623,7 @@ int vnetDisableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
 
   done=0;
   //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
-  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
+  for (i=vnetconfig->addrIndexMin; i<=vnetconfig->addrIndexMax && !done; i++) {
     //    if ( (!mac || !strcmp(vnetconfig->networks[vlan].addrs[i].mac, mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
     if ( (!mac || !machexcmp(mac, vnetconfig->networks[vlan].addrs[i].mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
       vnetconfig->networks[vlan].addrs[i].active=0;
@@ -1106,7 +1110,7 @@ int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, in
     // search for existing entry
     inip = dot2hex(outprivip);
     found=0;
-    for (i=2; i<vnetconfig->numaddrs-2 && !found; i++) {
+    for (i=vnetconfig->addrIndexMin; i<vnetconfig->addrIndexMax && !found; i++) {
       //      logprintfl(EUCADEBUG, "HELLO: %d %s %s %s %d %d\n", i, outmac, hex2dot(inip), hex2dot(vnetconfig->networks[0].addrs[i].ip), machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac), (vnetconfig->networks[0].addrs[i].ip == inip));
       if (!machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac) && (vnetconfig->networks[0].addrs[i].ip == inip)) {
 	//	logprintfl(EUCADEBUG, "WOOT: %d %s %s %s %d %d\n", i, outmac, hex2dot(inip), hex2dot(vnetconfig->networks[0].addrs[i].ip), machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac), (vnetconfig->networks[0].addrs[i].ip == inip));
@@ -1172,13 +1176,13 @@ int vnetGetNextHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int i
   }
   
   if (idx < 0) {
-    start = 2;
-    stop = vnetconfig->numaddrs-2;
-  } else if (idx >= 2 && idx <= (vnetconfig->numaddrs-2)) {
+    start = vnetconfig->addrIndexMin;
+    stop = vnetconfig->addrIndexMax;
+  } else if (idx >= vnetconfig->addrIndexMin && idx <= (vnetconfig->addrIndexMax)) {
     start = idx;
     stop = idx;
   } else {
-    logprintfl(EUCAERROR, "vnetGetNextHost(): index out of bounds: idx=%d, min=2 max=%d\n", idx, vnetconfig->numaddrs-2);
+    logprintfl(EUCAERROR, "vnetGetNextHost(): index out of bounds: idx=%d, min=%d max=%d\n", idx, vnetconfig->addrIndexMin, vnetconfig->addrIndexMax);
     return(1);
   }
   
@@ -1356,7 +1360,7 @@ int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts) {
       
 
       //      for (j=2; j<NUMBER_OF_HOSTS_PER_VLAN; j++) {
-      for (j=2; j<=vnetconfig->numaddrs-2; j++) {
+      for (j=vnetconfig->addrIndexMin; j<=vnetconfig->addrIndexMax; j++) {
 	if (vnetconfig->networks[i].addrs[j].active == 1) {
 	  newip = hex2dot(vnetconfig->networks[i].addrs[j].ip);
 	  //mac = vnetconfig->networks[i].addrs[j].mac;
@@ -1609,7 +1613,7 @@ int vnetStopInstanceNetwork(vnetConfig *vnetconfig, int vlan, char *publicIp, ch
 
 int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname) {
   char cmd[MAX_PATH], newdevname[32], newbrname[32], *network=NULL;
-  int rc, slashnet;
+  int rc, slashnet, i;
 
   // check input params...
   if (!vnetconfig || !outbrname) {
@@ -1683,8 +1687,9 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *
   } else if (vlan > 0 && (vnetconfig->role == CC || vnetconfig->role == CLC)) {
 
     vnetconfig->networks[vlan].active = 1;
-    vnetconfig->networks[vlan].addrs[0].active = 1;
-    vnetconfig->networks[vlan].addrs[1].active = 1;
+    for (i=0; i<NUMBER_OF_CCS; i++) {
+      vnetconfig->networks[vlan].addrs[i].active = 1;
+    }
     vnetconfig->networks[vlan].addrs[vnetconfig->numaddrs-1].active = 1;
     
     rc = vnetSetVlan(vnetconfig, vlan, uuid, userName, netName);

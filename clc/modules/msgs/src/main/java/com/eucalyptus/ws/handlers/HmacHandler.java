@@ -88,7 +88,7 @@ public class HmacHandler extends MessageStackHandler {
   
   @Override
   @SuppressWarnings( "deprecation" )
-  public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
+  public void incomingMessage( MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpRequest ) {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
       Map<String, String> parameters = httpRequest.getParameters( );
