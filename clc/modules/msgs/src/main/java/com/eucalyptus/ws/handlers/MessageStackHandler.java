@@ -124,7 +124,7 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
     }
     if ( channelEvent instanceof MessageEvent ) {
       final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
-      this.incomingMessage( msgEvent );
+      this.incomingMessage( ctx, msgEvent );
       ctx.sendUpstream( channelEvent );
     } else {
       ctx.sendUpstream( channelEvent );
