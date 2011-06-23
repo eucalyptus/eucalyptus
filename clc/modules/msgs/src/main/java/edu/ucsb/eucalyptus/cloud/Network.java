@@ -129,7 +129,7 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
     this.userFullName = ownerUserFullName;
     this.fullName = new FQDN( ownerUserFullName );
     this.networkName = networkName;
-    this.name = this.userFullName.getAccountNumber( ) + "-" + this.networkName;
+    this.name = this.userFullName.getUserId( ) + "-" + this.networkName;
     this.networkIndexes = new ConcurrentSkipListMap<Integer, NetworkIndexState>( ) {
       {
         for ( int i = MIN_ADDR; i < MAX_ADDR; i++ ) {
