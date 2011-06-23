@@ -74,6 +74,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import javax.persistence.Column;
+import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
 import javax.persistence.Table;
@@ -175,8 +176,9 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   private final String                                clusterName;
   @Column( name = "vm_partition_name" )
   private final String                                partitionName;
+  @Lob
   @Column( name = "vm_user_data" )
-  private final Byte[]                                userData;
+  private final byte[]                                userData;
   @Column( name = "vm_launch_time" )
   private Date                                        launchTime          = new Date( );
   @Column( name = "vm_password_data" )
@@ -212,7 +214,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
       LOG.debug( "Failed to find cluster configuration named: " + this.clusterName + " using that as the partition name." );
     }
     this.partitionName = p;
-    this.userData = Bytes.asList( userData ).toArray( this.userData );
+    this.userData = userData;
     this.platform = platform;
     this.keyInfo = keyInfo;
     this.vmTypeInfo = vmTypeInfo;
@@ -691,7 +693,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     return launchTime;
   }
   
-  public Byte[] getUserData( ) {
+  public byte[] getUserData( ) {
     return this.userData;
   }
   

@@ -84,7 +84,7 @@ public class VmMetadata {
                                                                                                        };
   private static Function<MetadataRequest, ByteArray>                        userDataFunc              = new Function<MetadataRequest, ByteArray>( ) {
                                                                                                          public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                                           return ByteArray.newInstance( Bytes.toArray( Lists.newArrayList( arg0.getVmInstance( ).getUserData( ) ) ) );
+                                                                                                           return ByteArray.newInstance( arg0.getVmInstance( ).getUserData( ) );
                                                                                                          }
                                                                                                        };
   private static Function<MetadataRequest, ByteArray>                        metaDataFunc              = new Function<MetadataRequest, ByteArray>( ) {
