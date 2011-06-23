@@ -70,8 +70,9 @@ import com.eucalyptus.config.DescribeComponentsType
 import com.eucalyptus.config.ModifyComponentAttributeResponseType
 import com.eucalyptus.config.ModifyComponentAttributeType
 import com.eucalyptus.config.RegisterComponentResponseType
+import com.eucalyptus.config.RegisterComponentType
 
-public class RegisterEucalyptusType extends RegisterComponentResponseType {}
+public class RegisterEucalyptusType extends RegisterComponentType {}
 public class RegisterEucalyptusResponseType extends RegisterComponentResponseType {}
 public class DeregisterEucalyptusType extends DeregisterComponentType {}
 public class DeregisterEucalyptusResponseType extends DeregisterComponentResponseType {}
