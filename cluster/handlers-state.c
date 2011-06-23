@@ -186,11 +186,13 @@ int doEnableService(ncMetadata *ccMeta) {
   logprintfl(EUCADEBUG, "EnableService(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
   sem_mywait(CONFIG);
-  // tell monitor thread to (re)enable
-  config->kick_network = 1;
-  config->kick_dhcp = 1;
-  config->kick_enabled = 1;
-  ccChangeState(ENABLED);
+  if (config->ccState != ENABLED) {
+    // tell monitor thread to (re)enable
+    config->kick_network = 1;
+    config->kick_dhcp = 1;
+    config->kick_enabled = 1;
+    ccChangeState(ENABLED);
+  }
   sem_mypost(CONFIG);  
 
   logprintfl(EUCAINFO, "EnableService(): done\n");
