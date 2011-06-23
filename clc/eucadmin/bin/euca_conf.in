@@ -544,7 +544,7 @@ class EucaConf(object):
                       'DescribeServices')
 
     def _get_accesskey_secretkey(self, url):
-        print 'No credentials found, attempting local registration'
+        print 'No credentials found, attempting local authentication'
         gc_cls = boto.utils.find_class('eucadmin.getcredentials',
                                        'GetCredentials')
         obj = gc_cls(euca_home=self.config['EUCALYPTUS'],
