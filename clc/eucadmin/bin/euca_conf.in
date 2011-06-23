@@ -34,8 +34,8 @@ import inspect
 import os
 import sys
 import boto.utils
-import boto.exception
 import eucadmin.configfile
+from boto.roboto.awsqueryservice import NoCredentialsError
 
 import bdb
 import traceback
@@ -457,7 +457,7 @@ class EucaConf(object):
             req.main()
 
     def do_check(self):
-        if self.options.check_what == 'common'
+        if self.options.check_what == 'common':
             cls = boto.utils.find_class('eucadmin.check', 'Check')
             req = cls(self.config, self.options.check_what)
             req.common()
@@ -468,11 +468,8 @@ class EucaConf(object):
             sys.exit(req.status)
         elif self.options.check_what == 'vmware':
             print 'do vmware check here'
-        elif if self.options.check_what in CheckableServices:
+        elif self.options.check_what in CheckableServices:
             sys.exit(0)
-        else:
-            print 'check requires one of %s' % CheckableServices
-            sys.exit(1)
 
     def do_enable(self):
         if (self.options.enable_whats):
@@ -559,9 +556,26 @@ class EucaConf(object):
             port = None
         cls = boto.utils.find_class(module_name, class_name)
         req = cls(debug=self.debug)
-        data = req.main(partition=partition, name=component_name,
-                        port=port, host=host)
-        req.cli_formatter(data)
+        try:
+            data = req.main(partition=partition, name=component_name,
+                            port=port, host=host)
+            req.cli_formatter(data)
+        except NoCredentialsError:
+            print 'No credentials found, attempting local registration'
+            url = 'http://localhost:8773/services/Eucalyptus'
+            gc_cls = boto.utils.find_class('eucadmin.getcredentials',
+                                           'GetCredentials')
+            obj = gc_cls(euca_home=self.config['EUCALYPTUS'],
+                         account=self.options.cred_account,
+                         user=self.options.cred_user,
+                         zipfile='notused')
+            s = obj.get_accesskey_secretkey()
+            ak, sk = s.split('\t')
+            req = cls(aws_access_key_id=ak, aws_secret_access_key=sk,
+                      url=url, debug=self.debug)
+            data = req.main(partition=partition, name=component_name,
+                            port=port, host=host)
+            req.cli_formatter(data)
 
     def do_register_cloud(self):
         if hasattr(self.options, 'register_cloud'):
