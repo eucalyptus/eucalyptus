@@ -278,8 +278,10 @@ public class SystemCredentials {
         }
       }
       for ( ComponentId c : ComponentIds.list( ) ) {
-        LOG.info( "Initializing system credentials for " + c.name( ) );
-        SystemCredentials.getCredentialProvider( c );
+        if( c.hasCredentials( ) ) {
+          LOG.info( "Initializing system credentials for " + c.name( ) );
+          SystemCredentials.getCredentialProvider( c );
+        }
       }
       return true;
     }
