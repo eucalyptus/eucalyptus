@@ -85,7 +85,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     }
     return singleton;
   }
-    
+  
   public boolean hasNetworking( ) {
     return Iterables.all( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
       @Override
@@ -116,6 +116,5 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
       return Clusters.getInstance( ).lookupDisabled( clusterConfig.getName( ) );
     }
   }
-  
   
 }
