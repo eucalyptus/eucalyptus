@@ -73,7 +73,7 @@ permission notice:
 #define NUMBER_OF_VLANS 4096
 #define NUMBER_OF_HOSTS_PER_VLAN 2048
 #define NUMBER_OF_PUBLIC_IPS 2048
-#define NUMBER_OF_CCS 8
+#define NUMBER_OF_CCS 2
 
 typedef struct netEntry_t {
   unsigned char mac[6];
@@ -103,6 +103,7 @@ typedef struct publicip_t {
 
 typedef struct tunnelData_t {
   int localIpId;
+  int localIpIdLast;
   uint32_t ccs[NUMBER_OF_CCS];
   time_t ccsTunnelStart[NUMBER_OF_CCS];
   time_t tunpassMtime;
@@ -196,8 +197,8 @@ int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst);
 int vnetReassignAddress(vnetConfig *vnetconfig, char *uuid, char *src, char *dst);
 int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst);
 
-int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname);
-int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname);
+int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname, int localIpId);
+int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname, int localIpId);
 
 // linux managed mode driver
 int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname);
