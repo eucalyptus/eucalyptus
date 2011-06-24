@@ -117,8 +117,8 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   
   public X509Certificate generateServiceCertificate( KeyPair keys, String serviceName ) {
     X500Principal x500 = new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=Cloud, C=US", serviceName ) );
-    SystemCredentials sys = SystemCredentials.getCredentialProvider( Eucalyptus.class );
-//    if( sys.getCertificate( ) != null ) {
+//    if( !"eucalyptus".equals( serviceName ) ) {
+//      SystemCredentials sys = SystemCredentials.getCredentialProvider( Eucalyptus.class );
 //      return generateCertificate( keys, x500, sys.getCertificate( ).getSubjectX500Principal( ), sys.getPrivateKey( ) );
 //    } else {
       return generateCertificate( keys, x500, x500, null );
