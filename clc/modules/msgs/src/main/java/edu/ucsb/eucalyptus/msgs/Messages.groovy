@@ -608,6 +608,7 @@ public class StatEventRecord extends EucalyptusMessage {
 public class ComponentMessageType extends BaseMessage {
   String component;
   String host;
+  String name;
   
   def ComponentMessageType() {
   }
