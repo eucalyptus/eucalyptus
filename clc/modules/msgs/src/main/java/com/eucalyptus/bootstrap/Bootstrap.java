@@ -415,7 +415,7 @@ public class Bootstrap {
   }
   
   public static Boolean isCloudController( ) {
-    return SubDirectory.DB.hasChild( "data", "ibdata1" ) || !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) );
+    return SubDirectory.DB.hasChild( "data", "ibdata1" ) && !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) );
   }
   
   private static List<String> bindAddrs = parseBindAddrs( );

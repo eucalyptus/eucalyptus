@@ -206,6 +206,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
     }
 
     vnetconfig->tunnels.localIpId = -1;
+    vnetconfig->tunnels.localIpIdLast = -1;
     vnetconfig->tunnels.tunneling = 0;
     vnetconfig->role = role;
     vnetconfig->enabled=1;
@@ -1340,7 +1341,7 @@ int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts) {
       netmask = hex2dot(vnetconfig->networks[i].nm);
       broadcast = hex2dot(vnetconfig->networks[i].bc);
       nameserver = hex2dot(vnetconfig->networks[i].dns);      
-      router = hex2dot(vnetconfig->networks[i].router);
+      router = hex2dot(vnetconfig->networks[i].router + vnetconfig->tunnels.localIpId);
       
       if (vnetconfig->euca_ns != 0) {
 	euca_nameserver = hex2dot(vnetconfig->euca_ns);
@@ -1490,13 +1491,31 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
   int i, j, found, lastj, localIpId=-1, rc;
   uint32_t tmpccs[NUMBER_OF_CCS];
   
-  if (ccsLen > NUMBER_OF_CCS) {
-    logprintfl(EUCAERROR, "vnetSetCCS(): specified number of cluster controllers exceeds max '%d'\n", NUMBER_OF_CCS);
+  if (ccsLen < 0 || ccsLen > NUMBER_OF_CCS) {
+    logprintfl(EUCAERROR, "vnetSetCCS(): specified number of cluster controllers out of bounds (in=%d, min=%d, max=%d)\n", ccsLen, 0, NUMBER_OF_CCS);
     return(1);
-  }  else if (ccsLen <= 0) {
-    return(0);
-  }
+  }  
   
+  found=0;
+  for (i=0; i<ccsLen; i++) {
+    logprintfl(EUCADEBUG, "vnetSetCCS(): input CC%d=%s\n", i, ccs[i]);
+    tmpccs[i] = dot2hex(ccs[i]);
+    rc = vnetCheckLocalIP(vnetconfig, tmpccs[i]);
+    if (!rc && !found) {
+      logprintfl(EUCADEBUG, "vnetSetCCS(): local IP found in input list of CCs, setting localIpId: %d\n", i);
+      vnetconfig->tunnels.localIpIdLast = vnetconfig->tunnels.localIpId;
+      vnetconfig->tunnels.localIpId = i;
+      found=1;
+    }    
+  }
+  if (!found) {
+    logprintfl(EUCADEBUG, "vnetSetCCS(): local IP not found in input list of CCs, setting localIpId: %d\n", -1);
+    vnetconfig->tunnels.localIpIdLast = vnetconfig->tunnels.localIpId;
+    vnetconfig->tunnels.localIpId = -1;
+  }
+  return(0);
+
+#if 0
   for (i=0; i<ccsLen; i++) {
     logprintfl(EUCADEBUG, "vnetSetCCS(): input CC=%s\n", ccs[i]);
     found=0;
@@ -1541,15 +1560,18 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
     }
   }
   if (localIpId >= 0) {
+    vnetconfig->tunnels.localIpIdLast = vnetconfig->tunnels.localIpId;
     vnetconfig->tunnels.localIpId = localIpId;
   } else {
     logprintfl(EUCAWARN, "vnetSetCCS(): VNET_LOCALIP is not in list of CCS, tearing down tunnels\n");
     vnetTeardownTunnels(vnetconfig);
     bzero(vnetconfig->tunnels.ccs, sizeof(uint32_t) * NUMBER_OF_CCS);
+    vnetconfig->tunnels.localIpIdLast = vnetconfig->tunnels.localIpId;
     vnetconfig->tunnels.localIpId = -1;
     return(0);
   }
   return(0);
+#endif
 }
 
 int vnetStartInstanceNetwork(vnetConfig *vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr) {
@@ -1781,7 +1803,7 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *
       snprintf(newdevname, 32, "%s", vnetconfig->privInterface);
     }
 
-    rc = vnetAddGatewayIP(vnetconfig, vlan, newdevname);
+    rc = vnetAddGatewayIP(vnetconfig, vlan, newdevname, vnetconfig->tunnels.localIpId);
     if (rc) {
       logprintfl(EUCAWARN, "vnetStartNetworkManaged(): failed to add gateway IP to device %s\n", newdevname);
     }
@@ -1998,14 +2020,20 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
   return(0);
 }
 
-int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname) {
+int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname, int localIpId) {
   char *newip, *broadcast;
   int rc, slashnet;
   char cmd[MAX_PATH];
 
-  newip = hex2dot(vnetconfig->networks[vlan].router);
+  if (localIpId < 0) {
+    logprintfl(EUCAWARN, "vnetAddGatewayIP(): negative localIpId supplied, defaulting to base gw\n");
+    localIpId = 0;
+  }
+
+  newip = hex2dot(vnetconfig->networks[vlan].router + localIpId);
   broadcast = hex2dot(vnetconfig->networks[vlan].bc);
-  
+  logprintfl(EUCADEBUG, "vnetAddGatewayIP(): adding gateway IP: %s\n", newip);
+
   //  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ifconfig %s %s netmask %s up", vnetconfig->eucahome, devname, newip, netmask);
   slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
   snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add %s/%d broadcast %s dev %s", vnetconfig->eucahome, newip, slashnet, broadcast, devname);
@@ -2034,15 +2062,20 @@ int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname) {
   return(0);
 }
 
-int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname) {
+int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname, int localIpId) {
   char *newip, *broadcast;
   int rc;
   int slashnet;
   char cmd[MAX_PATH];
-  
-  newip = hex2dot(vnetconfig->networks[vlan].router);
+
+  if (localIpId < 0) {
+    logprintfl(EUCAWARN, "vnetDelGatewayIP(): negative localIpId supplied, defaulting to base gw\n");
+    localIpId = 0;
+  }
+
+  newip = hex2dot(vnetconfig->networks[vlan].router + localIpId);
   broadcast = hex2dot(vnetconfig->networks[vlan].bc);
-  
+  logprintfl(EUCADEBUG, "vnetDelGatewayIP(): removing gateway IP: %s\n", newip);  
   //  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ifconfig %s %s netmask %s up", vnetconfig->eucahome, devname, newip, netmask);
   slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
   //slashnet = 16;
@@ -2128,7 +2161,7 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
 	logprintfl(EUCAWARN, "vnetStopNetworkManaged(): could not remove '%s' from list of interfaces\n", newdevname);
       }
     }
-    rc = vnetDelGatewayIP(vnetconfig, vlan, newdevname);
+    rc = vnetDelGatewayIP(vnetconfig, vlan, newdevname, vnetconfig->tunnels.localIpId);
     if (rc) {
       logprintfl(EUCAWARN, "vnetStopNetworkManaged(): failed to delete gateway IP from interface %s\n", newdevname);
     }
