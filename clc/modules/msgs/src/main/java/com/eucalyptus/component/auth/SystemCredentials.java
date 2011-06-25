@@ -207,7 +207,7 @@ public class SystemCredentials {
         continue;
       } else {
         try {
-          if ( !SystemCredentials.check( c ) ) {
+          if ( !EucaKeyStore.getCleanInstance( ).containsEntry( c.name( ) ) ) {
             LOG.error( "Failed to lookup key for " + c.getCapitalizedName( ) + " with alias=" + c.name( ) + " in file "
                        + EucaKeyStore.getInstance( ).getFileName( ) );
             return false;
