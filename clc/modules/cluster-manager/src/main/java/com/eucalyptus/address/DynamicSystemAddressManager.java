@@ -20,7 +20,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
     if ( Addresses.getInstance( ).listDisabledValues( ).size( ) < count ) throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
     for ( Address addr : Addresses.getInstance( ).listDisabledValues( ) ) {
       try {
-        if ( cluster.equals( addr.getCluster( ) ) && addressList.add( addr.pendingAssignment( ) ) && --count == 0 ) break;
+        if ( cluster.equals( addr.getPartition( ) ) && addressList.add( addr.pendingAssignment( ) ) && --count == 0 ) break;
       } catch ( IllegalStateException e ) {
         LOG.trace( e , e );
       }
@@ -44,7 +44,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
       public void fire( BaseMessage response ) {
         vm.updatePublicAddress( addr.getName( ) );
       }
-    }).dispatch( addr.getCluster( ) );
+    }).dispatch( addr.getPartition( ) );
   }
     
   @Override

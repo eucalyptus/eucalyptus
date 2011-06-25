@@ -99,10 +99,10 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
     try {
       this.updateState( );
     } catch ( IllegalStateException e ) {
-      AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
+      AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getPartition( ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
+      AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getPartition( ) );
     }
   }
   
@@ -146,7 +146,7 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
     } else if ( this.address.isSystemOwned( ) ) {
       Addresses.release( address );
     } else if ( this.address.isAssigned( ) ) {
-      AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
+      AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getPartition( ) );
     }
   }
   
