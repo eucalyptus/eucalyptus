@@ -36,7 +36,7 @@ DebugInitCommand = """%s/usr/sbin/eucalyptus-cloud -u %s -h %s --initialize --lo
 
 class Initialize(object):
 
-    def __init__(self, config, debug=True):
+    def __init__(self, config, debug=False):
         self.config = config
         self.debug = debug
 

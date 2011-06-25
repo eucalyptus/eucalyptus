@@ -331,4 +331,40 @@ public abstract class Bootstrapper {
                           this.dependsLocal, this.dependsRemote );
   }
   
+  public static abstract class Simple extends Bootstrapper {
+
+    @Override
+    public boolean load( ) throws Exception {
+      return true;
+    }
+
+    @Override
+    public boolean start( ) throws Exception {
+      return true;
+    }
+
+    @Override
+    public boolean enable( ) throws Exception {
+      return true;
+    }
+
+    @Override
+    public boolean stop( ) throws Exception {
+      return true;
+    }
+
+    @Override
+    public void destroy( ) throws Exception {}
+
+    @Override
+    public boolean disable( ) throws Exception {
+      return true;
+    }
+
+    @Override
+    public boolean check( ) throws Exception {
+      return true;
+    }
+    
+  }
 }

@@ -76,6 +76,7 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Hosts;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.util.Internets;
 
 public class Empyrean extends ComponentId.Unpartioned {
   
@@ -116,87 +117,35 @@ public class Empyrean extends ComponentId.Unpartioned {
   
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.PersistenceInit )
-  public static class PersistenceContextBootstrapper extends Bootstrapper {
+  public static class PersistenceContextBootstrapper extends Bootstrapper.Simple {
     private static Logger LOG = Logger.getLogger( PersistenceContextBootstrapper.class );
     
     @Override
     public boolean load( ) throws Exception {
+      System.setProperty( "jgroups.udp.bind_addr", Internets.localHostAddress( ) );
       GroovyUtil.evaluateScript( "setup_persistence.groovy" );
-      return true;
-    }
-    
-    @Override
-    public boolean start( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public boolean enable( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public boolean stop( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public void destroy( ) throws Exception {}
-    
-    @Override
-    public boolean disable( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public boolean check( ) throws Exception {
       return true;
     }
   }
   
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.PoolInit )
-  public static class DatabasePoolBootstrapper extends Bootstrapper {
+  public static class DatabasePoolBootstrapper extends Bootstrapper.Simple {
     
     @Override
     public boolean load( ) throws Exception {
+      System.setProperty("jgroups.udp.jdbc.bind_addr",Internets.localHostAddress());
       GroovyUtil.evaluateScript( "setup_dbpool.groovy" );
       return true;
     }
     
-    @Override
-    public boolean start( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public boolean enable( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public boolean stop( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public void destroy( ) throws Exception {}
-    
-    @Override
-    public boolean disable( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public boolean check( ) throws Exception {
-      return true;
-    }
   }
   
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.RemoteConfiguration )
-  public static class HostMembershipBootstrapper extends Bootstrapper {
+  public static class HostMembershipBootstrapper extends Bootstrapper.Simple {
     private static final Logger LOG = Logger.getLogger( Empyrean.HostMembershipBootstrapper.class );
+    
     @Override
     public boolean load( ) throws Exception {
       try {
@@ -213,34 +162,6 @@ public class Empyrean extends ComponentId.Unpartioned {
         BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
         return false;
       }
-    }
-    
-    @Override
-    public boolean start( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public boolean enable( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public boolean stop( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public void destroy( ) throws Exception {}
-    
-    @Override
-    public boolean disable( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public boolean check( ) throws Exception {
-      return true;
     }
     
   }

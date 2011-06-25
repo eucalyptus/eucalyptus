@@ -26,7 +26,7 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
       {
         regarding( );
         setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
-        setNameserver( Internets.getAllAddresses( ).get( 0 ) );//TODO:GRZE:FIXTHISDFSDFSDF
+        setNameserver( Internets.localHostAddress( ) );
       }
     } );
   }

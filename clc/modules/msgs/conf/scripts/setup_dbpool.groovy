@@ -104,11 +104,12 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
   new File( ha_jdbc_config_file_name ).withWriter{ writer ->
     def xml = new MarkupBuilder(writer);
     xml.'ha-jdbc'() {
+      distributable(config: 'eucalyptus_cache_jgroups.xml', stack: 'udp-jdbc', timeout: '10000')
       sync('class':'net.sf.hajdbc.sync.FullSynchronizationStrategy', id:'full') {
         'property'(name:'fetchSize', '1000')
         'property'(name:'maxBatchSize', '100')
       }
-      cluster(id:'eucalyptus',
+      cluster(id:"eucalyptus-${SystemIds.jdbcGroupName( )}",
           'auto-activate-schedule':'0 * * ? * *',
           balancer:'load', //(simple|random|round-robin|load)
           'default-sync':'full',
@@ -124,7 +125,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
           'eval-rand':'true'
           ) {
             Components.lookup(Database.class).lookupServiceConfigurations().each{ ServiceConfiguration db_service ->
-              database(id:db_service.getHostName(),local:db_service.isVmLocal()) {
+              database(id:db_service.getHostName(),local:db_service.isHostLocal()) {
                 driver(real_jdbc_driver)
                 url("jdbc:${db_service.uri.toASCIIString( )}_${context_name}")
                 //                property(true){

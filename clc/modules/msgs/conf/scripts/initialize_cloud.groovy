@@ -11,7 +11,7 @@ import com.eucalyptus.component.Components
 import com.eucalyptus.component.ServiceBuilders
 import com.eucalyptus.component.ServiceConfiguration
 import com.eucalyptus.component.ServiceBuilders.ServiceBuilderDiscovery
-import com.eucalyptus.component.auth.SystemCredentialProvider
+import com.eucalyptus.component.auth.SystemCredentials
 import com.eucalyptus.component.id.Database
 import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.entities.PersistenceContextDiscovery
@@ -27,7 +27,7 @@ ServiceJarDiscovery.doSingleDiscovery(  new ComponentDiscovery( ) );
 [ new ServiceBuilderDiscovery( ), new PersistenceContextDiscovery( ) ].each{
   ServiceJarDiscovery.runDiscovery( it );
 }
-SystemCredentialProvider.initialize( );
+SystemCredentials.initialize( );
 Component dbComp = Components.lookup( Database.class );
 try {
   MysqldResource mysql = MysqlDatabaseBootstrapper.initialize( );
