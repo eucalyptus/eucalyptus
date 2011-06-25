@@ -148,7 +148,7 @@ import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
 import edu.ucsb.eucalyptus.msgs.NodeType;
 
 public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMachine<Cluster, Cluster.State, Cluster.Transition> {
-  private static final int                               CLUSTER_STARTUP_SYNC_RETRIES = 1;
+  private static final int                               CLUSTER_STARTUP_SYNC_RETRIES = 10;
   private static final long                              STATE_INTERVAL_ENABLED       = 10l;
   private static final long                              STATE_INTERVAL_DISABLED      = 10l;
   private static final long                              STATE_INTERVAL_NOTREADY      = 3l;
@@ -182,7 +182,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       @Override
       public boolean apply( final Cluster input ) {
         try {
-          if ( !State.ENABLED.equals( input.getConfiguration( ).getStateMachine( ) ) ) {
+          if ( State.ENABLED.ordinal( ) > input.stateMachine.getState( ).ordinal( ) ) {
             AsyncRequests.newRequest( new EnableServiceCallback( input ) ).sendSync( input.configuration );
           }
           Clusters.getInstance( ).register( input );
@@ -532,27 +532,39 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   public void start( ) throws ServiceRegistrationException {
     try {
       Clusters.getInstance( ).registerDisabled( this );
-      ListenerRegistry.getInstance( ).register( ClockTick.class, this );
-      ListenerRegistry.getInstance( ).register( Hertz.class, this );
       if ( !State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
-        Automata.sequenceTransitions( this, State.PENDING, State.AUTHENTICATING,
-                                      State.STARTING,
-                                      State.STARTING_NOTREADY,
-                                      State.NOTREADY,
-                                      State.DISABLED ).call( ).get( );
+        Callable<CheckedListenableFuture<Cluster>> trans = Automata.sequenceTransitions( this, 
+                                                                                         State.PENDING, 
+                                                                                         State.AUTHENTICATING,
+                                                                                         State.STARTING,
+                                                                                         State.STARTING_NOTREADY,
+                                                                                         State.NOTREADY,
+                                                                                         State.DISABLED );
+        Exception lastEx = null;
+        for( int i = 0; i < CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
+          try {
+            trans.call( ).get( );
+            lastEx = null;
+            break;
+          } catch ( InterruptedException ex ) {
+            Thread.currentThread( ).interrupt( );
+          } catch ( ServiceRegistrationException ex ) {
+            lastEx = ex;
+            Logs.exhaust( ).debug( ex, ex );
+          } catch ( Exception ex ) {
+            lastEx = ex;
+            Logs.exhaust( ).debug( ex, ex );
+          }
+        }
+        ListenerRegistry.getInstance( ).register( ClockTick.class, this );
+        ListenerRegistry.getInstance( ).register( Hertz.class, this );
       }
-    } catch ( InterruptedException ex ) {
-      Thread.currentThread( ).interrupt( );
     } catch ( NoSuchElementException ex ) {
-      this.stop( );
-      Logs.exhaust( ).debug( ex, ex );
-      throw ex;
-    } catch ( ServiceRegistrationException ex ) {
-      this.stop( );
+//      this.stop( );
       Logs.exhaust( ).debug( ex, ex );
       throw ex;
     } catch ( Exception ex ) {
-      this.stop( );
+//      this.stop( );
       Logs.exhaust( ).debug( ex, ex );
       throw new ServiceRegistrationException( "Failed to call start() on cluster " + this.configuration + " because of: " + ex.getMessage( ), ex );
     }
@@ -926,7 +938,8 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       throw ex;
     } else if ( currentState.ordinal( ) < State.DISABLED.ordinal( )
                 || ( Component.State.ENABLED.equals( externalState ) && Cluster.State.ENABLING.ordinal( ) >= currentState.ordinal( ) ) ) {
-      IllegalStateException ex = new IllegalStateException( "Cluster is currently reported as " + externalState + " but is really " + currentState + ":  please see logs for additional information." );
+      IllegalStateException ex = new IllegalStateException( "Cluster is currently reported as " + externalState + " but is really " + currentState
+                                                            + ":  please see logs for additional information." );
       this.pendingErrors.add( ex );
       throw ServiceChecks.Severity.ERROR.transform( this.configuration, ex );
     }

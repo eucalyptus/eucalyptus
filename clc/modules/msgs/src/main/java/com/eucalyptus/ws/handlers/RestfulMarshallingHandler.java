@@ -71,6 +71,7 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -95,7 +96,6 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   private String               defaultBindingNamespace = BindingManager.DEFAULT_BINDING_NAMESPACE;
   private Binding              defaultBinding          = BindingManager.getDefaultBinding( );
   private Binding              binding;
-  private ChannelLocal<String> requestType             = new ChannelLocal<String>( );
   
   public RestfulMarshallingHandler( String namespacePattern ) {
     this.namespacePattern = namespacePattern;
@@ -111,7 +111,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   }
   
   @Override
-  public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
+  public void incomingMessage( MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpRequest ) {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
       String bindingVersion = httpRequest.getParameters( ).remove( RequiredQueryParams.Version.toString( ) );
@@ -123,12 +123,10 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       try {
         BaseMessage msg = ( BaseMessage ) this.bind( httpRequest );
         httpRequest.setMessage( msg );
-        this.requestType.set( ctx.getChannel( ), msg.getClass( ).getSimpleName( ) );
       } catch ( Exception e ) {
         if ( !( e instanceof BindingException ) ) {
           e = new BindingException( e );
         }
-//        Channels.fireExceptionCaught( ctx, e );
         throw e;
       }
     }

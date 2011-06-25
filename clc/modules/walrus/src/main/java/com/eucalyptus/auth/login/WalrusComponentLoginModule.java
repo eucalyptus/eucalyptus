@@ -72,7 +72,7 @@ import org.apache.xml.security.utils.Base64;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
@@ -95,7 +95,7 @@ public class WalrusComponentLoginModule extends BaseLoginModule<WalrusWrappedCom
 		String signature = credentials.getSignature();
 		try {
 			try {
-				PublicKey publicKey = SystemCredentialProvider.getCredentialProvider(Storage.class).getCertificate().getPublicKey();
+				PublicKey publicKey = SystemCredentials.getCredentialProvider(Storage.class).getCertificate().getPublicKey();
 				sig = Signature.getInstance("SHA1withRSA");
 				sig.initVerify(publicKey);
 				sig.update(data.getBytes());

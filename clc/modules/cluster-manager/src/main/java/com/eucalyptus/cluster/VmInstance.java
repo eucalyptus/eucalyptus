@@ -74,6 +74,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import javax.persistence.Column;
+import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
 import javax.persistence.Table;
@@ -108,6 +109,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Bytes;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
@@ -116,86 +118,85 @@ import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
-@Entity @javax.persistence.Entity
+@Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_instances" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @PolicyResourceType( vendor = PolicySpec.VENDOR_EC2, resource = PolicySpec.EC2_RESOURCE_INSTANCE )
 public class VmInstance extends UserMetadata<VmState> implements HasName<VmInstance> {
   @Transient
-  private static Logger LOG          = Logger.getLogger( VmInstance.class );
+  private static Logger                               LOG                 = Logger.getLogger( VmInstance.class );
   @Transient
-  public static String  DEFAULT_IP   = "0.0.0.0";
+  public static String                                DEFAULT_IP          = "0.0.0.0";
   @Transient
-  public static String  DEFAULT_TYPE = "m1.small";
-  
-  public enum BundleState {
-    none( "none" ), pending( null ), storing( "bundling" ), canceling( null ), complete( "succeeded" ), failed( "failed" );
-    private String mappedState;
-    
-    BundleState( String mappedState ) {
-      this.mappedState = mappedState;
-    }
-    
-    public String getMappedState( ) {
-      return this.mappedState;
-    }
-  }
-  @Column( name="instances_reservation_id" )
-  private final String                                reservationId;
-  private final int                                   launchIndex;
-  private final String                                instanceId;
-  private final String                                instanceUuid;
-  private int           stateCounter        = 0;
-  private static String SEND_USER_TERMINATE = "SIGTERM";
+  public static String                                DEFAULT_TYPE        = "m1.small";
   @Transient
-  private final FullName                              owner;
-  private final String                                clusterName;
-  private final String                                partition;
-  private final byte[]                                userData;
+  private static String                               SEND_USER_TERMINATE = "SIGTERM";
   @Transient
-  private final List<Network>                         networks      = Lists.newArrayList( );
+  private final List<Network>                         networks            = Lists.newArrayList( );
   @Transient
-  private final NetworkConfigType                     networkConfig = new NetworkConfigType( );
+  private final NetworkConfigType                     networkConfig       = new NetworkConfigType( );
   @Transient
   private String                                      platform;
   @Transient
   private VmKeyInfo                                   keyInfo;
   @Transient
   private VmTypeInfo                                  vmTypeInfo;
-  
   @Transient
-  private final AtomicMarkableReference<VmState>      state         = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
+  private final AtomicMarkableReference<VmState>      state               = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
   @Transient
-  private final AtomicMarkableReference<BundleTask>   bundleTask    = new AtomicMarkableReference<BundleTask>( null, false );
+  private final AtomicMarkableReference<BundleTask>   bundleTask          = new AtomicMarkableReference<BundleTask>( null, false );
   @Transient
-  private final ConcurrentMap<String, AttachedVolume> volumes       = new ConcurrentSkipListMap<String, AttachedVolume>( );
+  private final ConcurrentMap<String, AttachedVolume> volumes             = new ConcurrentSkipListMap<String, AttachedVolume>( );
   @Transient
-  private final StopWatch                             stopWatch     = new StopWatch( );
+  private final StopWatch                             stopWatch           = new StopWatch( );
   @Transient
-  private final StopWatch                             updateWatch   = new StopWatch( );
-  
-  private Date                                        launchTime    = new Date( );
+  private final StopWatch                             updateWatch         = new StopWatch( );
+  @Transient
   private String                                      serviceTag;
   @Transient
   private SystemState.Reason                          reason;
   @Transient
-  private final List<String>                          reasonDetails = Lists.newArrayList( );
+  private final List<String>                          reasonDetails       = Lists.newArrayList( );
   @Transient
-  private StringBuffer                                consoleOutput = new StringBuffer( );
+  private StringBuffer                                consoleOutput       = new StringBuffer( );
+  
+  @Column( name = "vm_reservation_id" )
+  private final String                                reservationId;
+  @Column( name = "vm_launch_index" )
+  private final Integer                               launchIndex;
+  @Column( name = "vm_instance_id" )
+  private final String                                instanceId;
+  @Column( name = "vm_instance_uuid" )
+  private final String                                instanceUuid;
+  @Transient
+  private final FullName                              owner;
+  @Column( name = "vm_cluster_name" )
+  private final String                                clusterName;
+  @Column( name = "vm_partition_name" )
+  private final String                                partitionName;
+  @Lob
+  @Column( name = "vm_user_data" )
+  private final byte[]                                userData;
+  @Column( name = "vm_launch_time" )
+  private Date                                        launchTime          = new Date( );
+  @Column( name = "vm_password_data" )
   private String                                      passwordData;
   @Transient
   private Boolean                                     privateNetwork;
-  private Long                                        blockBytes    = 0l;
-  private Long                                        networkBytes  = 0l;
+  @Column( name = "vm_block_bytes" )
+  private Long                                        blockBytes          = 0l;
+  @Column( name = "vm_network_bytes" )
+  private Long                                        networkBytes        = 0l;
   
-  public VmInstance( final UserFullName owner, 
-                     final String instanceId, final String instanceUuid, 
-                     final String reservationId, final int launchIndex, 
+  public VmInstance( final UserFullName owner,
+                     final String instanceId, final String instanceUuid,
+                     final String reservationId, final int launchIndex,
                      final String placement,
-                     final byte[] userData, 
-                     final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo, 
-                     final String platform, 
+                     final byte[] userData,
+                     final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo,
+                     final String platform,
                      final List<Network> networks, final String networkIndex ) {
     super( owner, instanceId );
     this.reservationId = reservationId;
@@ -212,7 +213,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
       /** ASAP:GRZE: review **/
       LOG.debug( "Failed to find cluster configuration named: " + this.clusterName + " using that as the partition name." );
     }
-    this.partition = p;
+    this.partitionName = p;
     this.userData = userData;
     this.platform = platform;
     this.keyInfo = keyInfo;
@@ -298,7 +299,6 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
       : "" );
   }
   
-  
   private void addReasonDetail( String... extra ) {
     for ( String s : extra ) {
       this.reasonDetails.add( s );
@@ -369,8 +369,8 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   private void store( ) {
     try {
       ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getInstanceUuid( ), this.getDisplayName( ), this.vmTypeInfo.getName( ),
-                                                                    this.getOwner( ).getNamespace( ), this.getOwner( ).getName( ), 
-                                                                    this.clusterName, this.partition, this.networkBytes, this.blockBytes ) );
+                                                                    this.getOwner( ).getNamespace( ), this.getOwner( ).getName( ),
+                                                                    this.clusterName, this.partitionName, this.networkBytes, this.blockBytes ) );
     } catch ( EventFailedException ex ) {
       LOG.error( ex, ex );
     }
@@ -465,6 +465,19 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     return ret;
   }
   
+  public enum BundleState {
+    none( "none" ), pending( null ), storing( "bundling" ), canceling( null ), complete( "succeeded" ), failed( "failed" );
+    private String mappedState;
+    
+    BundleState( String mappedState ) {
+      this.mappedState = mappedState;
+    }
+    
+    public String getMappedState( ) {
+      return this.mappedState;
+    }
+  }
+  
   public Boolean isBundling( ) {
     return this.bundleTask.getReference( ) != null;
   }
@@ -502,7 +515,8 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
           return; //already finished, wait and timeout the state along with the instance.
         } else if ( BundleState.storing.equals( next ) || BundleState.storing.equals( current ) ) {
           this.getBundleTask( ).setState( next.name( ) );
-          EventRecord.here( BundleCallback.class, EventType.BUNDLE_TRANSITION, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
+          EventRecord.here( BundleCallback.class, EventType.BUNDLE_TRANSITION, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
+                            this.getInstanceId( ),
                              this.getBundleTask( ).getState( ) ).info( );
           this.getBundleTask( ).setUpdateTime( new Date( ) );
         } else if ( BundleState.none.equals( next ) && BundleState.failed.equals( current ) ) {
@@ -518,7 +532,8 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     if ( this.getBundleTask( ) != null ) {
       this.bundleTask.set( this.getBundleTask( ), true );
       this.getBundleTask( ).setState( BundleState.canceling.name( ) );
-      EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
+      EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
+                        this.getInstanceId( ),
                          this.getBundleTask( ).getState( ) ).info( );
       return true;
     } else {
@@ -530,12 +545,14 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     if ( BundleState.pending.name( ).equals( this.getBundleTask( ).getState( ) )
           && this.bundleTask.compareAndSet( this.getBundleTask( ), this.getBundleTask( ), true, false ) ) {
       this.getBundleTask( ).setState( BundleState.storing.name( ) );
-      EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTING, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
+      EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTING, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
+                        this.getInstanceId( ),
                          this.getBundleTask( ).getState( ) ).info( );
       return true;
     } else if ( BundleState.canceling.name( ).equals( this.getBundleTask( ).getState( ) )
                  && this.bundleTask.compareAndSet( this.getBundleTask( ), this.getBundleTask( ), true, false ) ) {
-      EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELLED, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ),
+      EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELLED, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
+                        this.getInstanceId( ),
                          this.getBundleTask( ).getState( ) ).info( );
       this.resetBundleTask( );
       return true;
@@ -607,14 +624,14 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
         runningInstance.setDnsName( this.getNetworkConfig( ).getIpAddress( ) );
       }
     }
-
+    
     runningInstance.setPrivateIpAddress( this.getNetworkConfig( ).getIpAddress( ) );
     if ( !VmInstance.DEFAULT_IP.equals( this.getPublicAddress( ) ) ) {
       runningInstance.setIpAddress( this.getPublicAddress( ) );
     } else {
       runningInstance.setIpAddress( this.getNetworkConfig( ).getIpAddress( ) );
     }
-
+    
     runningInstance.setReason( this.getReason( ) );
     
     if ( this.getKeyInfo( ) != null )
@@ -622,13 +639,14 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     else runningInstance.setKeyName( "" );
     
     runningInstance.setInstanceType( this.getVmTypeInfo( ).getName( ) );
-    runningInstance.setPlacement( this.partition );
+    runningInstance.setPlacement( this.partitionName );
     
     runningInstance.setLaunchTime( this.launchTime );
-
+    
     runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( "/dev/sda1" ) );
-    for( AttachedVolume attachedVol : this.volumes.values( ) ) {
-      runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ), attachedVol.getStatus( ), attachedVol.getAttachTime( ) ) );      
+    for ( AttachedVolume attachedVol : this.volumes.values( ) ) {
+      runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ), attachedVol.getStatus( ),
+                                                                              attachedVol.getAttachTime( ) ) );
     }
     
     return runningInstance;
@@ -646,7 +664,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     NetworkConfigType conf = getNetworkConfig( );
     return conf != null && !( DEFAULT_IP.equals( conf.getIgnoredPublicIp( ) ) || conf.getIpAddress( ).equals( conf.getIgnoredPublicIp( ) ) );
   }
-
+  
   public void setLaunchTime( final Date launchTime ) {
     this.launchTime = launchTime;
   }
@@ -666,9 +684,9 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   public String getClusterName( ) {
     return clusterName;
   }
-
+  
   public String getPlacement( ) {
-    return clusterName;
+    return clusterName;//TODO:GRZE:RELEASE this should be reporting the partition name
   }
   
   public Date getLaunchTime( ) {
@@ -676,7 +694,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   }
   
   public byte[] getUserData( ) {
-    return userData;
+    return this.userData;
   }
   
   public VmKeyInfo getKeyInfo( ) {
@@ -781,11 +799,11 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
       return v;
     }
   }
-
-  public <T> Iterable<T> transformVolumeAttachments( Function<? super AttachedVolume,T> function ) throws NoSuchElementException {
+  
+  public <T> Iterable<T> transformVolumeAttachments( Function<? super AttachedVolume, T> function ) throws NoSuchElementException {
     return Iterables.transform( this.volumes.values( ), function );
   }
-
+  
   public boolean eachVolumeAttachment( Predicate<AttachedVolume> pred ) throws NoSuchElementException {
     return Iterables.all( this.volumes.values( ), pred );
   }
@@ -814,7 +832,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
         String volId = arg0.getVolumeId( );
         if ( "detaching".equals( arg0.getStatus( ) ) && !volMap.containsKey( volId ) ) {
           VmInstance.this.removeVolumeAttachment( volId );
-        } else if( ( "attaching".equals( arg0.getStatus( ) ) || "attached".equals( arg0.getStatus( ) ) ) && volMap.containsKey( volId ) ) {
+        } else if ( ( "attaching".equals( arg0.getStatus( ) ) || "attached".equals( arg0.getStatus( ) ) ) && volMap.containsKey( volId ) ) {
           VmInstance.this.updateVolumeAttachment( volId, arg0.getStatus( ) );
         }
         volMap.remove( volId );
@@ -914,11 +932,11 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   public void setBlockBytes( Long blockBytes ) {
     this.blockBytes = blockBytes;
   }
-
+  
   public String getPartition( ) {
-    return this.partition;
+    return this.partitionName;
   }
-
+  
   public String getInstanceUuid( ) {
     return this.instanceUuid;
   }

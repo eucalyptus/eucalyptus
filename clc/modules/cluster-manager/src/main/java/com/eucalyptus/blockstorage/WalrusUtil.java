@@ -73,7 +73,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
@@ -184,7 +184,7 @@ public class WalrusUtil {
           return true;
         }
       }
-      if ( ImageUtil.verifyManifestSignature( SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate(), signature, pad  )) {
+      if ( ImageUtil.verifyManifestSignature( SystemCredentials.getCredentialProvider(Eucalyptus.class).getCertificate(), signature, pad  )) {
         return true;
       }
       for ( User u : Accounts.listAllUsers( ) ) {
