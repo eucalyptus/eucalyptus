@@ -96,10 +96,10 @@ public abstract class AbstractSystemAddressManager {
         } else if ( addr != null && vm == null ) {
           cluster.getState( ).handleOrphan( addrInfo );
         } else if ( addr == null && vm != null ) {
-          addr = new Address( FakePrincipals.SYSTEM_USER_ERN, addrInfo.getAddress( ), cluster.getName( ), vm.getInstanceId( ), vm.getPrivateAddress( ) );
+          addr = new Address( FakePrincipals.SYSTEM_USER_ERN, addrInfo.getAddress( ), cluster.getPartition( ), vm.getInstanceId( ), vm.getPrivateAddress( ) );
           cluster.getState( ).clearOrphan( addrInfo );
         } else if( addr == null && vm == null ) {
-          addr = new Address( addrInfo.getAddress( ), cluster.getName( ) );
+          addr = new Address( addrInfo.getAddress( ), cluster.getPartition( ) );
           cluster.getState().handleOrphan( addrInfo );
         }
       } else {
@@ -114,7 +114,7 @@ public abstract class AbstractSystemAddressManager {
         } else if( addr != null && Address.Transition.system.equals( addr.getTransition( ) ) ) {
           cluster.getState( ).handleOrphan( addrInfo );
         } else if( addr == null ) {
-          addr = new Address( addrInfo.getAddress( ), cluster.getName( ) );
+          addr = new Address( addrInfo.getAddress( ), cluster.getPartition( ) );
           Helper.clearVmState( addrInfo );
         }
       } 
@@ -216,7 +216,7 @@ public abstract class AbstractSystemAddressManager {
       try {
         EntityWrapper<Address> db = EntityWrapper.get( Address.class );
         Address clusterAddr = new Address( );
-        clusterAddr.setCluster( cluster.getName( ) );
+        clusterAddr.setCluster( cluster.getPartition( ) );
         List<Address> addrList = Lists.newArrayList( );
         try {
           addrList = db.query( clusterAddr );
