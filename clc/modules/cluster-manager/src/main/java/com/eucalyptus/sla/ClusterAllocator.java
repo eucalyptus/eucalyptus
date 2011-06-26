@@ -313,7 +313,7 @@ public class ClusterAllocator extends Thread {
               public void fire( BaseMessage response ) {
                 vm.updatePublicAddress( addr.getName( ) );
               }
-            } ).dispatch( addr.getCluster( ) );
+            } ).dispatch( addr.getPartition( ) );
           }
         }
       } );

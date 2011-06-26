@@ -199,7 +199,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
               Addresses.release( address );
             } else {
               EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
-              AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
+              AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getPartition( ) );
             }
           } catch ( IllegalStateException e ) {} catch ( Throwable e ) {
             LOG.debug( e, e );
