@@ -30,7 +30,7 @@
 
 import eucadmin.registerrequest
 
-class RegisterVMWareBroker(eucadmin.registerrequest.RegisterRequest):
+class RegisterVMwareBroker(eucadmin.registerrequest.RegisterRequest):
 
-    ServiceName = 'VMWareBroker'
+    ServiceName = 'VMwareBroker'
     
