@@ -668,13 +668,11 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         gen_conn.rows('SELECT * FROM metadata_network_group').each {
             EntityWrapper<NetworkRulesGroup> dbGen = EntityWrapper.get(NetworkRulesGroup.class);
             try {
-                def accountName = safeUserMap.get(it.metadata_user_name);
-                def account = Accounts.lookupAccountByName(accountName);
-                AccountFullName eucaAfn = new AccountFullName(account);
-                def rulesGroup = new NetworkRulesGroup(eucaAfn, "${ accountName }_${ it.metadata_display_name }",
+                UserFullName ufn = UserFullName.getInstance(userIdMap.get(it.metadata_user_name));
+                def rulesGroup = new NetworkRulesGroup(ufn, "${ it.metadata_user_name }_${ it.metadata_display_name }",
                                                        it.metadata_network_group_description);
                 initMetaClass(rulesGroup, rulesGroup.class);
-                println "Adding network rules for ${accountName}/${it.metadata_display_name}";
+                println "Adding network rules for ${ it.metadata_user_name }/${it.metadata_display_name}";
                 gen_conn.rows("""SELECT r.* 
                                  FROM metadata_network_group_has_rules 
                                  LEFT OUTER JOIN metadata_network_rule r 

@@ -91,6 +91,10 @@ public class SystemIds {
     return createCloudUniqueName( "cache" );
   }
   
+  public static String jdbcGroupName( ) {
+    return createCloudUniqueName( "jdbc" );
+  }
+  
   public static String membershipGroupName( ) {
     return createCloudUniqueName( "membership" );
   }

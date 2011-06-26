@@ -3776,6 +3776,37 @@ int maintainNetworkState() {
       }
     }
 
+    // check to see if this CCs localIpId has changed
+    if (vnetconfig->tunnels.localIpId != vnetconfig->tunnels.localIpIdLast) {
+      logprintfl(EUCADEBUG, "maintainNetworkState(): local CC index has changed (%d -> %d): re-assigning gateway IPs and tunnel connections.\n", vnetconfig->tunnels.localIpId , vnetconfig->tunnels.localIpIdLast);
+
+      for (i=2; i<NUMBER_OF_VLANS; i++) {
+	if (vnetconfig->networks[i].active) {
+	  char brname[32];
+	  if (!strcmp(vnetconfig->mode, "MANAGED")) {
+	    snprintf(brname, 32, "eucabr%d", i);
+	  } else {
+	    snprintf(brname, 32, "%s", vnetconfig->privInterface);
+	  }
+
+	  if (vnetconfig->tunnels.localIpIdLast >= 0) {
+	    vnetDelGatewayIP(vnetconfig, i, brname, vnetconfig->tunnels.localIpIdLast);
+	  }
+	  if (vnetconfig->tunnels.localIpId >= 0) {
+	    vnetAddGatewayIP(vnetconfig, i, brname, vnetconfig->tunnels.localIpId);
+	  }
+	}
+      }
+      rc = vnetTeardownTunnels(vnetconfig);
+      if (rc) {
+	logprintfl(EUCAERROR, "maintainNetworkState(): failed to tear down tunnels\n");
+	ret = 1;
+      }
+
+      config->kick_dhcp = 1;
+      vnetconfig->tunnels.localIpIdLast = vnetconfig->tunnels.localIpId;
+    }
+        
     rc = vnetSetupTunnels(vnetconfig);
     if (rc) {
       logprintfl(EUCAERROR, "maintainNetworkState(): failed to setup tunnels during maintainNetworkState()\n");
@@ -3798,6 +3829,7 @@ int maintainNetworkState() {
 	}
       }
     }
+    
     sem_mypost(VNET);
   }
 

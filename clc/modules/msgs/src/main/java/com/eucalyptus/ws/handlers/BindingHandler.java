@@ -97,7 +97,7 @@ public class BindingHandler extends MessageStackHandler {
   }
   
   @Override
-  public void incomingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
+  public void incomingMessage( final MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpMessage ) {
       MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
       BaseMessage msg = null;

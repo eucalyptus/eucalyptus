@@ -444,6 +444,8 @@
 	      <xs:element minOccurs="0" maxOccurs="1" name="useVlans" type="xs:int"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="mode" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="addrsPerNet" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="addrIndexMin" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="addrIndexMax" type="xs:int"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="vlanMin" type="xs:int"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="vlanMax" type="xs:int"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="vnetSubnet" type="xs:string"/>

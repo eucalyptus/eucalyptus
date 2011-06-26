@@ -32,11 +32,11 @@ from eucadmin.command import Command
 
 InitCommand = """%s/usr/sbin/eucalyptus-cloud -u %s -h %s --initialize"""
 
-DebugInitCommand = """%s/usr/sbin/eucalyptus-cloud -u %s -h %s --initialize --log-level=EXTREME --debug -L console"""
+DebugInitCommand = """%s/usr/sbin/eucalyptus-cloud -u %s -h %s --initialize --log-level=EXTREME -L console"""
 
 class Initialize(object):
 
-    def __init__(self, config, debug=True):
+    def __init__(self, config, debug=False):
         self.config = config
         self.debug = debug
 

@@ -81,7 +81,6 @@ String real_jdbc_driver = 'com.mysql.jdbc.Driver';
 String pool_db_driver = 'net.sf.hajdbc.sql.Driver';
 String pool_db_url = 'jdbc:ha-jdbc:eucalyptus';
 String db_pass = SystemIds.databasePassword( );
-System.setProperty("jgroups.udp.bind_addr",Internets.localHostAddress());
 
 default_hiber_config = [
       'hibernate.archive.autodetection': 'jar, class, hbm',

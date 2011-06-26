@@ -82,7 +82,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.bootstrap.SystemIds;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.AbstractPersistent;
@@ -136,11 +136,11 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
     } else {
       if ( !compId.hasCredentials( ) ) {
         ComponentId p = ComponentIds.lookup( compId.getPartition( ) );
-        return new Partition( ).new Fake( compId.getPartition( ), SystemCredentialProvider.getCredentialProvider( p ).getKeyPair( ),
-                                          SystemCredentialProvider.getCredentialProvider( p ).getCertificate( ) );
+        return new Partition( ).new Fake( compId.getPartition( ), SystemCredentials.getCredentialProvider( p ).getKeyPair( ),
+                                          SystemCredentials.getCredentialProvider( p ).getCertificate( ) );
       } else {
-        return new Partition( ).new Fake( compId.getPartition( ), SystemCredentialProvider.getCredentialProvider( compId ).getKeyPair( ),
-                                          SystemCredentialProvider.getCredentialProvider( compId ).getCertificate( ) );
+        return new Partition( ).new Fake( compId.getPartition( ), SystemCredentials.getCredentialProvider( compId ).getKeyPair( ),
+                                          SystemCredentials.getCredentialProvider( compId ).getCertificate( ) );
       }
     }
   }
@@ -285,7 +285,7 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
     if( !keyDir.exists( ) && !keyDir.mkdir( ) ) {
       throw new RuntimeException( "Failed to create directory for partition credentials: " + this );
     }
-    X509Certificate systemX509 = SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( );
+    X509Certificate systemX509 = SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( );
     FileWriter out = null;
     try {
       PEMFiles.write( keyDir.getAbsolutePath( ) + File.separator + "cluster-pk.pem", this.getPrivateKey( ) );

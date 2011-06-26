@@ -34,7 +34,7 @@ import eucadmin
 
 class DescribeRequest(AWSQueryRequest):
 
-    ServiceNaem = ''
+    ServiceName = ''
     ServicePath = '/services/Configuration'
     ServiceClass = eucadmin.EucAdmin
     Description = 'List %s services' % ServiceName
@@ -56,7 +56,7 @@ class DescribeRequest(AWSQueryRequest):
         for s in services:
             if s.get('euca:hostName', None) != 'detail':
                 print fmt % (
-                    self.ServiceName.upper(),
+                    ServiceName.upper(),
                     s.get('euca:partition', None),
                     s.get('euca:name', None),
                     s.get('euca:hostName', None),

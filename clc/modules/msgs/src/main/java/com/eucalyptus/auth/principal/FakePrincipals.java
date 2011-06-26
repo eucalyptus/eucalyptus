@@ -73,7 +73,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
@@ -242,7 +242,7 @@ public class FakePrincipals {
                                                                                          
                                                                                          @Override
                                                                                          public X509Certificate getX509Certificate( ) {
-                                                                                           return SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( );
+                                                                                           return SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( );
                                                                                          }
                                                                                          
                                                                                          @Override
@@ -250,7 +250,7 @@ public class FakePrincipals {
                                                                                          
                                                                                          @Override
                                                                                          public Date getCreateDate( ) {
-                                                                                           return SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( ).getNotBefore( );
+                                                                                           return SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( ).getNotBefore( );
                                                                                          }
                                                                                          
                                                                                          @Override
@@ -477,7 +477,7 @@ public class FakePrincipals {
                                                                                          
                                                                                          @Override
                                                                                          public X509Certificate getX509Certificate( ) {
-                                                                                           return SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( );
+                                                                                           return SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( );
                                                                                          }
                                                                                          
                                                                                          @Override
