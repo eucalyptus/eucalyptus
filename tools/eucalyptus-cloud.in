@@ -139,16 +139,22 @@ do_upgrade() {
         while IFS=: read -r a b; do
                 OLD_EUCA_VERSION=$a
                 OLD_EUCA_PATH=$b
-        done < $EUCALYPTUS/etc/eucalyptus/eucalyptus.upgrade
-        #Attempt db upgrade
+        done < $EUCALYPTUS/etc/eucalyptus/.upgrade
+
+        if [ "$OLD_EUCA_VERSION" = "@EUCA_VERSION@" ]; then
+            # No need to upgrade to the same version
+            return
+        fi
+
+        # Attempt db upgrade
         echo "Attempting database upgrade from $OLD_EUCA_VERSION at $OLD_EUCA_PATH..."
-	$EUCALYPTUS/usr/share/eucalyptus/euca_upgrade --old $OLD_EUCA_PATH --new $EUCALYPTUS --db
+	su -c "$EUCALYPTUS/usr/share/eucalyptus/euca_upgrade --old $OLD_EUCA_PATH --new $EUCALYPTUS --db" "$EUCA_USER"
 	case "$?" in
-	0) 
-        	echo "done."
-		rm -f $EUCALYPTUS/etc/eucalyptus/eucalyptus.upgrade
+	0)
+		echo "done."
+		rm -f $EUCALYPTUS/etc/eucalyptus/.upgrade
 		;;
-        1)	
+        1)
 		echo "Upgrade failed. Aborting start."
 		exit 1
 		;;
@@ -180,7 +186,7 @@ do_start() {
 	fi
 
         #Check if we need to upgrade
-        if [ -e $EUCALYPTUS/etc/eucalyptus/eucalyptus.upgrade ]; then
+        if [ -e $EUCALYPTUS/etc/eucalyptus/.upgrade ]; then
                 do_upgrade
         fi
 
