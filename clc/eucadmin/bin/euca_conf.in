@@ -76,11 +76,11 @@ RegOptions = {
 # list of services which can be checked
 CheckableServices = ['common', 'cc', 'cloud', 'nc', 'sc',
                      'walrus', 'vmware', 'vmwarebroker']
-CheckableServicesString = CheckableServices.join('|')
+CheckableServicesString = '|'.join(CheckableServices)
 
 # list of services which can be enabled/disabled
 EnableableServices = ['cloud', 'walrus', 'sc', 'vmwarebroker']
-EnableableServicesString = EnableableServices.join('|')
+EnableableServicesString = '|'.join(EnableableServices)
 
 class EucaConf(object):
 
