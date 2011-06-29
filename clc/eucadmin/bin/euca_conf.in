@@ -76,9 +76,11 @@ RegOptions = {
 # list of services which can be checked
 CheckableServices = ['common', 'cc', 'cloud', 'nc', 'sc',
                      'walrus', 'vmware', 'vmwarebroker']
+CheckableServicesString = CheckableServices.join('|')
 
 # list of services which can be enabled/disabled
 EnableableServices = ['cloud', 'walrus', 'sc', 'vmwarebroker']
+EnableableServicesString = EnableableServices.join('|')
 
 class EucaConf(object):
 
@@ -266,12 +268,12 @@ class EucaConf(object):
         self.parser.add_option('--setup', action='store_true',
                                dest='do_setup', default=False,
                                help='perform initial setup')
-        self.parser.add_option('--enable {cloud|sc|walrus|vmwarebroker}',
+        self.parser.add_option('--enable {%s}' % EnableableServicesString,
                                action='append', type='choice',
                                choices=EnableableServices,
                                dest='enable_whats', metavar='<service>',
                                help='enable service at next start}')
-        self.parser.add_option('--disable {cloud|sc|walrus|vmwarebroker',
+        self.parser.add_option('--disable {%s}' % EnableableServicesString,
                                action='append', type='choice',
                                choices=EnableableServices,
                                dest='disable_whats', metavar='<service>',
