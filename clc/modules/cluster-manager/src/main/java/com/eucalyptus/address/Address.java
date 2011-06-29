@@ -142,8 +142,8 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   private static Logger                   LOG                     = Logger.getLogger( Address.class );
-  @Column( name = "metadata_address_cluster" )
-  private String                          cluster;
+  @Column( name = "metadata_address_partition" )
+  private String                          partition;
   @Transient
   private String                          instanceId;
   @Transient
@@ -179,19 +179,19 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     super( FakePrincipals.NOBODY_USER_ERN, ipAddress );
   }
   
-  public Address( String ipAddress, String cluster ) {
+  public Address( String ipAddress, String partition ) {
     this( ipAddress );
     this.instanceId = UNASSIGNED_INSTANCEID;
     this.instanceAddress = UNASSIGNED_INSTANCEADDR;
-    this.cluster = cluster;
+    this.partition = partition;
     this.transition = this.QUIESCENT;
     this.atomicState = new AtomicMarkableReference<State>( State.unallocated, false );
     this.init( );
   }
   
-  public Address( UserFullName userFullName, String address, String cluster, String instanceId, String instanceAddress ) {
+  public Address( UserFullName userFullName, String address, String partition, String instanceId, String instanceAddress ) {
     this( address );
-    this.cluster = cluster;
+    this.partition = partition;
     this.setOwner( userFullName );
     this.instanceId = instanceId;
     this.instanceAddress = instanceAddress;
@@ -327,7 +327,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
                      .withDetails( "type", Address.this.isSystemOwned( )
                        ? "SYSTEM"
                        : "USER" )
-                     .withDetails( "cluster", Address.this.getCluster( ) ).info( );
+                     .withDetails( "cluster", Address.this.getPartition( ) ).info( );
         } catch ( NoSuchElementException e ) {}
         EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_ASSIGN )
                    .withDetails( Address.this.getOwner( ).toString( ), Address.this.getDisplayName( ), "instance", Address.this.instanceId )
@@ -383,7 +383,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
                    .withDetails( "type", Address.this.isSystemOwned( )
                      ? "SYSTEM"
                      : "USER" )
-                   .withDetails( "cluster", Address.this.getCluster( ) ).info( );
+                   .withDetails( "cluster", Address.this.getPartition( ) ).info( );
         Address.this.setInstanceId( vm.getInstanceId( ) );
         Address.this.setInstanceAddress( vm.getPrivateAddress( ) );
         Address.this.stateUuid = UUID.randomUUID( ).toString( );
@@ -466,7 +466,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       db.rollback( );
       LOG.error( e, e );
     } catch ( EucalyptusCloudException e ) {
-      addr = new Address( address.getName( ), address.getCluster( ) );
+      addr = new Address( address.getName( ), address.getPartition( ) );
       try {
         db.add( addr );
         db.commit( );
@@ -481,7 +481,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   public String getCluster( ) {
-    return this.cluster;
+    return this.partition;
   }
   
   public String getUserId( ) {
@@ -501,7 +501,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   public void setCluster( final String cluster ) {
-    this.cluster = cluster;
+    this.partition = cluster;
   }
   
   public void setInstanceId( String instanceId ) {
@@ -510,7 +510,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   
   @Override
   public String toString( ) {
-    return "Address " + this.getDisplayName( ) + " " + this.cluster + " " + ( this.isAllocated( )
+    return "Address " + this.getDisplayName( ) + " " + this.partition + " " + ( this.isAllocated( )
       ? this.getOwner( ) + " "
       : "" ) + ( this.isAssigned( )
       ? this.instanceId + " " + this.instanceAddress + " "
@@ -592,12 +592,12 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   
   @Override
   public String getPartition( ) {
-    return this.cluster;//GRZE:BUG:BUG:TODO: this is almost certainly wrong
+    return this.partition;
   }
   
   @Override
   public FullName getFullName( ) {
-    return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( ClusterController.class ).name( ) ).namespace( this.getCluster( ) ).relativeId( "public-address",
+    return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( ClusterController.class ).name( ) ).namespace( this.getPartition( ) ).relativeId( "public-address",
                                                                                                                                                this.getName( ) );
   }
   

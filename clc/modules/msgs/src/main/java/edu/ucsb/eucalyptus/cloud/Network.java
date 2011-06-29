@@ -191,9 +191,10 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
     return getClusterToken( cluster );
   }
   
-  public void trim( Integer max ) {
+  public void trim( Integer min, Integer max ) {
     AddressRange addrRange = new AddressRange( ) {
       {
+        this.min = min;
         this.max = max;
       }
     };
