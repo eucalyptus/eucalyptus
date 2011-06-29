@@ -86,14 +86,13 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.auth.EucaKeyStore;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Lookups;
 import com.eucalyptus.util.WalrusProperties;
 
@@ -145,7 +144,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -162,6 +161,7 @@ import edu.ucsb.eucalyptus.cloud.DecryptionFailedException;
 import edu.ucsb.eucalyptus.cloud.NoSuchBucketException;
 import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
 import edu.ucsb.eucalyptus.cloud.NotAuthorizedException;
+import edu.ucsb.eucalyptus.cloud.WalrusException;
 import edu.ucsb.eucalyptus.cloud.entities.BucketInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
@@ -250,7 +250,7 @@ public class WalrusImageManager {
 								if(verified) break;
 							}
 							if(!verified) {
-								X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate();
+								X509Certificate cert = SystemCredentials.getCredentialProvider(Eucalyptus.class).getCertificate();
 								if(cert != null)
 									verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 							}
@@ -283,7 +283,7 @@ public class WalrusImageManager {
 						}
 						if(!signatureVerified) {
 							try {
-								X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate();
+								X509Certificate cert = SystemCredentials.getCredentialProvider(Eucalyptus.class).getCertificate();
 								if(cert != null)
 									signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 							} catch(Exception ex) {
@@ -323,7 +323,7 @@ public class WalrusImageManager {
 					byte[] key;
 					byte[] iv;
 					try {
-						PrivateKey pk = SystemCredentialProvider.getCredentialProvider(
+						PrivateKey pk = SystemCredentials.getCredentialProvider(
 								Eucalyptus.class ).getPrivateKey();
 						Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 						cipher.init(Cipher.DECRYPT_MODE, pk);
@@ -353,7 +353,7 @@ public class WalrusImageManager {
 						storageManager.deleteAbsoluteObject(encryptedImageName);
 					} catch (Exception ex) {
 						LOG.error(ex);
-						throw new EucalyptusCloudException();
+						throw new WalrusException("Unable to delete: " + encryptedImageKey);
 					}
 					db.commit();
 					return decryptedImageKey;
@@ -378,7 +378,7 @@ public class WalrusImageManager {
 		try {
 			bucket = db.getUnique(bucketInfo);
 		} catch(Throwable t) {
-			throw new EucalyptusCloudException("Unable to get bucket: " + bucketName, t);
+			throw new WalrusException("Unable to get bucket: " + bucketName, t);
 		}
 
 		if (bucket != null) {
@@ -420,7 +420,7 @@ public class WalrusImageManager {
 	            }
 	          }
 	          if(!signatureVerified) {
-	            X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate();
+	            X509Certificate cert = SystemCredentials.getCredentialProvider(Eucalyptus.class).getCertificate();
 	            if(cert != null)
 	              signatureVerified = canVerifySignature(sigVerifier, cert, signature, (machineConfiguration + image));
 	          }
@@ -458,7 +458,7 @@ public class WalrusImageManager {
 					byte[] key;
 					byte[] iv;
 					try {
-						PrivateKey pk = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getPrivateKey();
+						PrivateKey pk = SystemCredentials.getCredentialProvider(Eucalyptus.class).getPrivateKey();
 						Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 						cipher.init(Cipher.DECRYPT_MODE, pk);
 						key = Hashes.hexToBytes(new String(cipher.doFinal(Hashes.hexToBytes(encryptedKey))));
@@ -538,7 +538,7 @@ public class WalrusImageManager {
 			if(decryptedImageKey == null) {
 				try {
 					decryptedImageKey = decryptImage(bucketName, manifestKey, account, isAdministrator);
-				} catch(EucalyptusCloudException ex) {
+				} catch(WalrusException ex) {
 					imageCachers.remove(bucketName + manifestKey);
 					throw ex;
 				}
@@ -595,7 +595,7 @@ public class WalrusImageManager {
 		try {
 			bucket = db.getUnique(bucketInfo);
 		} catch(Throwable t) {
-			throw new EucalyptusCloudException("Unable to get bucket: " + bucketName, t);
+			throw new WalrusException("Unable to get bucket: " + bucketName, t);
 		}
 
 		if (bucket != null) {
@@ -616,7 +616,7 @@ public class WalrusImageManager {
 
 					FileInputStream fileInputStream = null;
 					try {
-						PrivateKey pk = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getPrivateKey();
+						PrivateKey pk = SystemCredentials.getCredentialProvider(Eucalyptus.class).getPrivateKey();
 						Signature sigCloud = Signature.getInstance("SHA1withRSA");
 						sigCloud.initSign(pk);
 						sigCloud.update(verificationString.getBytes());
@@ -648,13 +648,13 @@ public class WalrusImageManager {
 								}
 							} catch (IOException e) {
 								LOG.error(e);
-								throw new EucalyptusCloudException(e);
+								throw new WalrusException(e.getMessage());
 							} finally {
 								try {
 									inStream.close();
 								} catch (IOException e) {
 									LOG.error(e);
-									throw new EucalyptusCloudException(e);
+									throw new WalrusException(e.getMessage());
 								}
 							}
 							String md5 = Hashes.bytesToHex(digest.digest());
@@ -662,7 +662,7 @@ public class WalrusImageManager {
 							objectInfo.setSize(totalBytesRead);
 						} catch (FileNotFoundException e) {
 							LOG.error(e, e);
-							throw new EucalyptusCloudException(e);
+							throw new WalrusException(e.getMessage());
 						}
 					} catch(Exception ex) {
 						if(inStream != null) {
@@ -681,7 +681,7 @@ public class WalrusImageManager {
 						}
 						db.rollback();
 						LOG.error(ex, ex);
-						throw new EucalyptusCloudException("Unable to sign manifest: " + bucketName + "/" + objectKey);
+						throw new WalrusException("Unable to sign manifest: " + bucketName + "/" + objectKey);
 					}
 					db.commit();
 				} else {
@@ -938,7 +938,7 @@ public class WalrusImageManager {
 		if(outFile.exists())
 			return outFile.length();
 		else
-			throw new EucalyptusCloudException("Could not untar image " + imageName);
+			throw new WalrusException("Could not untar image " + imageName);
 	}
 
 	private class StreamConsumer extends Thread
@@ -1090,7 +1090,7 @@ public class WalrusImageManager {
 					try {
 						semaphore.acquire();
 					} catch(InterruptedException ex) {
-						throw new EucalyptusCloudException("semaphore could not be acquired");
+						throw new WalrusException("semaphore could not be acquired");
 					}
 					EntityWrapper<ImageCacheInfo> db2 = EntityWrapper.get(ImageCacheInfo.class);
 					ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
@@ -1149,14 +1149,14 @@ public class WalrusImageManager {
 								LOG.error(ex, ex);
 								semaphore.release();
 								imageMessenger.removeMonitor(bucketName + "/" + objectKey);
-								throw new EucalyptusCloudException("monitor failure");
+								throw new WalrusException("monitor failure");
 							}
 						}
 						if(!cached) {
 							LOG.error("Tired of waiting to cache image: " + bucketName + "/" + objectKey + " giving up");
 							imageMessenger.removeMonitor(bucketName + "/" + objectKey);
 							semaphore.release();
-							throw new EucalyptusCloudException("caching failure");
+							throw new WalrusException("caching failure");
 						}
 						//caching may have modified the db. repeat the query
 						db2 = EntityWrapper.get(ImageCacheInfo.class);
@@ -1214,7 +1214,7 @@ public class WalrusImageManager {
 		try {
 			bucket = db.getUnique(bucketInfo);
 		} catch(Throwable t) {
-			throw new EucalyptusCloudException("Unable to get bucket", t);
+			throw new WalrusException("Unable to get bucket", t);
 		}
 
 		if (bucket != null) {
@@ -1319,7 +1319,7 @@ public class WalrusImageManager {
 				imageCacheFlusher.start();
 			} else {
 				db.rollback();
-				throw new EucalyptusCloudException("not in cache");
+				throw new WalrusException("not in cache");
 			}
 		} else {
 			db.rollback();

@@ -200,7 +200,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		String roleString = getRole();
 		String[] roleParts = roleString.split("/");
 		if(roleParts.length > 1) {
-			if(PRIMARY_ROLE.equals(roleParts[0])) {
+			if(roleParts[0].startsWith(PRIMARY_ROLE)) {
 				return true;
 			} else {
 				return false;
@@ -214,7 +214,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		String roleString = getRole();
 		String[] roleParts = roleString.split("/");
 		if(roleParts.length > 1) {
-			if(SECONDARY_ROLE.equals(roleParts[0])) {
+			if(roleParts[0].startsWith(SECONDARY_ROLE)) {
 				return true;
 			} else {
 				return false;
@@ -228,7 +228,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		String roleString = getRole();
 		String[] roleParts = roleString.split("/");
 		if(roleParts.length > 1) {
-			if(PRIMARY_ROLE.equals(roleParts[1])) {
+			if(roleParts[1].startsWith(PRIMARY_ROLE)) {
 				return true;
 			} else {
 				return false;
@@ -242,7 +242,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		String roleString = getRole();
 		String[] roleParts = roleString.split("/");
 		if(roleParts.length > 1) {
-			if(SECONDARY_ROLE.equals(roleParts[1])) {
+			if(roleParts[1].startsWith(SECONDARY_ROLE)) {
 				return true;
 			} else {
 				return false;
@@ -265,7 +265,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		String dstateString = getDataStatus();
 		String[] dstateParts = dstateString.split("/");
 		if(dstateParts.length > 1) {
-			if(DSTATE_UPTODATE.equals(dstateParts[0])) {
+			if(dstateParts[0].startsWith(DSTATE_UPTODATE)) {
 				return true;
 			} else {
 				return false;
@@ -404,10 +404,10 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 						return;
 					}
 				}
-				if(!notConnected) {
+				if(notConnected) {
 					throw new EucalyptusCloudException("Resource not connected and not primary or cannot become one!");
 				}
-				if(!notUpToDate) {
+				if(notUpToDate) {
 					throw new EucalyptusCloudException("Resource not up to date and not primary or cannot become one!");
 				}
 			}

@@ -37,12 +37,6 @@ import os
 import time
 import boto.utils
 
-OpenSSLCmd = """openssl pkcs12 -in %s -name eucalyptus -name "eucalyptus" -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus -nodes | grep -A30 "friendlyName: eucalyptus" | grep -A26 "BEGIN RSA" >  %s """
-
-MySQLCmd = """echo "select u.auth_user_token from auth_user u inner join auth_group_has_users gu on u.id=gu.auth_user_id join auth_group g on gu.auth_group_id=g.id join auth_account a on g.auth_group_owning_account=a.id where a.auth_account_name='%s' and g.auth_group_name='_%s';" | mysql -u eucalyptus -P 8777 --protocol=TCP --password=%s eucalyptus_auth | tail -n1 """
-
-DBPassCmd = """echo -n eucalyptus | openssl dgst -sha256 -sign %s/var/lib/eucalyptus/keys/cloud-pk.pem -hex"""
-
 GetCertURL = 'https://localhost:8443/getX509?account=%s&user=%s&code=%s'
 
 EucaP12File = '%s/var/lib/eucalyptus/keys/euca.p12'
@@ -85,19 +79,20 @@ class GetCredentials(AWSQueryRequest):
         cmd_string = get_cmdstring('openssl')
         cmd = Command(cmd_string % (self.eucap12_file, self.cloudpk_file))
                       
-    def get_token(self, num_retries=10):
+    def query_mysql(self, query, num_retries=10):
+        result = None
         i = 0
         while i < num_retries:
-            cmd_string = get_cmdstring('mysql')
-            cmd = Command(cmd_string % (self.account, self.user, self.db_pass))
-            self.token = cmd.stdout.strip()
-            if self.token:
+            cmd = Command(query % (self.account, self.user, self.db_pass))
+            result = cmd.stdout.strip()
+            if result:
                 break
             print 'waiting for MySQL to respond'
             time.sleep(10)
             i += 1
-        if not self.token:
+        if not result:
             raise ValueError('cannot find code in database')
+        return result
 
     def get_credentials(self):
         data = boto.utils.retry_url(GetCertURL % (self.account,
@@ -115,9 +110,9 @@ class GetCredentials(AWSQueryRequest):
     def cli_formatter(self, data):
         pass
 
-    def main(self, **args):
-        self.args.update(args)
-        self.process_args()
+    def setup_query(self):
+        self.token = None
+        self.db_pass = None
         if 'euca_home' in self.request_params:
             self.euca_home = self.request_params['euca_home']
         else:
@@ -130,16 +125,26 @@ class GetCredentials(AWSQueryRequest):
         self.zipfile = self.request_params['zipfile']
         self.eucap12_file = EucaP12File % self.euca_home
         self.cloudpk_file = CloudPKFile % self.euca_home
-        self.token = None
-        self.db_pass = None
-        self.check_zipfile()
-        # check local service?
         if not self.check_cloudpk_file:
             self.gen_cloudpk_file()
         self.get_dbpass()
-        self.get_token()
-        self.get_credentials()
 
+    def get_accesskey_secretkey(self, **args):
+        self.args.update(args)
+        self.process_args()
+        self.setup_query()
+        query = get_cmdstring('mysql_get_accesskey_secretkey')
+        return self.query_mysql(query)
+
+    def main(self, **args):
+        self.args.update(args)
+        self.process_args()
+        self.setup_query()
+        self.check_zipfile()
+        # check local service?
+        self.token = self.query_mysql(get_cmdstring('mysql_get_token'))
+        self.get_credentials()
+        
     def main_cli(self):
         self.do_cli()
         

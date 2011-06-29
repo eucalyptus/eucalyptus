@@ -728,6 +728,7 @@ int java_init(euca_opts *args, java_home_t *data) {
 	JVM_ARG(opt[++x], "-Deuca.log.appender=%1$s", GETARG(args, log_appender));
 	if (args->initialize_flag) {
 		JVM_ARG(opt[++x], "-Deuca.initialize=true");
+		JVM_ARG(opt[++x], "-Deuca.remote.dns=true");
 	} else {
 		if (args->remote_dns_flag) {
 			JVM_ARG(opt[++x], "-Deuca.remote.dns=true");

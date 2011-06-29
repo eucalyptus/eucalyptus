@@ -77,7 +77,7 @@ import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.config.ClusterConfiguration;
@@ -108,7 +108,7 @@ public class BlockStorageUtil {
 	}
 
 	public static String encryptSCTargetPassword(String password) throws EucalyptusCloudException {
-		PublicKey scPublicKey = SystemCredentialProvider.getCredentialProvider(Storage.class).getKeyPair().getPublic();
+		PublicKey scPublicKey = SystemCredentials.getCredentialProvider(Storage.class).getKeyPair().getPublic();
 		Cipher cipher;
 		try {
 			cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
@@ -121,7 +121,7 @@ public class BlockStorageUtil {
 	}
 
 	public static String decryptSCTargetPassword(String encryptedPassword) throws EucalyptusCloudException {
-		PrivateKey scPrivateKey = SystemCredentialProvider.getCredentialProvider(Storage.class).getPrivateKey();
+		PrivateKey scPrivateKey = SystemCredentials.getCredentialProvider(Storage.class).getPrivateKey();
 		try {
 			Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 			cipher.init(Cipher.DECRYPT_MODE, scPrivateKey);

@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,103 +53,30 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.bootstrap;
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.id.Database;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.crypto.util.SslSetup;
-import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
-import com.eucalyptus.util.Internets;
+package com.eucalyptus.cloud;
 
-@Provides( Empyrean.class )
-@RunDuring( Bootstrap.Stage.DatabaseInit )
-@DependsRemote( Eucalyptus.class )
-public class RemoteDatabaseBootstrapper extends Bootstrapper implements DatabaseBootstrapper {
-  private static Logger LOG = Logger.getLogger( RemoteDatabaseBootstrapper.class );
-  
-  @Override
-  public boolean load( ) throws Exception {
-    try {
-      if ( Internets.testReachability( Components.lookup( Database.class ).getUri( ).getHost( ) ) ) {
-        LOG.debug( "Initializing SSL just in case: " + SslSetup.class );
-      } else {
-        LOG.error( "Failed with invalid DB address" );
-        System.exit( -1 );
-      }
-    } catch ( Throwable e ) {
-      LOG.error( "Failed with invalid DB address" );
-    }
-    try {
-      GroovyUtil.evaluateScript( "after_database.groovy" );
-    } catch ( ScriptExecutionFailedException e1 ) {
-      LOG.error( "Failed to initialize persistence layer" );
-      LOG.debug( e1, e1 );
-      System.exit( 123 );
-    }
-    
-    return true;
-  }
-  
-  @Override
-  public boolean start( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public boolean isRunning( ) {
-    return true;//TODO: track remote connectionf failures.
-  }
-  
-  @Override
-  public void hup( ) {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    return true;
-  }
-  
-}
+import com.eucalyptus.config.DeregisterComponentResponseType
+import com.eucalyptus.config.DeregisterComponentType
+import com.eucalyptus.config.DescribeComponentsResponseType
+import com.eucalyptus.config.DescribeComponentsType
+import com.eucalyptus.config.ModifyComponentAttributeResponseType
+import com.eucalyptus.config.ModifyComponentAttributeType
+import com.eucalyptus.config.RegisterComponentResponseType
+import com.eucalyptus.config.RegisterComponentType
+
+public class RegisterEucalyptusType extends RegisterComponentType {}
+public class RegisterEucalyptusResponseType extends RegisterComponentResponseType {}
+public class DeregisterEucalyptusType extends DeregisterComponentType {}
+public class DeregisterEucalyptusResponseType extends DeregisterComponentResponseType {}
+public class ModifyEucalyptusAttributeType extends ModifyComponentAttributeType{}
+public class ModifyEucalyptusAttributeResponseType extends ModifyComponentAttributeResponseType {}
+public class DescribeEucalyptusType extends DescribeComponentsType {}
+public class DescribeEucalyptusResponseType extends DescribeComponentsResponseType {}

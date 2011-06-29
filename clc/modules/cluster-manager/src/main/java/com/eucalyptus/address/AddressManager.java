@@ -175,7 +175,7 @@ public class AddressManager {
           public void fire( BaseMessage response ) {
             vm.updatePublicAddress( address.getName( ) );
           }
-        } ).dispatch( address.getCluster( ) );
+        } ).dispatch( address.getPartition( ) );
         if ( oldVm != null ) {
           Addresses.system( oldVm );
         }
@@ -185,14 +185,14 @@ public class AddressManager {
     final UnconditionalCallback unassignBystander = new UnconditionalCallback( ) {
       public void fire( ) {
         if ( oldAddr != null ) {
-          AsyncRequests.newRequest( oldAddr.unassign( ).getCallback( ) ).then( assignTarget ).dispatch( oldAddr.getCluster( ) );
+          AsyncRequests.newRequest( oldAddr.unassign( ).getCallback( ) ).then( assignTarget ).dispatch( oldAddr.getPartition( ) );
         } else {
           assignTarget.fire( );
         }
       }
     };
     if ( address.isAssigned( ) ) {
-      AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).then( unassignBystander ).dispatch( address.getCluster( ) );
+      AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).then( unassignBystander ).dispatch( address.getPartition( ) );
     } else {
       unassignBystander.fire( );
     }
@@ -244,7 +244,7 @@ public class AddressManager {
                 LOG.debug( e, e );
               }
             }
-          } ).dispatch( address.getCluster( ) );
+          } ).dispatch( address.getPartition( ) );
         } else {
           AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
             @Override
@@ -255,7 +255,7 @@ public class AddressManager {
                 LOG.debug( e, e );
               }
             }
-          } ).dispatch( address.getCluster( ) );
+          } ).dispatch( address.getPartition( ) );
         }
       } catch ( Throwable e ) {
         LOG.debug( e, e );

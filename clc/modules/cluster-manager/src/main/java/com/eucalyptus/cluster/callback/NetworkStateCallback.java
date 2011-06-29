@@ -5,6 +5,7 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
@@ -25,7 +26,7 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
       {
         regarding( );
         setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
-        setNameserver( Internets.getAllAddresses( ).get( 0 ) );//TODO:GRZE:FIXTHISDFSDFSDF
+        setNameserver( Internets.localHostAddress( ) );
       }
     } );
   }
@@ -37,37 +38,34 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
   @Override
   public void fire( DescribeNetworksResponseType reply ) {
     for ( Network net : Networks.getInstance( ).listValues( ) ) {
-      net.trim( reply.getAddrsPerNet( ) );
+      net.trim( reply.getAddrIndexMax( ), reply.getAddrIndexMax( ) );
     }
     this.getSubject( ).getState( ).setAddressCapacity( reply.getAddrsPerNet( ) );
     this.getSubject( ).getState( ).setMode( reply.getUseVlans( ) );
     for ( NetworkInfoType netInfo : reply.getActiveNetworks( ) ) {
-      AccountFullName accountFn = Accounts.lookupAccountFullNameById( netInfo.getAccountId( ) );
-      Network net = null;
       try {
-        net = Networks.getInstance( ).lookup( netInfo.getAccountId( ) + "-" + netInfo.getNetworkName( ) );
-        if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
-          NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), accountFn, netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
-          netToken = net.addTokenIfAbsent( netToken );
-        }
-      } catch ( NoSuchElementException e1 ) {
+        UserFullName userFn = UserFullName.getInstance( netInfo.getUserId( ) );
+        Network net = null;
         try {
-          if( accountFn != null ) {
-            net = new Network( accountFn, netInfo.getNetworkName( ), netInfo.getUuid( ) );
-            if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
-              NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), accountFn, netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
-              netToken = net.addTokenIfAbsent( netToken );
-            }
+          net = Networks.getInstance( ).lookup( netInfo.getUserId( ) + "-" + netInfo.getNetworkName( ) );
+          if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
+            NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), userFn, netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
+            netToken = net.addTokenIfAbsent( netToken );
           }
-        } catch ( Exception ex ) {
-          LOG.error( ex );
+        } catch ( NoSuchElementException e1 ) {
+          net = new Network( userFn, netInfo.getNetworkName( ), netInfo.getUuid( ) );
+          if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
+            NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), userFn, netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
+            netToken = net.addTokenIfAbsent( netToken );
+          }
         }
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
       }
     }
     
     for ( Network net : Networks.getInstance( ).listValues( Networks.State.ACTIVE ) ) {
-      net.trim( reply.getAddrsPerNet( ) );
-//TODO: update the network index/token state here.  ultimately needed for failure modes.
+      net.trim( reply.getAddrIndexMax( ), reply.getAddrIndexMax( ) );
     }
     List<Cluster> ccList = Clusters.getInstance( ).listValues( );
     int ccNum = ccList.size( );

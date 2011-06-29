@@ -83,7 +83,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Notifications;
@@ -183,7 +183,7 @@ public class X509Download extends HttpServlet {
       x509 = Certs.generateCertificate( keyPair, u.getName( ) );
       x509.checkValidity( );
       u.addCertificate( x509 );
-      cloudCert = SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( );
+      cloudCert = SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( );
     } catch ( Exception e ) {
       LOG.fatal( e, e );
       throw e;

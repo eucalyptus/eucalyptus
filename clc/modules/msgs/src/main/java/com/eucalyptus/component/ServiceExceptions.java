@@ -93,11 +93,19 @@ public class ServiceExceptions {
    * @return true if the error is fatal and the transition should be aborted
    */
   public static final boolean filterExceptions( final ServiceConfiguration parent, final Throwable ex, final Predicate<Throwable> failureAction ) {
-    LOG.error( "Transition failed on " + parent.lookupComponent( ).getName( ) + " due to " + ex.toString( ), ex );
     if ( ex instanceof CheckException ) {//go through all the exceptions and look for things with Severity greater than or equal to ERROR
       CheckException checkExHead = ( CheckException ) ex;
+      LOG.error( "Transition failed on " + parent.lookupComponent( ).getName( ) + " " + checkExHead.getSeverity( ) + " due to " + ex.toString( ), ex );
       for ( CheckException checkEx : checkExHead ) {
         LifecycleEvents.fireExceptionEvent( parent, checkEx.getSeverity( ), checkEx );
+      }
+      if( checkExHead.getSeverity( ).ordinal( ) >= Severity.ERROR.ordinal( ) ) {
+        try {
+          failureAction.apply( ex );
+        } catch ( Exception ex1 ) {
+          LOG.error( ex1, ex1 );
+        }
+        return true;
       }
       for ( CheckException checkEx : checkExHead ) {
         if( checkEx.getSeverity( ).ordinal( ) >= Severity.ERROR.ordinal( ) ) {
@@ -111,6 +119,7 @@ public class ServiceExceptions {
       }
       return false;
     } else {//treat generic exceptions as always being Severity.ERROR
+      LOG.error( "Transition failed on " + parent.lookupComponent( ).getName( ) + " due to " + ex.toString( ), ex );
       LifecycleEvents.fireExceptionEvent( parent, Severity.ERROR, ex );
       try {
         failureAction.apply( ex );

@@ -34,8 +34,8 @@ import inspect
 import os
 import sys
 import boto.utils
-import boto.exception
 import eucadmin.configfile
+from boto.roboto.awsqueryservice import NoCredentialsError
 
 import bdb
 import traceback
@@ -87,6 +87,9 @@ class EucaConf(object):
         self.config = None
         self.specified_options = {}
         self.parser = optparse.OptionParser()
+        self.parser.add_option('--initialize', action='store_true',
+                               dest='initialize', default=False,
+                               help='Do one-time initialize of CLC')
         self.parser.add_option('--heartbeat', action='store', type='string',
                                help='get heartbeat data for <host>')
         self.parser.add_option('--synckey', action='store_true',
@@ -122,6 +125,17 @@ class EucaConf(object):
                                action='append', type='string',
                                dest='dereg_nodes', metavar='"host host..."',
                                help='remove nodes from EUCALYPTUS')
+        self.parser.add_option('--register-cloud',
+                               action='callback',  callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name',
+                                                           'host_name']},
+                               help='add new clc to EUCALYPTUS')
+        self.parser.add_option('--deregister-cloud',
+                               action='callback', callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name']},
+                               help='remove clc from EUCALYPTUS')
         self.parser.add_option('--register-cluster',
                                action='callback',  callback=self.reg_callback,
                                callback_kwargs={'needs' : ['partition_name',
@@ -171,6 +185,9 @@ class EucaConf(object):
         self.parser.add_option('--list-walruses', action='store_true',
                                dest='list_walruses', default=False,
                                help='list registered walrus(es)')
+        self.parser.add_option('--list-clouds', action='store_true',
+                               dest='list_clouds', default=False,
+                               help='list registered CLCs')
         self.parser.add_option('--list-clusters', action='store_true',
                                dest='list_clusters', default=False,
                                help='list registered CCs')
@@ -261,10 +278,11 @@ class EucaConf(object):
                                         'vmwarebroker'],
                                dest='disable_whats', metavar='<service>',
                                help='disable service at next start}')
-        self.parser.add_option('--check {nc|cc|cloud|sc|walrus|vmware|vmwarebroker}',
+        self.parser.add_option('--check {common|vmware}',
                                action='store', type='choice',
-                               choices=['nc', 'cc', 'cloud', 'sc',
-                                        'walrus', 'vmware', 'vmwarebroker'],
+                               choices=['common', 'vmware', 'cc',
+                                        'cloud', 'nc', 'sc', 'walrus',
+                                        'vmware', 'vmwarebroker'],
                                dest='check_what', metavar='<service>',
                                help='pre-flight checks')
         self.parser.add_option('--debug', action='store_true',
@@ -417,6 +435,13 @@ class EucaConf(object):
             if name.startswith('do_') and inspect.ismethod(method):
                 method()
 
+    def do_initialize(self):
+        if self.options.initialize:
+            cls = boto.utils.find_class('eucadmin.initialize',
+                                        'Initialize')
+            obj = cls(self.config)
+            sys.exit(obj.main())
+
     def do_get_credentials(self):
         if self.options.get_credentials:
             cls = boto.utils.find_class('eucadmin.getcredentials',
@@ -434,13 +459,22 @@ class EucaConf(object):
             req.main()
 
     def do_check(self):
-        if self.options.check_what:
-            if self.options.check_what not in CheckableServices:
-                print 'check requires one of %s' % CheckableServices
-                sys.exit(1)
+        if self.options.check_what == 'common':
             cls = boto.utils.find_class('eucadmin.check', 'Check')
             req = cls(self.config, self.options.check_what)
-            req.main()
+            req.common()
+            if len(req.messages) > 0:
+                print 'The following messages should be reviewed:'
+                for msg in req.messages:
+                    print '\t%s' % msg
+            sys.exit(req.status)
+        elif self.options.check_what == 'vmware':
+            print 'do vmware check here'
+        elif self.options.check_what in CheckableServices:
+            # for backwards compat, do a common check for old check options
+            cls = boto.utils.find_class('eucadmin.check', 'Check')
+            req = cls(self.config, self.options.check_what)
+            req.common()
             if len(req.messages) > 0:
                 print 'The following messages should be reviewed:'
                 for msg in req.messages:
@@ -448,24 +482,14 @@ class EucaConf(object):
             sys.exit(req.status)
 
     def do_enable(self):
-        if (self.options.enable_whats):
-            for enable_what in self.options.enable_whats:
-                if enable_what not in EnableableServices:
-                    print 'enable requires one of %s' % EnableableServices
-                    sys.exit(1)
-                cls = boto.utils.find_class('eucadmin.enable', 'Enable')
-                req = cls(self.config, enable_what, True)
-                req.main()
+        if self.options.enable_whats:
+            # This is now a no-op.  Just return success.
+            sys.exit(0)
 
     def do_disable(self):
-        if (self.options.disable_whats):
-            for disable_what in self.options.disable_whats:
-                if disable_what not in EnableableServices:
-                    print 'disable requires one of %s' % EnableableServices
-                    sys.exit(1)
-                cls = boto.utils.find_class('eucadmin.enable', 'Enable')
-                req = cls(self.config, disable_what, False)
-                req.main()
+        if self.options.disable_whats:
+            # This is now a no-op.  Just return success.
+            sys.exit(0)
 
     def do_heartbeat(self):
         if self.options.heartbeat:
@@ -477,7 +501,14 @@ class EucaConf(object):
         if getattr(self.options, option_name):
             cls = boto.utils.find_class(module_name, class_name)
             req = cls(debug=self.debug)
-            data = req.main()
+            try:
+                data = req.main()
+            except NoCredentialsError:
+                url = 'http://localhost:8773/services/Eucalyptus'
+                ak, sk = self._get_accesskey_secretkey(url)
+                req = cls(aws_access_key_id=ak, aws_secret_access_key=sk,
+                          url=url, debug=self.debug)
+                data = req.main()
             req.cli_formatter(data)
 
     def do_list_nodes(self):
@@ -489,6 +520,11 @@ class EucaConf(object):
         self._do_list('list_walruses',
                       'eucadmin.describewalruses',
                       'DescribeWalruses')
+
+    def do_list_clouds(self):
+        self._do_list('list_clouds',
+                      'eucadmin.describeclouds',
+                      'DescribeClouds')
 
     def do_list_clusters(self):
         self._do_list('list_clusters',
@@ -515,6 +551,17 @@ class EucaConf(object):
                       'eucadmin.describeservices',
                       'DescribeServices')
 
+    def _get_accesskey_secretkey(self, url):
+        print 'No credentials found, attempting local authentication'
+        gc_cls = boto.utils.find_class('eucadmin.getcredentials',
+                                       'GetCredentials')
+        obj = gc_cls(euca_home=self.config['EUCALYPTUS'],
+                     account=self.options.cred_account,
+                     user=self.options.cred_user,
+                     zipfile='notused')
+        s = obj.get_accesskey_secretkey()
+        return s.split('\t')
+        
     def _do_register(self, module_name, class_name, port_option):
         partition = self.options.partition_name
         component_name = self.options.component_name
@@ -527,9 +574,32 @@ class EucaConf(object):
             port = None
         cls = boto.utils.find_class(module_name, class_name)
         req = cls(debug=self.debug)
-        data = req.main(partition=partition, name=component_name,
-                        port=port, host=host)
+        try:
+            data = req.main(partition=partition, name=component_name,
+                            port=port, host=host)
+        except NoCredentialsError:
+            url = 'http://localhost:8773/services/Eucalyptus'
+            ak, sk = self._get_accesskey_secretkey(url)
+            req = cls(aws_access_key_id=ak, aws_secret_access_key=sk,
+                      url=url, debug=self.debug)
+            data = req.main(partition=partition, name=component_name,
+                            port=port, host=host)
         req.cli_formatter(data)
+
+    def do_register_cloud(self):
+        if hasattr(self.options, 'register_cloud'):
+            self._do_register('eucadmin.registercloud',
+                              'RegisterCloud', None)
+            if not self.options.no_sync:
+                path1 = os.path.join(self.config['EUCALYPTUS'],
+                                     'var/lib/eucalyptus/keys')
+                path2 = os.path.join(path1, self.options.partition_name)
+                cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
+                req = cls([path1, path2], path1,
+                          self.options.host_name, ['euca.p12'],
+                          use_rsync=(not self.options.no_rsync),
+                          use_scp=(not self.options.no_scp))
+                req.sync()
 
     def do_register_cluster(self):
         if hasattr(self.options, 'register_cluster'):
@@ -591,9 +661,22 @@ class EucaConf(object):
         if hasattr(self.options, option_name):
             cls = boto.utils.find_class(module_name, class_name)
             req = cls(debug=self.debug)
-            data = req.main(partition=self.options.partition_name,
-                            name=self.options.component_name)
+            try:
+                data = req.main(partition=self.options.partition_name,
+                                name=self.options.component_name)
+            except NoCredentialsError:
+                url = 'http://localhost:8773/services/Eucalyptus'
+                ak, sk = self._get_accesskey_secretkey(url)
+                req = cls(aws_access_key_id=ak, aws_secret_access_key=sk,
+                          url=url, debug=self.debug)
+                data = req.main(partition=self.options.partition_name,
+                                name=self.options.component_name)
             req.cli_formatter(data)
+
+    def do_deregister_cloud(self):
+        self._do_deregister('deregister_cloud',
+                            'eucadmin.deregistercloud',
+                            'DeregisterCloud')
 
     def do_deregister_cluster(self):
         self._do_deregister('deregister_cluster',

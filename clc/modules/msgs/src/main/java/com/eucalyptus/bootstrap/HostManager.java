@@ -64,6 +64,7 @@
 package com.eucalyptus.bootstrap;
 
 import java.net.InetAddress;
+import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -88,7 +89,11 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Host;
 import com.eucalyptus.component.Hosts;
+import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -185,18 +190,18 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   }
   
   private static JChannel buildChannel( ) {
-    final JChannel channel = new JChannel( false );
-    channel.setName( Internets.localhostIdentifier( ) );
-    ProtocolStack stack = new ProtocolStack( );
-    channel.setProtocolStack( stack );
-    stack.addProtocols( Protocols.getMembershipProtocolStack( ) );
     try {
+      final JChannel channel = new JChannel( false );
+      channel.setName( Internets.localhostIdentifier( ) );
+      ProtocolStack stack = new ProtocolStack( );
+      channel.setProtocolStack( stack );
+      stack.addProtocols( Protocols.getMembershipProtocolStack( ) );
       stack.init( );
+      return channel;
     } catch ( Exception ex ) {
       LOG.fatal( ex, ex );
-      System.exit( 1 );
+      throw new RuntimeException( ex );
     }
-    return channel;
   }
   
   @Override
@@ -289,6 +294,20 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
             try {
               for ( final Address addr : view.getMembers( ) ) {
                 if ( ( HostManager.this.membershipChannel.getAddress( ) != null ) && ( !HostManager.this.membershipChannel.getAddress( ).equals( addr ) ) ) {
+//                  try {
+//                    Host host = Hosts.getHostInstance( addr );
+//                    for( InetAddress hostBindAddr : host.getHostAddresses( ) ) {
+//                      try {
+//                        ServiceConfiguration config = ServiceBuilders.lookup( Eucalyptus.class ).lookupByHost( hostBindAddr.getHostAddress( ) );
+//                      } catch ( ServiceRegistrationException ex ) {
+//                        LOG.debug( ex );
+//                      }
+//                      
+//                    }
+//                  } catch ( NoSuchElementException ex1 ) {
+//                    LOG.debug( ex1 );
+//                  }
+                  
                   Host localHost = Hosts.localHost( );
                   LOG.info( "Broadcasting local address info for viewId=" + view.getViewId( ) + " to: " + addr + " with host info: " + localHost );
                   try {

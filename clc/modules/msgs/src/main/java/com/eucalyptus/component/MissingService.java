@@ -70,7 +70,7 @@ import java.util.Collection;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.async.Request;
@@ -100,12 +100,12 @@ public class MissingService extends AbstractService implements Service {
   
   @Override
   public KeyPair getKeys( ) {
-    return SystemCredentialProvider.getCredentialProvider( this.serviceConfiguration.getComponentId( ) ).getKeyPair( );
+    return SystemCredentials.getCredentialProvider( this.serviceConfiguration.getComponentId( ) ).getKeyPair( );
   }
   
   @Override
   public X509Certificate getCertificate( ) {
-    return SystemCredentialProvider.getCredentialProvider( this.serviceConfiguration.getComponentId( ) ).getCertificate( );
+    return SystemCredentials.getCredentialProvider( this.serviceConfiguration.getComponentId( ) ).getCertificate( );
   }
   
   /**

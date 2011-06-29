@@ -182,9 +182,9 @@ public class ClusterState {
     this.clusterName = clusterName;
   }
   
-  public NetworkToken extantAllocation( String accountId, String networkName, String networkUuid, int vlan ) throws NetworkAlreadyExistsException {
-    AccountFullName accountFn = Accounts.lookupAccountFullNameById( accountId );
-    NetworkToken netToken = new NetworkToken( this.clusterName, accountFn, networkName, networkUuid, vlan );
+  public NetworkToken extantAllocation( String userId, String networkName, String networkUuid, int vlan ) throws NetworkAlreadyExistsException {
+    UserFullName userFn = UserFullName.getInstance( userId );
+    NetworkToken netToken = new NetworkToken( this.clusterName, userFn, networkName, networkUuid, vlan );
     if ( !ClusterState.availableVlans.remove( vlan ) ) {
       throw new NetworkAlreadyExistsException( );
     }

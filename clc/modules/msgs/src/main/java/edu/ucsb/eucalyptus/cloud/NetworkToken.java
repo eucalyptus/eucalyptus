@@ -66,6 +66,7 @@ package edu.ucsb.eucalyptus.cloud;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.UserFullName;
 
 public class NetworkToken implements Comparable {
   private final String networkUuid;
@@ -83,15 +84,15 @@ public class NetworkToken implements Comparable {
   private final Integer         vlan;
   private NavigableSet<Integer> indexes = new ConcurrentSkipListSet<Integer>( );
   private final String          name;
-  private final AccountFullName accountFullName;
+  private final UserFullName userFullName;
   
-  public NetworkToken( final String cluster, final AccountFullName accountFullName, final String networkName, final String networkUuid, final int vlan ) {
+  public NetworkToken( final String cluster, final UserFullName userFullName, final String networkName, final String networkUuid, final int vlan ) {
     this.networkName = networkName;
     this.networkUuid = networkUuid;
     this.cluster = cluster;
     this.vlan = vlan;
-    this.accountFullName = accountFullName;
-    this.name = this.accountFullName.getAccountNumber( ) + "-" + this.networkName;
+    this.userFullName = userFullName;
+    this.name = this.userFullName.getAccountNumber( ) + "-" + this.networkName;
   }
   
   public String getCluster( ) {
@@ -102,12 +103,8 @@ public class NetworkToken implements Comparable {
     return this.vlan;
   }
   
-  public String getAccountNumber( ) {
-    return this.accountFullName.getAccountNumber( );
-  }
-  
-  public AccountFullName getAccountFullName( ) {
-    return this.accountFullName;
+  public UserFullName getUserFullName( ) {
+    return this.userFullName;
   }
 
   public String getName( ) {
@@ -127,7 +124,7 @@ public class NetworkToken implements Comparable {
     
     if ( !this.cluster.equals( that.cluster ) ) return false;
     if ( !this.networkName.equals( that.networkName ) ) return false;
-    if ( !this.accountFullName.getAccountNumber( ).equals( that.accountFullName.getAccountNumber( ) ) ) return false;
+    if ( !this.userFullName.getUserId( ).equals( that.userFullName.getUserId( ) ) ) return false;
     
     return true;
   }
@@ -138,7 +135,7 @@ public class NetworkToken implements Comparable {
     
     result = networkName.hashCode( );
     result = 31 * result + cluster.hashCode( );
-    result = 31 * result + accountFullName.getAccountNumber( ).hashCode( );
+    result = 31 * result + userFullName.getUserId( ).hashCode( );
     return result;
   }
   

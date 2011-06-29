@@ -211,7 +211,11 @@ public class Emis {
     private VmTypeInfo createVmTypeInfo( VmType vmType, Long imgSize ) throws EucalyptusCloudException {
       VmTypeInfo vmTypeInfo = null;
       if ( this.getMachine( ) instanceof StaticDiskImage ) {
-        vmTypeInfo = VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( vmType );
+        if( Image.Platform.windows.equals( this.getMachine( ).getPlatform( ) ) ) {
+          vmTypeInfo = VmTypes.InstanceStoreWindowsVmTypeInfoMapper.INSTANCE.apply( vmType );
+        } else {
+          vmTypeInfo = VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( vmType );
+        }
         vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), ( ( StaticDiskImage ) this.getMachine( ) ).getManifestLocation( ), imgSize );
       } else if ( this.getMachine( ) instanceof BlockStorageImageInfo ) {
         vmTypeInfo = VmTypes.BlockStorageVmTypeInfoMapper.INSTANCE.apply( vmType );

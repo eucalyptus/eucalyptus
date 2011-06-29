@@ -71,7 +71,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
@@ -93,8 +93,6 @@ public class BasicService extends AbstractService implements Service {
     super( );
     this.serviceConfiguration = serviceConfiguration;
     this.stateMachine = new ServiceState( this.serviceConfiguration );
-    ListenerRegistry.getInstance( ).register( ClockTick.class, this );
-    ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
   
   static class Broken extends BasicService {
@@ -125,12 +123,12 @@ public class BasicService extends AbstractService implements Service {
   
   @Override
   public KeyPair getKeys( ) {
-    return SystemCredentialProvider.getCredentialProvider( this.serviceConfiguration.getComponentId( ) ).getKeyPair( );
+    return SystemCredentials.getCredentialProvider( this.serviceConfiguration.getComponentId( ) ).getKeyPair( );
   }
   
   @Override
   public X509Certificate getCertificate( ) {
-    return SystemCredentialProvider.getCredentialProvider( this.serviceConfiguration.getComponentId( ) ).getCertificate( );
+    return SystemCredentials.getCredentialProvider( this.serviceConfiguration.getComponentId( ) ).getCertificate( );
   }
   
   /**

@@ -1,7 +1,9 @@
 package com.eucalyptus.address;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -17,10 +19,16 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   @Override
   public List<Address> allocateSystemAddresses( String cluster, int count ) throws NotEnoughResourcesAvailable {
     List<Address> addressList = Lists.newArrayList( );
+    String partition;
+    try {
+      partition = Clusters.getInstance( ).lookup( cluster ).getPartition( );
+    } catch ( NoSuchElementException ex ) {
+      partition = cluster;//TODO:GRZE:RELEASE:OMGFIXME partition/cluster handling
+    }
     if ( Addresses.getInstance( ).listDisabledValues( ).size( ) < count ) throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
     for ( Address addr : Addresses.getInstance( ).listDisabledValues( ) ) {
       try {
-        if ( cluster.equals( addr.getCluster( ) ) && addressList.add( addr.pendingAssignment( ) ) && --count == 0 ) break;
+        if ( partition.equals( addr.getPartition( ) ) && addressList.add( addr.pendingAssignment( ) ) && --count == 0 ) break;
       } catch ( IllegalStateException e ) {
         LOG.trace( e , e );
       }
@@ -44,7 +52,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
       public void fire( BaseMessage response ) {
         vm.updatePublicAddress( addr.getName( ) );
       }
-    }).dispatch( addr.getCluster( ) );
+    }).dispatch( addr.getPartition( ) );
   }
     
   @Override
