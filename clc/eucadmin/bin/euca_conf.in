@@ -471,7 +471,15 @@ class EucaConf(object):
         elif self.options.check_what == 'vmware':
             print 'do vmware check here'
         elif self.options.check_what in CheckableServices:
-            sys.exit(0)
+            # for backwards compat, do a common check for old check options
+            cls = boto.utils.find_class('eucadmin.check', 'Check')
+            req = cls(self.config, self.options.check_what)
+            req.common()
+            if len(req.messages) > 0:
+                print 'The following messages should be reviewed:'
+                for msg in req.messages:
+                    print '\t%s' % msg
+            sys.exit(req.status)
 
     def do_enable(self):
         if self.options.enable_whats:
