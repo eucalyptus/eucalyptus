@@ -147,6 +147,8 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         // TODO: Perhaps we should raise an appropriate exception.
         if (!upgradeAuth()) {
             return;
+        } else if (!upgradeKeyPairs()) {
+            return;
         } else if (!upgradeNetwork()) {
             return;
         } else if (!upgradeWalrus()) {
@@ -156,8 +158,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         }
         
         buildEntityMap();
-        def altEntityMap = [ metadata_keypair:'eucalyptus_general',
-                vm_types:'eucalyptus_general' ];
+        def altEntityMap = [ vm_types:'eucalyptus_general' ];
 
 
         Set<String> entityKeys = entityMap.keySet();
@@ -344,8 +345,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 
     private void buildEntityMap() {
                 // Note that this maps new -> old
-        def tableMap = [ metadata_keypairs:'metadata_keypair',
-                cloud_vm_types:'vm_types' ];
+        def tableMap = [ cloud_vm_types:'vm_types' ];
         for (Class entity : entities) {
             if (entity.isAnnotationPresent(Table.class)) {
                 // This only handles tables whose names have not changed.
@@ -517,6 +517,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 v.setMappedState(vol.state);
                 v.setLocalDevice(vol.localdevice);
                 v.setRemoteDevice(vol.remotedevice);
+                println "Adding volume ${ vol.displayname } for ${ it.auth_user_name }"
                 dbVol.add(v);
                 dbVol.commit();
             }
@@ -525,11 +526,26 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 def snap_meta = stor_conn.firstRow("""SELECT * FROM Snapshots WHERE snapshot_name=${ snap.displayname }""");
                 def scName = (snap_meta == null) ? null :  snap_meta.sc_name;
                 Snapshot s = new Snapshot( ufn, snap.displayname, snap.parentvolume, scName, snap.cluster);
+                println "Adding snapshot ${ snap.displayname } for ${ it.auth_user_name }"
                 dbSnap.add(s);
                 dbSnap.commit();
             }
         }
         return true;
+    }
+
+    public boolean upgradeKeyPairs() {
+        def gen_conn = StandalonePersistence.getConnection("eucalyptus_general");
+        gen_conn.rows('SELECT * FROM metadata_keypair').each{
+            EntityWrapper<SshKeyPair> dbkp = EntityWrapper.get(SshKeyPair.class);
+            UserFullName ufn = UserFullName.getInstance(userIdMap.get(it.metadata_user_name));
+            SshKeyPair kp = new SshKeyPair( ufn, 
+                                            it.metadata_keypair_user_keyname,
+                                            it.metadata_keypair_public_key,
+                                            it.metadata_keypair_finger_print );
+            dbkp.add(kp);
+            dbkp.commit();
+        }
     }
 
     public void initMetaClass(obj, theClass) {
@@ -668,13 +684,11 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         gen_conn.rows('SELECT * FROM metadata_network_group').each {
             EntityWrapper<NetworkRulesGroup> dbGen = EntityWrapper.get(NetworkRulesGroup.class);
             try {
-                def accountName = safeUserMap.get(it.metadata_user_name);
-                def account = Accounts.lookupAccountByName(accountName);
-                AccountFullName eucaAfn = new AccountFullName(account);
-                def rulesGroup = new NetworkRulesGroup(eucaAfn, "${ accountName }_${ it.metadata_display_name }",
+                UserFullName ufn = UserFullName.getInstance(userIdMap.get(it.metadata_user_name));
+                def rulesGroup = new NetworkRulesGroup(ufn, "${ it.metadata_user_name }_${ it.metadata_display_name }",
                                                        it.metadata_network_group_description);
                 initMetaClass(rulesGroup, rulesGroup.class);
-                println "Adding network rules for ${accountName}/${it.metadata_display_name}";
+                println "Adding network rules for ${ it.metadata_user_name }/${it.metadata_display_name}";
                 gen_conn.rows("""SELECT r.* 
                                  FROM metadata_network_group_has_rules 
                                  LEFT OUTER JOIN metadata_network_rule r 
@@ -763,7 +777,6 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     static {
         // This is the list of entities which do not need special handling.
 
-        entities.add(SshKeyPair.class);
         entities.add(VmType.class);
 
         // eucalyptus_dns
