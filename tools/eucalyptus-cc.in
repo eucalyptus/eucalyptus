@@ -238,7 +238,6 @@ do_fullclean() {
 
         dopkill=0
         for pid in $pids ; do
-            echo $pid
             timeout=5
             while [ $timeout -gt 0 ]; do
                 if ps $pid > /dev/null 2>&1 ; then
@@ -293,7 +292,6 @@ do_stop() {
 
         dopkill=0
         for pid in $pids ; do
-            echo $pid
             timeout=5
             while [ $timeout -gt 0 ]; do
                 if ps $pid > /dev/null 2>&1 ; then
