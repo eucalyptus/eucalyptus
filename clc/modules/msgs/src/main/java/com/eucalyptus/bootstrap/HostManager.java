@@ -299,7 +299,7 @@ public class HostManager {
     }
     
     private boolean setView( View oldView, View newView ) {
-      return this.currentView.compareAndSet( oldView, newView, true, newView.getMembers( ).size( ) == 1 && Bootstrap.isCloudController( ) );//handle the bootstrap case correctly
+      return this.currentView.compareAndSet( oldView, newView, true, !( newView.getMembers( ).size( ) == 1 && Bootstrap.isCloudController( ) ) );//handle the bootstrap case correctly
     }
     
     public void viewAccepted( View newView ) {
