@@ -121,6 +121,10 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     return this.hostAddresses;
   }
   
+  public InetAddress getHostAddress( ) {
+    return this.hostAddresses.get( 0 );
+  }
+  
   public ViewId getViewId( ) {
     return this.viewId;
   }

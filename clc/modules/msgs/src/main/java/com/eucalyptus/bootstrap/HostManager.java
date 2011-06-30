@@ -63,7 +63,10 @@
 
 package com.eucalyptus.bootstrap;
 
+import java.io.Serializable;
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -100,74 +103,49 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.util.Internets;
+import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 
-public class HostManager implements Receiver, ExtendedMembershipListener, EventListener {
-  private static Logger                       LOG         = Logger.getLogger( HostManager.class );
-  private final JChannel                      membershipChannel;
-  private final PhysicalAddress               physicalAddress;
-  private final String                        membershipGroupName;
-  private final AtomicMarkableReference<View> currentView = new AtomicMarkableReference<View>( null, true );
-  public static HostManager                   singleton;
-  
-  static class HostMembershipWorker implements Runnable {
-    private final AtomicBoolean               running  = new AtomicBoolean( true );
-    private final BlockingQueue<Runnable>     msgQueue = new LinkedBlockingQueue<Runnable>( );
-    private final ExecutorService             executor = Executors.newFixedThreadPool( 1 );
-    private static final HostMembershipWorker worker   = new HostMembershipWorker( );
-    
-    private HostMembershipWorker( ) {
-      this.executor.submit( this );
-    }
-    
-    public static void submit( Runnable run ) {
-      worker.msgQueue.add( run );
-    }
-    
-    @Override
-    public void run( ) {
-      while ( this.running.get( ) ) {
-        Runnable event;
-        try {
-          if ( ( event = this.msgQueue.poll( 10000, TimeUnit.MILLISECONDS ) ) != null ) {
-            event.run( );
-          } else {
-            HostManager.singleton.broadcastAddresses( );
-          }
-        } catch ( InterruptedException e1 ) {
-          Thread.currentThread( ).interrupt( );
-          return;
-        } catch ( final Throwable e ) {
-          LOG.error( e, e );
-        }
-      }
-      LOG.debug( "Shutting down component registration request queue: " + Thread.currentThread( ).getName( ) );
-    }
-  }
+public class HostManager {
+  private static Logger         LOG = Logger.getLogger( HostManager.class );
+  private final JChannel        membershipChannel;
+  private final PhysicalAddress physicalAddress;
+  private final String          membershipGroupName;
+  private final CurrentView     view;
+  private HostStateListener     stateListener;
+  private static HostManager    singleton;
+  private final Predicate<Host> dbFilter;
   
   private HostManager( ) {
+    this.view = new CurrentView( );
     this.membershipChannel = HostManager.buildChannel( );
-    this.membershipChannel.setReceiver( this );
-    this.membershipGroupName = SystemIds.membershipGroupName( );//TODO:GRZE:RELEASE make cached
+    this.stateListener = Bootstrap.isCloudController( )
+      ? new CloudControllerHostStateHandler( )
+      : new RemoteHostStateListener( );
+    this.membershipChannel.setReceiver( this.stateListener );
+    //TODO:GRZE:set socket factory for crypto
+    this.membershipGroupName = SystemIds.membershipGroupName( );
     try {
       LOG.info( "Starting membership channel... " );
       this.membershipChannel.connect( this.membershipGroupName );
       this.physicalAddress = ( PhysicalAddress ) this.membershipChannel.downcall( new org.jgroups.Event( org.jgroups.Event.GET_PHYSICAL_ADDRESS,
                                                                                                          this.membershipChannel.getAddress( ) ) );
       LOG.info( "Started membership channel: " + this.membershipGroupName );
+      this.dbFilter = new Predicate<Host>( ) {
+        
+        @Override
+        public boolean apply( Host arg0 ) {
+          return arg0.hasDatabase( ) || arg0.getGroupsId( ).equals( HostManager.this.membershipChannel.getLocalAddress( ) );
+        }
+      };
+      ListenerRegistry.getInstance( ).register( Hertz.class, this.stateListener );
     } catch ( ChannelException ex ) {
       LOG.fatal( ex, ex );
       throw BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
     }
-    ListenerRegistry.getInstance( ).register( ClockTick.class, this );
-  }
-  
-  public static View getCurrentView( ) {
-    return singleton.currentView.getReference( );
-  }
-  
-  public static Boolean isReady( ) {
-    return !singleton.currentView.isMarked( );
   }
   
   public static HostManager getInstance( ) {
@@ -181,6 +159,179 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
           singleton = new HostManager( );
           return singleton;
         }
+      }
+    }
+  }
+  
+  public static View getCurrentView( ) {
+    return singleton.view.getCurrentView( );
+  }
+  
+  public static Boolean isReady( ) {
+    return singleton.view.isReady( );
+  }
+  
+  abstract class HostStateListener implements Receiver, ExtendedMembershipListener, EventListener {
+    
+    @Override
+    public final byte[] getState( ) {
+      return null;
+    }
+    
+    @Override
+    public final void setState( byte[] state ) {}
+    
+    @Override
+    public final void suspect( Address suspected_mbr ) {
+      LOG.debug( suspected_mbr );
+    }
+    
+    @Override
+    public final void block( ) {
+      LOG.debug( this.getClass( ) + ".block()" );
+    }
+    
+    @Override
+    public final void unblock( ) {
+      LOG.debug( this.getClass( ) + ".unblock()" );
+    }
+    
+    @Override
+    public abstract void receive( Message msg );
+    
+    @Override
+    public abstract void fireEvent( Event event );
+    
+    @Override
+    public final void viewAccepted( View new_view ) {
+      HostManager.this.view.viewAccepted( new_view );//this seems dumb at first glance, but the state changing mechanism needs to be separate from the state itself -- they hae diffferent life cycles.
+    }
+    
+    protected boolean setupRemoteCloudServices( InetAddress addr ) {
+      if ( !Internets.testReachability( addr ) || Internets.testLocal( addr ) ) {
+        return false;
+      } else {
+        try {
+          for ( ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
+            if ( compId.isCloudLocal( ) ) {
+              try {
+                Component comp = Components.lookup( compId );
+                ServiceConfiguration config = comp.initRemoteService( addr );
+                if( Component.State.INITIALIZED.ordinal( ) >= config.lookupState( ).ordinal( ) ) {
+                  comp.loadService( config ).get( );
+                }
+              } catch ( Exception ex ) {
+                LOG.error( ex, ex );
+              }
+            }
+            for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
+              stage.updateBootstrapDependencies( );
+            }
+            HostManager.this.view.markReady( );
+          }
+        } catch ( RuntimeException ex ) {
+          LOG.error( ex, ex );
+          throw ex;
+        }
+        return true;
+      }
+    }
+    
+  }
+  
+  private class RemoteHostStateListener extends HostStateListener {
+    @Override
+    public void receive( Message msg ) {
+      LOG.debug( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+      if ( !Bootstrap.isFinished( ) ) {
+        List<Host> dbHosts = ( List<Host> ) msg.getObject( );
+        for ( Host dbHost : dbHosts ) {
+          this.setupRemoteCloudServices( dbHost.getHostAddress( ) );
+        }
+      }//TODO:GRZE: this need to be /more/ dynamic
+    }
+    
+    @Override
+    public void fireEvent( Event event ) {
+      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 10 ) && HostManager.this.membershipChannel.isConnected( ) ) {
+        LOG.debug( "Sending state info: \n\t" + Hosts.localHost( ) );
+        try {
+          HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( Hosts.localHost( ) ) ) );
+        } catch ( ChannelNotConnectedException ex ) {
+          LOG.error( ex, ex );
+        } catch ( ChannelClosedException ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+    }
+    
+  }
+  
+  private class CloudControllerHostStateHandler extends HostStateListener {
+    
+    @Override
+    public void receive( Message msg ) {
+      List<Host> dbHosts = ( List<Host> ) msg.getObject( );
+      for ( Host dbHost : dbHosts ) {
+        this.setupRemoteCloudServices( dbHost.getHostAddress( ) );
+      }
+    }
+    
+    @Override
+    public void fireEvent( Event event ) {
+      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 10 ) && HostManager.this.membershipChannel.isConnected( ) ) {
+        HostManager.this.view.sendState( );
+      }
+    }
+  }
+  
+  class CurrentView {
+    private final AtomicMarkableReference<View> currentView = new AtomicMarkableReference<View>( null, true );
+    
+    public View getCurrentView( ) {
+      boolean[] holder = new boolean[1];
+      View view = currentView.get( holder );
+      if ( holder[0] ) {
+        return null;
+      } else {
+        return view;
+      }
+    }
+    
+    private boolean setView( View oldView, View newView ) {
+      return this.currentView.compareAndSet( oldView, newView, true, newView.getMembers( ).size( ) == 1 && Bootstrap.isCloudController( ) );//handle the bootstrap case correctly
+    }
+    
+    public void viewAccepted( View newView ) {
+      if ( this.setView( null, newView ) ) {
+        LOG.info( "Receiving initial view..." );
+      } else if ( this.setView( this.currentView.getReference( ), newView ) ) {
+        LOG.info( "Receiving view.  Still waiting for database..." );
+      } else {
+        LOG.info( "Receiving view.  Still waiting for database..." );
+        this.currentView.set( newView, true );
+      }
+      LOG.info( "-> view: " + this.currentView.getReference( ) );
+      LOG.info( "-> mark: " + this.currentView.isMarked( ) );
+    }
+    
+    public Boolean isReady( ) {
+      return this.currentView.isMarked( );
+    }
+    
+    void markReady( ) {
+      this.currentView.set( this.currentView.getReference( ), false );
+    }
+    
+    public void sendState( ) {
+      final Iterable<Host> dbs = Iterables.filter( Hosts.list( ), HostManager.this.dbFilter );
+      LOG.debug( "Sending state info: \n" + Joiner.on( "\n -> " ).join( dbs ) );
+      try {
+        HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( dbs ) ) );
+      } catch ( ChannelNotConnectedException ex ) {
+        LOG.error( ex, ex );
+      } catch ( ChannelClosedException ex ) {
+        LOG.error( ex, ex );
       }
     }
   }
@@ -201,160 +352,6 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     } catch ( Exception ex ) {
       LOG.fatal( ex, ex );
       throw new RuntimeException( ex );
-    }
-  }
-  
-  @Override
-  public void receive( Message msg ) {
-    View view = this.currentView.getReference( );
-    if ( view != null ) {
-      LOG.debug( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
-      Host recvHost = ( Host ) msg.getObject( );
-      if ( !Bootstrap.isFinished( ) ) {
-        if ( recvHost.hasDatabase( ) && !Bootstrap.isCloudController( ) ) {
-          for ( InetAddress addr : recvHost.getHostAddresses( ) ) {
-            if ( this.setupCloudLocals( addr ) ) {
-              break;
-            }
-          }
-        } else if ( Bootstrap.isCloudController( ) ) {
-          this.currentView.set( this.currentView.getReference( ), false );
-        }
-      }
-      LOG.debug( "Received updated host information: " + recvHost );
-      Host hostEntry = Hosts.updateHost( view, recvHost );
-      if ( Bootstrap.isCloudController( ) ) {
-        HostManager.this.broadcastAddresses( );
-      }
-    }
-  }
-  
-  private boolean setupCloudLocals( InetAddress addr ) {
-    if ( !Internets.testReachability( addr ) ) {
-      return false;
-    } else {
-      try {
-        for ( ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
-          if ( compId.isCloudLocal( ) ) {
-            try {
-              Component comp = Components.lookup( compId );
-              ServiceConfiguration config = comp.initRemoteService( addr );
-              comp.loadService( config ).get( );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-            }
-          }
-        }
-        for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-          stage.updateBootstrapDependencies( );
-        }
-      } catch ( RuntimeException ex ) {
-        LOG.error( ex, ex );
-        throw ex;
-      } finally {
-        this.currentView.set( this.currentView.getReference( ), false );
-      }
-      return true;
-    }
-  }
-  
-  @Override
-  public byte[] getState( ) {
-    return null;
-  }
-  
-  @Override
-  public void setState( byte[] state ) {}
-  
-  @Override
-  public void viewAccepted( final View newView ) {
-    if ( this.currentView.compareAndSet( null, newView, true, !Bootstrap.isCloudController( ) ) ) {
-      LOG.info( "Receiving initial view..." );
-    } else if ( this.currentView.compareAndSet( this.currentView.getReference( ), newView, true, true ) ) {
-      LOG.info( "Receiving view.  Still waiting for database..." );
-    } else {
-      this.currentView.set( newView, false );
-    }
-    LOG.info( "-> view: " + this.currentView.getReference( ) );
-    LOG.info( "-> mark: " + this.currentView.isMarked( ) );
-    if ( !Bootstrap.isCloudController( ) ) {
-      HostManager.this.broadcastAddresses( );
-    }
-  }
-  
-  private void broadcastAddresses( ) {
-    final View view = this.currentView.getReference( );
-    if ( view == null ) {
-      return;
-    } else {
-      HostMembershipWorker.submit( new Runnable( ) {
-        @Override
-        public void run( ) {
-          for ( int i = 0; i < 5; i++ ) {
-            try {
-              for ( final Address addr : view.getMembers( ) ) {
-                if ( ( HostManager.this.membershipChannel.getAddress( ) != null ) && ( !HostManager.this.membershipChannel.getAddress( ).equals( addr ) ) ) {
-//                  try {
-//                    Host host = Hosts.getHostInstance( addr );
-//                    for( InetAddress hostBindAddr : host.getHostAddresses( ) ) {
-//                      try {
-//                        ServiceConfiguration config = ServiceBuilders.lookup( Eucalyptus.class ).lookupByHost( hostBindAddr.getHostAddress( ) );
-//                      } catch ( ServiceRegistrationException ex ) {
-//                        LOG.debug( ex );
-//                      }
-//                      
-//                    }
-//                  } catch ( NoSuchElementException ex1 ) {
-//                    LOG.debug( ex1 );
-//                  }
-                  
-                  Host localHost = Hosts.localHost( );
-                  LOG.info( "Broadcasting local address info for viewId=" + view.getViewId( ) + " to: " + addr + " with host info: " + localHost );
-                  try {
-                    HostManager.this.membershipChannel.send( new Message( addr, null, localHost ) );
-                  } catch ( ChannelNotConnectedException ex ) {
-                    LOG.error( ex, ex );
-                  } catch ( ChannelClosedException ex ) {
-                    LOG.error( ex, ex );
-                  }
-                }
-              }
-              try {
-                TimeUnit.SECONDS.sleep( 2 );
-              } catch ( InterruptedException ex1 ) {
-                LOG.error( ex1, ex1 );
-                Thread.currentThread( ).interrupt( );
-              }
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-            }
-            
-          }
-        }
-      } );
-    }
-    
-  }
-  
-  @Override
-  public void suspect( Address suspect ) {
-    LOG.debug( "HostManager: suspected failure of " + suspect + " -> " + Hosts.getHostInstance( suspect ) );
-  }
-  
-  @Override
-  public void block( ) {
-    LOG.debug( "HostManager: blocked" );
-  }
-  
-  @Override
-  public void unblock( ) {
-    LOG.debug( "HostManager: unblocked" );
-  }
-  
-  @Override
-  public void fireEvent( Event event ) {
-    if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 5l ) ) {
-      this.broadcastAddresses( );
     }
   }
   

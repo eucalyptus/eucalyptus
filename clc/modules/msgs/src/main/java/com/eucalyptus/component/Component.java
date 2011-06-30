@@ -302,7 +302,7 @@ public class Component implements HasName<Component> {
     }
     ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ),
                                                                   this.getComponentId( ).getPort( ) );
-    this.serviceRegistry.register( config );
+    Service ret = this.serviceRegistry.register( config );
     LOG.debug( "Initializing remote service for host " + addr + " with configuration: " + config );
     return config;
   }
@@ -579,6 +579,15 @@ public class Component implements HasName<Component> {
         ret = service;
         try {
           ret.getStateMachine( ).transition( Component.State.INITIALIZED ).get( );
+          ListenerRegistry.getInstance( ).register( ClockTick.class, ret );
+          ListenerRegistry.getInstance( ).register( Hertz.class, ret );
+          EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_REGISTERED,
+                              Component.this.getName( ),
+                              ( config.isVmLocal( ) || config.isHostLocal( ) )
+                                ? "local"
+                                : "remote",
+                              config.toString( ) ).info( );
+          Logs.exhaust( ).debug( "Registered service " + ret + " for configuration: " + config );
         } catch ( IllegalStateException ex ) {
           LOG.error( ex , ex );
         } catch ( ExecutionException ex ) {
@@ -589,15 +598,6 @@ public class Component implements HasName<Component> {
           LOG.error( ex , ex );
         }
       }
-      ListenerRegistry.getInstance( ).register( ClockTick.class, ret );
-      ListenerRegistry.getInstance( ).register( Hertz.class, ret );
-      EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_REGISTERED,
-                          Component.this.getName( ),
-                          ( config.isVmLocal( ) || config.isHostLocal( ) )
-                            ? "local"
-                            : "remote",
-                          config.toString( ) ).info( );
-      Logs.exhaust( ).debug( "Registered service " + ret + " for configuration: " + config );
       return ret;
     }
     

@@ -95,6 +95,9 @@ public class Hosts {
     }
     throw Exceptions.debug( new NoSuchElementException( "Failed to lookup host for host address: " + addr ) );
   }
+  public static List<Host> list( ) {
+    return Lists.newArrayList( hostMap.values( ) );
+  }
   
   public static Host getHostInstance( Address jgroupsId ) {
     Host h = hostMap.get( jgroupsId );
@@ -108,11 +111,14 @@ public class Hosts {
   
   public static Host localHost( ) {
     if( !hostMap.containsKey( Hosts.localMembershipAddress( ) ) ) {
-      Host temp = new Host( HostManager.getCurrentView( ).getViewId( ) );
-      hostMap.putIfAbsent( Hosts.localMembershipAddress( ), temp );
-      Host local = hostMap.get( Hosts.localMembershipAddress( ) );
-      Mbeans.register( local );
-      return local;
+      Host oldRef = hostMap.putIfAbsent( Hosts.localMembershipAddress( ), new Host( HostManager.getCurrentView( ).getViewId( ) ) );
+      if( oldRef == null ) {
+        Host local = hostMap.get( Hosts.localMembershipAddress( ) );
+        Mbeans.register( local );
+        return local;
+      } else {
+        return oldRef;
+      }
     } else {
       return hostMap.get( Hosts.localMembershipAddress( ) );
     }
