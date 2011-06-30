@@ -164,11 +164,11 @@ public class HostManager {
   }
   
   public static View getCurrentView( ) {
-    return singleton.view.getCurrentView( );
+    return HostManager.getInstance( ).view.getCurrentView( );
   }
   
   public static Boolean isReady( ) {
-    return singleton.view.isReady( );
+    return HostManager.getInstance( ).view.isReady( );
   }
   
   abstract class HostStateListener implements Receiver, ExtendedMembershipListener, EventListener {
@@ -316,7 +316,7 @@ public class HostManager {
     }
     
     public Boolean isReady( ) {
-      return this.currentView.isMarked( );
+      return !this.currentView.isMarked( );
     }
     
     void markReady( ) {
