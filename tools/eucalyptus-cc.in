@@ -233,7 +233,7 @@ do_fullclean() {
         done
         if [ -n "$pids" ]; then
             kill -15 $pids >/dev/null 2>&1
-            pkill -9 -s $sids >/dev/null 2>&1
+            pkill -15 -s $sids >/dev/null 2>&1
         fi
 
         dopkill=0
