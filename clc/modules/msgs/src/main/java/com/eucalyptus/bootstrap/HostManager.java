@@ -298,18 +298,18 @@ public class HostManager {
       }
     }
     
-    private boolean setView( View oldView, View newView ) {
-      return this.currentView.compareAndSet( oldView, newView, true, !( newView.getMembers( ).size( ) == 1 && Bootstrap.isCloudController( ) ) );//handle the bootstrap case correctly
+    private boolean setInitialView( View oldView, View newView ) {
+      return this.currentView.compareAndSet( oldView, newView, true, !Bootstrap.isCloudController( ) );//handle the bootstrap case correctly
     }
     
     public void viewAccepted( View newView ) {
-      if ( this.setView( null, newView ) ) {
+      if ( this.setInitialView( null, newView ) ) {
         LOG.info( "Receiving initial view..." );
-      } else if ( this.setView( this.currentView.getReference( ), newView ) ) {
+      } else if( !this.isReady( ) ) {
         LOG.info( "Receiving view.  Still waiting for database..." );
+        this.setInitialView( this.getCurrentView( ), newView );
       } else {
-        LOG.info( "Receiving view.  Still waiting for database..." );
-        this.currentView.set( newView, true );
+        this.currentView.set( newView, false );
       }
       LOG.info( "-> view: " + this.currentView.getReference( ) );
       LOG.info( "-> mark: " + this.currentView.isMarked( ) );
