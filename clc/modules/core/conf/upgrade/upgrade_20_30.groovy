@@ -589,7 +589,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             
             EntityWrapper<BucketInfo> dbBucket = EntityWrapper.get(BucketInfo.class);
             try {
-                BucketInfo b = new BucketInfo(accountIdMap.get(safeUserMap.get(it.owner_id)),userIdMap.get(it.owner_id),it.bucket_name,it.bucket_creation_date);
+                BucketInfo b = new BucketInfo(accountIdMap.get(safeUserMap.get(it.owner_id)),accountIdMap.get(safeUserMap.get(it.owner_id)),it.bucket_name,it.bucket_creation_date);
                 initMetaClass(b, b.class);
                 b.setLocation(it.bucket_location);
                 b.setGlobalRead(it.global_read);
@@ -608,7 +608,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     GrantInfo grantInfo = new GrantInfo();
                                         initMetaClass(grantInfo, grantInfo.class);
                     
-                    grantInfo.setUserId(userIdMap.get(grant.user_id));
+                    grantInfo.setUserId(accountIdMap.get(safeUserMap.get(grant.user_id)));
                     grantInfo.setGrantGroup(grant.grantGroup);
                     grantInfo.setCanWrite(grant.allow_write);
                     grantInfo.setCanRead(grant.allow_read);
@@ -631,7 +631,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 ObjectInfo objectInfo = new ObjectInfo(it.bucket_name, it.object_key);
                                 initMetaClass(objectInfo, objectInfo.class);
                 objectInfo.setObjectName(it.object_name);
-                objectInfo.setOwnerId(userIdMap.get(it.owner_id));
+                objectInfo.setOwnerId(accountIdMap.get(safeUserMap.get(it.owner_id)));
                 objectInfo.setGlobalRead(it.global_read);
                 objectInfo.setGlobalWrite(it.global_write);
                 objectInfo.setGlobalReadACP(it.global_read_acp);
@@ -651,7 +651,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     println "--> grant: ${it.object_name}/${grant.user_id}"
                     GrantInfo grantInfo = new GrantInfo();
                     initMetaClass(grantInfo, grantInfo.class);
-                    grantInfo.setUserId(userIdMap.get(grant.user_id));
+                    grantInfo.setUserId(accountIdMap.get(safeUserMap.get(grant.user_id)));
                     grantInfo.setGrantGroup(grant.grantGroup);
                     grantInfo.setCanWrite(grant.allow_write);
                     grantInfo.setCanRead(grant.allow_read);
@@ -692,9 +692,9 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             EntityWrapper<NetworkRulesGroup> dbGen = EntityWrapper.get(NetworkRulesGroup.class);
             try {
                 UserFullName ufn = UserFullName.getInstance(userIdMap.get(it.metadata_user_name));
-                def rulesGroup = new NetworkRulesGroup(ufn, "${ it.metadata_user_name }_${ it.metadata_display_name }",
-                                                       it.metadata_network_group_description);
+                def rulesGroup = new NetworkRulesGroup(ufn, it.metadata_display_name, it.metadata_network_group_description);
                 initMetaClass(rulesGroup, rulesGroup.class);
+                rulesGroup.setDisplayName("${ it.metadata_user_name }_${it.metadata_display_name}");
                 println "Adding network rules for ${ it.metadata_user_name }/${it.metadata_display_name}";
                 gen_conn.rows("""SELECT r.* 
                                  FROM metadata_network_group_has_rules 
