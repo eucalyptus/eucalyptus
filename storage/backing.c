@@ -437,7 +437,6 @@ int destroy_instance_backing (ncInstance * instance, int do_destroy_files)
         }
 
         // remove the known leftover files
-        unlink (instance->instancePath);
         unlink (instance->xmlFilePath);
         unlink (instance->libvirtFilePath);
         unlink (instance->consoleFilePath);
@@ -446,6 +445,23 @@ int destroy_instance_backing (ncInstance * instance, int do_destroy_files)
         }
         set_path (path, sizeof (path), instance, "instance.checkpoint");
         unlink (path);
+    }
+   
+    // bundle instance will leave additional files
+    // let's delete every file in the directory
+    struct direct **files;
+    int n = scandir(instance->instancePath, &files, 0, alphasort);
+    char toDelete[MAX_PATH];
+    if (n>0){
+	while (n--) {
+	   struct dirent *entry = files[n];
+	   if( entry !=NULL && entry->d_name != NULL && strncmp(entry->d_name, ".",1)!=0 && strncmp(entry->d_name, "..", 2)!=0){
+	        snprintf(toDelete, MAX_PATH, "%s/%s", instance->instancePath, entry->d_name);
+		unlink(toDelete);
+		free(entry);
+	   }
+	}
+	free(files);
     }
 
     // Finally try to remove the directory.
