@@ -59,10 +59,18 @@
   ~   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ~   ANY SUCH LICENSES OR RIGHTS.
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ~ Author: Sunil Soman sunils@cs.ucsb.edu
+  ~ Author: Neil Soman neil@eucalyptus.com
   -->
 
 <project name="eucalyptus-walrus" basedir=".">
     <import file="../module-inc.xml"/>
+    <target name="install">
+        <!-- copy sample drbd config over -->
+        <copy todir="${DESTDIR}${euca.etc.dir}" overwrite="true">
+            <fileset dir="${basedir}/conf/drbd">
+                <include name="**/*" />
+            </fileset>
+        </copy>   
+    </target>
 </project>
 
