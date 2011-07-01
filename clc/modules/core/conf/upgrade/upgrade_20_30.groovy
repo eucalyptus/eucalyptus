@@ -105,6 +105,7 @@ import groovy.sql.Sql;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.blockstorage.State;
 
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
@@ -154,6 +155,8 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         } else if (!upgradeWalrus()) {
             return;
         } else if (!upgradeCluster(oldEucaHome)) {
+            return;
+        } else if (!upgradeStorage()) {
             return;
         }
         
@@ -512,9 +515,10 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             image_conn.rows("""SELECT * FROM Volume WHERE username=${ it.auth_user_name }""").each { vol ->
                 EntityWrapper<Volume> dbVol = EntityWrapper.get(Volume.class);
                 def vol_meta = stor_conn.firstRow("""SELECT * FROM Volumes WHERE volume_name=${ vol.displayname }""");
-                Volume v = new Volume( ufn, vol.displayname, vol.size, vol_meta.sc_name, vol.cluster, vol.parentsnapshot );
+                // Second "vol.cluster" is partition name
+                Volume v = new Volume( ufn, vol.displayname, vol.size, vol.cluster, vol.cluster, vol.parentsnapshot );
                 initMetaClass(v, v.class);
-                v.setMappedState(vol.state);
+                v.setState(State.valueOf(vol.state));
                 v.setLocalDevice(vol.localdevice);
                 v.setRemoteDevice(vol.remotedevice);
                 println "Adding volume ${ vol.displayname } for ${ it.auth_user_name }"
@@ -525,7 +529,10 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 EntityWrapper<Snapshot> dbSnap = EntityWrapper.get(Snapshot.class);
                 def snap_meta = stor_conn.firstRow("""SELECT * FROM Snapshots WHERE snapshot_name=${ snap.displayname }""");
                 def scName = (snap_meta == null) ? null :  snap_meta.sc_name;
-                Snapshot s = new Snapshot( ufn, snap.displayname, snap.parentvolume, scName, snap.cluster);
+                // Second scName is partition
+                Snapshot s = new Snapshot( ufn, snap.displayname, snap.parentvolume, scName, scName);
+                initMetaClass(s, s.class);
+                s.setState(State.valueOf(snap.state));
                 println "Adding snapshot ${ snap.displayname } for ${ it.auth_user_name }"
                 dbSnap.add(s);
                 dbSnap.commit();
@@ -582,7 +589,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             
             EntityWrapper<BucketInfo> dbBucket = EntityWrapper.get(BucketInfo.class);
             try {
-                BucketInfo b = new BucketInfo(accountIdMap.get(safeUserMap.get(it.owner_id)),userIdMap.get(it.owner_id),it.bucket_name,it.bucket_creation_date);
+                BucketInfo b = new BucketInfo(accountIdMap.get(safeUserMap.get(it.owner_id)),accountIdMap.get(safeUserMap.get(it.owner_id)),it.bucket_name,it.bucket_creation_date);
                 initMetaClass(b, b.class);
                 b.setLocation(it.bucket_location);
                 b.setGlobalRead(it.global_read);
@@ -601,7 +608,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     GrantInfo grantInfo = new GrantInfo();
                                         initMetaClass(grantInfo, grantInfo.class);
                     
-                    grantInfo.setUserId(userIdMap.get(grant.user_id));
+                    grantInfo.setUserId(accountIdMap.get(safeUserMap.get(grant.user_id)));
                     grantInfo.setGrantGroup(grant.grantGroup);
                     grantInfo.setCanWrite(grant.allow_write);
                     grantInfo.setCanRead(grant.allow_read);
@@ -624,7 +631,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 ObjectInfo objectInfo = new ObjectInfo(it.bucket_name, it.object_key);
                                 initMetaClass(objectInfo, objectInfo.class);
                 objectInfo.setObjectName(it.object_name);
-                objectInfo.setOwnerId(userIdMap.get(it.owner_id));
+                objectInfo.setOwnerId(accountIdMap.get(safeUserMap.get(it.owner_id)));
                 objectInfo.setGlobalRead(it.global_read);
                 objectInfo.setGlobalWrite(it.global_write);
                 objectInfo.setGlobalReadACP(it.global_read_acp);
@@ -644,7 +651,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     println "--> grant: ${it.object_name}/${grant.user_id}"
                     GrantInfo grantInfo = new GrantInfo();
                     initMetaClass(grantInfo, grantInfo.class);
-                    grantInfo.setUserId(userIdMap.get(grant.user_id));
+                    grantInfo.setUserId(accountIdMap.get(safeUserMap.get(grant.user_id)));
                     grantInfo.setGrantGroup(grant.grantGroup);
                     grantInfo.setCanWrite(grant.allow_write);
                     grantInfo.setCanRead(grant.allow_read);
@@ -685,9 +692,9 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             EntityWrapper<NetworkRulesGroup> dbGen = EntityWrapper.get(NetworkRulesGroup.class);
             try {
                 UserFullName ufn = UserFullName.getInstance(userIdMap.get(it.metadata_user_name));
-                def rulesGroup = new NetworkRulesGroup(ufn, "${ it.metadata_user_name }_${ it.metadata_display_name }",
-                                                       it.metadata_network_group_description);
+                def rulesGroup = new NetworkRulesGroup(ufn, it.metadata_display_name, it.metadata_network_group_description);
                 initMetaClass(rulesGroup, rulesGroup.class);
+                rulesGroup.setDisplayName("${ it.metadata_user_name }_${it.metadata_display_name}");
                 println "Adding network rules for ${ it.metadata_user_name }/${it.metadata_display_name}";
                 gen_conn.rows("""SELECT r.* 
                                  FROM metadata_network_group_has_rules 
@@ -733,6 +740,41 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         }
         return true;
     }
+
+    public boolean upgradeStorage() {
+        def stor_conn = StandalonePersistence.getConnection("eucalyptus_storage");
+        EntityWrapper<CHAPUserInfo> dbchap = EntityWrapper.get(CHAPUserInfo.class);
+        stor_conn.rows('SELECT * FROM CHAPUserInfo').each{
+            CHAPUserInfo cui = new CHAPUserInfo(it.user, it.encryptedPassword);
+            dbchap.add(cui);
+        }
+        dbchap.commit()
+
+        EntityWrapper<ISCSIVolumeInfo> dbIvi = EntityWrapper.get(ISCSIVolumeInfo.class);
+        stor_conn.rows('SELECT * FROM ISCSIVolumeInfo').each{
+            ISCSIVolumeInfo ivi = new ISCSIVolumeInfo();
+            initMetaClass(ivi, ivi.class);
+            ivi.setLoDevName(it.lodev_name);
+            ivi.setLoFileName(it.lofile_name);
+            ivi.setLvName(it.lv_name);
+            ivi.setPvName(it.pv_name);
+            ivi.setSize(it.size);
+            // I think "SC Name" is actually partition here
+            ivi.setScName(it.sc_name);
+            ivi.setSnapshotOf(it.snapshot_of);
+            ivi.setStatus(it.status);
+            ivi.setVgName(it.vg_name);
+            ivi.setVolumeId(it.volume_name);
+            ivi.setEncryptedPassword(it.encryptedPassword);
+            ivi.setLun(it.lun);
+            ivi.setStoreName(it.storeName);
+            ivi.setStoreUser(it.storeUser);
+            ivi.setTid(it.tid);
+            dbIvi.add(ivi);
+        }
+        dbIvi.commit();
+        return true;
+    }
     
     public boolean upgradeCluster(oldEucaHome) {
         def oldHome = System.getProperty( "euca.upgrade.old.dir" );
@@ -752,15 +794,18 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                  pem = new PEMReader(new FileReader("${ oldHome }/var/lib/eucalyptus/keys/${ it.config_component_name }/cluster-pk.pem"));
                  KeyPair clusterKeyPair = (KeyPair) pem.readObject();
                  pem.close();
-                 Partition p = new Partition("PARTI01", 
+                 print "Adding Partition ${ it.config_component_name }";
+                 Partition p = new Partition(it.config_component_name, 
                                              clusterKeyPair, 
                                              X509CertHelper.toCertificate(clCert.auth_x509_pem_certificate), 
                                              nodeKeyPair, 
                                              X509CertHelper.toCertificate(nodeCert.auth_x509_pem_certificate));
                  dbPart.add(p);
                  dbPart.commit();
-                 ClusterBuilder cbldr = new ClusterBuilder()
-                 ClusterConfiguration clcfg = cbldr.add("PARTI01", it.config_component_name, it.config_component_hostname, it.config_component_port);
+                 print "Adding Cluster ${ it.config_component_name }";
+                 // First argument is Partition name
+                 ClusterConfiguration clcfg = new ClusterConfiguration(it.config_component_name, it.config_component_name, it.config_component_hostname, it.config_component_port);
+                 dbCluster.add(clcfg);
                  dbCluster.commit();
             } finally {
                  // NOOP -- should be doing catch / rollback here
@@ -768,10 +813,12 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         }
         config_conn.rows('SELECT * FROM config_sc').each{
             EntityWrapper<StorageControllerConfiguration> dbSC = EntityWrapper.get(StorageControllerConfiguration.class);
-            StorageControllerConfiguration sc = new StorageControllerConfiguration("PARTI01", it.config_component_name, it.config_component_hostname, it.config_component_port);
+            // First argument is partition name
+            StorageControllerConfiguration sc = new StorageControllerConfiguration(it.config_component_name, it.config_component_name, it.config_component_hostname, it.config_component_port);
             dbSC.add(sc);
             dbSC.commit();
         }
+        return true;
     }   
 
     static {
@@ -789,9 +836,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         // eucalyptus_storage
         entities.add(AOEMetaInfo.class);
         entities.add(AOEVolumeInfo.class);
-        entities.add(CHAPUserInfo.class);
         entities.add(ISCSIMetaInfo.class);
-        entities.add(ISCSIVolumeInfo.class);
         entities.add(SnapshotInfo.class);
         entities.add(VolumeInfo.class);
         entities.add(DirectStorageInfo.class);
