@@ -504,16 +504,16 @@ int diskutil_write2file (const char * file, const char * str)
     char tmpfile [] = "/tmp/euca-temp-XXXXXX";
     int fd = safe_mkstemp (tmpfile);
     if (fd<0) {
-        logprintfl (EUCAERROR, "{%u} error: failed to create temporary directory\n");
+        logprintfl (EUCAERROR, "{%u} error: failed to create temporary directory\n", (unsigned int)pthread_self());
         return ERROR;
     }
     int size = strlen (str);
     if (write (fd, str, size) != size) {
-        logprintfl (EUCAERROR, "{%u} error: failed to create temporary directory\n");
+        logprintfl (EUCAERROR, "{%u} error: failed to create temporary directory\n", (unsigned int)pthread_self());
         ret = ERROR;
     } else {
         if (diskutil_cp (tmpfile, file) != OK) {
-            logprintfl (EUCAERROR, "{%u} error: failed to copy temp file to destination (%s)\n", file);
+            logprintfl (EUCAERROR, "{%u} error: failed to copy temp file to destination (%s)\n", (unsigned int)pthread_self(), file);
             ret = ERROR;
         }
     }
@@ -542,7 +542,7 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
     logprintfl (EUCAINFO, "{%u} installing kernel and ramdisk\n", (unsigned int)pthread_self());
     output = pruntf (TRUE, "%s %s -p %s/boot/grub/", helpers_path[ROOTWRAP], helpers_path[MKDIR], mnt_pt);
     if (!output) {
-        logprintfl (EUCAINFO, "{%u} error: failed to create grub directory\n");
+        logprintfl (EUCAINFO, "{%u} error: failed to create grub directory\n", (unsigned int)pthread_self());
         return ERROR;
     }
     free (output);
@@ -550,7 +550,7 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
     if (grub_version==1) {
         output = pruntf (TRUE, "%s %s /boot/grub/*stage* %s/boot/grub", helpers_path[ROOTWRAP], helpers_path[CP], mnt_pt);
         if (!output) {
-            logprintfl (EUCAINFO, "{%u} error: failed to copy stage files into grub directory\n");
+            logprintfl (EUCAINFO, "{%u} error: failed to copy stage files into grub directory\n", (unsigned int)pthread_self());
             return ERROR;
         }
         free (output);
@@ -688,7 +688,7 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
             close (tfd);
 
             if (saw_done==FALSE) {
-                logprintfl (EUCAERROR, "{%u} error: failed to run grub 1 on disk '%s': %s\n", (unsigned int)pthread_self(), path);
+                logprintfl (EUCAERROR, "{%u} error: failed to run grub 1 on disk '%s'\n", (unsigned int)pthread_self(), path);
                 rc = 1;
             } else {
                 rc = 0;

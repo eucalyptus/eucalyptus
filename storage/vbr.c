@@ -689,7 +689,7 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
 
     // add partition information to MBR
     for (int i=1; i<map_entries; i++) { // map [0] is for the MBR
-        logprintfl (EUCAINFO, "[%s] adding partition %d to partition table\n", a->instanceId, i);
+        logprintfl (EUCAINFO, "[%s] adding partition %d to partition table (%s)\n", a->instanceId, i, blockblob_get_dev (a->bb));
         if (diskutil_part (blockblob_get_dev (a->bb),  // issues `parted mkpart`
                            "primary", // TODO: make this work with more than 4 partitions
                            NULL, // do not create file system
