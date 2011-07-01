@@ -286,9 +286,11 @@ int instIpSync(ccInstance *inst, void *in) {
     logprintfl(EUCAERROR, "instIpSync(): CC and NC vlans differ instanceId=%s CCvlan=%d NCvlan=%d\n", inst->instanceId, inst->ccnet.vlan, inst->ncnet.vlan);
   }
   inst->ccnet.vlan = inst->ncnet.vlan;
-  if (!vnetconfig->networks[inst->ccnet.vlan].active) {
-    logprintfl(EUCAWARN, "instIpSync(): detected instance from NC that is running in a currently inactive network; will attempt to re-activate network '%d'\n", inst->ccnet.vlan);
-    ret++;
+  if (inst->ccnet.vlan >= 0) {
+    if (!vnetconfig->networks[inst->ccnet.vlan].active) {
+      logprintfl(EUCAWARN, "instIpSync(): detected instance from NC that is running in a currently inactive network; will attempt to re-activate network '%d'\n", inst->ccnet.vlan);
+      ret++;
+    }
   }
 
   // networkIndex cases
