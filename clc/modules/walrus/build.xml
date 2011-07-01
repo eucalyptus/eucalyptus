@@ -65,6 +65,14 @@
 <project name="eucalyptus-walrus" basedir=".">
     <import file="../module-inc.xml"/>
     <target name="install">
+        <copy todir="${DESTDIR}${euca.conf.dir}" overwrite="true">
+          <fileset dir="conf">
+            <include name="**/*" />
+          </fileset>
+        </copy>
+        <copy todir="${DESTDIR}${euca.lib.dir}" overwrite="true">
+          <fileset file="${jar.file}" />
+        </copy>
         <!-- copy sample drbd config over -->
         <copy todir="${DESTDIR}${euca.etc.dir}" overwrite="true">
             <fileset dir="${basedir}/conf/drbd">
