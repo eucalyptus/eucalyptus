@@ -694,7 +694,11 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 UserFullName ufn = UserFullName.getInstance(userIdMap.get(it.metadata_user_name));
                 def rulesGroup = new NetworkRulesGroup(ufn, it.metadata_display_name, it.metadata_network_group_description);
                 initMetaClass(rulesGroup, rulesGroup.class);
-                rulesGroup.setDisplayName("${ it.metadata_user_name }_${it.metadata_display_name}");
+                if ( it.metadata_user_name == 'admin' && it.metadata_display_name == 'default' ) {
+                    rulesGroup.setDisplayName(it.metadata_display_name);
+                } else {
+                    rulesGroup.setDisplayName("${ it.metadata_user_name }_${it.metadata_display_name}");
+                }
                 println "Adding network rules for ${ it.metadata_user_name }/${it.metadata_display_name}";
                 gen_conn.rows("""SELECT r.* 
                                  FROM metadata_network_group_has_rules 
