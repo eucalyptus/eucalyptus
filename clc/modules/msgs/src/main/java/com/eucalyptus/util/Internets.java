@@ -219,6 +219,13 @@ public class Internets {
   public static List<InetAddress> getAllInetAddresses( ) {
     List<InetAddress> addrs = Lists.newArrayList( );
     for ( NetworkInterface iface : Internets.getNetworkInterfaces( ) ) {
+      try {
+        if( iface.isPointToPoint( ) ) {
+          continue;
+        }
+      } catch ( SocketException ex ) {
+        LOG.error( ex , ex );
+      }
       for ( InterfaceAddress iaddr : iface.getInterfaceAddresses( ) ) {
         InetAddress addr = iaddr.getAddress( );
         if ( addr instanceof Inet4Address ) {
