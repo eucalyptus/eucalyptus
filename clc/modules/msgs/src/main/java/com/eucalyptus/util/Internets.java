@@ -99,24 +99,35 @@ public class Internets {
   
   private static InetAddress determineLocalAddress( ) {
     InetAddress laddr = null;
+    LOG.info( "Trying to determine local bind address based on cli (--bind-address)... " );
     if ( !BootstrapArgs.bindAddresses( ).isEmpty( ) ) {
       laddr = lookupBindAddresses( );
     }
     if ( laddr == null ) {
-      try {
-        String localAddr = ( String ) GroovyUtil.eval( "hi=\"ip -o route get 4.2.2.1\".execute();hi.waitFor();hi.text" );
-        String[] parts = localAddr.replaceAll( ".*src *", "" ).split( " " );
-        if ( parts.length >= 1 ) {
-          laddr = InetAddresses.forString( parts[0] );
-        }
-      } catch ( ScriptExecutionFailedException ex ) {
-        LOG.error( ex, ex );
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
-      }
+      LOG.info( "Trying to determine local bind address based on the default route... " );
+      laddr = lookupDefaultRoute( );
     }
     if ( laddr == null ) {
+      LOG.info( "Trying to determine local bind address based on a netmask and scope maximizing heuristic... " );
       laddr = Internets.getAllInetAddresses( ).get( 0 );
+    }
+    LOG.info( "==> Decided to use local bind address: " + laddr );
+    
+    return laddr;
+  }
+
+  private static InetAddress lookupDefaultRoute( ) {
+    InetAddress laddr = null;
+    try {
+      String localAddr = ( String ) GroovyUtil.eval( "hi=\"ip -o route get 4.2.2.1\".execute();hi.waitFor();hi.text" );
+      String[] parts = localAddr.replaceAll( ".*src *", "" ).split( " " );
+      if ( parts.length >= 1 ) {
+        laddr = InetAddresses.forString( parts[0] );
+      }
+    } catch ( ScriptExecutionFailedException ex ) {
+      LOG.error( ex, ex );
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
     }
     return laddr;
   }
