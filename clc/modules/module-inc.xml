@@ -77,11 +77,12 @@
 			<filterreader classname="org.apache.tools.ant.filters.StripLineBreaks" />
 		</filterchain>
 	</loadfile>
+	<property name="euca.etc.dir"  value="${euca.home}/etc/eucalyptus" />
 	<property name="euca.conf.dir" value="${euca.home}/etc/eucalyptus/cloud.d" />
-	<property name="euca.lib.dir" value="${euca.home}/usr/share/eucalyptus" />
-	<property name="euca.var.dir" value="${euca.home}/var/lib/eucalyptus" />
-	<property name="euca.run.dir" value="${euca.home}/var/run/eucalyptus" />
-	<property name="euca.log.dir" value="${euca.home}/var/log/eucalyptus" />
+	<property name="euca.lib.dir"  value="${euca.home}/usr/share/eucalyptus" />
+	<property name="euca.var.dir"  value="${euca.home}/var/lib/eucalyptus" />
+	<property name="euca.run.dir"  value="${euca.home}/var/run/eucalyptus" />
+	<property name="euca.log.dir"  value="${euca.home}/var/log/eucalyptus" />
 	<propertyset id="euca-props">
 		<propertyref prefix="euca" />
 	</propertyset>

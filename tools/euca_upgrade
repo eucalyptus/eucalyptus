@@ -62,7 +62,7 @@
 set -e
 unset UP_DB UP_KEYS UP_CONF UP_FORCE UP_LOG UP_SAMEVERSION
 unset NEW_EUCA OLD_EUCA NEW_EUCA_VERSION OLD_EUCA_VERSION
-LEGAL_LONG_OPTS="help old new conf keys db force copyonly sameversion"
+LEGAL_LONG_OPTS="help old new conf keys db force copyonly sameversion user"
 KEYDIR="/var/lib/eucalyptus/keys"
 DBDIR="/var/lib/eucalyptus/db"
 NEW_EUCA="/"
@@ -81,6 +81,7 @@ usage() {
 	echo "   -d|--db                     Upgrade the database"
 	echo "   -k|--keys                   Upgrade the keys"
 	echo "   -s|--sameversion            Versions unchanged or no db changes."
+	echo "   -u|--user                   The user who owns this eucalyptus installation."
 	echo
 }
 
@@ -170,12 +171,15 @@ upgrade_db() {
   UPGRADE_OPTS="-Deuca.log.level=INFO -Djava.security.egd=file:/dev/./urandom"
   UPGRADE_OUTPUT="egrep -v 'java.lang.ClassNotFoundException|PERSISTENCE_ENTITY_REGISTERED|DISCOVERY_LOADED_ENTRY'" #egrep -v '(TRACE)|(Resource)|(Bootstrap)|(istenceContextDiscovery)|(ServiceJarDiscovery)'" 
   # Setup commands 
-  UPGRADE_ARGS=$( for arg in ${UPGRADE_DEST_DIR} ${UPGRADE_SRC_DIR} ${UPGRADE_SRC_DB} ${UPGRADE_DEST_DB} ${UPGRADE_DEST_VERSION} ${UPGRADE_SRC_VERSION}; do echo " -D${arg}"; done; )
+  UPGRADE_ARGS=$( for arg in ${UPGRADE_DEST_DIR} ${UPGRADE_SRC_DIR} ${UPGRADE_SRC_DB} ${UPGRADE_DEST_DB} ${UPGRADE_DEST_VERSION} ${UPGRADE_SRC_VERSION}; do echo -n " -D${arg}"; done; )
   UPGRADE_CMD="java -Xbootclasspath/p:${EUCALYPTUS}/usr/share/eucalyptus/openjdk-crypto.jar -classpath ${CLASSPATH} ${UPGRADE_OPTS} ${UPGRADE_ARGS} ${UPGRADE_CLASS}" 
   echo "${UPGRADE_CMD}" >> ${UP_LOG} 
   
   echo "Upgrading your database..." | tee -a ${UP_LOG} 2>&1
-  if ! ( ${UPGRADE_CMD} | tee -a ${UP_LOG} 2>/dev/null | egrep -v 'java.lang.ClassNotFoundException|PERSISTENCE_ENTITY_REGISTERED|DISCOVERY_LOADED_ENTRY|:BOOTSTRAP_|_REGISTERED|ServiceJarDiscovery' ); then
+  # pipefail will return nonzero from a pipeline if _anything_ in the pipeline failed. NB: This is a bash-ism, v3 and later.
+  # Also note that egrep returns non-zero if any lines match the filter expression, hence the "or true"
+  set -o pipefail
+  if ! ( su $EUCA_USER -c "${UPGRADE_CMD}" | tee -a ${UP_LOG} 2>/dev/null | ( egrep -v 'java.lang.ClassNotFoundException|PERSISTENCE_ENTITY_REGISTERED|DISCOVERY_LOADED_ENTRY|:BOOTSTRAP_|_REGISTERED|ServiceJarDiscovery' || true ) ); then
     echo "Database upgrade failed! Please check your database before using Eucalyptus."
     exit 1
   fi
@@ -186,7 +190,7 @@ upgrade_db() {
 NEW_ARGS=$(echo "${@}" | sed 's/--\(.\)\w*/-\1/g')
 for f in $(echo "${@}" | sed 's/ /\n/g' | awk ' $1 ~ /--\w*/' | sed 's/--//g'); do if ! echo ${LEGAL_LONG_OPTS} | grep $f >/dev/null 2>&1; then echo "Illegal option: --$f"; FAIL="true"; fi; done
 if [ -n "${FAIL}" ]; then exit 1;fi
-while getopts ":hn:fo:ckdps" flag ${NEW_ARGS} ; do
+while getopts ":hn:fo:ckdpsu:" flag ${NEW_ARGS} ; do
   case $flag in
     h) usage; exit 0;;
     n) 
@@ -202,6 +206,7 @@ while getopts ":hn:fo:ckdps" flag ${NEW_ARGS} ; do
     k) UP_KEYS="upgrade_keys";;
     c) UP_CONF="upgrade_conf";;
     s) UP_SAMEVERSION="sameversion";;
+    u) EUCA_USER=${OPTARG};;
   esac
 done
 ## After this point guaranteed that NEW_EUCA and OLD_EUCA are set.
