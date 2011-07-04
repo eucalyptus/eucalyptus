@@ -74,7 +74,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.TopologyChanges.CloudTopologyCallables;
 import com.eucalyptus.component.TopologyChanges.RemoteTopologyCallables;
 import com.eucalyptus.empyrean.Empyrean;
@@ -229,7 +229,7 @@ public class Topology implements EventListener<Event> {
   }
   
   public static Future<ServiceConfiguration> stop( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( Bootstrap.isCloudController( ) ) {
+    if ( BootstrapArgs.isCloudController( ) ) {
       return Topology.getInstance( ).submitExternal( config, CloudTopologyCallables.STOP );
     } else {
       return Topology.getInstance( ).submitExternal( config, RemoteTopologyCallables.STOP );
@@ -237,7 +237,7 @@ public class Topology implements EventListener<Event> {
   }
   
   public static Future<ServiceConfiguration> start( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( Bootstrap.isCloudController( ) ) {
+    if ( BootstrapArgs.isCloudController( ) ) {
       return Topology.getInstance( ).submitExternal( config, CloudTopologyCallables.START );
     } else {
       return Topology.getInstance( ).submitExternal( config, RemoteTopologyCallables.START );
@@ -245,7 +245,7 @@ public class Topology implements EventListener<Event> {
   }
   
   public static Future<ServiceConfiguration> enable( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( Bootstrap.isCloudController( ) ) {
+    if ( BootstrapArgs.isCloudController( ) ) {
       return Topology.getInstance( ).submit( config, CloudTopologyCallables.ENABLE );
     } else {
       return Topology.getInstance( ).submit( config, RemoteTopologyCallables.ENABLE );
@@ -452,7 +452,7 @@ public class Topology implements EventListener<Event> {
   }
   
   public TransitionGuard getGuard( ) {
-    return ( Bootstrap.isCloudController( )
+    return ( BootstrapArgs.isCloudController( )
       ? cloudControllerGuard( )
       : remoteGuard( ) );
   }
@@ -460,7 +460,7 @@ public class Topology implements EventListener<Event> {
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
-    builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( Bootstrap.isCloudController( )
+    builder.append( "Topology:currentEpoch=" ).append( this.currentEpoch ).append( ":guard=" ).append( BootstrapArgs.isCloudController( )
       ? "cloud"
       : "remote" );
     return builder.toString( );
@@ -485,7 +485,7 @@ public class Topology implements EventListener<Event> {
           
           @Override
           public boolean apply( ServiceConfiguration arg0 ) {
-            if ( Bootstrap.isCloudController( ) ) {
+            if ( BootstrapArgs.isCloudController( ) ) {
               return true;
             } else {
               return arg0.isVmLocal( );
@@ -538,14 +538,14 @@ public class Topology implements EventListener<Event> {
         }
         Logs.exhaust( ).debug( "CHECK ===================================\n" + Joiner.on( "\n\t" ).join( checkedServices ) );
         Logs.exhaust( ).debug( "DISABLED ================================\n" + Joiner.on( "\n\t" ).join( disabledServices ) );
-        if ( Bootstrap.isCloudController( ) ) {
+        if ( BootstrapArgs.isCloudController( ) ) {
           final Predicate<ServiceConfiguration> predicate = new Predicate<ServiceConfiguration>( ) {
             
             @Override
             public boolean apply( ServiceConfiguration arg0 ) {
               try {
                 ServiceKey key = ServiceKey.create( arg0 );
-                if ( !Bootstrap.isCloudController( ) ) {
+                if ( !BootstrapArgs.isCloudController( ) ) {
                   Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": not cloud controller." );
                   return false;
                 } else if ( disabledServices.contains( arg0 ) ) {

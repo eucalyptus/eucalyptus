@@ -72,6 +72,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
@@ -138,7 +139,7 @@ public class ServiceBootstrapper extends Bootstrapper {
       
       @Override
       public boolean apply( final ServiceConfiguration config ) {
-        boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( ) || Bootstrap.isCloudController( );
+        boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( ) || BootstrapArgs.isCloudController( );
         LOG.debug( "ServiceBootstrapper.shouldLoad(" + config.toString( ) + "):" + ret );
         return ret;
       }
@@ -220,7 +221,7 @@ public class ServiceBootstrapper extends Bootstrapper {
         }
       } else if ( comp.hasLocalService( ) ) {
         final ServiceConfiguration config = comp.getLocalServiceConfiguration( );
-        if ( config.isVmLocal( ) || ( Bootstrap.isCloudController( ) && config.isHostLocal( ) ) ) {
+        if ( config.isVmLocal( ) || ( BootstrapArgs.isCloudController( ) && config.isHostLocal( ) ) ) {
           predicate.apply( config );
         }
       }

@@ -77,7 +77,7 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.system.SubDirectory;
+import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.StateMachine;
@@ -414,62 +414,6 @@ public class Bootstrap {
     return shutdown;
   }
   
-  public static Boolean isCloudController( ) {
-    return SubDirectory.DB.hasChild( "data", "ibdata1" ) && !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) );
-  }
-  
-  private static List<String> bindAddrs = parseBindAddrs( );
-  
-  public static List<String> parseBindAddrs( ) {
-    if ( bindAddrs != null ) {
-      return bindAddrs;
-    } else {
-      synchronized ( Bootstrap.class ) {
-        if ( bindAddrs == null ) {
-          bindAddrs = Lists.newArrayList( );
-          String fs = "euca.bind.addr.%d";
-          String next = String.format( fs, 1 );
-          for ( int i = 1; i < 255; next = String.format( fs, i++ ) ) {
-            if ( System.getProperty( next ) != null ) {
-              bindAddrs.add( System.getProperty( next ) );
-            } else {
-              break;
-            }
-          }
-        }
-        return bindAddrs;
-      }
-    }
-  }
-  
-  private static List<String> bootstrapHosts = parseBootstrapHosts( );
-  
-  public static List<String> parseBootstrapHosts( ) {
-    if ( bootstrapHosts != null ) {
-      return bootstrapHosts;
-    } else {
-      synchronized ( Bootstrap.class ) {
-        if ( bootstrapHosts == null ) {
-          bootstrapHosts = Lists.newArrayList( );
-          String fs = "euca.bootstrap.host.%d";
-          String next = String.format( fs, 1 );
-          for ( int i = 1; i < 255; next = String.format( fs, i++ ) ) {
-            if ( System.getProperty( next ) != null ) {
-              bootstrapHosts.add( System.getProperty( next ) );
-            } else {
-              break;
-            }
-          }
-        }
-        return bootstrapHosts;
-      }
-    }
-  }
-  
-  public static boolean isInitializeSystem( ) {
-    return System.getProperty( "euca.initialize" ) != null;
-  }
-  
   /**
    * Prepares the system to execute the bootstrap sequence defined by {@link Bootstrap.Stage}.
    * 
@@ -531,7 +475,7 @@ public class Bootstrap {
      * Create the component stubs (but do not startService) to do dependency checks on bootstrappers
      * and satisfy any forward references from bootstrappers.
      */
-    LOG.info( LogUtil.header( "Building core local services: cloudLocal=" + Bootstrap.isCloudController( ) ) );
+    LOG.info( LogUtil.header( "Building core local services: cloudLocal=" + BootstrapArgs.isCloudController( ) ) );
     List<Component> components = Components.whichCanLoad( );
     for ( Component comp : components ) {
       try {
@@ -580,5 +524,15 @@ public class Bootstrap {
       }
     }
     
+  }
+
+  static void initializeSystem( ) {
+    try {
+      GroovyUtil.evaluateScript( "initialize_cloud.groovy" );
+      System.exit( 0 );
+    } catch ( Throwable ex ) {
+      SystemBootstrapper.LOG.error( ex , ex );
+      System.exit( 1 );
+    }
   }
 }

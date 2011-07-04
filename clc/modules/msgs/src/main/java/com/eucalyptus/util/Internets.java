@@ -73,13 +73,11 @@ import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import org.apache.http.conn.util.InetAddressUtils;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.google.common.base.Function;
@@ -101,7 +99,7 @@ public class Internets {
   
   private static InetAddress determineLocalAddress( ) {
     InetAddress laddr = null;
-    if ( !Bootstrap.parseBindAddrs( ).isEmpty( ) ) {
+    if ( !BootstrapArgs.bindAddresses( ).isEmpty( ) ) {
       laddr = lookupBindAddresses( );
     }
     if ( laddr == null ) {
@@ -127,7 +125,7 @@ public class Internets {
     InetAddress laddr = null;
     List<InetAddress> locallyBoundAddrs = Internets.getAllInetAddresses( );
     boolean err = false;
-    for ( String addrStr : Bootstrap.parseBindAddrs( ) ) {
+    for ( String addrStr : BootstrapArgs.bindAddresses( ) ) {
       try {
         InetAddress next = InetAddress.getByName( addrStr );
         laddr = ( laddr == null )
@@ -143,11 +141,11 @@ public class Internets {
         }
       } catch ( UnknownHostException ex ) {
         LOG.fatal( "Invalid argument given for --bind-addr=" + addrStr + " " + ex.getMessage( ) );
-        LOG.debug( ex, ex );
+        LOG.error( ex, ex );
         err = true;
       } catch ( SocketException ex ) {
         LOG.fatal( "Invalid argument given for --bind-addr=" + addrStr + " " + ex.getMessage( ) );
-        LOG.debug( ex, ex );
+        LOG.error( ex, ex );
         err = true;
       }
       if ( err ) {

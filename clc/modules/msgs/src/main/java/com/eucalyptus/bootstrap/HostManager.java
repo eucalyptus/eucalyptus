@@ -122,7 +122,7 @@ public class HostManager {
   private HostManager( ) {
     this.view = new CurrentView( );
     this.membershipChannel = HostManager.buildChannel( );
-    this.stateListener = Bootstrap.isCloudController( )
+    this.stateListener = BootstrapArgs.isCloudController( )
       ? new CloudControllerHostStateHandler( )
       : new RemoteHostStateListener( );
     this.membershipChannel.setReceiver( this.stateListener );
@@ -299,7 +299,7 @@ public class HostManager {
     }
     
     private boolean setInitialView( View oldView, View newView ) {
-      return this.currentView.compareAndSet( oldView, newView, true, !Bootstrap.isCloudController( ) );//handle the bootstrap case correctly
+      return this.currentView.compareAndSet( oldView, newView, true, !BootstrapArgs.isCloudController( ) );//handle the bootstrap case correctly
     }
     
     public void viewAccepted( View newView ) {
