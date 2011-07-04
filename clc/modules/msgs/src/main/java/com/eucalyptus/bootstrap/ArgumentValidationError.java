@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,73 +53,23 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.binding;
 
-import java.util.HashMap;
-import java.util.Map;
-import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.BootstrapException;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.Logs;
+package com.eucalyptus.bootstrap;
 
-public class BindingManager {
-  
-  private static Logger               LOG        = Logger.getLogger( BindingManager.class );
-  private static Map<String, Binding> bindingMap = new HashMap<String, Binding>( );
-  public static final String DEFAULT_BINDING_NAMESPACE = "http://msgs.eucalyptus.com";
-  public static final String DEFAULT_BINDING_NAME =  BindingManager.sanitizeNamespace( DEFAULT_BINDING_NAMESPACE );
-  private static Binding DEFAULT = null;
-  public static Binding getDefaultBinding( ) {
-    if( DEFAULT != null ) {
-      return DEFAULT;
-    } else {
-      synchronized( BindingManager.class ) {
-        if( DEFAULT != null ) {
-          return DEFAULT;
-        } else {
-            return ( DEFAULT = BindingManager.getBinding( BindingManager.sanitizeNamespace( BindingManager.DEFAULT_BINDING_NAME ) ) );
-        }
-      }
-    }
-  }
-  public static String sanitizeNamespace( String namespace ) {
-    return namespace.replaceAll( "(http://)|(/$)", "" ).replaceAll( "[./-]", "_" );
+public class ArgumentValidationError extends Error {
+
+  /**
+   * @param message
+   */
+  public ArgumentValidationError( String message ) {
+    super( message );
   }
 
-  public static boolean seedBinding( final String bindingName, final Class seedClass ) {
-    if ( !BindingManager.bindingMap.containsKey( bindingName ) ) {
-      try {
-        BindingManager.getBinding( bindingName ).seed( seedClass );
-        Logs.exhaust( ).trace( "Seeding binding " + bindingName + " for class " + seedClass.getCanonicalName( ) );
-        EventRecord.here( BindingManager.class, EventType.BINDING_SEEDED, bindingName, seedClass.getName( ) ).trace( );
-        return true;
-      } catch ( BindingException e ) {
-        throw BootstrapException.error( "Failed to seed binding " + bindingName + " with class " + seedClass, e );
-      }
-    }
-    return false;
-  }
-  
-  public static boolean isRegisteredBinding( final String bindingName ) {
-    return BindingManager.bindingMap.containsKey( bindingName );
-  }
-  public static Binding getBinding( final String bindingName ) {
-    if ( BindingManager.bindingMap.containsKey( bindingName ) ) {
-      return BindingManager.bindingMap.get( bindingName );
-    } else {
-      final Binding newBinding = new Binding( bindingName );
-      BindingManager.bindingMap.put( bindingName, newBinding );
-      return newBinding;
-    }
-  }
-  
 }

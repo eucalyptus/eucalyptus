@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,73 +53,99 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.binding;
 
-import java.util.HashMap;
-import java.util.Map;
+package com.eucalyptus.bootstrap;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.BootstrapException;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.Logs;
+import com.eucalyptus.system.SubDirectory;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Lists;
 
-public class BindingManager {
+public class BootstrapArgs {
+  private static Logger             LOG            = Logger.getLogger( BootstrapArgs.class );
+  private static final List<String> bindAddrs      = Lists.newArrayList( );
+  private static final List<String> bootstrapHosts = Lists.newArrayList( );
+  private static boolean            initSystem     = false;
   
-  private static Logger               LOG        = Logger.getLogger( BindingManager.class );
-  private static Map<String, Binding> bindingMap = new HashMap<String, Binding>( );
-  public static final String DEFAULT_BINDING_NAMESPACE = "http://msgs.eucalyptus.com";
-  public static final String DEFAULT_BINDING_NAME =  BindingManager.sanitizeNamespace( DEFAULT_BINDING_NAMESPACE );
-  private static Binding DEFAULT = null;
-  public static Binding getDefaultBinding( ) {
-    if( DEFAULT != null ) {
-      return DEFAULT;
-    } else {
-      synchronized( BindingManager.class ) {
-        if( DEFAULT != null ) {
-          return DEFAULT;
+  enum BindAddressValidator implements Predicate<String> {
+    INSTANCE;
+    @Override
+    public boolean apply( String arg0 ) {
+      try {
+        InetAddress.getByName( arg0 );
+        return true;
+      } catch ( UnknownHostException ex ) {
+        LOG.error( ex, ex );
+        return false;
+      }
+    }
+    
+  }
+  
+  enum BootstrapHostValidator implements Predicate<String> {
+    INSTANCE;
+    @Override
+    public boolean apply( String arg0 ) {
+      try {
+        InetAddress.getByName( arg0 );
+        return true;
+      } catch ( UnknownHostException ex ) {
+        LOG.error( ex, ex );
+        return false;
+      }
+    }
+    
+  }
+  
+  static void init( ) {
+    bindAddrs.addAll( BootstrapArgs.parseMultipleArgs( "euca.bind.addr", BindAddressValidator.INSTANCE ) );
+    bootstrapHosts.addAll( BootstrapArgs.parseMultipleArgs( "euca.bootstrap.host", BindAddressValidator.INSTANCE ) );
+    initSystem = System.getProperty( "euca.initialize" ) != null;
+  }
+  
+  public static boolean isInitializeSystem( ) {
+    return initSystem;
+  }
+  
+  public static List<String> parseBootstrapHosts( ) {
+    return bootstrapHosts;
+  }
+  
+  public static List<String> bindAddresses( ) {
+    return bindAddrs;
+  }
+  
+  private static List<String> parseMultipleArgs( String baseString, Predicate<String> argValidator ) {
+    List<String> retList = Lists.newArrayList( );
+    String formatString = baseString + ".%d";
+    String next = String.format( formatString, 0 );
+    for ( int i = 0; i < 255; next = String.format( formatString, i++ ) ) {
+      String nextVal = System.getProperty( next );
+      if ( nextVal != null ) {
+        if ( argValidator.apply( nextVal ) ) {
+          retList.add( System.getProperty( next ) );
         } else {
-            return ( DEFAULT = BindingManager.getBinding( BindingManager.sanitizeNamespace( BindingManager.DEFAULT_BINDING_NAME ) ) );
+          Error err = new ArgumentValidationError( "Argument validation failed for " + next + " on value: " + nextVal );
+          LOG.error( err, err );
         }
       }
     }
-  }
-  public static String sanitizeNamespace( String namespace ) {
-    return namespace.replaceAll( "(http://)|(/$)", "" ).replaceAll( "[./-]", "_" );
+    return retList;
+    
   }
 
-  public static boolean seedBinding( final String bindingName, final Class seedClass ) {
-    if ( !BindingManager.bindingMap.containsKey( bindingName ) ) {
-      try {
-        BindingManager.getBinding( bindingName ).seed( seedClass );
-        Logs.exhaust( ).trace( "Seeding binding " + bindingName + " for class " + seedClass.getCanonicalName( ) );
-        EventRecord.here( BindingManager.class, EventType.BINDING_SEEDED, bindingName, seedClass.getName( ) ).trace( );
-        return true;
-      } catch ( BindingException e ) {
-        throw BootstrapException.error( "Failed to seed binding " + bindingName + " with class " + seedClass, e );
-      }
-    }
-    return false;
-  }
-  
-  public static boolean isRegisteredBinding( final String bindingName ) {
-    return BindingManager.bindingMap.containsKey( bindingName );
-  }
-  public static Binding getBinding( final String bindingName ) {
-    if ( BindingManager.bindingMap.containsKey( bindingName ) ) {
-      return BindingManager.bindingMap.get( bindingName );
-    } else {
-      final Binding newBinding = new Binding( bindingName );
-      BindingManager.bindingMap.put( bindingName, newBinding );
-      return newBinding;
-    }
+  public static Boolean isCloudController( ) {
+    return SubDirectory.DB.hasChild( "data", "ibdata1" ) && !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) );
   }
   
 }

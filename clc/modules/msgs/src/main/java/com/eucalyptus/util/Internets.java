@@ -73,13 +73,11 @@ import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import org.apache.http.conn.util.InetAddressUtils;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.google.common.base.Function;
@@ -101,24 +99,35 @@ public class Internets {
   
   private static InetAddress determineLocalAddress( ) {
     InetAddress laddr = null;
-    if ( !Bootstrap.parseBindAddrs( ).isEmpty( ) ) {
+    LOG.info( "Trying to determine local bind address based on cli (--bind-addr)... " );
+    if ( !BootstrapArgs.bindAddresses( ).isEmpty( ) ) {
       laddr = lookupBindAddresses( );
     }
     if ( laddr == null ) {
-      try {
-        String localAddr = ( String ) GroovyUtil.eval( "hi=\"ip -o route get 4.2.2.1\".execute();hi.waitFor();hi.text" );
-        String[] parts = localAddr.replaceAll( ".*src *", "" ).split( " " );
-        if ( parts.length >= 1 ) {
-          laddr = InetAddresses.forString( parts[0] );
-        }
-      } catch ( ScriptExecutionFailedException ex ) {
-        LOG.error( ex, ex );
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
-      }
+      LOG.info( "Trying to determine local bind address based on the default route... " );
+      laddr = lookupDefaultRoute( );
     }
     if ( laddr == null ) {
+      LOG.info( "Trying to determine local bind address based on a netmask and scope maximizing heuristic... " );
       laddr = Internets.getAllInetAddresses( ).get( 0 );
+    }
+    LOG.info( "==> Decided to use local bind address: " + laddr );
+    
+    return laddr;
+  }
+
+  private static InetAddress lookupDefaultRoute( ) {
+    InetAddress laddr = null;
+    try {
+      String localAddr = ( String ) GroovyUtil.eval( "hi=\"ip -o route get 4.2.2.1\".execute();hi.waitFor();hi.text" );
+      String[] parts = localAddr.replaceAll( ".*src *", "" ).split( " " );
+      if ( parts.length >= 1 ) {
+        laddr = InetAddresses.forString( parts[0] );
+      }
+    } catch ( ScriptExecutionFailedException ex ) {
+      LOG.error( ex, ex );
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
     }
     return laddr;
   }
@@ -127,7 +136,7 @@ public class Internets {
     InetAddress laddr = null;
     List<InetAddress> locallyBoundAddrs = Internets.getAllInetAddresses( );
     boolean err = false;
-    for ( String addrStr : Bootstrap.parseBindAddrs( ) ) {
+    for ( String addrStr : BootstrapArgs.bindAddresses( ) ) {
       try {
         InetAddress next = InetAddress.getByName( addrStr );
         laddr = ( laddr == null )
@@ -143,11 +152,11 @@ public class Internets {
         }
       } catch ( UnknownHostException ex ) {
         LOG.fatal( "Invalid argument given for --bind-addr=" + addrStr + " " + ex.getMessage( ) );
-        LOG.debug( ex, ex );
+        LOG.error( ex, ex );
         err = true;
       } catch ( SocketException ex ) {
         LOG.fatal( "Invalid argument given for --bind-addr=" + addrStr + " " + ex.getMessage( ) );
-        LOG.debug( ex, ex );
+        LOG.error( ex, ex );
         err = true;
       }
       if ( err ) {
@@ -174,13 +183,13 @@ public class Internets {
   public static List<NetworkInterface> getNetworkInterfaces( ) {
     try {
       List<NetworkInterface> ifaces = Collections.list( NetworkInterface.getNetworkInterfaces( ) );
-      ifaces = Lists.newArrayList( Iterables.filter( ifaces, new Predicate<NetworkInterface>( ) {
-        
-        @Override
-        public boolean apply( NetworkInterface input ) {
-          return !input.getName( ).contains( "virbr0" ) && !input.getDisplayName( ).contains( "virbr0" );
-        }
-      } ) );
+//      ifaces = Lists.newArrayList( Iterables.filter( ifaces, new Predicate<NetworkInterface>( ) {
+//        
+//        @Override
+//        public boolean apply( NetworkInterface input ) {
+//          return !input.getName( ).contains( "virbr0" ) && !input.getDisplayName( ).contains( "virbr0" );
+//        }
+//      } ) );
       Collections.sort( ifaces, new Comparator<NetworkInterface>( ) {
         
         @Override
@@ -210,6 +219,13 @@ public class Internets {
   public static List<InetAddress> getAllInetAddresses( ) {
     List<InetAddress> addrs = Lists.newArrayList( );
     for ( NetworkInterface iface : Internets.getNetworkInterfaces( ) ) {
+      try {
+        if( iface.isPointToPoint( ) ) {
+          continue;
+        }
+      } catch ( SocketException ex ) {
+        LOG.error( ex , ex );
+      }
       for ( InterfaceAddress iaddr : iface.getInterfaceAddresses( ) ) {
         InetAddress addr = iaddr.getAddress( );
         if ( addr instanceof Inet4Address ) {

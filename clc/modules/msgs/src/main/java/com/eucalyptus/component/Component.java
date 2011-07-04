@@ -73,7 +73,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
@@ -180,7 +180,7 @@ public class Component implements HasName<Component> {
    * @return true if the component could be run locally.
    */
   public Boolean isAvailableLocally( ) {
-    return this.identity.isAlwaysLocal( ) || ( this.identity.isCloudLocal( ) && Bootstrap.isCloudController( ) ) || this.checkComponentParts( );
+    return this.identity.isAlwaysLocal( ) || ( this.identity.isCloudLocal( ) && BootstrapArgs.isCloudController( ) ) || this.checkComponentParts( );
   }
   
   private boolean checkComponentParts( ) {

@@ -69,7 +69,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
 import org.jgroups.ViewId;
-import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.util.Internets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
@@ -92,7 +92,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   
   public Host( ViewId viewId ) {
     this.groupsId = Hosts.localMembershipAddress( );
-    this.update( viewId, Bootstrap.isCloudController( ), Internets.getAllInetAddresses( ) );
+    this.update( viewId, BootstrapArgs.isCloudController( ), Internets.getAllInetAddresses( ) );
   }
   
   synchronized void update( ViewId viewId, Boolean hasDb, List<InetAddress> addresses ) {

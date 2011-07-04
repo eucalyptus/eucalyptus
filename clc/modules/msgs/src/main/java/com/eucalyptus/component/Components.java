@@ -73,6 +73,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.empyrean.ServiceId;
@@ -299,7 +300,7 @@ public class Components {
     ARE_ENABLED_LOCAL {
       @Override
       public boolean apply( Component c ) {
-        boolean cloudLocal = Bootstrap.isCloudController( ) && c.getComponentId( ).isCloudLocal( );
+        boolean cloudLocal = BootstrapArgs.isCloudController( ) && c.getComponentId( ).isCloudLocal( );
         boolean alwaysLocal = c.getComponentId( ).isAlwaysLocal( );
         boolean runningLocal = c.isEnabledLocally( );
         return cloudLocal || alwaysLocal || runningLocal;
