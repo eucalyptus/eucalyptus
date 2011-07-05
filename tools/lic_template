@@ -4,13 +4,15 @@
 
   "ldap-service":{
 
-    "_comment":"This section defines configurations for LDAP service. <server-url> defines LDAP service URL. <auth-method> defines the LDAP authentication method. <auth-principal> defines the LDAP authentication user (for whom to access LDAP). <auth-credentials> field can have both un-encrypted and encrypted password. Encrypted password has a format as {RSA/ECB/PKCS1Padding}xxxxxxxxxxxxx. <use-ssl> specifies whether to use SSL for LDAP connection for extra safety.",
+    "_comment":"This section defines configurations for LDAP service. <server-url> defines LDAP service URL. <auth-method> defines the LDAP authentication method. <auth-principal> defines the LDAP authentication user (for whom to access LDAP). <auth-credentials> field can have both un-encrypted and encrypted password. Encrypted password has a format as {RSA/ECB/PKCS1Padding}xxxxxxxxxxxxx. <use-ssl> specifies whether to use SSL for LDAP connection for extra safety. <ignore-ssl-cert-validation> specifies whether to ignore SSL certificate validation, esp. for accepting self-signed certificates. <krb5-conf> specifies the krb5.conf file for GSSAPI with Kerbeors V5 authentication.",
 
     "server-url":"ldap://localhost:7733",
     "auth-method":"simple",
     "auth-principal":"cn=ldapadmin,dc=foo,dc=com",
     "auth-credentials":"ENCRYPTED_PASSWORD",
     "use-ssl":"false",
+    "ignore-ssl-cert-validation":"false",
+    "krb5-conf":"/path/to/krb5.conf",
   },
 
   "sync":{
