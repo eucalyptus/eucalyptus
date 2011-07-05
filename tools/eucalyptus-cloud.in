@@ -200,6 +200,11 @@ do_start() {
 do_status() {
 	if [ -s ${pidfile} ]; then
 		pid=`cat ${pidfile} 2> /dev/null`
+                ppid=`ps -p $pid -o ppid=`
+                if ! ps axww|grep $ppid|grep eucalyptus-cloud.pid >/dev/null; then
+                        # pid file is not matching parent pid
+                        return 1
+                fi
 		if ! ps axww|grep $pid|grep eucalyptus-cloud.pid > /dev/null; then
 			# pid file is not matching
 			rm -f ${pidfile}
@@ -335,7 +340,7 @@ case "$1" in
   	;;
   status)
 	if do_status ; then
-		echo "$DESC ($NAME) is/are running"
+		echo "$DESC are running"
 	else
 		exit 3
 	fi
