@@ -14,6 +14,7 @@ public class LicSpec {
   public static final String AUTH_PRINCIPAL = "auth-principal";
   public static final String AUTH_CREDENTIALS = "auth-credentials";
   public static final String USE_SSL = "use-ssl";
+  public static final String IGNORE_SSL_CERT_VALIDATION = "ignore-ssl-cert-validation";
   public static final String ROOT_DN = "root-dn";
   public static final String GROUP_BASE_DN = "base-dn";
   public static final String USER_BASE_DN = "base-dn";
@@ -35,5 +36,6 @@ public class LicSpec {
   public static final String ACCOUNTING_GROUP_BASE_DN = "base-dn";
   public static final String SELECTION = "selection";
   public static final String FILTER = "filter";
+  public static final String KRB5_CONF = "krb5-conf";
 
 }

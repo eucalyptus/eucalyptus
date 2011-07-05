@@ -19,6 +19,8 @@ public class LdapIntegrationConfiguration {
   private String authPrincipal;
   private String authCredentials;
   private boolean useSsl;
+  private boolean ignoreSslCertValidation = false;
+  private String krb5Conf;
   
   // Sync configuration
   private boolean enableSync;
@@ -61,6 +63,8 @@ public class LdapIntegrationConfiguration {
     sb.append( '\t' ).append( "auth-principal:" ).append( this.authPrincipal ).append( '\n' );
     sb.append( '\t' ).append( "auth-credentials:" ).append( this.authCredentials ).append( '\n' );
     sb.append( '\t' ).append( "use-ssl:" ).append( this.useSsl ).append( '\n' );
+    sb.append( '\t' ).append( "ignore-ssl-cert-validation:" ).append( this.ignoreSslCertValidation ).append( '\n' );
+    sb.append( '\t' ).append( "krb5-conf:" ).append( this.krb5Conf ).append( '\n' );
     sb.append( "sync:\n" );
     sb.append( '\t' ).append( "enable:" ).append( this.enableSync ).append( '\n' );
     sb.append( '\t' ).append( "auto:" ).append( this.autoSync ).append( '\n' );
@@ -271,6 +275,22 @@ public class LdapIntegrationConfiguration {
 
   public Selection getUsersSelection( ) {
     return usersSelection;
+  }
+
+  public void setIgnoreSslCertValidation( boolean ignoreSslCertValidation ) {
+    this.ignoreSslCertValidation = ignoreSslCertValidation;
+  }
+
+  public boolean isIgnoreSslCertValidation( ) {
+    return ignoreSslCertValidation;
+  }
+
+  public void setKrb5Conf( String krb5Conf ) {
+    this.krb5Conf = krb5Conf;
+  }
+
+  public String getKrb5Conf( ) {
+    return krb5Conf;
   }
 
 }

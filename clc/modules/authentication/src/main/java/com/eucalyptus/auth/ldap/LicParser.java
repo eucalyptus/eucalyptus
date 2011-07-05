@@ -12,6 +12,7 @@ import com.eucalyptus.auth.LicParseException;
 import com.eucalyptus.auth.json.JsonUtils;
 import com.eucalyptus.auth.lic.LicSpec;
 import com.google.common.collect.Sets;
+import com.google.gwt.thirdparty.guava.common.base.Strings;
 
 /**
  * Parser of ldap integration configuration (LIC). LIC is in JSON format.
@@ -79,8 +80,17 @@ public class LicParser {
     lic.setAuthPrincipal( validateNonEmpty( JsonUtils.getRequiredByType( String.class, ldapServiceObj, LicSpec.AUTH_PRINCIPAL ) ) );
     lic.setAuthCredentials( validateNonEmpty( JsonUtils.getRequiredByType( String.class, ldapServiceObj, LicSpec.AUTH_CREDENTIALS ) ) );
     lic.setUseSsl( "true".equalsIgnoreCase( JsonUtils.getRequiredByType( String.class, ldapServiceObj, LicSpec.USE_SSL ) ) );
-  }
+    lic.setIgnoreSslCertValidation( "true".equalsIgnoreCase( JsonUtils.getByType( String.class, ldapServiceObj, LicSpec.IGNORE_SSL_CERT_VALIDATION ) ) );
+    lic.setKrb5Conf( validateKrb5Conf( lic.getAuthMethod( ), JsonUtils.getByType( String.class, ldapServiceObj, LicSpec.KRB5_CONF ) ) );
+}
   
+  private String validateKrb5Conf( String authMethod, String krb5Conf ) throws JSONException {
+    if ( LDAP_AUTH_METHOD_SASL_GSSAPI.equals( authMethod ) && Strings.isNullOrEmpty( krb5Conf ) ) {
+      throw new JSONException( "krb5.conf must be specified for GSSAPI/KerberosV5" );
+    }
+    return krb5Conf;
+  }
+
   private String validateServerUrl( String url ) throws JSONException {
     if ( isEmpty( url ) || !url.startsWith( LDAP_URL_PREFIX ) ) {
       throw new JSONException( "Invalid server url " + url );
