@@ -240,6 +240,7 @@ do_stop() {
 	fi
 
 	# let's way few seconds than kill harder
+	# let's not.
 	timeout=20
 	while [ $timeout -gt 0 ]; do
 		if do_status ; then
@@ -250,8 +251,8 @@ do_stop() {
 		fi
 	done
 	if [ $timeout -eq 0 ]; then
-		kill -9 $pid > /dev/null 2>&1 
-		kill -9 $ppid > /dev/null 2>&1
+		kill $pid > /dev/null 2>&1 
+		kill $ppid > /dev/null 2>&1
 	fi
 	rm -f $pidfile
 
