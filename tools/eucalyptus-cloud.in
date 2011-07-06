@@ -146,6 +146,9 @@ do_upgrade() {
             return
         fi
 
+        # Remove old unpacked webapp area
+        rm -rf $EUCALYPTUS/var/run/eucalyptus/webapp
+
         # Attempt db upgrade
         echo "Attempting database upgrade from $OLD_EUCA_VERSION at $OLD_EUCA_PATH..."
 	$EUCALYPTUS/usr/share/eucalyptus/euca_upgrade --old $OLD_EUCA_PATH --new $EUCALYPTUS --db --user $EUCA_USER
@@ -181,7 +184,7 @@ do_start() {
 	if [ "$DISABLE_EBS" = "Y" ]; then
 		CLOUD_OPTS="$CLOUD_OPTS --disable-storage"
 	fi
-	if [ "$DISABLE_ISCSI" != "N" ]; then
+	if [ "$DISABLE_ISCSI" = "Y" ]; then
 		CLOUD_OPTS="$CLOUD_OPTS --disable-iscsi"
 	fi
 
@@ -240,6 +243,7 @@ do_stop() {
 	fi
 
 	# let's way few seconds than kill harder
+	# let's not.
 	timeout=20
 	while [ $timeout -gt 0 ]; do
 		if do_status ; then
@@ -250,8 +254,8 @@ do_stop() {
 		fi
 	done
 	if [ $timeout -eq 0 ]; then
-		kill -9 $pid > /dev/null 2>&1 
-		kill -9 $ppid > /dev/null 2>&1
+		kill $pid > /dev/null 2>&1 
+		kill $ppid > /dev/null 2>&1
 	fi
 	rm -f $pidfile
 

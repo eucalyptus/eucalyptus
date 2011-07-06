@@ -28,24 +28,6 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-# # enable/disable services
-# if [ -r $EUCALYPTUS/var/lib/eucalyptus/services ]; then
-# 	for x in `cat $EUCALYPTUS/var/lib/eucalyptus/services` ; do
-# 		TO_START="$TO_START $x"
-# 	done
-# fi
-# if [ -n "$DISABLED" -o -n "$ENABLED" ]; then
-# 	for x in $TO_START $ENABLED ; do
-# 		to_start="Y"
-# 		for y in $DISABLED ; do
-# 			if [ "$x" = "$y" ]; then
-# 				to_start="N"
-# 			fi
-# 		done
-# 		[ $to_start = "Y" ] && echo $x
-# 	done | sort | uniq > $EUCALYPTUS/var/lib/eucalyptus/services
-# fi
-
 import os
 
 class Enable(object):
