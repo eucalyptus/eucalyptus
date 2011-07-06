@@ -184,7 +184,7 @@ do_start() {
 	if [ "$DISABLE_EBS" = "Y" ]; then
 		CLOUD_OPTS="$CLOUD_OPTS --disable-storage"
 	fi
-	if [ "$DISABLE_ISCSI" != "N" ]; then
+	if [ "$DISABLE_ISCSI" = "Y" ]; then
 		CLOUD_OPTS="$CLOUD_OPTS --disable-iscsi"
 	fi
 
