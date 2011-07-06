@@ -170,7 +170,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	}
 
 	private void mountPrimary() throws ExecutionException, EucalyptusCloudException {
-		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_MOUNT_WRAPPER, "mount", DRBDInfo.getDRBDInfo().getBlockDevice(), WalrusInfo.getWalrusInfo().getStorageDir()}) != 0) {
+		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_MOUNT_WRAPPER, "mount", DRBDInfo.getDRBDInfo().getBlockDevice(), WalrusInfo.getWalrusInfo().getStorageDir(), WalrusProperties.EUCA_USER}) != 0) {
 			throw new EucalyptusCloudException("Unable to mount " + DRBDInfo.getDRBDInfo().getBlockDevice() + " as " + WalrusInfo.getWalrusInfo().getStorageDir());
 		}
 	}
@@ -265,7 +265,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		String dstateString = getDataStatus();
 		String[] dstateParts = dstateString.split("/");
 		if(dstateParts.length > 1) {
-			if(dstateParts[0].startsWith(DSTATE_UPTODATE)) {
+			if(dstateParts[0].startsWith(DSTATE_UPTODATE) && (dstateParts[1].startsWith(DSTATE_UPTODATE))) {
 				return true;
 			} else {
 				return false;
@@ -293,15 +293,16 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		//role, cstate, dstate
 		if(!isPrimary()) {
 			//make primary
-			if(!isPeerSecondary()) {
-				throw new EucalyptusCloudException("Peer is not secondary and I am master!");
+			if(isPeerPrimary()) {
+				throw new EucalyptusCloudException("Peer is primary and I am supposed to be master! Unable to proceed!");
 			}
 			makePrimary();
 		}
 		if(!isConnected()) {
-			connectResource();
-			if(!isConnected()) {
-				throw new EucalyptusCloudException("Resource could not be connected to peer.");
+			try {
+				connectResource();
+			} catch (Exception e) {
+				LOG.error(e);
 			}
 		}
 		//mount
@@ -325,9 +326,10 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 			makeSecondary();
 		}
 		if(!isConnected()) {
-			connectResource();
-			if(!isConnected()) {
-				throw new EucalyptusCloudException("Resource not connected to peer.");
+			try {
+				connectResource();
+			} catch(Exception e) {
+				LOG.error(e);
 			}
 		}
 		//verify state
@@ -370,23 +372,20 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		try {
 			boolean notConnected = false;
 			if(!isConnected()) {
-				connectResource();
-				if(!isConnected()) {
-					LOG.warn("Unable to connect resource");
-					notConnected = true;
+				try {
+					connectResource();
+				} catch(Exception e) {
+					LOG.error(e);
 				}
-			}
-			boolean notUpToDate = false;
-			if(!isUpToDate()) {
-				LOG.warn("Resource is not up to date");
-				notUpToDate = true;
 			}
 			if (Component.State.ENABLED.equals(Components.lookup("walrus").getState())) {
 				if(!isPrimary()) {
-					throw new EucalyptusCloudException("I am the master, but not DRBD primary. Aborting!");
+					throw new EucalyptusCloudException("I am the master, but not DRBD primary. Please make me primary. Aborting!");
 				}
-				return;
 			} else {
+				if((isConnected()) && (!isUpToDate())) {
+					throw new EucalyptusCloudException("Resource connected but not up to date!");
+				}
 				if (Component.State.DISABLED.equals(Components.lookup("walrus").getState())) {
 					if(!isSecondary()) {
 						LOG.warn("I am the slave, but not DRBD secondary. Trying to become secondary...");
@@ -395,20 +394,6 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 							throw new EucalyptusCloudException("Attempt to set secondary failed. Unable to proceed!");
 						}
 					}
-					NavigableSet<ServiceConfiguration> hii = Components.lookup("walrus").lookupServiceConfigurations( );
-					boolean isOtherPrimary = false;
-					for (ServiceConfiguration ii : hii) {
-						isOtherPrimary |= Component.State.ENABLED.equals(ii.lookupState()) && !ii.isVmLocal() ? true : false;
-					}
-					if(!isOtherPrimary) {
-						return;
-					}
-				}
-				if(notConnected) {
-					throw new EucalyptusCloudException("Resource not connected and not primary or cannot become one!");
-				}
-				if(notUpToDate) {
-					throw new EucalyptusCloudException("Resource not up to date and not primary or cannot become one!");
 				}
 			}
 		} catch(ExecutionException ex) {
