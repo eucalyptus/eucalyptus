@@ -492,9 +492,8 @@ class EucaConf(object):
 
     def do_upgrade_conf(self):
         if self.options.upgrade_conf_file:
-            #TODO: A no-op for now
-            print 'Upgrade from %s now' % self.options.upgrade_conf_file
-            sys.exit(0)
+            print 'Upgrading from %s' % self.options.upgrade_conf_file
+            self.config.mergefile(self.options.upgrade_conf_file)
             
     def _do_list(self, option_name, module_name, class_name):
         if getattr(self.options, option_name):

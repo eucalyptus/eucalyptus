@@ -121,7 +121,7 @@ upgrade_conf() {
     echo "Cannot find new ${NEW_EUCA}/usr/sbin/euca_conf! Skipping automatic upgrade."; exit 1
   fi
   # upgrade the conf file
-  ${EUCALYPTUS}/usr/sbin/euca_conf -d ${EUCALYPTUS} --upgrade-conf ${OLD_EUCA}/etc/eucalyptus/eucalyptus.conf ${EUCALYPTUS}/etc/eucalyptus/eucalyptus.conf 
+  ${EUCALYPTUS}/usr/sbin/euca_conf -d ${EUCALYPTUS} --upgrade-conf ${OLD_EUCA}/etc/eucalyptus/eucalyptus.conf 
 }
 
 upgrade_keys() {
