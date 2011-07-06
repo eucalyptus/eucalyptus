@@ -416,6 +416,10 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 			if(isMounted()) {
 				unmountPrimary();
 			}
+			if(!isSecondary()) {
+				//make secondary
+				makeSecondary();
+			}
 		} catch(ExecutionException ex) {
 			throw new EucalyptusCloudException(ex);
 		}
