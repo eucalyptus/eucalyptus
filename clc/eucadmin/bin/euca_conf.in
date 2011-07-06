@@ -265,6 +265,9 @@ class EucaConf(object):
         self.parser.add_option('--import-conf', action='store',
                                type='string', dest='import_conf_file',
                                help='import vars from another eucalyptus.conf')
+        self.parser.add_option('--upgrade-conf', action='store',
+                               type='string', dest='upgrade_conf_file',
+                               help='upgrade eucalyptus.conf from old installation')
         self.parser.add_option('--setup', action='store_true',
                                dest='do_setup', default=False,
                                help='perform initial setup')
@@ -487,6 +490,12 @@ class EucaConf(object):
             req = cls(self.options.heartbeat)
             req.cli_formatter()
 
+    def do_upgrade_conf(self):
+        if self.options.upgrade_conf_file:
+            #TODO: A no-op for now
+            print 'Upgrade from %s now' % self.options.upgrade_conf_file
+            sys.exit(0)
+            
     def _do_list(self, option_name, module_name, class_name):
         if getattr(self.options, option_name):
             cls = boto.utils.find_class(module_name, class_name)
