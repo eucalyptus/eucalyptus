@@ -189,7 +189,9 @@ public class HostManager {
     
     @Override
     public void receive( Message msg ) {
-      if ( msg.getObject( ) instanceof List ) {
+      if ( Hosts.getHostInstance( msg.getSrc( ) ).isLocalHost( ) ) {
+        return;
+      } else if ( msg.getObject( ) instanceof List ) {
         LOG.debug( "Received updated host information: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
         this.receive( ( List<Host> ) msg.getObject( ) );
       } else if ( msg.getObject( ) instanceof Initialize ) {
