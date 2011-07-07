@@ -97,11 +97,13 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -218,7 +220,7 @@ public class HostManager {
         Bootstrap.initializeSystem( );
         System.exit( 123 );
       } catch ( Throwable ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
         System.exit( 1 );
       }
     }
@@ -235,7 +237,7 @@ public class HostManager {
        * they have different life cycles.
        **/
     }
-        
+    
   }
   
   private class RemoteHostStateListener extends HostStateListener {
@@ -276,18 +278,26 @@ public class HostManager {
     @Override
     public void receive( List<Host> hosts ) {
       Component euca = Components.lookup( Eucalyptus.class );
-      for ( Host host : hosts ) {
+      for ( final Host host : hosts ) {
         if ( Bootstrap.isFinished( ) && !host.hasDatabase( ) ) {
           try {
             ServiceConfiguration config = euca.getBuilder( ).lookupByHost( host.getHostAddress( ).getHostAddress( ) );
             LOG.debug( "Requesting first time initialization for remote cloud controller: " + host );
-            HostManager.this.membershipChannel.send( new Message( host.getGroupsId( ), null, new Initialize( ) ) );
+            Threads.lookup( Empyrean.class, HostManager.class ).submit( new Runnable( ) {
+              
+              @Override
+              public void run( ) {
+                try {
+                  HostManager.this.membershipChannel.send( new Message( host.getGroupsId( ), null, new Initialize( ) ) );
+                } catch ( ChannelNotConnectedException ex ) {
+                  LOG.error( ex, ex );
+                } catch ( ChannelClosedException ex ) {
+                  LOG.error( ex, ex );
+                }
+              }
+            } );
           } catch ( ServiceRegistrationException ex ) {
             LOG.trace( ex );
-          } catch ( ChannelNotConnectedException ex ) {
-            LOG.error( ex , ex );
-          } catch ( ChannelClosedException ex ) {
-            LOG.error( ex , ex );
           }
         }
         Hosts.updateHost( getCurrentView( ), host );
