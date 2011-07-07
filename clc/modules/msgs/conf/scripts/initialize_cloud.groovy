@@ -2,6 +2,7 @@ import java.util.Properties
 import org.apache.log4j.Logger
 import org.hibernate.ejb.Ejb3Configuration
 import com.eucalyptus.bootstrap.Bootstrap
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.MysqlDatabaseBootstrapper
 import com.eucalyptus.bootstrap.ServiceJarDiscovery
 import com.eucalyptus.bootstrap.SystemIds
@@ -22,7 +23,7 @@ import com.mysql.management.MysqldResource
 
 
 Logger LOG = Logger.getLogger( Bootstrap.class );
-if( !Bootstrap.isFinished( ) ) {
+if( BootstrapArgs.isInitializeSystem( ) ) {
   new DirectoryBootstrapper( ).load( );
   ServiceJarDiscovery.doSingleDiscovery(  new ComponentDiscovery( ) );
   [ new ServiceBuilderDiscovery( ), new PersistenceContextDiscovery( ) ].each{
@@ -67,7 +68,7 @@ try {
       }
       PersistenceContexts.registerPersistenceContext( ctx, config );
     }
-    if( !Bootstrap.isFinished( ) ) {
+    if( BootstrapArgs.isInitializeSystem( ) ) {
       final ServiceConfiguration newComponent = ServiceBuilders.lookup( Eucalyptus.class ).add( Eucalyptus.INSTANCE.name( ), Internets.localHostAddress( ), Internets.localHostAddress( ), 8773 );
       LOG.info( "Added registration for this cloud controller: " + newComponent.toString() );
     }
