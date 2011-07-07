@@ -64,15 +64,7 @@
 package com.eucalyptus.bootstrap;
 
 import java.io.Serializable;
-import java.net.InetAddress;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
@@ -87,29 +79,24 @@ import org.jgroups.Receiver;
 import org.jgroups.View;
 import org.jgroups.stack.ProtocolStack;
 import com.eucalyptus.component.Component;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Host;
 import com.eucalyptus.component.Hosts;
-import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.Logs;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 
 public class HostManager {
   private static Logger         LOG = Logger.getLogger( HostManager.class );
@@ -218,10 +205,10 @@ public class HostManager {
     public void initialize( ) {
       try {
         Bootstrap.initializeSystem( );
-        System.exit( 123 );
+        Eucalyptus.setupLocals( Internets.localHostInetAddress( ) );
       } catch ( Throwable ex ) {
         LOG.error( ex, ex );
-        System.exit( 1 );
+        System.exit( 123 );
       }
     }
     
@@ -353,7 +340,7 @@ public class HostManager {
     
     public void sendState( ) {
       final Iterable<Host> dbs = Iterables.filter( Hosts.list( ), HostManager.this.dbFilter );
-      LOG.debug( "Sending state info: \n" + Joiner.on( "\n -> " ).join( dbs ) );
+      Logs.exhaust( ).debug( "Sending state info: \n" + Joiner.on( "\n" ).join( dbs ) );
       try {
         HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( dbs ) ) );
       } catch ( ChannelNotConnectedException ex ) {

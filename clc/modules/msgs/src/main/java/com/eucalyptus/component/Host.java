@@ -72,6 +72,7 @@ import org.jgroups.Address;
 import org.jgroups.ViewId;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.Logs;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 
@@ -98,17 +99,22 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   
   synchronized void update( ViewId viewId, Boolean hasDb, List<InetAddress> addresses ) {
     this.lastTime = this.timestamp.getAndSet( System.currentTimeMillis( ) );
-    LOG.debug( "Applying update (" + viewId + ") for host: " + this );
+    Logs.exhaust( ).debug( "Applying update (" + viewId + ") for host: " + this );
     ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( addresses ) );
     if ( this.viewId == null ) {
       this.viewId = viewId;
       LOG.trace( "Adding host with addresses: " + addresses );
+      this.viewId = viewId;
+      this.hasDatabase = hasDb;
+      this.hostAddresses = newAddrs;
+      this.lastTime = System.currentTimeMillis( );
+      LOG.trace( "Updated host: " + this );
+    } else {
+      this.viewId = viewId;
+      this.hasDatabase = hasDb;
+      this.hostAddresses = newAddrs;
+      this.lastTime = System.currentTimeMillis( );
     }
-    this.viewId = viewId;
-    this.hasDatabase = hasDb;
-    this.hostAddresses = newAddrs;
-    this.lastTime = System.currentTimeMillis( );
-    LOG.trace( "Updated host: " + this );
   }
   
   public Address getGroupsId( ) {

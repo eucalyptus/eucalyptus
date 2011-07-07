@@ -296,10 +296,11 @@ public class Component implements HasName<Component> {
    * @throws ServiceRegistrationException
    */
   public ServiceConfiguration initRemoteService( InetAddress addr ) throws ServiceRegistrationException {
-    if( Internets.testLocal( addr ) ) {
-      throw new ServiceRegistrationException( "Skipping invalid attempt to init remote service configuration for host " + addr + " on component "
-                                              + this.getName( ) );
-    }
+////TODO:GRZE:REVIEW: should this handle local case for 2ndry clc?
+//    if( Internets.testLocal( addr ) ) {
+//      throw new ServiceRegistrationException( "Skipping invalid attempt to init remote service configuration for host " + addr + " on component "
+//                                              + this.getName( ) );
+//    }
     ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ),
                                                                   this.getComponentId( ).getPort( ) );
     Service ret = this.serviceRegistry.register( config );

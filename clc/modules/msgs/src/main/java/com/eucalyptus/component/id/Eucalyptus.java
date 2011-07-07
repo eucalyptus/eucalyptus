@@ -103,7 +103,7 @@ public class Eucalyptus extends ComponentId.Unpartioned {
           if ( compId.isCloudLocal( ) ) {
             try {
               Component comp = Components.lookup( compId );
-              ServiceConfiguration config = comp.initRemoteService( addr );
+              ServiceConfiguration config = ( Internets.testLocal( addr ) ) ? comp.initRemoteService( addr ) : comp.initRemoteService( addr );//TODO:GRZE:REVIEW: use of initRemote
               if ( Component.State.INITIALIZED.ordinal( ) >= config.lookupState( ).ordinal( ) ) {
                 comp.loadService( config ).get( );
               }
