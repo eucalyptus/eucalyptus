@@ -65,6 +65,7 @@ package com.eucalyptus.bootstrap;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
@@ -163,6 +164,7 @@ public class HostManager {
   }
   
   abstract class HostStateListener implements Receiver, ExtendedMembershipListener, EventListener {
+    private AtomicBoolean initializing = new AtomicBoolean( false );
     
     @Override
     public final byte[] getState( ) {
@@ -189,14 +191,20 @@ public class HostManager {
     
     @Override
     public void receive( Message msg ) {
-      if ( Hosts.getHostInstance( msg.getSrc( ) ).isLocalHost( ) ) {
+      if ( Hosts.getHostInstance( msg.getSrc( ) ).isLocalHost( ) || this.initializing.get( ) ) {
         return;
+      } else if ( msg.getObject( ) instanceof Initialize ) {
+        LOG.debug( "Received initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+        try {
+          if ( this.initializing.compareAndSet( false, true ) ) {
+            this.initialize( );
+          }
+        } finally {
+          this.initializing.compareAndSet( true, false );
+        }
       } else if ( msg.getObject( ) instanceof List ) {
         LOG.debug( "Received updated host information: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
         this.receive( ( List<Host> ) msg.getObject( ) );
-      } else if ( msg.getObject( ) instanceof Initialize ) {
-        LOG.debug( "Received initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
-        this.initialize( );
       } else {
         LOG.debug( "Received unknown message type: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
       }
