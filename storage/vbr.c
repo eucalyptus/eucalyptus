@@ -744,7 +744,11 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
             logprintfl (EUCAERROR, "[%s] error: failed to make disk bootable\n", a->instanceId, root_part);
             goto unmount;
         }
-        
+        // change user of the blob device back to 'eucalyptus' (grub sets it to 'root')
+        sleep (1); // without this, perms on dev-mapper devices can flip back, presumably because in-kernel ops complete after grub process finishes
+        if (diskutil_ch (blockblob_get_dev (a->bb), EUCALYPTUS_ADMIN, NULL, 0) != OK) {
+            logprintfl (EUCAINFO, "[%s] error: failed to change user for '%s' to '%s'\n", a->instanceId, dev, EUCALYPTUS_ADMIN);
+        }
         bootification_failed = 0;
         
     unmount:
@@ -758,7 +762,6 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
             logprintfl (EUCAINFO, "[%s] error: failed to remove %s (there may be a resource leak): %s\n", a->instanceId, mnt_pt, strerror(errno));
             bootification_failed = 1;
         }
-        
         if (bootification_failed)
             goto cleanup;
     }
@@ -885,7 +888,10 @@ static int copy_creator (artifact * a)
             logprintfl (EUCAINFO, "[%s] error: failed to change user and/or permissions for '%s'\n", a->instanceId, path);
             goto unmount;
         }
-        
+        // change user of the blob device back to 'eucalyptus' (tune and maybe other commands above set it to 'root')
+        if (diskutil_ch (dev, EUCALYPTUS_ADMIN, NULL, 0) != OK) {
+            logprintfl (EUCAINFO, "[%s] error: failed to change user for '%s' to '%s'\n", a->instanceId, dev, EUCALYPTUS_ADMIN);
+        }
         injection_failed = 0;
 
     unmount:
