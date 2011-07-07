@@ -64,6 +64,7 @@
 package com.eucalyptus.component;
 
 import java.net.InetAddress;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
@@ -97,20 +98,17 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   
   synchronized void update( ViewId viewId, Boolean hasDb, List<InetAddress> addresses ) {
     this.lastTime = this.timestamp.getAndSet( System.currentTimeMillis( ) );
-    if ( this.viewId != null && this.viewId.equals( viewId ) ) {
-      LOG.debug( "Spurious update (" + viewId + ") for host: " + this );
-    } else {
-      LOG.debug( "Applying update (" + viewId + ") for host: " + this );
-      ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( addresses ) );
-      if ( this.viewId == null ) {
-        this.viewId = viewId;
-        LOG.trace( "Adding host with addresses: " + addresses );
-      }
+    LOG.debug( "Applying update (" + viewId + ") for host: " + this );
+    ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( addresses ) );
+    if ( this.viewId == null ) {
       this.viewId = viewId;
-      this.hasDatabase = hasDb;
-      this.hostAddresses = newAddrs;
-      LOG.trace( "Updated host: " + this );
+      LOG.trace( "Adding host with addresses: " + addresses );
     }
+    this.viewId = viewId;
+    this.hasDatabase = hasDb;
+    this.hostAddresses = newAddrs;
+    this.lastTime = System.currentTimeMillis( );
+    LOG.trace( "Updated host: " + this );
   }
   
   public Address getGroupsId( ) {
@@ -172,7 +170,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   
   @Override
   public String toString( ) {
-    return String.format( "Host:id=%s:viewId=%s:hostAddresses=%s:hasDatabase=%s", this.groupsId, this.viewId, this.hostAddresses, this.hasDatabase );
+    return String.format( "Host:id=%s:viewId=%s:hostAddresses=%s:hasDatabase=%s:lastTime=", this.groupsId, this.viewId, this.hostAddresses, this.hasDatabase, new Date( this.lastTime ) );
   }
 
   public ServiceConfiguration getServiceConfiguration( ) {
