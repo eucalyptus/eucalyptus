@@ -122,7 +122,7 @@ public class Hosts {
     } else {
       ret = hostMap.get( Hosts.localMembershipAddress( ) );
     }
-    ret.update( HostManager.getCurrentView( ).getViewId( ), BootstrapArgs.isCloudController( ), Internets.localInetAddresses( ) );
+    ret.update( HostManager.getCurrentView( ).getViewId( ), BootstrapArgs.isCloudController( ), Internets.getAllInetAddresses( ) );
     return ret;
   }
   

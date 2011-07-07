@@ -266,7 +266,7 @@ public class HostManager {
     public void receive( List<Host> hosts ) {
       Component euca = Components.lookup( Eucalyptus.class );
       for ( final Host host : hosts ) {
-        if ( Bootstrap.isFinished( ) && !host.hasDatabase( ) ) {
+        if ( Bootstrap.isFinished( ) && !host.hasDatabase( ) && !host.isLocalHost( ) ) {
           try {
             ServiceConfiguration config = euca.getBuilder( ).lookupByHost( host.getHostAddress( ).getHostAddress( ) );
             LOG.debug( "Requesting first time initialization for remote cloud controller: " + host );
