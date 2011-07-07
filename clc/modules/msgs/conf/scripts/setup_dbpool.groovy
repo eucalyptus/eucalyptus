@@ -104,7 +104,6 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
   new File( ha_jdbc_config_file_name ).withWriter{ writer ->
     def xml = new MarkupBuilder(writer);
     xml.'ha-jdbc'() {
-//      distributable(config: 'eucalyptus_cache_jgroups.xml', stack: 'udp-jdbc', timeout: '10000')
       sync('class':'net.sf.hajdbc.sync.FullSynchronizationStrategy', id:'full') {
         'property'(name:'fetchSize', '1000')
         'property'(name:'maxBatchSize', '100')

@@ -208,7 +208,7 @@ public class HostManager {
     }
     
     protected boolean setupRemoteCloudServices( InetAddress addr ) {
-      if ( !Internets.testReachability( addr ) || Internets.testLocal( addr ) ) {
+      if ( !Internets.testReachability( addr ) ) {
         return false;
       } else {
         try {
@@ -271,10 +271,10 @@ public class HostManager {
     
     @Override
     public void receive( Message msg ) {
-      List<Host> dbHosts = ( List<Host> ) msg.getObject( );
-      for ( Host dbHost : dbHosts ) {
-        this.setupRemoteCloudServices( dbHost.getHostAddress( ) );
-      }
+//      List<Host> dbHosts = ( List<Host> ) msg.getObject( );
+//      for ( Host dbHost : dbHosts ) {
+//        this.setupRemoteCloudServices( dbHost.getHostAddress( ) );
+//      }
     }
     
     @Override
