@@ -277,7 +277,6 @@ public class HostManager {
     public void receive( List<Host> hosts ) {
       Component euca = Components.lookup( Eucalyptus.class );
       for ( Host host : hosts ) {
-        Hosts.updateHost( getCurrentView( ), host );
         if ( Bootstrap.isFinished( ) && !host.hasDatabase( ) ) {
           try {
             ServiceConfiguration config = euca.getBuilder( ).lookupByHost( host.getHostAddress( ).getHostAddress( ) );
@@ -291,6 +290,7 @@ public class HostManager {
             LOG.error( ex , ex );
           }
         }
+        Hosts.updateHost( getCurrentView( ), host );
       }
     }
     
