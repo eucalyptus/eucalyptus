@@ -504,16 +504,16 @@ int diskutil_write2file (const char * file, const char * str)
     char tmpfile [] = "/tmp/euca-temp-XXXXXX";
     int fd = safe_mkstemp (tmpfile);
     if (fd<0) {
-        logprintfl (EUCAERROR, "{%u} error: failed to create temporary directory\n");
+        logprintfl (EUCAERROR, "{%u} error: failed to create temporary directory\n", (unsigned int)pthread_self());
         return ERROR;
     }
     int size = strlen (str);
     if (write (fd, str, size) != size) {
-        logprintfl (EUCAERROR, "{%u} error: failed to create temporary directory\n");
+        logprintfl (EUCAERROR, "{%u} error: failed to create temporary directory\n", (unsigned int)pthread_self());
         ret = ERROR;
     } else {
         if (diskutil_cp (tmpfile, file) != OK) {
-            logprintfl (EUCAERROR, "{%u} error: failed to copy temp file to destination (%s)\n", file);
+            logprintfl (EUCAERROR, "{%u} error: failed to copy temp file to destination (%s)\n", (unsigned int)pthread_self(), file);
             ret = ERROR;
         }
     }
@@ -542,7 +542,7 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
     logprintfl (EUCAINFO, "{%u} installing kernel and ramdisk\n", (unsigned int)pthread_self());
     output = pruntf (TRUE, "%s %s -p %s/boot/grub/", helpers_path[ROOTWRAP], helpers_path[MKDIR], mnt_pt);
     if (!output) {
-        logprintfl (EUCAINFO, "{%u} error: failed to create grub directory\n");
+        logprintfl (EUCAINFO, "{%u} error: failed to create grub directory\n", (unsigned int)pthread_self());
         return ERROR;
     }
     free (output);
@@ -550,7 +550,7 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
     if (grub_version==1) {
         output = pruntf (TRUE, "%s %s /boot/grub/*stage* %s/boot/grub", helpers_path[ROOTWRAP], helpers_path[CP], mnt_pt);
         if (!output) {
-            logprintfl (EUCAINFO, "{%u} error: failed to copy stage files into grub directory\n");
+            logprintfl (EUCAINFO, "{%u} error: failed to copy stage files into grub directory\n", (unsigned int)pthread_self());
             return ERROR;
         }
         free (output);
@@ -649,6 +649,12 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
             return ERROR;
         }
 
+        // create a soft link of the first partition's device mapper entry in the
+        // form that grub is looking for (not DISKp1 but just DISK1)
+        if (NULL==pruntf (TRUE, "%s /bin/ln -s %sp1 %s1", helpers_path[ROOTWRAP], path, path)) {
+            logprintfl (EUCAINFO, "{%u} warning: failed to create partition device soft-link", (unsigned int)pthread_self());
+        }
+
         // we now invoke grub through euca_rootwrap because it may need to operate on
         // devices that are owned by root (e.g. /dev/mapper/euca-dsk-7E4E131B-fca1d769p1)
         snprintf(cmd, sizeof (cmd), "%s %s --batch >%s 2>&1", helpers_path[ROOTWRAP], helpers_path[GRUB], tmp_file);
@@ -688,13 +694,17 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
             close (tfd);
 
             if (saw_done==FALSE) {
-                logprintfl (EUCAERROR, "{%u} error: failed to run grub 1 on disk '%s': %s\n", (unsigned int)pthread_self(), path);
+                logprintfl (EUCAERROR, "{%u} error: failed to run grub 1 on disk '%s'\n", (unsigned int)pthread_self(), path);
                 rc = 1;
             } else {
                 rc = 0;
             }
         }
-        
+        // try to remove the partition device soft link created above
+        if (NULL==pruntf (TRUE, "%s /bin/rm %s1", helpers_path[ROOTWRAP], path)) {
+            logprintfl (EUCAINFO, "{%u} warning: failed to remove partition device soft-link", (unsigned int)pthread_self());
+        }
+
     } else if (grub_version==2) {
         char * output = pruntf (TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s %s", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt, path);
         if (!output) {
@@ -716,6 +726,12 @@ int diskutil_ch (const char * path, const char * user, const char * group, const
     int ret = OK;
     char * output;
 
+    logprintfl (EUCAINFO, "{%u} changing ownership and permissions of '%s' to %s:%s %o\n", 
+                (unsigned int)pthread_self(), 
+                path,
+                user?user:"", 
+                group?group:"", 
+                perms);
     if (user) {
         output = pruntf (TRUE, "%s %s %s %s", helpers_path[ROOTWRAP], helpers_path[CHOWN], user, path);
         if (!output) {
@@ -798,6 +814,7 @@ static char * pruntf (boolean log_error, char *format, ...)
         pclose(IF);
         return(NULL);
     }
+    output[0]='\0'; // make sure we return an empty string if there is no output
 
     while((bytes = fread(output+(outsize-1025), 1, 1024, IF)) > 0) {
         output[(outsize-1025)+bytes] = '\0';
