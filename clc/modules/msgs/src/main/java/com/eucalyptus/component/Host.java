@@ -84,13 +84,13 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   private Long                       lastTime  = 0l;
   private ServiceConfiguration serviceConfiguration;
   
-  public Host( ViewId viewId, Address jgroupsId, Boolean hasDb, List<InetAddress> hostAddresses, ServiceConfiguration configuration ) {
+  Host( ViewId viewId, Address jgroupsId, Boolean hasDb, List<InetAddress> hostAddresses, ServiceConfiguration configuration ) {
     this.groupsId = jgroupsId;
     this.serviceConfiguration = configuration;
     this.update( viewId, hasDb, hostAddresses );
   }
   
-  public Host( ViewId viewId ) {
+  Host( ViewId viewId ) {
     this.groupsId = Hosts.localMembershipAddress( );
     this.update( viewId, BootstrapArgs.isCloudController( ), Internets.getAllInetAddresses( ) );
   }

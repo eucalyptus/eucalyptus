@@ -77,6 +77,7 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
@@ -526,13 +527,7 @@ public class Bootstrap {
     
   }
 
-  static void initializeSystem( ) {
-    try {
-      GroovyUtil.evaluateScript( "initialize_cloud.groovy" );
-      System.exit( 0 );
-    } catch ( Throwable ex ) {
-      SystemBootstrapper.LOG.error( ex , ex );
-      System.exit( 1 );
-    }
+  static void initializeSystem( ) throws Throwable {
+    GroovyUtil.evaluateScript( "initialize_cloud.groovy" );
   }
 }

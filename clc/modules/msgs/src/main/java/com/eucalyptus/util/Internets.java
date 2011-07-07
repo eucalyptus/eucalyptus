@@ -93,7 +93,7 @@ public class Internets {
   private static final InetAddress       localHostAddr     = determineLocalAddress( );
   private static final List<InetAddress> localHostAddrList = Lists.newArrayList( );
   
-  public static List<InetAddress> localAddresses( ) {
+  public static List<InetAddress> localInetAddresses( ) {
     return localHostAddrList;
   }
   

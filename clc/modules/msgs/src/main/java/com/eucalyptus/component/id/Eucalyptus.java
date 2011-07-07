@@ -63,11 +63,21 @@
 
 package com.eucalyptus.component.id;
 
+import java.net.InetAddress;
+import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.HostManager;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.util.Internets;
 
 public class Eucalyptus extends ComponentId.Unpartioned {
-  public static final Eucalyptus INSTANCE = new Eucalyptus( ); //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
-                                                                
+  public static final Eucalyptus INSTANCE = new Eucalyptus( );                   //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
+  private static Logger          LOG      = Logger.getLogger( Eucalyptus.class );
+  
   @Override
   public String getLocalEndpointName( ) {
     return "vm://EucalyptusRequestQueue";
@@ -83,4 +93,34 @@ public class Eucalyptus extends ComponentId.Unpartioned {
     return true;
   }
   
+  public static boolean setupLocals( InetAddress addr ) {
+    if ( !Internets.testReachability( addr ) ) {
+      LOG.warn( "Failed to reach host for cloud controller: " + addr );
+      return false;
+    } else {
+      try {
+        for ( ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
+          if ( compId.isCloudLocal( ) ) {
+            try {
+              Component comp = Components.lookup( compId );
+              ServiceConfiguration config = comp.initRemoteService( addr );
+              if ( Component.State.INITIALIZED.ordinal( ) >= config.lookupState( ).ordinal( ) ) {
+                comp.loadService( config ).get( );
+              }
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
+            }
+          }
+          for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
+            stage.updateBootstrapDependencies( );
+          }
+        }
+      } catch ( RuntimeException ex ) {
+        LOG.error( ex, ex );
+        throw ex;
+      }
+      return true;
+    }
+    
+  }
 }
