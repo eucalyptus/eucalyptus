@@ -22,12 +22,14 @@ import com.mysql.management.MysqldResource
 
 
 Logger LOG = Logger.getLogger( Bootstrap.class );
-new DirectoryBootstrapper( ).load( );
-ServiceJarDiscovery.doSingleDiscovery(  new ComponentDiscovery( ) );
-[ new ServiceBuilderDiscovery( ), new PersistenceContextDiscovery( ) ].each{
-  ServiceJarDiscovery.runDiscovery( it );
+if( !Bootstrap.isFinished( ) ) {
+  new DirectoryBootstrapper( ).load( );
+  ServiceJarDiscovery.doSingleDiscovery(  new ComponentDiscovery( ) );
+  [ new ServiceBuilderDiscovery( ), new PersistenceContextDiscovery( ) ].each{
+    ServiceJarDiscovery.runDiscovery( it );
+  }
+  SystemCredentials.initialize( );
 }
-SystemCredentials.initialize( );
 Component dbComp = Components.lookup( Database.class );
 try {
   MysqldResource mysql = MysqlDatabaseBootstrapper.initialize( );
