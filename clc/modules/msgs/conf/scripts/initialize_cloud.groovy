@@ -67,8 +67,10 @@ try {
       }
       PersistenceContexts.registerPersistenceContext( ctx, config );
     }
-    final ServiceConfiguration newComponent = ServiceBuilders.lookup( Eucalyptus.class ).add( Eucalyptus.INSTANCE.name( ), Internets.localHostAddress( ), Internets.localHostAddress( ), 8773 );
-    LOG.info( "Added registration for this cloud controller: " + newComponent.toString() );
+    if( !Bootstrap.isFinished( ) ) {
+      final ServiceConfiguration newComponent = ServiceBuilders.lookup( Eucalyptus.class ).add( Eucalyptus.INSTANCE.name( ), Internets.localHostAddress( ), Internets.localHostAddress( ), 8773 );
+      LOG.info( "Added registration for this cloud controller: " + newComponent.toString() );
+    }
   } catch( Exception ex ) {
     LOG.error( ex, ex );
     System.exit( 1 );
