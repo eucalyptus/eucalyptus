@@ -61,9 +61,15 @@ permission notice:
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mount.h>
+#include <unistd.h>
+#include <pwd.h>
 
 int main(int argc, char **argv) {
   int rc;
+  uid_t uid;
+  struct passwd *pass;
+  char *endptr;
+
   if (argc < 2) {
     exit(1);
   }
@@ -73,6 +79,7 @@ int main(int argc, char **argv) {
     }
 
     if (argc==5) {
+        /*For debugging*/
         if (!strcmp("--bind", argv[2])) {
             rc = mount (argv[3], argv[4], NULL, MS_BIND, NULL);
             if (rc) {
@@ -80,8 +87,23 @@ int main(int argc, char **argv) {
                 exit(1);
             }
         } else {
-            fprintf(stderr, "%s: unknown flag %s\n", argv[0], argv[2]);
-            exit(1);
+	    /*Set owner after mount*/
+	    rc = mount(argv[2], argv[3], "ext3", MS_MGC_VAL, NULL);
+            if (rc) {
+                perror("mount");
+                exit(1);
+            }
+            pass = getpwnam(argv[4]);  
+            if (pass == NULL) {
+                perror("getpwnam");
+                exit(1);
+            }
+            uid = pass->pw_uid;
+	    rc = chown(argv[3], uid, (gid_t)-1);
+	    if (rc) {
+                perror("chown");
+                exit(1);
+	    }
         }
     } else {
         rc = mount(argv[2], argv[3], "ext2", MS_MGC_VAL, NULL);
