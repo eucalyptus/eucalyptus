@@ -187,5 +187,13 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     this.serviceConfiguration = serviceConfiguration;
   }
 
+  /**
+   * TODO: DOCUMENT Host.java
+   * @return
+   */
+  public boolean isLocalHost( ) {
+    return false;
+  }
+
 
 }
