@@ -127,6 +127,9 @@ public class Hosts {
   }
   
   public static Host updateHost( View currentView, Host updatedHost ) {
+    if( Internets.testLocal( updatedHost.getHostAddress( ) ) ) {
+      return Hosts.localHost( );
+    }
     synchronized ( Hosts.class ) {
       List<Address> currentMembers = Lists.newArrayList( currentView.getMembers( ) );
       Host entry = null;
