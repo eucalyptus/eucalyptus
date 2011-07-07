@@ -134,7 +134,13 @@ public class SystemBootstrapper {
 
   public boolean load( ) throws Throwable {
     if( BootstrapArgs.isInitializeSystem( ) ) {
-      Bootstrap.initializeSystem( );
+      try {
+        Bootstrap.initializeSystem( );
+        System.exit( 0 );
+      } catch ( Throwable ex ) {
+        LOG.error( ex , ex );
+        System.exit( 1 );
+      }
     } else {
       try {
         // TODO: validation-api

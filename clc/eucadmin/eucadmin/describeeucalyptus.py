@@ -37,10 +37,10 @@ class DescribeEucalyptus(eucadmin.describerequest.DescribeRequest):
     def cli_formatter(self, data):
         clouds = getattr(data, 'euca:registered')
         for cloud in clouds:
-            print 'CLOUDS\t%s\t%s\t%s\t%s\t%s' % (cluster['euca:partition'],
-                                                  cluster['euca:name'],
-                                                  cluster['euca:hostName'],
-                                                  cluster['euca:state'],
-                                                  cluster['euca:detail'])
+            print 'CLOUDS\t%s\t%s\t%s\t%s\t%s' % (cloud['euca:partition'],
+                                                  cloud['euca:name'],
+                                                  cloud['euca:hostName'],
+                                                  cloud['euca:state'],
+                                                  cloud['euca:detail'])
 
     

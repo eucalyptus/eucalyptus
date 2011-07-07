@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.ws;
 
+import java.net.InetAddress;
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
@@ -84,8 +85,10 @@ import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.ServiceTransitions;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Internets;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
@@ -148,6 +151,7 @@ public class ServiceBootstrapper extends Bootstrapper {
   
   @Override
   public boolean load( ) {
+    ServiceBootstrapper.maybeBootstrapDatabase( );
     ServiceBootstrapper.execute( new Predicate<ServiceConfiguration>( ) {
       
       @Override
@@ -168,6 +172,20 @@ public class ServiceBootstrapper extends Bootstrapper {
       }
     } );
     return true;
+  }
+
+  private static void maybeBootstrapDatabase( ) throws NoSuchElementException {
+    Component euca = Components.lookup( Eucalyptus.class );
+    try {
+      for( ServiceConfiguration config : euca.getBuilder( ).list( ) ) {
+        InetAddress addr = config.getInetAddress( );
+        if( Internets.testLocal( addr ) ) {
+          Eucalyptus.setupLocals( addr );
+        }
+      }
+    } catch ( ServiceRegistrationException ex1 ) {
+      LOG.error( ex1 , ex1 );
+    }
   }
   
   @Override

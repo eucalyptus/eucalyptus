@@ -119,6 +119,8 @@ public class HostManager {
   private static HostManager    singleton;
   private final Predicate<Host> dbFilter;
   
+  static class Initialize implements Serializable {}
+  
   private HostManager( ) {
     this.view = new CurrentView( );
     this.membershipChannel = HostManager.buildChannel( );
@@ -197,58 +199,60 @@ public class HostManager {
     }
     
     @Override
-    public abstract void receive( Message msg );
+    public void receive( Message msg ) {
+      if ( msg.getObject( ) instanceof List ) {
+        LOG.debug( "Received updated host information: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+        this.receive( ( List<Host> ) msg.getObject( ) );
+      } else if ( msg.getObject( ) instanceof Initialize ) {
+        LOG.debug( "Received initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+        this.initialize( );
+      } else {
+        LOG.debug( "Received unknown message type: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+      }
+    }
+    
+    public abstract void receive( List<Host> hostsState );
+    
+    public void initialize( ) {
+      try {
+        Bootstrap.initializeSystem( );
+        System.exit( 123 );
+      } catch ( Throwable ex ) {
+        LOG.error( ex , ex );
+        System.exit( 1 );
+      }
+    }
     
     @Override
     public abstract void fireEvent( Event event );
     
     @Override
     public final void viewAccepted( View new_view ) {
-      HostManager.this.view.viewAccepted( new_view );//this seems dumb at first glance, but the state changing mechanism needs to be separate from the state itself -- they hae diffferent life cycles.
+      HostManager.this.view.viewAccepted( new_view );
+      /**
+       * this seems dumb at first glance, but the state changing mechanism needs to be separate from
+       * the state itself --
+       * they have different life cycles.
+       **/
     }
-    
-    protected boolean setupRemoteCloudServices( InetAddress addr ) {
-      if ( !Internets.testReachability( addr ) || Internets.testLocal( addr ) ) {
-        return false;
-      } else {
-        try {
-          for ( ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
-            if ( compId.isCloudLocal( ) ) {
-              try {
-                Component comp = Components.lookup( compId );
-                ServiceConfiguration config = comp.initRemoteService( addr );
-                if( Component.State.INITIALIZED.ordinal( ) >= config.lookupState( ).ordinal( ) ) {
-                  comp.loadService( config ).get( );
-                }
-              } catch ( Exception ex ) {
-                LOG.error( ex, ex );
-              }
-            }
-            for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-              stage.updateBootstrapDependencies( );
-            }
-            HostManager.this.view.markReady( );
-          }
-        } catch ( RuntimeException ex ) {
-          LOG.error( ex, ex );
-          throw ex;
-        }
-        return true;
-      }
-    }
-    
+        
   }
   
   private class RemoteHostStateListener extends HostStateListener {
     @Override
-    public void receive( Message msg ) {
-      LOG.debug( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+    public void receive( List<Host> hosts ) {
       if ( !Bootstrap.isFinished( ) ) {
-        List<Host> dbHosts = ( List<Host> ) msg.getObject( );
-        for ( Host dbHost : dbHosts ) {
-          this.setupRemoteCloudServices( dbHost.getHostAddress( ) );
+        for ( Host host : hosts ) {
+          if ( Eucalyptus.setupLocals( host.getHostAddress( ) ) ) {
+            HostManager.this.view.markReady( );
+          }
+        }//TODO:GRZE: this need to be /more/ dynamic
+      } else {
+        for ( Host host : hosts ) {
+          Hosts.updateHost( getCurrentView( ), host );
         }
-      }//TODO:GRZE: this need to be /more/ dynamic
+      }
+      
     }
     
     @Override
@@ -270,10 +274,23 @@ public class HostManager {
   private class CloudControllerHostStateHandler extends HostStateListener {
     
     @Override
-    public void receive( Message msg ) {
-      List<Host> dbHosts = ( List<Host> ) msg.getObject( );
-      for ( Host dbHost : dbHosts ) {
-        this.setupRemoteCloudServices( dbHost.getHostAddress( ) );
+    public void receive( List<Host> hosts ) {
+      Component euca = Components.lookup( Eucalyptus.class );
+      for ( Host host : hosts ) {
+        Hosts.updateHost( getCurrentView( ), host );
+        if ( Bootstrap.isFinished( ) && !host.hasDatabase( ) ) {
+          try {
+            ServiceConfiguration config = euca.getBuilder( ).lookupByHost( host.getHostAddress( ).getHostAddress( ) );
+            LOG.debug( "Requesting first time initialization for remote cloud controller: " + host );
+            HostManager.this.membershipChannel.send( new Message( host.getGroupsId( ), null, new Initialize( ) ) );
+          } catch ( ServiceRegistrationException ex ) {
+            LOG.trace( ex );
+          } catch ( ChannelNotConnectedException ex ) {
+            LOG.error( ex , ex );
+          } catch ( ChannelClosedException ex ) {
+            LOG.error( ex , ex );
+          }
+        }
       }
     }
     
@@ -283,6 +300,7 @@ public class HostManager {
         HostManager.this.view.sendState( );
       }
     }
+    
   }
   
   class CurrentView {
@@ -305,7 +323,7 @@ public class HostManager {
     public void viewAccepted( View newView ) {
       if ( this.setInitialView( null, newView ) ) {
         LOG.info( "Receiving initial view..." );
-      } else if( !this.isReady( ) ) {
+      } else if ( !this.isReady( ) ) {
         LOG.info( "Receiving view.  Still waiting for database..." );
         this.setInitialView( this.getCurrentView( ), newView );
       } else {

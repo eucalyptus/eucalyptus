@@ -29,5 +29,5 @@
 import eucadmin.registercloud
 
 if __name__ == "__main__":
-    r = eucadmin.registercloud.RegisterCloud()
+    r = eucadmin.registercloud.RegisterEucalyptus()
     r.main_cli()

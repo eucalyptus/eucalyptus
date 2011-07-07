@@ -77,6 +77,69 @@ static void print_libvirt_error (void)
     }
 }
 
+// find value of the given param in the eucalyptus.conf (e.g., /usr/bin/euca-bundle-upload for NC_BUNDLE_UPLOAD_PATH)
+// return NULL if the param is commented out
+static char* find_conf_value(const char* eucahome, const char* param)
+{
+     char conf_path[1024];
+     char line[1024];
+     char *value = NULL;
+     FILE *f_conf = NULL;
+     int i =0; 
+     if(!eucahome || !param)
+	return NULL;
+
+     snprintf(conf_path, 1024, "%s/etc/eucalyptus/eucalyptus.conf", eucahome); 
+     f_conf=fopen(conf_path, "r");
+     if(!f_conf){ 
+    	return NULL;
+     }
+      
+     while(fgets(line, 1024, f_conf)!=NULL){
+        if(strstr(line, param)!=NULL){ // found the param in the line
+           if(strchr(line, '#')!= NULL) // the line is commented out (assume # can't appear in the middle)
+	      break;   
+           else{
+		char* pch = strtok(line, "="); // again assume '=' can't appear in the middle of value
+	        pch = strtok(NULL, "=");
+		if(pch && strlen(pch)>0) {
+	           value = calloc(strlen(pch)+1, 1);
+	           snprintf(value, strlen(pch)+1, "%s", pch);
+	        }             
+	        break;
+	   }
+	}
+	bzero(line, 1024);
+     } 
+
+     // remove "" from the value 	
+     if(value){
+	int quote=0;
+        for(int i=0; i<strlen(value); i++)	
+ 	{	
+	   if(value[i]=='\"')	
+	      quote++;
+	   else
+	      value[i-quote] = value[i];
+	}
+	value[strlen(value)-quote] = 0x00;
+
+       // remove spaces
+       i=0;
+       while(value[i]==' ' || value[i]=='\t')
+          i++;
+       for(int j=i; j<strlen(value); j++)
+          value[j-i] = value[j];
+       value[strlen(value)-i] = 0x00;
+    
+       if(value[strlen(value)-1] == '\n')
+	  value[strlen(value)-1] = 0x00;
+     }
+    
+     fclose(f_conf); 
+     return value;
+}
+
 int main (int argc, char * argv[] )
 {
   virConnectPtr conn = NULL;
@@ -147,6 +210,49 @@ int main (int argc, char * argv[] )
     print_libvirt_error ();
     fprintf (stderr, "error: failed to query running domains\n");
     exit (1);
+  }
+
+  /* check if euca2ools command lines for bundle-instance is in the PATH */
+  fprintf(stderr, "euca-bundle-upload: ");
+  char* bundle_upload = find_conf_value(eucahome, "NC_BUNDLE_UPLOAD_PATH");
+  if(bundle_upload){
+     snprintf(cmd, 1024,"%s --version", bundle_upload);
+     if (system(cmd)){ 
+	fprintf(stderr, "error: could not run '%s'\n", cmd);
+	exit(1);
+     }
+     free(bundle_upload);
+  }else if(system("euca-bundle-upload --version")){
+	fprintf(stderr, "error: could not find euca-bundle-upload in the PATH\n");
+	exit(1);
+  } 
+  
+  fprintf(stderr, "euca-check-bucket: ");
+  char* chk_bucket = find_conf_value(eucahome, "NC_CHECK_BUCKET_PATH");
+  if(chk_bucket){ 
+      snprintf(cmd, 1024, "%s --version", chk_bucket);
+      if(system(cmd)){
+          fprintf(stderr, "error: could not run '%s'\n", cmd);
+          exit(1);
+      }
+      free(chk_bucket);
+  }else if(system("euca-check-bucket --version")){
+      fprintf(stderr, "error: could not find euca-check-bucket in the PATH\n");
+      exit(1);
+  }
+
+  fprintf(stderr, "euca-delete-bundle: ");
+  char* delete_bundle = find_conf_value(eucahome, "NC_DELETE_BUNDLE_PATH");
+  if(delete_bundle){
+      snprintf(cmd, 1024, "%s --version", delete_bundle);
+      if(system(cmd)){
+          fprintf(stderr, "error: could not run '%s'\n", cmd);
+          exit(1);
+      } 
+      free(delete_bundle);
+  }else if(system("euca-delete-bundle --version")){
+     fprintf(stderr, "error: could not find euca-delete-bundle in the PATH\n");
+     exit(1);
   }
   
   return 0;
