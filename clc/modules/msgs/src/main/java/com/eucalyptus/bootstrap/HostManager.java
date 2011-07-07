@@ -209,6 +209,7 @@ public class HostManager {
     
     protected boolean setupRemoteCloudServices( InetAddress addr ) {
       if ( !Internets.testReachability( addr ) ) {
+        LOG.warn( "Failed to contact host for cloud controller: " + addr ); 
         return false;
       } else {
         try {
@@ -227,12 +228,12 @@ public class HostManager {
             for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
               stage.updateBootstrapDependencies( );
             }
-            HostManager.this.view.markReady( );
           }
         } catch ( RuntimeException ex ) {
           LOG.error( ex, ex );
           throw ex;
         }
+        HostManager.this.view.markReady( );
         return true;
       }
     }
@@ -246,7 +247,9 @@ public class HostManager {
       if ( !Bootstrap.isFinished( ) ) {
         List<Host> dbHosts = ( List<Host> ) msg.getObject( );
         for ( Host dbHost : dbHosts ) {
-          this.setupRemoteCloudServices( dbHost.getHostAddress( ) );
+          if ( Eucalyptus.setupLocals( dbHost.getHostAddress( ) ) ) {
+            HostManager.this.view.markReady( );
+          }
         }
       }//TODO:GRZE: this need to be /more/ dynamic
     }
