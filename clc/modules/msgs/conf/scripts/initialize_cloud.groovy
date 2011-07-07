@@ -22,12 +22,14 @@ import com.mysql.management.MysqldResource
 
 
 Logger LOG = Logger.getLogger( Bootstrap.class );
-new DirectoryBootstrapper( ).load( );
-ServiceJarDiscovery.doSingleDiscovery(  new ComponentDiscovery( ) );
-[ new ServiceBuilderDiscovery( ), new PersistenceContextDiscovery( ) ].each{
-  ServiceJarDiscovery.runDiscovery( it );
+if( !Bootstrap.isFinished( ) ) {
+  new DirectoryBootstrapper( ).load( );
+  ServiceJarDiscovery.doSingleDiscovery(  new ComponentDiscovery( ) );
+  [ new ServiceBuilderDiscovery( ), new PersistenceContextDiscovery( ) ].each{
+    ServiceJarDiscovery.runDiscovery( it );
+  }
+  SystemCredentials.initialize( );
 }
-SystemCredentials.initialize( );
 Component dbComp = Components.lookup( Database.class );
 try {
   MysqldResource mysql = MysqlDatabaseBootstrapper.initialize( );
@@ -65,8 +67,10 @@ try {
       }
       PersistenceContexts.registerPersistenceContext( ctx, config );
     }
-    final ServiceConfiguration newComponent = ServiceBuilders.lookup( Eucalyptus.class ).add( Eucalyptus.INSTANCE.name( ), Internets.localHostAddress( ), Internets.localHostAddress( ), 8773 );
-    LOG.info( "Added registration for this cloud controller: " + newComponent.toString() );
+    if( !Bootstrap.isFinished( ) ) {
+      final ServiceConfiguration newComponent = ServiceBuilders.lookup( Eucalyptus.class ).add( Eucalyptus.INSTANCE.name( ), Internets.localHostAddress( ), Internets.localHostAddress( ), 8773 );
+      LOG.info( "Added registration for this cloud controller: " + newComponent.toString() );
+    }
   } catch( Exception ex ) {
     LOG.error( ex, ex );
     System.exit( 1 );
