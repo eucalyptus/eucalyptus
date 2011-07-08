@@ -65,6 +65,7 @@ package com.eucalyptus.bootstrap;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import org.apache.log4j.Logger;
@@ -191,9 +192,14 @@ public class HostManager {
     
     @Override
     public void receive( Message msg ) {
-      if ( Hosts.getHostInstance( msg.getSrc( ) ).isLocalHost( ) || this.initializing.get( ) ) {
-        return;
-      } else if ( msg.getObject( ) instanceof Initialize ) {
+      try {
+        if ( Hosts.getHostInstance( msg.getSrc( ) ).isLocalHost( ) || this.initializing.get( ) ) {
+          return;
+        }
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex , ex );
+      } 
+      if ( msg.getObject( ) instanceof Initialize ) {
         LOG.debug( "Received initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
         try {
           if ( this.initializing.compareAndSet( false, true ) ) {
