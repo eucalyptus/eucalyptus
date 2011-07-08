@@ -193,7 +193,7 @@ public class HostManager {
     @Override
     public void receive( Message msg ) {
       try {
-        if ( Hosts.getHostInstance( msg.getSrc( ) ).isLocalHost( ) || this.initializing.get( ) ) {
+        if ( this.initializing.get( ) || Hosts.getHostInstance( msg.getSrc( ) ).isLocalHost( ) ) {
           return;
         }
       } catch ( NoSuchElementException ex ) {
