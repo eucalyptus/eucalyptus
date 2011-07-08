@@ -222,6 +222,7 @@ public class HostManager {
       try {
         Bootstrap.initializeSystem( );
         Eucalyptus.setupLocals( Internets.localHostInetAddress( ) );
+        HostManager.this.stateListener = new CloudControllerHostStateHandler( );
       } catch ( Throwable ex ) {
         LOG.error( ex, ex );
         System.exit( 123 );
