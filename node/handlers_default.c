@@ -821,13 +821,18 @@ static void * bundling_thread (void *arg)
 	}
 
 	logprintfl (EUCAINFO, "bundling_thread: started bundling instance %s\n", instance->instanceId);
-	char dstDiskPath[MAX_PATH];
-	snprintf(dstDiskPath, MAX_PATH, "%s/%s", instance->instancePath, params->filePrefix);
 
-	int rc = rename(params->diskPath, dstDiskPath); // rename disk file to match input 'filePrefix'
-	if (rc) {
-		logprintfl(EUCAERROR, "bundling_thread: could not rename '%s' to specified filePrefix '%s'\n", params->diskPath, dstDiskPath);
+	int rc=OK;
+	char bundlePath[MAX_PATH];
+        if (clone_bundling_backing(instance, params->filePrefix, bundlePath) != OK){
+		logprintfl(EUCAERROR, "bundling_thread: could not clone the instance image\n");
 	} else {
+		char prefixPath[MAX_PATH];
+		snprintf(prefixPath, MAX_PATH, "%s/%s", instance->instancePath, params->filePrefix);
+		if (strcmp(bundlePath, prefixPath)!=0 && rename(bundlePath, prefixPath)!=0){
+			logprintfl(EUCAERROR, "bundling_thread: could not rename from %s to %s\n", bundlePath, prefixPath);
+			return NULL;
+		}
 		// USAGE: euca-nc-bundle-upload -i <image_path> -d <working dir> -b <bucket>
 	        int pid, status;
 		
@@ -865,8 +870,8 @@ static void * bundling_thread (void *arg)
 		
 		pid = fork();
 		if (!pid) {
-		  logprintfl(EUCADEBUG, "bundling_thread: running cmd '%s -i %s -d %s -b %s -c %s --policysignature %s --euca-auth'\n", params->ncBundleUploadCmd, dstDiskPath, params->workPath, params->bucketName, params->S3Policy, params->S3PolicySig);
-		  exit(execl(params->ncBundleUploadCmd, params->ncBundleUploadCmd, "-i", dstDiskPath, "-d", params->workPath, "-b", params->bucketName, "-c", params->S3Policy, "--policysignature", params->S3PolicySig, "--euca-auth", NULL));
+		  logprintfl(EUCADEBUG, "bundling_thread: running cmd '%s -i %s -d %s -b %s -c %s --policysignature %s --euca-auth'\n", params->ncBundleUploadCmd, prefixPath, params->workPath, params->bucketName, params->S3Policy, params->S3PolicySig);
+		  exit(execlp(params->ncBundleUploadCmd, params->ncBundleUploadCmd, "-i", prefixPath, "-d", params->workPath, "-b", params->bucketName, "-c", params->S3Policy, "--policysignature", params->S3PolicySig, "--euca-auth", NULL));
 		} else {
 		  instance->bundlePid = pid;
 		  rc = waitpid(pid, &status, 0);
@@ -941,7 +946,8 @@ doBundleInstance(
 	params->ncBundleUploadCmd = strdup (nc->ncBundleUploadCmd);
 	params->ncCheckBucketCmd = strdup (nc->ncCheckBucketCmd);
 	params->ncDeleteBundleCmd = strdup (nc->ncDeleteBundleCmd);
-
+ 
+	params->workPath = strdup(instance->instancePath);	
         /***
 	params->sizeMb = get_bundling_size (instanceId, instance->userId) / MEGABYTE;
 	if (params->sizeMb<1)

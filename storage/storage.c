@@ -1027,6 +1027,7 @@ static long long get_cached_file (const char * user_id, const char * url, const 
     return 0L;
 }
 
+// DEPRECATED
 char * get_disk_path (
                       const char * instanceId,
                       const char * userId)

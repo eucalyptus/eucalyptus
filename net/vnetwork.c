@@ -1414,9 +1414,27 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
   snprintf(file, MAX_PATH, "%s/euca-dhcp.pid", vnetconfig->path);
   if (stat(file, &statbuf) == 0) {
     char rootwrap[MAX_PATH];
-    
+    char *tmpstr=NULL;
+    int tmppid, tmpcount;
+
     snprintf(rootwrap, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", vnetconfig->eucahome);
     snprintf(buf, MAX_PATH, "%s/var/run/eucalyptus/net/euca-dhcp.pid", vnetconfig->eucahome);
+
+    // little chunk of code to work-around bad dhcpd that takes some time to populate the pidfile...
+    tmpstr = file2str(buf);
+    if (tmpstr) {
+      tmppid = atoi(tmpstr);
+      free(tmpstr);
+    }
+    for (i=0; i<4 && tmppid == 0; i++) {
+      usleep(250000);
+      tmpstr = file2str(buf);
+      if (tmpstr) {
+	tmppid = atoi(tmpstr);
+	free(tmpstr);
+      }
+    }
+
     rc = safekillfile(buf, vnetconfig->dhcpdaemon, 9, rootwrap);
     if (rc) {
       logprintfl(EUCAWARN, "vnetKickDHCP(): failed to kill previous dhcp daemon\n");

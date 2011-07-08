@@ -179,7 +179,7 @@ static void * rebooting_thread (void *arg)
         int err = 0;
         int rc = 0;
         ncVolume *volume = &instance->volumes[i];
-        rc = generate_attach_xml(volume->localDevReal, volume->remoteDev, &nc_state, attach_xml);
+        rc = generate_attach_xml(volume->localDevReal, volume->remoteDev, &nc_state, instance, attach_xml);
         if(!rc) {
             sem_p (hyp_sem);
             err = virDomainAttachDevice (dom, attach_xml);
@@ -386,7 +386,7 @@ doAttachVolume (	struct nc_state_t *nc,
 		logprintfl(EUCAERROR, "AttachVolume(): cannot verify that host device '%s' is available for hypervisor attach\n", remoteDevReal);
 		ret = ERROR;
 	      } else {
-		rc = generate_attach_xml(localDevReal, remoteDevReal, nc, xml);
+		rc = generate_attach_xml(localDevReal, remoteDevReal, nc, instance, xml);
 		if (!rc) {
 		  /* protect KVM calls, just in case */
 		  sem_p (hyp_sem);
@@ -522,7 +522,7 @@ doDetachVolume (	struct nc_state_t *nc,
 		logprintfl(EUCAERROR, "DetachVolume(): cannot verify that host device '%s' is available for hypervisor detach\n", remoteDevReal);
 		if (!force) ret = ERROR;
 	      } else {
-		rc = generate_attach_xml(localDevReal, remoteDevReal, nc, xml);
+		rc = generate_attach_xml(localDevReal, remoteDevReal, nc, instance, xml);
 		if (!rc) {
 		  /* protect KVM calls, just in case */
 		  sem_p (hyp_sem);

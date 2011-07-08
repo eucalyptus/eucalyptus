@@ -146,9 +146,12 @@ do_upgrade() {
             return
         fi
 
+        # Remove old unpacked webapp area
+        rm -rf $EUCALYPTUS/var/run/eucalyptus/webapp
+
         # Attempt db upgrade
         echo "Attempting database upgrade from $OLD_EUCA_VERSION at $OLD_EUCA_PATH..."
-	su -c "$EUCALYPTUS/usr/share/eucalyptus/euca_upgrade --old $OLD_EUCA_PATH --new $EUCALYPTUS --db" "$EUCA_USER"
+	$EUCALYPTUS/usr/share/eucalyptus/euca_upgrade --old $OLD_EUCA_PATH --new $EUCALYPTUS --db --user $EUCA_USER
 	case "$?" in
 	0)
 		echo "done."
@@ -181,7 +184,7 @@ do_start() {
 	if [ "$DISABLE_EBS" = "Y" ]; then
 		CLOUD_OPTS="$CLOUD_OPTS --disable-storage"
 	fi
-	if [ "$DISABLE_ISCSI" != "N" ]; then
+	if [ "$DISABLE_ISCSI" = "Y" ]; then
 		CLOUD_OPTS="$CLOUD_OPTS --disable-iscsi"
 	fi
 
@@ -198,31 +201,49 @@ do_start() {
 }
 
 do_status() {
-	if [ -s ${pidfile} ]; then
-		pid=`cat ${pidfile} 2> /dev/null`
-		if ! ps axww|grep $pid|grep eucalyptus-cloud.pid > /dev/null; then
-			# pid file is not matching
-			rm -f ${pidfile}
-			return 1
-		fi
-	else
-		# no pidfile, no running services
-		return 1
-	fi
+    local inpid="$1"
+    local ret=0
 
-	return $?
+    if [ -z "$inpid" ]; then
+        if [ -s ${pidfile} ]; then
+            pid=`cat ${pidfile} 2> /dev/null`
+        else
+            # no input pid, no pidfile, can't do anything
+            return 1
+        fi
+    else
+        pid="$inpid"
+    fi
+
+    ppid=`ps -p $pid -o ppid=`
+    if [ -n "$ppid" ]; then
+        if ! ps axww|grep $ppid|grep eucalyptus-cloud.pid >/dev/null; then
+            # pid file is not matching parent pid
+            ret=1
+        fi
+    fi
+    if [ -n "$pid" ]; then
+        if ! ps axww|grep $pid|grep eucalyptus-cloud.pid > /dev/null; then
+            # pid file is not matching
+            ret=1
+        fi
+    fi
+
+    return $ret
 }
 
 do_stop() {
 	# now stop the service
 	if [ -s "${pidfile}" ]; then
 		pid=`cat $pidfile 2> /dev/null`
+                ppid=`ps -p $pid -o ppid=`
 		kill $pid > /dev/null 2>&1
 	else
 		return
 	fi
 
 	# let's way few seconds than kill harder
+	# let's not.
 	timeout=20
 	while [ $timeout -gt 0 ]; do
 		if do_status ; then
@@ -233,7 +254,8 @@ do_stop() {
 		fi
 	done
 	if [ $timeout -eq 0 ]; then
-		kill -9 $pid > /dev/null 2>&1 
+		kill $pid > /dev/null 2>&1 
+		kill $ppid > /dev/null 2>&1
 	fi
 	rm -f $pidfile
 
@@ -335,7 +357,7 @@ case "$1" in
   	;;
   status)
 	if do_status ; then
-		echo "$DESC ($NAME) is/are running"
+		echo "$DESC are running"
 	else
 		exit 3
 	fi
