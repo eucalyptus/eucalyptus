@@ -263,7 +263,7 @@ public class HostManager {
     @Override
     public void fireEvent( Event event ) {
       if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 10 ) && HostManager.this.membershipChannel.isConnected( ) ) {
-        LOG.debug( "Sending state info: \n\t" + Hosts.localHost( ) );
+        Logs.exhaust( ).debug( "Sending state info: " + Hosts.localHost( )  );
         try {
           HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( Hosts.localHost( ) ) ) );
         } catch ( Exception ex ) {
