@@ -64,15 +64,9 @@
 package com.eucalyptus.bootstrap;
 
 import java.io.Serializable;
-import java.net.InetAddress;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
@@ -87,27 +81,24 @@ import org.jgroups.Receiver;
 import org.jgroups.View;
 import org.jgroups.stack.ProtocolStack;
 import com.eucalyptus.component.Component;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Host;
 import com.eucalyptus.component.Hosts;
-import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.Logs;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 
 public class HostManager {
   private static Logger         LOG = Logger.getLogger( HostManager.class );
@@ -174,6 +165,7 @@ public class HostManager {
   }
   
   abstract class HostStateListener implements Receiver, ExtendedMembershipListener, EventListener {
+    private AtomicBoolean initializing = new AtomicBoolean( false );
     
     @Override
     public final byte[] getState( ) {
@@ -200,12 +192,25 @@ public class HostManager {
     
     @Override
     public void receive( Message msg ) {
-      if ( msg.getObject( ) instanceof List ) {
+      try {
+        if ( this.initializing.get( ) || Hosts.getHostInstance( msg.getSrc( ) ).isLocalHost( ) ) {
+          return;
+        }
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex , ex );
+      } 
+      if ( msg.getObject( ) instanceof Initialize ) {
+        LOG.debug( "Received initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+        try {
+          if ( this.initializing.compareAndSet( false, true ) ) {
+            this.initialize( );
+          }
+        } finally {
+          this.initializing.set( false );
+        }
+      } else if ( msg.getObject( ) instanceof List ) {
         LOG.debug( "Received updated host information: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
         this.receive( ( List<Host> ) msg.getObject( ) );
-      } else if ( msg.getObject( ) instanceof Initialize ) {
-        LOG.debug( "Received initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
-        this.initialize( );
       } else {
         LOG.debug( "Received unknown message type: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
       }
@@ -217,9 +222,11 @@ public class HostManager {
       try {
         Bootstrap.initializeSystem( );
         System.exit( 123 );
+//        Eucalyptus.setupLocals( Internets.localHostInetAddress( ) );
+//        HostManager.this.stateListener = new CloudControllerHostStateHandler( );
       } catch ( Throwable ex ) {
-        LOG.error( ex , ex );
-        System.exit( 1 );
+        LOG.error( ex, ex );
+        System.exit( 123 );
       }
     }
     
@@ -235,7 +242,7 @@ public class HostManager {
        * they have different life cycles.
        **/
     }
-        
+    
   }
   
   private class RemoteHostStateListener extends HostStateListener {
@@ -258,14 +265,12 @@ public class HostManager {
     @Override
     public void fireEvent( Event event ) {
       if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 10 ) && HostManager.this.membershipChannel.isConnected( ) ) {
-        LOG.debug( "Sending state info: \n\t" + Hosts.localHost( ) );
+        Logs.exhaust( ).debug( "Sending state info: " + Hosts.localHost( )  );
         try {
           HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( Hosts.localHost( ) ) ) );
-        } catch ( ChannelNotConnectedException ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex, ex );
-        } catch ( ChannelClosedException ex ) {
-          LOG.error( ex, ex );
-        }
+        } 
       }
     }
     
@@ -276,21 +281,27 @@ public class HostManager {
     @Override
     public void receive( List<Host> hosts ) {
       Component euca = Components.lookup( Eucalyptus.class );
-      for ( Host host : hosts ) {
-        Hosts.updateHost( getCurrentView( ), host );
-        if ( Bootstrap.isFinished( ) && !host.hasDatabase( ) ) {
+      for ( final Host host : hosts ) {
+        if ( Bootstrap.isFinished( ) && !host.hasDatabase( ) && !host.isLocalHost( ) ) {
           try {
             ServiceConfiguration config = euca.getBuilder( ).lookupByHost( host.getHostAddress( ).getHostAddress( ) );
             LOG.debug( "Requesting first time initialization for remote cloud controller: " + host );
-            HostManager.this.membershipChannel.send( new Message( host.getGroupsId( ), null, new Initialize( ) ) );
+            Threads.lookup( Empyrean.class, HostManager.class ).submit( new Runnable( ) {
+              
+              @Override
+              public void run( ) {
+                try {
+                  HostManager.this.membershipChannel.send( new Message( host.getGroupsId( ), null, new Initialize( ) ) );
+                } catch ( Exception ex ) {
+                  LOG.error( ex, ex );
+                } 
+              }
+            } );
           } catch ( ServiceRegistrationException ex ) {
             LOG.trace( ex );
-          } catch ( ChannelNotConnectedException ex ) {
-            LOG.error( ex , ex );
-          } catch ( ChannelClosedException ex ) {
-            LOG.error( ex , ex );
           }
         }
+        Hosts.updateHost( getCurrentView( ), host );
       }
     }
     
@@ -343,7 +354,7 @@ public class HostManager {
     
     public void sendState( ) {
       final Iterable<Host> dbs = Iterables.filter( Hosts.list( ), HostManager.this.dbFilter );
-      LOG.debug( "Sending state info: \n" + Joiner.on( "\n -> " ).join( dbs ) );
+      Logs.exhaust( ).debug( "Sending state info: \n" + Joiner.on( "\n" ).join( dbs ) );
       try {
         HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( dbs ) ) );
       } catch ( ChannelNotConnectedException ex ) {

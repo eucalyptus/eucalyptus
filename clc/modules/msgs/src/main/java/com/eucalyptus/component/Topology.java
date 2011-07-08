@@ -265,7 +265,7 @@ public class Topology implements EventListener<Event> {
           return true;
         } else if ( config.getComponentId( ).isRootService( ) && !config.getComponentId( ).isPartitioned( ) ) {
           return true;
-        } else if ( config.getComponentId( ).isRootService( ) && config.getComponentId( ).isPartitioned( )
+        } else if ( ( config.getComponentId( ).isRootService( ) || config.getComponentId( ).isRegisterable( ) ) && config.getComponentId( ).isPartitioned( )
                     && partition.getName( ).equals( config.getPartition( ) ) ) {
           return true;
         } else {

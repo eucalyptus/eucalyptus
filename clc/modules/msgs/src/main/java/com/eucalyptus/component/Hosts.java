@@ -64,7 +64,6 @@
 package com.eucalyptus.component;
 
 import java.net.InetAddress;
-import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -78,10 +77,8 @@ import com.eucalyptus.bootstrap.HostManager;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.Mbeans;
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 
 public class Hosts {
@@ -125,11 +122,14 @@ public class Hosts {
     } else {
       ret = hostMap.get( Hosts.localMembershipAddress( ) );
     }
-    ret.update( HostManager.getCurrentView( ).getViewId( ), BootstrapArgs.isCloudController( ), Internets.localInetAddresses( ) );
+    ret.update( HostManager.getCurrentView( ).getViewId( ), BootstrapArgs.isCloudController( ), Internets.getAllInetAddresses( ) );
     return ret;
   }
   
   public static Host updateHost( View currentView, Host updatedHost ) {
+    if( Internets.testLocal( updatedHost.getHostAddress( ) ) ) {
+      return Hosts.localHost( );
+    }
     synchronized ( Hosts.class ) {
       List<Address> currentMembers = Lists.newArrayList( currentView.getMembers( ) );
       Host entry = null;
@@ -168,9 +168,9 @@ public class Hosts {
 //          LOG.info( "Removing host: " + removedHost );
 //        }
 //      }
-      LOG.debug( "Current host entries: " );
+      Logs.exhaust( ).debug( "Current host entries: " );
       for ( Host host : hostMap.values( ) ) {
-        LOG.debug( "-> " + host );
+        Logs.exhaust( ).debug( "-> " + host );
       }
       return entry;
     }
