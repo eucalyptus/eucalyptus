@@ -100,7 +100,7 @@ public class Eucalyptus extends ComponentId.Unpartioned {
     } else {
       try {
         for ( ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
-          if ( compId.isCloudLocal( ) ) {
+          if ( compId.isCloudLocal( ) && !compId.isRegisterable( ) ) {
             try {
               Component comp = Components.lookup( compId );
               ServiceConfiguration config = ( Internets.testLocal( addr ) ) ? comp.initRemoteService( addr ) : comp.initRemoteService( addr );//TODO:GRZE:REVIEW: use of initRemote
