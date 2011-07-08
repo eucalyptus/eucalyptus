@@ -200,7 +200,7 @@ public class HostManager {
             this.initialize( );
           }
         } finally {
-          this.initializing.compareAndSet( true, false );
+          this.initializing.set( false );
         }
       } else if ( msg.getObject( ) instanceof List ) {
         LOG.debug( "Received updated host information: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
@@ -260,11 +260,9 @@ public class HostManager {
         LOG.debug( "Sending state info: \n\t" + Hosts.localHost( ) );
         try {
           HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( Hosts.localHost( ) ) ) );
-        } catch ( ChannelNotConnectedException ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex, ex );
-        } catch ( ChannelClosedException ex ) {
-          LOG.error( ex, ex );
-        }
+        } 
       }
     }
     
@@ -286,11 +284,9 @@ public class HostManager {
               public void run( ) {
                 try {
                   HostManager.this.membershipChannel.send( new Message( host.getGroupsId( ), null, new Initialize( ) ) );
-                } catch ( ChannelNotConnectedException ex ) {
+                } catch ( Exception ex ) {
                   LOG.error( ex, ex );
-                } catch ( ChannelClosedException ex ) {
-                  LOG.error( ex, ex );
-                }
+                } 
               }
             } );
           } catch ( ServiceRegistrationException ex ) {
