@@ -224,7 +224,7 @@ typedef struct ccConfig_t {
   time_t configMtime, instanceTimeout, ncPollingFrequency, clcPollingFrequency;
   int threads[3];
   int ncFanout;
-  int ccState, ccLastState, kick_network, kick_enabled;
+  int ccState, ccLastState, kick_network, kick_enabled, kick_monitor_running;
   uint32_t cloudIp;
   serviceStatusType ccStatus;
   serviceInfoType services[16];

@@ -991,8 +991,10 @@ int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *
 
   ret=0;
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    sem_mywait(VNET);
     *outAddresses = vnetconfig->publicips;
     *outAddressesLen = NUMBER_OF_PUBLIC_IPS;
+    sem_mypost(VNET);
   } else {
     *outAddresses = NULL;
     *outAddressesLen = 0;
@@ -1539,15 +1541,17 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 		if (ip) free(ip);
 	      }
 
-	      //	      if ((myInstance->ccnet.publicIp[0] != '\0' && strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) && (myInstance->ncnet.publicIp[0] == '\0' || !strcmp(myInstance->ncnet.publicIp, "0.0.0.0"))) {
+	      //#if 0
+	      if ((myInstance->ccnet.publicIp[0] != '\0' && strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) && (myInstance->ncnet.publicIp[0] == '\0' || !strcmp(myInstance->ncnet.publicIp, "0.0.0.0"))) {
 		// CC has network info, NC does not
-		//		logprintfl(EUCADEBUG, "refresh_instances(): sending ncAssignAddress to sync NC\n");
-		//		rc = ncClientCall(ccMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL, "ncAssignAddress", myInstance->instanceId, myInstance->ccnet.publicIp);
-		//		if (rc) {
+		logprintfl(EUCADEBUG, "refresh_instances(): sending ncAssignAddress to sync NC\n");
+		rc = ncClientCall(ccMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL, "ncAssignAddress", myInstance->instanceId, myInstance->ccnet.publicIp);
+		if (rc) {
 		  // problem, but will retry next time
-		//		  logprintfl(EUCAWARN, "refresh_instances(): could not send AssignAddress to NC\n");
-		//		}
-	      //	      }
+		  logprintfl(EUCAWARN, "refresh_instances(): could not send AssignAddress to NC\n");
+		}
+	      }
+	      //#endif
 	      
 	      refresh_instanceCache(myInstance->instanceId, myInstance);
 	      if (!strcmp(myInstance->state, "Extant")) {
@@ -2091,7 +2095,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
       snprintf(uuid, 48, "UNSET");
     }
 
-    logprintfl(EUCADEBUG,"RunInstances(): running instance %s with emiId %s...\n", instId, amiId);
+    logprintfl(EUCADEBUG,"RunInstances(): running instance %s\n", instId);
     
     // generate new mac
     bzero(mac, 32);
@@ -2896,7 +2900,7 @@ void *monitor_thread(void *in) {
 	  logprintfl(EUCADEBUG, "monitor_thread(): syncNetworkState() triggering network restore\n");
 	  config->kick_network = 1;
 	}
-	
+
 	if (config->kick_network) {
 	  logprintfl(EUCADEBUG, "monitor_thread(): restoring network state\n");
 	  rc = restoreNetworkState();
@@ -2950,6 +2954,7 @@ void *monitor_thread(void *in) {
 	  }
 	}
       }
+      config->kick_monitor_running = 1;
     } else {
       // this CC is not enabled, ensure that local network state is disabled
       rc = clean_network_state();
@@ -3853,6 +3858,8 @@ int maintainNetworkState() {
 
   if(pidstr) 
      free(pidstr);
+
+
 
   return(ret);
 }
