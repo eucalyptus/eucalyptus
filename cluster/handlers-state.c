@@ -175,7 +175,7 @@ int doStopService(ncMetadata *ccMeta) {
 }
 
 int doEnableService(ncMetadata *ccMeta) {
-  int i, rc, ret=0;
+  int i, rc, ret=0, done=0;
 
   rc = initialize(ccMeta);
   if (rc) {
@@ -188,12 +188,27 @@ int doEnableService(ncMetadata *ccMeta) {
   sem_mywait(CONFIG);
   if (config->ccState != ENABLED) {
     // tell monitor thread to (re)enable  
+    config->kick_monitor_running = 0;
     config->kick_network = 1;
     config->kick_dhcp = 1;
     config->kick_enabled = 1;
     ccChangeState(ENABLED);
   }
   sem_mypost(CONFIG);  
+
+  // wait for a minute to make sure CC is running again
+  done=0;
+  for (i=0; i<60 && !done; i++) {
+    sem_mywait(CONFIG);
+    if (config->kick_monitor_running) {
+      done++;
+    }
+    sem_mypost(CONFIG);
+    if (!done) {
+      logprintfl(EUCADEBUG, "EnableService(): waiting for monitor to re-initialize (%d/60)\n", i);
+      sleep(1);
+    }
+  }
 
   logprintfl(EUCAINFO, "EnableService(): done\n");
   
