@@ -197,8 +197,8 @@ public class HostManager {
           return;
         }
       } catch ( NoSuchElementException ex ) {
-        LOG.error( ex , ex );
-      } 
+        LOG.error( ex, ex );
+      }
       if ( msg.getObject( ) instanceof Initialize ) {
         LOG.debug( "Received initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
         try {
@@ -221,9 +221,11 @@ public class HostManager {
     public void initialize( ) {
       try {
         Bootstrap.initializeSystem( );
-        System.exit( 123 );
-//        Eucalyptus.setupLocals( Internets.localHostInetAddress( ) );
-//        HostManager.this.stateListener = new CloudControllerHostStateHandler( );
+        Eucalyptus.setupLocals( Internets.localHostInetAddress( ) );
+        for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
+          stage.updateBootstrapDependencies( );
+        }
+        HostManager.this.stateListener = new CloudControllerHostStateHandler( );
       } catch ( Throwable ex ) {
         LOG.error( ex, ex );
         System.exit( 123 );
@@ -265,12 +267,12 @@ public class HostManager {
     @Override
     public void fireEvent( Event event ) {
       if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 10 ) && HostManager.this.membershipChannel.isConnected( ) ) {
-        Logs.exhaust( ).debug( "Sending state info: " + Hosts.localHost( )  );
+        Logs.exhaust( ).debug( "Sending state info: " + Hosts.localHost( ) );
         try {
           HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( Hosts.localHost( ) ) ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
-        } 
+        }
       }
     }
     
@@ -294,7 +296,7 @@ public class HostManager {
                   HostManager.this.membershipChannel.send( new Message( host.getGroupsId( ), null, new Initialize( ) ) );
                 } catch ( Exception ex ) {
                   LOG.error( ex, ex );
-                } 
+                }
               }
             } );
           } catch ( ServiceRegistrationException ex ) {

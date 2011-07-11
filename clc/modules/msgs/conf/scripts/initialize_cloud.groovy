@@ -78,8 +78,6 @@ try {
   } finally {
     mysql.shutdown( );
   }
-  System.exit( 0 );
 } catch( Exception ex ) {
   LOG.error( ex, ex );
-  System.exit( 1 );
 }
