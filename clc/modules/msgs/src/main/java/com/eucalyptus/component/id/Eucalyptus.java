@@ -64,6 +64,7 @@
 package com.eucalyptus.component.id;
 
 import java.net.InetAddress;
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.HostManager;
@@ -72,6 +73,7 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.util.Internets;
 
 public class Eucalyptus extends ComponentId.Unpartioned {
@@ -99,6 +101,13 @@ public class Eucalyptus extends ComponentId.Unpartioned {
       return false;
     } else {
       try {
+        Component euca = Components.lookup( Eucalyptus.class );
+        ServiceConfiguration euconfig = ( Internets.testLocal( addr ) )
+          ? euca.initRemoteService( addr )
+          : euca.initRemoteService( addr );//TODO:GRZE:REVIEW: use of initRemote
+        if ( Component.State.INITIALIZED.ordinal( ) >= euconfig.lookupState( ).ordinal( ) ) {
+          euca.loadService( euconfig ).get( );
+        }
         for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
           stage.updateBootstrapDependencies( );
         }
@@ -112,6 +121,8 @@ public class Eucalyptus extends ComponentId.Unpartioned {
               if ( Component.State.INITIALIZED.ordinal( ) >= config.lookupState( ).ordinal( ) ) {
                 comp.loadService( config ).get( );
               }
+            } catch ( InterruptedException ex ) {
+              Thread.currentThread( ).interrupt( );
             } catch ( Exception ex ) {
               LOG.error( ex, ex );
             }
@@ -123,6 +134,12 @@ public class Eucalyptus extends ComponentId.Unpartioned {
       } catch ( RuntimeException ex ) {
         LOG.error( ex, ex );
         throw ex;
+      } catch ( ServiceRegistrationException ex ) {
+        LOG.error( ex , ex );
+      } catch ( ExecutionException ex ) {
+        LOG.error( ex , ex );
+      } catch ( InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
       }
       return true;
     }

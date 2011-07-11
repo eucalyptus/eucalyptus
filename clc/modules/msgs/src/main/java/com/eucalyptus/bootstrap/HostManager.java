@@ -252,6 +252,9 @@ public class HostManager {
     public void receive( List<Host> hosts ) {
       if ( !Bootstrap.isFinished( ) ) {
         for ( Host host : hosts ) {
+          Hosts.updateHost( getCurrentView( ), host );
+        }
+        for ( Host host : hosts ) {
           if ( Eucalyptus.setupLocals( host.getHostAddress( ) ) ) {
             HostManager.this.view.markReady( );
           }
