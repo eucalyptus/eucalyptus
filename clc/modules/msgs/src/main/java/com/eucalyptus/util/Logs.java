@@ -328,7 +328,7 @@ public class Logs {
           if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
             Logs.exhaust( ).info( SystemBootstrapper.class + " " + EventType.STDOUT + " " + ( string == null
               ? "null"
-              : string.replaceAll( "\\n*\\z", "" ) ) );
+              : string ) );
           }
         }
       }
@@ -340,7 +340,7 @@ public class Logs {
           if ( string.replaceAll( "\\s*", "" ).length( ) > 2 ) {
             Logs.exhaust( ).error( SystemBootstrapper.class + " " + EventType.STDERR + " " + ( string == null
               ? "null"
-              : string.replaceAll( "\\n*\\z", "" ) ) );
+              : string ) );
           }
         }
       }

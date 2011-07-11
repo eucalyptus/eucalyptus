@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,79 +61,22 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.bootstrap;
+package com.eucalyptus.cloud;
 
-import java.util.concurrent.ExecutionException;
-import org.apache.log4j.Logger;
-import com.eucalyptus.component.Host;
-import com.eucalyptus.component.Hosts;
-import com.eucalyptus.empyrean.DescribeServicesResponseType;
-import com.eucalyptus.empyrean.DescribeServicesType;
-import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.event.ClockTick;
-import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventListener;
-import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.Request;
-import com.eucalyptus.util.async.SubjectMessageCallback;
-import com.google.common.base.Predicate;
+import com.eucalyptus.config.DeregisterComponentResponseType
+import com.eucalyptus.config.DeregisterComponentType
+import com.eucalyptus.config.DescribeComponentsResponseType
+import com.eucalyptus.config.DescribeComponentsType
+import com.eucalyptus.config.ModifyComponentAttributeResponseType
+import com.eucalyptus.config.ModifyComponentAttributeType
+import com.eucalyptus.config.RegisterComponentResponseType
+import com.eucalyptus.config.RegisterComponentType
 
-public class HostStateMonitor implements EventListener<Event> {
-  private static Logger LOG = Logger.getLogger( HostStateMonitor.class );
-  class ServiceCallback extends SubjectMessageCallback<Host, DescribeServicesType, DescribeServicesResponseType> {
-    
-    public ServiceCallback( Host target ) {
-      this.setSubject( target );
-      this.setRequest( new DescribeServicesType( ) );
-    }
-    
-    @Override
-    public void fire( DescribeServicesResponseType msg ) {
-      LOG.info( LogUtil.dumpObject( msg ) );//TODO:GRZE:submit state/fd event here
-    }
-
-    @Override
-    public void fireException( Throwable t ) {
-      LOG.error( "Failed sending describe services to host: " + this.getSubject( ) + " with error: " + t.getMessage( ), t );//TODO:GRZE:submit state/fd event here
-    }
-    
-  }
-  
-  @Override
-  public void fireEvent( Event event ) {
-    if ( event instanceof ClockTick ) {
-      Hosts.collect( new Predicate<Host>( ) {
-        @Override
-        public boolean apply( final Host target ) {
-          try {
-            if( target.getServiceConfiguration( ) != null ) { 
-              final Request req = AsyncRequests.newRequest( new ServiceCallback( target ) );
-              Threads.lookup( Empyrean.class, HostStateMonitor.class ).submit( new Runnable( ) {
-                
-                @Override
-                public void run( ) {
-                  try {
-                    req.sendSync( target.getServiceConfiguration( ) );
-                  } catch ( ExecutionException ex ) {
-                    LOG.error( ex , ex );
-                  } catch ( InterruptedException ex ) {
-                    LOG.error( ex , ex );
-                    Thread.currentThread( ).interrupt( );
-                  }
-                }
-              } );
-              return true;
-            } else {
-              return false;
-            }
-          } catch ( Exception ex ) {
-            LOG.error( ex , ex );
-            return false;
-          }
-        }
-      } );
-    }
-  }
-}
+public class RegisterEucalyptusType extends RegisterComponentType {}
+public class RegisterEucalyptusResponseType extends RegisterComponentResponseType {}
+public class DeregisterEucalyptusType extends DeregisterComponentType {}
+public class DeregisterEucalyptusResponseType extends DeregisterComponentResponseType {}
+public class ModifyEucalyptusAttributeType extends ModifyComponentAttributeType{}
+public class ModifyEucalyptusAttributeResponseType extends ModifyComponentAttributeResponseType {}
+public class DescribeEucalyptusType extends DescribeComponentsType {}
+public class DescribeEucalyptusResponseType extends DescribeComponentsResponseType {}

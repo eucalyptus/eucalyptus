@@ -364,6 +364,8 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
       }
       adb_describeNetworksResponseType_set_mode(snrt, env, outvnetConfig->mode);	
       adb_describeNetworksResponseType_set_addrsPerNet(snrt, env, outvnetConfig->numaddrs);
+      adb_describeNetworksResponseType_set_addrIndexMin(snrt, env, outvnetConfig->addrIndexMin);
+      adb_describeNetworksResponseType_set_addrIndexMax(snrt, env, outvnetConfig->addrIndexMax);
       
       vnetSubnet = hex2dot(outvnetConfig->nw);
       if (vnetSubnet) {

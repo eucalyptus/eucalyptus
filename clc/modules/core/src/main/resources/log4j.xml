@@ -112,7 +112,7 @@
     <param name="MaxBackupIndex" value="2" />
     <param name="Threshold" value="${euca.exhaust.level}" />
     <layout class="org.apache.log4j.PatternLayout">
-      <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] %m%n" />
+      <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%C.%M(%F):%L] %m%n" />
     </layout>
   </appender>
   <appender name="walrus-stats-log" class="org.apache.log4j.RollingFileAppender">
@@ -205,6 +205,10 @@
   </category>
   <category name="net.sf.ehcache" additivity="false">
     <priority value="${euca.log.exhaustive.external}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.jgroups.protocols.TP" additivity="false">
+    <priority value="FATAL" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="org.logicalcobwebs.proxool" additivity="false">

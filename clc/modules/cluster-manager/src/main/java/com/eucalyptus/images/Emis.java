@@ -197,11 +197,13 @@ public class Emis {
                                             + vmType.getDisk( ) * 1024l + "MB]" );
       }
       VmTypeInfo vmTypeInfo = createVmTypeInfo( vmType, imgSize );
-      if ( this.hasKernel( ) ) {
-        vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), this.getKernel( ).getManifestLocation( ) );
-      }
-      if ( this.hasRamdisk( ) ) {
-        vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), this.getRamdisk( ).getManifestLocation( ) );
+      if ( this.isLinux( ) ) {
+        if ( this.hasKernel( ) ) {
+          vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), this.getKernel( ).getManifestLocation( ) );
+        }
+        if ( this.hasRamdisk( ) ) {
+          vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), this.getRamdisk( ).getManifestLocation( ) );
+        }
       }
       return vmTypeInfo;
     }
@@ -209,7 +211,11 @@ public class Emis {
     private VmTypeInfo createVmTypeInfo( VmType vmType, Long imgSize ) throws EucalyptusCloudException {
       VmTypeInfo vmTypeInfo = null;
       if ( this.getMachine( ) instanceof StaticDiskImage ) {
-        vmTypeInfo = VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( vmType );
+        if( Image.Platform.windows.equals( this.getMachine( ).getPlatform( ) ) ) {
+          vmTypeInfo = VmTypes.InstanceStoreWindowsVmTypeInfoMapper.INSTANCE.apply( vmType );
+        } else {
+          vmTypeInfo = VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( vmType );
+        }
         vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), ( ( StaticDiskImage ) this.getMachine( ) ).getManifestLocation( ), imgSize );
       } else if ( this.getMachine( ) instanceof BlockStorageImageInfo ) {
         vmTypeInfo = VmTypes.BlockStorageVmTypeInfoMapper.INSTANCE.apply( vmType );
@@ -275,7 +281,6 @@ public class Emis {
       bootSet = Emis.bootsetWithRamdisk( bootSet );
     }
     Emis.checkStoredImage( bootSet );
-//    bootSet.populateVirtualBootRecord( vmType );
     return bootSet;
   }
   

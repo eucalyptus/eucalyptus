@@ -63,12 +63,12 @@
 
 package com.eucalyptus.empyrean
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import com.eucalyptus.component.ComponentMessage;
+import java.io.Serializable
+import java.util.ArrayList
+import com.eucalyptus.component.ComponentMessage
 import com.eucalyptus.util.HasSideEffect
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+import edu.ucsb.eucalyptus.msgs.BaseMessage
+import edu.ucsb.eucalyptus.msgs.EucalyptusData
 
 public class AnonymousMessage extends BaseMessage implements Cloneable, Serializable {
 }
@@ -79,32 +79,43 @@ public class ModifyServiceType extends EmpyreanMessage {
   String name;
   String state;
 }
-public class ModifyServiceResponseType extends EmpyreanMessage implements HasSideEffect {}
-public class ServiceTransitionType extends EmpyreanMessage  {
-  ArrayList<ServiceInfoType> services = new ArrayList<ServiceInfoType>();
+public class ModifyServiceResponseType extends EmpyreanMessage implements HasSideEffect {
 }
-public class StartServiceType extends ServiceTransitionType {}
-public class StartServiceResponseType extends ServiceTransitionType {}
-public class StopServiceType extends ServiceTransitionType {}
-public class StopServiceResponseType extends ServiceTransitionType {}
-public class EnableServiceType extends ServiceTransitionType {}
-public class EnableServiceResponseType extends ServiceTransitionType implements HasSideEffect {}
-public class DisableServiceType extends ServiceTransitionType {}
-public class DisableServiceResponseType extends ServiceTransitionType implements HasSideEffect {}
+public class ServiceTransitionType extends EmpyreanMessage  {
+  ArrayList<ServiceId> services = new ArrayList<ServiceId>();
+}
+public class StartServiceType extends ServiceTransitionType {
+}
+public class StartServiceResponseType extends ServiceTransitionType {
+}
+public class StopServiceType extends ServiceTransitionType {
+}
+public class StopServiceResponseType extends ServiceTransitionType {
+}
+public class EnableServiceType extends ServiceTransitionType {
+}
+public class EnableServiceResponseType extends ServiceTransitionType implements HasSideEffect {
+}
+public class DisableServiceType extends ServiceTransitionType {
+}
+public class DisableServiceResponseType extends ServiceTransitionType implements HasSideEffect {
+}
 public class ServiceId extends EucalyptusData {
   String uuid;/** UUID of the registration **/
   String partition;/** The resource partition name **/
   String name;/** The registration name **/
   String type;/** name of the ComponentId **/
   String fullName;/** full name of the registration **/
-  String uri;
-}
-public class ServiceInfoType extends EucalyptusData {
-  String partition;/** The resource partition name **/
-  String name;/** The registration name **/
-  String type;/** name of the ComponentId **/
-  String fullName;/** full name of the registration **/
   ArrayList<String> uris = new ArrayList<String>( );
+  String uri;
+  public String getUri( ) {
+    return ( uris.isEmpty( ) ? "none" : uris.get( 0 ) );
+  }
+  public void setUri( String uri ) {
+    this.uris.remove( uri );
+    this.uris.add(0, uri);
+    this.uri = uri;
+  }
 }
 public class ServiceStatusType extends EucalyptusData {
   ServiceId serviceId;

@@ -130,7 +130,6 @@ public class ClusterAllocator extends Thread {
   private StatefulMessageSet<State> messages;
   private Cluster                   cluster;
   private Allocation                allocInfo;
-  private ServiceConfiguration      sc;
   
   public static void create( ResourceToken t, Allocation allocInfo ) {
     Clusters.getInstance( ).lookup( t.getCluster( ) ).getThreadFactory( ).newThread( new ClusterAllocator( t, allocInfo ) ).start( );
@@ -141,17 +140,17 @@ public class ClusterAllocator extends Thread {
     if ( vmToken != null ) {
       try {
         this.cluster = Clusters.getInstance( ).lookup( vmToken.getCluster( ) );
-        this.sc = Partitions.lookupService( Storage.class, this.cluster.getPartition( ) );
         this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
         
         if ( this.allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {
+          ServiceConfiguration sc = Partitions.lookupService( Storage.class, this.cluster.getPartition( ) );
           VirtualBootRecord root = allocInfo.getVmTypeInfo( ).lookupRoot( );
           if ( root.isBlockStorage( ) ) {
             for ( int i = 0; i < vmToken.getAmount( ); i++ ) {
               BlockStorageImageInfo imgInfo = ( ( BlockStorageImageInfo ) this.allocInfo.getBootSet( ).getMachine( ) );
               int sizeGb = ( int ) Math.ceil( imgInfo.getImageSizeBytes( ) / ( 1024l * 1024l * 1024l ) );
               LOG.debug( "About to prepare root volume using bootable block storage: " + imgInfo + " and vbr: " + root );
-              Volume vol = Volumes.createStorageVolume( this.sc, this.allocInfo.getOwnerFullName( ), imgInfo.getSnapshotId( ), sizeGb, allocInfo.getRequest( ) );
+              Volume vol = Volumes.createStorageVolume( sc, this.allocInfo.getOwnerFullName( ), imgInfo.getSnapshotId( ), sizeGb, allocInfo.getRequest( ) );
               if ( imgInfo.getDeleteOnTerminate( ) ) {
                 this.allocInfo.getTransientVolumes( ).add( vol );
               } else {
@@ -314,7 +313,7 @@ public class ClusterAllocator extends Thread {
               public void fire( BaseMessage response ) {
                 vm.updatePublicAddress( addr.getName( ) );
               }
-            } ).dispatch( addr.getCluster( ) );
+            } ).dispatch( addr.getPartition( ) );
           }
         }
       } );

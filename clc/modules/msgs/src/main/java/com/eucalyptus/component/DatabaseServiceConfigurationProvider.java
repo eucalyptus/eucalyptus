@@ -52,9 +52,10 @@ public class DatabaseServiceConfigurationProvider<T extends ServiceConfiguration
       db.add( t );
       t = db.getUnique( t );
       db.commit( );
-      EventRecord.here( ServiceConfigurationProvider.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED ).withDetails( t.getComponentId( ).name( ), t.getName( ), "host", t.getHostName( ) ).info( );
+      EventRecord.here( ServiceConfigurationProvider.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, t.toString( ) ).info( );
     } catch ( Exception e ) {
       db.rollback( );
+      EventRecord.here( ServiceConfigurationProvider.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, t.toString( ) ).error( );
       LOG.error( e, e );
       throw new ServiceRegistrationException( e );
     }
@@ -70,9 +71,10 @@ public class DatabaseServiceConfigurationProvider<T extends ServiceConfiguration
       T exists = db.getUnique( searchConfig );
       db.delete( exists );
       db.commit( );
-      EventRecord.here( ServiceConfigurationProvider.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED ).withDetails( t.getComponentId( ).name( ), t.getName( ), "host", t.getHostName( )  ).info( );
+      EventRecord.here( ServiceConfigurationProvider.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED, t.toString( ) ).info( );
     } catch ( Exception e ) {
       db.rollback( );
+      EventRecord.here( ServiceConfigurationProvider.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED, t.toString( ) ).error( );
       LOG.error( e, e );
       throw new ServiceRegistrationException( e );
     }

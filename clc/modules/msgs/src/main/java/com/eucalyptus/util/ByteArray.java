@@ -63,6 +63,9 @@
 
 package com.eucalyptus.util;
 
+import java.util.Arrays;
+import com.google.common.primitives.Bytes;
+
 public class ByteArray {
   private final byte[] bytes;
   
@@ -74,7 +77,11 @@ public class ByteArray {
     super( );
     this.bytes = bytes;
   }
-  
+
+  public static ByteArray newInstance( Byte[] bytes ) {
+    return new ByteArray( Bytes.toArray( Arrays.asList( bytes ) ) );
+  }
+
   public static ByteArray newInstance( byte[] bytes ) {
     return new ByteArray( bytes );
   }

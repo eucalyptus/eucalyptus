@@ -91,7 +91,7 @@ public class SoapHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( SoapHandler.class );
   
   @Override
-  public void incomingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
+  public void incomingMessage( final MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpMessage ) {
       final MappingHttpMessage message = ( MappingHttpMessage ) event.getMessage( );
       final SOAPEnvelope env = message.getSoapEnvelope( );

@@ -73,7 +73,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
   public boolean fire( final ServiceConfiguration config, final Q request ) {
     if ( !this.request.compareAndSet( null, request ) ) {
       LOG.warn( "Duplicate write attempt for request: " + this.request.get( ).getClass( ).getSimpleName( ) );
-      return true;
+      return false;
     } else {
       final SocketAddress serviceSocketAddress = config.getSocketAddress( );
       final ChannelPipelineFactory factory = config.getComponentId( ).getClientPipeline( );
@@ -100,7 +100,8 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
 //TODO:GRZE: better logging here                LOG.debug( "Connected as: " + future.getChannel( ).getLocalAddress( ) );
                 final InetAddress localAddr = ( ( InetSocketAddress ) future.getChannel( ).getLocalAddress( ) ).getAddress( );
                 if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
-                  AsyncRequestHandler.this.request.get( ).getBaseServices( ).addAll( Topology.relativeView( config.lookupPartition( ), localAddr ) );
+                  AsyncRequestHandler.this.request.get( ).set_epoch( Topology.epoch( ) );
+                  AsyncRequestHandler.this.request.get( ).get_services( ).addAll( Topology.partitionRelativeView( config.lookupPartition( ), localAddr ) );
                 }
                 EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPEN, request.getClass( ).getSimpleName( ),
                                   request.getCorrelationId( ), serviceSocketAddress.toString( ), "" + future.getChannel( ).getLocalAddress( ),
@@ -126,7 +127,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
               } else {
                 AsyncRequestHandler.this.teardown( future.getCause( ) );
               }
-            } catch ( RuntimeException ex ) {
+            } catch ( Exception ex ) {
               LOG.error( ex, ex );
               AsyncRequestHandler.this.teardown( future.getCause( ) );
             }
@@ -184,6 +185,8 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
         }
 //REVIEW: this is likely not needed.        LOG.error( this.connectFuture.getCause( ).getMessage( ) );
       }
+    } else {
+      this.response.setException( t );
     }
   }
   

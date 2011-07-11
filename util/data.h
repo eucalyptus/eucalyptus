@@ -288,6 +288,7 @@ typedef struct ncInstance_t {
     char xmlFilePath [CHAR_BUFFER_SIZE];
     char libvirtFilePath [CHAR_BUFFER_SIZE];
     char consoleFilePath [CHAR_BUFFER_SIZE];
+    char floppyFilePath [CHAR_BUFFER_SIZE];
     char hypervisorType [SMALL_CHAR_BUFFER_SIZE];
     hypervisorCapabilityType hypervisorCapability;
     boolean combinePartitions; // hypervisor works only with disks (all except Xen)

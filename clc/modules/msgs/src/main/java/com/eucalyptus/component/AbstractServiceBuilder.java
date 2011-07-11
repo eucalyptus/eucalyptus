@@ -98,7 +98,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
   }
   
   @Override
-  public T lookupByName( String name ) throws ServiceRegistrationException {
+  public T lookupByName( String name ) throws ServiceRegistrationException {//TODO:GRZE:RELEASE fix the name uniqueness checking here.
     T conf = this.newInstance( );
     conf.setName( name );
     return ( T ) ServiceConfigurations.getInstance( ).lookup( conf );
@@ -116,9 +116,6 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     try {
       if ( !Internets.testGoodAddress( host ) ) {
         throw new EucalyptusCloudException( "Components cannot be registered using local, link-local, or multicast addresses." );
-//      } else if ( Internets.testLocal( host ) && !this.getComponent( ).isAvailableLocally( ) ) {
-//        throw new EucalyptusCloudException( "You do not have a local " + this.newInstance( ).getClass( ).getSimpleName( ).replaceAll( "Configuration", "" )
-//                                            + " enabled (or it is not installed)." );
       }
     } catch ( EucalyptusCloudException e ) {
       throw new ServiceRegistrationException( e.getMessage( ), e );

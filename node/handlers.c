@@ -1403,15 +1403,20 @@ int get_instance_stats(virDomainPtr dom, ncInstance *instance)
   return(ret);
 }
 
-int generate_attach_xml(char *localDevReal, char *remoteDev, struct nc_state_t *nc, char *xml) {
+int generate_attach_xml(char *localDevReal, char *remoteDev, struct nc_state_t *nc, ncInstance *instance, char *xml ) {
         int virtio_dev = 0;
         int rc = 0;
         struct stat statbuf;
-        /* only attach using virtio when the device is /dev/vdXX */
-        if (localDevReal[5] == 'v' && localDevReal[6] == 'd') {
-             virtio_dev = 1;
-        }
-        if (nc->config_use_virtio_disk && virtio_dev) {
+
+	if(strncmp(instance->hypervisorType, "kvm", 3) ==0){ 
+	    if (strncmp(instance->platform, "windows", 7)==0)
+	        virtio_dev = 1; /* always use virtio for windows instances */
+            else if(localDevReal[5] == 'v' && localDevReal[6] == 'd' && nc->config_use_virtio_disk) {        /* only attach using virtio when the device is /dev/vdXX */
+                virtio_dev = 1;
+            }
+	}
+
+        if (virtio_dev) {
              snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s' bus='virtio'/></disk>", remoteDev, localDevReal);
         } else {
              snprintf (xml, 1024, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'/></disk>", remoteDev, localDevReal);

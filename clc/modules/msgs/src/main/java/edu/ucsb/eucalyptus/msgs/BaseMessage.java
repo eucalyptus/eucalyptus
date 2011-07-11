@@ -26,7 +26,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
-import com.eucalyptus.empyrean.ServiceInfoType;
+import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
@@ -38,14 +38,14 @@ import com.google.common.collect.Lists;
 
 public class BaseMessage {
   @Transient
-  private static Logger              LOG      = Logger.getLogger( BaseMessage.class );
-  private String                     correlationId;
-  private String                     userId;
-  private String                     effectiveUserId;
-  private Boolean                    _return  = true;
-  private String                     statusMessage;
-  private Integer                    epoch    = Topology.epoch( );
-  private ArrayList<ServiceInfoType> services = Lists.newArrayList( );
+  private static Logger        LOG      = Logger.getLogger( BaseMessage.class );
+  private String               correlationId;
+  private String               userId;
+  private String               effectiveUserId;
+  private Boolean              _return  = true;
+  private String               statusMessage;
+  private Integer              _epoch;//NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
+  private ArrayList<ServiceId> _services = Lists.newArrayList( );//NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
   
   public BaseMessage( ) {
     super( );
@@ -250,29 +250,38 @@ public class BaseMessage {
   /**
    * @return the epoch
    */
-  public Integer getBaseEpoch( ) {
-    return this.epoch;
+  public Integer get_epoch( ) {
+    return this._epoch;
   }
   
   /**
    * @param epoch the epoch to set
    */
-  public void setBaseEpoch( Integer epoch ) {
-    this.epoch = epoch;
+  public void set_epoch( Integer epoch ) {
+    this._epoch = epoch;
   }
   
   /**
    * @return the services
    */
-  public ArrayList<ServiceInfoType> getBaseServices( ) {
-    return this.services;
+  public ArrayList<ServiceId> get_services( ) {
+    return this._services;
+  }
+
+  /**
+   * @deprecated use get_services( ) as needed, this old name presents a potential naming conflict
+   * @see #get_services()
+   */
+  @Deprecated
+  public ArrayList<ServiceId> getBaseServices( ) {
+    return this._services;
   }
   
   /**
    * @param services the services to set
    */
-  public void setBaseServices( ArrayList<ServiceInfoType> services ) {
-    this.services = services;
+  public void set_services( ArrayList<ServiceId> services ) {
+    this._services = services;
   }
   
   /**

@@ -6,6 +6,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
@@ -65,14 +66,27 @@ public class NetworkGroupManager {
     NetworkGroupUtil.makeDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
     DeleteSecurityGroupResponseType reply = ( DeleteSecurityGroupResponseType ) request.getReply( );
     if ( Contexts.lookup().hasAdministrativePrivileges() && request.getGroupName( ).indexOf( "::" ) != -1 ) {
-      String userName = request.getGroupName( ).replaceAll( "::.*", "" );
-      try {
-        User user = Accounts.lookupUserByName( userName );
-        AccountFullName userFullName = UserFullName.getInstance( user ); 
-        NetworkGroupUtil.deleteUserNetworkRulesGroup( userFullName, request.getGroupName( ).replaceAll( "\\w*::", "" ) );
-      } catch ( AuthException ex ) {
-        LOG.error( ex.getMessage( ) );
-        throw new EucalyptusCloudException( "Deleting security failed because of: " + ex.getMessage( ) + " for request " + request.toSimpleString( ) );
+      String[] nameParts = request.getGroupName( ).split( "::" );
+      if( nameParts.length != 2 ) {
+        throw new EucalyptusCloudException( "Request to delete group named: " + request.getGroupName( ) + " is malformed." );
+      } else {
+        String accountId = nameParts[ 0 ];
+        String groupName = nameParts[ 1 ];
+        try {
+          Account account = Accounts.lookupAccountById( accountId );
+          for( User user : account.getUsers( ) ) {
+            UserFullName userFullName = UserFullName.getInstance( user );
+            try {
+              NetworkGroupUtil.getUserNetworkRulesGroup( userFullName, groupName );
+              NetworkGroupUtil.deleteUserNetworkRulesGroup( userFullName, groupName );
+            } catch ( EucalyptusCloudException ex ) {
+              //need to iterate over all users in the account and check each of their security groups
+            }
+          }
+        } catch ( AuthException ex ) {
+          LOG.error( ex.getMessage( ) );
+          throw new EucalyptusCloudException( "Deleting security failed because of: " + ex.getMessage( ) + " for request " + request.toSimpleString( ) );
+        }
       }
     } else {
       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, request.getGroupName( ), ctx.getAccount( ), PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
@@ -110,7 +124,7 @@ public class NetworkGroupManager {
                                                               new Predicate<SecurityGroupItemType>( ) {
                                                                 @Override
                                                                 public boolean apply( SecurityGroupItemType arg0 ) {
-                                                                  if ( Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, arg0.getGroupName( ), ctx.getAccount( ), PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+                                                                  if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, arg0.getGroupName( ), ctx.getAccount( ), PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
                                                                     return false;
                                                                   }
                                                                   return groupNames.isEmpty( ) || groupNames.contains( arg0.getGroupName( ) );

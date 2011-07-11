@@ -86,14 +86,6 @@ public class Hosts {
   private static final Logger                       LOG     = Logger.getLogger( Hosts.class );
   private static final ConcurrentMap<Address, Host> hostMap = new ConcurrentHashMap<Address, Host>( );
 
-  public static <T> Collection<Host> collect( Predicate<Host> function ) {
-    return Collections2.filter( hostMap.values( ), function );
-  }
-
-  public static <T> Collection<? extends T> collect( Function<Host,? extends T> function ) {
-    return Collections2.transform( hostMap.values( ), function );
-  }
-  
   public static Host getHostByAddress( InetAddress addr ) {
     for ( Host h : hostMap.values( ) ) {
       if ( h.getHostAddresses( ).contains( addr ) ) {
@@ -140,9 +132,8 @@ public class Hosts {
           ServiceConfiguration ephemeralConfig = ServiceConfigurations.createEphemeral( empyrean, addr );
           if( !empyrean.hasService( ephemeralConfig ) ) {
             try {
-              empyrean.initRemoteService( addr );
+              ServiceConfiguration config = empyrean.initRemoteService( addr );
               empyrean.loadService( ephemeralConfig ).get();
-              ServiceConfiguration config = empyrean.lookupService( ephemeralConfig ).getServiceConfiguration( );
               entry = new Host( currentView.getViewId( ), updatedHost.getGroupsId( ), updatedHost.hasDatabase( ), updatedHost.getHostAddresses( ), config );
               Host temp = hostMap.putIfAbsent( entry.getGroupsId( ), entry );
               entry = ( temp != null ) ? temp : entry;

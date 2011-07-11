@@ -28,39 +28,11 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-from boto.roboto.awsqueryrequest import AWSQueryRequest
-from boto.roboto.param import Param
-import eucadmin
+import eucadmin.describerequest
 
-class DescribeClusters(AWSQueryRequest):
-  
-    ServicePath = '/services/Configuration'
-    ServiceClass = eucadmin.EucAdmin
-    Description = 'Get properties'
+class DescribeClusters(eucadmin.describerequest.DescribeRequest):
 
-    def __init__(self, **args):
-        AWSQueryRequest.__init__(self, **args)
-        self.list_markers = ['euca:registered']
-        self.item_markers = ['euca:item']
-  
-    def get_connection(self, **args):
-        if self.connection is None:
-            args['path'] = self.ServicePath
-            self.connection = self.ServiceClass(**args)
-        return self.connection
-      
-    def cli_formatter(self, data):
-        clusters = getattr(data, 'euca:registered')
-        for cluster in clusters:
-            print 'CLUSTER\t%s\t%s\t%s\t%s\t%s' % (cluster['euca:partition'],
-                                                   cluster['euca:name'],
-                                                   cluster['euca:hostName'],
-                                                   cluster['euca:state'],
-                                                   cluster['euca:detail'])
+    ServiceName = 'Cluster'
+    
 
-    def main(self, **args):
-        return self.send(**args)
-
-    def main_cli(self):
-        self.do_cli()
     

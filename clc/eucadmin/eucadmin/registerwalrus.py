@@ -28,53 +28,9 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-from boto.roboto.awsqueryrequest import AWSQueryRequest
-from boto.roboto.param import Param
-import eucadmin
+import eucadmin.registerrequest
 
-class RegisterWalrus(AWSQueryRequest):
-  
-    ServicePath = '/services/Configuration'
-    ServiceClass = eucadmin.EucAdmin
-    Description = 'Register walruses'
-    Params = [Param(name='Partition',
-                    short_name='P',
-                    long_name='partition',
-                    ptype='string',
-                    optional=True,
-                    doc='Partition for the walrus'),
-              Param(name='Host',
-                    short_name='H',
-                    long_name='host',
-                    ptype='string',
-                    optional=False,
-                    doc='Hostname of the walrus'),
-              Param(name='Port',
-                    short_name='p',
-                    long_name='port',
-                    ptype='integer',
-                    default=8773,
-                    optional=True,
-                    doc='Port for the walrus')]
-    Args = [Param(name='Name',
-                  long_name='name',
-                  ptype='string',
-                  optional=False,
-                  doc='The walrus name')]
+class RegisterWalrus(eucadmin.registerrequest.RegisterRequest):
 
-    def get_connection(self, **args):
-        if self.connection is None:
-            args['path'] = self.ServicePath
-            self.connection = self.ServiceClass(**args)
-        return self.connection
-      
-    def cli_formatter(self, data):
-        response = getattr(data, 'euca:_return')
-        print 'RESPONSE %s' % response
-
-    def main(self, **args):
-        return self.send(**args)
-
-    def main_cli(self):
-        self.do_cli()
+    ServiceName = 'Walrus'
     

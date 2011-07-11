@@ -16,7 +16,7 @@ import com.eucalyptus.auth.DatabaseAuthProvider;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentDiscovery;
 import com.eucalyptus.component.auth.EucaKeyStore;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.entities.PersistenceContextDiscovery;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
@@ -26,7 +26,7 @@ import com.eucalyptus.system.SubDirectory;
 import com.google.common.collect.Lists;
 
 public class StandalonePersistence {
-  private static Logger                     LOG = Logger.getLogger( StandalonePersistence.class );
+  private static Logger                     LOG;
   private static ConcurrentMap<String, Sql> sqlConnections = new ConcurrentHashMap<String, Sql>( );
   private static List<UpgradeScript> upgradeScripts = Lists.newArrayList( );
   static {
@@ -92,6 +92,7 @@ public class StandalonePersistence {
   }
   public static Sql getConnection( String persistenceContext ) throws SQLException {
     Sql newSql = source.getSqlSession( persistenceContext );
+    if ( newSql == null ) { return null; }
     Sql conn = sqlConnections.putIfAbsent( persistenceContext, newSql );
     if ( conn != null ) {
       newSql.close( );
@@ -144,7 +145,7 @@ public class StandalonePersistence {
     if ( !new File( EucaKeyStore.getInstance( ).getFileName( ) ).exists( ) ) {
       throw new RuntimeException( "Database upgrade must be preceded by a key upgrade." );
     }
-    SystemCredentialProvider.initializeCredentials( );
+    SystemCredentials.initialize( );
     LOG.debug( "Initializing SSL just in case: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.crypto.util.SslSetup" ) );
     LOG.debug( "Initializing db password: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.auth.util.Hashes" ) );
   }
@@ -164,8 +165,9 @@ public class StandalonePersistence {
     System.setProperty( "euca.lib.dir", eucaHome + "/usr/share/eucalyptus/" );
     boolean doTrace = "TRACE".equals( System.getProperty( "euca.log.level" ) );
     boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || doTrace;
-//    Logs.DEBUG = doDebug;
-//    Logs.TRACE = doDebug;
+    // Logs.DEBUG = doDebug;
+    // Logs.TRACE = doDebug;
+    StandalonePersistence.LOG = Logger.getLogger( StandalonePersistence.class );
 
     LOG.info( String.format( "%-20.20s %s", "New install directory:", eucaHome ) );
     LOG.info( String.format( "%-20.20s %s", "Old install directory:", eucaOld ) );

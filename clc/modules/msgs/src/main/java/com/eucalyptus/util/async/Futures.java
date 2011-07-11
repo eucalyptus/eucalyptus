@@ -101,8 +101,8 @@ public class Futures {
             final T res = firstCall.call( );
             intermediateFuture.set( res );
           } catch ( Exception ex ) {
-            intermediateFuture.setException( ex );
             resultFuture.setException( ex );
+            intermediateFuture.setException( ex );
           }
           Threads.lookup( Empyrean.class, Futures.class ).submit( new Runnable( ) {
             
@@ -126,7 +126,7 @@ public class Futures {
                 resultFuture.setException( ex );
               }
             }
-          } );
+          } ).get( );
         } catch ( Exception ex1 ) {
           resultFuture.setException( ex1 );
         }

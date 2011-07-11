@@ -78,7 +78,7 @@ public class UserWsSecHandler extends MessageStackHandler implements ChannelHand
   private static Logger             LOG = Logger.getLogger( UserWsSecHandler.class );
 
   @Override
-  public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
+  public void incomingMessage( MessageEvent event ) throws Exception {
     final Object o = event.getMessage( );
     if ( o instanceof MappingHttpMessage ) {
       final MappingHttpMessage httpRequest = ( MappingHttpMessage ) o;

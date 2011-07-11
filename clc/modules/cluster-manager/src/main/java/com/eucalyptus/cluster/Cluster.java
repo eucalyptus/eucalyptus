@@ -119,6 +119,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.CheckedListenableFuture;
@@ -140,7 +141,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
@@ -148,95 +148,67 @@ import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
 import edu.ucsb.eucalyptus.msgs.NodeType;
 
 public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMachine<Cluster, Cluster.State, Cluster.Transition> {
-  /**
-   * 
-   */
-  private static final int                               CLUSTER_STARTUP_SYNC_RETRIES = 15;
-  /**
-   * 
-   */
+  private static final int                               CLUSTER_STARTUP_SYNC_RETRIES = 10;
   private static final long                              STATE_INTERVAL_ENABLED       = 10l;
-  /**
-   * 
-   */
   private static final long                              STATE_INTERVAL_DISABLED      = 10l;
-  /**
-   * 
-   */
   private static final long                              STATE_INTERVAL_NOTREADY      = 3l;
-  /**
-   * 
-   */
   private static final long                              STATE_INTERVAL_PENDING       = 3l;
   private static Logger                                  LOG                          = Logger.getLogger( Cluster.class );
   private final StateMachine<Cluster, State, Transition> stateMachine;
   private final ClusterConfiguration                     configuration;
   private final FullName                                 fullName;
-  private final ThreadFactory                            threadFactory;
   private final ConcurrentNavigableMap<String, NodeInfo> nodeMap;
-  private final BlockingQueue<Throwable>                 errors                       = new LinkedBlockingDeque<Throwable>( );
+  private final BlockingQueue<Throwable>                 pendingErrors                = new LinkedBlockingDeque<Throwable>( );
   private final ClusterState                             state;
   private final ClusterNodeState                         nodeState;
   private NodeLogInfo                                    lastLog                      = new NodeLogInfo( );
   private boolean                                        hasClusterCert               = false;
   private boolean                                        hasNodeCert                  = false;
   
-  enum ComponentStatePredicates implements Predicate<Cluster> {
+  enum ServiceStateDispatch implements Predicate<Cluster> {
     STARTED {
       
       @Override
       public boolean apply( final Cluster input ) {
-        if ( Component.State.NOTREADY.ordinal( ) <= input.getConfiguration( ).lookupStateMachine( ).getState( ).ordinal( ) ) {
-          try {
-            AsyncRequests.newRequest( new StartServiceCallback( input ) ).dispatch( input.configuration ).get( );
-            return true;
-          } catch ( Throwable t ) {
-            return input.filterExceptions( t );
-          }
-        } else {
-          return false;
+        try {
+          AsyncRequests.newRequest( new StartServiceCallback( input ) ).sendSync( input.configuration );
+          return true;
+        } catch ( Throwable t ) {
+          return input.filterExceptions( t );
         }
       }
     },
     ENABLED {
       @Override
       public boolean apply( final Cluster input ) {
-        if ( Component.State.ENABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) ) ) {
-          try {
+        try {
+          if ( State.ENABLED.ordinal( ) > input.stateMachine.getState( ).ordinal( ) ) {
             AsyncRequests.newRequest( new EnableServiceCallback( input ) ).sendSync( input.configuration );
-            return true;
-          } catch ( Throwable t ) {
-            return input.filterExceptions( t );
-          } finally {
-            try {
-              Clusters.getInstance( ).enable( input.getName( ) );
-            } catch ( NoSuchElementException ex ) {
-              Clusters.getInstance( ).register( input );
-              LOG.error( ex, ex );
-            }
           }
-        } else {
-          return false;
+          Clusters.getInstance( ).register( input );
+          return true;
+        } catch ( Throwable t ) {
+          if ( !input.filterExceptions( t ) ) {
+            return false;
+          } else {
+            Clusters.getInstance( ).register( input );
+            return true;
+          }
         }
       }
     },
     DISABLED {
       @Override
       public boolean apply( final Cluster input ) {
-        if ( Component.State.DISABLED.equals( input.getConfiguration( ).lookupStateMachine( ).getState( ) ) ) {
-          try {
-            Clusters.getInstance( ).disable( input.getName( ) );
-          } catch ( NoSuchElementException ex ) {
-            LOG.error( ex, ex );
-          }
-          try {
+        try {
+          if ( State.ENABLED.equals( input.getConfiguration( ).getStateMachine( ) ) ) {
             AsyncRequests.newRequest( new DisableServiceCallback( input ) ).sendSync( input.configuration );
-            return true;
-          } catch ( Throwable t ) {
-            return input.filterExceptions( t );
           }
-        } else {
-          return false;
+          return true;
+        } catch ( Throwable t ) {
+          return input.filterExceptions( t );
+        } finally {
+          Clusters.getInstance( ).registerDisabled( input );
         }
       }
     };
@@ -259,7 +231,6 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         @Override
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
-            TimeUnit.SECONDS.sleep( 10 );
             BaseMessage res = AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback )
                                            .sendSync( parent.getLogServiceConfiguration( ) );
             LOG.error( res );
@@ -283,11 +254,6 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
       this.refresh = refresh;
     }
     
-    private static final List<Class<? extends Exception>> communicationErrors = Lists.newArrayList( ConnectionException.class, IOException.class,
-                                                                                                    WebServicesException.class );
-    private static final List<Class<? extends Exception>> executionErrors     = Lists.newArrayList( UndeclaredThrowableException.class,
-                                                                                                    ExecutionException.class );
-    
     @Override
     public TransitionAction<Cluster> apply( final Cluster cluster ) {
       final SubjectRemoteCallbackFactory<RemoteCallback, Cluster> factory = newSubjectMessageFactory( this.refresh, cluster );
@@ -297,28 +263,18 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
             AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
-          } catch ( final ExecutionException e ) {
-            if ( e.getCause( ) instanceof FailedRequestException ) {
-              LOG.error( e.getCause( ).getMessage( ) );
-              parent.errors.add( e );
-            } else if ( ( e.getCause( ) instanceof ConnectionException ) || ( e.getCause( ) instanceof IOException ) ) {
-              LOG.error( parent.getName( ) + ": Error communicating with cluster: " + e.getCause( ).getMessage( ) );
-              parent.errors.add( e );
-            } else {
-              LOG.error( e, e );
-              parent.errors.add( e );
-            }
-          } catch ( final InterruptedException e ) {
-            LOG.error( e, e );
-            parent.errors.add( e );
-          } catch ( final Throwable e ) {
-            LOG.error( e, e );
-            parent.errors.add( e );
+          } catch ( final Throwable t ) {
+            parent.filterExceptions( t );
           }
         }
       };
     }
   }
+  
+  private static final List<Class<? extends Exception>> communicationErrors = Lists.newArrayList( ConnectionException.class, IOException.class,
+                                                                                                  WebServicesException.class );
+  private static final List<Class<? extends Exception>> executionErrors     = Lists.newArrayList( UndeclaredThrowableException.class,
+                                                                                                  ExecutionException.class );
   
   public enum State implements Automata.State<State> {
     BROKEN, /** cannot establish initial contact with cluster because of CLC side errors **/
@@ -349,6 +305,26 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     
   }
   
+  enum ErrorStateListeners implements Callback<Cluster> {
+    FLUSHPENDING {
+      @Override
+      public void fire( Cluster t ) {
+        LOG.debug( "Clearing error logs for: " + t );
+        t.clearExceptions( );
+      }
+    },
+    CHECKPENDING {
+      @Override
+      public void fire( Cluster t ) {
+        if ( !t.pendingErrors.isEmpty( ) ) {
+          Logs.exhaust( ).error( t.pendingErrors );
+        }
+        LOG.debug( "Clearing error logs for: " + t );
+        t.clearExceptions( );
+      }
+    };
+  };
+  
   public Cluster( final ClusterConfiguration configuration ) {
     super( );
     this.configuration = configuration;
@@ -356,48 +332,70 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
     this.state = new ClusterState( configuration.getName( ) );
     this.nodeState = new ClusterNodeState( configuration.getName( ) );
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>( );
-    this.threadFactory = Threads.lookup( com.eucalyptus.component.id.ClusterController.class, Cluster.class, this.getFullName( ).toString( ) );
     this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.PENDING ) {
       {
         final TransitionAction<Cluster> noop = Transitions.noop( );
-        this.from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( noop );
+        in( Cluster.State.DISABLED ).run( Cluster.ServiceStateDispatch.DISABLED );
+        in( Cluster.State.NOTREADY ).run( Cluster.ServiceStateDispatch.DISABLED );
+        in( Cluster.State.ENABLED ).run( Cluster.ServiceStateDispatch.ENABLED );
+        from( State.BROKEN ).to( State.PENDING ).error( State.BROKEN ).on( Transition.RESTART_BROKEN ).run( noop );
         
-        this.from( State.STOPPED ).to( State.PENDING ).error( State.PENDING ).on( Transition.PRESTART ).run( noop );
-        this.from( State.PENDING ).to( State.AUTHENTICATING ).error( State.PENDING ).on( Transition.AUTHENTICATE ).run( LogRefresh.CERTS );
-        this.from( State.AUTHENTICATING ).to( State.STARTING ).error( State.PENDING ).on( Transition.START ).run( Cluster.ComponentStatePredicates.STARTED );
-        this.from( State.STARTING ).to( State.STARTING_NOTREADY ).error( State.PENDING ).on( Transition.START_CHECK ).run( Refresh.SERVICEREADY );
-        this.from( State.STARTING_NOTREADY ).to( State.NOTREADY ).error( State.PENDING ).on( Transition.STARTING_SERVICES ).run( Refresh.SERVICEREADY );
+        from( State.STOPPED ).to( State.PENDING ).error( State.PENDING ).on( Transition.PRESTART ).run( noop );
+        from( State.PENDING ).to( State.AUTHENTICATING ).error( State.PENDING ).on( Transition.AUTHENTICATE ).run( LogRefresh.CERTS );
+        from( State.AUTHENTICATING ).to( State.STARTING ).error( State.PENDING ).on( Transition.START ).run( noop );
+        from( State.STARTING ).to( State.STARTING_NOTREADY ).error( State.PENDING ).on( Transition.START_CHECK ).run( Refresh.SERVICEREADY );
+        from( State.STARTING_NOTREADY ).to( State.NOTREADY ).error( State.PENDING ).on( Transition.STARTING_SERVICES ).run( Refresh.SERVICEREADY );
         
-        this.from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.NOTREADYCHECK ).run( Refresh.SERVICEREADY );
+        from( State.NOTREADY ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.NOTREADYCHECK ).run( Refresh.SERVICEREADY );
         
-        this.from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLEDCHECK ).run( Refresh.SERVICEREADY );
-        this.from( State.DISABLED ).to( State.ENABLING ).error( State.DISABLED ).on( Transition.ENABLE ).run( Cluster.ComponentStatePredicates.ENABLED );
-        this.from( State.DISABLED ).to( State.STOPPED ).error( State.PENDING ).on( Transition.STOP ).run( noop );
+        from( State.DISABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLEDCHECK ).addListener( ErrorStateListeners.FLUSHPENDING ).run( Refresh.SERVICEREADY );
+        from( State.DISABLED ).to( State.ENABLING ).error( State.DISABLED ).on( Transition.ENABLE ).run( Cluster.ServiceStateDispatch.ENABLED );
+        from( State.DISABLED ).to( State.STOPPED ).error( State.PENDING ).on( Transition.STOP ).run( noop );
         
-        this.from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLE ).run( Cluster.ComponentStatePredicates.DISABLED );
+        from( State.ENABLED ).to( State.DISABLED ).error( State.NOTREADY ).on( Transition.DISABLE ).run( Cluster.ServiceStateDispatch.DISABLED );
+        from( State.ENABLED ).to( State.NOTREADY ).error( State.NOTREADY ).on( Transition.DISABLE ).run( Cluster.ServiceStateDispatch.DISABLED );
         
-        this.from( State.ENABLING ).to( State.ENABLING_RESOURCES ).error( State.NOTREADY ).on( Transition.ENABLING_RESOURCES ).run( Refresh.RESOURCES );
-        this.from( State.ENABLING_RESOURCES ).to( State.ENABLING_NET ).error( State.NOTREADY ).on( Transition.ENABLING_NET ).run( Refresh.NETWORKS );
-        this.from( State.ENABLING_NET ).to( State.ENABLING_VMS ).error( State.NOTREADY ).on( Transition.ENABLING_VMS ).run( Refresh.INSTANCES );
-        this.from( State.ENABLING_VMS ).to( State.ENABLING_ADDRS ).error( State.NOTREADY ).on( Transition.ENABLING_ADDRS ).run( Refresh.ADDRESSES );
-        this.from( State.ENABLING_ADDRS ).to( State.ENABLING_VMS_PASS_TWO ).error( State.NOTREADY ).on( Transition.ENABLING_VMS_PASS_TWO ).run( Refresh.INSTANCES );
-        this.from( State.ENABLING_VMS_PASS_TWO ).to( State.ENABLING_ADDRS_PASS_TWO ).error( State.NOTREADY ).on( Transition.ENABLING_ADDRS_PASS_TWO ).run( Refresh.ADDRESSES );
-        this.from( State.ENABLING_ADDRS_PASS_TWO ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLING_ADDRS_PASS_TWO ).run( Refresh.ADDRESSES );
+        from( State.ENABLING ).to( State.ENABLING_RESOURCES ).error( State.NOTREADY ).on( Transition.ENABLING_RESOURCES ).run( Refresh.RESOURCES );
+        from( State.ENABLING_RESOURCES ).to( State.ENABLING_NET ).error( State.NOTREADY ).on( Transition.ENABLING_NET ).run( Refresh.NETWORKS );
+        from( State.ENABLING_NET ).to( State.ENABLING_VMS ).error( State.NOTREADY ).on( Transition.ENABLING_VMS ).run( Refresh.INSTANCES );
+        from( State.ENABLING_VMS ).to( State.ENABLING_ADDRS ).error( State.NOTREADY ).on( Transition.ENABLING_ADDRS ).run( Refresh.ADDRESSES );
+        from( State.ENABLING_ADDRS ).to( State.ENABLING_VMS_PASS_TWO ).error( State.NOTREADY ).on( Transition.ENABLING_VMS_PASS_TWO ).run( Refresh.INSTANCES );
+        from( State.ENABLING_VMS_PASS_TWO ).to( State.ENABLING_ADDRS_PASS_TWO ).error( State.NOTREADY ).on( Transition.ENABLING_ADDRS_PASS_TWO ).run( Refresh.ADDRESSES );
+        from( State.ENABLING_ADDRS_PASS_TWO ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLING_ADDRS_PASS_TWO ).run( Refresh.ADDRESSES );
         
-        this.from( State.ENABLED ).to( State.ENABLED_SERVICE_CHECK ).error( State.NOTREADY ).on( Transition.ENABLED_SERVICES ).run( Refresh.SERVICEREADY );
-        this.from( State.ENABLED_SERVICE_CHECK ).to( State.ENABLED_ADDRS ).error( State.NOTREADY ).on( Transition.ENABLED_ADDRS ).run( Refresh.ADDRESSES );
-        this.from( State.ENABLED_ADDRS ).to( State.ENABLED_RSC ).error( State.NOTREADY ).on( Transition.ENABLED_RSC ).run( Refresh.RESOURCES );
-        this.from( State.ENABLED_RSC ).to( State.ENABLED_NET ).error( State.NOTREADY ).on( Transition.ENABLED_NET ).run( Refresh.NETWORKS );
-        this.from( State.ENABLED_NET ).to( State.ENABLED_VMS ).error( State.NOTREADY ).on( Transition.ENABLED_VMS ).run( Refresh.INSTANCES );
-        this.from( State.ENABLED_VMS ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLED ).run( noop );
-        
+        from( State.ENABLED ).to( State.ENABLED_SERVICE_CHECK ).error( State.NOTREADY ).on( Transition.ENABLED_SERVICES ).run( Refresh.SERVICEREADY );
+        from( State.ENABLED_SERVICE_CHECK ).to( State.ENABLED_ADDRS ).error( State.NOTREADY ).on( Transition.ENABLED_ADDRS ).run( Refresh.ADDRESSES );
+        from( State.ENABLED_ADDRS ).to( State.ENABLED_RSC ).error( State.NOTREADY ).on( Transition.ENABLED_RSC ).run( Refresh.RESOURCES );
+        from( State.ENABLED_RSC ).to( State.ENABLED_NET ).error( State.NOTREADY ).on( Transition.ENABLED_NET ).run( Refresh.NETWORKS );
+        from( State.ENABLED_NET ).to( State.ENABLED_VMS ).error( State.NOTREADY ).on( Transition.ENABLED_VMS ).run( Refresh.INSTANCES );
+        from( State.ENABLED_VMS ).to( State.ENABLED ).error( State.NOTREADY ).on( Transition.ENABLED ).run( ErrorStateListeners.FLUSHPENDING );
       }
     }.newAtomicMarkedState( );
   }
   
+  public void clearExceptions( ) {
+    if ( !this.pendingErrors.isEmpty( ) ) {
+      List<Throwable> currentErrors = Lists.newArrayList( );
+      this.pendingErrors.drainTo( currentErrors );
+      for ( Throwable t : currentErrors ) {
+        Throwable filtered = Exceptions.filterStackTrace( t );
+        LOG.debug( this.configuration + ": Clearing error: " + filtered.getMessage( ), filtered );
+      }
+    } else {
+      LOG.debug( this.configuration + ": no pending errors to clear." );
+    }
+  }
+  
   private void fireClockTick( final Hertz tick ) {
     try {
-      boolean initialized = this.configuration.lookupState( ).ordinal( ) > Component.State.LOADED.ordinal( );
+      Component.State systemState;
+      try {
+        systemState = this.configuration.lookupState( );
+      } catch ( NoSuchElementException ex1 ) {
+        this.stop( );
+        return;
+      }
+      boolean initialized = systemState.ordinal( ) > Component.State.LOADED.ordinal( );
       if ( !this.stateMachine.isBusy( ) ) {
         Callable<CheckedListenableFuture<Cluster>> transition = null;
         switch ( this.stateMachine.getState( ) ) {
@@ -416,9 +414,10 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             }
             break;
           case DISABLED:
-            if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_DISABLED ) && Component.State.DISABLED.isIn( this.configuration ) ) {
+            if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_DISABLED )
+                 && ( Component.State.DISABLED.equals( systemState ) || Component.State.NOTREADY.equals( systemState ) ) ) {
               transition = Automata.sequenceTransitions( this, State.DISABLED, State.DISABLED );
-            } else if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_DISABLED ) && Component.State.ENABLED.isIn( this.configuration ) ) {
+            } else if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_DISABLED ) && Component.State.ENABLED.equals( systemState ) ) {
               transition = Automata.sequenceTransitions( this, State.ENABLING, State.ENABLING_RESOURCES, State.ENABLING_NET, State.ENABLING_VMS,
                                                          State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO, State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
             }
@@ -437,13 +436,12 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         if ( transition != null ) {
           try {
             Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
+            this.clearExceptions( );
           } catch ( Exception ex ) {
             LOG.error( ex, ex );
           }
         }
       }
-    } catch ( final IllegalStateException ex ) {
-      Exceptions.trace( ex );
     } catch ( final Exception ex ) {
       LOG.error( ex, ex );
     }
@@ -533,94 +531,93 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   }
   
   public void start( ) throws ServiceRegistrationException {
-    Clusters.getInstance( ).registerDisabled( this );
     try {
-      ListenerRegistry.getInstance( ).register( ClockTick.class, Cluster.this );
-      ListenerRegistry.getInstance( ).register( Hertz.class, Cluster.this );
-    } catch ( Exception ex1 ) {
-      LOG.error( ex1, ex1 );
-    }
-//    this.configuration.lookupService( ).getEndpoint( ).start( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
-    if ( !State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
-      final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( Cluster.this, State.PENDING, State.AUTHENTICATING,
-                                                                                                  State.STARTING,
-                                                                                                  State.STARTING_NOTREADY, State.NOTREADY, State.DISABLED );
-      Exception error = null;
-      for ( int i = 0; i < Cluster.CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
-        try {
+      Clusters.getInstance( ).registerDisabled( this );
+      if ( !State.DISABLED.equals( this.stateMachine.getState( ) ) ) {
+        Callable<CheckedListenableFuture<Cluster>> trans = Automata.sequenceTransitions( this, 
+                                                                                         State.PENDING, 
+                                                                                         State.AUTHENTICATING,
+                                                                                         State.STARTING,
+                                                                                         State.STARTING_NOTREADY,
+                                                                                         State.NOTREADY,
+                                                                                         State.DISABLED );
+        Exception lastEx = null;
+        for( int i = 0; i < CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
           try {
-            transition.call( ).get( );
-            error = null;
+            trans.call( ).get( );
+            lastEx = null;
             break;
+          } catch ( InterruptedException ex ) {
+            Thread.currentThread( ).interrupt( );
+          } catch ( ServiceRegistrationException ex ) {
+            lastEx = ex;
+            Logs.exhaust( ).debug( ex, ex );
           } catch ( Exception ex ) {
-            LOG.error( ex );
-            error = ex;
+            lastEx = ex;
+            Logs.exhaust( ).debug( ex, ex );
           }
-          TimeUnit.SECONDS.sleep( 1 );
-        } catch ( InterruptedException ex ) {
-          LOG.error( ex, ex );
         }
+        ListenerRegistry.getInstance( ).register( ClockTick.class, this );
+        ListenerRegistry.getInstance( ).register( Hertz.class, this );
       }
-      if ( error != null ) {
-        this.configuration.info( error );
-      }
+    } catch ( NoSuchElementException ex ) {
+//      this.stop( );
+      Logs.exhaust( ).debug( ex, ex );
+      throw ex;
+    } catch ( Exception ex ) {
+//      this.stop( );
+      Logs.exhaust( ).debug( ex, ex );
+      throw new ServiceRegistrationException( "Failed to call start() on cluster " + this.configuration + " because of: " + ex.getMessage( ), ex );
     }
   }
   
   public void enable( ) throws ServiceRegistrationException {
-    if ( !State.ENABLED.equals( this.stateMachine.getState( ) ) ) {
+    if ( State.ENABLING.ordinal( ) > this.stateMachine.getState( ).ordinal( ) ) {
       try {
-        final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.PENDING, State.AUTHENTICATING, State.STARTING,
-                                                                                                    State.STARTING_NOTREADY, State.NOTREADY,
-                                                                                                    State.DISABLED,
-                                                                                                    State.ENABLING, State.ENABLING_RESOURCES,
-                                                                                                    State.ENABLING_NET, State.ENABLING_VMS,
-                                                                                                    State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
-                                                                                                    State.ENABLING_ADDRS_PASS_TWO, State.ENABLED );
-        try {
-          CheckedListenableFuture<Cluster> res = Threads.lookup( ClusterController.class, Cluster.class ).submit( transition ).get( );
-          Exception error = null;
-          for ( int i = 0; i < Cluster.CLUSTER_STARTUP_SYNC_RETRIES; i++ ) {
-            try {
-              try {
-                res.get( );
-                error = null;
-                break;
-              } catch ( Exception ex ) {
-                LOG.error( ex );
-                error = ex;
-              }
-              TimeUnit.SECONDS.sleep( 1 );
-            } catch ( InterruptedException ex ) {
-              LOG.error( ex, ex );
-            }
-          }
-          if ( error != null ) {
-            this.configuration.info( error );
-          }
-        } catch ( InterruptedException ex1 ) {
-          LOG.error( ex1, ex1 );
-        } catch ( ExecutionException ex1 ) {
-          LOG.error( ex1, ex1 );
-        }
-      } catch ( NoSuchElementException ex ) {
-        throw ex;
+        CheckedListenableFuture<Cluster> result = Automata.sequenceTransitions( this, State.PENDING, State.AUTHENTICATING, State.STARTING,
+                                                                                State.STARTING_NOTREADY, State.NOTREADY,
+                                                                                State.DISABLED, State.ENABLING, State.ENABLING_RESOURCES,
+                                                                                State.ENABLING_NET, State.ENABLING_VMS,
+                                                                                State.ENABLING_ADDRS, State.ENABLING_VMS_PASS_TWO,
+                                                                                State.ENABLING_ADDRS_PASS_TWO, State.ENABLED ).call( );
+        result.get( );
+      } catch ( InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).debug( ex, ex );
+        throw new ServiceRegistrationException( "Failed to call enable() on cluster " + this.configuration + " because of: " + ex.getMessage( ), ex );
       }
     }
   }
   
   public void disable( ) throws ServiceRegistrationException {
-    final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
-    Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
+    try {
+      if ( State.NOTREADY.equals( this.getStateMachine( ).getState( ) ) ) {
+        Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED ).call( ).get( );
+      } else if ( State.ENABLED.equals( this.getStateMachine( ).getState( ) ) ) {
+        Automata.sequenceTransitions( this, State.NOTREADY, State.DISABLED ).call( ).get( );
+      }
+    } catch ( InterruptedException ex ) {
+      Thread.currentThread( ).interrupt( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).debug( ex, ex );
+      throw new ServiceRegistrationException( "Failed to call disable() on cluster " + this.configuration + " because of: " + ex.getMessage( ), ex );
+    }
   }
   
   public void stop( ) throws ServiceRegistrationException {
-    final Callable<CheckedListenableFuture<Cluster>> transition = Automata.sequenceTransitions( this, State.DISABLED, State.STOPPED );
-    Threads.lookup( ClusterController.class, Cluster.class ).submit( transition );
-    ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
-    ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
-//    this.configuration.lookupService( ).getEndpoint( ).stop( );//TODO:GRZE: this has a corresponding transition and needs to be removed when that is activated.
-    Clusters.getInstance( ).deregister( this.getName( ) );
+    try {
+      Automata.sequenceTransitions( this, State.DISABLED, State.STOPPED ).call( ).get( );
+    } catch ( InterruptedException ex ) {
+      Thread.currentThread( ).interrupt( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).debug( ex, ex );
+      throw new ServiceRegistrationException( "Failed to call stop() on cluster " + this.configuration + " because of: " + ex.getMessage( ), ex );
+    } finally {
+      ListenerRegistry.getInstance( ).deregister( Hertz.class, this );
+      ListenerRegistry.getInstance( ).deregister( ClockTick.class, this );
+      Clusters.getInstance( ).deregister( this.getName( ) );
+    }
   }
   
   @Override
@@ -686,7 +683,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   }
   
   public ThreadFactory getThreadFactory( ) {
-    return this.threadFactory;
+    return Threads.lookup( ClusterController.class, Cluster.class, this.getFullName( ).toString( ) );
   }
   
   @Override
@@ -909,36 +906,43 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   }
   
   private <T extends Throwable> boolean filterExceptions( final T t ) {
+    Throwable fin = t;
     if ( t instanceof ExecutionException ) {
-      Throwable fin = t.getCause( ) != null
+      fin = t.getCause( ) != null
         ? t.getCause( )
         : t;
-      if ( fin instanceof FailedRequestException ) {
-        LOG.error( fin );
-      } else if ( ( fin instanceof ConnectionException ) || ( fin instanceof IOException ) ) {
-        LOG.error( this.getName( ) + ": Error communicating with cluster: " + fin.getMessage( ) );
-        LOG.trace( fin, fin );
-      } else {
-        LOG.error( fin, fin );
-      }
-      this.errors.add( fin );
-    } else if ( t instanceof InterruptedException ) {
+    }
+    if ( t instanceof InterruptedException ) {
       Thread.currentThread( ).interrupt( );
       LOG.error( t );
+    } else if ( fin instanceof FailedRequestException ) {
+      LOG.error( fin, fin );
+      this.pendingErrors.add( fin );
+    } else if ( ( fin instanceof ConnectionException ) || ( fin instanceof IOException ) ) {
+      LOG.error( this.getName( ) + ": Error communicating with cluster: " + fin.getMessage( ) );
+      LOG.trace( fin, fin );
+      this.pendingErrors.add( fin );
     } else {
-      this.errors.add( t );
-      LOG.error( t );
-      LOG.trace( t, t );
+      LOG.error( fin, fin );
+      this.pendingErrors.add( fin );
     }
     return false;
   }
   
-  public void check( ) throws CheckException {
+  public void check( ) throws CheckException, IllegalStateException {
+    Cluster.State currentState = this.stateMachine.getState( );
+    Component.State externalState = this.configuration.lookupState( );
     List<Throwable> currentErrors = Lists.newArrayList( );
-    this.errors.drainTo( currentErrors );
+    currentErrors.addAll( this.pendingErrors );
     if ( !currentErrors.isEmpty( ) ) {
       CheckException ex = ServiceChecks.Severity.ERROR.transform( this.configuration, currentErrors );
       throw ex;
+    } else if ( currentState.ordinal( ) < State.DISABLED.ordinal( )
+                || ( Component.State.ENABLED.equals( externalState ) && Cluster.State.ENABLING.ordinal( ) >= currentState.ordinal( ) ) ) {
+      IllegalStateException ex = new IllegalStateException( "Cluster is currently reported as " + externalState + " but is really " + currentState
+                                                            + ":  please see logs for additional information." );
+      this.pendingErrors.add( ex );
+      throw ServiceChecks.Severity.ERROR.transform( this.configuration, ex );
     }
   }
   

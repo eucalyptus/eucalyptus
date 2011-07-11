@@ -183,9 +183,10 @@ public abstract class Bootstrapper {
         dependsLocal = Lists.newArrayList( );
         for ( Class compIdClass : Ats.from( this.getClass( ) ).get( DependsLocal.class ).value( ) ) {
           if ( !ComponentId.class.isAssignableFrom( compIdClass ) ) {
-            LOG.error( "Ignoring specified @Depends which does not use ComponentId" );
+            LOG.error( "Ignoring specified @Depends which does not extend ComponentId: " + compIdClass );
           } else {
             try {
+              LOG.trace( "Adding @Depends to " + this.getClass( ) + ": " + compIdClass );
               dependsLocal.add( ( ComponentId ) compIdClass.newInstance( ) );
             } catch ( InstantiationException ex ) {
               LOG.error( ex, ex );
@@ -276,7 +277,7 @@ public abstract class Bootstrapper {
   public boolean checkLocal( ) {
     for ( ComponentId c : this.getDependsLocal( ) ) {
       try {
-        if ( !Components.lookup( c ).hasLocalService( ) ) {
+        if ( Components.lookup( c ).isRunningRemoteMode( ) || !Components.lookup( c ).hasLocalService( ) ) {
           return false;
         }
       } catch ( NoSuchElementException ex ) {
@@ -330,4 +331,40 @@ public abstract class Bootstrapper {
                           this.dependsLocal, this.dependsRemote );
   }
   
+  public static abstract class Simple extends Bootstrapper {
+
+    @Override
+    public boolean load( ) throws Exception {
+      return true;
+    }
+
+    @Override
+    public boolean start( ) throws Exception {
+      return true;
+    }
+
+    @Override
+    public boolean enable( ) throws Exception {
+      return true;
+    }
+
+    @Override
+    public boolean stop( ) throws Exception {
+      return true;
+    }
+
+    @Override
+    public void destroy( ) throws Exception {}
+
+    @Override
+    public boolean disable( ) throws Exception {
+      return true;
+    }
+
+    @Override
+    public boolean check( ) throws Exception {
+      return true;
+    }
+    
+  }
 }

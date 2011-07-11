@@ -1,12 +1,18 @@
 package com.eucalyptus.util.async;
 
+import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.NoSuchServiceException;
+import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceEndpoint;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Logs;
@@ -15,7 +21,8 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implements Request<Q, R> {
   private static Logger                     LOG = Logger.getLogger( AsyncRequest.class );
-  private final Callback.TwiceChecked<Q, R> callback;
+  private final Callback.TwiceChecked<Q, R> wrapperCallback;
+  private final Callback.TwiceChecked<Q, R> cb;
   private final CheckedListenableFuture<R>  requestResult;
   private final CheckedListenableFuture<R>  result;
   private final RequestHandler<Q, R>        handler;
@@ -28,7 +35,8 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
     this.requestResult = new AsyncResponseFuture<R>( );
     this.handler = new AsyncRequestHandler<Q, R>( this.requestResult );
     this.callbackSequence = new CallbackListenerSequence<R>( );
-    this.callback = new TwiceChecked<Q, R>( ) {
+    this.cb = cb;
+    this.wrapperCallback = new TwiceChecked<Q, R>( ) {
       
       @Override
       public void fireException( Throwable t ) {
@@ -53,18 +61,19 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
             Logs.extreme( ).debug( cb.getClass( ).getCanonicalName( ) + ".fire():\n" + r );
           }
           cb.fire( r );
+          AsyncRequest.this.result.set( r );
           try {
-            AsyncRequest.this.result.set( r );
             AsyncRequest.this.callbackSequence.fire( r );
           } catch ( Throwable ex ) {
-            AsyncRequest.this.result.setException( ex );
             LOG.error( ex, ex );
+            AsyncRequest.this.result.setException( ex );
           }
         } catch ( RuntimeException ex ) {
           LOG.error( ex, ex );
           AsyncRequest.this.result.setException( ex );
           AsyncRequest.this.callbackSequence.fireException( ex );
         } catch ( Exception ex ) {
+          LOG.error( ex, ex );
           AsyncRequest.this.result.setException( ex );
           AsyncRequest.this.callbackSequence.fireException( ex );
         }
@@ -75,19 +84,31 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
         if ( Logs.EXTREME ) {
           Logs.extreme( ).debug( cb.getClass( ).getCanonicalName( ) + ".initialize():\n" + request );
         }
+        try {
+          cb.initialize( request );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+          AsyncRequest.this.result.setException( ex );
+          AsyncRequest.this.callbackSequence.fireException( ex );
+        }
       }
     };
-    Callbacks.addListenerHandler( requestResult, this.callback );
+    Callbacks.addListenerHandler( requestResult, this.wrapperCallback );
   }
   
   /**
    * @see com.eucalyptus.util.async.Request#dispatch(java.lang.String)
-   * @param cluster
+   * @param clusterOrPartition
    * @return
    */
   @Override
-  public CheckedListenableFuture<R> dispatch( String cluster ) {//TODO:GRZE:ASAP: get rid of this method
-    ServiceConfiguration serviceConfig = Components.lookup( com.eucalyptus.component.id.ClusterController.class ).lookupServiceConfiguration( cluster );
+  public CheckedListenableFuture<R> dispatch( String clusterOrPartition ) {//TODO:GRZE:ASAP: get rid of this method
+    ServiceConfiguration serviceConfig;
+    try {
+      serviceConfig = Components.lookup( ClusterController.class ).lookupServiceConfiguration( clusterOrPartition );
+    } catch ( NoSuchElementException ex ) {
+      serviceConfig = Partitions.lookupService( ClusterController.class, clusterOrPartition );
+    }
     return this.dispatch( serviceConfig );
   }
   
@@ -101,23 +122,26 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    */
   @Override
   public CheckedListenableFuture<R> dispatch( final ServiceConfiguration serviceConfig ) {
-    Future<CheckedListenableFuture<R>> res = Threads.lookup( Empyrean.class, AsyncRequest.class, serviceConfig.getFullName( ).toString( ) ).limitTo( NUM_WORKERS ).submit( new Callable<CheckedListenableFuture<R>>( ) {
-                                                                                                                                                                             
-                                                                                                                                                                             @Override
-                                                                                                                                                                             public CheckedListenableFuture<R> call( ) throws Exception {
-                                                                                                                                                                               return AsyncRequest.this.execute( serviceConfig ).getResponse( );
-                                                                                                                                                                             }
-                                                                                                                                                                           } );
     try {
-      res.get( ).get( );
-      return res.get( );
-    } catch ( ExecutionException ex ) {
-      LOG.error( ex, ex );
-      return Futures.predestinedFailedFuture( ex );
-    } catch ( InterruptedException ex ) {
-      Thread.currentThread( ).interrupt( );
-      LOG.error( ex, ex );
-      return Futures.predestinedFailedFuture( ex );
+      serviceConfig.lookupService( ).enqueue( this );
+      return this.getResponse( );
+    } catch ( Exception ex1 ) {
+      Future<CheckedListenableFuture<R>> res = Threads.lookup( Empyrean.class, AsyncRequest.class, serviceConfig.getFullName( ).toString( ) ).limitTo( NUM_WORKERS ).submit( new Callable<CheckedListenableFuture<R>>( ) {
+                                                                                                                                                                               
+                                                                                                                                                                               @Override
+                                                                                                                                                                               public CheckedListenableFuture<R> call( ) throws Exception {
+                                                                                                                                                                                 return AsyncRequest.this.execute( serviceConfig ).getResponse( );
+                                                                                                                                                                               }
+                                                                                                                                                                             } );
+      try {
+        res.get( ).get( );
+      } catch ( ExecutionException ex ) {
+        LOG.error( ex, ex );
+      } catch ( InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
+        LOG.error( ex, ex );
+      }
+      return this.getResponse( );
     }
   }
   
@@ -134,67 +158,49 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   }
   
   public Request<Q, R> execute( ServiceConfiguration config ) {
+    this.doInitializeCallback( config );
     try {
-      Logger.getLogger( this.callback.getClass( ) ).trace( "initialize: endpoint " + config );
-      try {
-        this.callback.initialize( this.request );
-      } catch ( Throwable e ) {
-        Logger.getLogger( this.callback.getClass( ) ).error( e.getMessage( ), e );
-        RequestException ex = ( e instanceof RequestException )
-          ? ( RequestException ) e
-          : new RequestInitializationException( this.callback.getClass( ).getSimpleName( ) + " failed: " + e.getMessage( ), e, this.getRequest( ) );
-        this.result.setException( ex );
-        throw ex;
-      }
-      Logger.getLogger( this.callback.getClass( ) ).debug( "fire: endpoint " + config );
+      Logger.getLogger( this.cb.getClass( ) ).debug( "fire: endpoint " + config );
       if ( !this.handler.fire( config, this.request ) ) {
-        if ( this.requestResult.isDone( ) ) {
-          try {
-            R r = this.requestResult.get( 1, TimeUnit.MILLISECONDS );
-            throw new RequestException( "Request failed but produced a response: " + r, this.getRequest( ) );
-          } catch ( ExecutionException e ) {
-            this.result.setException( e.getCause( ) );
-            if ( e.getCause( ) != null && e.getCause( ) instanceof RequestException ) {
-              Logger.getLogger( this.callback.getClass( ) ).error( e.getCause( ) );
-              throw ( RequestException ) e.getCause( );
-            } else {
-              Logger.getLogger( this.callback.getClass( ) ).error( e );
-              throw new RequestException( "Request failed due to: " + e.getMessage( ), e, this.getRequest( ) );
-            }
-          } catch ( RequestException e ) {
-            this.result.setException( e );
-            Logger.getLogger( this.callback.getClass( ) ).error( e );
-            throw e;
-          } catch ( Throwable e ) {
-            this.result.setException( e );
-            Logger.getLogger( this.callback.getClass( ) ).error( e );
-            throw new RequestException( "Request failed due to: " + e.getMessage( ), e, this.getRequest( ) );
-          }
-        } else {
+        LOG.error( "Error occurred while trying to send request: " + this.request );
+        if ( !this.requestResult.isDone( ) ) {
           RequestException ex = new RequestException( "Error occured attempting to fire the request.", this.getRequest( ) );
           try {
             this.result.setException( ex );
           } catch ( Throwable t ) {}
-          throw ex;
         }
       } else {
         try {
-          this.result.set( this.requestResult.get( ) );
+          this.requestResult.get( );
         } catch ( ExecutionException ex ) {
           LOG.error( ex, ex );
-          this.result.setException( ex.getCause( ) );
         } catch ( InterruptedException ex ) {
           LOG.error( ex, ex );
-          Thread.currentThread( ).interrupt( );
-          this.result.setException( ex );
         }
       }
     } catch ( RuntimeException ex ) {
       LOG.error( ex, ex );
       this.result.setException( ex );
-      throw ex;
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
+      this.result.setException( ex );
+      throw new RuntimeException( ex );
     }
     return this;
+  }
+  
+  private void doInitializeCallback( ServiceConfiguration config ) throws RequestException {
+    Logger.getLogger( this.wrapperCallback.getClass( ) ).trace( "initialize: endpoint " + config );
+    try {
+      this.wrapperCallback.initialize( this.request );
+    } catch ( Throwable e ) {
+      Logger.getLogger( this.wrapperCallback.getClass( ) ).error( e.getMessage( ), e );
+      RequestException ex = ( e instanceof RequestException )
+        ? ( RequestException ) e
+        : new RequestInitializationException( this.wrapperCallback.getClass( ).getSimpleName( ) + " failed: " + e.getMessage( ), e, this.getRequest( ) );
+      this.result.setException( ex );
+      throw ex;
+    }
   }
   
   /**
@@ -247,7 +253,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    */
   @Override
   public Callback.TwiceChecked<Q, R> getCallback( ) {
-    return this.callback;
+    return this.wrapperCallback;
   }
   
   /**
@@ -274,7 +280,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   
   @Override
   public String toString( ) {
-    return String.format( "AsyncRequest:callback=%s", this.callback );
+    return String.format( "AsyncRequest:callback=%s", this.wrapperCallback );
   }
   
 }

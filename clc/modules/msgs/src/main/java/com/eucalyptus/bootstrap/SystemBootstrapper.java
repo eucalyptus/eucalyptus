@@ -115,8 +115,8 @@ public class SystemBootstrapper {
     Logs.init( );
     Security.addProvider( new BouncyCastleProvider( ) );
     try {
-      Bootstrap.init( );
       if( !Bootstrap.isInitializeSystem( ) ) {
+        Bootstrap.init( );
         Bootstrap.Stage stage = Bootstrap.transition( );
         stage.load( );
       }
@@ -134,8 +134,7 @@ public class SystemBootstrapper {
 
   private static void initializeSystem( ) {
     try {
-      GroovyUtil.exec( "com.eucalyptus.component.auth.SystemCredentialProvider.initializeCredentials( );" );
-      GroovyUtil.exec( "com.eucalyptus.bootstrap.MysqlDatabaseBootstrapper.initializeDatabase( );" );
+      GroovyUtil.evaluateScript( "initialize_cloud.groovy" );
       System.exit( 0 );
     } catch ( Throwable ex ) {
       LOG.error( ex , ex );
@@ -334,7 +333,7 @@ public class SystemBootstrapper {
         banner += prefix + c.getName( ) + SEP + localConfig.toString( );
         banner += prefix + c.getName( ) + SEP + localConfig.lookupBuilder( ).toString( );
         banner += prefix + c.getName( ) + SEP + localConfig.getComponentId( ).toString( );
-        banner += prefix + c.getName( ) + SEP + localConfig.lookupStateMachine( ).getState( ).toString( );
+        banner += prefix + c.getName( ) + SEP + localConfig.lookupState( ).toString( );
       }
     }
     banner += headerHeader + String.format( headerFormat, "Detected Interfaces" ) + headerFooter;
