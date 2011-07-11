@@ -64,6 +64,8 @@ package com.eucalyptus.bootstrap;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
@@ -77,7 +79,6 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
@@ -167,7 +168,7 @@ public class Bootstrap {
        */
       @Override
       public void start( ) {
-        for ( Bootstrapper b : this.getBootstrappers( ) ) {
+        for ( Bootstrapper b : this.bootstrappers ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, this.name( ), "SKIPPING start()", b.getClass( ).getCanonicalName( ) ).warn( );
         }
       }
@@ -180,7 +181,7 @@ public class Bootstrap {
        */
       @Override
       public void start( ) {
-        for ( Bootstrapper b : this.getBootstrappers( ) ) {
+        for ( Bootstrapper b : this.bootstrappers ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, this.name( ), "SKIPPING start()", b.getClass( ).getCanonicalName( ) ).warn( );
         }
       }
@@ -199,12 +200,8 @@ public class Bootstrap {
       return Arrays.asList( Stage.values( ) );
     }
     
-    private final List<Bootstrapper> bootstrappers         = Lists.newArrayList( );
-    private final List<Bootstrapper> disabledBootstrappers = Lists.newArrayList( );
-    
-    public List<Bootstrapper> getBootstrappers( ) {
-      return this.bootstrappers;
-    }
+    protected final Set<Bootstrapper> bootstrappers         = new ConcurrentSkipListSet( );
+    private final Set<Bootstrapper> disabledBootstrappers = new ConcurrentSkipListSet( );
     
     void addBootstrapper( Bootstrapper b ) {
       if ( this.bootstrappers.contains( b ) ) {
