@@ -84,6 +84,7 @@ import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.ws.EmpyreanService;
 import com.google.common.base.Joiner;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 /**
@@ -101,16 +102,20 @@ import com.google.common.collect.Lists;
  * Implementors of {@link Bootstrapper} must declare which {@link Bootstrap.Stage} they are to be
  * executed by specifying the {@link RunDuring} annotation.
  * 
- * NOTE: It is worth noting that the {@link #start()}-phase is <b>NOT</b> executed for the {@link EmpyreanService.Stage.PrivilegedConfiguration} stage. Since
+ * NOTE: It is worth noting that the {@link #start()}-phase is <b>NOT</b> executed for the
+ * {@link EmpyreanService.Stage.PrivilegedConfiguration} stage. Since
  * privileges must be dropped
  * after {@link EmpyreanService.Stage.PrivilegedConfiguration}.{@link #load()} the bootstrappers
  * would no
  * longer have the indicated privileges.
  * 
- * After a call to {@link #transition()} the current stage can be obtained from {@link #getCurrentStage()}.
+ * After a call to {@link #transition()} the current stage can be obtained from
+ * {@link #getCurrentStage()}.
  * 
- * Once {@link EmpyreanService.Stage.Final} is reached for {@link SystemBootstrapper#load()} the {@link #getCurrentStage()} is reset to be
- * {@link EmpyreanService.Stage.SystemInit} and {@link SystemBootstrapper#start()} proceeds. Upon completing {@link SystemBootstrapper#start()} the state
+ * Once {@link EmpyreanService.Stage.Final} is reached for {@link SystemBootstrapper#load()} the
+ * {@link #getCurrentStage()} is reset to be {@link EmpyreanService.Stage.SystemInit} and
+ * {@link SystemBootstrapper#start()} proceeds. Upon completing {@link SystemBootstrapper#start()}
+ * the state
  * forever remains {@link EmpyreanService.Stage.Final}.
  * return {@link EmpyreanService.Stage.Final}.
  * 
@@ -134,14 +139,17 @@ public class Bootstrap {
    * Each phase consists of iterating through each {@link Bootstrap.Stage} and executing the
    * associated bootstrappers accordingly.
    * 
-   * NOTE: It is worth noting that the {@link #start()}-phase is <b>NOT</b> executed for the {@link EmpyreanService.Stage.PrivilegedConfiguration} stage. Since
+   * NOTE: It is worth noting that the {@link #start()}-phase is <b>NOT</b> executed for the
+   * {@link EmpyreanService.Stage.PrivilegedConfiguration} stage. Since
    * privileges must be dropped
    * after {@link EmpyreanService.Stage.PrivilegedConfiguration}.{@link #load()} the bootstrappers
    * would no
    * longer have the indicated privileges.
    * 
-   * Once {@link EmpyreanService.Stage.Final} is reached for {@link SystemBootstrapper#load()} the {@link #getCurrentStage()} is reset to be
-   * {@link EmpyreanService.Stage.SystemInit} and {@link SystemBootstrapper#start()} proceeds. Upon completing {@link SystemBootstrapper#start()} the state
+   * Once {@link EmpyreanService.Stage.Final} is reached for {@link SystemBootstrapper#load()} the
+   * {@link #getCurrentStage()} is reset to be {@link EmpyreanService.Stage.SystemInit} and
+   * {@link SystemBootstrapper#start()} proceeds. Upon completing {@link SystemBootstrapper#start()}
+   * the state
    * forever remains {@link EmpyreanService.Stage.Final}.
    * return {@link EmpyreanService.Stage.Final}.
    * 
@@ -191,8 +199,8 @@ public class Bootstrap {
       return Arrays.asList( Stage.values( ) );
     }
     
-    private List<Bootstrapper> bootstrappers     = Lists.newArrayList( );
-    private List<Bootstrapper> skipBootstrappers = Lists.newArrayList( );
+    private final List<Bootstrapper> bootstrappers         = Lists.newArrayList( );
+    private final List<Bootstrapper> disabledBootstrappers = Lists.newArrayList( );
     
     public List<Bootstrapper> getBootstrappers( ) {
       return this.bootstrappers;
@@ -207,10 +215,10 @@ public class Bootstrap {
     }
     
     void skipBootstrapper( Bootstrapper b ) {
-      if ( this.skipBootstrappers.contains( b ) ) {
+      if ( this.disabledBootstrappers.contains( b ) ) {
         throw BootstrapException.throwFatal( "Duplicate bootstrapper registration: " + b.getClass( ).toString( ) );
       } else {
-        this.skipBootstrappers.add( b );
+        this.disabledBootstrappers.add( b );
       }
     }
     
@@ -224,17 +232,34 @@ public class Bootstrap {
     }
     
     public void updateBootstrapDependencies( ) {
-      for ( Bootstrapper b : Lists.newArrayList( this.bootstrappers ) ) {
-        if ( !b.checkLocal( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + Bootstrap.getCurrentStage( ), this.getClass( ).getSimpleName( ),
-                            "Depends.local=" + b.toString( ), "Component." + b.toString( ) + "=remote" ).info( );
-          this.bootstrappers.remove( b );
-        } else if ( !b.checkRemote( ) ) {
-          EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + Bootstrap.getCurrentStage( ), this.getClass( ).getSimpleName( ),
-                            "Depends.remote=" + b.toString( ), "Component." + b.toString( ) + "=local" ).info( );
-          this.bootstrappers.remove( b );
+      Iterable<Bootstrapper> currBootstrappers = Iterables.concat( Lists.newArrayList( this.bootstrappers ),
+                                                                   Lists.newArrayList( this.disabledBootstrappers ) );
+      this.bootstrappers.clear( );
+      this.disabledBootstrappers.clear( );
+      for ( Bootstrapper bootstrapper : currBootstrappers ) {
+        try {
+          Bootstrap.Stage stage = bootstrapper.getBootstrapStage( );
+          if ( bootstrapper.checkLocal( ) && bootstrapper.checkRemote( ) ) {
+            this.enableBootstrapper( bootstrapper );
+          } else {
+            this.disableBootstrapper( bootstrapper );
+          }
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
         }
       }
+    }
+    
+    private void enableBootstrapper( Bootstrapper bootstrapper ) {
+      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_MARK_ENABLED, "stage=" + this.toString( ), bootstrapper.toString( ) ).info( );
+      this.disabledBootstrappers.remove( bootstrapper );
+      this.bootstrappers.add( bootstrapper );
+    }
+    
+    private void disableBootstrapper( Bootstrapper bootstrapper ) {
+      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_MARK_DISABLED, "stage=" + this.toString( ), bootstrapper.toString( ) ).info( );
+      this.bootstrappers.remove( bootstrapper );
+      this.disabledBootstrappers.add( bootstrapper );
     }
     
     public void load( ) {
@@ -362,10 +387,13 @@ public class Bootstrap {
    * Subsequent calls to {@link #transition()} trigger the transition through the two-phase
    * (load/start) iteration through the {@link Bootstrap.Stage}s.
    * 
-   * After a call to {@link #transition()} the current stage can be obtained from {@link #getCurrentStage()}.
+   * After a call to {@link #transition()} the current stage can be obtained from
+   * {@link #getCurrentStage()}.
    * 
-   * Once {@link EmpyreanService.Stage.Final} is reached for {@link SystemBootstrapper#load()} the {@link #getCurrentStage()} is reset to be
-   * {@link EmpyreanService.Stage.SystemInit} and {@link SystemBootstrapper#start()} proceeds. Upon completing {@link SystemBootstrapper#start()} the state
+   * Once {@link EmpyreanService.Stage.Final} is reached for {@link SystemBootstrapper#load()} the
+   * {@link #getCurrentStage()} is reset to be {@link EmpyreanService.Stage.SystemInit} and
+   * {@link SystemBootstrapper#start()} proceeds. Upon completing {@link SystemBootstrapper#start()}
+   * the state
    * forever remains {@link EmpyreanService.Stage.Final}.
    * return {@link EmpyreanService.Stage.Final}.
    * 
@@ -427,13 +455,14 @@ public class Bootstrap {
    * The following steps are performed in order.
    * 
    * <ol>
-   * <li><b>Component configurations</b>: Load the component configuration files from the local jar files. This determines which services it is possible to
-   * start in the <tt>local</tt> context.</li>
+   * <li><b>Component configurations</b>: Load the component configuration files from the local jar
+   * files. This determines which services it is possible to start in the <tt>local</tt> context.</li>
    * 
    * <li><b>Print configurations</b>: The configuration is printed for review.</li>
    * 
-   * <li><b>Discovery ({@link ServiceJarDiscovery}</b>: First, find all instantiable descendants of {@code ServiceJarDiscovery}. Second, execute each discovery
-   * implementation. <b>NOTE:</b> This step finds the available bootstrappers but does not evaluate their dependency constraints.</li>
+   * <li><b>Discovery ({@link ServiceJarDiscovery}</b>: First, find all instantiable descendants of
+   * {@code ServiceJarDiscovery}. Second, execute each discovery implementation. <b>NOTE:</b> This
+   * step finds the available bootstrappers but does not evaluate their dependency constraints.</li>
    * 
    * <li><b>Print configurations</b>: The configuration is printed for review.</li>
    * <li><b>Print configurations</b>: The configuration is printed for review.</li>
@@ -526,7 +555,7 @@ public class Bootstrap {
     }
     
   }
-
+  
   static void initializeSystem( ) throws Throwable {
     GroovyUtil.evaluateScript( "initialize_cloud.groovy" );
   }
