@@ -80,6 +80,7 @@ import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.sla.ClusterAllocator;
@@ -361,8 +362,15 @@ public class ClusterEndpoint implements Startable {
   
   public DescribeRegionsResponseType DescribeRegions( DescribeRegionsType request ) {//TODO:GRZE:URGENT fix the behaviour here.
     DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
-    SystemConfiguration config = SystemConfiguration.getSystemConfiguration( );
-    reply.getRegionInfo( ).add( new RegionInfoType( "Eucalyptus", Internets.localHostInetAddress( ).getCanonicalHostName( ) ) );
+    try {
+      Component euca = Components.lookup( Eucalyptus.class );
+      NavigableSet<ServiceConfiguration> configs = euca.lookupServiceConfigurations( );
+      if( !configs.isEmpty( ) && Component.State.ENABLED.isIn( configs.first( ) ) ) {
+        reply.getRegionInfo( ).add( new RegionInfoType( euca.getComponentId( ).name( ), configs.first( ).getUri( ).toASCIIString( ) ) );
+      }
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex, ex );
+    }
     try {
       Component walrus = Components.lookup( Walrus.class );
       NavigableSet<ServiceConfiguration> configs = walrus.lookupServiceConfigurations( );
