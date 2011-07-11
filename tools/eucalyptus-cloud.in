@@ -288,7 +288,7 @@ case "$1" in
 	# let's check there is no previous cloud running
 	if do_status ; then
 		echo
-		echo "another $DESC is already running!"
+		echo "$DESC are already running!"
 		if [ "$VERBOSE" != no ]; then
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 1
@@ -332,7 +332,7 @@ case "$1" in
 	# let's check there is a previous cloud running
 	if ! do_status ; then
 		echo
-		echo "no $DESC is running!"
+		echo "$DESC are running!"
 		if [ "$VERBOSE" != no ]; then
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 1
