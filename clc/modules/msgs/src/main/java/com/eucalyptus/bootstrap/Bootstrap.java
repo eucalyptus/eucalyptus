@@ -81,6 +81,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.ws.EmpyreanService;
@@ -200,8 +201,8 @@ public class Bootstrap {
       return Arrays.asList( Stage.values( ) );
     }
     
-    protected final Set<Bootstrapper> bootstrappers         = new ConcurrentSkipListSet( );
-    private final Set<Bootstrapper> disabledBootstrappers = new ConcurrentSkipListSet( );
+    protected final Set<Bootstrapper> bootstrappers         = new ConcurrentSkipListSet<Bootstrapper>( );
+    private final Set<Bootstrapper>   disabledBootstrappers = new ConcurrentSkipListSet<Bootstrapper>( );
     
     void addBootstrapper( Bootstrapper b ) {
       if ( this.bootstrappers.contains( b ) ) {
@@ -235,7 +236,6 @@ public class Bootstrap {
       this.disabledBootstrappers.clear( );
       for ( Bootstrapper bootstrapper : currBootstrappers ) {
         try {
-          Bootstrap.Stage stage = bootstrapper.getBootstrapStage( );
           if ( bootstrapper.checkLocal( ) && bootstrapper.checkRemote( ) ) {
             this.enableBootstrapper( bootstrapper );
           } else {
@@ -248,13 +248,13 @@ public class Bootstrap {
     }
     
     private void enableBootstrapper( Bootstrapper bootstrapper ) {
-      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_MARK_ENABLED, "stage=" + this.toString( ), bootstrapper.toString( ) ).info( );
+      Logs.exhaust( ).trace( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_MARK_ENABLED, "stage=" + this.toString( ), bootstrapper.toString( ) ) );
       this.disabledBootstrappers.remove( bootstrapper );
       this.bootstrappers.add( bootstrapper );
     }
     
     private void disableBootstrapper( Bootstrapper bootstrapper ) {
-      EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_MARK_DISABLED, "stage=" + this.toString( ), bootstrapper.toString( ) ).info( );
+      Logs.exhaust( ).trace( EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_MARK_DISABLED, "stage=" + this.toString( ), bootstrapper.toString( ) ) );
       this.bootstrappers.remove( bootstrapper );
       this.disabledBootstrappers.add( bootstrapper );
     }
@@ -303,11 +303,11 @@ public class Bootstrap {
     
   }
   
-  private static Boolean loading      = false;
+  static Boolean loading      = false;
   private static Boolean starting     = false;
   private static Boolean finished     = false;
   private static Stage   currentStage = Stage.SystemInit;
-  private static Boolean shutdown     = false;
+  static Boolean shutdown     = false;
   
   /**
    * @return Bootstrap.currentStage
@@ -332,7 +332,6 @@ public class Bootstrap {
   /**
    * TODO: DOCUMENT Bootstrap.java
    */
-  @SuppressWarnings( "deprecation" )
   public static void initBootstrappers( ) {
     for ( Bootstrapper bootstrap : BootstrapperDiscovery.getBootstrappers( ) ) {//these have all been checked at discovery time
       try {
@@ -494,7 +493,6 @@ public class Bootstrap {
     
     LOG.info( LogUtil.header( "Initializing component identifiers:" ) );
     for ( ComponentId compId : ComponentIds.list( ) ) {
-      LOG.info( "-> Registering ComponentId of type: " + compId.getClass( ).getCanonicalName( ) );
       Components.create( compId );
     }
     
