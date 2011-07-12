@@ -372,8 +372,6 @@ int clone_bundling_backing (ncInstance *instance, const char* filePrefix, char* 
 	goto error;
     }
     
-    if(dest_blob->blocks_path)
-	snprintf(blockPath, MAX_PATH, "%s", dest_blob->blocks_path);
     // copy blob (will 'dd' eventually)
     if(blockblob_copy(src_blob, 0, dest_blob, 0, src_blob->size_bytes) != OK) {
  	logprintfl (EUCAERROR, "[%s] couldn't copy block blob for bundling (%s)", instance->instanceId, id);
@@ -454,7 +452,7 @@ int destroy_instance_backing (ncInstance * instance, int do_destroy_files)
         if (n>0){
             while (n--) {
                struct dirent *entry = files[n];
-               if( entry !=NULL && entry->d_name != NULL && strncmp(entry->d_name, ".",1)!=0 && strncmp(entry->d_name, "..", 2)!=0){
+               if( entry !=NULL && strncmp(entry->d_name, ".",1)!=0 && strncmp(entry->d_name, "..", 2)!=0){
                     snprintf(toDelete, MAX_PATH, "%s/%s", instance->instancePath, entry->d_name);
                     unlink(toDelete);
                     free(entry);
