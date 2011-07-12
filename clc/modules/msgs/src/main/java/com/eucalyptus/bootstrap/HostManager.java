@@ -203,7 +203,20 @@ public class HostManager {
           return;
         }
       } catch ( NoSuchElementException ex ) {
-        LOG.error( ex );
+        Logs.exhaust( ).error( ex );
+      }
+      if( this.initializing.get( ).equals( InitState.PENDING ) ) {
+        Threads.lookup( Empyrean.class, HostManager.class ).submit( new Runnable( ) {
+          
+          @Override
+          public void run( ) {
+            try {
+              HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( Hosts.localHost( ) ) ) );
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
+            }
+          }
+        } );
       }
       if( msg.getObject( ) instanceof InitRequest && this.initializing.compareAndSet( InitState.PENDING, InitState.WORKING ) ) {
         if ( msg.getObject( ) instanceof Initialize ) {
@@ -225,7 +238,7 @@ public class HostManager {
           LOG.debug( "Received unknown message type: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
         }
       } else {
-        LOG.debug( "Received message while InitState.WORKING, ignoring: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+        LOG.debug( "Received message while InitState." + this.initializing.get( ) + ", ignoring: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
       }
     }
     
