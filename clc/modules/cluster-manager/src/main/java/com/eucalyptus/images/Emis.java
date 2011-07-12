@@ -191,12 +191,7 @@ public class Emis {
     }
     
     public VmTypeInfo populateVirtualBootRecord( VmType vmType ) throws EucalyptusCloudException {
-      Long imgSize = this.getMachine( ).getImageSizeBytes( );
-      if ( imgSize > 1024l * 1024l * 1024l * vmType.getDisk( ) ) {
-        throw new EucalyptusCloudException( "image too large [size=" + imgSize / ( 1024l * 1024l ) + "MB] for instance type " + vmType.getName( ) + " [disk="
-                                            + vmType.getDisk( ) * 1024l + "MB]" );
-      }
-      VmTypeInfo vmTypeInfo = createVmTypeInfo( vmType, imgSize );
+      VmTypeInfo vmTypeInfo = VmTypes.asVmTypeInfo( vmType, this.getMachine( ) );
       if ( this.isLinux( ) ) {
         if ( this.hasKernel( ) ) {
           vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), this.getKernel( ).getManifestLocation( ) );
@@ -207,25 +202,7 @@ public class Emis {
       }
       return vmTypeInfo;
     }
-
-    private VmTypeInfo createVmTypeInfo( VmType vmType, Long imgSize ) throws EucalyptusCloudException {
-      VmTypeInfo vmTypeInfo = null;
-      if ( this.getMachine( ) instanceof StaticDiskImage ) {
-        if( Image.Platform.windows.equals( this.getMachine( ).getPlatform( ) ) ) {
-          vmTypeInfo = VmTypes.InstanceStoreWindowsVmTypeInfoMapper.INSTANCE.apply( vmType );
-        } else {
-          vmTypeInfo = VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( vmType );
-        }
-        vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), ( ( StaticDiskImage ) this.getMachine( ) ).getManifestLocation( ), imgSize );
-      } else if ( this.getMachine( ) instanceof BlockStorageImageInfo ) {
-        vmTypeInfo = VmTypes.BlockStorageVmTypeInfoMapper.INSTANCE.apply( vmType );
-        vmTypeInfo.setEbsRoot( this.getMachine( ).getDisplayName( ), null, imgSize );
-      } else {
-        throw new EucalyptusCloudException( "Failed to identify the root machine image type: " + this.getMachine( ) );
-      }
-      return vmTypeInfo;
-    }
-  }
+  } 
   
   static class NoRamdiskBootableSet extends BootableSet {
     private final KernelImageInfo kernel;
