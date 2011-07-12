@@ -356,6 +356,9 @@ public class HostManager {
         HostManager.this.view.sendState( );
       }
     }
+
+    @Override
+    public void initialize( boolean doInit ) {}
     
   }
   
