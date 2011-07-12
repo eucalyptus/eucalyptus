@@ -112,6 +112,8 @@ public class HostManager {
   
   static class Initialize implements Serializable {}
   
+  static class NoInitialize implements Serializable {}
+  
   private HostManager( ) {
     this.view = new CurrentView( );
     this.membershipChannel = HostManager.buildChannel( );
@@ -202,12 +204,15 @@ public class HostManager {
       if ( msg.getObject( ) instanceof Initialize ) {
         LOG.debug( "Received initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
         try {
-          if ( this.initializing.compareAndSet( false, true ) ) {
+          if ( this.initializing.compareAndSet( true, true ) ) {
             this.initialize( );
           }
         } finally {
           this.initializing.set( false );
         }
+      } else if ( msg.getObject( ) instanceof NoInitialize ) {
+        LOG.debug( "Received no-initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+        this.initializing.set( false );
       } else if ( msg.getObject( ) instanceof List ) {
         LOG.debug( "Received updated host information: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
         this.receive( ( List<Host> ) msg.getObject( ) );
@@ -269,7 +274,7 @@ public class HostManager {
     
     @Override
     public void fireEvent( Event event ) {
-      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 10 ) && HostManager.this.membershipChannel.isConnected( ) ) {
+      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 1 ) && !Bootstrap.isFinished( ) && HostManager.this.membershipChannel.isConnected( ) ) {
         Logs.exhaust( ).debug( "Sending state info: " + Hosts.localHost( ) );
         try {
           HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( Hosts.localHost( ) ) ) );
@@ -287,7 +292,7 @@ public class HostManager {
     public void receive( List<Host> hosts ) {
       Component euca = Components.lookup( Eucalyptus.class );
       for ( final Host host : hosts ) {
-        if ( Bootstrap.isFinished( ) && !host.hasDatabase( ) && !host.isLocalHost( ) ) {
+        if ( Bootstrap.isFinished( ) && !host.hasBootstrapped( ) && !host.hasDatabase( ) && !host.isLocalHost( ) ) {
           try {
             ServiceConfiguration config = euca.getBuilder( ).lookupByHost( host.getHostAddress( ).getHostAddress( ) );
             LOG.debug( "Requesting first time initialization for remote cloud controller: " + host );
@@ -305,6 +310,19 @@ public class HostManager {
           } catch ( ServiceRegistrationException ex ) {
             LOG.trace( ex );
           }
+        } else if ( !host.hasBootstrapped( ) ) {
+          LOG.debug( "Requesting remote component startup: " + host );
+          Threads.lookup( Empyrean.class, HostManager.class ).submit( new Runnable( ) {
+            
+            @Override
+            public void run( ) {
+              try {
+                HostManager.this.membershipChannel.send( new Message( host.getGroupsId( ), null, new NoInitialize( ) ) );
+              } catch ( Exception ex ) {
+                LOG.error( ex, ex );
+              }
+            }
+          } );
         }
         Hosts.updateHost( getCurrentView( ), host );
       }
@@ -312,7 +330,7 @@ public class HostManager {
     
     @Override
     public void fireEvent( Event event ) {
-      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 10 ) && HostManager.this.membershipChannel.isConnected( ) ) {
+      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 3 ) && HostManager.this.membershipChannel.isConnected( ) ) {
         HostManager.this.view.sendState( );
       }
     }

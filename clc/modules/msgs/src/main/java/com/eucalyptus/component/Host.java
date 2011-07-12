@@ -82,22 +82,23 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   private ImmutableList<InetAddress> hostAddresses;
   private ViewId                     viewId;
   private Boolean                    hasDatabase;
+  private Boolean                    hasBootstrapped;
   private AtomicLong                 timestamp = new AtomicLong( System.currentTimeMillis( ) );
   private Long                       lastTime  = 0l;
   private ServiceConfiguration serviceConfiguration;
   
-  Host( ViewId viewId, Address jgroupsId, Boolean hasDb, List<InetAddress> hostAddresses, ServiceConfiguration configuration ) {
+  Host( ViewId viewId, Address jgroupsId, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> hostAddresses, ServiceConfiguration configuration ) {
     this.groupsId = jgroupsId;
     this.serviceConfiguration = configuration;
-    this.update( viewId, hasDb, hostAddresses );
+    this.update( viewId, hasDb, hasBootstrapped, hostAddresses );
   }
   
   Host( ViewId viewId ) {
     this.groupsId = Hosts.localMembershipAddress( );
-    this.update( viewId, BootstrapArgs.isCloudController( ), Internets.getAllInetAddresses( ) );
+    this.update( viewId, BootstrapArgs.isCloudController( ), false, Internets.getAllInetAddresses( ) );
   }
   
-  synchronized void update( ViewId viewId, Boolean hasDb, List<InetAddress> addresses ) {
+  synchronized void update( ViewId viewId, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> addresses ) {
     this.lastTime = this.timestamp.getAndSet( System.currentTimeMillis( ) );
     Logs.exhaust( ).debug( "Applying update (" + viewId + ") for host: " + this );
     ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( addresses ) );
@@ -189,6 +190,14 @@ public class Host implements java.io.Serializable, Comparable<Host> {
 
   public boolean isLocalHost( ) {
     return Internets.testLocal( this.getHostAddress( ) );
+  }
+
+  public Boolean hasBootstrapped( ) {
+    return this.hasBootstrapped;
+  }
+
+  public void markBootstrapped( ) {
+    this.hasBootstrapped = hasBootstrapped;
   }
 
 
