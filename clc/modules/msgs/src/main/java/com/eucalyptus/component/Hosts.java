@@ -112,7 +112,7 @@ public class Hosts {
   public static Host localHost( ) {
     Host ret = null;
     if( !hostMap.containsKey( Hosts.localMembershipAddress( ) ) ) {
-      Host oldRef = hostMap.putIfAbsent( Hosts.localMembershipAddress( ), new Host( HostManager.getCurrentView( ).getViewId( ) ) );
+      Host oldRef = hostMap.putIfAbsent( Hosts.localMembershipAddress( ), new Host( HostManager.isReady( ) ? HostManager.getCurrentView( ).getViewId( ) : null ) );
       if( oldRef == null ) {
         Host local = hostMap.get( Hosts.localMembershipAddress( ) );
         Mbeans.register( local );
