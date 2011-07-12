@@ -651,9 +651,15 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
 
         // create a soft link of the first partition's device mapper entry in the
         // form that grub is looking for (not DISKp1 but just DISK1)
-        if (NULL==pruntf (TRUE, "%s /bin/ln -s %sp1 %s1", helpers_path[ROOTWRAP], path, path)) {
+        char *output = pruntf (TRUE, "%s /bin/ln -s %sp1 %s1", helpers_path[ROOTWRAP], path, path);
+        if(!output) {
             logprintfl (EUCAINFO, "{%u} warning: failed to create partition device soft-link", (unsigned int)pthread_self());
+        } else {
+            free(output);
         }
+        /*        if (NULL==pruntf (TRUE, "%s /bin/ln -s %sp1 %s1", helpers_path[ROOTWRAP], path, path)) {
+            logprintfl (EUCAINFO, "{%u} warning: failed to create partition device soft-link", (unsigned int)pthread_self());
+            }*/
 
         // we now invoke grub through euca_rootwrap because it may need to operate on
         // devices that are owned by root (e.g. /dev/mapper/euca-dsk-7E4E131B-fca1d769p1)
@@ -701,9 +707,15 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
             }
         }
         // try to remove the partition device soft link created above
-        if (NULL==pruntf (TRUE, "%s /bin/rm %s1", helpers_path[ROOTWRAP], path)) {
+        output = pruntf (TRUE, "%s /bin/rm %s1", helpers_path[ROOTWRAP], path);
+        if(!output) {
             logprintfl (EUCAINFO, "{%u} warning: failed to remove partition device soft-link", (unsigned int)pthread_self());
+        } else {
+            free(output);
         }
+        /*        if (NULL==pruntf (TRUE, "%s /bin/rm %s1", helpers_path[ROOTWRAP], path)) {
+            logprintfl (EUCAINFO, "{%u} warning: failed to remove partition device soft-link", (unsigned int)pthread_self());
+            }*/
 
     } else if (grub_version==2) {
         char * output = pruntf (TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s %s", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt, path);
