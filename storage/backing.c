@@ -371,6 +371,9 @@ int clone_bundling_backing (ncInstance *instance, const char* filePrefix, char* 
 	logprintfl (EUCAERROR, "[%s] couldn't create the destination blob for bundling (%s)", instance->instanceId, id);
 	goto error;
     }
+
+    if(strlen(dest_blob->blocks_path) > 0)
+        snprintf(blockPath, MAX_PATH, "%s", dest_blob->blocks_path);
     
     // copy blob (will 'dd' eventually)
     if(blockblob_copy(src_blob, 0, dest_blob, 0, src_blob->size_bytes) != OK) {
