@@ -72,6 +72,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
 import org.jgroups.View;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.HostManager;
 import com.eucalyptus.empyrean.Empyrean;
@@ -122,7 +123,7 @@ public class Hosts {
     } else {
       ret = hostMap.get( Hosts.localMembershipAddress( ) );
     }
-    ret.update( HostManager.getCurrentView( ).getViewId( ), BootstrapArgs.isCloudController( ), Internets.getAllInetAddresses( ) );
+    ret.update( HostManager.getCurrentView( ).getViewId( ), BootstrapArgs.isCloudController( ), Bootstrap.isFinished( ), Internets.getAllInetAddresses( ) );
     return ret;
   }
   
@@ -135,7 +136,7 @@ public class Hosts {
       Host entry = null;
       if ( hostMap.containsKey( updatedHost.getGroupsId( ) ) ) {
         entry = hostMap.get( updatedHost.getGroupsId( ) );
-        entry.update( currentView.getViewId( ), updatedHost.hasDatabase( ), updatedHost.getHostAddresses( ) );
+        entry.update( currentView.getViewId( ), updatedHost.hasDatabase( ), updatedHost.hasBootstrapped( ), updatedHost.getHostAddresses( ) );
       } else {
         Component empyrean = Components.lookup( Empyrean.class );
         ComponentId empyreanId = empyrean.getComponentId( );
@@ -145,7 +146,7 @@ public class Hosts {
             try {
               ServiceConfiguration config = empyrean.initRemoteService( addr );
               empyrean.loadService( ephemeralConfig ).get();
-              entry = new Host( currentView.getViewId( ), updatedHost.getGroupsId( ), updatedHost.hasDatabase( ), updatedHost.getHostAddresses( ), config );
+              entry = new Host( currentView.getViewId( ), updatedHost.getGroupsId( ), updatedHost.hasDatabase( ), updatedHost.hasBootstrapped( ), updatedHost.getHostAddresses( ), config );
               Host temp = hostMap.putIfAbsent( entry.getGroupsId( ), entry );
               entry = ( temp != null ) ? temp : entry;
               Mbeans.register( entry );
