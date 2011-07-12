@@ -298,7 +298,7 @@ public class HostManager {
     
     @Override
     public void fireEvent( Event event ) {
-      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 1 ) && !Bootstrap.isFinished( ) && HostManager.this.membershipChannel.isConnected( ) ) {
+      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 3 ) && HostManager.this.membershipChannel.isConnected( ) ) {
         Logs.exhaust( ).debug( "Sending state info: " + Hosts.localHost( ) );
         try {
           HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( Hosts.localHost( ) ) ) );
