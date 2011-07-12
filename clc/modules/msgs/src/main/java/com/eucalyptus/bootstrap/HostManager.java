@@ -109,10 +109,10 @@ public class HostManager {
   private HostStateListener     stateListener;
   private static HostManager    singleton;
   private final Predicate<Host> dbFilter;
+  interface InitRequest{}
+  static class Initialize implements InitRequest, Serializable {}
   
-  static class Initialize implements Serializable {}
-  
-  static class NoInitialize implements Serializable {}
+  static class NoInitialize implements InitRequest, Serializable {}
   
   private HostManager( ) {
     this.view = new CurrentView( );
@@ -205,7 +205,7 @@ public class HostManager {
       } catch ( NoSuchElementException ex ) {
         LOG.error( ex );
       }
-      if( this.initializing.compareAndSet( InitState.PENDING, InitState.WORKING ) ) {
+      if( msg.getObject( ) instanceof InitRequest && this.initializing.compareAndSet( InitState.PENDING, InitState.WORKING ) ) {
         if ( msg.getObject( ) instanceof Initialize ) {
           LOG.debug( "Received initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
           try {
