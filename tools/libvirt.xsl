@@ -114,12 +114,20 @@ that describes a Eucalyptus instance to be launched.
                             </xsl:choose>
                         </source>
                         <target>
-                            <xsl:attribute name="dev">
-                                <xsl:value-of select="@targetDeviceName"/>
-                            </xsl:attribute>
-                            <xsl:attribute name="bus">
-                                <xsl:value-of select="@targetDeviceBus"/>
-                            </xsl:attribute>
+	                    <xsl:choose> 
+			       <xsl:when test="/instance/hypervisor/@type='kvm' and /instance/os/@platform='windows'">
+                 		   <xsl:attribute name="dev">vda</xsl:attribute>
+				   <xsl:attribute name="bus">virtio</xsl:attribute>
+	                       </xsl:when>
+			       <xsl:otherwise>
+			           <xsl:attribute name="dev">
+                               		<xsl:value-of select="@targetDeviceName"/>
+                            	   </xsl:attribute>
+                            	   <xsl:attribute name="bus">
+                               		<xsl:value-of select="@targetDeviceBus"/>
+                            	   </xsl:attribute>
+			        </xsl:otherwise>
+	                    </xsl:choose>
                         </target>
                     </disk>
                     <xsl:if test="/instance/disks/floppyPath != ''">
@@ -147,11 +155,11 @@ that describes a Eucalyptus instance to be launched.
                             </xsl:attribute>
                         </mac>
                         <xsl:choose>
-                            <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@virtioRoot = 'true'">
+                            <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@platform = 'windows'">
                                 <model type="virtio"/>
                             </xsl:when>
-                            <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@platform = 'windows'">
-                                <model type="rtl8139"/>
+                            <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@virtioRoot = 'true'">
+                                <model type="virtio"/>
                             </xsl:when>
                             <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@platform = 'linux'">
                                 <model type="e1000"/>

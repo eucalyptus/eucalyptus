@@ -170,7 +170,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	}
 
 	private void mountPrimary() throws ExecutionException, EucalyptusCloudException {
-		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_MOUNT_WRAPPER, "mount", DRBDInfo.getDRBDInfo().getBlockDevice(), WalrusInfo.getWalrusInfo().getStorageDir()}) != 0) {
+		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_MOUNT_WRAPPER, "mount", DRBDInfo.getDRBDInfo().getBlockDevice(), WalrusInfo.getWalrusInfo().getStorageDir(), WalrusProperties.EUCA_USER}) != 0) {
 			throw new EucalyptusCloudException("Unable to mount " + DRBDInfo.getDRBDInfo().getBlockDevice() + " as " + WalrusInfo.getWalrusInfo().getStorageDir());
 		}
 	}
@@ -415,6 +415,10 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		try {
 			if(isMounted()) {
 				unmountPrimary();
+			}
+			if(!isSecondary()) {
+				//make secondary
+				makeSecondary();
 			}
 		} catch(ExecutionException ex) {
 			throw new EucalyptusCloudException(ex);
