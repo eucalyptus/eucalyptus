@@ -109,7 +109,9 @@ public class HostManager {
   private HostStateListener     stateListener;
   private static HostManager    singleton;
   private final Predicate<Host> dbFilter;
-  interface InitRequest{}
+  
+  interface InitRequest {}
+  
   static class Initialize implements InitRequest, Serializable {}
   
   static class NoInitialize implements InitRequest, Serializable {}
@@ -205,20 +207,7 @@ public class HostManager {
       } catch ( NoSuchElementException ex ) {
         Logs.exhaust( ).error( ex );
       }
-      if( this.initializing.get( ).equals( InitState.PENDING ) ) {
-        Threads.lookup( Empyrean.class, HostManager.class ).submit( new Runnable( ) {
-          
-          @Override
-          public void run( ) {
-            try {
-              HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( Hosts.localHost( ) ) ) );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-            }
-          }
-        } );
-      }
-      if( msg.getObject( ) instanceof InitRequest && this.initializing.compareAndSet( InitState.PENDING, InitState.WORKING ) ) {
+      if ( msg.getObject( ) instanceof InitRequest && this.initializing.compareAndSet( InitState.PENDING, InitState.WORKING ) ) {
         if ( msg.getObject( ) instanceof Initialize ) {
           LOG.debug( "Received initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
           try {
@@ -230,6 +219,18 @@ public class HostManager {
           LOG.debug( "Received no-initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
           this.initializing.set( InitState.FINISHED );
         }
+      } else if ( this.initializing.get( ).equals( InitState.PENDING ) ) {
+        Threads.lookup( Empyrean.class, HostManager.class ).submit( new Runnable( ) {
+          
+          @Override
+          public void run( ) {
+            try {
+              HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( Hosts.localHost( ) ) ) );
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
+            }
+          }
+        } );
       } else if ( this.initializing.compareAndSet( InitState.FINISHED, InitState.FINISHED ) ) {
         if ( msg.getObject( ) instanceof List ) {
           LOG.debug( "Received updated host information: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
