@@ -22,7 +22,7 @@ import com.google.common.base.Strings;
  * @author wenye
  *
  */
-public class DefaultAuthenticator extends AbstractBaseAuthenticator {
+public class DefaultAuthenticator implements LdapAuthenticator {
   
   private static Logger LOG = Logger.getLogger( DefaultAuthenticator.class ); 
   
@@ -30,19 +30,19 @@ public class DefaultAuthenticator extends AbstractBaseAuthenticator {
   }
   
   @Override
-  public LdapContext authenticate( LdapIntegrationConfiguration lic, String login, String password ) throws LdapException {
+  public LdapContext authenticate( String serverUrl, String method, boolean useSsl, boolean ignoreSslCert, String login, String password, Object... extraArgs ) throws LdapException {
     if ( Strings.isNullOrEmpty( login ) || Strings.isNullOrEmpty( password ) ) {
       throw new LdapException( "LDAP login failed: empty login name or password" );
     }    
     Properties env = new Properties( );
     env.put( Context.INITIAL_CONTEXT_FACTORY, LDAP_CONTEXT_FACTORY );
-    env.put( Context.PROVIDER_URL, lic.getServerUrl( ) );
-    env.put( Context.SECURITY_AUTHENTICATION, lic.getAuthMethod( ) );
+    env.put( Context.PROVIDER_URL, serverUrl );
+    env.put( Context.SECURITY_AUTHENTICATION, method );
     env.put( Context.SECURITY_PRINCIPAL, login );
     env.put( Context.SECURITY_CREDENTIALS, password );
-    if ( lic.isUseSsl( ) ) {
+    if ( useSsl ) {
       env.put( Context.SECURITY_PROTOCOL, SSL_PROTOCOL );
-      if ( lic.isIgnoreSslCertValidation( ) ) {
+      if ( ignoreSslCert ) {
         env.put( SOCKET_FACTORY, EasySSLSocketFactory.class.getCanonicalName( ) );
       }
     }

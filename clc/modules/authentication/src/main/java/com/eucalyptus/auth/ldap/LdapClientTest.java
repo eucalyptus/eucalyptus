@@ -12,17 +12,17 @@ public class LdapClientTest {
     //lic.setAuthPrincipal( "cn=admin,dc=test-eucalyptus,dc=com" );
     lic.setAuthPrincipal( "peter" );
     lic.setAuthCredentials( "" );
-    lic.setUseSsl( true );
+    lic.setUseSsl( false );
     lic.setIgnoreSslCertValidation( true );
-    lic.setKrb5Conf( "" );
+    lic.setKrb5Conf( "/home/wenye/workspace/jndi-gssapi/src/krb5.conf" );
     lic.setGroupBaseDn( "ou=Groups,dc=test-eucalyptus,dc=com" );
     lic.setUserBaseDn( "ou=People,dc=test-eucalyptus,dc=com" );
     
-    LdapClient client = new LdapClient( lic );
+    LdapClient client = LdapClient.authenticateClient( lic );
     NamingEnumeration<SearchResult> results = client.search( "dc=test-eucalyptus,dc=com", "objectClass=inetOrgPerson", new String[]{ "displayName" } );
     while ( results.hasMore( ) ) {
       SearchResult r = results.next( );
-      System.out.println( r.getNameInNamespace( ) + " -- " + r.getAttributes( ) );
+      System.out.println( r.getName( ) + " " + r.getNameInNamespace( ) + " -- " + r.getAttributes( ) );
     }
   }
   

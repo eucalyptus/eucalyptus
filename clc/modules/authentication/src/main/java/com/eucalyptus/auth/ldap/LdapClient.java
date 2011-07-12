@@ -20,8 +20,34 @@ public class LdapClient {
 
   private LdapContext context;
   
-  public LdapClient( LdapIntegrationConfiguration lic ) throws LdapException {
-    this.context = LdapAuthenticatorFactory.getLdapAuthenticator( lic ).authenticate( lic );
+  private LdapClient( ) {
+    // constructor not allowed
+  }
+  
+  private LdapClient( LdapContext context ) {
+    this.context = context;
+  }
+  
+  public static LdapClient authenticateClient( LdapIntegrationConfiguration lic ) throws LdapException {
+    LdapContext context = LdapAuthenticatorFactory.getLdapAuthenticator( lic.getAuthMethod( ) ).authenticate( lic.getServerUrl( ),
+                                                                                                              lic.getAuthMethod( ),
+                                                                                                              lic.isUseSsl( ),
+                                                                                                              lic.isIgnoreSslCertValidation( ),
+                                                                                                              lic.getAuthPrincipal( ),
+                                                                                                              lic.getAuthCredentials( ),
+                                                                                                              lic.getKrb5Conf( ) );
+    return new LdapClient( context );
+  }
+  
+  public static LdapClient authenticateUser( LdapIntegrationConfiguration lic, String login, String password ) throws LdapException {
+    LdapContext context = LdapAuthenticatorFactory.getLdapAuthenticator( lic.getAuthMethod( ) ).authenticate( lic.getServerUrl( ),
+                                                                                                              lic.getRealUserAuthMethod( ),
+                                                                                                              lic.isUseSsl( ),
+                                                                                                              lic.isIgnoreSslCertValidation( ),
+                                                                                                              login,
+                                                                                                              password,
+                                                                                                              lic.getKrb5Conf( ) );
+    return new LdapClient( context );
   }
 
   public void close( ) {

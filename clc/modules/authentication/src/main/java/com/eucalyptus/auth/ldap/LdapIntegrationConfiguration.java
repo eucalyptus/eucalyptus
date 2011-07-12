@@ -16,6 +16,7 @@ public class LdapIntegrationConfiguration {
   // LDAP service configuration
   private String serverUrl;
   private String authMethod;
+  private String userAuthMethod;
   private String authPrincipal;
   private String authCredentials;
   private boolean useSsl;
@@ -26,6 +27,7 @@ public class LdapIntegrationConfiguration {
   private boolean enableSync;
   private boolean autoSync;
   private long syncInterval;
+  private boolean cleanDeletion;
   
   private boolean hasAccountingGroups;
   
@@ -60,6 +62,7 @@ public class LdapIntegrationConfiguration {
     sb.append( "ldap-service:\n" );
     sb.append( '\t' ).append( "server-url:" ).append( this.serverUrl ).append( '\n' );
     sb.append( '\t' ).append( "auth-method:" ).append( this.authMethod ).append( '\n' );
+    sb.append( '\t' ).append( "user-auth-method:" ).append( this.userAuthMethod ).append( '\n' );
     sb.append( '\t' ).append( "auth-principal:" ).append( this.authPrincipal ).append( '\n' );
     sb.append( '\t' ).append( "auth-credentials:" ).append( this.authCredentials ).append( '\n' );
     sb.append( '\t' ).append( "use-ssl:" ).append( this.useSsl ).append( '\n' );
@@ -69,6 +72,7 @@ public class LdapIntegrationConfiguration {
     sb.append( '\t' ).append( "enable:" ).append( this.enableSync ).append( '\n' );
     sb.append( '\t' ).append( "auto:" ).append( this.autoSync ).append( '\n' );
     sb.append( '\t' ).append( "interval:" ).append( this.syncInterval ).append( '\n' );
+    sb.append( '\t' ).append( "clean-deletion:" ).append( this.cleanDeletion ).append( '\n' );
     if ( this.hasAccountingGroups ) {
       sb.append( "accounting-groups:\n" );
       sb.append( '\t' ).append( "base-dn:" ).append( this.accountingGroupBaseDn ).append( '\n' );
@@ -291,6 +295,26 @@ public class LdapIntegrationConfiguration {
 
   public String getKrb5Conf( ) {
     return krb5Conf;
+  }
+
+  public void setUserAuthMethod( String userAuthMethod ) {
+    this.userAuthMethod = userAuthMethod;
+  }
+
+  public String getUserAuthMethod( ) {
+    return userAuthMethod;
+  }
+  
+  public String getRealUserAuthMethod( ) {
+    return ( userAuthMethod != null ? userAuthMethod : authMethod );
+  }
+
+  public void setCleanDeletion( boolean cleanDeletion ) {
+    this.cleanDeletion = cleanDeletion;
+  }
+
+  public boolean isCleanDeletion( ) {
+    return cleanDeletion;
   }
 
 }

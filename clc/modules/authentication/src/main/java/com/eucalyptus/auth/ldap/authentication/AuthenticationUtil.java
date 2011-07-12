@@ -16,16 +16,13 @@ public class AuthenticationUtil {
 
   private static final Logger LOG = Logger.getLogger( AuthenticationUtil.class );
   
-  private static StringCrypto crypto;
+  private static final StringCrypto CYPTO = new StringCrypto( CRYPTO_FORMAT, CRYPTO_PROVIDER );
   
   /**
    * @return a StringCrypto singleton.
    */
   private static synchronized StringCrypto getCrypto( ) {
-    if ( crypto == null ) {
-      crypto = new StringCrypto( CRYPTO_FORMAT, CRYPTO_PROVIDER );
-    }
-    return crypto;
+    return CYPTO;
   }
   
   /**

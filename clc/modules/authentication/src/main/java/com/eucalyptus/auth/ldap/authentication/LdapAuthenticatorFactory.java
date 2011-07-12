@@ -6,11 +6,11 @@ import com.eucalyptus.auth.ldap.LicParser;
 
 public class LdapAuthenticatorFactory {
 
-  public static LdapAuthenticator getLdapAuthenticator( LdapIntegrationConfiguration lic ) throws LdapException {
-    if ( lic == null ) {
-      throw new LdapException( "Can not find LDAP authenticator for empty configuration" );
+  public static LdapAuthenticator getLdapAuthenticator( String authMethod ) throws LdapException {
+    if ( authMethod == null ) {
+      throw new LdapException( "Can not find LDAP authenticator for empty authentication method" );
     }
-    if ( LicParser.LDAP_AUTH_METHOD_SASL_GSSAPI.equals( lic.getAuthMethod( ) ) ) {
+    if ( LicParser.LDAP_AUTH_METHOD_SASL_GSSAPI.equals( authMethod ) ) {
       return new GssapiKrb5Authenticator( );
     } else {
       return new DefaultAuthenticator( );

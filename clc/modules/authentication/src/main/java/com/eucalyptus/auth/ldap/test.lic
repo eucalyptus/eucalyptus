@@ -8,6 +8,7 @@
 
     "server-url":"ldap://localhost:7733",
     "auth-method":"GSSAPI",
+    "user-auth-method":"GSSAPI",
     "auth-principal":"cn=ldapadmin,dc=foo,dc=com",
     "auth-credentials":"ENCRYPTED_PASSWORD",
     "use-ssl":"false",
@@ -22,6 +23,7 @@
     "enable":"true",
     "auto":"true",
     "interval":"900000",
+    "clean-deletion":"false",
   },
 
   "groups-partition":{

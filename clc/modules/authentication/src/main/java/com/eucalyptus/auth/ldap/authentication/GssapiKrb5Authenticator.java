@@ -31,7 +31,7 @@ import com.google.common.base.Strings;
  * @author wenye
  *
  */
-public class GssapiKrb5Authenticator extends AbstractBaseAuthenticator {
+public class GssapiKrb5Authenticator implements LdapAuthenticator {
   
   public static final String KRB5_CONF_PROPERTY = "java.security.krb5.conf";
   public static final String KRB5_LOGIN_MODULE = "com.sun.security.auth.module.Krb5LoginModule";
@@ -43,13 +43,22 @@ public class GssapiKrb5Authenticator extends AbstractBaseAuthenticator {
   public GssapiKrb5Authenticator( ) {
   }
   
+  /**
+   * See {@link com.eucalyptus.auth.ldap.authentication.LdapAuthenticator}
+   * <p>
+   *  extraArgs[0] is the path of krb5.conf
+   * </p>
+   */
   @Override
-  public LdapContext authenticate( final LdapIntegrationConfiguration lic, final String login, final String password ) throws LdapException {
+  public LdapContext authenticate( final String serverUrl, String method, final boolean useSsl, final boolean ignoreSslCert, final String login, final String password, Object... extraArgs ) throws LdapException {
     if ( Strings.isNullOrEmpty( login ) || Strings.isNullOrEmpty( password ) ) {
       throw new LdapException( "LDAP login failed: empty login name or password" );
     }
+    if ( extraArgs.length < 1 || !( extraArgs[0] instanceof String ) || Strings.isNullOrEmpty( ( String )extraArgs[0] ) ) {
+      throw new LdapException( "GSSAPI w/ Kerberos V5 requires krb5.conf argument" );
+    }
     
-    System.setProperty( KRB5_CONF_PROPERTY, lic.getKrb5Conf( ) );
+    System.setProperty( KRB5_CONF_PROPERTY, ( String )extraArgs[0] );
     
     final Map<String, String> options = new HashMap<String, String>( );
     options.put( JAAS_CONF_OPTION_CLIENT, "TRUE" );
@@ -93,11 +102,11 @@ public class GssapiKrb5Authenticator extends AbstractBaseAuthenticator {
       public LdapContext run( ) {
         Properties env = new Properties( );
         env.put( Context.INITIAL_CONTEXT_FACTORY, LDAP_CONTEXT_FACTORY );
-        env.put( Context.PROVIDER_URL, lic.getServerUrl( ) );
+        env.put( Context.PROVIDER_URL, serverUrl );
         env.put( Context.SECURITY_AUTHENTICATION, LicParser.LDAP_AUTH_METHOD_SASL_GSSAPI );
-        if ( lic.isUseSsl( ) ) {
+        if ( useSsl ) {
           env.put( Context.SECURITY_PROTOCOL, SSL_PROTOCOL );
-          if ( lic.isIgnoreSslCertValidation( ) ) {
+          if ( ignoreSslCert ) {
             env.put( SOCKET_FACTORY, EasySSLSocketFactory.class.getCanonicalName( ) );
           }
         }
