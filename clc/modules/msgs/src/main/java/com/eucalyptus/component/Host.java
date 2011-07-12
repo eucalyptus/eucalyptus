@@ -175,7 +175,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   
   @Override
   public String toString( ) {
-    return String.format( "Host:id=%s:viewId=%s:hostAddresses=%s:hasDatabase=%s:lastTime=%s", this.groupsId, this.viewId, this.hostAddresses, this.hasDatabase, new Date( this.lastTime ) );
+    return String.format( "Host:id=%s:viewId=%s:hostAddresses=%s:db=%s:booted=%s:lastTime=%s", this.groupsId, this.viewId, this.hostAddresses, this.hasDatabase, this.hasBootstrapped, new Date( this.lastTime ) );
   }
 
   public ServiceConfiguration getServiceConfiguration( ) {
