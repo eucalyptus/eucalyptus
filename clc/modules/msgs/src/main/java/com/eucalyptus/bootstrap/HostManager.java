@@ -66,8 +66,8 @@ package com.eucalyptus.bootstrap;
 import java.io.Serializable;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
 import org.jgroups.ChannelClosedException;
@@ -166,8 +166,12 @@ public class HostManager {
     return HostManager.getInstance( ).view.isReady( );
   }
   
+  enum InitState {
+    PENDING, WORKING, FINISHED
+  };
+  
   abstract class HostStateListener implements Receiver, ExtendedMembershipListener, EventListener {
-    private AtomicBoolean initializing = new AtomicBoolean( false );
+    private AtomicReference<InitState> initializing = new AtomicReference<InitState>( InitState.PENDING );
     
     @Override
     public final byte[] getState( ) {
@@ -195,29 +199,33 @@ public class HostManager {
     @Override
     public void receive( Message msg ) {
       try {
-        if ( this.initializing.get( ) || Hosts.getHostInstance( msg.getSrc( ) ).isLocalHost( ) ) {
+        if ( Hosts.getHostInstance( msg.getSrc( ) ).isLocalHost( ) ) {
           return;
         }
       } catch ( NoSuchElementException ex ) {
         LOG.error( ex );
       }
-      if ( msg.getObject( ) instanceof Initialize ) {
-        LOG.debug( "Received initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
-        try {
-          if ( this.initializing.compareAndSet( true, true ) ) {
+      if( this.initializing.compareAndSet( InitState.PENDING, InitState.WORKING ) ) {
+        if ( msg.getObject( ) instanceof Initialize ) {
+          LOG.debug( "Received initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+          try {
             this.initialize( );
+          } finally {
+            this.initializing.set( InitState.FINISHED );
           }
-        } finally {
-          this.initializing.set( false );
+        } else if ( msg.getObject( ) instanceof NoInitialize ) {
+          LOG.debug( "Received no-initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+          this.initializing.set( InitState.FINISHED );
         }
-      } else if ( msg.getObject( ) instanceof NoInitialize ) {
-        LOG.debug( "Received no-initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
-        this.initializing.set( false );
-      } else if ( msg.getObject( ) instanceof List ) {
-        LOG.debug( "Received updated host information: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
-        this.receive( ( List<Host> ) msg.getObject( ) );
+      } else if ( this.initializing.compareAndSet( InitState.FINISHED, InitState.FINISHED ) ) {
+        if ( msg.getObject( ) instanceof List ) {
+          LOG.debug( "Received updated host information: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+          this.receive( ( List<Host> ) msg.getObject( ) );
+        } else {
+          LOG.debug( "Received unknown message type: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+        }
       } else {
-        LOG.debug( "Received unknown message type: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+        LOG.debug( "Received message while InitState.WORKING, ignoring: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
       }
     }
     
