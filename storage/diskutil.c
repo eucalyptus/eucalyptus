@@ -643,7 +643,7 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
     logprintfl (EUCAINFO, "{%u} installing grub in MBR\n", (unsigned int)pthread_self());
     if (grub_version==1) {
         char tmp_file [EUCA_MAX_PATH] = "/tmp/euca-temp-XXXXXX";
-        int tfd = mkstemp (tmp_file);
+        int tfd = safe_mkstemp (tmp_file);
         if (tfd < 0) {
             logprintfl (EUCAINFO, "{%u} error: mkstemp() failed: %s\n", (unsigned int)pthread_self(), strerror (errno));
             return ERROR;

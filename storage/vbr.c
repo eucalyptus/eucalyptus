@@ -788,7 +788,7 @@ static int iqn_creator (artifact * a)
         return ERROR;
     } 
     // update VBR with device location
-    strncpy (vbr->backingPath, dev, sizeof (vbr->backingPath));
+    safe_strncpy (vbr->backingPath, dev, sizeof (vbr->backingPath));
     vbr->backingType = SOURCE_TYPE_BLOCK;
 
     return OK;
@@ -806,7 +806,7 @@ static int aoe_creator (artifact * a)
         return ERROR;
     } 
     // update VBR with device location
-    strncpy (vbr->backingPath, dev, sizeof (vbr->backingPath));
+    safe_strncpy (vbr->backingPath, dev, sizeof (vbr->backingPath));
     vbr->backingType = SOURCE_TYPE_BLOCK;
 
     return OK;
