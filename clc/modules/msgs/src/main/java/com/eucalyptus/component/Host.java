@@ -108,13 +108,11 @@ public class Host implements java.io.Serializable, Comparable<Host> {
       this.viewId = viewId;
       this.hasDatabase = hasDb;
       this.hostAddresses = newAddrs;
-      this.lastTime = System.currentTimeMillis( );
       LOG.trace( "Updated host: " + this );
     } else {
       this.viewId = viewId;
       this.hasDatabase = hasDb;
       this.hostAddresses = newAddrs;
-      this.lastTime = System.currentTimeMillis( );
     }
   }
   

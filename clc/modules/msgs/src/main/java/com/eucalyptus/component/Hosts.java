@@ -72,6 +72,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
 import org.jgroups.View;
+import org.jgroups.ViewId;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.HostManager;
@@ -111,8 +112,9 @@ public class Hosts {
   
   public static Host localHost( ) {
     Host ret = null;
+    ViewId viewId = HostManager.isReady( ) ? HostManager.getCurrentView( ).getViewId( ) : null;
     if( !hostMap.containsKey( Hosts.localMembershipAddress( ) ) ) {
-      Host oldRef = hostMap.putIfAbsent( Hosts.localMembershipAddress( ), new Host( HostManager.isReady( ) ? HostManager.getCurrentView( ).getViewId( ) : null ) );
+      Host oldRef = hostMap.putIfAbsent( Hosts.localMembershipAddress( ), new Host( viewId ) );
       if( oldRef == null ) {
         Host local = hostMap.get( Hosts.localMembershipAddress( ) );
         Mbeans.register( local );
@@ -123,7 +125,7 @@ public class Hosts {
     } else {
       ret = hostMap.get( Hosts.localMembershipAddress( ) );
     }
-    ret.update( HostManager.getCurrentView( ).getViewId( ), BootstrapArgs.isCloudController( ), Bootstrap.isFinished( ), Internets.getAllInetAddresses( ) );
+    ret.update( viewId, BootstrapArgs.isCloudController( ), Bootstrap.isFinished( ), Internets.getAllInetAddresses( ) );
     return ret;
   }
   
