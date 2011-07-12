@@ -173,7 +173,9 @@ public class HostManager {
   };
   
   abstract class HostStateListener implements Receiver, ExtendedMembershipListener, EventListener {
-    private AtomicReference<InitState> initializing = new AtomicReference<InitState>( InitState.PENDING );
+    private AtomicReference<InitState> initializing = new AtomicReference<InitState>( BootstrapArgs.isCloudController( )
+                                                      ? InitState.FINISHED
+                                                      : InitState.PENDING );
     
     @Override
     public final byte[] getState( ) {
@@ -208,15 +210,10 @@ public class HostManager {
         Logs.exhaust( ).error( ex );
       }
       if ( msg.getObject( ) instanceof InitRequest && this.initializing.compareAndSet( InitState.PENDING, InitState.WORKING ) ) {
-        if ( msg.getObject( ) instanceof Initialize ) {
-          LOG.debug( "Received initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
-          try {
-            this.initialize( );
-          } finally {
-            this.initializing.set( InitState.FINISHED );
-          }
-        } else if ( msg.getObject( ) instanceof NoInitialize ) {
-          LOG.debug( "Received no-initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+        LOG.debug( "Received initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+        try {
+          this.initialize( msg.getObject( ) instanceof Initialize );
+        } finally {
           this.initializing.set( InitState.FINISHED );
         }
       } else if ( this.initializing.get( ).equals( InitState.PENDING ) ) {
@@ -244,20 +241,7 @@ public class HostManager {
     }
     
     public abstract void receive( List<Host> hostsState );
-    
-    public void initialize( ) {
-      try {
-        Bootstrap.initializeSystem( );
-        Eucalyptus.setupLocals( Internets.localHostInetAddress( ) );
-        for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-          stage.updateBootstrapDependencies( );
-        }
-        HostManager.this.stateListener = new CloudControllerHostStateHandler( );
-      } catch ( Throwable ex ) {
-        LOG.error( ex, ex );
-        System.exit( 123 );
-      }
-    }
+    public abstract void initialize( boolean doInit );
     
     @Override
     public abstract void fireEvent( Event event );
@@ -275,6 +259,22 @@ public class HostManager {
   }
   
   private class RemoteHostStateListener extends HostStateListener {
+    public void initialize( boolean doInit ) {
+      if( doInit ) {
+        try {
+          Bootstrap.initializeSystem( );
+          Eucalyptus.setupLocals( Internets.localHostInetAddress( ) );
+          for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
+            stage.updateBootstrapDependencies( );
+          }
+          HostManager.this.stateListener = new CloudControllerHostStateHandler( );
+        } catch ( Throwable ex ) {
+          LOG.error( ex, ex );
+          System.exit( 123 );
+        }
+      }
+    }
+    
     @Override
     public void receive( List<Host> hosts ) {
       if ( !Bootstrap.isFinished( ) ) {
