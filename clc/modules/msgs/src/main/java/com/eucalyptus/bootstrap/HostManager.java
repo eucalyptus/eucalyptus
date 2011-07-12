@@ -197,7 +197,7 @@ public class HostManager {
           return;
         }
       } catch ( NoSuchElementException ex ) {
-        LOG.error( ex, ex );
+        LOG.error( ex );
       }
       if ( msg.getObject( ) instanceof Initialize ) {
         LOG.debug( "Received initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
@@ -252,13 +252,13 @@ public class HostManager {
     public void receive( List<Host> hosts ) {
       if ( !Bootstrap.isFinished( ) ) {
         for ( Host host : hosts ) {
-          Hosts.updateHost( getCurrentView( ), host );
-        }
-        for ( Host host : hosts ) {
           if ( Eucalyptus.setupLocals( host.getHostAddress( ) ) ) {
             HostManager.this.view.markReady( );
           }
         }//TODO:GRZE: this need to be /more/ dynamic
+        for ( Host host : hosts ) {
+          Hosts.updateHost( getCurrentView( ), host );
+        }
       } else {
         for ( Host host : hosts ) {
           Hosts.updateHost( getCurrentView( ), host );
