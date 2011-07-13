@@ -272,7 +272,7 @@ public class VolumeManager {
     AttachVolumeResponseType reply = ( AttachVolumeResponseType ) request.getReply( );
     Context ctx = Contexts.lookup( );
     
-    if ( request.getDevice( ) == null || request.getDevice( ).endsWith( "sda" ) ) {
+    if ( request.getDevice( ) == null || request.getDevice( ).endsWith( "sda" ) || request.getDevice( ).endsWith( "sdb" ) ) {
       throw new EucalyptusCloudException( "Invalid device name specified: " + request.getDevice( ) );
     }
     VmInstance vm = null;
