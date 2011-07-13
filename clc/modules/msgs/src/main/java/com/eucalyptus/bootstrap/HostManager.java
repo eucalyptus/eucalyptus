@@ -278,10 +278,10 @@ public class HostManager {
         LOG.info( "Performing first-time system init." );
         try {
           Bootstrap.initializeSystem( );
-          Eucalyptus.setupServiceDependencies( Internets.localHostInetAddress( ) );
-          Bootstrap.initBootstrappers( );
-          HostManager.this.setStateListener( new CloudControllerHostStateHandler( ) );
-          HostManager.this.view.markReady( );
+//          Eucalyptus.setupServiceDependencies( Internets.localHostInetAddress( ) );
+//          Bootstrap.initBootstrappers( );
+//          HostManager.this.setStateListener( new CloudControllerHostStateHandler( ) );
+          System.exit( 123 );
         } catch ( Throwable ex ) {
           LOG.error( ex, ex );
           System.exit( 123 );
