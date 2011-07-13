@@ -292,11 +292,11 @@ public class HostManager {
           }
         }//TODO:GRZE: this need to be /more/ dynamic
         for ( Host host : hosts ) {
-          Hosts.updateHost( getCurrentView( ), host );
+          Hosts.updateHost( HostManager.getCurrentView( ), host );
         }
       } else {
         for ( Host host : hosts ) {
-          Hosts.updateHost( getCurrentView( ), host );
+          Hosts.updateHost( HostManager.getCurrentView( ), host );
         }
       }
       
@@ -356,11 +356,11 @@ public class HostManager {
     public View getCurrentView( ) {
       boolean[] holder = new boolean[1];
       View view = currentView.get( holder );
-      if ( holder[0] ) {
-        return null;
-      } else {
+//      if ( holder[0] ) {
+//        return null;
+//      } else {
         return view;
-      }
+//      }
     }
     
     private boolean setInitialView( View oldView, View newView ) {
