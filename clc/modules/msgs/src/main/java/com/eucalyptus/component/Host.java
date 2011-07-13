@@ -166,7 +166,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   
   @Override
   public String toString( ) {
-    return String.format( "Host:id=%s:viewId=%s:hostAddresses=%s:db=%s:booted=%s:lastTime=%s", this.groupsId, this.viewId, this.hostAddresses,
+    return String.format( "Host:id=%s:bindAddr=%s:allAddrs=%s:db=%s:booted=%s:lastTime=%s", this.groupsId, this.bindAddress, this.hostAddresses,
                           this.hasDatabase, this.hasBootstrapped, new Date( this.lastTime ) );
   }
   
