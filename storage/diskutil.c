@@ -820,6 +820,9 @@ static char * pruntf (boolean log_error, char *format, ...)
     }
 
     output = malloc(sizeof(char) * outsize);
+    if(output) {
+        output[0]='\0'; // make sure we return an empty string if there is no output
+    }
 
     while(output != NULL && (bytes = fread(output+(outsize-1025), 1, 1024, IF)) > 0) {
         output[(outsize-1025)+bytes] = '\0';
@@ -833,7 +836,6 @@ static char * pruntf (boolean log_error, char *format, ...)
         pclose(IF);
         return(NULL);
     }
-    output[0]='\0'; // make sure we return an empty string if there is no output
 
     rc = pclose(IF);
     if (rc) {
