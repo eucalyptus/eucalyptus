@@ -102,17 +102,15 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     this.lastTime = this.timestamp.getAndSet( System.currentTimeMillis( ) );
     Logs.exhaust( ).debug( "Applying update (" + viewId + ") for host: " + this );
     ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( addresses ) );
-    if ( this.viewId == null ) {
-      this.viewId = viewId;
-      LOG.trace( "Adding host with addresses: " + addresses );
-      this.viewId = viewId;
-      this.hasDatabase = hasDb;
-      this.hostAddresses = newAddrs;
-      LOG.trace( "Updated host: " + this );
+    this.hasBootstrapped = hasBootstrapped;
+    boolean isnew = ( this.viewId == null );
+    this.viewId = viewId;
+    this.hasDatabase = hasDb;
+    this.hostAddresses = newAddrs;
+    if ( isnew ) {
+      LOG.trace( "Adding host: " + this );
     } else {
-      this.viewId = viewId;
-      this.hasDatabase = hasDb;
-      this.hostAddresses = newAddrs;
+      LOG.trace( "Updated host: " + this );
     }
   }
   
