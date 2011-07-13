@@ -86,6 +86,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.sla.ClusterAllocator;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.vm.VmType;
+import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;

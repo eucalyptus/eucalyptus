@@ -61,7 +61,7 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
 import java.util.List;
 import java.util.NavigableSet;
@@ -77,7 +77,6 @@ import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.TypeMapper;
-import com.eucalyptus.vm.VmType;
 import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
@@ -94,7 +93,7 @@ public class VmTypes {
       if( Image.Platform.windows.equals( img.getPlatform( ) ) ) {
         vmTypeInfo  = VmTypes.InstanceStoreWindowsVmTypeInfoMapper.INSTANCE.apply( vmType );
       } else {
-        vmTypeInfo = VmTypes.asVmTypeInfo( vmType, img );
+        vmTypeInfo = VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( vmType );
       }
       vmTypeInfo.setRoot( img.getDisplayName( ), ( ( StaticDiskImage ) img ).getManifestLocation( ), imgSize );
       vmTypeInfo.setEphemeral( 0, "/dev/sdb", vmType.getDisk( )*1024l*1024l*1024l - imgSize /**bytes**/ );
@@ -108,8 +107,7 @@ public class VmTypes {
     return vmTypeInfo;
   }
   
-  @TypeMapper
-  public enum InstanceStoreVmTypeInfoMapper implements Function<VmType, VmTypeInfo> {
+  private enum InstanceStoreVmTypeInfoMapper implements Function<VmType, VmTypeInfo> {
     INSTANCE;
     
     @Override
@@ -131,8 +129,7 @@ public class VmTypes {
     }
   };
 
-  @TypeMapper
-  public enum BlockStorageVmTypeInfoMapper implements Function<VmType, VmTypeInfo> {
+  private enum BlockStorageVmTypeInfoMapper implements Function<VmType, VmTypeInfo> {
     INSTANCE;
     
     @Override

@@ -68,10 +68,10 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cluster.VmTypes;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.vm.VmType;
+import com.eucalyptus.vm.VmTypes;
 
 public class VmTypeVerify {
   private static Logger LOG = Logger.getLogger( VmTypeVerify.class );
