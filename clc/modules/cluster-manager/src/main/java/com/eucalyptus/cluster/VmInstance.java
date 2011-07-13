@@ -818,10 +818,10 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     }
   }
   
-  public void updateVolumeAttachments( final List<AttachedVolume> volList ) throws NoSuchElementException {
-    final Map<String, AttachedVolume> volMap = new HashMap<String, AttachedVolume>( ) {
+  public void updateVolumeAttachments( final List<AttachedVolume> ncAttachedVols ) throws NoSuchElementException {
+    final Map<String, AttachedVolume> ncAttachedVolMap = new HashMap<String, AttachedVolume>( ) {
       {
-        for ( AttachedVolume v : volList ) {
+        for ( AttachedVolume v : ncAttachedVols ) {
           put( v.getVolumeId( ), v );
         }
       }
@@ -830,16 +830,21 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
       @Override
       public boolean apply( AttachedVolume arg0 ) {
         String volId = arg0.getVolumeId( );
-        if ( "detaching".equals( arg0.getStatus( ) ) && !volMap.containsKey( volId ) ) {
+        if ( ncAttachedVolMap.containsKey( volId ) ) {
+          AttachedVolume ncVol = ncAttachedVolMap.get( volId );
+          if ( "detached".equals( ncVol.getStatus( ) ) ) {
+            VmInstance.this.removeVolumeAttachment( volId );
+          } else if ( "attaching".equals( arg0.getStatus( ) ) || "attached".equals( arg0.getStatus( ) ) ) {
+            VmInstance.this.updateVolumeAttachment( volId, arg0.getStatus( ) );
+          }
+        } else if ( "detaching".equals( arg0.getStatus( ) ) ) {//TODO:GRZE:remove this case when NC is updated to report "detached" state
           VmInstance.this.removeVolumeAttachment( volId );
-        } else if ( ( "attaching".equals( arg0.getStatus( ) ) || "attached".equals( arg0.getStatus( ) ) ) && volMap.containsKey( volId ) ) {
-          VmInstance.this.updateVolumeAttachment( volId, arg0.getStatus( ) );
         }
-        volMap.remove( volId );
+        ncAttachedVolMap.remove( volId );
         return true;
       }
     } );
-    for ( AttachedVolume v : volMap.values( ) ) {
+    for ( AttachedVolume v : ncAttachedVolMap.values( ) ) {
       LOG.warn( "Restoring volume attachment state for " + this.getInstanceId( ) + " with " + v.toString( ) );
       this.addVolumeAttachment( v );
     }
