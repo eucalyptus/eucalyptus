@@ -287,16 +287,16 @@ public class HostManager {
     public void receive( List<Host> hosts ) {
       if ( !Bootstrap.isFinished( ) ) {
         for ( Host host : hosts ) {
-          if ( Eucalyptus.setupLocals( host.getHostAddress( ) ) ) {
+          if ( Eucalyptus.setupLocals( host.getBindAddress( ) ) ) {
             HostManager.this.view.markReady( );
           }
         }//TODO:GRZE: this need to be /more/ dynamic
         for ( Host host : hosts ) {
-          Hosts.updateHost( HostManager.getCurrentView( ), host );
+          Hosts.update( host );
         }
       } else {
         for ( Host host : hosts ) {
-          Hosts.updateHost( HostManager.getCurrentView( ), host );
+          Hosts.update( host );
         }
       }
       
@@ -304,8 +304,8 @@ public class HostManager {
     
     @Override
     public void fireEvent( Event event ) {
-      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 3 ) && HostManager.this.membershipChannel.isConnected( ) ) {
-        Logs.exhaust( ).debug( "Sending state info: " + Hosts.localHost( ) );
+      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( Bootstrap.isFinished( ) ? 15 : 3 ) ) {
+        LOG.debug( "Sending state info: " + Hosts.localHost( ) );
         try {
           HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( Hosts.localHost( ) ) ) );
         } catch ( Exception ex ) {
