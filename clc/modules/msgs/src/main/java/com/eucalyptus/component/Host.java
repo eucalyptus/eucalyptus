@@ -71,6 +71,7 @@ import org.apache.log4j.Logger;
 import org.jgroups.Address;
 import org.jgroups.ViewId;
 import com.eucalyptus.bootstrap.BootstrapArgs;
+import com.eucalyptus.bootstrap.HostManager;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Logs;
 import com.google.common.collect.ImmutableList;
@@ -79,39 +80,35 @@ import com.google.common.collect.Ordering;
 public class Host implements java.io.Serializable, Comparable<Host> {
   private static Logger              LOG       = Logger.getLogger( Host.class );
   private final Address              groupsId;
+  private final InetAddress          bindAddress;
   private ImmutableList<InetAddress> hostAddresses;
-  private ViewId                     viewId;
   private Boolean                    hasDatabase;
   private Boolean                    hasBootstrapped;
   private AtomicLong                 timestamp = new AtomicLong( System.currentTimeMillis( ) );
   private Long                       lastTime  = 0l;
-  private ServiceConfiguration serviceConfiguration;
+  private ServiceConfiguration       serviceConfiguration;
   
-  Host( ViewId viewId, Address jgroupsId, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> hostAddresses, ServiceConfiguration configuration ) {
+  Host( Address jgroupsId, InetAddress bindAddress, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> hostAddresses, ServiceConfiguration configuration ) {
     this.groupsId = jgroupsId;
     this.serviceConfiguration = configuration;
-    this.update( viewId, hasDb, hasBootstrapped, hostAddresses );
+    this.bindAddress = bindAddress;
+    this.update( hasDb, hasBootstrapped, hostAddresses );
   }
   
-  Host( ViewId viewId ) {
-    this.groupsId = Hosts.localHostGroupsId( );
-    this.update( viewId, BootstrapArgs.isCloudController( ), false, Internets.getAllInetAddresses( ) );
+  Host( Address jgroupsId ) {
+    this.groupsId = HostManager.getInstance( ).getMembershipChannel( ).getAddress( );
+    this.bindAddress = Internets.localHostInetAddress( );
+    this.update( BootstrapArgs.isCloudController( ), false, Internets.getAllInetAddresses( ) );
   }
   
-  synchronized void update( ViewId viewId, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> addresses ) {
+  synchronized void update( Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> addresses ) {
     this.lastTime = this.timestamp.getAndSet( System.currentTimeMillis( ) );
-    Logs.exhaust( ).debug( "Applying update (" + viewId + ") for host: " + this );
+    Logs.exhaust( ).debug( "Applying update for host: " + this );
     ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( addresses ) );
     this.hasBootstrapped = hasBootstrapped;
-    boolean isnew = ( this.viewId == null );
-    this.viewId = viewId;
     this.hasDatabase = hasDb;
     this.hostAddresses = newAddrs;
-    if ( isnew ) {
-      LOG.trace( "Adding host: " + this );
-    } else {
-      LOG.trace( "Updated host: " + this );
-    }
+    LOG.trace( "Updated host: " + this );
   }
   
   public Address getGroupsId( ) {
@@ -122,12 +119,8 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     return this.hostAddresses;
   }
   
-  public InetAddress getHostAddress( ) {
-    return this.hostAddresses.get( 0 );
-  }
-  
-  public ViewId getViewId( ) {
-    return this.viewId;
+  public InetAddress getBindAddress( ) {
+    return this.bindAddress;
   }
   
   public Boolean hasDatabase( ) {
@@ -173,28 +166,28 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   
   @Override
   public String toString( ) {
-    return String.format( "Host:id=%s:viewId=%s:hostAddresses=%s:db=%s:booted=%s:lastTime=%s", this.groupsId, this.viewId, this.hostAddresses, this.hasDatabase, this.hasBootstrapped, new Date( this.lastTime ) );
+    return String.format( "Host:id=%s:viewId=%s:hostAddresses=%s:db=%s:booted=%s:lastTime=%s", this.groupsId, this.viewId, this.hostAddresses,
+                          this.hasDatabase, this.hasBootstrapped, new Date( this.lastTime ) );
   }
-
+  
   public ServiceConfiguration getServiceConfiguration( ) {
     return this.serviceConfiguration;
   }
-
+  
   public void setServiceConfiguration( ServiceConfiguration serviceConfiguration ) {
     this.serviceConfiguration = serviceConfiguration;
   }
-
+  
   public boolean isLocalHost( ) {
-    return Internets.testLocal( this.getHostAddress( ) );
+    return Internets.testLocal( this.getBindAddress( ) );
   }
-
+  
   public Boolean hasBootstrapped( ) {
     return this.hasBootstrapped;
   }
-
+  
   public void markBootstrapped( ) {
     this.hasBootstrapped = hasBootstrapped;
   }
-
-
+  
 }

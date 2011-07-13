@@ -86,16 +86,7 @@ import com.google.common.collect.Lists;
 public class Hosts {
   private static final Logger                       LOG     = Logger.getLogger( Hosts.class );
   private static final ConcurrentMap<Address, Host> hostMap = new ConcurrentHashMap<Address, Host>( );
-
-  public static Host getHostByAddress( InetAddress addr ) {
-    for ( Host h : hostMap.values( ) ) {
-      if ( h.getHostAddresses( ).contains( addr ) ) {
-        LOG.debug( "Found host info: addr=" + addr + " host=" + h );
-        return h;
-      }
-    }
-    throw Exceptions.debug( new NoSuchElementException( "Failed to lookup host for host address: " + addr ) );
-  }
+  
   public static List<Host> list( ) {
     return Lists.newArrayList( hostMap.values( ) );
   }
@@ -103,8 +94,8 @@ public class Hosts {
   public static boolean contains( Address jgroupsId ) {
     return hostMap.containsKey( jgroupsId );
   }
-
-  public static Host getHostInstance( Address jgroupsId ) {
+  
+  public static Host lookup( Address jgroupsId ) {
     Host h = hostMap.get( jgroupsId );
     if ( h == null ) {
       throw new NoSuchElementException( "Failed to lookup host for jgroups address: " + jgroupsId );
@@ -115,76 +106,90 @@ public class Hosts {
   }
   
   public static Host localHost( ) {
+    return localHost( HostManager.getInstance( ).getMembershipChannel( ).getAddress( ) );
+  }
+  
+  public static Host localHost( Address localJgroupsId ) {
     Host ret = null;
-    ViewId viewId = HostManager.isReady( ) ? HostManager.getCurrentView( ).getViewId( ) : null;
-    if( !hostMap.containsKey( Hosts.localHostGroupsId( ) ) ) {
-      Host newRef = new Host( viewId );
+    if ( !hostMap.containsKey( localJgroupsId ) ) {
+      Host newRef = new Host( localJgroupsId );
       Host oldRef = hostMap.putIfAbsent( newRef.getGroupsId( ), newRef );
-      if( oldRef == null ) {
-        Host local = hostMap.get( Hosts.localHostGroupsId( ) );
+      if ( oldRef == null ) {
+        Host local = hostMap.get( localJgroupsId );
         Mbeans.register( local );
         ret = local;
       } else {
         ret = oldRef;
       }
     } else {
-      ret = hostMap.get( Hosts.localHostGroupsId( ) );
+      ret = hostMap.get( localJgroupsId );
     }
-    ret.update( viewId, BootstrapArgs.isCloudController( ), Bootstrap.isFinished( ), Internets.getAllInetAddresses( ) );
+    ret.update( BootstrapArgs.isCloudController( ), Bootstrap.isFinished( ), Internets.getAllInetAddresses( ) );
     return ret;
   }
   
-  public static Host updateHost( View currentView, Host updatedHost ) {
-    if( Internets.testLocal( updatedHost.getHostAddress( ) ) ) {
+  public static List<Host> change( List<Address> currentMembers ) {
+    /** determine hosts to remove in this view **/
+    List<Address> removeMembers = Lists.newArrayList( hostMap.keySet( ) );
+    List<Host> removedHosts = Lists.newArrayList( );
+    if ( removeMembers.removeAll( currentMembers ) ) {
+      for ( Address addr : removeMembers ) {
+        Host removedHost = hostMap.remove( addr );
+        removedHosts.add( removedHost );
+        LOG.warn( "Failure detected for host: " + removedHost );
+      }
+    }
+    LOG.debug( "Current host entries: " );
+    for ( Host host : hostMap.values( ) ) {
+      LOG.debug( "-> " + host );
+    }
+    LOG.debug( "Removed host entries: " );
+    for ( Host host : removedHosts ) {
+      LOG.debug( "-> " + host );
+    }
+    return removedHosts;
+  }
+  
+  public static Host update( Host updatedHost ) {
+    if ( Internets.testLocal( updatedHost.getBindAddress( ) ) ) {
       return Hosts.localHost( );
     }
     synchronized ( Hosts.class ) {
-      List<Address> currentMembers = Lists.newArrayList( currentView.getMembers( ) );
       Host entry = null;
       if ( hostMap.containsKey( updatedHost.getGroupsId( ) ) ) {
         entry = hostMap.get( updatedHost.getGroupsId( ) );
-        entry.update( currentView.getViewId( ), updatedHost.hasDatabase( ), updatedHost.hasBootstrapped( ), updatedHost.getHostAddresses( ) );
+        entry.update( updatedHost.hasDatabase( ), updatedHost.hasBootstrapped( ), updatedHost.getHostAddresses( ) );
       } else {
         Component empyrean = Components.lookup( Empyrean.class );
         ComponentId empyreanId = empyrean.getComponentId( );
-        for( InetAddress addr : updatedHost.getHostAddresses( ) ) {
+        for ( InetAddress addr : updatedHost.getHostAddresses( ) ) {
           ServiceConfiguration ephemeralConfig = ServiceConfigurations.createEphemeral( empyrean, addr );
-          if( !empyrean.hasService( ephemeralConfig ) ) {
+          if ( !empyrean.hasService( ephemeralConfig ) ) {
             try {
               ServiceConfiguration config = empyrean.initRemoteService( addr );
-              empyrean.loadService( ephemeralConfig ).get();
-              entry = new Host( currentView.getViewId( ), updatedHost.getGroupsId( ), updatedHost.hasDatabase( ), updatedHost.hasBootstrapped( ), updatedHost.getHostAddresses( ), config );
+              empyrean.loadService( ephemeralConfig ).get( );
+              entry = new Host( updatedHost.getGroupsId( ), updatedHost.getBindAddress( ), updatedHost.hasDatabase( ), updatedHost.hasBootstrapped( ),
+                                updatedHost.getHostAddresses( ), config );
               Host temp = hostMap.putIfAbsent( entry.getGroupsId( ), entry );
-              entry = ( temp != null ) ? temp : entry;
-              Mbeans.register( entry );
+              if ( temp == null ) {
+                Mbeans.register( entry );
+              } else {
+                entry = temp;
+              }
             } catch ( ServiceRegistrationException ex ) {
-              LOG.error( ex , ex );
+              LOG.error( ex, ex );
             } catch ( ExecutionException ex ) {
-              LOG.error( ex , ex );
+              LOG.error( ex, ex );
             } catch ( InterruptedException ex ) {
               Thread.currentThread( ).interrupt( );
-              LOG.error( ex , ex );
+              LOG.error( ex, ex );
             }
           }
         }
       }
-      /** determine hosts to remove in this view **/
-//      List<Address> removeMembers = Lists.newArrayList( hostMap.keySet( ) );
-//      if ( removeMembers.removeAll( currentMembers ) ) {
-//        for ( Address addr : removeMembers ) {
-//          Host removedHost = hostMap.remove( addr );
-//          LOG.info( "Removing host: " + removedHost );
-//        }
-//      }
-      Logs.exhaust( ).debug( "Current host entries: " );
-      for ( Host host : hostMap.values( ) ) {
-        Logs.exhaust( ).debug( "-> " + host );
-      }
       return entry;
     }
+    
   }
   
-  public static Address localHostGroupsId( ) {
-    return HostManager.getInstance( ).getMembershipChannel( ).getAddress( );
-  }
 }

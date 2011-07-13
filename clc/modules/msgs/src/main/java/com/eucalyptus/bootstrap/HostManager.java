@@ -136,7 +136,7 @@ public class HostManager {
         
         @Override
         public boolean apply( Host arg0 ) {
-          return arg0.hasDatabase( ) || arg0.getGroupsId( ).equals( Hosts.localHostGroupsId( ) );
+          return arg0.hasDatabase( ) || arg0.getGroupsId( ).equals( HostManager.this.getMembershipChannel( ).getAddress( ) );
         }
       };
       ListenerRegistry.getInstance( ).register( Hertz.class, this.stateListener );
@@ -203,7 +203,7 @@ public class HostManager {
     
     @Override
     public void receive( Message msg ) {
-      if ( Hosts.contains( msg.getSrc( ) ) && Hosts.getHostInstance( msg.getSrc( ) ).isLocalHost( ) ) {
+      if ( Hosts.localHost( ).getGroupsId( ).equals( msg.getSrc( ) ) ) {
         return;
       } else {
         try {
@@ -324,7 +324,7 @@ public class HostManager {
       for ( final Host host : hosts ) {
         if ( Bootstrap.isFinished( ) && !host.hasBootstrapped( ) && !host.hasDatabase( ) && !host.isLocalHost( ) ) {
           try {
-            ServiceConfiguration config = euca.getBuilder( ).lookupByHost( host.getHostAddress( ).getHostAddress( ) );
+            ServiceConfiguration config = euca.getBuilder( ).lookupByHost( host.getBindAddress( ).getHostAddress( ) );
             LOG.debug( "Requesting first time initialization for remote cloud controller: " + host );
             HostManager.send( host.getGroupsId( ), new Initialize( ) );
           } catch ( ServiceRegistrationException ex ) {
@@ -334,7 +334,7 @@ public class HostManager {
           LOG.debug( "Requesting remote component startup: " + host );
           HostManager.send( host.getGroupsId( ), new NoInitialize( ) );
         }
-        Hosts.updateHost( getCurrentView( ), host );
+        Hosts.update( host );
       }
     }
     
@@ -378,6 +378,7 @@ public class HostManager {
       }
       LOG.info( "-> view: " + this.currentView.getReference( ) );
       LOG.info( "-> mark: " + this.currentView.isMarked( ) );
+      Hosts.change( this.currentView.getReference( ).getMembers( ) );
     }
     
     public Boolean isReady( ) {
