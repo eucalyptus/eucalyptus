@@ -281,6 +281,7 @@ public class HostManager {
           Eucalyptus.setupServiceDependencies( Internets.localHostInetAddress( ) );
           Bootstrap.initBootstrappers( );
           HostManager.this.setStateListener( new CloudControllerHostStateHandler( ) );
+          HostManager.this.view.markReady( );
         } catch ( Throwable ex ) {
           LOG.error( ex, ex );
           System.exit( 123 );
@@ -292,7 +293,7 @@ public class HostManager {
     public void receive( List<Host> hosts ) {
       if ( !Bootstrap.isFinished( ) ) {
         for ( Host host : hosts ) {
-          if ( Eucalyptus.setupServiceDependencies( host.getBindAddress( ) ) ) {
+          if ( host.hasDatabase( ) && Eucalyptus.setupServiceDependencies( host.getBindAddress( ) ) ) {
             HostManager.this.view.markReady( );
           }
         }//TODO:GRZE: this need to be /more/ dynamic
