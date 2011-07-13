@@ -111,21 +111,21 @@ public class ComponentBootstrapper {
   }
   
   private void updateBootstrapDependencies( ) {
-    try {
-      Iterable<Bootstrapper> currBootstrappers = Iterables.concat( Lists.newArrayList( this.bootstrappers.values( ) ),
+    Iterable<Bootstrapper> currBootstrappers = Iterables.concat( Lists.newArrayList( this.bootstrappers.values( ) ),
                                                                                  Lists.newArrayList( this.disabledBootstrappers.values( ) ) );
-      this.bootstrappers.clear( );
-      this.disabledBootstrappers.clear( );
-      for ( Bootstrapper bootstrapper : currBootstrappers ) {
+    this.bootstrappers.clear( );
+    this.disabledBootstrappers.clear( );
+    for ( Bootstrapper bootstrapper : currBootstrappers ) {
+      try {
         Bootstrap.Stage stage = bootstrapper.getBootstrapStage( );
         if ( bootstrapper.checkLocal( ) && bootstrapper.checkRemote( ) ) {
           this.enableBootstrapper( stage, bootstrapper );
         } else {
           this.disableBootstrapper( stage, bootstrapper );
         }
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
       }
-    } catch ( Exception ex ) {
-      LOG.error( ex, ex );
     }
   }
   

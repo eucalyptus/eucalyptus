@@ -63,14 +63,11 @@
 
 package com.eucalyptus.bootstrap;
 
-import java.net.InetAddress;
-import java.util.NoSuchElementException;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.io.Serializable;
+import java.util.List;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
 import org.jgroups.ChannelClosedException;
@@ -83,91 +80,69 @@ import org.jgroups.PhysicalAddress;
 import org.jgroups.Receiver;
 import org.jgroups.View;
 import org.jgroups.stack.ProtocolStack;
+import com.eucalyptus.bootstrap.HostManager.HostStateListener;
 import com.eucalyptus.component.Component;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Host;
 import com.eucalyptus.component.Hosts;
-import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
-import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
+import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
-public class HostManager implements Receiver, ExtendedMembershipListener, EventListener {
-  private static Logger                       LOG         = Logger.getLogger( HostManager.class );
-  private final JChannel                      membershipChannel;
-  private final PhysicalAddress               physicalAddress;
-  private final String                        membershipGroupName;
-  private final AtomicMarkableReference<View> currentView = new AtomicMarkableReference<View>( null, true );
-  public static HostManager                   singleton;
+public class HostManager {
+  private static Logger         LOG = Logger.getLogger( HostManager.class );
+  private final JChannel        membershipChannel;
+  private final PhysicalAddress physicalAddress;
+  private final String          membershipGroupName;
+  private final CurrentView     view;
+  private HostStateListener     stateListener;
+  private static HostManager    singleton;
+  private final Predicate<Host> dbFilter;
   
-  static class HostMembershipWorker implements Runnable {
-    private final AtomicBoolean               running  = new AtomicBoolean( true );
-    private final BlockingQueue<Runnable>     msgQueue = new LinkedBlockingQueue<Runnable>( );
-    private final ExecutorService             executor = Executors.newFixedThreadPool( 1 );
-    private static final HostMembershipWorker worker   = new HostMembershipWorker( );
-    
-    private HostMembershipWorker( ) {
-      this.executor.submit( this );
-    }
-    
-    public static void submit( Runnable run ) {
-      worker.msgQueue.add( run );
-    }
-    
-    @Override
-    public void run( ) {
-      while ( this.running.get( ) ) {
-        Runnable event;
-        try {
-          if ( ( event = this.msgQueue.poll( 10000, TimeUnit.MILLISECONDS ) ) != null ) {
-            event.run( );
-          } else {
-            HostManager.singleton.broadcastAddresses( );
-          }
-        } catch ( InterruptedException e1 ) {
-          Thread.currentThread( ).interrupt( );
-          return;
-        } catch ( final Throwable e ) {
-          LOG.error( e, e );
-        }
-      }
-      LOG.debug( "Shutting down component registration request queue: " + Thread.currentThread( ).getName( ) );
-    }
-  }
+  interface InitRequest {}
+  
+  static class Initialize implements InitRequest, Serializable {}
+  
+  static class NoInitialize implements InitRequest, Serializable {}
   
   private HostManager( ) {
+    this.view = new CurrentView( );
     this.membershipChannel = HostManager.buildChannel( );
-    this.membershipChannel.setReceiver( this );
-    this.membershipGroupName = SystemIds.membershipGroupName( );//TODO:GRZE:RELEASE make cached
+    HostStateListener listener = BootstrapArgs.isCloudController( )
+      ? new CloudControllerHostStateHandler( )
+      : new RemoteHostStateListener( );
+    this.membershipChannel.setReceiver( listener );
+    //TODO:GRZE:set socket factory for crypto
+    this.membershipGroupName = SystemIds.membershipGroupName( );
     try {
       LOG.info( "Starting membership channel... " );
       this.membershipChannel.connect( this.membershipGroupName );
+      this.setStateListener( listener );
       this.physicalAddress = ( PhysicalAddress ) this.membershipChannel.downcall( new org.jgroups.Event( org.jgroups.Event.GET_PHYSICAL_ADDRESS,
                                                                                                          this.membershipChannel.getAddress( ) ) );
       LOG.info( "Started membership channel: " + this.membershipGroupName );
+      this.dbFilter = new Predicate<Host>( ) {
+        
+        @Override
+        public boolean apply( Host arg0 ) {
+          return arg0.hasDatabase( ) || arg0.getGroupsId( ).equals( HostManager.this.getMembershipChannel( ).getAddress( ) );
+        }
+      };
     } catch ( ChannelException ex ) {
       LOG.fatal( ex, ex );
       throw BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
     }
-    ListenerRegistry.getInstance( ).register( ClockTick.class, this );
-  }
-  
-  public static View getCurrentView( ) {
-    return singleton.currentView.getReference( );
-  }
-  
-  public static Boolean isReady( ) {
-    return !singleton.currentView.isMarked( );
   }
   
   public static HostManager getInstance( ) {
@@ -185,6 +160,253 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     }
   }
   
+  public static View getCurrentView( ) {
+    return HostManager.getInstance( ).view.getCurrentView( );
+  }
+  
+  public static Boolean isReady( ) {
+    return HostManager.getInstance( ).view.isReady( );
+  }
+  
+  enum InitState {
+    PENDING, WORKING, FINISHED
+  };
+  
+  abstract class HostStateListener implements Receiver, ExtendedMembershipListener, EventListener {
+    private AtomicReference<InitState> initializing = new AtomicReference<InitState>( BootstrapArgs.isCloudController( )
+                                                      ? InitState.FINISHED
+                                                      : InitState.PENDING );
+    
+    @Override
+    public final byte[] getState( ) {
+      return null;
+    }
+    
+    @Override
+    public final void setState( byte[] state ) {}
+    
+    @Override
+    public final void suspect( Address suspected_mbr ) {
+      LOG.debug( suspected_mbr );
+    }
+    
+    @Override
+    public final void block( ) {
+      LOG.debug( this.getClass( ) + ".block()" );
+    }
+    
+    @Override
+    public final void unblock( ) {
+      LOG.debug( this.getClass( ) + ".unblock()" );
+    }
+    
+    @Override
+    public void receive( Message msg ) {
+      if ( Hosts.localHost( ).getGroupsId( ).equals( msg.getSrc( ) ) ) {
+        return;
+      } else {
+        try {
+          this.onMessage( msg );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+    }
+    
+    private void onMessage( Message msg ) {
+      switch ( this.initializing.get( ) ) {
+        case PENDING:
+          if ( msg.getObject( ) instanceof InitRequest ) {
+            if ( this.initializing.compareAndSet( InitState.PENDING, InitState.WORKING ) ) {
+              LOG.debug( "Received initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+              try {
+                this.initialize( msg.getObject( ) instanceof Initialize );
+              } finally {
+                this.initializing.set( InitState.FINISHED );
+              }
+            } else {
+              LOG.debug( "Ignoring request arriving while currently working on initializing system state: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+            }
+          } else if ( !BootstrapArgs.isCloudController( ) ) {
+            HostManager.send( null, Lists.newArrayList( Hosts.localHost( ) ) );
+          }
+          break;
+        case WORKING:
+          LOG.debug( "Ignoring request arriving while currently working on initializing system state: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+          break;
+        case FINISHED:
+          if ( msg.getObject( ) instanceof List ) {
+            LOG.debug( "Received updated host information: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+            this.receive( ( List<Host> ) msg.getObject( ) );
+          } else {
+            LOG.debug( "Received unknown message type: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+          }
+          break;
+      }
+    }
+    
+    public abstract void receive( List<Host> hostsState );
+    
+    public abstract void initialize( boolean doInit );
+    
+    @Override
+    public abstract void fireEvent( Event event );
+    
+    @Override
+    public final void viewAccepted( View new_view ) {
+      HostManager.this.view.viewAccepted( new_view );
+      /**
+       * this seems dumb at first glance, but the state changing mechanism needs to be separate from
+       * the state itself --
+       * they have different life cycles.
+       **/
+    }
+    
+  }
+  
+  private void setStateListener( HostStateListener stateListener ) {
+    if ( this.stateListener != null && this.stateListener != stateListener ) {//yes i mean reference equality
+      ListenerRegistry.getInstance( ).deregister( Hertz.class, HostManager.this.stateListener );
+    }
+    this.stateListener = stateListener;
+    ListenerRegistry.getInstance( ).register( Hertz.class, HostManager.this.stateListener );
+  }
+  
+  private class RemoteHostStateListener extends HostStateListener {
+    public void initialize( boolean doInit ) {
+      if ( doInit ) {
+        LOG.info( "Performing first-time system init." );
+        try {
+          Bootstrap.initializeSystem( );
+//          Eucalyptus.setupServiceDependencies( Internets.localHostInetAddress( ) );
+//          Bootstrap.initBootstrappers( );
+//          HostManager.this.setStateListener( new CloudControllerHostStateHandler( ) );
+          System.exit( 123 );
+        } catch ( Throwable ex ) {
+          LOG.error( ex, ex );
+          System.exit( 123 );
+        }
+      }
+    }
+    
+    @Override
+    public void receive( List<Host> hosts ) {
+      if ( !Bootstrap.isFinished( ) ) {
+        for ( Host host : hosts ) {
+          if ( host.hasDatabase( ) && Eucalyptus.setupServiceDependencies( host.getBindAddress( ) ) ) {
+            HostManager.this.view.markReady( );
+          }
+        }//TODO:GRZE: this need to be /more/ dynamic
+        for ( Host host : hosts ) {
+          Hosts.update( host );
+        }
+      } else {
+        for ( Host host : hosts ) {
+          Hosts.update( host );
+        }
+      }
+      
+    }
+    
+    @Override
+    public void fireEvent( Event event ) {
+      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( Bootstrap.isFinished( )
+        ? 15
+        : 3 ) ) {
+        LOG.debug( "Sending state info: " + Hosts.localHost( ) );
+        try {
+          HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( Hosts.localHost( ) ) ) );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+    }
+    
+  }
+  
+  private class CloudControllerHostStateHandler extends HostStateListener {
+    
+    @Override
+    public void receive( List<Host> hosts ) {
+      Component euca = Components.lookup( Eucalyptus.class );
+      if ( !Bootstrap.isFinished( ) ) {
+        return;
+      }
+      for ( final Host host : hosts ) {
+        if ( !host.hasBootstrapped( ) && !host.hasDatabase( ) && !host.isLocalHost( ) ) {
+          try {
+            ServiceConfiguration config = euca.getBuilder( ).lookupByHost( host.getBindAddress( ).getHostAddress( ) );
+            LOG.debug( "Requesting first time initialization for remote cloud controller: " + host );
+            HostManager.send( host.getGroupsId( ), new Initialize( ) );
+          } catch ( ServiceRegistrationException ex ) {
+            LOG.trace( ex );
+          }
+        } else if ( !host.hasBootstrapped( ) ) {
+          LOG.debug( "Requesting remote component startup: " + host );
+          HostManager.send( host.getGroupsId( ), new NoInitialize( ) );
+        }
+        Hosts.update( host );
+      }
+    }
+    
+    @Override
+    public void fireEvent( Event event ) {
+      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 3 ) && Bootstrap.isFinished( ) ) {
+        HostManager.this.view.sendState( );
+      }
+    }
+    
+    @Override
+    public void initialize( boolean doInit ) {}
+    
+  }
+  
+  class CurrentView {
+    private final AtomicMarkableReference<View> currentView = new AtomicMarkableReference<View>( null, true );
+    
+    public View getCurrentView( ) {
+      boolean[] holder = new boolean[1];
+      View view = currentView.get( holder );
+//      if ( holder[0] ) {
+//        return null;
+//      } else {
+      return view;
+//      }
+    }
+    
+    private boolean setInitialView( View oldView, View newView ) {
+      return this.currentView.compareAndSet( oldView, newView, true, !BootstrapArgs.isCloudController( ) );//handle the bootstrap case correctly
+    }
+    
+    public void viewAccepted( View newView ) {
+      if ( this.setInitialView( null, newView ) ) {
+        LOG.info( "Receiving initial view..." );
+      } else if ( !this.isReady( ) ) {
+        LOG.info( "Receiving view.  Still waiting for database..." );
+        this.setInitialView( this.getCurrentView( ), newView );
+      } else {
+        this.currentView.set( newView, false );
+      }
+      LOG.info( "-> view: " + this.currentView.getReference( ) );
+      LOG.info( "-> mark: " + this.currentView.isMarked( ) );
+      Hosts.change( this.currentView.getReference( ).getMembers( ) );
+    }
+    
+    public Boolean isReady( ) {
+      return !this.currentView.isMarked( );
+    }
+    
+    void markReady( ) {
+      this.currentView.set( this.currentView.getReference( ), false );
+    }
+    
+    public void sendState( ) {
+      final Iterable<Host> dbs = Iterables.filter( Hosts.list( ), HostManager.this.dbFilter );
+      LOG.debug( "Sending state info: \n" + Joiner.on( "\n" ).join( dbs ) );
+      HostManager.send( null, Lists.newArrayList( dbs ) );
+    }
+  }
+  
   public static String getMembershipGroupName( ) {
     return HostManager.getInstance( ).membershipGroupName;
   }
@@ -192,7 +414,7 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
   private static JChannel buildChannel( ) {
     try {
       final JChannel channel = new JChannel( false );
-      channel.setName( Internets.localhostIdentifier( ) );
+      channel.setName( Internets.localHostIdentifier( ) );
       ProtocolStack stack = new ProtocolStack( );
       channel.setProtocolStack( stack );
       stack.addProtocols( Protocols.getMembershipProtocolStack( ) );
@@ -204,166 +426,35 @@ public class HostManager implements Receiver, ExtendedMembershipListener, EventL
     }
   }
   
-  @Override
-  public void receive( Message msg ) {
-    View view = this.currentView.getReference( );
-    if ( view != null ) {
-      LOG.debug( msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
-      Host recvHost = ( Host ) msg.getObject( );
-      if ( !Bootstrap.isFinished( ) ) {
-        if ( recvHost.hasDatabase( ) && !Bootstrap.isCloudController( ) ) {
-          for ( InetAddress addr : recvHost.getHostAddresses( ) ) {
-            if ( this.setupCloudLocals( addr ) ) {
-              break;
-            }
-          }
-        } else if ( Bootstrap.isCloudController( ) ) {
-          this.currentView.set( this.currentView.getReference( ), false );
-        }
-      }
-      LOG.debug( "Received updated host information: " + recvHost );
-      Host hostEntry = Hosts.updateHost( view, recvHost );
-      if ( Bootstrap.isCloudController( ) ) {
-        HostManager.this.broadcastAddresses( );
-      }
-    }
-  }
-  
-  private boolean setupCloudLocals( InetAddress addr ) {
-    if ( !Internets.testReachability( addr ) ) {
-      return false;
-    } else {
-      try {
-        for ( ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
-          if ( compId.isCloudLocal( ) ) {
-            try {
-              Component comp = Components.lookup( compId );
-              ServiceConfiguration config = comp.initRemoteService( addr );
-              comp.loadService( config ).get( );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-            }
-          }
-        }
-        for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-          stage.updateBootstrapDependencies( );
-        }
-      } catch ( RuntimeException ex ) {
-        LOG.error( ex, ex );
-        throw ex;
-      } finally {
-        this.currentView.set( this.currentView.getReference( ), false );
-      }
-      return true;
-    }
-  }
-  
-  @Override
-  public byte[] getState( ) {
-    return null;
-  }
-  
-  @Override
-  public void setState( byte[] state ) {}
-  
-  @Override
-  public void viewAccepted( final View newView ) {
-    if ( this.currentView.compareAndSet( null, newView, true, !Bootstrap.isCloudController( ) ) ) {
-      LOG.info( "Receiving initial view..." );
-    } else if ( this.currentView.compareAndSet( this.currentView.getReference( ), newView, true, true ) ) {
-      LOG.info( "Receiving view.  Still waiting for database..." );
-    } else {
-      this.currentView.set( newView, false );
-    }
-    LOG.info( "-> view: " + this.currentView.getReference( ) );
-    LOG.info( "-> mark: " + this.currentView.isMarked( ) );
-    if ( !Bootstrap.isCloudController( ) ) {
-      HostManager.this.broadcastAddresses( );
-    }
-  }
-  
-  private void broadcastAddresses( ) {
-    final View view = this.currentView.getReference( );
-    if ( view == null ) {
-      return;
-    } else {
-      HostMembershipWorker.submit( new Runnable( ) {
-        @Override
-        public void run( ) {
-          for ( int i = 0; i < 5; i++ ) {
-            try {
-              for ( final Address addr : view.getMembers( ) ) {
-                if ( ( HostManager.this.membershipChannel.getAddress( ) != null ) && ( !HostManager.this.membershipChannel.getAddress( ).equals( addr ) ) ) {
-//                  try {
-//                    Host host = Hosts.getHostInstance( addr );
-//                    for( InetAddress hostBindAddr : host.getHostAddresses( ) ) {
-//                      try {
-//                        ServiceConfiguration config = ServiceBuilders.lookup( Eucalyptus.class ).lookupByHost( hostBindAddr.getHostAddress( ) );
-//                      } catch ( ServiceRegistrationException ex ) {
-//                        LOG.debug( ex );
-//                      }
-//                      
-//                    }
-//                  } catch ( NoSuchElementException ex1 ) {
-//                    LOG.debug( ex1 );
-//                  }
-                  
-                  Host localHost = Hosts.localHost( );
-                  LOG.info( "Broadcasting local address info for viewId=" + view.getViewId( ) + " to: " + addr + " with host info: " + localHost );
-                  try {
-                    HostManager.this.membershipChannel.send( new Message( addr, null, localHost ) );
-                  } catch ( ChannelNotConnectedException ex ) {
-                    LOG.error( ex, ex );
-                  } catch ( ChannelClosedException ex ) {
-                    LOG.error( ex, ex );
-                  }
-                }
-              }
-              try {
-                TimeUnit.SECONDS.sleep( 2 );
-              } catch ( InterruptedException ex1 ) {
-                LOG.error( ex1, ex1 );
-                Thread.currentThread( ).interrupt( );
-              }
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-            }
-            
-          }
-        }
-      } );
-    }
-    
-  }
-  
-  @Override
-  public void suspect( Address suspect ) {
-    LOG.debug( "HostManager: suspected failure of " + suspect + " -> " + Hosts.getHostInstance( suspect ) );
-  }
-  
-  @Override
-  public void block( ) {
-    LOG.debug( "HostManager: blocked" );
-  }
-  
-  @Override
-  public void unblock( ) {
-    LOG.debug( "HostManager: unblocked" );
-  }
-  
-  @Override
-  public void fireEvent( Event event ) {
-    if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 5l ) ) {
-      this.broadcastAddresses( );
-    }
-  }
-  
   public JChannel getMembershipChannel( ) {
     return this.membershipChannel;
   }
   
   public PhysicalAddress getPhysicalAddress( ) {
     return this.physicalAddress;
+  }
+  
+  public static Future<?> send( final Address dest, final Serializable msg ) {
+    LOG.debug( "Preparing to send message to: " + dest + " with payload " + msg.toString( ) );
+    final Message outMsg = new Message( dest, null, msg );
+    LOG.debug( "Outgoing message: " + outMsg );
+    return Threads.lookup( Empyrean.class, HostManager.class ).submit( new Runnable( ) {
+      
+      @Override
+      public void run( ) {
+        try {
+          LOG.trace( "Sending message to: " + dest + " with payload " + msg.toString( ) );
+          singleton.membershipChannel.send( outMsg );
+        } catch ( ChannelNotConnectedException ex ) {
+          LOG.error( ex, ex );
+        } catch ( ChannelClosedException ex ) {
+          LOG.error( ex, ex );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+    } );
+    
   }
   
 }

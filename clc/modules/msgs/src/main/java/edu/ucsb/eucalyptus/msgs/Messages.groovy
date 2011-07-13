@@ -337,8 +337,8 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
     this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes/1024l, , type : "swap", format : "swap" ) );
   }
 
-  public void setEphemeral( Integer index, String deviceName, Long sizeKb ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( type : "ephemeral" + index, guestDeviceName : deviceName, size : sizeKb ) );
+  public void setEphemeral( Integer index, String deviceName, Long sizeBytes ) {
+    this.virtualBootRecord.add( new VirtualBootRecord( type : "ephemeral" + index, guestDeviceName : deviceName, size : sizeBytes/1024l ) );
   }
 
   public VirtualBootRecord lookupRoot( ) throws NoSuchElementException {

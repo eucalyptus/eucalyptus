@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,110 +61,91 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.empyrean;
+package com.eucalyptus.bootstrap;
 
-import java.util.ArrayList;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.BootstrapException;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.HostManager;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.Hosts;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
-import com.eucalyptus.util.Internets;
+import com.eucalyptus.system.SubDirectory;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 
-public class Empyrean extends ComponentId.Unpartioned {
+public class BootstrapArgs {
+  private static Logger             LOG            = Logger.getLogger( BootstrapArgs.class );
+  private static final List<String> bindAddrs      = Lists.newArrayList( );
+  private static final List<String> bootstrapHosts = Lists.newArrayList( );
+  private static boolean            initSystem     = false;
   
-  public static final Empyrean INSTANCE = new Empyrean( ); //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
-                                                           
-  @Override
-  public String getPartition( ) {
-    return this.name( );
-  }
-  
-  public Empyrean( ) {
-    super( "Bootstrap" );
-  }
-  
-  @Override
-  public String getServiceModelFileName( ) {
-    return "eucalyptus-bootstrap.xml";
-  }
-  
-  @Override
-  public Boolean hasCredentials( ) {
-    return true;
-  }
-  
-  @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return new ArrayList( ) {
-      {
-        add( Empyrean.class );
-      }
-    };
-  }
-  
-  @Override
-  public boolean isAdminService( ) {
-    return true;
-  }
-  
-  @Provides( Empyrean.class )
-  @RunDuring( Bootstrap.Stage.PersistenceInit )
-  public static class PersistenceContextBootstrapper extends Bootstrapper.Simple {
-    private static Logger LOG = Logger.getLogger( PersistenceContextBootstrapper.class );
-    
+  enum BindAddressValidator implements Predicate<String> {
+    INSTANCE;
     @Override
-    public boolean load( ) throws Exception {
-      System.setProperty( "jgroups.udp.bind_addr", Internets.localHostAddress( ) );
-      GroovyUtil.evaluateScript( "setup_persistence.groovy" );
-      return true;
-    }
-  }
-  
-  @Provides( Empyrean.class )
-  @RunDuring( Bootstrap.Stage.PoolInit )
-  public static class DatabasePoolBootstrapper extends Bootstrapper.Simple {
-    
-    @Override
-    public boolean load( ) throws Exception {
-      System.setProperty("jgroups.udp.jdbc.bind_addr",Internets.localHostAddress());
-      GroovyUtil.evaluateScript( "setup_dbpool.groovy" );
-      return true;
-    }
-    
-  }
-  
-  @Provides( Empyrean.class )
-  @RunDuring( Bootstrap.Stage.RemoteConfiguration )
-  public static class HostMembershipBootstrapper extends Bootstrapper.Simple {
-    private static final Logger LOG = Logger.getLogger( Empyrean.HostMembershipBootstrapper.class );
-    
-    @Override
-    public boolean load( ) throws Exception {
+    public boolean apply( String arg0 ) {
       try {
-        HostManager.getInstance( );
-        LOG.info( "Started membership channel " + HostManager.getMembershipGroupName( ) );
-        while ( !HostManager.isReady( ) ) {
-          TimeUnit.SECONDS.sleep( 1 );
-          LOG.info( "Waiting for system view with database..." );
-          HostManager.send( null, Lists.newArrayList( Hosts.localHost( ) ) );
-        }
-        LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
+        InetAddress.getByName( arg0 );
         return true;
-      } catch ( Exception ex ) {
-        LOG.fatal( ex, ex );
-        BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
+      } catch ( UnknownHostException ex ) {
+        LOG.error( ex, ex );
         return false;
       }
     }
     
   }
+  
+  enum BootstrapHostValidator implements Predicate<String> {
+    INSTANCE;
+    @Override
+    public boolean apply( String arg0 ) {
+      try {
+        InetAddress.getByName( arg0 );
+        return true;
+      } catch ( UnknownHostException ex ) {
+        LOG.error( ex, ex );
+        return false;
+      }
+    }
+    
+  }
+  
+  static void init( ) {
+    bindAddrs.addAll( BootstrapArgs.parseMultipleArgs( "euca.bind.addr", BindAddressValidator.INSTANCE ) );
+    bootstrapHosts.addAll( BootstrapArgs.parseMultipleArgs( "euca.bootstrap.host", BindAddressValidator.INSTANCE ) );
+    initSystem = System.getProperty( "euca.initialize" ) != null;
+  }
+  
+  public static boolean isInitializeSystem( ) {
+    return initSystem;
+  }
+  
+  public static List<String> parseBootstrapHosts( ) {
+    return bootstrapHosts;
+  }
+  
+  public static List<String> bindAddresses( ) {
+    return bindAddrs;
+  }
+  
+  private static List<String> parseMultipleArgs( String baseString, Predicate<String> argValidator ) {
+    List<String> retList = Lists.newArrayList( );
+    String formatString = baseString + ".%d";
+    String next = String.format( formatString, 0 );
+    for ( int i = 0; i < 255; next = String.format( formatString, i++ ) ) {
+      String nextVal = System.getProperty( next );
+      if ( nextVal != null ) {
+        if ( argValidator.apply( nextVal ) ) {
+          retList.add( System.getProperty( next ) );
+        } else {
+          Error err = new ArgumentValidationError( "Argument validation failed for " + next + " on value: " + nextVal );
+          LOG.error( err, err );
+        }
+      }
+    }
+    return retList;
+    
+  }
+
+  public static Boolean isCloudController( ) {
+    return SubDirectory.DB.hasChild( "data", "ibdata1" ) && !Boolean.TRUE.valueOf( System.getProperty( "euca.force.remote.bootstrap" ) );
+  }
+  
 }
