@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,50 +53,23 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
- * @author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.cloud.run;
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.vm.VmType;
-import com.eucalyptus.vm.VmTypes;
+package com.eucalyptus.bootstrap;
 
-public class VmTypeVerify {
-  private static Logger LOG = Logger.getLogger( VmTypeVerify.class );
-  
-  public Allocation verify( Allocation allocInfo ) throws EucalyptusCloudException {
-    String instanceType = allocInfo.getRequest( ).getInstanceType( );
-    Context ctx = allocInfo.getContext( );
-    User user = ctx.getUser( );
-    VmType v = VmTypes.getVmType( ( instanceType == null )
-      ? VmType.M1_SMALL
-      : instanceType );
-    if ( v == null ) {
-      throw new EucalyptusCloudException( "instance type does not exist: " + instanceType );
-    }
-    String action = PolicySpec.requestToAction( allocInfo.getRequest( ) );
-    try {
-      if ( !ctx.hasAdministrativePrivileges( ) && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VMTYPE, instanceType, user.getAccount( ), action, user ) ) {
-        throw new EucalyptusCloudException( "Not authorized to allocate vm type " + instanceType + " for " + ctx.getUserFullName( ) );
-      }
-    } catch ( AuthException ex ) {
-      LOG.error( ex, ex );
-      throw new EucalyptusCloudException( "Not authorized to allocate vm type " + instanceType + " for " + ctx.getUserFullName( ) );
-    }
-    allocInfo.setVmType( v );
-    return allocInfo;
+public class ArgumentValidationError extends Error {
+
+  /**
+   * @param message
+   */
+  public ArgumentValidationError( String message ) {
+    super( message );
   }
-  
+
 }

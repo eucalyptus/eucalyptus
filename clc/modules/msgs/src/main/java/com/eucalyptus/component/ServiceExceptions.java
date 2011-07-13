@@ -64,7 +64,7 @@
 package com.eucalyptus.component;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.component.ServiceChecks.Severity;
@@ -139,7 +139,7 @@ public class ServiceExceptions {
       
       @Override
       public boolean apply( final Throwable ex ) {
-        if ( State.ENABLED.isIn( parent ) && ( parent.isVmLocal( ) || ( Bootstrap.isCloudController( ) && parent.isHostLocal( ) ) ) ) {
+        if ( State.ENABLED.isIn( parent ) && ( parent.isVmLocal( ) || ( BootstrapArgs.isCloudController( ) && parent.isHostLocal( ) ) ) ) {
           try {
             Topology.disable( parent );
           } catch ( ServiceRegistrationException ex1 ) {

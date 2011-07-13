@@ -80,6 +80,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.vm.VmType;
+import com.eucalyptus.vm.VmTypes;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;

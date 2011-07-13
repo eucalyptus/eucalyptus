@@ -113,7 +113,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   
   public static void runDiscovery( ) {
     for ( final ServiceJarDiscovery s : discovery ) {
-      EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_DISCOVERY, s.getClass( ).getCanonicalName( ) ).info( );
+      EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_DISCOVERY, s.getClass( ).getCanonicalName( ) ).trace( );
     }
     for ( final ServiceJarDiscovery s : discovery ) {
       runDiscovery( s );

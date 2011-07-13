@@ -68,6 +68,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Topology.ServiceKey;
 import com.eucalyptus.util.async.CheckedListenableFuture;
@@ -77,7 +78,7 @@ public class TopologyChanges {
   private static Logger LOG = Logger.getLogger( TopologyChanges.class );
   
   static Function<ServiceConfiguration, ServiceConfiguration> checkFunction( ) {
-    if ( Bootstrap.isCloudController( ) ) {
+    if ( BootstrapArgs.isCloudController( ) ) {
       return CloudTopologyCallables.CHECK;
     } else {
       return RemoteTopologyCallables.CHECK;
@@ -85,7 +86,7 @@ public class TopologyChanges {
   }
   
   static Function<ServiceConfiguration, ServiceConfiguration> disableFunction( ) {
-    if ( Bootstrap.isCloudController( ) ) {
+    if ( BootstrapArgs.isCloudController( ) ) {
       return CloudTopologyCallables.DISABLE;
     } else {
       return RemoteTopologyCallables.DISABLE;
@@ -93,7 +94,7 @@ public class TopologyChanges {
   }
   
   static Function<ServiceConfiguration, ServiceConfiguration> enableFunction( ) {
-    if ( Bootstrap.isCloudController( ) ) {
+    if ( BootstrapArgs.isCloudController( ) ) {
       return CloudTopologyCallables.ENABLE;
     } else {
       return RemoteTopologyCallables.ENABLE;
