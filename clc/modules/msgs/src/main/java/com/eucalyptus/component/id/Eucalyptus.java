@@ -95,54 +95,42 @@ public class Eucalyptus extends ComponentId.Unpartioned {
     return true;
   }
   
-  public static boolean setupLocals( InetAddress addr ) {
-    if ( !Internets.testReachability( addr ) ) {
+  public static boolean setupServiceDependencies( InetAddress addr ) {
+    if ( !Internets.testLocal( addr ) && !Internets.testReachability( addr ) ) {
       LOG.warn( "Failed to reach host for cloud controller: " + addr );
       return false;
     } else {
       try {
-        Component euca = Components.lookup( Eucalyptus.class );
-        ServiceConfiguration euconfig = ( Internets.testLocal( addr ) )
-          ? euca.initRemoteService( addr )
-          : euca.initRemoteService( addr );//TODO:GRZE:REVIEW: use of initRemote
-        if ( Component.State.INITIALIZED.ordinal( ) >= euconfig.lookupState( ).ordinal( ) ) {
-          euca.loadService( euconfig ).get( );
-        }
-        for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-          stage.updateBootstrapDependencies( );
-        }
-        for ( ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
-          if ( compId.isCloudLocal( ) && !compId.isRegisterable( ) ) {
-            try {
-              Component comp = Components.lookup( compId );
-              ServiceConfiguration config = ( Internets.testLocal( addr ) )
-                ? comp.initRemoteService( addr )
-                : comp.initRemoteService( addr );//TODO:GRZE:REVIEW: use of initRemote
-              if ( Component.State.INITIALIZED.ordinal( ) >= config.lookupState( ).ordinal( ) ) {
-                comp.loadService( config ).get( );
-              }
-            } catch ( InterruptedException ex ) {
-              Thread.currentThread( ).interrupt( );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
-            }
-          }
-          for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-            stage.updateBootstrapDependencies( );
-          }
-        }
-      } catch ( RuntimeException ex ) {
+        setupServiceState( addr, Eucalyptus.INSTANCE );
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
-        throw ex;
-      } catch ( ServiceRegistrationException ex ) {
-        LOG.error( ex , ex );
-      } catch ( ExecutionException ex ) {
-        LOG.error( ex , ex );
-      } catch ( InterruptedException ex ) {
-        Thread.currentThread( ).interrupt( );
+        return false;
+      }
+      for ( ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
+        try {
+          if ( compId.isCloudLocal( ) && !compId.isRegisterable( ) ) {
+            setupServiceState( addr, compId );
+          }
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
       }
       return true;
     }
     
+  }
+  
+  private static void setupServiceState( InetAddress addr, ComponentId compId ) throws ServiceRegistrationException, ExecutionException {
+    try {
+      Component comp = Components.lookup( compId );
+      ServiceConfiguration config = ( Internets.testLocal( addr ) )
+        ? comp.initRemoteService( addr )
+        : comp.initRemoteService( addr );//TODO:GRZE:REVIEW: use of initRemote
+      if ( Component.State.INITIALIZED.ordinal( ) >= config.lookupState( ).ordinal( ) ) {
+        comp.loadService( config ).get( );
+      }
+    } catch ( InterruptedException ex ) {
+      Thread.currentThread( ).interrupt( );
+    }
   }
 }

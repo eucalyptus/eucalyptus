@@ -304,11 +304,11 @@ public class Bootstrap {
     
   }
   
-  static Boolean loading      = false;
+  static Boolean         loading      = false;
   private static Boolean starting     = false;
   private static Boolean finished     = false;
   private static Stage   currentStage = Stage.SystemInit;
-  static Boolean shutdown     = false;
+  static Boolean         shutdown     = false;
   
   /**
    * @return Bootstrap.currentStage
@@ -334,6 +334,10 @@ public class Bootstrap {
    * TODO: DOCUMENT Bootstrap.java
    */
   public static void initBootstrappers( ) {
+    for ( Bootstrap.Stage stage : Stage.values( ) ) {
+      stage.bootstrappers.clear( );
+      stage.disabledBootstrappers.clear( );
+    }
     for ( Bootstrapper bootstrap : BootstrapperDiscovery.getBootstrappers( ) ) {//these have all been checked at discovery time
       try {
         Class<ComponentId> compType;

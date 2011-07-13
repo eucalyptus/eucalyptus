@@ -180,7 +180,7 @@ public class ServiceBootstrapper extends Bootstrapper {
       for( ServiceConfiguration config : euca.getBuilder( ).list( ) ) {
         InetAddress addr = config.getInetAddress( );
         if( Internets.testLocal( addr ) ) {
-          Eucalyptus.setupLocals( addr );
+          Eucalyptus.setupServiceDependencies( addr );
         }
       }
     } catch ( ServiceRegistrationException ex1 ) {

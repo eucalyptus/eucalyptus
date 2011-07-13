@@ -65,7 +65,6 @@ package com.eucalyptus.bootstrap;
 
 import java.io.Serializable;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.concurrent.atomic.AtomicReference;
@@ -81,6 +80,7 @@ import org.jgroups.PhysicalAddress;
 import org.jgroups.Receiver;
 import org.jgroups.View;
 import org.jgroups.stack.ProtocolStack;
+import com.eucalyptus.bootstrap.HostManager.HostStateListener;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Host;
@@ -95,7 +95,6 @@ import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.Logs;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -120,15 +119,16 @@ public class HostManager {
   private HostManager( ) {
     this.view = new CurrentView( );
     this.membershipChannel = HostManager.buildChannel( );
-    this.stateListener = BootstrapArgs.isCloudController( )
+    HostStateListener listener = BootstrapArgs.isCloudController( )
       ? new CloudControllerHostStateHandler( )
       : new RemoteHostStateListener( );
-    this.membershipChannel.setReceiver( this.stateListener );
+    this.membershipChannel.setReceiver( listener );
     //TODO:GRZE:set socket factory for crypto
     this.membershipGroupName = SystemIds.membershipGroupName( );
     try {
       LOG.info( "Starting membership channel... " );
       this.membershipChannel.connect( this.membershipGroupName );
+      this.setStateListener( listener );
       this.physicalAddress = ( PhysicalAddress ) this.membershipChannel.downcall( new org.jgroups.Event( org.jgroups.Event.GET_PHYSICAL_ADDRESS,
                                                                                                          this.membershipChannel.getAddress( ) ) );
       LOG.info( "Started membership channel: " + this.membershipGroupName );
@@ -139,7 +139,6 @@ public class HostManager {
           return arg0.hasDatabase( ) || arg0.getGroupsId( ).equals( HostManager.this.getMembershipChannel( ).getAddress( ) );
         }
       };
-      ListenerRegistry.getInstance( ).register( Hertz.class, this.stateListener );
     } catch ( ChannelException ex ) {
       LOG.fatal( ex, ex );
       throw BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
@@ -209,11 +208,11 @@ public class HostManager {
         try {
           this.onMessage( msg );
         } catch ( Exception ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         }
       }
     }
-
+    
     private void onMessage( Message msg ) {
       switch ( this.initializing.get( ) ) {
         case PENDING:
@@ -265,17 +264,23 @@ public class HostManager {
     
   }
   
+  private void setStateListener( HostStateListener stateListener ) {
+    if ( this.stateListener != null && this.stateListener != stateListener ) {//yes i mean reference equality
+      ListenerRegistry.getInstance( ).deregister( Hertz.class, HostManager.this.stateListener );
+    }
+    this.stateListener = stateListener;
+    ListenerRegistry.getInstance( ).register( Hertz.class, HostManager.this.stateListener );
+  }
+  
   private class RemoteHostStateListener extends HostStateListener {
     public void initialize( boolean doInit ) {
       if ( doInit ) {
         LOG.info( "Performing first-time system init." );
         try {
           Bootstrap.initializeSystem( );
-          Eucalyptus.setupLocals( Internets.localHostInetAddress( ) );
-          for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-            stage.updateBootstrapDependencies( );
-          }
-          HostManager.this.stateListener = new CloudControllerHostStateHandler( );
+          Eucalyptus.setupServiceDependencies( Internets.localHostInetAddress( ) );
+          Bootstrap.initBootstrappers( );
+          HostManager.this.setStateListener( new CloudControllerHostStateHandler( ) );
         } catch ( Throwable ex ) {
           LOG.error( ex, ex );
           System.exit( 123 );
@@ -287,7 +292,7 @@ public class HostManager {
     public void receive( List<Host> hosts ) {
       if ( !Bootstrap.isFinished( ) ) {
         for ( Host host : hosts ) {
-          if ( Eucalyptus.setupLocals( host.getBindAddress( ) ) ) {
+          if ( Eucalyptus.setupServiceDependencies( host.getBindAddress( ) ) ) {
             HostManager.this.view.markReady( );
           }
         }//TODO:GRZE: this need to be /more/ dynamic
@@ -304,7 +309,9 @@ public class HostManager {
     
     @Override
     public void fireEvent( Event event ) {
-      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( Bootstrap.isFinished( ) ? 15 : 3 ) ) {
+      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( Bootstrap.isFinished( )
+        ? 15
+        : 3 ) ) {
         LOG.debug( "Sending state info: " + Hosts.localHost( ) );
         try {
           HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( Hosts.localHost( ) ) ) );
@@ -321,8 +328,11 @@ public class HostManager {
     @Override
     public void receive( List<Host> hosts ) {
       Component euca = Components.lookup( Eucalyptus.class );
+      if ( !Bootstrap.isFinished( ) ) {
+        return;
+      }
       for ( final Host host : hosts ) {
-        if ( Bootstrap.isFinished( ) && !host.hasBootstrapped( ) && !host.hasDatabase( ) && !host.isLocalHost( ) ) {
+        if ( !host.hasBootstrapped( ) && !host.hasDatabase( ) && !host.isLocalHost( ) ) {
           try {
             ServiceConfiguration config = euca.getBuilder( ).lookupByHost( host.getBindAddress( ).getHostAddress( ) );
             LOG.debug( "Requesting first time initialization for remote cloud controller: " + host );
@@ -340,7 +350,7 @@ public class HostManager {
     
     @Override
     public void fireEvent( Event event ) {
-      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 3 ) && HostManager.this.membershipChannel.isConnected( ) ) {
+      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 3 ) && Bootstrap.isFinished( ) ) {
         HostManager.this.view.sendState( );
       }
     }
@@ -359,7 +369,7 @@ public class HostManager {
 //      if ( holder[0] ) {
 //        return null;
 //      } else {
-        return view;
+      return view;
 //      }
     }
     
@@ -424,14 +434,16 @@ public class HostManager {
   }
   
   public static Future<?> send( final Address dest, final Serializable msg ) {
-    LOG.trace( "Preparing to send message to: " + dest + " with payload " + msg.toString( ) );
+    LOG.debug( "Preparing to send message to: " + dest + " with payload " + msg.toString( ) );
+    final Message outMsg = new Message( dest, null, msg );
+    LOG.debug( "Outgoing message: " + outMsg );
     return Threads.lookup( Empyrean.class, HostManager.class ).submit( new Runnable( ) {
       
       @Override
       public void run( ) {
         try {
           LOG.trace( "Sending message to: " + dest + " with payload " + msg.toString( ) );
-          singleton.membershipChannel.send( new Message( dest, null, msg ) );
+          singleton.membershipChannel.send( outMsg );
         } catch ( ChannelNotConnectedException ex ) {
           LOG.error( ex, ex );
         } catch ( ChannelClosedException ex ) {
