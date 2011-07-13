@@ -77,6 +77,7 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Hosts;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.util.Internets;
+import com.google.common.collect.Lists;
 
 public class Empyrean extends ComponentId.Unpartioned {
   
@@ -154,6 +155,7 @@ public class Empyrean extends ComponentId.Unpartioned {
         while ( !HostManager.isReady( ) ) {
           TimeUnit.SECONDS.sleep( 1 );
           LOG.info( "Waiting for system view with database..." );
+          HostManager.send( null, Lists.newArrayList( Hosts.localHost( ) ) );
         }
         LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
         return true;

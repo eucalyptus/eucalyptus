@@ -94,7 +94,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   }
   
   Host( ViewId viewId ) {
-    this.groupsId = Hosts.localMembershipAddress( );
+    this.groupsId = Hosts.localHostGroupsId( );
     this.update( viewId, BootstrapArgs.isCloudController( ), false, Internets.getAllInetAddresses( ) );
   }
   

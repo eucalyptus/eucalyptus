@@ -89,7 +89,7 @@ import com.google.common.net.InetAddresses;
 
 public class Internets {
   private static Logger                  LOG               = Logger.getLogger( Internets.class );
-  private static final String            localId           = localhostIdentifier( );
+  private static final String            localId           = localHostIdentifier( );
   private static final InetAddress       localHostAddr     = determineLocalAddress( );
   private static final List<InetAddress> localHostAddrList = Lists.newArrayList( );
   
@@ -174,7 +174,7 @@ public class Internets {
     return localHostInetAddress( ).getHostAddress( );
   }
   
-  public static String localhostIdentifier( ) {
+  public static String localHostIdentifier( ) {
     return localId != null
       ? localId
       : Joiner.on( ":" ).join( getAllAddresses( ) );

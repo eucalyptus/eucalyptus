@@ -66,6 +66,7 @@ package com.eucalyptus.bootstrap;
 import java.io.Serializable;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
@@ -135,7 +136,7 @@ public class HostManager {
         
         @Override
         public boolean apply( Host arg0 ) {
-          return arg0.hasDatabase( ) || arg0.getGroupsId( ).equals( HostManager.this.membershipChannel.getLocalAddress( ) );
+          return arg0.hasDatabase( ) || arg0.getGroupsId( ).equals( Hosts.localHostGroupsId( ) );
         }
       };
       ListenerRegistry.getInstance( ).register( Hertz.class, this.stateListener );
@@ -202,47 +203,51 @@ public class HostManager {
     
     @Override
     public void receive( Message msg ) {
-      try {
-        if ( Hosts.getHostInstance( msg.getSrc( ) ).isLocalHost( ) ) {
-          return;
+      if ( Hosts.contains( msg.getSrc( ) ) && Hosts.getHostInstance( msg.getSrc( ) ).isLocalHost( ) ) {
+        return;
+      } else {
+        try {
+          this.onMessage( msg );
+        } catch ( Exception ex ) {
+          LOG.error( ex , ex );
         }
-        if ( msg.getObject( ) instanceof InitRequest && this.initializing.compareAndSet( InitState.PENDING, InitState.WORKING ) ) {
-          LOG.debug( "Received initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
-          try {
-            this.initialize( msg.getObject( ) instanceof Initialize );
-          } finally {
-            this.initializing.set( InitState.FINISHED );
-          }
-        } else if ( this.initializing.get( ).equals( InitState.PENDING ) ) {
-          Threads.lookup( Empyrean.class, HostManager.class ).submit( new Runnable( ) {
-            
-            @Override
-            public void run( ) {
+      }
+    }
+
+    private void onMessage( Message msg ) {
+      switch ( this.initializing.get( ) ) {
+        case PENDING:
+          if ( msg.getObject( ) instanceof InitRequest ) {
+            if ( this.initializing.compareAndSet( InitState.PENDING, InitState.WORKING ) ) {
+              LOG.debug( "Received initialize message: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
               try {
-                HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( Hosts.localHost( ) ) ) );
-              } catch ( Exception ex ) {
-                LOG.error( ex, ex );
+                this.initialize( msg.getObject( ) instanceof Initialize );
+              } finally {
+                this.initializing.set( InitState.FINISHED );
               }
+            } else {
+              LOG.debug( "Ignoring request arriving while currently working on initializing system state: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
             }
-          } );
-        } else if ( this.initializing.compareAndSet( InitState.FINISHED, InitState.FINISHED ) ) {
+          } else if ( !BootstrapArgs.isCloudController( ) ) {
+            HostManager.send( null, Lists.newArrayList( Hosts.localHost( ) ) );
+          }
+          break;
+        case WORKING:
+          LOG.debug( "Ignoring request arriving while currently working on initializing system state: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+          break;
+        case FINISHED:
           if ( msg.getObject( ) instanceof List ) {
             LOG.debug( "Received updated host information: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
             this.receive( ( List<Host> ) msg.getObject( ) );
           } else {
             LOG.debug( "Received unknown message type: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
           }
-        } else {
-          LOG.debug( "Received message while InitState." + this.initializing.get( ) + ", ignoring: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
-        }
-      } catch ( NoSuchElementException ex ) {
-        Logs.exhaust( ).error( ex );
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
+          break;
       }
     }
     
     public abstract void receive( List<Host> hostsState );
+    
     public abstract void initialize( boolean doInit );
     
     @Override
@@ -262,7 +267,8 @@ public class HostManager {
   
   private class RemoteHostStateListener extends HostStateListener {
     public void initialize( boolean doInit ) {
-      if( doInit ) {
+      if ( doInit ) {
+        LOG.info( "Performing first-time system init." );
         try {
           Bootstrap.initializeSystem( );
           Eucalyptus.setupLocals( Internets.localHostInetAddress( ) );
@@ -320,33 +326,13 @@ public class HostManager {
           try {
             ServiceConfiguration config = euca.getBuilder( ).lookupByHost( host.getHostAddress( ).getHostAddress( ) );
             LOG.debug( "Requesting first time initialization for remote cloud controller: " + host );
-            Threads.lookup( Empyrean.class, HostManager.class ).submit( new Runnable( ) {
-              
-              @Override
-              public void run( ) {
-                try {
-                  HostManager.this.membershipChannel.send( new Message( host.getGroupsId( ), null, new Initialize( ) ) );
-                } catch ( Exception ex ) {
-                  LOG.error( ex, ex );
-                }
-              }
-            } );
+            HostManager.send( host.getGroupsId( ), new Initialize( ) );
           } catch ( ServiceRegistrationException ex ) {
             LOG.trace( ex );
           }
         } else if ( !host.hasBootstrapped( ) ) {
           LOG.debug( "Requesting remote component startup: " + host );
-          Threads.lookup( Empyrean.class, HostManager.class ).submit( new Runnable( ) {
-            
-            @Override
-            public void run( ) {
-              try {
-                HostManager.this.membershipChannel.send( new Message( host.getGroupsId( ), null, new NoInitialize( ) ) );
-              } catch ( Exception ex ) {
-                LOG.error( ex, ex );
-              }
-            }
-          } );
+          HostManager.send( host.getGroupsId( ), new NoInitialize( ) );
         }
         Hosts.updateHost( getCurrentView( ), host );
       }
@@ -358,7 +344,7 @@ public class HostManager {
         HostManager.this.view.sendState( );
       }
     }
-
+    
     @Override
     public void initialize( boolean doInit ) {}
     
@@ -404,14 +390,8 @@ public class HostManager {
     
     public void sendState( ) {
       final Iterable<Host> dbs = Iterables.filter( Hosts.list( ), HostManager.this.dbFilter );
-      Logs.exhaust( ).debug( "Sending state info: \n" + Joiner.on( "\n" ).join( dbs ) );
-      try {
-        HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( dbs ) ) );
-      } catch ( ChannelNotConnectedException ex ) {
-        LOG.error( ex, ex );
-      } catch ( ChannelClosedException ex ) {
-        LOG.error( ex, ex );
-      }
+      LOG.debug( "Sending state info: \n" + Joiner.on( "\n" ).join( dbs ) );
+      HostManager.send( null, Lists.newArrayList( dbs ) );
     }
   }
   
@@ -422,7 +402,7 @@ public class HostManager {
   private static JChannel buildChannel( ) {
     try {
       final JChannel channel = new JChannel( false );
-      channel.setName( Internets.localhostIdentifier( ) );
+      channel.setName( Internets.localHostIdentifier( ) );
       ProtocolStack stack = new ProtocolStack( );
       channel.setProtocolStack( stack );
       stack.addProtocols( Protocols.getMembershipProtocolStack( ) );
@@ -440,6 +420,27 @@ public class HostManager {
   
   public PhysicalAddress getPhysicalAddress( ) {
     return this.physicalAddress;
+  }
+  
+  public static Future<?> send( final Address dest, final Serializable msg ) {
+    LOG.trace( "Preparing to send message to: " + dest + " with payload " + msg.toString( ) );
+    return Threads.lookup( Empyrean.class, HostManager.class ).submit( new Runnable( ) {
+      
+      @Override
+      public void run( ) {
+        try {
+          LOG.trace( "Sending message to: " + dest + " with payload " + msg.toString( ) );
+          singleton.membershipChannel.send( new Message( dest, null, msg ) );
+        } catch ( ChannelNotConnectedException ex ) {
+          LOG.error( ex, ex );
+        } catch ( ChannelClosedException ex ) {
+          LOG.error( ex, ex );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+    } );
+    
   }
   
 }

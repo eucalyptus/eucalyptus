@@ -100,6 +100,10 @@ public class Hosts {
     return Lists.newArrayList( hostMap.values( ) );
   }
   
+  public static boolean contains( Address jgroupsId ) {
+    return hostMap.containsKey( jgroupsId );
+  }
+
   public static Host getHostInstance( Address jgroupsId ) {
     Host h = hostMap.get( jgroupsId );
     if ( h == null ) {
@@ -113,17 +117,18 @@ public class Hosts {
   public static Host localHost( ) {
     Host ret = null;
     ViewId viewId = HostManager.isReady( ) ? HostManager.getCurrentView( ).getViewId( ) : null;
-    if( !hostMap.containsKey( Hosts.localMembershipAddress( ) ) ) {
-      Host oldRef = hostMap.putIfAbsent( Hosts.localMembershipAddress( ), new Host( viewId ) );
+    if( !hostMap.containsKey( Hosts.localHostGroupsId( ) ) ) {
+      Host newRef = new Host( viewId );
+      Host oldRef = hostMap.putIfAbsent( newRef.getGroupsId( ), newRef );
       if( oldRef == null ) {
-        Host local = hostMap.get( Hosts.localMembershipAddress( ) );
+        Host local = hostMap.get( Hosts.localHostGroupsId( ) );
         Mbeans.register( local );
         ret = local;
       } else {
         ret = oldRef;
       }
     } else {
-      ret = hostMap.get( Hosts.localMembershipAddress( ) );
+      ret = hostMap.get( Hosts.localHostGroupsId( ) );
     }
     ret.update( viewId, BootstrapArgs.isCloudController( ), Bootstrap.isFinished( ), Internets.getAllInetAddresses( ) );
     return ret;
@@ -179,7 +184,7 @@ public class Hosts {
     }
   }
   
-  public static Address localMembershipAddress( ) {
+  public static Address localHostGroupsId( ) {
     return HostManager.getInstance( ).getMembershipChannel( ).getAddress( );
   }
 }
