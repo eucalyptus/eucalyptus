@@ -283,7 +283,7 @@ public class Logs {
   
   public static Logger extreme( ) {
     if ( EXTREME ) {
-      return Logger.getLogger( "EXHAUST" );
+      return Logger.getLogger( "EXTREME" );
     } else {
       return nullLogger;
     }
