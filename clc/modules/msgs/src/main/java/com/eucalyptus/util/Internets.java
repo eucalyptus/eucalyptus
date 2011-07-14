@@ -183,7 +183,7 @@ public class Internets {
   public static String localHostIdentifier( ) {
     return localId != null
       ? localId
-      : Joiner.on( ":" ).join( getAllAddresses( ) );
+      : localHostInetAddress( ).getHostAddress( );
   }
   
   public static List<NetworkInterface> getNetworkInterfaces( ) {

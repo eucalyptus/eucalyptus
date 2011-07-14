@@ -444,7 +444,7 @@ public class HostManager {
     
     public void sendState( ) {
       final Iterable<Host> dbs = Iterables.filter( Hosts.list( ), HostManager.this.dbFilter );
-      LOG.debug( "Sending state info: \n" + Joiner.on( "\n" ).join( dbs ) );
+      LOG.debug( "Sending state info:  " + dbs );
       HostManager.send( null, Lists.newArrayList( dbs ) );
     }
   }
