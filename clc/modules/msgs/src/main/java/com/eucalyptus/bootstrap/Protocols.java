@@ -112,16 +112,17 @@ public class Protocols {
                                                                  @Override
                                                                  public Protocol get( ) {
                                                                    UDP protocol = new UDP( );
-                                                                   protocol.setMulticastAddress( MembershipConfiguration.getMulticastInetAddress( ) );
-                                                                   protocol.setMulticastPort( MembershipConfiguration.getMulticastPort( ) );
                                                                    try {
                                                                      protocol.setBindAddress( Internets.localHostAddress( ) );
                                                                      protocol.setBindPort( 8773 );
-                                                                     protocol.setBindToAllInterfaces( false );
+                                                                     protocol.setBindToAllInterfaces( true );
                                                                    } catch ( UnknownHostException ex ) {
                                                                      LOG.error( ex, ex );
                                                                    }
+                                                                   protocol.setMulticastAddress( MembershipConfiguration.getMulticastInetAddress( ) );
+                                                                   protocol.setMulticastPort( MembershipConfiguration.getMulticastPort( ) );
                                                                    protocol.setDiscardIncompatiblePackets( true );
+                                                                   protocol.setLogDiscardMessages( false );
                                                                    protocol.setMaxBundleSize( 60000 );
                                                                    protocol.setMaxBundleTimeout( 30 );
                                                                    
