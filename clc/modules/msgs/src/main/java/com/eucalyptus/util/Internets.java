@@ -76,6 +76,8 @@ import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
@@ -88,15 +90,15 @@ import com.google.common.collect.Lists;
 import com.google.common.net.InetAddresses;
 
 public class Internets {
-  private static Logger                  LOG               = Logger.getLogger( Internets.class );
-  private static final String            localId           = localHostIdentifier( );
-  private static final InetAddress       localHostAddr     = determineLocalAddress( );
-  private static final List<InetAddress> localHostAddrList = Lists.newArrayList( );
+  private static Logger                                   LOG               = Logger.getLogger( Internets.class );
+  private static final String                             localId           = localHostIdentifier( );
+  private static final ConcurrentMap<String, InetAddress> localHostAddrList = new ConcurrentHashMap<String, InetAddress>( );
+  private static final InetAddress                        localHostAddr     = determineLocalAddress( );
   
-  public static List<InetAddress> localInetAddresses( ) {
-    return localHostAddrList;
-  }
-  
+//  public static List<InetAddress> localInetAddresses( ) {
+//    return localHostAddrList;
+//  }
+//  
   private static InetAddress determineLocalAddress( ) {
     InetAddress laddr = null;
     LOG.info( "Trying to determine local bind address based on cli (--bind-addr)... " );
@@ -115,7 +117,7 @@ public class Internets {
     
     return laddr;
   }
-
+  
   private static InetAddress lookupDefaultRoute( ) {
     InetAddress laddr = null;
     try {
@@ -144,7 +146,7 @@ public class Internets {
           : laddr;
         NetworkInterface iface = NetworkInterface.getByInetAddress( next );
         if ( locallyBoundAddrs.contains( InetAddress.getByName( addrStr ) ) ) {
-          localHostAddrList.add( next );
+          localHostAddrList.put( next.getHostAddress( ), next );
           LOG.info( "Identified local bind address: " + addrStr + " on interface " + iface.toString( ) );
         } else {
           LOG.error( "Failed to find specified --bind-addr=" + addrStr + " as it is not bound to a local interface.\n  Known addresses are: "
@@ -221,11 +223,11 @@ public class Internets {
     List<InetAddress> addrs = Lists.newArrayList( );
     for ( NetworkInterface iface : Internets.getNetworkInterfaces( ) ) {
       try {
-        if( iface.isPointToPoint( ) ) {
+        if ( iface.isPointToPoint( ) ) {
           continue;
         }
       } catch ( SocketException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
       for ( InterfaceAddress iaddr : iface.getInterfaceAddresses( ) ) {
         InetAddress addr = iaddr.getAddress( );
