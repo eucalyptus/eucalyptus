@@ -267,7 +267,7 @@ public class ServiceTransitions {
           LOG.error( ex, ex );
           throw ex;
         }
-      } else if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
+      } else if ( !BootstrapArgs.isCloudController( ) ) {
         try {
           trans = ServiceRemoteTransitionNotification.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {

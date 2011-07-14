@@ -63,9 +63,13 @@
 
 package com.eucalyptus.bootstrap;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.List;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
@@ -74,6 +78,7 @@ import org.jgroups.ChannelClosedException;
 import org.jgroups.ChannelException;
 import org.jgroups.ChannelNotConnectedException;
 import org.jgroups.ExtendedMembershipListener;
+import org.jgroups.Header;
 import org.jgroups.JChannel;
 import org.jgroups.Message;
 import org.jgroups.PhysicalAddress;
@@ -87,6 +92,7 @@ import com.eucalyptus.component.Host;
 import com.eucalyptus.component.Hosts;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.Event;
@@ -101,16 +107,42 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class HostManager {
-  private static Logger         LOG = Logger.getLogger( HostManager.class );
-  private final JChannel        membershipChannel;
-  private final PhysicalAddress physicalAddress;
-  private final String          membershipGroupName;
-  private final CurrentView     view;
-  private HostStateListener     stateListener;
-  private static HostManager    singleton;
-  private final Predicate<Host> dbFilter;
+  private static Logger              LOG             = Logger.getLogger( HostManager.class );
+  private final JChannel             membershipChannel;
+  private final PhysicalAddress      physicalAddress;
+  private final String               membershipGroupName;
+  private final CurrentView          view;
+  private HostStateListener          stateListener;
+  private static HostManager         singleton;
+  private final Predicate<Host>      dbFilter;
+  private static final short         EPOCH_HEADER_ID = 0x2ce;
+  private static final AtomicInteger epochSeen       = new AtomicInteger( 0 );
   
   interface InitRequest {}
+  
+  static class EpochHeader extends Header {
+    private final Integer value;
+    
+    public EpochHeader( Integer value ) {
+      super( );
+      this.value = value;
+    }
+    
+    @Override
+    public void writeTo( DataOutputStream out ) throws IOException {}
+    
+    @Override
+    public void readFrom( DataInputStream in ) throws IOException, IllegalAccessException, InstantiationException {}
+    
+    @Override
+    public int size( ) {
+      return 32;
+    }
+    
+    public Integer getValue( ) {
+      return this.value;
+    }
+  }
   
   static class Initialize implements InitRequest, Serializable {}
   
@@ -143,6 +175,10 @@ public class HostManager {
       LOG.fatal( ex, ex );
       throw BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
     }
+  }
+
+  public static int getMaxSeenEpoch( ) {
+    return HostManager.epochSeen.get( );
   }
   
   public static HostManager getInstance( ) {
@@ -214,6 +250,12 @@ public class HostManager {
     }
     
     private void onMessage( Message msg ) {
+      EpochHeader epochHeader = ( EpochHeader ) msg.getHeader( EPOCH_HEADER_ID );
+      Integer senderEpoch = epochHeader.getValue( );
+      int myEpoch = HostManager.epochSeen.get( );
+      if( myEpoch < senderEpoch ) {
+        HostManager.epochSeen.compareAndSet( myEpoch, senderEpoch );
+      }
       switch ( this.initializing.get( ) ) {
         case PENDING:
           if ( msg.getObject( ) instanceof InitRequest ) {
@@ -437,6 +479,7 @@ public class HostManager {
   public static Future<?> send( final Address dest, final Serializable msg ) {
     LOG.debug( "Preparing to send message to: " + dest + " with payload " + msg.toString( ) );
     final Message outMsg = new Message( dest, null, msg );
+    outMsg.putHeader( EPOCH_HEADER_ID, new EpochHeader( Topology.epoch( ) ) );
     LOG.debug( "Outgoing message: " + outMsg );
     return Threads.lookup( Empyrean.class, HostManager.class ).submit( new Runnable( ) {
       

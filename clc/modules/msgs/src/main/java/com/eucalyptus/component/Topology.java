@@ -75,6 +75,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapArgs;
+import com.eucalyptus.bootstrap.HostManager;
 import com.eucalyptus.component.TopologyChanges.CloudTopologyCallables;
 import com.eucalyptus.component.TopologyChanges.RemoteTopologyCallables;
 import com.eucalyptus.empyrean.Empyrean;
@@ -96,19 +97,30 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 public class Topology implements EventListener<Event> {
-  private static Logger                                         LOG            = Logger.getLogger( Topology.class );
-  private static final Topology                                 singleton      = new Topology( );                                                        //TODO:GRZE:handle differently for remote case?
-  private Integer                                               currentEpoch   = 0;                                                                      //TODO:GRZE: get the right initial epoch value from membership bootstrap
+  private static Logger                                         LOG          = Logger.getLogger( Topology.class );
+  private static Topology                                       singleton    = null;                                                                   //TODO:GRZE:handle differently for remote case?
+  private Integer                                               currentEpoch = 0;                                                                      //TODO:GRZE: get the right initial epoch value from membership bootstrap
   private TransitionGuard                                       guard;
-  private final ConcurrentMap<ServiceKey, ServiceConfiguration> services       = new ConcurrentSkipListMap<Topology.ServiceKey, ServiceConfiguration>( );
+  private final ConcurrentMap<ServiceKey, ServiceConfiguration> services     = new ConcurrentSkipListMap<Topology.ServiceKey, ServiceConfiguration>( );
   
-  private Topology( ) {
+  private Topology( int i ) {
     super( );
+    this.currentEpoch = i;
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
   
   public static Topology getInstance( ) {
-    return singleton;
+    if ( singleton != null ) {
+      return singleton;
+    } else {
+      synchronized ( Topology.class ) {
+        if ( singleton != null ) {
+          return singleton;
+        } else {
+          return ( singleton = new Topology( HostManager.getMaxSeenEpoch( ) ) );
+        }
+      }
+    }
   }
   
   private ThreadPool getWorker( ) {
