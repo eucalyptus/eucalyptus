@@ -183,13 +183,13 @@ public class Internets {
   public static List<NetworkInterface> getNetworkInterfaces( ) {
     try {
       List<NetworkInterface> ifaces = Collections.list( NetworkInterface.getNetworkInterfaces( ) );
-//      ifaces = Lists.newArrayList( Iterables.filter( ifaces, new Predicate<NetworkInterface>( ) {
-//        
-//        @Override
-//        public boolean apply( NetworkInterface input ) {
-//          return !input.getName( ).contains( "virbr0" ) && !input.getDisplayName( ).contains( "virbr0" );
-//        }
-//      } ) );
+      ifaces = Lists.newArrayList( Iterables.filter( ifaces, new Predicate<NetworkInterface>( ) {
+        
+        @Override
+        public boolean apply( NetworkInterface input ) {
+          return !input.getName( ).contains( "virbr0" ) && !input.getDisplayName( ).contains( "virbr0" );
+        }
+      } ) );
       Collections.sort( ifaces, new Comparator<NetworkInterface>( ) {
         
         @Override

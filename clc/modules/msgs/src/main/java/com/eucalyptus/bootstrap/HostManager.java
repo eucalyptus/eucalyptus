@@ -442,15 +442,20 @@ public class HostManager {
       
       @Override
       public void run( ) {
-        try {
-          LOG.trace( "Sending message to: " + dest + " with payload " + msg.toString( ) );
-          singleton.membershipChannel.send( outMsg );
-        } catch ( ChannelNotConnectedException ex ) {
-          LOG.error( ex, ex );
-        } catch ( ChannelClosedException ex ) {
-          LOG.error( ex, ex );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+        View v = HostManager.getInstance( ).view.getCurrentView( );
+        if ( dest == null && ( v == null || v.getMembers( ).size( ) <= 1 ) ) {
+          return;
+        } else {
+          try {
+            LOG.trace( "Sending message to: " + dest + " with payload " + msg.toString( ) );
+            singleton.membershipChannel.send( outMsg );
+          } catch ( ChannelNotConnectedException ex ) {
+            LOG.error( ex, ex );
+          } catch ( ChannelClosedException ex ) {
+            LOG.error( ex, ex );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
         }
       }
     } );
