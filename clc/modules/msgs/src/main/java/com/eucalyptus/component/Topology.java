@@ -96,11 +96,12 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 public class Topology implements EventListener<Event> {
-  private static Logger                                         LOG          = Logger.getLogger( Topology.class );
-  private static final Topology                                 singleton    = new Topology( );                                                        //TODO:GRZE:handle differently for remote case?
-  private Integer                                               currentEpoch = 0;//TODO:GRZE: get the right initial epoch value from membership bootstrap
+  private static Logger                                         LOG            = Logger.getLogger( Topology.class );
+  private static final Topology                                 singleton      = new Topology( );                                                        //TODO:GRZE:handle differently for remote case?
+  private Integer                                               currentEpoch   = 0;                                                                      //TODO:GRZE: get the right initial epoch value from membership bootstrap
   private TransitionGuard                                       guard;
-  private final ConcurrentMap<ServiceKey, ServiceConfiguration> services     = new ConcurrentSkipListMap<Topology.ServiceKey, ServiceConfiguration>( );
+  private final ConcurrentMap<ServiceKey, ServiceConfiguration> services       = new ConcurrentSkipListMap<Topology.ServiceKey, ServiceConfiguration>( );
+  private final Map<ServiceKey, ServiceConfiguration>           activeservices = new ConcurrentSkipListMap<Topology.ServiceKey, ServiceConfiguration>( );
   
   private Topology( ) {
     super( );
@@ -123,7 +124,14 @@ public class Topology implements EventListener<Event> {
     return Topology.getInstance( ).getEpoch( );
   }
   
-  public static List<ServiceId> partitionRelativeView( final Partition partition, final InetAddress localAddr ) {
+  public static List<ServiceId> partitionRelativeView( final ServiceConfiguration config, final InetAddress localAddr ) {
+    Partition partition;
+    try {
+      partition = Partitions.lookup( config );
+    } catch ( ServiceRegistrationException ex ) {
+      LOG.error( ex, ex );
+      partition = Partitions.lookupInternal( config );
+    }
     final String localhostAddr = localAddr.getHostAddress( );
     Function<ServiceConfiguration, ServiceId> toServiceId = new Function<ServiceConfiguration, ServiceId>( ) {
       
@@ -149,7 +157,7 @@ public class Topology implements EventListener<Event> {
   private <T> Future<T> submit( final Callable<T> callable ) {
     Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.ENQUEUE, Topology.this.toString( ), callable.toString( ) ) );
     final Long queueStart = System.currentTimeMillis( );
-
+    
     return this.getWorker( ).submit( new Callable<T>( ) {
       
       @Override
@@ -157,16 +165,16 @@ public class Topology implements EventListener<Event> {
         Long serviceStart = System.currentTimeMillis( );
         Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), callable.toString( ) )
                                           .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) ) );
-
+        
         try {
           T result = callable.call( );
-
+          
           Long finish = System.currentTimeMillis( );
           Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), callable.toString( ) )
                                             .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) ) );
           return result;
         } catch ( Exception ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
           throw ex;
         }
       }
@@ -185,13 +193,13 @@ public class Topology implements EventListener<Event> {
                                           .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) ) );
         try {
           ServiceConfiguration result = function.apply( config );
-
+          
           Long finish = System.currentTimeMillis( );
           Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
                                             .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) ) );
           return result;
         } catch ( Exception ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
           throw ex;
         }
       }
@@ -218,10 +226,10 @@ public class Topology implements EventListener<Event> {
           EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
                      .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) )
                      .info( );
-
+          
           return result;
         } catch ( Exception ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
           throw ex;
         }
       }
@@ -353,7 +361,10 @@ public class Topology implements EventListener<Event> {
     private final ComponentId componentId;
     
     static ServiceKey create( final ServiceConfiguration config ) throws ServiceRegistrationException {
-      if ( config.getComponentId( ).isPartitioned( ) ) {
+      if ( config.getComponentId( ).isAlwaysLocal( ) || config.getComponentId( ).isCloudLocal( ) ) {
+        Partition p = Partitions.lookupInternal( config );
+        return new ServiceKey( config.getComponentId( ), p );
+      } else if ( config.getComponentId( ).isPartitioned( ) ) {
         Partition p = Partitions.lookup( config );
         return new ServiceKey( config.getComponentId( ), p );
       } else {
@@ -432,13 +443,13 @@ public class Topology implements EventListener<Event> {
       }
       return true;
     }
-
+    
     @Override
     public int compareTo( ServiceKey that ) {
-      if( this.componentId.equals( that.componentId ) ) {
-        if( this.partition == null && that.partition == null) {
+      if ( this.componentId.equals( that.componentId ) ) {
+        if ( this.partition == null && that.partition == null ) {
           return 0;
-        } else if( this.partition != null ) {
+        } else if ( this.partition != null ) {
           return this.partition.compareTo( that.partition );
         } else {
           return -1;
@@ -447,7 +458,6 @@ public class Topology implements EventListener<Event> {
         return this.componentId.compareTo( that.componentId );
       }
     }
-
     
   }
   
@@ -498,7 +508,7 @@ public class Topology implements EventListener<Event> {
           
           @Override
           public boolean apply( Future<?> arg0 ) {
-            if( !arg0.isDone( ) ) {
+            if ( !arg0.isDone( ) ) {
               try {
                 arg0.get( 100, TimeUnit.MILLISECONDS );
               } catch ( InterruptedException ex ) {
@@ -506,10 +516,10 @@ public class Topology implements EventListener<Event> {
               } catch ( ExecutionException ex ) {
                 LOG.error( ex );
               } catch ( TimeoutException ex ) {
-              }
-            }
-            return arg0.isDone( );
-          }
+                                            }
+                                        }
+                                        return arg0.isDone( );
+                                      }
         };
         Map<ServiceConfiguration, Future<ServiceConfiguration>> futures = Maps.newHashMap( );
         for ( ServiceConfiguration config : checkServicesList ) {

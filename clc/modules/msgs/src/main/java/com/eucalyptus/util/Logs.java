@@ -120,9 +120,10 @@ public class Logs {
     
   }
   
-  public static boolean       DEBUG      = false;                                                                    //TODO:get rid of this non-sense
-  public static boolean       TRACE      = false;                                                                    //TODO:get rid of this non-sense
   public static boolean       EXTREME    = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
+  public static boolean       TRACE      = EXTREME || "TRACE".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
+  public static boolean       DEBUG      = TRACE || EXTREME || "DEBUG".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
+                                                                                                                               
   private static final Logger nullLogger = new Logger( "/dev/null" ) {
                                            
                                            @Override
@@ -298,9 +299,6 @@ public class Logs {
   }
   
   public static void init( ) {
-    Logs.EXTREME = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
-    Logs.TRACE = "TRACE".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || Logs.EXTREME;
-    Logs.DEBUG = "DEBUG".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) ) || Logs.TRACE;
     if ( Logs.EXTREME ) {
       System.setProperty( "euca.log.level", "TRACE" );
       System.setProperty( "euca.exhaust.level", "TRACE" );

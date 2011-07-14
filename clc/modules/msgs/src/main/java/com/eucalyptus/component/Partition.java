@@ -130,21 +130,6 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
     
   }
   
-  public static Partition fakePartition( final ComponentId compId ) {
-    if ( compId.isPartitioned( ) ) {
-      throw new IllegalArgumentException( "Provided compId is partitioned: " + compId.getFullName( ) );
-    } else {
-      if ( !compId.hasCredentials( ) ) {
-        ComponentId p = ComponentIds.lookup( compId.getPartition( ) );
-        return new Partition( ).new Fake( compId.getPartition( ), SystemCredentials.getCredentialProvider( p ).getKeyPair( ),
-                                          SystemCredentials.getCredentialProvider( p ).getCertificate( ) );
-      } else {
-        return new Partition( ).new Fake( compId.getPartition( ), SystemCredentials.getCredentialProvider( compId ).getKeyPair( ),
-                                          SystemCredentials.getCredentialProvider( compId ).getCertificate( ) );
-      }
-    }
-  }
-  
   public Partition( String name, KeyPair keyPair, X509Certificate certificate, KeyPair nodeKeyPair, X509Certificate nodeCertificate ) {
     this.name = name;
     this.pemCertificate = PEMFiles.fromCertificate( certificate );
@@ -282,7 +267,7 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
   @PostPersist
   private void writePartitionKeyFiles( ) {
     File keyDir = SubDirectory.KEYS.getChildFile( this.getName( ) );
-    if( !keyDir.exists( ) && !keyDir.mkdir( ) ) {
+    if ( !keyDir.exists( ) && !keyDir.mkdir( ) ) {
       throw new RuntimeException( "Failed to create directory for partition credentials: " + this );
     }
     X509Certificate systemX509 = SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( );
@@ -318,13 +303,45 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
     builder.append( "Partition:name=" ).append( this.name ).append( ":cc-cert-serial=" ).append( this.getCertificate( ).getSerialNumber( ) ).append( ":nc-cert-serial=" ).append( this.getNodeCertificate( ).getSerialNumber( ) );
     return builder.toString( );
   }
-
+  
   /**
    * @see java.lang.Comparable#compareTo(java.lang.Object)
    */
   @Override
   public int compareTo( Partition that ) {
     return this.name.compareTo( that.name );
+  }
+  
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( this.name == null )
+      ? 0
+      : this.name.hashCode( ) );
+    return result;
+  }
+  
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( !super.equals( obj ) ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    Partition other = ( Partition ) obj;
+    if ( this.name == null ) {
+      if ( other.name != null ) {
+        return false;
+      }
+    } else if ( !this.name.equals( other.name ) ) {
+      return false;
+    }
+    return true;
   }
   
 }
