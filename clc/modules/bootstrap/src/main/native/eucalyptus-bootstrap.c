@@ -739,6 +739,8 @@ int java_init(euca_opts *args, java_home_t *data) {
 		JVM_ARG(opt[++x], "-Deuca.force.remote.bootstrap=true");
 	}
 	if (args->debug_flag) {
+		JVM_ARG(opt[++x], "-XX:+HeapDumpOnOutOfMemoryError");
+		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(args, home));
 		JVM_ARG(opt[++x], "-Xdebug");
 		JVM_ARG(
 				opt[++x],
@@ -751,8 +753,6 @@ int java_init(euca_opts *args, java_home_t *data) {
 	//		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.port=8772");
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.authenticate=false");//TODO:GRZE:RELEASE FIXME to use ssl
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.ssl=false");
-		JVM_ARG(opt[++x], "-XX:+HeapDumpOnOutOfMemoryError");
-		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(args, home));
 	}
 	if (args->verbose_flag ) {
 		JVM_ARG(opt[++x], "-verbose:gc");
