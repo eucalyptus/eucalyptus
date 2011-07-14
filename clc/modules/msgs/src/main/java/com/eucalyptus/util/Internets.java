@@ -143,12 +143,13 @@ public class Internets {
           ? next
           : laddr;
         NetworkInterface iface = NetworkInterface.getByInetAddress( next );
-        if ( locallyBoundAddrs.contains( locallyBoundAddrs ) ) {
+        if ( locallyBoundAddrs.contains( InetAddress.getByName( addrStr ) ) ) {
           localHostAddrList.add( next );
           LOG.info( "Identified local bind address: " + addrStr + " on interface " + iface.toString( ) );
         } else {
-          LOG.error( "Ignoring --bind-addr=" + addrStr + " as it is not bound to a local interface.\n  Known addresses are: "
+          LOG.error( "Failed to find specified --bind-addr=" + addrStr + " as it is not bound to a local interface.\n  Known addresses are: "
                      + Joiner.on( ", " ).join( locallyBoundAddrs ) );
+          System.exit( 1 );
         }
       } catch ( UnknownHostException ex ) {
         LOG.fatal( "Invalid argument given for --bind-addr=" + addrStr + " " + ex.getMessage( ) );
