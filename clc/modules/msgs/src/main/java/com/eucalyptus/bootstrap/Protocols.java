@@ -202,9 +202,9 @@ public class Protocols {
                                                                  @Override
                                                                  public Protocol get( ) {
                                                                    NAKACK protocol = new NAKACK( );
-                                                                   protocol.setUseMcastXmit( true );
+                                                                   protocol.setUseMcastXmit( false );
                                                                    protocol.setDiscardDeliveredMsgs( true );
-                                                                   protocol.setGcLag( 25 );
+                                                                   protocol.setGcLag( 20 );
                                                                    protocol.setMaxXmitBufSize( 50 );
 //                                                                   protocol.setProperty( "retransmit_timeout", "300,600,1200,2400,4800" );
                                                                    return protocol;

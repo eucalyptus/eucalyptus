@@ -89,7 +89,7 @@ import com.google.common.collect.Lists;
 public class SystemBootstrapper {
   private static final String       SEP = " -- ";
   
-  static Logger             LOG = Logger.getLogger( SystemBootstrapper.class );
+  static Logger                     LOG = Logger.getLogger( SystemBootstrapper.class );
   
   private static SystemBootstrapper singleton;
   private static ThreadGroup        singletonGroup;
@@ -108,14 +108,17 @@ public class SystemBootstrapper {
     return singleton;
   }
   
-  public SystemBootstrapper( ) {}
+  public SystemBootstrapper( ) {
+//    BootstrapClassLoader.init( );
+  }
   
   public boolean init( ) throws Exception {
+//    BootstrapClassLoader.init( );
     Logs.init( );
     BootstrapArgs.init( );
     Security.addProvider( new BouncyCastleProvider( ) );
     try {
-      if( !BootstrapArgs.isInitializeSystem( ) ) {
+      if ( !BootstrapArgs.isInitializeSystem( ) ) {
         Bootstrap.init( );
         Bootstrap.Stage stage = Bootstrap.transition( );
         stage.load( );
@@ -131,14 +134,15 @@ public class SystemBootstrapper {
       return false;
     }
   }
-
+  
   public boolean load( ) throws Throwable {
-    if( BootstrapArgs.isInitializeSystem( ) ) {
+//    BootstrapClassLoader.init( );
+    if ( BootstrapArgs.isInitializeSystem( ) ) {
       try {
         Bootstrap.initializeSystem( );
         System.exit( 0 );
       } catch ( Throwable ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
         System.exit( 1 );
       }
     } else {
@@ -166,6 +170,7 @@ public class SystemBootstrapper {
   }
   
   public boolean start( ) throws Throwable {
+//    BootstrapClassLoader.init( );
     try {
       /** @NotNull */
       Bootstrap.Stage stage = Bootstrap.transition( );

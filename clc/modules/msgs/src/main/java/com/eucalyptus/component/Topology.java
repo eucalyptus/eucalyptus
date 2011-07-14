@@ -80,6 +80,7 @@ import com.eucalyptus.component.TopologyChanges.CloudTopologyCallables;
 import com.eucalyptus.component.TopologyChanges.RemoteTopologyCallables;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceId;
+import com.eucalyptus.empyrean.ServiceTransitionType;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
@@ -107,6 +108,15 @@ public class Topology implements EventListener<Event> {
     super( );
     this.currentEpoch = i;
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
+  }
+  
+  public static void touch( ServiceTransitionType msg ) {
+    if ( !BootstrapArgs.isCloudController( ) ) {
+      Integer msgEpoch = msg.get_epoch( );
+      Topology.getInstance( ).currentEpoch = ( Topology.getInstance( ).currentEpoch > msgEpoch )
+        ? Topology.getInstance( ).currentEpoch
+        : msgEpoch;
+    }
   }
   
   public static Topology getInstance( ) {

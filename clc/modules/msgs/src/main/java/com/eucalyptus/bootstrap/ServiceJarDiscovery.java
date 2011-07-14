@@ -2,6 +2,7 @@ package com.eucalyptus.bootstrap;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -15,14 +16,17 @@ import java.util.SortedSet;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import javax.persistence.PersistenceContext;
+import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import org.jibx.binding.Loader;
+import org.jibx.binding.Utility;
 import org.jibx.runtime.JiBXException;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.BaseDirectory;
+import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Function;
 import com.google.common.collect.ArrayListMultimap;
@@ -34,10 +38,10 @@ import com.google.common.collect.Sets;
  * TODO: DOCUMENT
  */
 public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscovery> {
-  private static Logger                         LOG        = Logger.getLogger( ServiceJarDiscovery.class );
-  private static SortedSet<ServiceJarDiscovery> discovery  = Sets.newTreeSet( );
-  private static Multimap<Class, String>        classList  = ArrayListMultimap.create( );
-  private static final Loader                   jibxLoader = initClassloader( );
+  private static Logger                         LOG         = Logger.getLogger( ServiceJarDiscovery.class );
+  private static SortedSet<ServiceJarDiscovery> discovery   = Sets.newTreeSet( );
+  private static Multimap<Class, String>        classList   = ArrayListMultimap.create( );
+  private static List<String>                   bindingList = Lists.newArrayList( );
   
   enum JarFilePass {
     BINDINGS {
@@ -50,14 +54,8 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
         for ( final JarEntry j : jarList ) {
           try {
             if ( j.getName( ).matches( ".*\\-binding.xml" ) ) {
-              try {
-                LOG.info( "Loading binding from: " + f.getAbsolutePath( ) + "!/" + j.getName( ) );
-                jibxLoader.loadResourceBinding( j.getName( ) );
-              } catch ( JiBXException ex ) {
-                LOG.error( ex, ex );
-              } catch ( IOException ex ) {
-                LOG.error( ex, ex );
-              }
+              LOG.info( "Loading binding from: " + f.getAbsolutePath( ) + "!/" + j.getName( ) );
+              bindingList.add( j.getName( ) );
             }
           } catch ( RuntimeException ex ) {
             LOG.error( ex, ex );
@@ -110,19 +108,6 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
       
     };
     public abstract void process( final File f ) throws Exception;
-  }
-  
-
-  
-  private static Loader initClassloader( ) {
-    try {
-      Loader jibxLoader = new Loader( );
-      return jibxLoader;
-    } catch ( MalformedURLException ex ) {
-      LOG.error( ex, ex );
-      System.exit( 1 );
-      throw new Error( ex );
-    }
   }
   
   private static void doDiscovery( ) {
@@ -226,7 +211,32 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   }
   
   public static void compileBindings( ) {
-
+    BootstrapClassLoader jibxLoader = BootstrapClassLoader.getInstance( );
+    final File libDir = new File( BaseDirectory.LIB.toString( ) );
+    for ( final File f : libDir.listFiles( ) ) {
+      if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
+           && !f.getName( ).matches( ".*-ext-.*" ) ) {
+        EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_SERVICE_JAR, f.getName( ) ).info( );
+        try {
+//          ServiceJarDiscovery.JarFilePass.BINDINGS.process( f );
+        } catch ( final Throwable e ) {
+          Bootstrap.LOG.error( e.getMessage( ) );
+          continue;
+        }
+      }
+    }
+    try {
+      for ( String binding : bindingList ) {
+        jibxLoader.loadResourceBinding( binding ); 
+      }
+      jibxLoader.processBindings( );
+    } catch ( JiBXException ex ) {
+      LOG.error( ex, ex );
+      throw new Error( "Failed to prepare the system while trying to compile bindings: " + ex.getMessage( ), ex );
+    } catch ( IOException ex ) {
+      LOG.error( ex, ex );
+      throw new Error( "Failed to prepare the system while trying to compile bindings: " + ex.getMessage( ), ex );
+    }
   }
   
   public static void processLibraries( ) {

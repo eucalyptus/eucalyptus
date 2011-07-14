@@ -74,6 +74,7 @@ import com.eucalyptus.scripting.groovy.GroovyUtil;
 public enum SubDirectory {
   DB( BaseDirectory.VAR, "db" ),
   TX( BaseDirectory.HOME, "/var/run/eucalyptus/tx" ),
+  CLASSCACHE( BaseDirectory.HOME, "/var/run/eucalyptus/classcache" ),
   WWW( BaseDirectory.CONF, "www" ),
   WEBAPPS( BaseDirectory.VAR, "webapps" ),
   KEYS( BaseDirectory.VAR, "keys" ),
