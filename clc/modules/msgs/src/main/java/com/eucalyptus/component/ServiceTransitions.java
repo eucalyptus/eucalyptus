@@ -105,7 +105,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
 public class ServiceTransitions {
-  static Logger            LOG                                  = Logger.getLogger( ServiceTransitions.class );
+  static Logger LOG = Logger.getLogger( ServiceTransitions.class );
   
   interface ServiceTransitionCallback {
     public void fire( ServiceConfiguration parent ) throws Throwable;
@@ -168,7 +168,7 @@ public class ServiceTransitions {
                                                  Component.State.ENABLED );
     } else {
       transition = Automata.sequenceTransitions( config,
-                                                 Component.State.ENABLED ,
+                                                 Component.State.ENABLED,
                                                  Component.State.ENABLED );
     }
     return executeTransition( config, transition );
@@ -262,14 +262,21 @@ public class ServiceTransitions {
     try {
       if ( parent.isVmLocal( ) || ( parent.isHostLocal( ) && BootstrapArgs.isCloudController( ) ) ) {
         try {
-          trans = LocalTransitionCallbacks.valueOf( transitionAction.name( ) );
+          trans = ServiceLocalTransitionCallbacks.valueOf( transitionAction.name( ) );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+          throw ex;
+        }
+      } else if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
+        try {
+          trans = ServiceRemoteTransitionNotification.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
           throw ex;
         }
       } else if ( BootstrapArgs.isCloudController( ) ) {
         try {
-          trans = RemoteTransitionCallbacks.valueOf( transitionAction.name( ) );
+          trans = CloudRemoteTransitionCallbacks.valueOf( transitionAction.name( ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
           throw ex;
@@ -352,7 +359,7 @@ public class ServiceTransitions {
     
   }
   
-  enum RemoteTransitionCallbacks implements ServiceTransitionCallback {
+  enum CloudRemoteTransitionCallbacks implements ServiceTransitionCallback {
     LOAD {
       
       @Override
@@ -458,7 +465,7 @@ public class ServiceTransitions {
     
   }
   
-  enum LocalTransitionCallbacks implements ServiceTransitionCallback {
+  enum ServiceLocalTransitionCallbacks implements ServiceTransitionCallback {
     LOAD {
       
       @Override
@@ -522,6 +529,77 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration parent ) throws Throwable {
         parent.lookupComponent( ).getBootstrapper( ).stop( );
         parent.lookupComponent( ).getBuilder( ).fireStop( parent );
+      }
+    };
+    
+  }
+  
+  enum ServiceRemoteTransitionNotification implements ServiceTransitionCallback {
+    LOAD {
+      
+      @Override
+      public void fire( final ServiceConfiguration parent ) throws Throwable {}
+    },
+    DESTROY {
+      
+      @Override
+      public void fire( final ServiceConfiguration parent ) throws Throwable {}
+    },
+    CHECK {
+      
+      @Override
+      public void fire( final ServiceConfiguration parent ) throws Throwable {
+        try {
+          parent.lookupBuilder( ).fireCheck( parent );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+      
+    },
+    START {
+      
+      @Override
+      public void fire( final ServiceConfiguration parent ) throws Throwable {
+        try {
+          parent.lookupComponent( ).getBuilder( ).fireStart( parent );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+    },
+    ENABLE {
+      
+      @Override
+      public void fire( final ServiceConfiguration parent ) throws Throwable {
+        try {
+          parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+        
+      }
+    },
+    DISABLE {
+      
+      @Override
+      public void fire( final ServiceConfiguration parent ) throws Throwable {
+        try {
+          parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+    },
+    STOP {
+      
+      @Override
+      public void fire( final ServiceConfiguration parent ) throws Throwable {
+        try {
+          parent.lookupComponent( ).getBuilder( ).fireStop( parent );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
       }
     };
     

@@ -101,7 +101,6 @@ public class Topology implements EventListener<Event> {
   private Integer                                               currentEpoch   = 0;                                                                      //TODO:GRZE: get the right initial epoch value from membership bootstrap
   private TransitionGuard                                       guard;
   private final ConcurrentMap<ServiceKey, ServiceConfiguration> services       = new ConcurrentSkipListMap<Topology.ServiceKey, ServiceConfiguration>( );
-  private final Map<ServiceKey, ServiceConfiguration>           activeservices = new ConcurrentSkipListMap<Topology.ServiceKey, ServiceConfiguration>( );
   
   private Topology( ) {
     super( );
