@@ -114,6 +114,9 @@ public class Internets {
       laddr = Internets.getAllInetAddresses( ).get( 0 );
     }
     LOG.info( "==> Decided to use local bind address: " + laddr );
+    System.setProperty( "bind.address", laddr.getHostAddress( ) );
+    System.setProperty( "jgroups.bind_addr", laddr.getHostAddress( ) );
+    System.setProperty( "jgroups.udp.bind_addr", laddr.getHostAddress( ) );
     
     return laddr;
   }

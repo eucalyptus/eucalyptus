@@ -139,7 +139,7 @@
 	<classpathentry kind="lib" path="lib/jetty6-servlet-tester-6.1.19.jar"/>
 	<classpathentry kind="lib" path="lib/jetty6-sslengine-6.1.19.jar"/>
 	<classpathentry kind="lib" path="lib/jetty6-util-6.1.19.jar"/>
-	<classpathentry kind="lib" path="lib/jgroups-2.11.1.Final.jar" sourcepath="/bzr/third-party/JGroups-2.11.0.GA.src"/>
+	<classpathentry kind="lib" path="lib/jgroups-2.11.1.Final.jar" sourcepath="/bzr/third-party/jgroups-sources-2.11.1.jar"/>
 	<classpathentry kind="lib" path="lib/jibx-bind-1.2.3.jar" sourcepath="/bzr/third-party/jibx-1.2.2"/>
 	<classpathentry kind="lib" path="lib/jibx-extras-1.2.3.jar"/>
 	<classpathentry kind="lib" path="lib/jibx-run-1.2.3.jar"/>

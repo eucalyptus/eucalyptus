@@ -167,7 +167,10 @@ public class Protocols {
                                                                  
                                                                  @Override
                                                                  public Protocol get( ) {
-                                                                   return new FD_SOCK( );
+                                                                   FD_SOCK protocol = new FD_SOCK( );
+                                                                   protocol.setValue( "start_port", 65218 );
+                                                                   protocol.setValue( "bind_addr", Internets.localHostAddress( ) );
+                                                                   return protocol;
                                                                  }
                                                                };
   private static final Supplier<Protocol> fd                   = new Supplier<Protocol>( ) {
