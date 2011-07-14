@@ -115,7 +115,7 @@ public class Protocols {
                                                                    try {
                                                                      protocol.setBindAddress( Internets.localHostAddress( ) );
                                                                      protocol.setBindPort( 8773 );
-                                                                     protocol.setBindToAllInterfaces( true );
+                                                                     protocol.setBindToAllInterfaces( false );
                                                                    } catch ( UnknownHostException ex ) {
                                                                      LOG.error( ex, ex );
                                                                    }
@@ -168,7 +168,6 @@ public class Protocols {
                                                                  @Override
                                                                  public Protocol get( ) {
                                                                    FD_SOCK protocol = new FD_SOCK( );
-                                                                   protocol.setValue( "start_port", 65218 );
                                                                    protocol.setValue( "bind_addr", Internets.localHostInetAddress( ) );
                                                                    return protocol;
                                                                  }
