@@ -25,6 +25,7 @@ public class DatabaseServiceConfigurationProvider<T extends ServiceConfiguration
       existingHosts = db.query( searchConfig );
       db.rollback( );
     } catch ( Exception e ) {
+      db.rollback( );
       existingHosts = Lists.newArrayList( );
     }    
     return existingHosts;
@@ -39,6 +40,7 @@ public class DatabaseServiceConfigurationProvider<T extends ServiceConfiguration
       db.rollback( );
       return existingName;
     } catch ( Exception e ) {
+      db.rollback( );
       throw new ServiceRegistrationException( "Component lookup failed for: " + LogUtil.dumpObject( type ) );
     }    
   }
