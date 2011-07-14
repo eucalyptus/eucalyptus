@@ -29,7 +29,6 @@ import org.bouncycastle.openssl.PEMReader;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import java.security.cert.X509Certificate;
 import com.eucalyptus.auth.util.X509CertHelper;
@@ -76,6 +75,13 @@ import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageStatsInfo;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 
+// SAN
+import edu.ucsb.eucalyptus.cloud.entities.NetappInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SANInfo;
+import edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo;
+import edu.ucsb.eucalyptus.cloud.entities.IgroupInfo;
+import edu.ucsb.eucalyptus.cloud.entities.DASInfo;
+
 // Walrus
 import edu.ucsb.eucalyptus.cloud.entities.BucketInfo;
 import edu.ucsb.eucalyptus.cloud.entities.GrantInfo;
@@ -106,6 +112,7 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.State;
+import com.eucalyptus.util.Internets;
 
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
@@ -146,7 +153,9 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     public void upgrade(File oldEucaHome, File newEucaHome) {
         // Do this in stages and bail out if something goes seriously wrong.
         // TODO: Perhaps we should raise an appropriate exception.
-        if (!upgradeAuth()) {
+        if (!upgradeCluster(oldEucaHome)) {
+            return;
+        } else if (!upgradeAuth()) {
             return;
         } else if (!upgradeKeyPairs()) {
             return;
@@ -154,9 +163,9 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             return;
         } else if (!upgradeWalrus()) {
             return;
-        } else if (!upgradeCluster(oldEucaHome)) {
-            return;
         } else if (!upgradeStorage()) {
+            return;
+        } else if (!upgradeSAN()) {
             return;
         }
         
@@ -515,6 +524,9 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             image_conn.rows("""SELECT * FROM Volume WHERE username=${ it.auth_user_name }""").each { vol ->
                 EntityWrapper<Volume> dbVol = EntityWrapper.get(Volume.class);
                 def vol_meta = stor_conn.firstRow("""SELECT * FROM Volumes WHERE volume_name=${ vol.displayname }""");
+                if (vol.cluster == "default") {
+                    vol.cluster = System.getProperty("euca.storage.name");
+                }
                 // Second "vol.cluster" is partition name
                 Volume v = new Volume( ufn, vol.displayname, vol.size, vol.cluster, vol.cluster, vol.parentsnapshot );
                 initMetaClass(v, v.class);
@@ -692,6 +704,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         gen_conn.rows('SELECT * FROM metadata_network_group').each {
             EntityWrapper<NetworkRulesGroup> dbGen = EntityWrapper.get(NetworkRulesGroup.class);
             try {
+                // Why is this broken on Ubuntu?
                 UserFullName ufn = UserFullName.getInstance(userIdMap.get(it.metadata_user_name));
                 def uniqueName = "${ it.metadata_user_name }_${it.metadata_display_name}";
                 if ( it.metadata_user_name == 'admin' && it.metadata_display_name == 'default' ) {
@@ -780,6 +793,37 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         dbIvi.commit();
         return true;
     }
+
+    public boolean upgradeSAN() {
+        def stor_conn = StandalonePersistence.getConnection("eucalyptus_storage");
+        EntityWrapper<SANVolumeInfo> dbsvi = EntityWrapper.get(SANVolumeInfo.class);
+        stor_conn.rows('SELECT * FROM EquallogicVolumeInfo').each{
+            SANVolumeInfo sanvol = new SANVolumeInfo(it.volumeId, it.iqn, it.size);
+            initMetaClass(sanvol, sanvol.class);
+            sanvol.setStoreUser(it.storeUser);
+            sanvol.setScName(it.scName);
+            sanvol.setEncryptedPassword(it.encryptedPassword);
+            sanvol.setStatus(it.status);
+            sanvol.setSnapshotOf(it.snapshot_of);
+            dbsvi.add(sanvol);
+        }
+        dbsvi.commit()
+
+        EntityWrapper<IgroupInfo> dbigroup = EntityWrapper.get(IgroupInfo.class);
+        stor_conn.rows('SELECT * FROM Igroups').each{
+            IgroupInfo igroup = new IgroupInfo(it.igroup_name, it.volume_name, it.iqn);
+            dbigroup.add(igroup);
+        }
+        dbigroup.commit();
+
+        EntityWrapper<SANInfo> dbsaninfo = EntityWrapper.get(SANInfo.class);
+        stor_conn.rows('SELECT * FROM san_info').each{
+            SANInfo s = new SANInfo(it.storage_name, it.san_host, it.san_user, it.san_password);
+            dbsaninfo.add(s);
+        }
+        dbsaninfo.commit();
+        return true;
+    }
     
     public boolean upgradeCluster(oldEucaHome) {
         def oldHome = System.getProperty( "euca.upgrade.old.dir" );
@@ -820,6 +864,9 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             EntityWrapper<StorageControllerConfiguration> dbSC = EntityWrapper.get(StorageControllerConfiguration.class);
             // First argument is partition name
             StorageControllerConfiguration sc = new StorageControllerConfiguration(it.config_component_name, it.config_component_name, it.config_component_hostname, it.config_component_port);
+            if (it.config_component_port == -1 || Internets.testLocal(it.config_component_hostname)) {
+                System.setProperty('euca.storage.name', it.config_component_name);
+            }
             dbSC.add(sc);
             dbSC.commit();
         }
@@ -847,6 +894,9 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         entities.add(DirectStorageInfo.class);
         entities.add(StorageInfo.class);
         entities.add(StorageStatsInfo.class);
+        // Below are for enterprise only
+        entities.add(NetappInfo.class);
+        entities.add(DASInfo.class);
 
         // eucalyptus_walrus
         entities.add(ImageCacheInfo.class);

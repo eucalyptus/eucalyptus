@@ -63,11 +63,23 @@
 
 package com.eucalyptus.component.id;
 
+import java.net.InetAddress;
+import java.util.concurrent.ExecutionException;
+import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.HostManager;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.util.Internets;
 
 public class Eucalyptus extends ComponentId.Unpartioned {
-  public static final Eucalyptus INSTANCE = new Eucalyptus( ); //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
-                                                                
+  public static final Eucalyptus INSTANCE = new Eucalyptus( );                   //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
+  private static Logger          LOG      = Logger.getLogger( Eucalyptus.class );
+  
   @Override
   public String getLocalEndpointName( ) {
     return "vm://EucalyptusRequestQueue";
@@ -83,4 +95,42 @@ public class Eucalyptus extends ComponentId.Unpartioned {
     return true;
   }
   
+  public static boolean setupServiceDependencies( InetAddress addr ) {
+    if ( !Internets.testLocal( addr ) && !Internets.testReachability( addr ) ) {
+      LOG.warn( "Failed to reach host for cloud controller: " + addr );
+      return false;
+    } else {
+      try {
+        setupServiceState( addr, Eucalyptus.INSTANCE );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        return false;
+      }
+      for ( ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
+        try {
+          if ( compId.isCloudLocal( ) && !compId.isRegisterable( ) ) {
+            setupServiceState( addr, compId );
+          }
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+      return true;
+    }
+    
+  }
+  
+  private static void setupServiceState( InetAddress addr, ComponentId compId ) throws ServiceRegistrationException, ExecutionException {
+    try {
+      Component comp = Components.lookup( compId );
+      ServiceConfiguration config = ( Internets.testLocal( addr ) )
+        ? comp.initRemoteService( addr )
+        : comp.initRemoteService( addr );//TODO:GRZE:REVIEW: use of initRemote
+      if ( Component.State.INITIALIZED.ordinal( ) >= config.lookupState( ).ordinal( ) ) {
+        comp.loadService( config ).get( );
+      }
+    } catch ( InterruptedException ex ) {
+      Thread.currentThread( ).interrupt( );
+    }
+  }
 }

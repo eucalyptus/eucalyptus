@@ -67,8 +67,9 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapException;
-import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.Logs;
 
 public class BindingManager {
   
@@ -98,8 +99,8 @@ public class BindingManager {
     if ( !BindingManager.bindingMap.containsKey( bindingName ) ) {
       try {
         BindingManager.getBinding( bindingName ).seed( seedClass );
-        LOG.debug( "Seeding binding " + bindingName + " for class " + seedClass.getCanonicalName( ) );
-        EventRecord.here( BindingManager.class, EventType.BINDING_SEEDED, bindingName, seedClass.getName( ) ).info( );
+        Logs.exhaust( ).trace( "Seeding binding " + bindingName + " for class " + seedClass.getCanonicalName( ) );
+        EventRecord.here( BindingManager.class, EventType.BINDING_SEEDED, bindingName, seedClass.getName( ) ).trace( );
         return true;
       } catch ( BindingException e ) {
         throw BootstrapException.error( "Failed to seed binding " + bindingName + " with class " + seedClass, e );

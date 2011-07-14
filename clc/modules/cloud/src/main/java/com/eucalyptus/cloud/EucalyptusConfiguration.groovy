@@ -73,7 +73,7 @@ import javax.persistence.Transient
 import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.hibernate.annotations.Entity
-import com.eucalyptus.bootstrap.Bootstrap
+import com.eucalyptus.bootstrap.BootstrapArgs
 import com.eucalyptus.component.ComponentPart
 import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.config.ComponentConfiguration
@@ -93,6 +93,6 @@ public class EucalyptusConfiguration extends ComponentConfiguration implements S
   }
   @Override
   public Boolean isVmLocal( ) {
-    return Bootstrap.isCloudController( );
+    return BootstrapArgs.isCloudController( );
   }
 }

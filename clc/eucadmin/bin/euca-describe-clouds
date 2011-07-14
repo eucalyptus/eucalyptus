@@ -29,5 +29,5 @@
 import eucadmin.describeclouds
 
 if __name__ == "__main__":
-    r = eucadmin.describeclouds.DescribeClouds()
+    r = eucadmin.describeclouds.DescribeEucalyptus()
     r.main_cli()
