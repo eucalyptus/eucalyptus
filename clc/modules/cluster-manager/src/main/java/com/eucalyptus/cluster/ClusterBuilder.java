@@ -16,7 +16,6 @@ import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.DeregisterClusterType;
 import com.eucalyptus.config.DescribeClustersType;
 import com.eucalyptus.config.ModifyClusterAttributeType;
@@ -60,7 +59,7 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     try {
       Partition part = Partitions.lookup( config );
       part.syncKeysToDisk( );
-      ServiceConfigurations.getInstance( ).store( config );
+      ServiceConfigurations.store( config );
     } catch ( ServiceRegistrationException ex ) {
 //      Partitions.maybeRemove( config.getPartition( ) );//TODO:GRZE:restore
       throw ex;

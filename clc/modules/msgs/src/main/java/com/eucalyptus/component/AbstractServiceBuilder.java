@@ -86,7 +86,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
   
   @Override
   public List<T> list( ) throws ServiceRegistrationException {
-    return ServiceConfigurations.getInstance( ).list( this.newInstance( ) );
+    return ServiceConfigurations.list( this.newInstance( ) );
   }
   
   @Override
@@ -94,21 +94,21 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     T conf = this.newInstance( );
     conf.setName( name );
     conf.setPartition( partition );
-    return ( T ) ServiceConfigurations.getInstance( ).lookup( conf );
+    return ( T ) ServiceConfigurations.lookup( conf );
   }
   
   @Override
   public T lookupByName( String name ) throws ServiceRegistrationException {//TODO:GRZE:RELEASE fix the name uniqueness checking here.
     T conf = this.newInstance( );
     conf.setName( name );
-    return ( T ) ServiceConfigurations.getInstance( ).lookup( conf );
+    return ( T ) ServiceConfigurations.lookup( conf );
   }
   
   @Override
   public T lookupByHost( String hostName ) throws ServiceRegistrationException {
     T conf = this.newInstance( );
     conf.setHostName( hostName );
-    return ( T ) ServiceConfigurations.getInstance( ).lookup( conf );
+    return ( T ) ServiceConfigurations.lookup( conf );
   }
   
   @Override
@@ -150,13 +150,13 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
   @Override
   public T add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     T config = this.newInstance( partition, name, host, port );
-    return ( T ) ServiceConfigurations.getInstance( ).store( config );
+    return ( T ) ServiceConfigurations.store( config );
   }
   
   @Override
   public T remove( ServiceConfiguration config ) throws ServiceRegistrationException {
     T removeConf = this.lookupByName( config.getName( ) );
-    return ( T ) ServiceConfigurations.getInstance( ).remove( removeConf );
+    return ( T ) ServiceConfigurations.remove( removeConf );
   }
   
 }

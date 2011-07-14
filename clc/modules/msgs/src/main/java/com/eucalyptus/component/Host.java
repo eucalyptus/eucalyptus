@@ -87,21 +87,23 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   private AtomicLong                 timestamp = new AtomicLong( System.currentTimeMillis( ) );
   private Long                       lastTime  = 0l;
   private ServiceConfiguration       serviceConfiguration;
+  private Integer                    epoch;
   
-  Host( Address jgroupsId, InetAddress bindAddress, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> hostAddresses, ServiceConfiguration configuration ) {
+  Host( Address jgroupsId, InetAddress bindAddress, Integer epoch, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> hostAddresses, ServiceConfiguration configuration ) {
     this.groupsId = jgroupsId;
     this.serviceConfiguration = configuration;
     this.bindAddress = bindAddress;
-    this.update( hasDb, hasBootstrapped, hostAddresses );
+    this.update( epoch, hasDb, hasBootstrapped, hostAddresses );
   }
   
   Host( Address jgroupsId ) {
     this.groupsId = HostManager.getInstance( ).getMembershipChannel( ).getAddress( );
     this.bindAddress = Internets.localHostInetAddress( );
-    this.update( BootstrapArgs.isCloudController( ), false, Internets.getAllInetAddresses( ) );
+    this.update( Topology.epoch( ), BootstrapArgs.isCloudController( ), false, Internets.getAllInetAddresses( ) );
   }
   
-  synchronized void update( Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> addresses ) {
+  synchronized void update( Integer epoch, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> addresses ) {
+    this.epoch = epoch;
     this.lastTime = this.timestamp.getAndSet( System.currentTimeMillis( ) );
     Logs.exhaust( ).debug( "Applying update for host: " + this );
     ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( addresses ) );
@@ -188,6 +190,14 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   
   public void markBootstrapped( ) {
     this.hasBootstrapped = hasBootstrapped;
+  }
+
+  public Integer getEpoch( ) {
+    return this.epoch;
+  }
+
+  public void setEpoch( Integer epoch ) {
+    this.epoch = epoch;
   }
   
 }

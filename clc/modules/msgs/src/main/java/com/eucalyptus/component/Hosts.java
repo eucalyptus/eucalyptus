@@ -124,7 +124,7 @@ public class Hosts {
     } else {
       ret = hostMap.get( localJgroupsId );
     }
-    ret.update( BootstrapArgs.isCloudController( ), Bootstrap.isFinished( ), Internets.getAllInetAddresses( ) );
+    ret.update( Topology.epoch( ), BootstrapArgs.isCloudController( ), Bootstrap.isFinished( ), Internets.getAllInetAddresses( ) );
     return ret;
   }
   
@@ -158,7 +158,7 @@ public class Hosts {
       Host entry = null;
       if ( hostMap.containsKey( updatedHost.getGroupsId( ) ) ) {
         entry = hostMap.get( updatedHost.getGroupsId( ) );
-        entry.update( updatedHost.hasDatabase( ), updatedHost.hasBootstrapped( ), updatedHost.getHostAddresses( ) );
+        entry.update( updatedHost.getEpoch( ), updatedHost.hasDatabase( ), updatedHost.hasBootstrapped( ), updatedHost.getHostAddresses( ) );
       } else {
         Component empyrean = Components.lookup( Empyrean.class );
         ComponentId empyreanId = empyrean.getComponentId( );
@@ -168,7 +168,9 @@ public class Hosts {
             try {
               ServiceConfiguration config = empyrean.initRemoteService( addr );
               empyrean.loadService( ephemeralConfig ).get( );
-              entry = new Host( updatedHost.getGroupsId( ), updatedHost.getBindAddress( ), updatedHost.hasDatabase( ), updatedHost.hasBootstrapped( ),
+              entry = new Host( updatedHost.getGroupsId( ), updatedHost.getBindAddress( ), updatedHost.getEpoch( ), 
+                                updatedHost.hasDatabase( ),
+                                updatedHost.hasBootstrapped( ),
                                 updatedHost.getHostAddresses( ), config );
               Host temp = hostMap.putIfAbsent( entry.getGroupsId( ), entry );
               if ( temp == null ) {

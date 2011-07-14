@@ -2,6 +2,7 @@ package com.eucalyptus.component;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -28,7 +29,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-public abstract class ComponentId implements HasName<ComponentId>, HasFullName<ComponentId> {
+public abstract class ComponentId implements HasName<ComponentId>, HasFullName<ComponentId>, Serializable {
   private static Logger       LOG         = Logger.getLogger( ComponentId.class );
   private static final String EMPTY_MODEL = "  <mule xmlns=\"http://www.mulesource.org/schema/mule/core/2.0\"\n"
                                             +

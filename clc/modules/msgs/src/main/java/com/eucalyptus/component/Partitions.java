@@ -72,6 +72,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.component.Partition.Fake;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.EntityWrapper;
@@ -182,6 +183,10 @@ public class Partitions {
   
   @Deprecated
   public static ServiceConfiguration lookupService( Class<? extends ComponentId> compClass, String partition ) {
+    return lookupService( compClass, Partitions.lookupByName( partition ) );
+  }
+
+  public static ServiceConfiguration lookupService( Class<? extends ComponentId> compClass, Partition partition ) {
     NavigableSet<ServiceConfiguration> services = Components.lookup( compClass ).enabledPartitionServices( partition );
     if ( services.isEmpty( ) ) {
       throw new NoSuchElementException( "Failed to find service of type: " + compClass.getSimpleName( ) + " in partition: " + partition );

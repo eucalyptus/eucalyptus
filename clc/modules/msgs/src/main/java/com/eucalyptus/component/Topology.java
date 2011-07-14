@@ -490,7 +490,7 @@ public class Topology implements EventListener<Event> {
       
       @Override
       public void run( ) {
-        List<ServiceConfiguration> checkServicesList = ServiceConfigurations.collect( new Predicate<ServiceConfiguration>( ) {
+        List<ServiceConfiguration> checkServicesList = Services.collect( new Predicate<ServiceConfiguration>( ) {
           
           @Override
           public boolean apply( ServiceConfiguration arg0 ) {
@@ -579,7 +579,7 @@ public class Topology implements EventListener<Event> {
               }
             }
           };
-          List<ServiceConfiguration> failoverServicesList = ServiceConfigurations.collect( predicate );
+          List<ServiceConfiguration> failoverServicesList = Services.collect( predicate );
           Logs.exhaust( ).debug( "FAILOVER ================================\n" + Joiner.on( "\n\t" ).join( failoverServicesList ) );
           for ( ServiceConfiguration config : failoverServicesList ) {
             try {

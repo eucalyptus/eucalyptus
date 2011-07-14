@@ -70,9 +70,10 @@ import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.config.WalrusConfiguration;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.BaseDirectory;
@@ -149,11 +150,11 @@ public class StorageProperties {
 	}
 
 	public static void updateWalrusUrl() {
-		List<WalrusConfiguration> walrusConfigs;
+		List<ServiceConfiguration> walrusConfigs;
 		try {
-			walrusConfigs = ServiceConfigurations.getConfigurations( WalrusConfiguration.class );
+			walrusConfigs = ServiceConfigurations.list( Walrus.class );
 			if(walrusConfigs.size() > 0) {
-				WalrusConfiguration walrusConfig = walrusConfigs.get(0);
+			  ServiceConfiguration walrusConfig = walrusConfigs.get(0);
 				WALRUS_URL = walrusConfig.getUri().toASCIIString( );
 				StorageProperties.enableSnapshots = true;
 				LOG.info("Setting WALRUS_URL to: " + WALRUS_URL);

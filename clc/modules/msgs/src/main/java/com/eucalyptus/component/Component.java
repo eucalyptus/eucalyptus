@@ -381,13 +381,13 @@ public class Component implements HasName<Component> {
   }
   
   public NavigableSet<ServiceConfiguration> enabledServices( ) {
-    return Sets.newTreeSet( Iterables.filter( this.serviceRegistry.getServices( ), Components.Predicates.enabledService( ) ) );
+    return Sets.newTreeSet( Iterables.filter( this.serviceRegistry.getServices( ), Services.enabledService( ) ) );
   }
   
-  NavigableSet<ServiceConfiguration> enabledPartitionServices( final String partitionName ) {
+  NavigableSet<ServiceConfiguration> enabledPartitionServices( final Partition partition ) {
     Iterable<ServiceConfiguration> services = Iterables.filter( this.serviceRegistry.getServices( ),
-                                                                Predicates.and( Components.Predicates.enabledService( ),
-                                                                                Components.Predicates.serviceInPartition( partitionName ) ) );
+                                                                Predicates.and( Services.enabledService( ),
+                                                                                Services.serviceInPartition( partition ) ) );
     return Sets.newTreeSet( services );
   }
   

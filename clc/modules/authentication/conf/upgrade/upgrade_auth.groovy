@@ -9,7 +9,7 @@ import com.eucalyptus.auth.UserInfoStore;
 import com.eucalyptus.auth.Users;
 import com.eucalyptus.auth.util.AuthBootstrapHelper;
 import com.eucalyptus.auth.X509Cert;
-import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.upgrade.AbstractUpgradeScript;
