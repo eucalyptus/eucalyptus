@@ -824,6 +824,7 @@ static void * bundling_thread (void *arg)
 
 	int rc=OK;
 	char bundlePath[MAX_PATH];
+    bundlePath[0] = '\0';
         if (clone_bundling_backing(instance, params->filePrefix, bundlePath) != OK){
 		logprintfl(EUCAERROR, "bundling_thread: could not clone the instance image\n");
 	} else {

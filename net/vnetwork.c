@@ -1415,7 +1415,7 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
   if (stat(file, &statbuf) == 0) {
     char rootwrap[MAX_PATH];
     char *tmpstr=NULL;
-    int tmppid, tmpcount;
+    int tmppid = 0, tmpcount;
 
     snprintf(rootwrap, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", vnetconfig->eucahome);
     snprintf(buf, MAX_PATH, "%s/var/run/eucalyptus/net/euca-dhcp.pid", vnetconfig->eucahome);
@@ -1426,7 +1426,7 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
       tmppid = atoi(tmpstr);
       free(tmpstr);
     }
-    for (i=0; i<4 && tmppid == 0; i++) {
+    for (i=0; i<4 && tmppid <= 0; i++) {
       usleep(250000);
       tmpstr = file2str(buf);
       if (tmpstr) {
