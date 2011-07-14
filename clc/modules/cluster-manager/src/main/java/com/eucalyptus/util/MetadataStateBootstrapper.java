@@ -73,49 +73,21 @@ import com.eucalyptus.vm.VmType;
 
 @Provides( Eucalyptus.class )
 @RunDuring( Bootstrap.Stage.UserCredentialsInit )
-public class MetadataStateBootstrapper extends Bootstrapper {
+public class MetadataStateBootstrapper extends Bootstrapper.Simple {
   
   @Override
-  public boolean load( ) throws Exception {
+  public boolean start( ) throws Exception {
     ensureCountersExist( );
     ensureVmTypesExist( );
     return true;
   }
   
-  @Override
-  public boolean start( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public boolean enable( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public boolean stop( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  @Override
-  public boolean disable( ) throws Exception {
-    return true;
-  }
-  
-  @Override
-  public boolean check( ) throws Exception {
-    return true;
-  }
-
   private static void ensureCountersExist( ) {
     Counters.getNextId( );
   }
-
+  
   private static void ensureVmTypesExist( ) {
-    EntityWrapper<VmType> db = EntityWrapper.get(VmType.class);
+    EntityWrapper<VmType> db = EntityWrapper.get( VmType.class );
     try {
       if ( db.query( new VmType( ) ).size( ) == 0 ) { //TODO: make defaults configurable?
         db.add( new VmType( "m1.small", 1, 2, 128 ) );

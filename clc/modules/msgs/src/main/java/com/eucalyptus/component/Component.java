@@ -73,7 +73,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
@@ -180,7 +180,7 @@ public class Component implements HasName<Component> {
    * @return true if the component could be run locally.
    */
   public Boolean isAvailableLocally( ) {
-    return this.identity.isAlwaysLocal( ) || ( this.identity.isCloudLocal( ) && Bootstrap.isCloudController( ) ) || this.checkComponentParts( );
+    return this.identity.isAlwaysLocal( ) || ( this.identity.isCloudLocal( ) && BootstrapArgs.isCloudController( ) ) || this.checkComponentParts( );
   }
   
   private boolean checkComponentParts( ) {
@@ -296,13 +296,14 @@ public class Component implements HasName<Component> {
    * @throws ServiceRegistrationException
    */
   public ServiceConfiguration initRemoteService( InetAddress addr ) throws ServiceRegistrationException {
-    if( Internets.testLocal( addr ) ) {
-      throw new ServiceRegistrationException( "Skipping invalid attempt to init remote service configuration for host " + addr + " on component "
-                                              + this.getName( ) );
-    }
+////TODO:GRZE:REVIEW: should this handle local case for 2ndry clc?
+//    if( Internets.testLocal( addr ) ) {
+//      throw new ServiceRegistrationException( "Skipping invalid attempt to init remote service configuration for host " + addr + " on component "
+//                                              + this.getName( ) );
+//    }
     ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), addr.getHostAddress( ), addr.getHostAddress( ),
                                                                   this.getComponentId( ).getPort( ) );
-    this.serviceRegistry.register( config );
+    Service ret = this.serviceRegistry.register( config );
     LOG.debug( "Initializing remote service for host " + addr + " with configuration: " + config );
     return config;
   }
@@ -579,6 +580,15 @@ public class Component implements HasName<Component> {
         ret = service;
         try {
           ret.getStateMachine( ).transition( Component.State.INITIALIZED ).get( );
+          ListenerRegistry.getInstance( ).register( ClockTick.class, ret );
+          ListenerRegistry.getInstance( ).register( Hertz.class, ret );
+          EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_REGISTERED,
+                              Component.this.getName( ),
+                              ( config.isVmLocal( ) || config.isHostLocal( ) )
+                                ? "local"
+                                : "remote",
+                              config.toString( ) ).info( );
+          Logs.exhaust( ).debug( "Registered service " + ret + " for configuration: " + config );
         } catch ( IllegalStateException ex ) {
           LOG.error( ex , ex );
         } catch ( ExecutionException ex ) {
@@ -589,15 +599,6 @@ public class Component implements HasName<Component> {
           LOG.error( ex , ex );
         }
       }
-      ListenerRegistry.getInstance( ).register( ClockTick.class, ret );
-      ListenerRegistry.getInstance( ).register( Hertz.class, ret );
-      EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_REGISTERED,
-                          Component.this.getName( ),
-                          ( config.isVmLocal( ) || config.isHostLocal( ) )
-                            ? "local"
-                            : "remote",
-                          config.toString( ) ).info( );
-      Logs.exhaust( ).debug( "Registered service " + ret + " for configuration: " + config );
       return ret;
     }
     

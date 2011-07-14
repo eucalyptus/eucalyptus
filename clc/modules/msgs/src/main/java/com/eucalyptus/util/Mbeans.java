@@ -157,10 +157,10 @@ public class Mbeans {
     for( Class c : Classes.ancestry( targetType ) ) {
       File jmxConfig = SubDirectory.MANAGEMENT.getChildFile( c.getCanonicalName( ) );
       if(  jmxConfig.exists( ) ) {
-        LOG.debug( "Trying to read jmx config file: " + jmxConfig.getAbsolutePath( ) );
+        LOG.trace( "Trying to read jmx config file: " + jmxConfig.getAbsolutePath( ) );
         try {
           exportString = Files.toString( jmxConfig, Charset.defaultCharset( ) );
-          LOG.debug( "Succeeded reading jmx config file: " + jmxConfig.getAbsolutePath( ) );
+          LOG.trace( "Succeeded reading jmx config file: " + jmxConfig.getAbsolutePath( ) );
           break;
         } catch ( IOException ex ) {
           LOG.error( ex , ex );
@@ -169,8 +169,8 @@ public class Mbeans {
     }
     //TODO:GRZE:load class specific config here
     try {
-      LOG.debug( "Exporting MBean: " + obj );
-      LOG.debug( "Exporting MBean: " + exportString );
+      LOG.trace( "Exporting MBean: " + obj );
+      LOG.trace( "Exporting MBean: " + exportString );
       List<GroovyMBean> mbeans = ( List<GroovyMBean> ) GroovyUtil.eval( exportString, new HashMap( ) {
         {
           put( "jmx", jmxBuilder );
@@ -178,7 +178,7 @@ public class Mbeans {
         }
       } );
       for ( GroovyMBean mbean : mbeans ) {
-        LOG.info( "MBean server: default=" + mbean.server( ).getDefaultDomain( ) + " all=" + Arrays.asList( mbean.server( ).getDomains( ) ) );
+        LOG.trace( "MBean server: default=" + mbean.server( ).getDefaultDomain( ) + " all=" + Arrays.asList( mbean.server( ).getDomains( ) ) );
         LOG.trace( "Exported MBean: " + mbean );
       }
     } catch ( ScriptExecutionFailedException ex ) {

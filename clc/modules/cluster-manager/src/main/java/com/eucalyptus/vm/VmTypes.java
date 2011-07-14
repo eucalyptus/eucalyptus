@@ -61,7 +61,7 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
 import java.util.List;
 import java.util.NavigableSet;
@@ -69,17 +69,45 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.Image.StaticDiskImage;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.images.BlockStorageImageInfo;
+import com.eucalyptus.images.BootableImageInfo;
+import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.TypeMapper;
-import com.eucalyptus.vm.VmType;
 import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmTypes {
 
-  @TypeMapper
-  public enum InstanceStoreVmTypeInfoMapper implements Function<VmType, VmTypeInfo> {
+  public static VmTypeInfo asVmTypeInfo( VmType vmType, BootableImageInfo img ) throws EucalyptusCloudException {
+    Long imgSize = img.getImageSizeBytes( );
+    if ( imgSize > 1024l * 1024l * 1024l * vmType.getDisk( ) ) {
+      throw new EucalyptusCloudException( "image too large [size=" + imgSize / ( 1024l * 1024l ) + "MB] for instance type " + vmType.getName( ) + " [disk="
+                                          + vmType.getDisk( ) * 1024l + "MB]" );
+    }
+    VmTypeInfo vmTypeInfo = null;
+    if ( img instanceof StaticDiskImage ) {
+      if( Image.Platform.windows.equals( img.getPlatform( ) ) ) {
+        vmTypeInfo  = VmTypes.InstanceStoreWindowsVmTypeInfoMapper.INSTANCE.apply( vmType );
+      } else {
+        vmTypeInfo = VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( vmType );
+      }
+      vmTypeInfo.setRoot( img.getDisplayName( ), ( ( StaticDiskImage ) img ).getManifestLocation( ), imgSize );
+      vmTypeInfo.setEphemeral( 0, "/dev/sdb", vmType.getDisk( )*1024l*1024l*1024l - imgSize /**bytes**/ );
+    } else if ( img instanceof BlockStorageImageInfo ) {
+      vmTypeInfo = VmTypes.BlockStorageVmTypeInfoMapper.INSTANCE.apply( vmType );
+      vmTypeInfo.setEbsRoot( img.getDisplayName( ), null, imgSize );
+      vmTypeInfo.setEphemeral( 0, "/dev/sdb", vmType.getDisk( )*1024l*1024l*1024l /**bytes**/ );
+    } else {
+      throw new EucalyptusCloudException( "Failed to identify the root machine image type: " + img );
+    }
+    return vmTypeInfo;
+  }
+  
+  private enum InstanceStoreVmTypeInfoMapper implements Function<VmType, VmTypeInfo> {
     INSTANCE;
     
     @Override
@@ -92,7 +120,7 @@ public class VmTypes {
     }
   };
 
-  public enum InstanceStoreWindowsVmTypeInfoMapper implements Function<VmType, VmTypeInfo> {
+  private enum InstanceStoreWindowsVmTypeInfoMapper implements Function<VmType, VmTypeInfo> {
     INSTANCE;
     
     @Override
@@ -101,8 +129,7 @@ public class VmTypes {
     }
   };
 
-  @TypeMapper
-  public enum BlockStorageVmTypeInfoMapper implements Function<VmType, VmTypeInfo> {
+  private enum BlockStorageVmTypeInfoMapper implements Function<VmType, VmTypeInfo> {
     INSTANCE;
     
     @Override

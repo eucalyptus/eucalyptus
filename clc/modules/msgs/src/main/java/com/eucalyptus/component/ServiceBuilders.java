@@ -111,12 +111,12 @@ public class ServiceBuilders {
 
   
   static void addBuilder( Class c, ServiceBuilder b ) {
-    LOG.info( "Registered service builder for " + c.getSimpleName( ) + " -> " + b.getClass( ).getCanonicalName( ) );
+    LOG.trace( "Registered service builder for " + c.getSimpleName( ) + " -> " + b.getClass( ).getCanonicalName( ) );
     builders.put( c, b );
   }
 
   public static void addBuilder( ComponentId c, ServiceBuilder b ) {
-    LOG.info( "Registered service builder for " + c.name( ) + " -> " + b.getClass( ).getCanonicalName( ) );
+    LOG.trace( "Registered service builder for " + c.name( ) + " -> " + b.getClass( ).getCanonicalName( ) );
     componentBuilders.put( c, b );
   }
 

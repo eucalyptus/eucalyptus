@@ -3,6 +3,7 @@ package com.eucalyptus.webui.server;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
@@ -34,7 +35,9 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   private static final long serialVersionUID = 1L;
 
   private static final String WHITESPACE_PATTERN = "\\s+";
-    
+
+  private static final Random RANDOM = new Random( );
+  
   private static User verifySession( Session session ) throws EucalyptusServiceException {
     WebSession ws = WebSessionManager.getInstance( ).getSession( session.getId( ) );
     if ( ws == null ) {
@@ -53,13 +56,20 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     return sq;
   }
 
+  private static void randomDelay( ) {
+    try {
+      Thread.sleep( 200 + RANDOM.nextInt( 800 ) );
+    } catch ( Exception e ) { }
+  }
+  
   @Override
   public Session login( String accountName, String userName, String password ) throws EucalyptusServiceException {
+    // Simple thwart to automatic login attack.
+    randomDelay( );
     if ( Strings.isNullOrEmpty( accountName ) || Strings.isNullOrEmpty( userName ) || Strings.isNullOrEmpty( password ) ) {
       throw new EucalyptusServiceException( "Empty login or password" );
     }
     EuareWebBackend.checkPassword( EuareWebBackend.getUser( userName, accountName ), password );
-    try { Thread.sleep( 500 ); } catch ( Exception e ) { } // Simple thwart to automatic login attack.
     return new Session( WebSessionManager.getInstance( ).newSession( userName, accountName ) );
   }
 
@@ -431,7 +441,8 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   @Override
   public void signupAccount( String accountName, String password, String email ) throws EucalyptusServiceException {
-    try { Thread.sleep( 500 ); } catch ( Exception e ) { } // Simple thwart to automatic signup attack.
+    // Simple thwart to automatic signup attack.
+    randomDelay( );
     User admin = EuareWebBackend.createAccount( accountName, password, email );
     if ( admin != null ) {
       EuareWebBackend.notifyAccountRegistration( admin, accountName, email, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
@@ -465,7 +476,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   @Override
   public void signupUser( String userName, String accountName, String password, String email ) throws EucalyptusServiceException {
-    try { Thread.sleep( 500 ); } catch ( Exception e ) { } // Simple thwart to automatic signup attack.
+    randomDelay( );
     User user = EuareWebBackend.createUser( userName, accountName, password, email );
     if ( user != null ) {
       EuareWebBackend.notifyUserRegistration( user, accountName, email, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );

@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.LdapException;
+import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
@@ -189,9 +191,25 @@ public class EuareWebBackend {
   }
   
   public static void checkPassword( User user, String password ) throws EucalyptusServiceException {
-    if ( !user.getPassword( ).equals( Crypto.generateHashedPassword( password ) ) ) {
+    if ( LdapSync.enabled( ) ) {
+      authenticateLdap( user, password );
+    } else {
+      authenticateLocal( user, password );
+    }
+  }
+  
+  private static void authenticateLdap( User user, String password ) throws EucalyptusServiceException {
+    try {
+      LdapSync.authenticate( user, password );
+    } catch ( LdapException e ) {
       throw new EucalyptusServiceException( "Incorrect password" );
     }
+  }
+  
+  private static void authenticateLocal( User user, String password ) throws EucalyptusServiceException {
+    if ( !user.getPassword( ).equals( Crypto.generateHashedPassword( password ) ) ) {
+      throw new EucalyptusServiceException( "Incorrect password" );
+    }    
   }
   
   public static void changeUserPassword( User requestUser, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
