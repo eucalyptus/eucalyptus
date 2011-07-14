@@ -35,8 +35,8 @@ import eucadmin.command
 class ConfigFile(dict):
 
     ChangeCmd = r"""sed -i "s<^[[:blank:]#]*\(%s\).*<\1=\"%s\"<" %s"""
-    CommentCmd = r"""sed -i "s<^[[:blank:]]*\($%s.*\)<#\1<" %s"""
-    UncommentCmd = r"""sed -i "s<^[#[:blank:]]*\($%s.*\)<\1<" %s"""
+    CommentCmd = r"""sed -i "s<^[[:blank:]]*\(%s.*\)<#\1<" %s"""
+    UncommentCmd = r"""sed -i "s<^[#[:blank:]]*\(%s.*\)<\1<" %s"""
 
     def __init__(self, filepath, test=False):
         dict.__init__(self)
@@ -85,7 +85,7 @@ class ConfigFile(dict):
             del self[pattern]
 
     def uncomment(self, pattern):
-        self.backup()
+        self._backup()
         cmd_str = self.UncommentCmd % (pattern, self.path)
         cmd = eucadmin.command.Command(cmd_str)
         self['pattern'] = ''
