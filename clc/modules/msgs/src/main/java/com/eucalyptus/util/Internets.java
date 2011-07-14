@@ -91,9 +91,9 @@ import com.google.common.net.InetAddresses;
 
 public class Internets {
   private static Logger                                   LOG               = Logger.getLogger( Internets.class );
-  private static final String                             localId           = localHostIdentifier( );
   private static final ConcurrentMap<String, InetAddress> localHostAddrList = new ConcurrentHashMap<String, InetAddress>( );
   private static final InetAddress                        localHostAddr     = determineLocalAddress( );
+  private static final String                             localId           = localHostIdentifier( );
   
 //  public static List<InetAddress> localInetAddresses( ) {
 //    return localHostAddrList;
