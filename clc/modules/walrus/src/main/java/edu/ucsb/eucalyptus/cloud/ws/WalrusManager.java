@@ -437,9 +437,8 @@ public class WalrusManager {
 	}
 
 	private boolean checkBucketName(String bucketName) {
-		if(!(bucketName.matches("^[A-Za-z0-9].*") || bucketName.contains(".") || 
-				bucketName.contains("-")))
-			return false;
+                if(!bucketName.matches("^[a-z0-9][a-z0-9._-]+"))
+                        return false;
 		if(bucketName.length() < 3 || bucketName.length() > 255)
 			return false;
 		String[] addrParts = bucketName.split("\\.");

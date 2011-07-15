@@ -153,5 +153,4 @@ public class Lookups {
     }
     return Permissions.isAuthorized( vendor, resourceType, resourceId, account, action, requestUser );
   }
-  
 }
