@@ -93,11 +93,11 @@ MERGE2 mergeHandler = new MERGE2( );
 mergeHandler.setMaxInterval( 30000 );
 mergeHandler.setMinInterval( 10000 );
 
-//NAKACK negackBroadcast = new NAKACK( );
-//negackBroadcast.setUseMcastXmit( true );
-//negackBroadcast.setDiscardDeliveredMsgs( true );
-//negackBroadcast.setGcLag( 20 );
-//negackBroadcast.setMaxXmitBufSize( 50 );
+NAKACK negackBroadcast = new NAKACK( );
+negackBroadcast.setUseMcastXmit( false );
+negackBroadcast.setDiscardDeliveredMsgs( true );
+negackBroadcast.setGcLag( 20 );
+negackBroadcast.setMaxXmitBufSize( 50 );
 
 UNICAST reliableUnicast = new UNICAST( );
 
@@ -125,5 +125,5 @@ return [ udp,
   pingDiscovery,
   mergeHandler,
   new FD_SOCK(), new FD(), new VERIFY_SUSPECT(),
-  /*negackBroadcast, */new UNICAST(), stableBroadcast, 
+  negackBroadcast, new UNICAST(), stableBroadcast, 
   groupMembership ];
