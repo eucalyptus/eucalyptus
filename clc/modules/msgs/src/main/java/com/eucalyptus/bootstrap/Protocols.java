@@ -66,6 +66,7 @@ package com.eucalyptus.bootstrap;
 import java.net.UnknownHostException;
 import java.util.List;
 import org.apache.log4j.Logger;
+import org.jgroups.Header;
 import org.jgroups.conf.ClassConfigurator;
 import org.jgroups.protocols.BARRIER;
 import org.jgroups.protocols.FC;
@@ -92,8 +93,22 @@ public class Protocols {
   
   private static Logger LOG         = Logger.getLogger( Protocols.class );
   public static short   PROTOCOL_ID = 512;
+  public static short   HEADER_ID   = 1024;
   
-  private static String registerProtocol( Protocol p ) {
+  public static short lookupRegisteredId( Class c ) {
+    return ClassConfigurator.getMagicNumber( c );
+  }
+  
+  public static synchronized <T extends Header> String registerHeader( Class<T> h ) {
+    if ( ClassConfigurator.getMagicNumber( h ) == 0 ) {
+      ClassConfigurator.addProtocol( ++HEADER_ID, h );
+    }
+    return "euca-" + ( h.isAnonymousClass( )
+      ? h.getSuperclass( ).getSimpleName( ).toLowerCase( )
+      : h.getSimpleName( ).toLowerCase( ) ) + "-header";
+  }
+  
+  public static synchronized String registerProtocol( Protocol p ) {
     if ( ClassConfigurator.getProtocolId( p.getClass( ) ) == 0 ) {
       ClassConfigurator.addProtocol( ++PROTOCOL_ID, p.getClass( ) );
     }

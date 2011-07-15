@@ -107,7 +107,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class HostManager {
-  private static Logger              LOG             = Logger.getLogger( HostManager.class );
+  private static Logger              LOG                   = Logger.getLogger( HostManager.class );
   private final JChannel             membershipChannel;
   private final PhysicalAddress      physicalAddress;
   private final String               membershipGroupName;
@@ -115,13 +115,13 @@ public class HostManager {
   private HostStateListener          stateListener;
   private static HostManager         singleton;
   private final Predicate<Host>      dbFilter;
-  private static final short         EPOCH_HEADER_ID = 0x2ce;
-  private static final AtomicInteger epochSeen       = new AtomicInteger( 0 );
+  private static final AtomicInteger epochSeen             = new AtomicInteger( 0 );
+  private static final long          HOST_ADVERTISE_REMOTE = 15;
   
   interface InitRequest {}
   
   static class EpochHeader extends Header {
-    private final Integer value;
+    private Integer value;
     
     public EpochHeader( Integer value ) {
       super( );
@@ -129,10 +129,14 @@ public class HostManager {
     }
     
     @Override
-    public void writeTo( DataOutputStream out ) throws IOException {}
+    public void writeTo( DataOutputStream out ) throws IOException {
+      out.writeInt( this.value );
+    }
     
     @Override
-    public void readFrom( DataInputStream in ) throws IOException, IllegalAccessException, InstantiationException {}
+    public void readFrom( DataInputStream in ) throws IOException, IllegalAccessException, InstantiationException {
+      this.value = in.readInt( );
+    }
     
     @Override
     public int size( ) {
@@ -161,6 +165,7 @@ public class HostManager {
       LOG.info( "Starting membership channel... " );
       this.membershipChannel.connect( this.membershipGroupName );
       this.setStateListener( listener );
+      Protocols.registerHeader( EpochHeader.class );
       this.physicalAddress = ( PhysicalAddress ) this.membershipChannel.downcall( new org.jgroups.Event( org.jgroups.Event.GET_PHYSICAL_ADDRESS,
                                                                                                          this.membershipChannel.getAddress( ) ) );
       LOG.info( "Started membership channel: " + this.membershipGroupName );
@@ -176,7 +181,7 @@ public class HostManager {
       throw BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
     }
   }
-
+  
   public static int getMaxSeenEpoch( ) {
     return HostManager.epochSeen.get( );
   }
@@ -250,10 +255,10 @@ public class HostManager {
     }
     
     private void onMessage( Message msg ) {
-      EpochHeader epochHeader = ( EpochHeader ) msg.getHeader( EPOCH_HEADER_ID );
+      EpochHeader epochHeader = ( EpochHeader ) msg.getHeader( Protocols.lookupRegisteredId( EpochHeader.class ) );
       Integer senderEpoch = epochHeader.getValue( );
       int myEpoch = HostManager.epochSeen.get( );
-      if( myEpoch < senderEpoch ) {
+      if ( myEpoch < senderEpoch ) {
         HostManager.epochSeen.compareAndSet( myEpoch, senderEpoch );
       }
       switch ( this.initializing.get( ) ) {
@@ -315,6 +320,7 @@ public class HostManager {
   }
   
   private class RemoteHostStateListener extends HostStateListener {
+    
     public void initialize( boolean doInit ) {
       if ( doInit ) {
         LOG.info( "Performing first-time system init." );
@@ -352,12 +358,10 @@ public class HostManager {
     
     @Override
     public void fireEvent( Event event ) {
-      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( Bootstrap.isFinished( )
-        ? 15
-        : 3 ) ) {
+      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( HOST_ADVERTISE_REMOTE ) ) {
         LOG.debug( "Sending state info: " + Hosts.localHost( ) );
         try {
-          HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( Hosts.localHost( ) ) ) );
+          HostManager.send( null, Lists.newArrayList( Hosts.localHost( ) ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -479,7 +483,7 @@ public class HostManager {
   public static Future<?> send( final Address dest, final Serializable msg ) {
     LOG.debug( "Preparing to send message to: " + dest + " with payload " + msg.toString( ) );
     final Message outMsg = new Message( dest, null, msg );
-    outMsg.putHeader( EPOCH_HEADER_ID, new EpochHeader( Topology.epoch( ) ) );
+    outMsg.putHeader( Protocols.lookupRegisteredId( EpochHeader.class ), new EpochHeader( Topology.epoch( ) ) );
     LOG.debug( "Outgoing message: " + outMsg );
     return Threads.lookup( Empyrean.class, HostManager.class ).submit( new Runnable( ) {
       
