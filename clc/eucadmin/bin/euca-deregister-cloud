@@ -29,5 +29,5 @@
 import eucadmin.deregistercloud
 
 if __name__ == "__main__":
-    r = eucadmin.deregistercloud.DeregisterCloud()
+    r = eucadmin.deregistercloud.DeregisterEucalyptus()
     r.main_cli()
