@@ -74,7 +74,7 @@ import com.eucalyptus.system.Threads.ThreadPool;
 public class MembershipConfiguration {
   private static Logger LOG                        = Logger.getLogger( MembershipConfiguration.class );
   private static String        multicastAddress           = "228.7.7.3";
-  private static Integer       multicastPort              = 18773;
+  private static Integer       multicastPort              = 8773;
   private static Integer       threadPoolMaxThreads       = 25;
   private static Integer       threadPoolMinThreads       = 2;
   private static Integer       threadPoolKeepAliveTime    = 5000;
