@@ -57,7 +57,7 @@ udp.setValue( "singleton_name", SystemIds.membershipUdpMcastTransportName( ) );
 try {
   udp.setBindAddress( Internets.localHostAddress( ) );
   udp.setBindPort( 8773 );
-  udp.setBindToAllInterfaces( true );
+  udp.setBindToAllInterfaces( false );
 } catch ( UnknownHostException ex ) {
   LOG.error( ex, ex );
 }
