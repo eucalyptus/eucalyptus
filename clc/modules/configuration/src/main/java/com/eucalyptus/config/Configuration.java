@@ -164,7 +164,7 @@ public class Configuration {
   
   public DescribeNodesResponseType listComponents( final DescribeNodesType request ) throws EucalyptusCloudException {
     final DescribeNodesResponseType reply = ( DescribeNodesResponseType ) request.getReply( );
-    reply.setRegistered( ( ArrayList<NodeComponentInfoType> ) Groovyness.evaluateScript( "describe_nodes" ) );
+    reply.setRegistered( ( ArrayList<NodeComponentInfoType> ) Groovyness.run( "describe_nodes" ) );
     return reply;
   }
   

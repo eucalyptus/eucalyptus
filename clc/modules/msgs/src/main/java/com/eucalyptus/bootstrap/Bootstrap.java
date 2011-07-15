@@ -559,6 +559,6 @@ public class Bootstrap {
   }
   
   static void initializeSystem( ) throws Throwable {
-    Groovyness.evaluateScript( "initialize_cloud.groovy" );
+    Groovyness.run( "initialize_cloud.groovy" );
   }
 }

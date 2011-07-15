@@ -124,7 +124,7 @@ public class Empyrean extends ComponentId.Unpartioned {
     @Override
     public boolean load( ) throws Exception {
       System.setProperty( "jgroups.udp.bind_addr", Internets.localHostAddress( ) );
-      Groovyness.evaluateScript( "setup_persistence.groovy" );
+      Groovyness.run( "setup_persistence.groovy" );
       return true;
     }
   }
@@ -136,7 +136,7 @@ public class Empyrean extends ComponentId.Unpartioned {
     @Override
     public boolean load( ) throws Exception {
       System.setProperty("jgroups.udp.jdbc.bind_addr",Internets.localHostAddress());
-      Groovyness.evaluateScript( "setup_dbpool.groovy" );
+      Groovyness.run( "setup_dbpool.groovy" );
       return true;
     }
     
