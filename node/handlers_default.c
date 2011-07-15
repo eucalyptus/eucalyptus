@@ -827,12 +827,14 @@ static void * bundling_thread (void *arg)
     bundlePath[0] = '\0';
         if (clone_bundling_backing(instance, params->filePrefix, bundlePath) != OK){
 		logprintfl(EUCAERROR, "bundling_thread: could not clone the instance image\n");
+                cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_FAILED);
 	} else {
 		char prefixPath[MAX_PATH];
 		snprintf(prefixPath, MAX_PATH, "%s/%s", instance->instancePath, params->filePrefix);
 		if (strcmp(bundlePath, prefixPath)!=0 && rename(bundlePath, prefixPath)!=0){
-			logprintfl(EUCAERROR, "bundling_thread: could not rename from %s to %s\n", bundlePath, prefixPath);
-			return NULL;
+	    	    logprintfl(EUCAERROR, "bundling_thread: could not rename from %s to %s\n", bundlePath, prefixPath);
+                    cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_FAILED);	
+	    	    return NULL;
 		}
 		// USAGE: euca-nc-bundle-upload -i <image_path> -d <working dir> -b <bucket>
 	        int pid, status;
@@ -868,7 +870,13 @@ static void * bundling_thread (void *arg)
 		rc = system(cmd);
 		rc = rc>>8;
 		instance->bundleBucketExists = rc;
-		
+
+                if (instance->bundleCanceled){
+                    logprintfl(EUCAINFO, "bundle task canceled; terminating bundling thread\n");
+                    cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_CANCELLED);
+		    return NULL;
+                }
+	
 		pid = fork();
 		if (!pid) {
 		  logprintfl(EUCADEBUG, "bundling_thread: running cmd '%s -i %s -d %s -b %s -c %s --policysignature %s --euca-auth'\n", params->ncBundleUploadCmd, prefixPath, params->workPath, params->bucketName, params->S3Policy, params->S3PolicySig);
