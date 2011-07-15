@@ -92,7 +92,7 @@ void init_iscsi (const char * euca_home)
             tmp = "/opt/eucalyptus";
         }
     } 
-    strncpy (home, tmp, sizeof (home));
+    safe_strncpy (home, tmp, sizeof (home));
     snprintf (connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, home, home);
     snprintf (disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, home, home);
     snprintf (get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, home, home);

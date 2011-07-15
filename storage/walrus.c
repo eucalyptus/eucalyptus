@@ -117,7 +117,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     int code = ERROR;
     char url [BUFSIZE];
 
-    strncpy (url, requested_url, BUFSIZE);
+    safe_strncpy (url, requested_url, BUFSIZE);
 #if defined(CAN_GZIP)
     if (do_compress)
         snprintf (url, BUFSIZE, "%s%s", requested_url, "?IsCompressed=true");
@@ -139,7 +139,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
         return code;
     }
 
-    int fd = open (outfile, O_CREAT | O_WRONLY); // we do not truncate the file
+    int fd = open (outfile, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR); // we do not truncate the file
     if (fd==-1 || lseek (fd, 0, SEEK_SET)==-1) {
         logprintfl (EUCAERROR, "{%u} walrus_request: failed to open %s for writing\n", (unsigned int)pthread_self(), outfile);
         return code;
