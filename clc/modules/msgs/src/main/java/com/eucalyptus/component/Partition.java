@@ -86,8 +86,8 @@ import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.SubDirectory;
 
 @Entity
@@ -175,7 +175,7 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
     if ( !keyLink.exists( ) ) {
       LOG.debug( "Creating key directory link for " + config.getFullName( ) + " at " + keyLink.getAbsolutePath( ) );
       try {
-        GroovyUtil.exec( "ln -sf " + SubDirectory.KEYS.getChildFile( this.name ).getAbsolutePath( ) + " " + keyLink.getAbsolutePath( ) );
+        Groovyness.exec( "ln -sf " + SubDirectory.KEYS.getChildFile( this.name ).getAbsolutePath( ) + " " + keyLink.getAbsolutePath( ) );
         try {
           LOG.debug( "Created key directory link: " + keyLink.getAbsolutePath( ) + " -> " + keyLink.getCanonicalPath( ) );
         } catch ( IOException ex ) {}

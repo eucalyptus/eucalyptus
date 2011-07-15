@@ -75,7 +75,7 @@ import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.BaseDirectory;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 
@@ -124,7 +124,7 @@ public class StorageProperties {
 	public final static int SNAP_RESERVE = 20;
 	public static double NETAPP_META_OVERHEAD = 5;
 
-	static { GroovyUtil.loadConfig("storageprops.groovy"); }
+	static { Groovyness.loadConfig("storageprops.groovy"); }
 
 	public static void updateName() {
 	  try {

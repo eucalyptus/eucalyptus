@@ -75,7 +75,7 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Hosts;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.Internets;
 import com.google.common.collect.Lists;
 
@@ -124,7 +124,7 @@ public class Empyrean extends ComponentId.Unpartioned {
     @Override
     public boolean load( ) throws Exception {
       System.setProperty( "jgroups.udp.bind_addr", Internets.localHostAddress( ) );
-      GroovyUtil.evaluateScript( "setup_persistence.groovy" );
+      Groovyness.evaluateScript( "setup_persistence.groovy" );
       return true;
     }
   }
@@ -136,7 +136,7 @@ public class Empyrean extends ComponentId.Unpartioned {
     @Override
     public boolean load( ) throws Exception {
       System.setProperty("jgroups.udp.jdbc.bind_addr",Internets.localHostAddress());
-      GroovyUtil.evaluateScript( "setup_dbpool.groovy" );
+      Groovyness.evaluateScript( "setup_dbpool.groovy" );
       return true;
     }
     

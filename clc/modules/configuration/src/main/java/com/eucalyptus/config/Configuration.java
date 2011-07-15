@@ -78,7 +78,7 @@ import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.TypeMapper;
@@ -164,7 +164,7 @@ public class Configuration {
   
   public DescribeNodesResponseType listComponents( final DescribeNodesType request ) throws EucalyptusCloudException {
     final DescribeNodesResponseType reply = ( DescribeNodesResponseType ) request.getReply( );
-    reply.setRegistered( ( ArrayList<NodeComponentInfoType> ) GroovyUtil.evaluateScript( "describe_nodes" ) );
+    reply.setRegistered( ( ArrayList<NodeComponentInfoType> ) Groovyness.evaluateScript( "describe_nodes" ) );
     return reply;
   }
   

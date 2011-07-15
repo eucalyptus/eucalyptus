@@ -86,8 +86,8 @@ import javax.management.remote.JMXServiceURL;
 import javax.management.remote.rmi.RMIConnectorServer;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapException;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.SubDirectory;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
@@ -171,7 +171,7 @@ public class Mbeans {
     try {
       LOG.trace( "Exporting MBean: " + obj );
       LOG.trace( "Exporting MBean: " + exportString );
-      List<GroovyMBean> mbeans = ( List<GroovyMBean> ) GroovyUtil.eval( exportString, new HashMap( ) {
+      List<GroovyMBean> mbeans = ( List<GroovyMBean> ) Groovyness.eval( exportString, new HashMap( ) {
         {
           put( "jmx", jmxBuilder );
           put( "obj", obj );

@@ -1,4 +1,4 @@
-package com.eucalyptus.scripting.groovy;
+package com.eucalyptus.scripting;
 
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyObject;
@@ -20,14 +20,13 @@ import javax.script.SimpleBindings;
 import javax.script.SimpleScriptContext;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.system.SubDirectory;
 
-public class GroovyUtil {
-  private static Logger LOG = Logger.getLogger( GroovyUtil.class );
+public class Groovyness {
+  private static Logger LOG = Logger.getLogger( Groovyness.class );
   public static ScriptEngine groovyEngine = getGroovyEngine();
   public static ScriptEngine getGroovyEngine() {
-    synchronized( GroovyUtil.class ) {
+    synchronized( Groovyness.class ) {
       if( groovyEngine == null ) {
         ScriptEngineManager manager = new ScriptEngineManager();
         groovyEngine = manager.getEngineByName( "groovy" );        

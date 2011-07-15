@@ -19,8 +19,8 @@ import com.eucalyptus.component.auth.EucaKeyStore;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.entities.PersistenceContextDiscovery;
 import com.eucalyptus.entities.PersistenceContexts;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.SubDirectory;
 import com.google.common.collect.Lists;
@@ -206,7 +206,7 @@ public class StandalonePersistence {
     for( File script : SubDirectory.UPGRADE.getFile( ).listFiles( ) ) {
       LOG.debug( "Trying to load what looks like an upgrade script: " + script.getAbsolutePath( ) );
       try {
-        UpgradeScript u = GroovyUtil.newInstance( script.getAbsolutePath( ) );
+        UpgradeScript u = Groovyness.newInstance( script.getAbsolutePath( ) );
         registerUpgradeScript( u );
       } catch ( ScriptExecutionFailedException e ) {
         LOG.debug( e, e );

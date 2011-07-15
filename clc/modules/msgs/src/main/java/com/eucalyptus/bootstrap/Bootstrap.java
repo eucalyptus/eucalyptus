@@ -80,7 +80,7 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
@@ -559,6 +559,6 @@ public class Bootstrap {
   }
   
   static void initializeSystem( ) throws Throwable {
-    GroovyUtil.evaluateScript( "initialize_cloud.groovy" );
+    Groovyness.evaluateScript( "initialize_cloud.groovy" );
   }
 }
