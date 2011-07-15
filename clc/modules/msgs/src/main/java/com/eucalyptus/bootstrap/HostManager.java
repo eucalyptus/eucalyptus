@@ -102,6 +102,7 @@ import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.Logs;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -118,6 +119,7 @@ public class HostManager {
   private final Predicate<Host>      dbFilter;
   private static final AtomicInteger epochSeen             = new AtomicInteger( 0 );
   private static final long          HOST_ADVERTISE_REMOTE = 15;
+  private static final long          HOST_ADVERTISE_CLOUD  = 8;
   
   interface InitRequest {}
   
@@ -127,7 +129,7 @@ public class HostManager {
     public EpochHeader( ) {
       super( );
     }
-
+    
     public EpochHeader( Integer value ) {
       super( );
       this.value = value;
@@ -331,14 +333,13 @@ public class HostManager {
         LOG.info( "Performing first-time system init." );
         try {
           Bootstrap.initializeSystem( );
-//          Eucalyptus.setupServiceDependencies( Internets.localHostInetAddress( ) );
-//          Bootstrap.initBootstrappers( );
-//          HostManager.this.setStateListener( new CloudControllerHostStateHandler( ) );
           System.exit( 123 );
         } catch ( Throwable ex ) {
           LOG.error( ex, ex );
           System.exit( 123 );
         }
+      } else {
+        HostManager.this.view.markReady( );
       }
     }
     
@@ -384,25 +385,27 @@ public class HostManager {
         return;
       }
       for ( final Host host : hosts ) {
+        Hosts.update( host );
         if ( !host.hasBootstrapped( ) && !host.hasDatabase( ) && !host.isLocalHost( ) ) {
           try {
             ServiceConfiguration config = euca.getBuilder( ).lookupByHost( host.getBindAddress( ).getHostAddress( ) );
             LOG.debug( "Requesting first time initialization for remote cloud controller: " + host );
             HostManager.send( host.getGroupsId( ), new Initialize( ) );
-          } catch ( ServiceRegistrationException ex ) {
-            LOG.trace( ex );
+          } catch ( Exception ex ) {
+            Logs.exhaust( ).error( ex, ex );
+            LOG.debug( "Requesting remote component startup: " + host );
+            HostManager.send( host.getGroupsId( ), new NoInitialize( ) );
           }
         } else if ( !host.hasBootstrapped( ) ) {
           LOG.debug( "Requesting remote component startup: " + host );
           HostManager.send( host.getGroupsId( ), new NoInitialize( ) );
         }
-        Hosts.update( host );
       }
     }
     
     @Override
     public void fireEvent( Event event ) {
-      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 3 ) && Bootstrap.isFinished( ) ) {
+      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( HOST_ADVERTISE_CLOUD ) && Bootstrap.isFinished( ) ) {
         HostManager.this.view.sendState( );
       }
     }
@@ -490,7 +493,7 @@ public class HostManager {
     final Message outMsg = new Message( dest, null, msg );
     outMsg.putHeader( Protocols.lookupRegisteredId( EpochHeader.class ), new EpochHeader( Topology.epoch( ) ) );
     LOG.debug( "Outgoing message: " + outMsg );
-    return Threads.lookup( Empyrean.class, HostManager.class ).submit( new Runnable( ) {
+    return Threads.lookup( Empyrean.class, HostManager.class ).limitTo( 8 ).submit( new Runnable( ) {
       
       @Override
       public void run( ) {

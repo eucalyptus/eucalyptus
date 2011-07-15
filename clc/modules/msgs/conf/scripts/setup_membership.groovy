@@ -68,7 +68,7 @@ udp.setLogDiscardMessages( false );
 udp.setMaxBundleSize( 60000 );
 udp.setMaxBundleTimeout( 30 );
 
-udp.setDefaultThreadPool( defaultThreads );
+//udp.setDefaultThreadPool( defaultThreads );
 udp.setDefaultThreadPoolThreadFactory( defaultThreads );
 
 udp.setThreadFactory( normalThreads );
@@ -79,7 +79,7 @@ udp.setThreadPoolQueueEnabled( threadPoolQueueEnabled );
 udp.setRegularRejectionPolicy( regularRejectionPolicy );
 
 udp.setOOBThreadPoolThreadFactory( oobThreads );
-udp.setOOBThreadPool( oobThreads );
+//udp.setOOBThreadPool( oobThreads );
 udp.setOOBThreadPoolMaxThreads( oobThreadPoolMaxThreads );
 udp.setOOBThreadPoolKeepAliveTime( oobThreadPoolKeepAliveTime );
 udp.setOOBThreadPoolMinThreads( oobThreadPoolMinThreads );
