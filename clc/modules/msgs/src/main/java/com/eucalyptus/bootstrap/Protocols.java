@@ -250,6 +250,9 @@ public class Protocols {
                                                                  @Override
                                                                  public Protocol get( ) {
                                                                    GMS protocol = new GMS( );
+                                                                   if( !BootstrapArgs.isCloudController( ) ) {
+                                                                     protocol.setValue( "disable_initial_coord", true );
+                                                                   }
                                                                    protocol.setPrintLocalAddress( true );
                                                                    protocol.setJoinTimeout( 3000 );
                                                                    protocol.setShun( false );
