@@ -104,6 +104,10 @@ static char* find_conf_value(const char* eucahome, const char* param)
 	        pch = strtok(NULL, "=");
 		if(pch && strlen(pch)>0) {
 	           value = calloc(strlen(pch)+1, 1);
+		   if(!value) {
+		     fclose(f_conf); 
+		     return NULL;
+		   }
 	           snprintf(value, strlen(pch)+1, "%s", pch);
 	        }             
 	        break;
