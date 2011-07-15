@@ -78,6 +78,7 @@ import org.jgroups.ChannelClosedException;
 import org.jgroups.ChannelException;
 import org.jgroups.ChannelNotConnectedException;
 import org.jgroups.ExtendedMembershipListener;
+import org.jgroups.Global;
 import org.jgroups.Header;
 import org.jgroups.JChannel;
 import org.jgroups.Message;
@@ -140,7 +141,7 @@ public class HostManager {
     
     @Override
     public int size( ) {
-      return 32;
+      return Global.INT_SIZE;
     }
     
     public Integer getValue( ) {

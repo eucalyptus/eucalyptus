@@ -92,16 +92,16 @@ import com.google.common.collect.Lists;
 public class Protocols {
   
   private static Logger LOG         = Logger.getLogger( Protocols.class );
-  public static short   PROTOCOL_ID = 512;
-  public static short   HEADER_ID   = 1024;
+  public static short   PROTOCOL_ID = 513;
+  public static short   HEADER_ID   = 1025;
   
   public static short lookupRegisteredId( Class c ) {
     return ClassConfigurator.getMagicNumber( c );
   }
   
   public static synchronized <T extends Header> String registerHeader( Class<T> h ) {
-    if ( ClassConfigurator.getMagicNumber( h ) == 0 ) {
-      ClassConfigurator.addProtocol( ++HEADER_ID, h );
+    if ( ClassConfigurator.getMagicNumber( h ) == -1 ) {
+      ClassConfigurator.add( ++HEADER_ID, h );
     }
     return "euca-" + ( h.isAnonymousClass( )
       ? h.getSuperclass( ).getSimpleName( ).toLowerCase( )
