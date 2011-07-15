@@ -351,8 +351,7 @@ int clone_bundling_backing (ncInstance *instance, const char* filePrefix, char* 
 
     for (blockblob_meta * bm = matches; bm; bm=bm->next) {
         blockblob * bb = blockblob_open (work_bs, bm->id, 0, 0, NULL, BLOBSTORE_FIND_TIMEOUT_USEC);
-        if (bb!=NULL && bb->snapshot_type == BLOBSTORE_SNAPSHOT_DM) {
-	//    logprintfl (EUCAINFO, "[%s] snapshot type blockblob found [%s] [%lld]", instance->instanceId, bb->blocks_path, bb->size_bytes);
+        if (bb!=NULL && bb->snapshot_type == BLOBSTORE_SNAPSHOT_DM && strstr(bb->blocks_path,"emi-") != NULL) { // root image contains substr 'emi-'
 	    src_blob = bb;
 	    break;
         }else if (bb!=NULL)
