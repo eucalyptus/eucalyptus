@@ -127,6 +127,7 @@ public class Protocols {
                                                                  @Override
                                                                  public Protocol get( ) {
                                                                    UDP protocol = new UDP( );
+                                                                   protocol.setValue( "singleton_name", SystemIds.membershipUdpMcastTransportName( ) );
                                                                    try {
                                                                      protocol.setBindAddress( Internets.localHostAddress( ) );
                                                                      protocol.setBindPort( 8773 );

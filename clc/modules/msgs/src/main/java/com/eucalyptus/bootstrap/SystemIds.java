@@ -86,20 +86,24 @@ public class SystemIds {
   public static String createShortCloudUniqueName( String subName ) {
     return Joiner.on( "." ).join( Eucalyptus.class.getSimpleName( ), subName, Signatures.SHA1WithRSA.trySign( Eucalyptus.class, subName.getBytes( ) ) );
   }
-
+  
   public static String cloudName( ) {
-    return createShortCloudUniqueName( "cloud" );
+    return createCloudUniqueName( "cloud" );
   }
   
   public static String cacheName( ) {
-    return createShortCloudUniqueName( "cache" );
+    return createCloudUniqueName( "cache" );
   }
   
   public static String jdbcGroupName( ) {
-    return createShortCloudUniqueName( "jdbc" );
+    return createCloudUniqueName( "jdbc" );
   }
   
   public static String membershipGroupName( ) {
-    return createShortCloudUniqueName( "membership" );
+    return createCloudUniqueName( "membership" );
+  }
+  
+  public static String membershipUdpMcastTransportName( ) {
+    return createShortCloudUniqueName( "membership-udp-mcast-transport" );
   }
 }

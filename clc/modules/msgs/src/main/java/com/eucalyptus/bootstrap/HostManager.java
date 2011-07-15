@@ -124,6 +124,10 @@ public class HostManager {
   static class EpochHeader extends Header {
     private Integer value;
     
+    public EpochHeader( ) {
+      super( );
+    }
+
     public EpochHeader( Integer value ) {
       super( );
       this.value = value;
