@@ -121,7 +121,7 @@ public class HostManager {
   
   interface InitRequest {}
   
-  static class EpochHeader extends Header {
+  public static class EpochHeader extends Header {
     private Integer value;
     
     public EpochHeader( ) {
