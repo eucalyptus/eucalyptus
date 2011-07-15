@@ -125,7 +125,7 @@ public class VmTypes {
     
     @Override
     public VmTypeInfo apply( VmType arg0 ) {
-      return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "hda" );
+      return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda" );
     }
   };
 
