@@ -131,7 +131,7 @@ public class Protocols {
                                                                    try {
                                                                      protocol.setBindAddress( Internets.localHostAddress( ) );
                                                                      protocol.setBindPort( 8773 );
-                                                                     protocol.setBindToAllInterfaces( false );
+                                                                     protocol.setBindToAllInterfaces( true );
                                                                    } catch ( UnknownHostException ex ) {
                                                                      LOG.error( ex, ex );
                                                                    }
