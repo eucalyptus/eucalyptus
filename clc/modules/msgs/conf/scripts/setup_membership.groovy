@@ -5,18 +5,13 @@ import org.jgroups.protocols.VERIFY_SUSPECT
 
 import org.jgroups.protocols.FD
 import org.jgroups.protocols.FD_SOCK
-import org.jgroups.protocols.FRAG2
-import org.jgroups.protocols.UNICAST
-import org.jgroups.protocols.VERIFY_SUSPECT
-
-import java.net.InetAddress
-import java.net.UnknownHostException
 import java.net.InetAddress
 import java.net.UnknownHostException
 import org.apache.log4j.Logger
 import org.jgroups.protocols.FC
 import org.jgroups.protocols.FD
 import org.jgroups.protocols.FD_SOCK
+import org.jgroups.protocols.FRAG2
 import org.jgroups.protocols.MERGE2
 import org.jgroups.protocols.PING
 import org.jgroups.protocols.UDP
@@ -25,6 +20,7 @@ import org.jgroups.protocols.VERIFY_SUSPECT
 import org.jgroups.protocols.pbcast.GMS
 import org.jgroups.protocols.pbcast.NAKACK
 import org.jgroups.protocols.pbcast.STABLE
+import org.jgroups.protocols.pbcast.STATE_TRANSFER
 import com.eucalyptus.bootstrap.BootstrapArgs
 import com.eucalyptus.bootstrap.HostManager
 import com.eucalyptus.bootstrap.SystemIds
@@ -97,7 +93,6 @@ NAKACK negackBroadcast = new NAKACK( );
 negackBroadcast.setUseMcastXmit( false );
 negackBroadcast.setDiscardDeliveredMsgs( true );
 negackBroadcast.setGcLag( 20 );
-negackBroadcast.setMaxXmitBufSize( 50 );
 
 UNICAST reliableUnicast = new UNICAST( );
 
@@ -112,7 +107,6 @@ if( !BootstrapArgs.isCloudController( ) ) {
 groupMembership.setPrintLocalAddress( true );
 groupMembership.setJoinTimeout( 3000 );
 groupMembership.setShun( false );
-groupMembership.upThreadEnabled( )
 groupMembership.setViewBundling( true );
 
 FC flowcontrol = new FC( );
@@ -121,9 +115,17 @@ flowcontrol.setMinThreshold( 0.1 );
 
 
 
-return [ udp,
+return [
+  udp,
   pingDiscovery,
   mergeHandler,
-  new FD_SOCK(), new FD(), new VERIFY_SUSPECT(),
-  negackBroadcast, new UNICAST(), stableBroadcast, 
-  groupMembership ];
+  new FD_SOCK(),
+  new FD(),
+  new VERIFY_SUSPECT(),
+  negackBroadcast, new UNICAST(),
+  stableBroadcast,
+  groupMembership,
+  flowControl,
+  new FRAG2( ),
+  new STATE_TRANSFER()
+];
