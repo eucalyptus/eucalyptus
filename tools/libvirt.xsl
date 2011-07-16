@@ -116,9 +116,25 @@ that describes a Eucalyptus instance to be launched.
                         <target>
 	                    <xsl:choose> 
 			       <xsl:when test="/instance/hypervisor/@type='kvm' and /instance/os/@platform='windows'">
-                 		   <xsl:attribute name="dev">vda</xsl:attribute>
-				   <xsl:attribute name="bus">virtio</xsl:attribute>
+                                   <xsl:attribute name="bus">virtio</xsl:attribute>
+			  	   <xsl:attribute name="dev"> 
+                                        <xsl:call-template name="string-replace-all">
+ 		    		           <xsl:with-param name="text" select="@targetDeviceName"/>
+		  		           <xsl:with-param name="replace" select="'sd'"/>
+                                           <xsl:with-param name="by" select="'vd'"/>
+ 				        </xsl:call-template>
+                                   </xsl:attribute>
 	                       </xsl:when>
+			       <xsl:when test="/instance/hypervisor/@type='xen' and /instance/os/@platform='windows'"> 
+                                  <xsl:attribute name="bus">xen</xsl:attribute>
+				  <xsl:attribute name="dev">
+					<xsl:call-template name="string-replace-all">
+					    <xsl:with-param name="text" select="@targetDeviceName"/>
+					    <xsl:with-param name="replace" select="'sd'"/>
+				            <xsl:with-param name="by" select="'xvd'"/>
+                                        </xsl:call-template>
+				  </xsl:attribute>
+			       </xsl:when>
 			       <xsl:otherwise>
 			           <xsl:attribute name="dev">
                                		<xsl:value-of select="@targetDeviceName"/>
@@ -191,5 +207,25 @@ that describes a Eucalyptus instance to be launched.
                 <!-- <graphics type='vnc' port='-1' autoport='yes' keymap='en-us' listen='0.0.0.0'/> -->
             </devices>
         </domain>
+    </xsl:template>
+    <xsl:template name="string-replace-all">
+        <xsl:param name="text" />
+        <xsl:param name="replace" />
+        <xsl:param name="by" />
+        <xsl:choose>
+            <xsl:when test="contains($text, $replace)">
+                <xsl:value-of select="substring-before($text,$replace)" />
+                <xsl:value-of select="$by" />
+                    <xsl:call-template name="string-replace-all">
+                        <xsl:with-param name="text"
+                           select="substring-after($text,$replace)" />
+                        <xsl:with-param name="replace" select="$replace" />
+                        <xsl:with-param name="by" select="$by" />
+                    </xsl:call-template>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:value-of select="$text" />
+            </xsl:otherwise>
+        </xsl:choose>
     </xsl:template>
 </xsl:transform>
