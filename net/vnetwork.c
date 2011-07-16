@@ -182,7 +182,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
       return(1);
     }
     
-    if (macPrefix) safe_strncpy(vnetconfig->macPrefix, macPrefix, 5);
+    if (macPrefix) safe_strncpy(vnetconfig->macPrefix, macPrefix, 6);
     if (path) safe_strncpy(vnetconfig->path, path, MAX_PATH);
     if (eucahome) safe_strncpy(vnetconfig->eucahome, eucahome, MAX_PATH);
     if (pubInterface) safe_strncpy(vnetconfig->pubInterface, pubInterface, 32);
