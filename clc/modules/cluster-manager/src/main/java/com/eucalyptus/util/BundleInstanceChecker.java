@@ -40,7 +40,7 @@ public class BundleInstanceChecker {
 	/// this is a copy of edu.ucsb.eucalyptus.cloud.ws.WalrusManager.checkBucketName
 	/// could not reference it because of the build order problem
 	private static boolean checkBucketName(String bucketName) {
-                if(!bucketName.matches("^[a-z0-9][a-z0-9._-]+"))
+               if(!bucketName.matches("^[A-Za-z0-9][A-Za-z0-9._-]+"))
                         return false;
 		if(bucketName.length() < 3 || bucketName.length() > 255)
 			return false;
