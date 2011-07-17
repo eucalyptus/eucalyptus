@@ -184,41 +184,49 @@ int gen_instance_xml (const ncInstance * instance)
 
     { // disks specification
         xmlNodePtr disks = _NODE(instanceNode, "disks");
-        for (int i=0; i<EUCA_MAX_VBRS && i<instance->params.virtualBootRecordLen; i++) {
-            const virtualBootRecord * vbr = &(instance->params.virtualBootRecord[i]);
-            // skip empty entries, if any
-            if (vbr==NULL)
-                continue;
-            // skip anything without a device on the guest, e.g., kernel and ramdisk
-            if (!strcmp ("none", vbr->guestDeviceName)) 
-                continue;
-            // for Linux instances on Xen, partitions can be used directly, so disks can be skipped
-            if (strstr (instance->platform, "linux") && strstr (instance->hypervisorType, "xen")) {
-                if (vbr->partitionNumber == 0) {
-                    continue;
-                }
-            } else { // on all other os + hypervisor combinations, disks are used, so partitions must be skipped
-                if (vbr->partitionNumber > 0) {
-                    continue;
-                }
-            }
+
+        // the first disk should be the root disk (at least for Windows)
+        for (int root=1; root>=0; root--){ 
+           for (int i=0; i<EUCA_MAX_VBRS && i<instance->params.virtualBootRecordLen; i++) {
+               const virtualBootRecord * vbr = &(instance->params.virtualBootRecord[i]); 
+               if(root && vbr->type != NC_RESOURCE_IMAGE) 
+                   continue;
+               if(!root && vbr->type == NC_RESOURCE_IMAGE)
+                   continue;
+               // skip empty entries, if any
+               if (vbr==NULL)
+                   continue;
+               // skip anything without a device on the guest, e.g., kernel and ramdisk
+               if (!strcmp ("none", vbr->guestDeviceName)) 
+                   continue;
+               // for Linux instances on Xen, partitions can be used directly, so disks can be skipped
+               if (strstr (instance->platform, "linux") && strstr (instance->hypervisorType, "xen")) {
+                   if (vbr->partitionNumber == 0) {
+                       continue;
+                   }
+               } else { // on all other os + hypervisor combinations, disks are used, so partitions must be skipped
+                   if (vbr->partitionNumber > 0) {
+                       continue;
+                   }
+               }
             
-            xmlNodePtr disk = _ELEMENT(disks, "diskPath", vbr->backingPath);
-            _ATTRIBUTE(disk, "targetDeviceType", libvirtDevTypeNames[vbr->guestDeviceType]);
-            _ATTRIBUTE(disk, "targetDeviceName", vbr->guestDeviceName);
-            if (nc_state.config_use_virtio_root) {
-                char virtiostr[SMALL_CHAR_BUFFER_SIZE];
-                snprintf(virtiostr, SMALL_CHAR_BUFFER_SIZE, "%s", vbr->guestDeviceName);
-                virtiostr[0] = 'v';
-                _ATTRIBUTE(disk, "targetDeviceNameVirtio", virtiostr);
-                _ATTRIBUTE(disk, "targetDeviceBusVirtio", "virtio");     
-            }
-            _ATTRIBUTE(disk, "targetDeviceBus", libvirtBusTypeNames[vbr->guestDeviceBus]);
-            _ATTRIBUTE(disk, "sourceType", libvirtSourceTypeNames[vbr->backingType]);
-        }
-        if (strlen (instance->floppyFilePath)) {
-            _ELEMENT(disks, "floppyPath", instance->floppyFilePath);
-        }
+               xmlNodePtr disk = _ELEMENT(disks, "diskPath", vbr->backingPath);
+               _ATTRIBUTE(disk, "targetDeviceType", libvirtDevTypeNames[vbr->guestDeviceType]);
+               _ATTRIBUTE(disk, "targetDeviceName", vbr->guestDeviceName);
+               if (nc_state.config_use_virtio_root) {
+                   char virtiostr[SMALL_CHAR_BUFFER_SIZE];
+                   snprintf(virtiostr, SMALL_CHAR_BUFFER_SIZE, "%s", vbr->guestDeviceName);
+                   virtiostr[0] = 'v';
+                   _ATTRIBUTE(disk, "targetDeviceNameVirtio", virtiostr);
+                   _ATTRIBUTE(disk, "targetDeviceBusVirtio", "virtio");     
+               }
+               _ATTRIBUTE(disk, "targetDeviceBus", libvirtBusTypeNames[vbr->guestDeviceBus]);
+               _ATTRIBUTE(disk, "sourceType", libvirtSourceTypeNames[vbr->backingType]);
+           }
+           if (strlen (instance->floppyFilePath)) {
+               _ELEMENT(disks, "floppyPath", instance->floppyFilePath);
+           }
+       }
     }
 
     if (instance->params.nicType!=NIC_TYPE_NONE) { // NIC specification
