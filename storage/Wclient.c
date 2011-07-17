@@ -172,7 +172,7 @@ int main (int argc, char * argv[])
                 result = walrus_image_by_manifest_url (request, tmp_name, do_compress);
             }
         } else {
-            strncpy (request, manifest, STRSIZE);
+            safe_strncpy (request, manifest, STRSIZE);
             if ( strcmp(command, "GetObject")==0 ) {
                 result = walrus_object_by_path (request, tmp_name, do_compress);
             } else {
