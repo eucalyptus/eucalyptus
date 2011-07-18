@@ -382,11 +382,11 @@ public class Topology implements EventListener<Event> {
     private final ComponentId componentId;
     
     static ServiceKey create( final ServiceConfiguration config ) throws ServiceRegistrationException {
-      if ( config.getComponentId( ).isAlwaysLocal( ) || ( config.getComponentId( ).isCloudLocal( ) && !config.getComponentId( ).isRegisterable( ) ) ) {
-        Partition p = Partitions.lookupInternal( config );
-        return new ServiceKey( config.getComponentId( ), p );
-      } else if ( config.getComponentId( ).isPartitioned( ) ) {
+      if ( config.getComponentId( ).isPartitioned( ) ) {
         Partition p = Partitions.lookup( config );
+        return new ServiceKey( config.getComponentId( ), p );
+      } else if ( config.getComponentId( ).isAlwaysLocal( ) || ( config.getComponentId( ).isCloudLocal( ) && !config.getComponentId( ).isRegisterable( ) ) ) {
+        Partition p = Partitions.lookupInternal( config );
         return new ServiceKey( config.getComponentId( ), p );
       } else {
         return new ServiceKey( config.getComponentId( ) );
