@@ -110,8 +110,8 @@ groupMembership.setShun( false );
 groupMembership.setViewBundling( true );
 
 FC flowControl = new FC( );
-flowcontrol.setMaxCredits( 20000000 );
-flowcontrol.setMinThreshold( 0.1 );
+flowControl.setMaxCredits( 20000000 );
+flowControl.setMinThreshold( 0.1 );
 
 
 
