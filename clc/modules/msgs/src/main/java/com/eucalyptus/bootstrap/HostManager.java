@@ -392,7 +392,7 @@ public class HostManager {
             LOG.debug( "Requesting first time initialization for remote cloud controller: " + host );
             HostManager.send( host.getGroupsId( ), new Initialize( ) );
           } catch ( Exception ex ) {
-            Logs.exhaust( ).error( ex, ex );
+            Logs.exhaust( ).error( ex );
             LOG.debug( "Requesting remote component startup: " + host );
             HostManager.send( host.getGroupsId( ), new NoInitialize( ) );
           }

@@ -64,6 +64,7 @@ package com.eucalyptus.component;
  */
 
 import java.util.List;
+import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
@@ -76,8 +77,8 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     try {
       this.lookupByName( name );
       return true;
-    } catch ( ServiceRegistrationException e ) {
-      throw e;
+    } catch ( PersistenceException e ) {
+      throw new ServiceRegistrationException( e );
     } catch ( Throwable e ) {
       LOG.error( e, e );
       return false;
@@ -125,13 +126,13 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     ServiceConfiguration existingName = null;
     try {
       existingName = this.lookupByName( name );
-    } catch ( ServiceRegistrationException ex1 ) {
+    } catch ( PersistenceException ex1 ) {
       LOG.trace( "Failed to find existing component registration for name: " + name );
     }
     ServiceConfiguration existingHost = null;
     try {
       existingHost = this.lookupByHost( host );
-    } catch ( ServiceRegistrationException ex1 ) {
+    } catch ( PersistenceException ex1 ) {
       LOG.trace( "Failed to find existing component registration for host: " + host );
     }
     if ( existingName != null && existingHost != null ) {
