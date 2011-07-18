@@ -135,9 +135,6 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
               database(id:host.getBindAddress(),local:host.isLocalHost( )) {
                 driver(real_jdbc_driver)
                 url("jdbc:${ComponentIds.lookup(Database.class).makeExternalRemoteUri( host.getBindAddress( ).getHostAddress( ), 8777 ).toASCIIString( )}_${context_name}")
-                //                property(true){
-                //                  name:'sql.tx_no_multi_rewrite'
-                //                }
                 user('eucalyptus')
                 password(db_pass)
               }
