@@ -749,7 +749,10 @@ class EucaConf(object):
         if self.options.dereg_nodes:
             current_nodes = self.config['NODES'].split()
             for node in self.options.dereg_nodes:
-                current_nodes.remove(node)
+                if node in current_nodes:
+                    current_nodes.remove(node)
+                else:
+                    print 'Node %s is not currently registered' % node
             self.config['NODES'] = ' '.join(current_nodes)
 
 if __name__ == "__main__":
