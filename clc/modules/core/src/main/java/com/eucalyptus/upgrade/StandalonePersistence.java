@@ -67,20 +67,17 @@ public class StandalonePersistence {
       StandalonePersistence.runUpgrade( );
       System.exit(0);
     } catch ( Throwable e ) {
+      LOG.error( e, e );
       e.printStackTrace( );
       System.exit( -1 );
     }
   }
   
   public static void runUpgrade( ) {
-	Collections.sort(upgradeScripts);
+    Collections.sort(upgradeScripts);
     LOG.info( upgradeScripts );
     for( UpgradeScript up : upgradeScripts ) {
-      try {
-        up.upgrade( oldLibDir, newLibDir );
-      } catch ( Throwable e ) {
-        LOG.error( e, e );
-      }
+      up.upgrade( oldLibDir, newLibDir );
     }
     LOG.info( "=============================" );
     LOG.info( "= DATABASE UPGRADE COMPLETE =" );
