@@ -109,7 +109,7 @@ groupMembership.setJoinTimeout( 3000 );
 groupMembership.setShun( false );
 groupMembership.setViewBundling( true );
 
-FC flowcontrol = new FC( );
+FC flowControl = new FC( );
 flowcontrol.setMaxCredits( 20000000 );
 flowcontrol.setMinThreshold( 0.1 );
 
