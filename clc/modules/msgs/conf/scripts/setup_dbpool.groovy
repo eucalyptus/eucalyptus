@@ -114,7 +114,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
       } else {
         sync('class':'net.sf.hajdbc.sync.PassiveSynchronizationStrategy ', id:'full');      
       }
-      cluster(id:"eucalyptus-${SystemIds.jdbcGroupName( )}",
+      cluster(id:"${SystemIds.jdbcGroupName( )}",
           'auto-activate-schedule':'0 * * ? * *',
           balancer:'load', //(simple|random|round-robin|load)
           'default-sync':'full',
