@@ -66,7 +66,8 @@ import org.apache.log4j.Logger
 import org.logicalcobwebs.proxool.ProxoolFacade
 import com.eucalyptus.bootstrap.BootstrapArgs
 import com.eucalyptus.bootstrap.SystemIds
-import com.eucalyptus.component.Components
+import com.eucalyptus.component.Host
+import com.eucalyptus.component.Hosts
 import com.eucalyptus.component.ServiceConfiguration
 import com.eucalyptus.component.id.Database
 import com.eucalyptus.entities.PersistenceContexts
@@ -128,7 +129,9 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
           'eval-current-timestamp':'true',
           'eval-rand':'true'
           ) {
-            Components.lookup(Database.class).lookupServiceConfigurations().each{ ServiceConfiguration db_service ->
+            Hosts.list( ).findAll{ Host host ->
+              host.hasDatabase( )
+            }.each{
               database(id:db_service.getHostName(),local:db_service.isHostLocal()) {
                 driver(real_jdbc_driver)
                 url("jdbc:${db_service.uri.toASCIIString( )}_${context_name}")
