@@ -529,7 +529,7 @@ doDetachVolume(	struct nc_state_t *nc,
 static void change_createImage_state (ncInstance * instance, createImage_progress state)
 {
     instance->createImageTaskState = state;
-    strncpy (instance->createImageTaskStateName, createImage_progress_names [state], CHAR_BUFFER_SIZE);
+    safe_strncpy (instance->createImageTaskStateName, createImage_progress_names [state], CHAR_BUFFER_SIZE);
 }
 
 // helper for cleaning up 
@@ -681,7 +681,7 @@ doCreateImage(	struct nc_state_t *nc,
 static void change_bundling_state (ncInstance * instance, bundling_progress state)
 {
 	instance->bundleTaskState = state;
-	strncpy (instance->bundleTaskStateName, bundling_progress_names [state], CHAR_BUFFER_SIZE);
+	safe_strncpy (instance->bundleTaskStateName, bundling_progress_names [state], CHAR_BUFFER_SIZE);
 }
 
 /*
@@ -824,14 +824,17 @@ static void * bundling_thread (void *arg)
 
 	int rc=OK;
 	char bundlePath[MAX_PATH];
+    bundlePath[0] = '\0';
         if (clone_bundling_backing(instance, params->filePrefix, bundlePath) != OK){
 		logprintfl(EUCAERROR, "bundling_thread: could not clone the instance image\n");
+                cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_FAILED);
 	} else {
 		char prefixPath[MAX_PATH];
 		snprintf(prefixPath, MAX_PATH, "%s/%s", instance->instancePath, params->filePrefix);
 		if (strcmp(bundlePath, prefixPath)!=0 && rename(bundlePath, prefixPath)!=0){
-			logprintfl(EUCAERROR, "bundling_thread: could not rename from %s to %s\n", bundlePath, prefixPath);
-			return NULL;
+	    	    logprintfl(EUCAERROR, "bundling_thread: could not rename from %s to %s\n", bundlePath, prefixPath);
+                    cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_FAILED);	
+	    	    return NULL;
 		}
 		// USAGE: euca-nc-bundle-upload -i <image_path> -d <working dir> -b <bucket>
 	        int pid, status;
@@ -867,7 +870,13 @@ static void * bundling_thread (void *arg)
 		rc = system(cmd);
 		rc = rc>>8;
 		instance->bundleBucketExists = rc;
-		
+
+                if (instance->bundleCanceled){
+                    logprintfl(EUCAINFO, "bundle task canceled; terminating bundling thread\n");
+                    cleanup_bundling_task (instance, params, SHUTOFF, BUNDLING_CANCELLED);
+		    return NULL;
+                }
+	
 		pid = fork();
 		if (!pid) {
 		  logprintfl(EUCADEBUG, "bundling_thread: running cmd '%s -i %s -d %s -b %s -c %s --policysignature %s --euca-auth'\n", params->ncBundleUploadCmd, prefixPath, params->workPath, params->bucketName, params->S3Policy, params->S3PolicySig);

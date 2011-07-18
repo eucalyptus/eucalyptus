@@ -43,7 +43,7 @@ int parse_img_spec (img_loc * loc, const char * str)
     if (!strncmp (low, "http://", 7) || !strncmp (low, "https://", 8)) {
         if (strstr (str, "services/Walrus")) {
             loc->type=WALRUS;
-            strncpy (loc->url, str, sizeof(loc->url));
+            safe_strncpy (loc->url, str, sizeof(loc->url));
 
         } else if (strstr (str, "dcPath=")) {
             // EXAMPLE: https://192.168.7.236/folder/i-4DD50852?dcPath=ha-datacenter&dsName=S1
@@ -69,7 +69,7 @@ int parse_img_spec (img_loc * loc, const char * str)
             loc->type=VSPHERE;
 
             char path [SIZE];
-            strncpy (loc->url,            str, sizeof (loc->url));
+            safe_strncpy (loc->url,            str, sizeof (loc->url));
             strnsub (loc->host,           str, pmatch[1].rm_so, pmatch[1].rm_eo, sizeof (loc->host));
             strnsub (path,                str, pmatch[2].rm_so, pmatch[2].rm_eo, sizeof (loc->path));
             strnsub (loc->vsphere_dc,     str, pmatch[3].rm_so, pmatch[3].rm_eo, sizeof (loc->vsphere_dc));
@@ -97,7 +97,7 @@ int parse_img_spec (img_loc * loc, const char * str)
                 strncat (loc->file, pt, sizeof(loc->file));
             }
             if (loc->dir[0]=='\0') {
-                strncpy (loc->path, loc->file, sizeof(loc->path));
+                safe_strncpy (loc->path, loc->file, sizeof(loc->path));
             } else {
                 snprintf (loc->path, sizeof(loc->path), "%s/%s", loc->dir, loc->file);
             }
@@ -137,7 +137,7 @@ int parse_img_spec (img_loc * loc, const char * str)
             char port [_SIZE]; bzero (port, sizeof (port));
             strnsub (s,                   str, pmatch[1].rm_so, pmatch[1].rm_eo, sizeof (s));
             if (s[0]=='s' ) loc->type = HTTPS;
-            strncpy (loc->url,            str, sizeof (loc->url));
+            safe_strncpy (loc->url,            str, sizeof (loc->url));
             strnsub (loc->host,           str, pmatch[2].rm_so, pmatch[2].rm_eo, sizeof (loc->host));
             strnsub (port,                str, pmatch[4].rm_so, pmatch[4].rm_eo, sizeof (port) - 1);
             loc->port = atoi (port);
@@ -147,7 +147,7 @@ int parse_img_spec (img_loc * loc, const char * str)
 
     } else {
         loc->type=PATH;
-        strncpy (loc->path, str, sizeof(loc->path));
+        safe_strncpy (loc->path, str, sizeof(loc->path));
     }
 
     return 0;
@@ -157,8 +157,9 @@ int img_init_spec (img_spec * spec, const char * id, const char * loc, const img
 {
     bzero (spec, sizeof(spec));
 
-    if (id && strlen(id))
-        strncpy (spec->id, id, sizeof(spec->id));
+    if (id && strlen(id)) 
+        strncpy (spec->id, id, sizeof(spec->id) - 1); 
+    
     else
         return 0; // if no ID is given, this function just zeroes out the struct
 

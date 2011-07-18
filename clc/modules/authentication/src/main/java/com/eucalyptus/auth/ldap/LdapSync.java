@@ -38,6 +38,12 @@ import com.google.common.collect.Sets;
  */
 public class LdapSync {
   
+  private interface LdapEntryProcessor {
+    
+    public void processLdapEntry( String dn, Attributes attrs ) throws NamingException;
+    
+  }
+  
   private static final Logger LOG = Logger.getLogger( LdapSync.class );
   
   private static final boolean VERBOSE = true;
@@ -54,7 +60,7 @@ public class LdapSync {
   
   private static final ClockTickListener TIMER_LISTENER = new ClockTickListener( );
   
-  private static class ClockTickListener implements EventListener {
+  private static class ClockTickListener implements EventListener<Event> {
 
     @Override
     public void fireEvent( Event event ) {
@@ -104,23 +110,72 @@ public class LdapSync {
   }
   
   public static synchronized boolean check( ) {
-    if ( lic.isSyncEnabled( ) ) {
-      LdapClient ldap = null;
-      try {
-        ldap = new LdapClient( lic );
-        return true;
-      } catch ( LdapException e ) {
-        LOG.error( e, e );
-        LOG.warn( "Failed to connect to LDAP service", e );
-        return false;
-      } finally {
-        if ( ldap != null ) {
-          ldap.close( );
-        }
-      }
-    } else {
+    if ( !lic.isSyncEnabled( ) ) {
       return true;
     }
+    LdapClient ldap = null;
+    try {
+      ldap = LdapClient.authenticateClient( lic );
+      return true;
+    } catch ( LdapException e ) {
+      LOG.error( e, e );
+      LOG.warn( "Failed to connect to LDAP service", e );
+      return false;
+    } finally {
+      if ( ldap != null ) {
+        ldap.close( );
+      }
+    }
+  }
+  
+  /**
+   * Authenticate an LDAP user by his login and password.
+   * 
+   * @param login
+   * @param password
+   * @return
+   * @throws LdapException
+   */
+  public static synchronized void authenticate( User user, String password ) throws LdapException {
+    if ( !lic.isSyncEnabled( ) ) {
+      throw new LdapException( "LDAP sync is not enabled" );
+    }
+    LdapClient ldap = null;
+    try {
+      // Get proper user LDAP principal based on authentication method
+      String login = null;
+      if ( LicParser.LDAP_AUTH_METHOD_SIMPLE.equals( lic.getRealUserAuthMethod( ) ) ) {
+        // Simple requires full user DN
+        login = user.getInfo( User.DN );
+      } else {
+        // SASL requires user ID
+        // TODO(wenye): possible other formats of user ID, like "u:..." or "dn:..."
+        login = user.getName( );
+      }
+      if ( login == null ) {
+        throw new LdapException( "Invalid login user" );
+      }
+      ldap = LdapClient.authenticateUser( lic, login, password );
+    } catch ( AuthException e ) {
+      LOG.error( e, e );
+      LOG.debug( "Failed to get auth information for user " + user );
+      throw new LdapException( "Failed to get auth information", e );
+    } catch ( LdapException e ) {
+      LOG.error( e, e );
+      LOG.debug( "Failed to connect to LDAP service", e );
+      throw e;
+    } finally {
+      if ( ldap != null ) {
+        ldap.close( );
+      }
+    }
+  }
+  
+  /**
+   * @return true if LDAP sync is enabled.
+   */
+  public static synchronized boolean enabled( ) {
+    return lic.isSyncEnabled( );
   }
   
   private static synchronized boolean getAndSetSync( boolean newValue ) {
@@ -165,7 +220,7 @@ public class LdapSync {
     Map<String, Map<String, String>> users = null;
     LdapClient ldap = null;
     try {
-      ldap = new LdapClient( lic );
+      ldap = LdapClient.authenticateClient( lic );
       if ( lic.hasAccountingGroups( ) ) {
         accountingGroups = loadLdapGroupType( ldap,
                                               lic.getAccountingGroupBaseDn( ),
@@ -231,13 +286,15 @@ public class LdapSync {
         if ( oldAccountSet.contains( accountName ) ) {
           // Remove common elements from old account set
           oldAccountSet.remove( accountName );
-          updateAccount( accountName, accountMembers, groups, users );
+          updateAccount( lic, accountName, accountMembers, groups, users );
         } else {
           addNewAccount( accountName, accountMembers, groups, users );
         }
       }
-      // Remaining accounts are obsolete
-      removeObsoleteAccounts( oldAccountSet );
+      if ( lic.isCleanDeletion( ) ) {
+        // Remaining accounts are obsolete
+        removeObsoleteAccounts( oldAccountSet );
+      }
     } catch ( Throwable e ) {
       LOG.error( e, e );
       LOG.error( "Error in rebuilding local auth database", e );
@@ -300,7 +357,7 @@ public class LdapSync {
     return userSet;
   }
   
-  private static void updateAccount( String accountName, Set<String> accountMembers, Map<String, Set<String>> groups, Map<String, Map<String, String>> users ) {
+  private static void updateAccount( LdapIntegrationConfiguration lic, String accountName, Set<String> accountMembers, Map<String, Set<String>> groups, Map<String, Map<String, String>> users ) {
     LOG.debug( "Updating account " + accountName );
     Account account = null;
     try {
@@ -326,7 +383,9 @@ public class LdapSync {
           }
         }
       }
-      removeObsoleteUsers( account, oldUserSet );
+      if ( lic.isCleanDeletion( ) ) {
+        removeObsoleteUsers( account, oldUserSet );
+      }
       // Now update groups
       Set<String> oldGroupSet = getLocalGroupSet( account );
       for ( String group : accountMembers ) {
@@ -337,7 +396,9 @@ public class LdapSync {
           addNewGroup( account, group, groups.get( group ) );
         }
       }
-      removeObsoleteGroups( account, oldGroupSet );
+      if ( lic.isCleanDeletion( ) ) {
+        removeObsoleteGroups( account, oldGroupSet );
+      }
     } catch ( AuthException e ) {
       LOG.error( e, e );
       LOG.error( "Failed to update account " + accountName, e );
@@ -509,51 +570,55 @@ public class LdapSync {
     }
   }
   
-  private static List<Attributes> retrieveSelection( LdapClient ldap, String baseDn, Selection selection, String[] attrNames ) throws LdapException {
+  private static void retrieveSelection( LdapClient ldap, String baseDn, Selection selection, String[] attrNames, LdapEntryProcessor processor ) throws LdapException {
     if ( VERBOSE ) {
       LOG.debug( "Search users by: baseDn=" + baseDn + ", attributes=" + attrNames + ", selection=" + selection );
     }
-    List<Attributes> attrsList = Lists.newArrayList( );
     try {
       // Search by filter first.
       NamingEnumeration<SearchResult> results = ldap.search( baseDn, selection.getSearchFilter( ), attrNames );
       while ( results.hasMore( ) ) {
         SearchResult res = results.next( );
         if ( !selection.getNotSelected( ).contains( res.getNameInNamespace( ) ) ) {
-          attrsList.add( res.getAttributes( ) );
+          processor.processLdapEntry( res.getNameInNamespace( ), res.getAttributes( ) );
         }
       }
       // Get one-off DNs
       for ( String dn : selection.getSelected( ) ) {
-        attrsList.add( ldap.getContext( ).getAttributes( dn, attrNames ) );
+        Attributes attrs = null;
+        try {
+          attrs = ldap.getContext( ).getAttributes( dn, attrNames );
+        } catch ( NamingException e ) {
+          LOG.debug( "Failed to retrieve entry " + dn );
+          LOG.error( e, e );
+        }
+        processor.processLdapEntry( dn, attrs );
       }
     } catch ( NamingException e ) {
       LOG.error( e, e );
       throw new LdapException( e );
     }
-    return attrsList;
   }
   
-  private static Map<String, Set<String>> loadLdapGroupType( LdapClient ldap, String baseDn, String idAttrName, String memberAttrName, String memberIdAttrName, Selection selection ) throws LdapException {
+  private static Map<String, Set<String>> loadLdapGroupType( LdapClient ldap, String baseDn, final String idAttrName, final String memberAttrName, final String memberIdAttrName, Selection selection ) throws LdapException {
     String[] attrNames = new String[]{ idAttrName, memberAttrName };
-    List<Attributes> attrsList = retrieveSelection( ldap, baseDn, selection, attrNames );
-    try {
-      Map<String, Set<String>> groupMap = Maps.newHashMap( );
-      for ( Attributes attrs : attrsList ) {
+    final Map<String, Set<String>> groupMap = Maps.newHashMap( );
+    retrieveSelection( ldap, baseDn, selection, attrNames, new LdapEntryProcessor( ) {
+
+      @Override
+      public void processLdapEntry( String dn, Attributes attrs ) throws NamingException {
         if ( VERBOSE ) {
-          LOG.debug( "Retrieved group: " + attrs );
+          LOG.debug( "Retrieved group: " + dn + " -> " + attrs );
         }
-        groupMap.put( getId( idAttrName, attrs ),
-                      getMembers( memberIdAttrName, memberAttrName, attrs ) );
+        groupMap.put( getId( idAttrName, attrs ), getMembers( memberIdAttrName, memberAttrName, attrs ) );
+        
       }
-      return groupMap;
-    } catch ( NamingException e ) {
-      LOG.error( e, e );
-      throw new LdapException( "Error reading groups", e );
-    }
+      
+    } );
+    return groupMap;
   }
   
-  private static Map<String, Map<String, String>> loadLdapUsers( LdapClient ldap, LdapIntegrationConfiguration lic ) throws LdapException {
+  private static Map<String, Map<String, String>> loadLdapUsers( LdapClient ldap, final LdapIntegrationConfiguration lic ) throws LdapException {
     // Prepare the list of attributes to retrieve
     List<String> attrNames = Lists.newArrayList( );
     attrNames.addAll( lic.getUserInfoAttributes( ).keySet( ) );
@@ -561,24 +626,24 @@ public class LdapSync {
       attrNames.add( lic.getUserIdAttribute( ) );
     }
     // Retrieving from LDAP using a search
-    List<Attributes> attrsList = retrieveSelection( ldap, lic.getUserBaseDn( ), lic.getUsersSelection( ), attrNames.toArray( new String[0] ) );
-    try {
-      Map<String, Map<String, String>> userMap = Maps.newHashMap( );
-      for ( Attributes attrs : attrsList ) {
+    final Map<String, Map<String, String>> userMap = Maps.newHashMap( );
+    retrieveSelection( ldap, lic.getUserBaseDn( ), lic.getUsersSelection( ), attrNames.toArray( new String[0] ), new LdapEntryProcessor( ) {
+
+      @Override
+      public void processLdapEntry( String dn, Attributes attrs ) throws NamingException {
         if ( VERBOSE ) {
-          LOG.debug( "Retrieved user: " + attrs );
+          LOG.debug( "Retrieved user: " + dn + " -> " + attrs );
         }
         Map<String, String> infoMap = Maps.newHashMap( );
-        for ( String attr : lic.getUserInfoAttributes( ).keySet( ) ) {
-          infoMap.put( lic.getUserInfoAttributes( ).get( attr ), ( String ) attrs.get( attr ).get( ) );
+        for ( String attrName : lic.getUserInfoAttributes( ).keySet( ) ) {
+          infoMap.put( lic.getUserInfoAttributes( ).get( attrName ), ( String ) attrs.get( attrName ).get( ) );
         }
+        infoMap.put( User.DN, dn );
         userMap.put( getId( lic.getUserIdAttribute( ), attrs ), infoMap );
       }
-      return userMap;
-    } catch ( NamingException e ) {
-      LOG.error( e, e );
-      throw new LdapException( "Error reading users", e );
-    }
+      
+    } );
+    return userMap;
   }
 
 }

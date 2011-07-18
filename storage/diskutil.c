@@ -643,7 +643,7 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
     logprintfl (EUCAINFO, "{%u} installing grub in MBR\n", (unsigned int)pthread_self());
     if (grub_version==1) {
         char tmp_file [EUCA_MAX_PATH] = "/tmp/euca-temp-XXXXXX";
-        int tfd = mkstemp (tmp_file);
+        int tfd = safe_mkstemp (tmp_file);
         if (tfd < 0) {
             logprintfl (EUCAINFO, "{%u} error: mkstemp() failed: %s\n", (unsigned int)pthread_self(), strerror (errno));
             return ERROR;
@@ -651,9 +651,15 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
 
         // create a soft link of the first partition's device mapper entry in the
         // form that grub is looking for (not DISKp1 but just DISK1)
-        if (NULL==pruntf (TRUE, "%s /bin/ln -s %sp1 %s1", helpers_path[ROOTWRAP], path, path)) {
+        char *output = pruntf (TRUE, "%s /bin/ln -s %sp1 %s1", helpers_path[ROOTWRAP], path, path);
+        if(!output) {
             logprintfl (EUCAINFO, "{%u} warning: failed to create partition device soft-link", (unsigned int)pthread_self());
+        } else {
+            free(output);
         }
+        /*        if (NULL==pruntf (TRUE, "%s /bin/ln -s %sp1 %s1", helpers_path[ROOTWRAP], path, path)) {
+            logprintfl (EUCAINFO, "{%u} warning: failed to create partition device soft-link", (unsigned int)pthread_self());
+            }*/
 
         // we now invoke grub through euca_rootwrap because it may need to operate on
         // devices that are owned by root (e.g. /dev/mapper/euca-dsk-7E4E131B-fca1d769p1)
@@ -701,9 +707,15 @@ int diskutil_grub2_mbr (const char * path, const int part, const char * mnt_pt)
             }
         }
         // try to remove the partition device soft link created above
-        if (NULL==pruntf (TRUE, "%s /bin/rm %s1", helpers_path[ROOTWRAP], path)) {
+        output = pruntf (TRUE, "%s /bin/rm %s1", helpers_path[ROOTWRAP], path);
+        if(!output) {
             logprintfl (EUCAINFO, "{%u} warning: failed to remove partition device soft-link", (unsigned int)pthread_self());
+        } else {
+            free(output);
         }
+        /*        if (NULL==pruntf (TRUE, "%s /bin/rm %s1", helpers_path[ROOTWRAP], path)) {
+            logprintfl (EUCAINFO, "{%u} warning: failed to remove partition device soft-link", (unsigned int)pthread_self());
+            }*/
 
     } else if (grub_version==2) {
         char * output = pruntf (TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s %s", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt, path);
@@ -808,19 +820,23 @@ static char * pruntf (boolean log_error, char *format, ...)
     }
 
     output = malloc(sizeof(char) * outsize);
+    if(output) {
+        output[0]='\0'; // make sure we return an empty string if there is no output
+    }
+
+    while(output != NULL && (bytes = fread(output+(outsize-1025), 1, 1024, IF)) > 0) {
+        output[(outsize-1025)+bytes] = '\0';
+        outsize += 1024;
+        output = realloc(output, outsize);
+    }
+
     if (output == NULL) {
         logprintfl (EUCAERROR, "error: failed to allocate mem for output\n");
         va_end(ap);
         pclose(IF);
         return(NULL);
     }
-    output[0]='\0'; // make sure we return an empty string if there is no output
 
-    while((bytes = fread(output+(outsize-1025), 1, 1024, IF)) > 0) {
-        output[(outsize-1025)+bytes] = '\0';
-        outsize += 1024;
-        output = realloc(output, outsize);
-    }
     rc = pclose(IF);
     if (rc) {
         if (log_error) {
@@ -831,6 +847,7 @@ static char * pruntf (boolean log_error, char *format, ...)
         output = NULL;
     }
     va_end(ap);
+
     return (output);
 }
 

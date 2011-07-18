@@ -621,6 +621,8 @@ char* java_library_path(euca_opts *args) {
 	wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "%s", class_cache_dir);
 	wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "%s", script_dir);
 	DIR* lib_dir_p = opendir(lib_dir);
+	if(!lib_dir_p)
+	   __die(1, "Can't open library directory %s", lib_dir);
 	struct direct *dir_ent;
 	while ((dir_ent = readdir(lib_dir_p)) != 0) {
 		if (strcmp(dir_ent->d_name, ".") != 0 && strcmp(dir_ent->d_name, "..")
@@ -650,7 +652,7 @@ char* java_library_path(euca_opts *args) {
 				wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, ":%s", jar);
 		}
 	}
-	closedir(lib_dir_p);
+	closedir(lib_dir_p); 
 	return jar_list;
 }
 

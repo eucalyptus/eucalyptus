@@ -4,22 +4,26 @@
 
   "ldap-service":{
 
-    "_comment":"This section defines configurations for LDAP service. <server-url> defines LDAP service URL. <auth-method> defines the LDAP authentication method. <auth-principal> defines the LDAP authentication user (for whom to access LDAP). <auth-credentials> field can have both un-encrypted and encrypted password. Encrypted password has a format as {RSA/ECB/PKCS1Padding}xxxxxxxxxxxxx. <use-ssl> specifies whether to use SSL for LDAP connection for extra safety.",
+    "_comment":"This section defines configurations for LDAP service. <server-url> defines LDAP service URL. <auth-method> specifies the LDAP authentication method for the administrative identity designated to perform LDAP sync. <user-auth-method> specifies the LDAP authentication method for normal LDAP users. <auth-principal> defines the LDAP authentication user (for whom to access LDAP). <auth-credentials> field can have both un-encrypted and encrypted password. Encrypted password has a format as {RSA/ECB/PKCS1Padding}xxxxxxxxxxxxx. <use-ssl> specifies whether to use SSL for LDAP connection for extra safety. <ignore-ssl-cert-validation> specifies whether to ignore SSL certificate validation, esp. for accepting self-signed certificates. <krb5-conf> specifies the krb5.conf file for GSSAPI with Kerbeors V5 authentication.",
 
     "server-url":"ldap://localhost:7733",
     "auth-method":"simple",
+    "user-auth-method":"simple",
     "auth-principal":"cn=ldapadmin,dc=foo,dc=com",
     "auth-credentials":"ENCRYPTED_PASSWORD",
     "use-ssl":"false",
+    "ignore-ssl-cert-validation":"false",
+    "krb5-conf":"/path/to/krb5.conf",
   },
 
   "sync":{
 
-    "_comment":"This section defines configurations for sync behavior. <enable> turns on/off sync. <auto> specifies if sync is automated. <interval> defines the period between syncs.",
+    "_comment":"This section defines configurations for sync behavior. <enable> turns on/off sync. <auto> specifies if sync is automated. <interval> defines the period between syncs. <clean-deletion> specifies whether to clean up identity objects that are already deleted in the LDAP from the local database.",
 
     "enable":"true",
     "auto":"true",
     "interval":"900000",
+    "clean-deletion":"false",
   },
 
   "accounting-groups":{
