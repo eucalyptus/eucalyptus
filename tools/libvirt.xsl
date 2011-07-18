@@ -146,17 +146,17 @@ that describes a Eucalyptus instance to be launched.
 	                    </xsl:choose>
                         </target>
                     </disk>
-                    <xsl:if test="/instance/disks/floppyPath != ''">
-                        <disk type="file" device="floppy">
-                            <source>
-                                <xsl:attribute name="file">
-                                    <xsl:value-of select="/instance/disks/floppyPath"/>
-                                </xsl:attribute>
-                            </source>
-                            <target dev="fda"/>
-                        </disk>
-                    </xsl:if>
                 </xsl:for-each>
+                <xsl:if test="/instance/disks/floppyPath != ''">
+                    <disk type="file" device="floppy">
+                        <source>
+                            <xsl:attribute name="file">
+                               <xsl:value-of select="/instance/disks/floppyPath"/>
+                            </xsl:attribute>
+                        </source>
+                        <target dev="fda"/>
+                    </disk>
+                </xsl:if>
                 <!-- network cards -->
                 <xsl:for-each select="/instance/nics/nic">
                     <interface type="bridge">
