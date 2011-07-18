@@ -64,6 +64,7 @@
 import groovy.xml.MarkupBuilder
 import org.apache.log4j.Logger
 import org.logicalcobwebs.proxool.ProxoolFacade
+import com.eucalyptus.bootstrap.BootstrapArgs
 import com.eucalyptus.bootstrap.SystemIds
 import com.eucalyptus.component.Components
 import com.eucalyptus.component.ServiceConfiguration
@@ -104,10 +105,14 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
   new File( ha_jdbc_config_file_name ).withWriter{ writer ->
     def xml = new MarkupBuilder(writer);
     xml.'ha-jdbc'() {
-//      sync('class':'net.sf.hajdbc.sync.FullSynchronizationStrategy', id:'full') {
-//        'property'(name:'fetchSize', '1000')
-//        'property'(name:'maxBatchSize', '100')
-//      }
+      if( BootstrapArgs.isCloudController( ) ) {
+        sync('class':'net.sf.hajdbc.sync.DifferentialSynchronizationStrategy', id:'full') {
+          'property'(name:'fetchSize', '1000')
+          'property'(name:'maxBatchSize', '100')
+        }
+      } else {
+        sync('class':'net.sf.hajdbc.sync.PassiveSynchronizationStrategy ', id:'full');      
+      }
       cluster(id:"eucalyptus-${SystemIds.jdbcGroupName( )}",
           'auto-activate-schedule':'0 * * ? * *',
           balancer:'load', //(simple|random|round-robin|load)

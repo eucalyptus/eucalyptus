@@ -78,18 +78,20 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 
 public class Host implements java.io.Serializable, Comparable<Host> {
-  private static Logger              LOG       = Logger.getLogger( Host.class );
+  private static final long          serialVersionUID = 1;
+  private static Logger              LOG              = Logger.getLogger( Host.class );
   private final Address              groupsId;
   private final InetAddress          bindAddress;
   private ImmutableList<InetAddress> hostAddresses;
   private Boolean                    hasDatabase;
   private Boolean                    hasBootstrapped;
-  private AtomicLong                 timestamp = new AtomicLong( System.currentTimeMillis( ) );
-  private Long                       lastTime  = 0l;
+  private AtomicLong                 timestamp        = new AtomicLong( System.currentTimeMillis( ) );
+  private Long                       lastTime         = 0l;
   private ServiceConfiguration       serviceConfiguration;
   private Integer                    epoch;
   
-  Host( Address jgroupsId, InetAddress bindAddress, Integer epoch, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> hostAddresses, ServiceConfiguration configuration ) {
+  Host( Address jgroupsId, InetAddress bindAddress, Integer epoch, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> hostAddresses,
+        ServiceConfiguration configuration ) {
     this.groupsId = jgroupsId;
     this.serviceConfiguration = configuration;
     this.bindAddress = bindAddress;
@@ -191,11 +193,11 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   public void markBootstrapped( ) {
     this.hasBootstrapped = hasBootstrapped;
   }
-
+  
   public Integer getEpoch( ) {
     return this.epoch;
   }
-
+  
   public void setEpoch( Integer epoch ) {
     this.epoch = epoch;
   }
