@@ -66,9 +66,9 @@ import org.apache.log4j.Logger
 import org.logicalcobwebs.proxool.ProxoolFacade
 import com.eucalyptus.bootstrap.BootstrapArgs
 import com.eucalyptus.bootstrap.SystemIds
+import com.eucalyptus.component.ComponentIds
 import com.eucalyptus.component.Host
 import com.eucalyptus.component.Hosts
-import com.eucalyptus.component.ServiceConfiguration
 import com.eucalyptus.component.id.Database
 import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.system.SubDirectory
@@ -131,10 +131,10 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
           ) {
             Hosts.list( ).findAll{ Host host ->
               host.hasDatabase( )
-            }.each{
-              database(id:db_service.getHostName(),local:db_service.isHostLocal()) {
+            }.each{ Host host ->
+              database(id:host.getBindAddress(),local:host.isLocalHost( )) {
                 driver(real_jdbc_driver)
-                url("jdbc:${db_service.uri.toASCIIString( )}_${context_name}")
+                url("jdbc:${ComponentIds.lookup(Database.class).makeExternalRemoteUri( host.getBindAddress( ).getHostAddress( ), 8777 ).toASCIIString( )}_${context_name}")
                 //                property(true){
                 //                  name:'sql.tx_no_multi_rewrite'
                 //                }
