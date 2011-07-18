@@ -112,7 +112,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
           'property'(name:'maxBatchSize', '100')
         }
       } else {
-        sync('class':'net.sf.hajdbc.sync.PassiveSynchronizationStrategy ', id:'full');      
+        sync('class':'net.sf.hajdbc.sync.PassiveSynchronizationStrategy ', id:'passive');      
       }
       cluster(id:"${SystemIds.jdbcGroupName( )}",
           'auto-activate-schedule':'0 * * ? * *',
