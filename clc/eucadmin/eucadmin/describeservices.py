@@ -34,7 +34,8 @@ import eucadmin
 
 class DescribeServices(AWSQueryRequest):
   
-    ServicePath = '/internal/BootstrapInternal'
+    ServicePath = '/services/Bootstrap'
+    InternalServicePath = '/internal/BootstrapInternal'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Get services'
     Params = [
@@ -92,6 +93,8 @@ class DescribeServices(AWSQueryRequest):
               ]
 
     def __init__(self, **args):
+      if 'debug' in self.args and self.args['debug'] >= 2:
+        self.ServicePath = InternalServicePath
         AWSQueryRequest.__init__(self, **args)
         self.list_markers = ['euca:serviceStatuses']
         self.item_markers = ['euca:item']
@@ -136,5 +139,5 @@ class DescribeServices(AWSQueryRequest):
         return self.send(**args)
 
     def main_cli(self):
-        self.do_cli()
+      self.do_cli()
     
