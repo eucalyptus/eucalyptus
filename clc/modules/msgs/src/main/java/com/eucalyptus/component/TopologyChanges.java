@@ -319,7 +319,7 @@ public class TopologyChanges {
             Future<ServiceConfiguration> result = ServiceTransitions.transitionChain( config, nextState );
             ServiceConfiguration endConfig = result.get( );
             State endState = endConfig.lookupState( );
-            LOG.debug( this.toString( ) + " completed for: " + endConfig + " trying " + initialState + "->" + nextState + " ended in: " + endState );
+            LOG.debug( this.toString( ) + " completed for: " + endConfig.getFullName( ) + " trying " + initialState + "->" + nextState + " ended in: " + endState );
             return endConfig;
           } catch ( InterruptedException ex ) {
             Thread.currentThread( ).interrupt( );
@@ -327,7 +327,7 @@ public class TopologyChanges {
           } catch ( UndeclaredThrowableException ex ) {
             throw ex;
           } catch ( Exception ex ) {
-            LOG.debug( this.toString( ) + " failed for: " + config + " trying " + initialState + "->" + nextState + " because of: " + ex.getMessage( ), ex );
+            LOG.debug( this.toString( ) + " failed for: " + config.getFullName( ) + " trying " + initialState + "->" + nextState + " because of: " + ex.getMessage( ), ex );
             throw new UndeclaredThrowableException( ex );
           }
         }
@@ -336,7 +336,7 @@ public class TopologyChanges {
     
     @Override
     public String toString( ) {
-      return this.getClass( ).toString( ) + "." + this.name( );
+      return this.getClass( ).toString( ).replaceAll( "^.*\\$", "" ).replaceAll( "\\$.*$", "" ) + "." + this.name( );
     }
     
   }

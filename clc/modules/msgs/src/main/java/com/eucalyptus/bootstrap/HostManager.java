@@ -324,7 +324,6 @@ public class HostManager {
     @Override
     public void fireEvent( Event event ) {
       if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( HOST_ADVERTISE_REMOTE ) ) {
-        LOG.debug( "Sending state info: " + Hosts.localHost( ) );
         try {
           HostManager.send( null, Lists.newArrayList( Hosts.localHost( ) ) );
         } catch ( Exception ex ) {
@@ -455,7 +454,7 @@ public class HostManager {
   public static Future<?> send( final Address dest, final Serializable msg ) {
     final Message outMsg = new Message( dest, null, msg );
     outMsg.putHeader( Protocols.lookupRegisteredId( EpochHeader.class ), new EpochHeader( Topology.epoch( ) ) );
-    LOG.debug( "Outgoing message to: " + dest + " with payload " + msg.toString( ) + " " + outMsg.getHeaders( ) );
+    LOG.debug( Thread.currentThread( ).getStackTrace( )[1] + " sending message to: " + dest + " with payload " + msg.toString( ) + " " + outMsg.getHeaders( ) );
     return Threads.lookup( Empyrean.class, HostManager.class ).limitTo( 8 ).submit( new Runnable( ) {
       
       @Override
