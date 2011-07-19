@@ -31,7 +31,7 @@
 from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
 import eucadmin
-import sys
+import os
 
 class DescribeServices(AWSQueryRequest):
   
