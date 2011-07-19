@@ -110,7 +110,7 @@ public class Databases {
   @RunDuring( Bootstrap.Stage.DatabaseInit )
   @Provides( Empyrean.class )
   @DependsLocal( Eucalyptus.class )
-  public static class ScriptedDbBootstrapper implements DatabaseBootstrapper {
+  public static class ScriptedDbBootstrapper extends Bootstrapper.Simple implements DatabaseBootstrapper {
     DatabaseBootstrapper db;
     
     public ScriptedDbBootstrapper( ) {
@@ -172,6 +172,11 @@ public class Databases {
     @Override
     public String getUriPattern( ) {
       return this.db.getUriPattern( );
+    }
+
+    @Override
+    public boolean check( ) throws Exception {
+      return this.db.isRunning( );
     }
   }
   
