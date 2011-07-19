@@ -74,6 +74,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.util.Internets;
 
 public class Eucalyptus extends ComponentId.Unpartioned {
@@ -129,6 +130,7 @@ public class Eucalyptus extends ComponentId.Unpartioned {
       if ( Component.State.INITIALIZED.ordinal( ) >= config.lookupState( ).ordinal( ) ) {
         comp.loadService( config ).get( );
       }
+      Topology.enable( config );
     } catch ( InterruptedException ex ) {
       Thread.currentThread( ).interrupt( );
     }
