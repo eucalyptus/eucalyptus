@@ -110,10 +110,10 @@ public class Databases {
   @RunDuring( Bootstrap.Stage.DatabaseInit )
   @Provides( Empyrean.class )
   @DependsLocal( Eucalyptus.class )
-  static class ScriptedDbBootstrapper implements DatabaseBootstrapper {
+  public static class ScriptedDbBootstrapper implements DatabaseBootstrapper {
     DatabaseBootstrapper db;
     
-    ScriptedDbBootstrapper( ) {
+    public ScriptedDbBootstrapper( ) {
       super( );
       try {
         this.db = Groovyness.newInstance( "setup_db" );
