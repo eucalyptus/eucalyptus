@@ -86,7 +86,7 @@ public class Hosts {
     INSTANCE;
     @Override
     public boolean apply( Host arg0 ) {
-      return arg0.hasDatabase( ) || arg0.getGroupsId( ).equals( HostManager.getInstance( ).getMembershipChannel( ).getAddress( ) );
+      return arg0.hasDatabase( );
     }
     
   }
