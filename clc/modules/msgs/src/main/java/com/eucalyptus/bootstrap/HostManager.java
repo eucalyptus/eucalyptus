@@ -454,7 +454,8 @@ public class HostManager {
   public static Future<?> send( final Address dest, final Serializable msg ) {
     final Message outMsg = new Message( dest, null, msg );
     outMsg.putHeader( Protocols.lookupRegisteredId( EpochHeader.class ), new EpochHeader( Topology.epoch( ) ) );
-    LOG.debug( Thread.currentThread( ).getStackTrace( )[1] + " sending message to: " + dest + " with payload " + msg.toString( ) + " " + outMsg.getHeaders( ) );
+    StackTraceElement caller = Thread.currentThread( ).getStackTrace( )[1];
+    LOG.debug( caller.getClassName( ).replaceAll( "^.*\\.","" ) + "." + caller.getMethodName( ) + ":" + caller.getLineNumber( ) + " sending message to: " + dest + " with payload " + msg.toString( ) + " " + outMsg.getHeaders( ) );
     return Threads.lookup( Empyrean.class, HostManager.class ).limitTo( 8 ).submit( new Runnable( ) {
       
       @Override
