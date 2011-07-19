@@ -220,7 +220,8 @@ public class Topology implements EventListener<Event> {
                                             .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) ) );
           return result;
         } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+          Logs.exhaust( ).error( ex, ex );
+          LOG.error( ex );
           throw ex;
         }
       }
@@ -250,7 +251,8 @@ public class Topology implements EventListener<Event> {
           
           return result;
         } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+          Logs.exhaust( ).error( ex, ex );
+          LOG.error( ex );
           throw ex;
         }
       }

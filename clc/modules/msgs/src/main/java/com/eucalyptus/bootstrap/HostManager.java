@@ -298,7 +298,6 @@ public class HostManager {
           System.exit( 123 );
         }
       } else {
-        HostManager.this.view.markReady( );
       }
     }
     
