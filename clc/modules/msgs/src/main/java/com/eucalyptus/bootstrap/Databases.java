@@ -70,8 +70,22 @@ import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 
 public class Databases {
-  private static final ScriptedDbBootstrapper singleton = new ScriptedDbBootstrapper( );
-  private static Logger                       LOG       = Logger.getLogger( Databases.class );
+  private static final ScriptedDbBootstrapper singleton   = new ScriptedDbBootstrapper( );
+  private static Logger                       LOG         = Logger.getLogger( Databases.class );
+  private static final String                 DB_NAME     = "eucalyptus";
+  public static final String                  DB_USERNAME = DB_NAME;
+
+  public static String getUserName( ) {
+    return DB_USERNAME;
+  }
+  
+  public static String getDatabaseName( ) { 
+    return DB_NAME;
+  }
+  
+  public static String getPassword( ) {
+    return SystemIds.databasePassword( );
+  }
   
   public static String getDriverName( ) {
     return singleton.getDriverName( );
@@ -80,15 +94,15 @@ public class Databases {
   public static String getJdbcDialect( ) {
     return singleton.getJdbcDialect( );
   }
-
+  
   public static String getHibernateDialect( ) {
     return singleton.getHibernateDialect( );
   }
-
+  
   public static DatabaseBootstrapper getBootstrapper( ) {
     return singleton;
   }
-
+  
   public static void initialize( ) {
     singleton.init( );
   }
@@ -135,32 +149,32 @@ public class Databases {
     public String getDriverName( ) {
       return this.db.getDriverName( );
     }
-
+    
     @Override
     public String getJdbcDialect( ) {
       return this.db.getJdbcDialect( );
     }
-
+    
     @Override
     public String getHibernateDialect( ) {
       return this.db.getHibernateDialect( );
     }
-
+    
     @Override
     public void init( ) {
       this.db.init( );
     }
-
+    
     public static DatabaseBootstrapper getInstance( ) {
       return singleton;
     }
-
+    
     @Override
     public String getUriPattern( ) {
       return this.db.getUriPattern( );
     }
   }
-
+  
   public static String getUriPattern( ) {
     return singleton.getUriPattern( );
   }
