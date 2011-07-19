@@ -74,12 +74,13 @@ try {
       final ServiceConfiguration newComponent = ServiceBuilders.lookup( Eucalyptus.class ).add( Eucalyptus.INSTANCE.name( ), Internets.localHostAddress( ), Internets.localHostAddress( ), 8773 );
       LOG.info( "Added registration for this cloud controller: " + newComponent.toString() );
     }
+    Databases.getBootstrapper( ).destroy( );
   } catch( Exception ex ) {
+    Databases.getBootstrapper( ).destroy( );
     LOG.error( ex, ex );
     System.exit( 1 );
-  } finally {
-    Databases.getBootstrapper( ).stop( );
   }
 } catch( Exception ex ) {
+  Databases.getBootstrapper( ).destroy( );
   LOG.error( ex, ex );
 }
