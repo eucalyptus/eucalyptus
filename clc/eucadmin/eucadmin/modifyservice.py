@@ -35,8 +35,7 @@ import os
 
 class ModifyService(AWSQueryRequest):
   
-    ServicePath = '/services/Bootstrap'
-    InternalServicePath = '/internal/BootstrapInternal'
+    ServicePath = '/services/Empyrean'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Modify service state'
     Params = [
@@ -52,11 +51,6 @@ class ModifyService(AWSQueryRequest):
                   ptype='string',
                   optional=False,
                   doc='The name of the service')]
-
-    def __init__(self, **args):
-      if os.environ.get('EC2_URL').endswith('Internal'):
-        self.ServicePath = self.InternalServicePath
-      AWSQueryRequest.__init__(self, **args)
 
     def get_connection(self, **args):
         if self.connection is None:

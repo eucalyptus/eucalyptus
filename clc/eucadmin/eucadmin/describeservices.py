@@ -35,8 +35,7 @@ import os
 
 class DescribeServices(AWSQueryRequest):
   
-    ServicePath = '/services/Bootstrap'
-    InternalServicePath = '/internal/BootstrapInternal'
+    ServicePath = '/services/Empyrean'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Get services'
     Params = [
@@ -94,8 +93,6 @@ class DescribeServices(AWSQueryRequest):
               ]
 
     def __init__(self, **args):
-      if os.environ.get('EC2_URL').endswith('Internal'):
-        self.ServicePath = self.InternalServicePath
       AWSQueryRequest.__init__(self, **args)
       self.list_markers = ['euca:serviceStatuses']
       self.item_markers = ['euca:item']
