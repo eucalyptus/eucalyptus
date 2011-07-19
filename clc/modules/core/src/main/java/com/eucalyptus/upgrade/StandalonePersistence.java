@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
+import org.apache.log4j.Level;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.jboss.netty.util.internal.ConcurrentHashMap;
 import com.eucalyptus.auth.Accounts;
@@ -150,7 +151,6 @@ public class StandalonePersistence {
   static void setupSystemProperties( ) {
     /** Pre-flight configuration for system **/
     System.setProperty( "euca.home", eucaHome );
-    System.setProperty( "euca.log.level", "TRACE" );
     System.setProperty( "euca.log.appender", "console" );
     System.setProperty( "euca.log.exhaustive.cc", "FATAL" );
     System.setProperty( "euca.log.exhaustive.db", "FATAL" );
@@ -160,11 +160,9 @@ public class StandalonePersistence {
     System.setProperty( "euca.conf.dir", eucaHome + "/etc/eucalyptus/cloud.d/" );
     System.setProperty( "euca.log.dir", eucaHome + "/var/log/eucalyptus/" );
     System.setProperty( "euca.lib.dir", eucaHome + "/usr/share/eucalyptus/" );
-    boolean doTrace = "TRACE".equals( System.getProperty( "euca.log.level" ) );
-    boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || doTrace;
-    // Logs.DEBUG = doDebug;
-    // Logs.TRACE = doDebug;
-    StandalonePersistence.LOG = Logger.getLogger( StandalonePersistence.class );
+    String logLevel = System.getProperty( "euca.log.level", "INFO" ).toUpperCase();
+    LOG = Logger.getLogger( StandalonePersistence.class );
+    LOG.setLevel(Level.toLevel(logLevel, Level.toLevel("INFO")));
 
     LOG.info( String.format( "%-20.20s %s", "New install directory:", eucaHome ) );
     LOG.info( String.format( "%-20.20s %s", "Old install directory:", eucaOld ) );
