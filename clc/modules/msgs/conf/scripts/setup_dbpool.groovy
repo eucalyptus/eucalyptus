@@ -116,7 +116,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
       cluster(id:context_pool_alias,
           'auto-activate-schedule':'0 * * ? * *',
           balancer:'load', //(simple|random|round-robin|load)
-          'default-sync': BootstrapArgs.isCloudController() ? 'full' : 'passive',
+          'default-sync': 'passive',
           dialect:'net.sf.hajdbc.dialect.MySQLDialect',
           'failure-detect-schedule':'0 * * ? * *',
           'meta-data-cache':'none',//(none|lazy|eager)

@@ -71,19 +71,35 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
-import org.jgroups.View;
-import org.jgroups.ViewId;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.HostManager;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.Mbeans;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class Hosts {
+  enum DbFilter implements Predicate<Host> {
+    INSTANCE;
+    @Override
+    public boolean apply( Host arg0 ) {
+      return arg0.hasDatabase( ) || arg0.getGroupsId( ).equals( HostManager.getInstance( ).getMembershipChannel( ).getAddress( ) );
+    }
+    
+  }
+  
+  enum NonLocalDbFilter implements Predicate<Host> {
+    INSTANCE;
+    @Override
+    public boolean apply( Host arg0 ) {
+      return !arg0.isLocalHost( ) && DbFilter.INSTANCE.apply( arg0 );
+    }
+    
+  }
+  
   private static final Logger                       LOG     = Logger.getLogger( Hosts.class );
   private static final ConcurrentMap<Address, Host> hostMap = new ConcurrentHashMap<Address, Host>( );
   
@@ -91,6 +107,14 @@ public class Hosts {
     return Lists.newArrayList( hostMap.values( ) );
   }
   
+  public static List<Host> listDatabases( ) {
+    return Lists.newArrayList( Iterables.filter( Hosts.list( ), DbFilter.INSTANCE ) );
+  }
+  
+  public static List<Host> listRemoteDatabases( ) {
+    return Lists.newArrayList( Iterables.filter( Hosts.list( ), NonLocalDbFilter.INSTANCE ) );
+  }
+
   public static boolean contains( Address jgroupsId ) {
     return hostMap.containsKey( jgroupsId );
   }
@@ -136,7 +160,7 @@ public class Hosts {
       for ( Address addr : removeMembers ) {
         Host removedHost = hostMap.remove( addr );
         removedHosts.add( removedHost );
-        LOG.warn( "Failure detected for host: " + removedHost );
+        LOG.warn( "Failure detected for host: " + removedHost );//TODO:GRZE: review.
       }
     }
     LOG.debug( "Current host entries: " );
@@ -168,7 +192,7 @@ public class Hosts {
             try {
               ServiceConfiguration config = empyrean.initRemoteService( addr );
               empyrean.loadService( ephemeralConfig ).get( );
-              entry = new Host( updatedHost.getGroupsId( ), updatedHost.getBindAddress( ), updatedHost.getEpoch( ), 
+              entry = new Host( updatedHost.getGroupsId( ), updatedHost.getBindAddress( ), updatedHost.getEpoch( ),
                                 updatedHost.hasDatabase( ),
                                 updatedHost.hasBootstrapped( ),
                                 updatedHost.getHostAddresses( ), config );

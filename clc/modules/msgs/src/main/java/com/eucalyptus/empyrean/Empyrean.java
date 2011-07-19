@@ -153,9 +153,8 @@ public class Empyrean extends ComponentId.Unpartioned {
         HostManager.getInstance( );
         LOG.info( "Started membership channel " + HostManager.getMembershipGroupName( ) );
         while ( !HostManager.isReady( ) ) {
-          TimeUnit.SECONDS.sleep( 1 );
+          TimeUnit.SECONDS.sleep( 5 );
           LOG.info( "Waiting for system view with database..." );
-          HostManager.send( null, Lists.newArrayList( Hosts.localHost( ) ) );
         }
         LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
         return true;
