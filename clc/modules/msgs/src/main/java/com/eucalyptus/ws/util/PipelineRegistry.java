@@ -122,9 +122,11 @@ public class PipelineRegistry {
     if ( candidate == null ) {
       for ( FilteredPipeline f : this.componentPipelines.values( ) ) {
         if ( f.checkAccepts( request ) ) {
-          return f;
+          candidate = f;
         }
       }
+    }
+    if ( candidate == null ) {
       if ( Logs.EXTREME ) {
         if ( request instanceof MappingHttpMessage ) {
           ( ( MappingHttpMessage ) request ).logMessage( );
