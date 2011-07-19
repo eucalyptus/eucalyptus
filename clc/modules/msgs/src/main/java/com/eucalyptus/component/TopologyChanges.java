@@ -336,7 +336,7 @@ public class TopologyChanges {
     
     @Override
     public String toString( ) {
-      return this.getClass( ).toString( ).replaceAll( "^.*\\$", "" ).replaceAll( "\\$.*$", "" ) + "." + this.name( );
+      return this.getClass( ).toString( ).replaceAll( "^[^\\$]*\\$", "" ).replaceAll( "\\$[^\\$]*$", "" ) + "." + this.name( );
     }
     
   }
