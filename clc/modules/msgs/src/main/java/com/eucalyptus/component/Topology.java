@@ -96,6 +96,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Topology implements EventListener<Event> {
   private static Logger                                         LOG          = Logger.getLogger( Topology.class );
@@ -118,7 +119,16 @@ public class Topology implements EventListener<Event> {
         : msgEpoch;
     }
   }
-  
+
+  public static boolean check( BaseMessage msg ) {
+    if ( !BootstrapArgs.isCloudController( ) ) {
+      Integer msgEpoch = ( msg.get_epoch( ) == null ? 0 : Topology.epoch( ) );
+      boolean rightEpoch = Topology.getInstance( ).epoch( ) <= msgEpoch;
+    } else {
+      return true;
+    }
+  }
+
   public static Topology getInstance( ) {
     if ( singleton != null ) {
       return singleton;

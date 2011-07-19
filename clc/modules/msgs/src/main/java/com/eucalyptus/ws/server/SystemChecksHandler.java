@@ -86,6 +86,7 @@ import com.eucalyptus.empyrean.ServiceTransitionType;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
+import com.eucalyptus.util.Logs;
 import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -97,14 +98,18 @@ public enum SystemChecksHandler implements ChannelUpstreamHandler {
       final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
       final BaseMessage msg = BaseMessage.extractMessage( e );
       if ( msg != null ) {
-        boolean rightEpoch = ( msg.get_epoch( ) == null || ( msg.get_epoch( ) == Topology.getInstance( ).epoch( ) ) );
-        Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
-        ComponentId compId = ComponentIds.lookup( compClass );
-        Component comp = Components.lookup( compId );
-        if ( comp.isEnabledLocally( ) ) {
+        try {
+          Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
+          ComponentId compId = ComponentIds.lookup( compClass );
+          Component comp = Components.lookup( compId );
+          if ( comp.isEnabledLocally( ) ) {
+            ctx.sendUpstream( e );
+          } else {
+            this.sendError( ctx, e, comp );
+          }
+        } catch ( Exception ex ) {
+          Logs.extreme( ).error( ex, ex );
           ctx.sendUpstream( e );
-        } else {
-          this.sendError( ctx, e, comp );
         }
       } else {
         ctx.sendUpstream( e );
@@ -117,15 +122,21 @@ public enum SystemChecksHandler implements ChannelUpstreamHandler {
     public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
       final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
       final BaseMessage msg = BaseMessage.extractMessage( e );
-      if ( msg != null && !( msg instanceof ServiceTransitionType ) ) {
-        boolean rightEpoch = ( msg.get_epoch( ) == null || ( msg.get_epoch( ) == Topology.getInstance( ).epoch( ) ) );
-        if ( rightEpoch ) {
+      if ( msg != null ) {
+        try {
+          if ( msg instanceof ServiceTransitionType ) {
+            Topology.touch( ( ServiceTransitionType ) msg );
+          } else if ( Topology.check( msg ) ) {
+            ctx.sendUpstream( e );
+          } else {
+            Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
+            ComponentId compId = ComponentIds.lookup( compClass );
+            Component comp = Components.lookup( compId );
+            this.sendError( ctx, e, comp );
+          }
+        } catch ( Exception ex ) {
+          Logs.extreme( ).error( ex, ex );
           ctx.sendUpstream( e );
-        } else {
-          Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
-          ComponentId compId = ComponentIds.lookup( compClass );
-          Component comp = Components.lookup( compId );
-          this.sendError( ctx, e, comp );
         }
       }
     }
