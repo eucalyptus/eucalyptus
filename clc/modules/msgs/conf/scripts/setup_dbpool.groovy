@@ -61,6 +61,8 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
+import com.eucalyptus.bootstrap.BootstrapArgs
+import com.eucalyptus.bootstrap.SystemIds
 import groovy.xml.MarkupBuilder
 import org.apache.log4j.Logger
 import org.logicalcobwebs.proxool.ProxoolFacade
@@ -106,18 +108,15 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
   new File( ha_jdbc_config_file_name ).withWriter{ writer ->
     def xml = new MarkupBuilder(writer);
     xml.'ha-jdbc'() {
-      if( BootstrapArgs.isCloudController( ) ) {
-        sync('class':'net.sf.hajdbc.sync.DifferentialSynchronizationStrategy', id:'full') {
-          'property'(name:'fetchSize', '1000')
-          'property'(name:'maxBatchSize', '100')
-        }
-      } else {
-        sync('class':'net.sf.hajdbc.sync.PassiveSynchronizationStrategy ', id:'passive');      
+      sync('class':'net.sf.hajdbc.sync.FullSynchronizationStrategy', id:'full') {
+        'property'(name:'fetchSize', '1000')
+        'property'(name:'maxBatchSize', '100')
       }
-      cluster(id:"${SystemIds.jdbcGroupName( )}",
+      sync('class':'net.sf.hajdbc.sync.PassiveSynchronizationStrategy', id:'passive');
+      cluster(id:context_pool_alias,
           'auto-activate-schedule':'0 * * ? * *',
           balancer:'load', //(simple|random|round-robin|load)
-          'default-sync':'full',
+          'default-sync': BootstrapArgs.isCloudController() ? 'full' : 'passive',
           dialect:'net.sf.hajdbc.dialect.MySQLDialect',
           'failure-detect-schedule':'0 * * ? * *',
           'meta-data-cache':'none',//(none|lazy|eager)
@@ -132,7 +131,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
             Hosts.list( ).findAll{ Host host ->
               host.hasDatabase( )
             }.each{ Host host ->
-              database(id:host.getBindAddress(),local:host.isLocalHost( )) {
+              database(id:host.getBindAddress().getHostAddress( ),local:host.isLocalHost( )) {
                 driver(real_jdbc_driver)
                 url("jdbc:${ComponentIds.lookup(Database.class).makeExternalRemoteUri( host.getBindAddress( ).getHostAddress( ), 8777 ).toASCIIString( )}_${context_name}")
                 user('eucalyptus')

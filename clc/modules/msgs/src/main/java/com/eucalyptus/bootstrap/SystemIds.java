@@ -88,22 +88,22 @@ public class SystemIds {
   }
   
   public static String cloudName( ) {
-    return "eucalyptus-" + createCloudUniqueName( "cloud" );
+    return createCloudUniqueName( "cloud" );
   }
   
   public static String cacheName( ) {
-    return "eucalyptus-" + createCloudUniqueName( "cache" );
+    return createCloudUniqueName( "cache" );
   }
   
   public static String jdbcGroupName( ) {
-    return "eucalyptus-" + createCloudUniqueName( "jdbc" );
+    return createCloudUniqueName( "jdbc" );
   }
   
   public static String membershipGroupName( ) {
-    return "eucalyptus-" + createCloudUniqueName( "membership" );
+    return createCloudUniqueName( "membership" );
   }
   
   public static String membershipUdpMcastTransportName( ) {
-    return "eucalyptus-" + createShortCloudUniqueName( "membership-udp-mcast-transport" );
+    return createShortCloudUniqueName( "membership-udp-mcast-transport" );
   }
 }
