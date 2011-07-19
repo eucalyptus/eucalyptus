@@ -159,7 +159,7 @@ public class SystemBootstrapper {
       } catch ( Throwable t ) {
         t.printStackTrace( );
         LOG.fatal( t, t );
-        System.exit( 1 );
+        System.exit( 123 );
         throw t;
       }
       for ( Component c : Components.whichCanLoad( ) ) {
@@ -183,7 +183,7 @@ public class SystemBootstrapper {
       throw t;
     } catch ( Throwable t ) {
       LOG.fatal( t, t );
-      System.exit( 1 );
+      System.exit( 123 );
       throw t;
     }
     for ( final Component c : Components.whichCanLoad( ) ) {

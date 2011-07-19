@@ -128,9 +128,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
           'eval-current-timestamp':'true',
           'eval-rand':'true'
           ) {
-            Hosts.list( ).findAll{ Host host ->
-              host.hasDatabase( )
-            }.each{ Host host ->
+            Hosts.listDatabases( ).each{ Host host ->
               database(id:host.getBindAddress().getHostAddress( ),local:host.isLocalHost( )) {
                 driver(real_jdbc_driver)
                 url("jdbc:${ComponentIds.lookup(Database.class).makeExternalRemoteUri( host.getBindAddress( ).getHostAddress( ), 8777 ).toASCIIString( )}_${context_name}")
