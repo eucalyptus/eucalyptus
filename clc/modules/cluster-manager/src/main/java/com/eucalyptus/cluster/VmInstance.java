@@ -206,7 +206,9 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     this.clusterName = placement;
     String p = null;
     try {
-      p = ServiceConfigurations.lookup( new ClusterConfiguration( ) { { this.setName( VmInstance.this.clusterName  ); } } ).getPartition( );
+      ClusterConfiguration query = new ClusterConfiguration( );
+      query.setName( this.clusterName );
+      p = ServiceConfigurations.lookup( query ).getPartition( );
     } catch ( PersistenceException ex ) {
       p = placement;
       /** ASAP:GRZE: review **/
