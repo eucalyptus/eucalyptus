@@ -101,7 +101,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
                 final InetAddress localAddr = ( ( InetSocketAddress ) future.getChannel( ).getLocalAddress( ) ).getAddress( );
                 if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
                   AsyncRequestHandler.this.request.get( ).set_epoch( Topology.epoch( ) );
-                  AsyncRequestHandler.this.request.get( ).get_services( ).addAll( Topology.partitionRelativeView( config.lookupPartition( ), localAddr ) );
+                  AsyncRequestHandler.this.request.get( ).get_services( ).addAll( Topology.partitionRelativeView( config, localAddr ) );
                 }
                 EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPEN, request.getClass( ).getSimpleName( ),
                                   request.getCorrelationId( ), serviceSocketAddress.toString( ), "" + future.getChannel( ).getLocalAddress( ),

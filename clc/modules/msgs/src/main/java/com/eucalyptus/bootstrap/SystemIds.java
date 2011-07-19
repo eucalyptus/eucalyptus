@@ -83,6 +83,10 @@ public class SystemIds {
     return Joiner.on( "." ).join( Eucalyptus.class.getSimpleName( ), subName, Signatures.SHA256withRSA.trySign( Eucalyptus.class, subName.getBytes( ) ) );
   }
   
+  public static String createShortCloudUniqueName( String subName ) {
+    return Joiner.on( "." ).join( Eucalyptus.class.getSimpleName( ), subName, Signatures.SHA1WithRSA.trySign( Eucalyptus.class, subName.getBytes( ) ) );
+  }
+  
   public static String cloudName( ) {
     return createCloudUniqueName( "cloud" );
   }
@@ -97,5 +101,9 @@ public class SystemIds {
   
   public static String membershipGroupName( ) {
     return createCloudUniqueName( "membership" );
+  }
+  
+  public static String membershipUdpMcastTransportName( ) {
+    return createShortCloudUniqueName( "membership-udp-mcast-transport" );
   }
 }

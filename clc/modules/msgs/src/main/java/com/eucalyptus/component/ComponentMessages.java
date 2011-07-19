@@ -68,11 +68,15 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.system.Ats;
+import com.eucalyptus.util.Classes;
+import com.google.common.base.Predicate;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class ComponentMessages {
-  private static Logger                        LOG       = Logger.getLogger( ComponentMessages.class );
-  private static final Map<Class<? extends ComponentId>, Class<? extends BaseMessage>> compIdMap = new HashMap<Class<? extends ComponentId>, Class<? extends BaseMessage>>( );
+  private static Logger                                                                  LOG       = Logger.getLogger( ComponentMessages.class );
+  private static final BiMap<Class<? extends ComponentId>, Class<? extends BaseMessage>> compIdMap = HashBiMap.create( );
   
   public static Class<? extends BaseMessage> lookup( Class<? extends ComponentId> compIdClass ) {
     if ( !compIdMap.containsKey( compIdClass ) ) {
@@ -82,9 +86,24 @@ public class ComponentMessages {
     }
   }
   
+  public static <T extends BaseMessage> Class<? extends ComponentId> lookup( T msg ) {
+    Class<? extends BaseMessage> msgType = Classes.findAncestor( msg, new Predicate<Class>( ) {
+      
+      @Override
+      public boolean apply( Class arg0 ) {
+        return Ats.from( arg0 ).has( ComponentMessage.class );
+      }
+    } );
+    if ( !compIdMap.containsValue( msgType ) ) {
+      throw new NoSuchElementException( "No ComponentMessage with name: " + msgType );
+    } else {
+      return compIdMap.inverse( ).get( msgType );
+    }
+  }
+  
   public static void register( Class<? extends BaseMessage> componentMsg ) {
     Class<? extends ComponentId> componentIdClass = Ats.from( componentMsg ).get( ComponentMessage.class ).value( );
     compIdMap.put( componentIdClass, componentMsg );
   }
-
+  
 }

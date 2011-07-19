@@ -10,6 +10,7 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmTypeAvailability;
+import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
@@ -64,14 +65,15 @@ public class NodeResourceAllocator implements ResourceAllocator {
             break;
           } else {
             ClusterNodeState state = cluster.getNodeState( );
-            try {
-              if ( allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {
-                try {
-                  ServiceConfiguration sc = Partitions.lookupService( Storage.class, cluster.getConfiguration( ).getPartition( ) );
-                } catch ( Exception ex ) {
-                  throw new NotEnoughResourcesAvailable( "Not enough resources: " + ex.getMessage( ), ex );
-                }
+            Partition partition = cluster.getConfiguration( ).lookupPartition( );
+            if ( allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {
+              try {
+                ServiceConfiguration sc = Partitions.lookupService( Storage.class, partition );
+              } catch ( Exception ex ) {
+                throw new NotEnoughResourcesAvailable( "Not enough resources: " + ex.getMessage( ), ex );
               }
+            }
+            try {
               int tryAmount = ( remaining > state.getAvailability( vmTypeName ).getAvailable( ) )
                 ? state.getAvailability( vmTypeName ).getAvailable( )
                 : remaining;

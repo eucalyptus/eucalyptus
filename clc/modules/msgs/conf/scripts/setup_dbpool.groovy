@@ -61,19 +61,23 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
+import com.eucalyptus.bootstrap.BootstrapArgs
+import com.eucalyptus.bootstrap.SystemIds
 import groovy.xml.MarkupBuilder
 import org.apache.log4j.Logger
 import org.logicalcobwebs.proxool.ProxoolFacade
+import com.eucalyptus.bootstrap.BootstrapArgs
 import com.eucalyptus.bootstrap.SystemIds
-import com.eucalyptus.component.Components
-import com.eucalyptus.component.ServiceConfiguration
+import com.eucalyptus.component.ComponentIds
+import com.eucalyptus.component.Host
+import com.eucalyptus.component.Hosts
 import com.eucalyptus.component.id.Database
 import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.system.SubDirectory
 import com.eucalyptus.util.LogUtil
 
 
-Logger LOG = Logger.getLogger( "after_database" );
+Logger LOG = Logger.getLogger( "setup_dbpool" );
 
 ClassLoader.getSystemClassLoader().loadClass('org.logicalcobwebs.proxool.ProxoolDriver');
 ClassLoader.getSystemClassLoader().loadClass('net.sf.hajdbc.local.LocalStateManager');
@@ -84,9 +88,9 @@ String pool_db_url = 'jdbc:ha-jdbc:eucalyptus';
 String db_pass = SystemIds.databasePassword( );
 
 default_pool_props = [
-      'proxool.simultaneous-build-throttle': '64',
+      'proxool.simultaneous-build-throttle': '4',
       'proxool.minimum-connection-count': '2',
-      'proxool.maximum-connection-count': '256',
+      'proxool.maximum-connection-count': '32',
       'proxool.house-keeping-test-sql': 'SELECT 1=1;',
       'proxool.house-keeping-sleep-time': '5000',
       'user': 'eucalyptus',
@@ -108,10 +112,11 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
         'property'(name:'fetchSize', '1000')
         'property'(name:'maxBatchSize', '100')
       }
-      cluster(id:"eucalyptus-${SystemIds.jdbcGroupName( )}",
+      sync('class':'net.sf.hajdbc.sync.PassiveSynchronizationStrategy', id:'passive');
+      cluster(id:context_pool_alias,
           'auto-activate-schedule':'0 * * ? * *',
           balancer:'load', //(simple|random|round-robin|load)
-          'default-sync':'full',
+          'default-sync': 'passive',
           dialect:'net.sf.hajdbc.dialect.MySQLDialect',
           'failure-detect-schedule':'0 * * ? * *',
           'meta-data-cache':'none',//(none|lazy|eager)
@@ -123,13 +128,10 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
           'eval-current-timestamp':'true',
           'eval-rand':'true'
           ) {
-            Components.lookup(Database.class).lookupServiceConfigurations().each{ ServiceConfiguration db_service ->
-              database(id:db_service.getHostName(),local:db_service.isHostLocal()) {
+            Hosts.listDatabases( ).each{ Host host ->
+              database(id:host.getBindAddress().getHostAddress( ),local:host.isLocalHost( )) {
                 driver(real_jdbc_driver)
-                url("jdbc:${db_service.uri.toASCIIString( )}_${context_name}")
-                //                property(true){
-                //                  name:'sql.tx_no_multi_rewrite'
-                //                }
+                url("jdbc:${ComponentIds.lookup(Database.class).makeExternalRemoteUri( host.getBindAddress( ).getHostAddress( ), 8777 ).toASCIIString( )}_${context_name}")
                 user('eucalyptus')
                 password(db_pass)
               }

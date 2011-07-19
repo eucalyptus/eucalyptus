@@ -40,7 +40,7 @@ import com.eucalyptus.auth.DatabaseAccountProxy;
 import com.eucalyptus.auth.DatabaseAuthUtils;
 
 // Config
-import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.cluster.ClusterBuilder;

@@ -85,6 +85,11 @@ public class Database extends ComponentId.Unpartioned {
   }
   
   @Override
+  public String getExternalUriPattern( ) {
+    return this.getUriPattern( );
+  }
+
+  @Override
   public String getUriPattern( ) {
     return "mysql://%s:%d/eucalyptus";
   }
@@ -102,4 +107,5 @@ public class Database extends ComponentId.Unpartioned {
       }
     };
   }
+
 }

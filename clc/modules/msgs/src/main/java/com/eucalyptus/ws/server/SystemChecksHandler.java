@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -64,34 +64,97 @@
 package com.eucalyptus.ws.server;
 
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.context.Contexts;
+import org.jboss.netty.handler.codec.http.HttpVersion;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ComponentMessage;
+import com.eucalyptus.component.ComponentMessages;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.empyrean.ServiceTransitionType;
 import com.eucalyptus.http.MappingHttpMessage;
-import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.system.Ats;
+import com.eucalyptus.util.Classes;
+import com.eucalyptus.util.Logs;
+import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @ChannelPipelineCoverage( "all" )
-public enum InternalOnlyHandler implements ChannelUpstreamHandler {
-  INSTANCE;
-  @Override
-  public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
-    final BaseMessage msg = BaseMessage.extractMessage( e );
-    if ( request != null && msg != null ) {
-      final User user = Contexts.lookup( request.getCorrelationId( ) ).getUser( );
-      if ( user.isSystemInternal( ) || user.isSystemAdmin( ) ) {
-        ctx.sendUpstream( e );
+public enum SystemChecksHandler implements ChannelUpstreamHandler {
+  SERVICE_STATE {
+    @Override
+    public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+      final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
+      final BaseMessage msg = BaseMessage.extractMessage( e );
+      if ( msg != null ) {
+        try {
+          Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
+          ComponentId compId = ComponentIds.lookup( compClass );
+          Component comp = Components.lookup( compId );
+          if ( comp.isEnabledLocally( ) ) {
+            ctx.sendUpstream( e );
+          } else {
+            this.sendError( ctx, e, comp );
+          }
+        } catch ( Exception ex ) {
+          Logs.extreme( ).error( ex, ex );
+          ctx.sendUpstream( e );
+        }
       } else {
-        Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );
-        ctx.getChannel( ).write( new MappingHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.FORBIDDEN ) );
+        ctx.sendUpstream( e );
       }
+    }
+    
+  },
+  MESSAGE_EPOCH {
+    @Override
+    public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+      final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
+      final BaseMessage msg = BaseMessage.extractMessage( e );
+      if ( msg != null ) {
+        try {
+          if ( msg instanceof ServiceTransitionType ) {
+            Topology.touch( ( ServiceTransitionType ) msg );
+            ctx.sendUpstream( e );
+          } else if ( Topology.check( msg ) ) {
+            ctx.sendUpstream( e );
+          } else {
+            Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
+            ComponentId compId = ComponentIds.lookup( compClass );
+            Component comp = Components.lookup( compId );
+            this.sendError( ctx, e, comp );
+          }
+        } catch ( Exception ex ) {
+          Logs.extreme( ).error( ex, ex );
+          ctx.sendUpstream( e );
+        }
+      }
+    }
+  };
+  protected void sendError( ChannelHandlerContext ctx, ChannelEvent e, Component comp ) {
+    e.getFuture( ).cancel( );
+    HttpResponse response = null;
+    if ( !comp.enabledServices( ).isEmpty( ) ) {
+      response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.MOVED_PERMANENTLY );
+      response.setHeader( HttpHeaders.Names.LOCATION, comp.enabledServices( ).first( ).getUri( ).toASCIIString( ) );
     } else {
-      ctx.sendUpstream( e );
+      response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND );
+    }
+    ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
+    writeFuture.addListener( ChannelFutureListener.CLOSE );
+    if ( ctx.getChannel( ).isConnected( ) ) {
+      Channels.write( ctx, writeFuture, response );
     }
   }
-  
 }

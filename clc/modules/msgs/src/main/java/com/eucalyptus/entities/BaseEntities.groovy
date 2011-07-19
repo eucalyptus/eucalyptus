@@ -10,12 +10,15 @@ import javax.persistence.PrePersist
 import javax.persistence.PreUpdate
 import javax.persistence.Temporal
 import javax.persistence.TemporalType
+import javax.persistence.Transient
 import javax.persistence.Version
 import org.hibernate.annotations.GenericGenerator
 
 
 @MappedSuperclass
 public class AbstractPersistent implements Serializable {
+  @Transient
+  private static final long serialVersionUID = 1;
   @Id
   @GeneratedValue(generator = "system-uuid")
   @GenericGenerator(name="system-uuid", strategy = "uuid")

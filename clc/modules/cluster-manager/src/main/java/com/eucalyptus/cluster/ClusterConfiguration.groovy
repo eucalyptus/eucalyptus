@@ -61,7 +61,7 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.config
+package com.eucalyptus.cluster
 
 import java.io.Serializable
 import javax.persistence.Column
@@ -74,6 +74,7 @@ import org.hibernate.annotations.Entity
 import com.eucalyptus.component.ComponentId
 import com.eucalyptus.component.ComponentPart
 import com.eucalyptus.component.id.ClusterController
+import com.eucalyptus.config.ComponentConfiguration
 
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_config")

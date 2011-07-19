@@ -7,7 +7,7 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurationProperties;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
@@ -66,7 +66,7 @@ public class Properties {
     } );
     for ( String altValue : eucas ) {
       try {
-        props.add( new Property( ( altValue = altValue.replaceAll( "euca=", "" ) ), "" + GroovyUtil.eval( altValue ), altValue ) );
+        props.add( new Property( ( altValue = altValue.replaceAll( "euca=", "" ) ), "" + Groovyness.eval( altValue ), altValue ) );
       } catch ( Exception ex ) {
         props.add( new Property( altValue, ex.getMessage( ), Exceptions.string( ex ) ) );
       }
@@ -82,7 +82,7 @@ public class Properties {
       LOG.debug( "Performing euca operation: \n" + request.getValue( ) );
       try {
         reply.setName( INTERNAL_OP );
-        reply.setValue( "" + GroovyUtil.eval( request.getValue( ) ) );
+        reply.setValue( "" + Groovyness.eval( request.getValue( ) ) );
         reply.setOldValue( "executed successfully." );
       } catch ( Throwable ex ) {
         LOG.error( ex , ex );
