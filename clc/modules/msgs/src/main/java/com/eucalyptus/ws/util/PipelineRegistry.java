@@ -120,6 +120,16 @@ public class PipelineRegistry {
       }
     }
     if ( candidate == null ) {
+      for ( FilteredPipeline f : this.componentPipelines.values( ) ) {
+        if ( f.checkAccepts( request ) ) {
+          
+          if ( candidate != null ) {
+            EventRecord.here( this.getClass( ), EventType.PIPELINE_DUPLICATE, f.toString( ) ).debug( );
+          } else {
+            candidate = f;
+          }
+        }
+      }
       if ( Logs.EXTREME ) {
         if ( request instanceof MappingHttpMessage ) {
           ( ( MappingHttpMessage ) request ).logMessage( );

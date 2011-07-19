@@ -112,7 +112,7 @@ public class Topology implements EventListener<Event> {
   }
   
   public static void touch( ServiceTransitionType msg ) {
-    if ( !BootstrapArgs.isCloudController( ) ) {
+    if ( !BootstrapArgs.isCloudController( ) && msg.get_epoch( ) != null ) {
       Integer msgEpoch = msg.get_epoch( );
       Topology.getInstance( ).currentEpoch = ( Topology.getInstance( ).currentEpoch > msgEpoch )
         ? Topology.getInstance( ).currentEpoch
@@ -121,9 +121,10 @@ public class Topology implements EventListener<Event> {
   }
 
   public static boolean check( BaseMessage msg ) {
-    if ( !BootstrapArgs.isCloudController( ) ) {
-      Integer msgEpoch = ( msg.get_epoch( ) == null ? 0 : Topology.epoch( ) );
+    if ( !BootstrapArgs.isCloudController( ) && msg.get_epoch( ) != null ) {
+      Integer msgEpoch = msg.get_epoch( );
       boolean rightEpoch = Topology.getInstance( ).epoch( ) <= msgEpoch;
+      return rightEpoch;
     } else {
       return true;
     }
