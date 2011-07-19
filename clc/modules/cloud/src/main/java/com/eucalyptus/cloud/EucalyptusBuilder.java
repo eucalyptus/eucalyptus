@@ -102,17 +102,21 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
       final String contextName = ctx.startsWith( "eucalyptus_" )
         ? ctx
         : "eucalyptus_" + ctx;
-      DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain, ImmutableMap.builder( ).put( "cluster", contextName ).build( ),
-                                                          DriverDatabaseClusterMBean.class );
-      for( String dbId : cluster.getActiveDatabases( ) ) {
-        if( !cluster.isAlive( dbId ) ) {
-          cluster.deactivate( dbId );
+      try {
+        DriverDatabaseClusterMBean cluster = Mbeans.lookup( jdbcJmxDomain, ImmutableMap.builder( ).put( "cluster", contextName ).build( ),
+                                                            DriverDatabaseClusterMBean.class );
+        for( String dbId : cluster.getActiveDatabases( ) ) {
+          if( !cluster.isAlive( dbId ) ) {
+            cluster.deactivate( dbId );
+          }
         }
-      }
-      for( String dbId : cluster.getInactiveDatabases( ) ) {
-        if( cluster.isAlive( dbId ) ) {
-          cluster.activate( dbId );
+        for( String dbId : cluster.getInactiveDatabases( ) ) {
+          if( cluster.isAlive( dbId ) ) {
+            cluster.activate( dbId );
+          }
         }
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
       }
     }
   }
