@@ -70,16 +70,20 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.MalformedURLException;
 import java.nio.charset.Charset;
-import java.rmi.RMISecurityManager;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.ExportException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import javax.management.JMX;
 import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
 import javax.management.remote.JMXConnectorServer;
 import javax.management.remote.JMXConnectorServerFactory;
 import javax.management.remote.JMXServiceURL;
@@ -89,7 +93,6 @@ import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.system.SubDirectory;
-import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 
 public class Mbeans {
@@ -144,6 +147,23 @@ public class Mbeans {
     return mbeanServer;
   }
   
+  public static <T> T lookup( final String domain, final Map props, Class<T> type  ) throws NoSuchElementException {
+    ObjectName objectName;
+    Hashtable<String, String> attributes = new Hashtable<String, String>( props );
+    try {
+      MBeanServer server = ManagementFactory.getPlatformMBeanServer( );
+      objectName = ObjectName.getInstance( domain, attributes );
+      T mbeanProxy = JMX.newMBeanProxy( server, objectName, type );
+      return mbeanProxy;
+    } catch ( MalformedObjectNameException ex ) {
+      Logs.extreme( ).error( ex , ex );
+      throw new NoSuchElementException( "Failed to lookup: " + type.getCanonicalName( ) + " named: " + domain + "=" + props.toString( ) );
+    } catch ( NullPointerException ex ) {
+      Logs.extreme( ).error( ex , ex );
+      throw new NoSuchElementException( "Failed to lookup: " + type.getCanonicalName( ) + " named: " + domain + "=" + props.toString( ) );
+    }
+  }
+
   public static void register( final Object obj ) {
     Class targetType = obj.getClass( );
     if( targetType.isAnonymousClass( ) ) {

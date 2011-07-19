@@ -66,7 +66,6 @@ package com.eucalyptus.empyrean;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -75,13 +74,11 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.HostManager;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Hosts;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.Internets;
@@ -199,4 +196,28 @@ public class Empyrean extends ComponentId.Unpartioned {
     
   }
   
+  public static boolean teardownServiceDependencies( InetAddress addr ) {
+    if ( !Internets.testLocal( addr ) ) {
+      LOG.warn( "Failed to reach host for cloud controller: " + addr );
+      return false;
+    } else {
+      try {
+        for ( ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
+          try {
+            if ( compId.isAlwaysLocal( ) ) {
+              ServiceConfiguration dependsConfig = ServiceConfigurations.lookupByName( compId.getClass( ), addr.getHostAddress( ) );
+              Topology.stop( dependsConfig );
+            }
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+        }
+        return true;
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        return false;
+      }
+    }
+    
+  }
 }

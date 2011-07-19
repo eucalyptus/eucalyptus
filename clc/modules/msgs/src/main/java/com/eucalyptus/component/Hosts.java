@@ -74,6 +74,7 @@ import org.jgroups.Address;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.HostManager;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Mbeans;
@@ -170,6 +171,10 @@ public class Hosts {
     LOG.debug( "Removed host entries: " );
     for ( Host host : removedHosts ) {
       LOG.debug( "-> " + host );
+      if ( host.hasDatabase( ) ) {
+        Eucalyptus.teardownServiceDependencies( host.getBindAddress( ) );
+      }
+      Empyrean.teardownServiceDependencies( host.getBindAddress( ) );
     }
     return removedHosts;
   }
