@@ -46,7 +46,7 @@ try {
           "hibernate.generate_statistics": "true",
           "hibernate.connection.driver_class": Databases.getDriverName( ),
           "hibernate.connection.username": "eucalyptus",
-          "hibernate.connection.password": SystemIds.databasePassword( ),
+          "hibernate.connection.password": Databases.getPassword( ),
           "hibernate.bytecode.use_reflection_optimizer": "true",
           "hibernate.cglib.use_reflection_optimizer": "true",
           "hibernate.dialect": Databases.getHibernateDialect( ),
