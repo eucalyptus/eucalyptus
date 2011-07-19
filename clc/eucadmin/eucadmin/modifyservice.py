@@ -34,7 +34,7 @@ import eucadmin
 
 class ModifyService(AWSQueryRequest):
   
-    ServicePath = '/services/Bootstrap'
+    ServicePath = '/internal/BootstrapInternal'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Modify service state'
     Params = [

@@ -34,7 +34,7 @@ import eucadmin
 
 class DescribeServices(AWSQueryRequest):
   
-    ServicePath = '/services/Bootstrap'
+    ServicePath = '/internal/BootstrapInternal'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Get services'
     Params = [
