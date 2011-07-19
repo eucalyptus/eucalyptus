@@ -76,8 +76,8 @@ import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Logs;
 
 public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Filterable<HttpRequest> {
-  private static Logger               LOG    = Logger.getLogger( FilteredPipeline.class );
-  private final NioMessageReceiver    msgReceiver;
+  private static Logger            LOG = Logger.getLogger( FilteredPipeline.class );
+  private final NioMessageReceiver msgReceiver;
   
   public FilteredPipeline( ) {
     this.msgReceiver = null;
@@ -91,11 +91,13 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
   
   private final void addSystemHandlers( final ChannelPipeline pipeline ) {
     if ( this.msgReceiver != null ) {
-      pipeline.addLast( "internal-only-restriction", new InternalOnlyHandler( ) );
+      pipeline.addLast( "internal-only-restriction", InternalOnlyHandler.INSTANCE );
     }
-    pipeline.addLast( "service-specific-mangling", new ServiceHackeryHandler( ) );
+    pipeline.addLast( "service-state-check", ServiceStateCheckHandler.INSTANCE );
+    pipeline.addLast( "service-specific-mangling", ServiceHackeryHandler.INSTANCE );
     pipeline.addLast( "service-sink", new ServiceContextHandler( ) );
   }
+  
   public void unroll( final ChannelPipeline pipeline ) {
     try {
       this.addHandlers( pipeline );
@@ -117,12 +119,12 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
   
   @Override
   public abstract boolean checkAccepts( HttpRequest message );
-
+  
   @Override
   public final int compareTo( final FilteredPipeline o ) {
-    if( this.getClass( ).getSimpleName( ).startsWith( "Internal" ) && !o.getClass( ).getSimpleName( ).startsWith( "Internal" ) ) {
+    if ( this.getClass( ).getSimpleName( ).startsWith( "Internal" ) && !o.getClass( ).getSimpleName( ).startsWith( "Internal" ) ) {
       return 1;
-    } else if( o.getClass( ).getSimpleName( ).startsWith( "Internal" ) && !this.getClass( ).getSimpleName( ).startsWith( "Internal" ) ) {
+    } else if ( o.getClass( ).getSimpleName( ).startsWith( "Internal" ) && !this.getClass( ).getSimpleName( ).startsWith( "Internal" ) ) {
       return -1;
     } else {
       return ( this.getName( ) + this.getClass( ).getCanonicalName( ) ).compareTo( ( this.getName( ) + o.getClass( ).getCanonicalName( ) ) );
@@ -138,7 +140,7 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
       : this.getName( ).hashCode( ) );
     return result;
   }
-
+  
   @Override
   public final boolean equals( Object obj ) {
     if ( this == obj ) return true;
@@ -150,7 +152,7 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
     } else if ( !this.getName( ).equals( other.getName( ) ) ) return false;
     return true;
   }
-
+  
   @Override
   public String toString( ) {
     return String.format( "FilteredPipeline:name=%s:hashCode=%s:class=%s", this.getName( ), this.hashCode( ), this.getClass( ).getSimpleName( ) );

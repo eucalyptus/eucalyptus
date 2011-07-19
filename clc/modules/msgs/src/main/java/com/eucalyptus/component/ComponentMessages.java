@@ -68,17 +68,28 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.system.Ats;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class ComponentMessages {
   private static Logger                        LOG       = Logger.getLogger( ComponentMessages.class );
-  private static final Map<Class<? extends ComponentId>, Class<? extends BaseMessage>> compIdMap = new HashMap<Class<? extends ComponentId>, Class<? extends BaseMessage>>( );
+  private static final BiMap<Class<? extends ComponentId>, Class<? extends BaseMessage>> compIdMap = HashBiMap.create( );
   
   public static Class<? extends BaseMessage> lookup( Class<? extends ComponentId> compIdClass ) {
     if ( !compIdMap.containsKey( compIdClass ) ) {
       throw new NoSuchElementException( "No ComponentMessage with name: " + compIdClass );
     } else {
       return compIdMap.get( compIdClass );
+    }
+  }
+
+  public static <T extends BaseMessage> Class<? extends ComponentId> lookup( T msgClass ) {
+    Class<? extends BaseMessage> msgType = msgClass.getClass( );
+    if ( !compIdMap.containsValue( msgType ) ) {
+      throw new NoSuchElementException( "No ComponentMessage with name: " + msgType );
+    } else {
+      return compIdMap.inverse( ).get( msgType );
     }
   }
   
