@@ -564,7 +564,8 @@ public class Topology implements EventListener<Event> {
             } catch ( ServiceRegistrationException ex1 ) {
               LOG.error( ex1, ex1 );
             }
-            LOG.error( ex, ex );
+            LOG.error( ex.getMessage( ) );
+            Logs.exhaust( ).error( ex, ex );
           }
         }
         Logs.exhaust( ).debug( "CHECK ===================================\n" + Joiner.on( "\n\t" ).join( checkedServices ) );
