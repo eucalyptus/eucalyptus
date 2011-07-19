@@ -248,7 +248,7 @@ public class ServiceConfigurations {
   }
   
   public static <T extends ServiceConfiguration, C extends ComponentId> List<T> list( Class<C> type ) throws PersistenceException {
-    if ( !ComponentConfiguration.class.isAssignableFrom( type ) ) {
+    if ( !ComponentId.class.isAssignableFrom( type ) ) {
       throw new PersistenceException( "Unknown configuration type passed: " + type.getCanonicalName( ) );
     } else {
       T example = ( T ) ServiceBuilders.lookup( type ).newInstance( );
@@ -257,7 +257,7 @@ public class ServiceConfigurations {
   }
   
   public static <T extends ServiceConfiguration, C extends ComponentId> List<T> listPartition( Class<C> type, String partition ) throws PersistenceException, NoSuchElementException {
-    if ( !ComponentConfiguration.class.isAssignableFrom( type ) ) {
+    if ( !ComponentId.class.isAssignableFrom( type ) ) {
       throw new PersistenceException( "Unknown configuration type passed: " + type.getCanonicalName( ) );
     }
     T example = ( T ) ServiceBuilders.lookup( type ).newInstance( );
@@ -266,7 +266,7 @@ public class ServiceConfigurations {
   }
   
   public static <T extends ServiceConfiguration, C extends ComponentId> T lookupByName( Class<C> type, String name ) {
-    if ( !ComponentConfiguration.class.isAssignableFrom( type ) ) {
+    if ( !ComponentId.class.isAssignableFrom( type ) ) {
       throw new PersistenceException( "Unknown configuration type passed: " + type.getCanonicalName( ) );
     }
     T example = ( T ) ServiceBuilders.lookup( type ).newInstance( );
