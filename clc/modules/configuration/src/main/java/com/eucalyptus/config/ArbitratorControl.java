@@ -96,7 +96,7 @@ public class ArbitratorControl {
   
   public static void check( ) throws Exception {
     if ( Components.lookup( Walrus.class ).hasLocalService( ) || Components.lookup( Eucalyptus.class ).hasLocalService( ) ) {
-      final List<ArbitratorConfiguration> configs = ServiceConfigurations.getConfigurations( ArbitratorConfiguration.class );
+      final List<ArbitratorConfiguration> configs = ServiceConfigurations.list( Arbitrator.class );
       for ( final ArbitratorConfiguration config : configs ) {
         final String hostName = config.getHostName( );
         Threads.lookup( Arbitrator.class, ArbitratorControl.class ).submit( new Runnable( ) {

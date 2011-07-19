@@ -73,7 +73,7 @@ public interface Image extends HasFullName<Image>, HasOwningAccount {
   }
   
   public enum Hypervisor {
-    xen, kvm, vmware
+    xen, kvm, other
   }
   
   public enum DeviceMappingType {
@@ -81,7 +81,7 @@ public interface Image extends HasFullName<Image>, HasOwningAccount {
   }
   
   public enum Architecture {
-    i386, x86_64
+    i386, x86_64, other
   }
   
   public enum Platform {

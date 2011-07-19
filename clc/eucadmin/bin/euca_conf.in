@@ -82,6 +82,10 @@ CheckableServicesString = '|'.join(CheckableServices)
 EnableableServices = ['cloud', 'walrus', 'sc', 'vmwarebroker']
 EnableableServicesString = '|'.join(EnableableServices)
 
+RegisterHelp = """
+Detailed help on register/deregister operations goes here.
+"""
+
 class EucaConf(object):
 
     def __init__(self, filepath=None):
@@ -309,6 +313,9 @@ class EucaConf(object):
                                dest=RegOptions['component'][2],
                                metavar='<component name>',
                                help='Name of the component')
+        self.parser.add_option('--help-register', action='store_true',
+                               default=False,
+                               help='Display help on register/deregister')
         self.options, self.args = self.parser.parse_args()
         if len(self.args) > 0:
             filepath = self.args[0]
@@ -749,8 +756,15 @@ class EucaConf(object):
         if self.options.dereg_nodes:
             current_nodes = self.config['NODES'].split()
             for node in self.options.dereg_nodes:
-                current_nodes.remove(node)
+                if node in current_nodes:
+                    current_nodes.remove(node)
+                else:
+                    print 'Node %s is not currently registered' % node
             self.config['NODES'] = ' '.join(current_nodes)
+
+    def do_help_register(self):
+        if self.options.help_register:
+            print RegisterHelp
 
 if __name__ == "__main__":
     ec = EucaConf()

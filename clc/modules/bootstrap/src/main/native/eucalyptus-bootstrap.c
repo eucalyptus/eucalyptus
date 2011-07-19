@@ -605,18 +605,20 @@ void euca_load_bootstrapper(void) {
 
 char* java_library_path(euca_opts *args) {
 #define JAVA_PATH_LEN 65536
-	char lib_dir[256], etc_dir[256], script_dir[256], *jar_list =
+	char lib_dir[256], etc_dir[256], script_dir[256], class_cache_dir[256], *jar_list =
 			(char*) malloc(JAVA_PATH_LEN * sizeof(char));
 	__die((strlen(GETARG(args, home)) + strlen(EUCA_LIB_DIR) >= 254),
 			"Directory path too long: %s/%s", GETARG(args, home), EUCA_LIB_DIR);
 	snprintf(lib_dir, 255, "%s%s", GETARG(args, home), EUCA_LIB_DIR);
 	snprintf(etc_dir, 255, "%s%s", GETARG(args, home), EUCA_ETC_DIR);
+	snprintf(class_cache_dir, 255, "%s%s", GETARG(args, home), EUCA_CLASSCACHE_DIR);
 	snprintf(script_dir, 255, "%s%s", GETARG(args, home), EUCA_SCRIPT_DIR);
 	if (!CHECK_ISDIR(lib_dir))
 		__die(1, "Can't find library directory %s", lib_dir);
 	int wb = 0;
 	wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "-Djava.class.path=%s:",
 			etc_dir);
+	wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "%s", class_cache_dir);
 	wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "%s", script_dir);
 	DIR* lib_dir_p = opendir(lib_dir);
 	if(!lib_dir_p)
@@ -741,6 +743,8 @@ int java_init(euca_opts *args, java_home_t *data) {
 		JVM_ARG(opt[++x], "-Deuca.force.remote.bootstrap=true");
 	}
 	if (args->debug_flag) {
+		JVM_ARG(opt[++x], "-XX:+HeapDumpOnOutOfMemoryError");
+		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(args, home));
 		JVM_ARG(opt[++x], "-Xdebug");
 		JVM_ARG(
 				opt[++x],
@@ -753,8 +757,6 @@ int java_init(euca_opts *args, java_home_t *data) {
 	//		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.port=8772");
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.authenticate=false");//TODO:GRZE:RELEASE FIXME to use ssl
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.ssl=false");
-		JVM_ARG(opt[++x], "-XX:+HeapDumpOnOutOfMemoryError");
-		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(args, home));
 	}
 	if (args->verbose_flag ) {
 		JVM_ARG(opt[++x], "-verbose:gc");

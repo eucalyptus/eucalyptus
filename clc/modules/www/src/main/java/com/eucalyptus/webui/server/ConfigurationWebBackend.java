@@ -16,10 +16,13 @@ import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.AddressingConfiguration;
 import com.eucalyptus.bootstrap.HttpServerBootstrapper;
+import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
@@ -240,7 +243,8 @@ public class ConfigurationWebBackend {
     }    
   }
   
-  private static void serializeClusterConfiguration( ClusterConfiguration clusterConf, SearchResultRow result ) {
+  private static void serializeClusterConfiguration( ServiceConfiguration serviceConf, SearchResultRow result ) {
+    ClusterConfiguration clusterConf = (ClusterConfiguration) serviceConf;//NOTE:GRZE: depending on referencing the Cluster-specific configuration type is not a safe assumption as that is a component-private type
     // Common
     result.addField( makeConfigId( clusterConf.getName( ), CLUSTER_TYPE ) );
     result.addField( clusterConf.getName( ) );
@@ -258,7 +262,7 @@ public class ConfigurationWebBackend {
   public static List<SearchResultRow> getClusterConfigurations( ) {
     List<SearchResultRow> results = Lists.newArrayList( );
     try {
-      for ( ClusterConfiguration c : ServiceConfigurations.getConfigurations( ClusterConfiguration.class ) ) {
+      for ( ServiceConfiguration c : ServiceConfigurations.list( ClusterController.class ) ) {
         SearchResultRow row = new SearchResultRow( );
         row.setExtraFieldDescs( CLUSTER_CONFIG_EXTRA_FIELD_DESCS );
         serializeClusterConfiguration( c, row );
@@ -270,7 +274,8 @@ public class ConfigurationWebBackend {
     return results;
   }
   
-  private static void deserializeClusterConfiguration( ClusterConfiguration clusterConf, SearchResultRow input ) {
+  private static void deserializeClusterConfiguration( ServiceConfiguration serviceConf, SearchResultRow input ) {
+    ClusterConfiguration clusterConf = ( ClusterConfiguration ) serviceConf;//NOTE:GRZE: depending on referencing the Cluster-specific configuration type is not a safe assumption as that is a component-private type
     int i = COMMON_FIELD_DESCS.size( );
     try {
       Integer val = Integer.parseInt( input.getField( i++ ) );
@@ -287,9 +292,9 @@ public class ConfigurationWebBackend {
    * 
    * @param input
    */
-  public static void setClusterConfiguration( SearchResultRow input ) throws EucalyptusServiceException {
+  public static void setClusterConfiguration( final SearchResultRow input ) throws EucalyptusServiceException {
     try {
-      ClusterConfiguration clusterConf = ServiceConfigurations.getConfiguration( ClusterConfiguration.class, input.getField( 1 ) );
+      ServiceConfiguration clusterConf = ServiceConfigurations.lookupByName( ClusterController.class, input.getField( 1 ) );
       deserializeClusterConfiguration( clusterConf, input );
       EntityWrapper.get( clusterConf ).mergeAndCommit( clusterConf );
     } catch ( Exception e ) {
@@ -371,7 +376,7 @@ public class ConfigurationWebBackend {
    */
   public static List<SearchResultRow> getStorageConfiguration( ) {
     List<SearchResultRow> results = Lists.newArrayList( );
-    for ( ClusterConfiguration cc : ServiceConfigurations.getConfigurations( ClusterConfiguration.class ) ) {
+    for ( final ServiceConfiguration cc : ServiceConfigurations.list( ClusterController.class ) ) {
       try {
         if ( Internets.testLocal( cc.getHostName( ) ) && !Components.lookup( "storage" ).isEnabledLocally( ) ) {
           results.add( createStorageConfiguration( STORAGE_TYPE, SC_DEFAULT_NAME, SC_DEFAULT_HOST, SC_DEFAULT_PORT, new ArrayList<ComponentProperty>( ) ) );
@@ -382,7 +387,7 @@ public class ConfigurationWebBackend {
       }
       StorageControllerConfiguration c;
       try {
-        c = ServiceConfigurations.getConfiguration( StorageControllerConfiguration.class, cc.getName( ) );
+        c = ServiceConfigurations.lookup( new StorageControllerConfiguration() {{ this.setName( cc.getName( ) ); }} );
         List<ComponentProperty> properties = Lists.newArrayList( );
         try {
           GetStorageConfigurationResponseType getStorageConfigResponse = sendForStorageInfo( cc, c );
@@ -440,7 +445,7 @@ public class ConfigurationWebBackend {
     }
   }
 
-  private static GetStorageConfigurationResponseType sendForStorageInfo( ClusterConfiguration cc, StorageControllerConfiguration c ) throws EucalyptusCloudException {
+  private static GetStorageConfigurationResponseType sendForStorageInfo( ServiceConfiguration cc, ServiceConfiguration c ) throws EucalyptusCloudException {
     GetStorageConfigurationType getStorageConfiguration = new GetStorageConfigurationType( c.getName( ) );
     Dispatcher scDispatch = ServiceDispatcher.lookup( c );
     GetStorageConfigurationResponseType getStorageConfigResponse = scDispatch.send( getStorageConfiguration );
@@ -453,7 +458,7 @@ public class ConfigurationWebBackend {
   public static List<SearchResultRow> getWalrusConfiguration( ) {
     List<SearchResultRow> results = new ArrayList<SearchResultRow>( );
     try {
-      for ( WalrusConfiguration c : ServiceConfigurations.getConfigurations( WalrusConfiguration.class ) ) {
+      for ( ServiceConfiguration c : ServiceConfigurations.list( Walrus.class ) ) {
         GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType( WalrusProperties.NAME );
         Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Components.lookup( WALRUS_NAME ) );
         GetWalrusConfigurationResponseType getWalrusConfigResponse = scDispatch.send( getWalrusConfiguration );

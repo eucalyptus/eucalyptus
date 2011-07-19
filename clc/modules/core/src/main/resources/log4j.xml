@@ -115,6 +115,15 @@
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%C.%M(%F):%L] %m%n" />
     </layout>
   </appender>
+  <appender name="cloud-extreme" class="org.apache.log4j.RollingFileAppender">
+    <param name="File" value="${euca.log.dir}/cloud-extreme.log" />
+    <param name="MaxFileSize" value="10MB" />
+    <param name="MaxBackupIndex" value="100" />
+    <param name="Threshold" value="${euca.exhaust.level}" />
+    <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%C.%M(%F):%L] %m%n" />
+    </layout>
+  </appender>
   <appender name="walrus-stats-log" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/walrus-stats.log" />
     <param name="MaxFileSize" value="10MB" />
@@ -146,6 +155,10 @@
   <category name="EXHAUST" additivity="false">
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="EXTREME" additivity="true">
+    <priority value="TRACE" />
+    <appender-ref ref="cloud-extreme" />
   </category>
   <category name="com.eucalyptus.util.fsm.StateMachineBuilder" additivity="false">
     <priority value="${euca.log.level}" />

@@ -67,13 +67,14 @@ import java.io.File;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
 
 
 public enum SubDirectory {
   DB( BaseDirectory.VAR, "db" ),
   TX( BaseDirectory.HOME, "/var/run/eucalyptus/tx" ),
+  CLASSCACHE( BaseDirectory.HOME, "/var/run/eucalyptus/classcache" ),
   WWW( BaseDirectory.CONF, "www" ),
   WEBAPPS( BaseDirectory.VAR, "webapps" ),
   KEYS( BaseDirectory.VAR, "keys" ),
@@ -132,12 +133,12 @@ public enum SubDirectory {
   
   private void assertPermissions( ) {
     try {
-      GroovyUtil.exec( "chown -R " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+      Groovyness.exec( "chown -R " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOG.error( ex , ex );
     }
     try {
-      GroovyUtil.exec( "chmod -R +rwX " + this.toString( ) );
+      Groovyness.exec( "chmod -R +rwX " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOG.error( ex , ex );
     }

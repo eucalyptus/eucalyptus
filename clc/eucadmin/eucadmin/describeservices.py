@@ -31,10 +31,11 @@
 from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
 import eucadmin
+import os
 
 class DescribeServices(AWSQueryRequest):
   
-    ServicePath = '/services/Configuration'
+    ServicePath = '/services/Empyrean'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Get services'
     Params = [
@@ -92,9 +93,9 @@ class DescribeServices(AWSQueryRequest):
               ]
 
     def __init__(self, **args):
-        AWSQueryRequest.__init__(self, **args)
-        self.list_markers = ['euca:serviceStatuses']
-        self.item_markers = ['euca:item']
+      AWSQueryRequest.__init__(self, **args)
+      self.list_markers = ['euca:serviceStatuses']
+      self.item_markers = ['euca:item']
   
     def get_connection(self, **args):
         if self.connection is None:
@@ -136,5 +137,5 @@ class DescribeServices(AWSQueryRequest):
         return self.send(**args)
 
     def main_cli(self):
-        self.do_cli()
+      self.do_cli()
     

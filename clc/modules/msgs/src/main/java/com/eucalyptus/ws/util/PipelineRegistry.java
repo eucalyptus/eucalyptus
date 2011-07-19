@@ -120,6 +120,16 @@ public class PipelineRegistry {
       }
     }
     if ( candidate == null ) {
+      for ( FilteredPipeline f : this.componentPipelines.values( ) ) {
+        if ( f.checkAccepts( request ) ) {
+          
+          if ( candidate != null ) {
+            EventRecord.here( this.getClass( ), EventType.PIPELINE_DUPLICATE, f.toString( ) ).debug( );
+          } else {
+            candidate = f;
+          }
+        }
+      }
       if ( Logs.EXTREME ) {
         if ( request instanceof MappingHttpMessage ) {
           ( ( MappingHttpMessage ) request ).logMessage( );
@@ -137,17 +147,17 @@ public class PipelineRegistry {
   }
   
   public boolean enable( ComponentId compId ) {
-    for ( FilteredPipeline pipeline : this.componentPipelines.get( compId ) ) {
+    for ( FilteredPipeline pipeline : componentPipelines.get( compId ) ) {
       LOG.info( "-> Registering component pipeline: " + compId.getName( ) + " " + pipeline );
     }
-    return this.pipelines.addAll( this.componentPipelines.get( compId ) );
+    return this.pipelines.addAll( componentPipelines.get( compId ) );
   }
   
   public boolean disable( ComponentId compId ) {
-    for ( FilteredPipeline pipeline : this.componentPipelines.get( compId ) ) {
+    for ( FilteredPipeline pipeline : componentPipelines.get( compId ) ) {
       LOG.info( "-> Deregistering pipeline: " + compId.getName( ) + " " + pipeline );
     }
-    return this.pipelines.removeAll( this.componentPipelines.get( compId ) );
+    return this.pipelines.removeAll( componentPipelines.get( compId ) );
   }
   
   public static class PipelineDiscovery extends ServiceJarDiscovery {
