@@ -81,6 +81,8 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentMessage;
 import com.eucalyptus.component.ComponentMessages;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.empyrean.ServiceTransitionType;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
@@ -88,30 +90,59 @@ import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @ChannelPipelineCoverage( "all" )
-public enum ServiceStateCheckHandler implements ChannelUpstreamHandler {
-  INSTANCE;
-  @Override
-  public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
-    final BaseMessage msg = BaseMessage.extractMessage( e );
-    if ( msg != null ) {
-      Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
-      ComponentId compId = ComponentIds.lookup( compClass );
-      Component comp = Components.lookup( compId );
-      if ( comp.isEnabledLocally( ) ) {
-        ctx.sendUpstream( e );
+public enum SystemChecksHandler implements ChannelUpstreamHandler {
+  SERVICE_STATE {
+    @Override
+    public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+      final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
+      final BaseMessage msg = BaseMessage.extractMessage( e );
+      if ( msg != null ) {
+        boolean rightEpoch = ( msg.get_epoch( ) == null || ( msg.get_epoch( ) == Topology.getInstance( ).epoch( ) ) );
+        Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
+        ComponentId compId = ComponentIds.lookup( compClass );
+        Component comp = Components.lookup( compId );
+        if ( comp.isEnabledLocally( ) ) {
+          ctx.sendUpstream( e );
+        } else {
+          this.sendError( ctx, e, comp );
+        }
       } else {
-        e.getFuture( ).cancel( );
-        final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.MOVED_PERMANENTLY );
-        response.setHeader( HttpHeaders.Names.LOCATION, comp.enabledServices( ).first( ).getUri( ).toASCIIString( ) );
-        ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
-        writeFuture.addListener( ChannelFutureListener.CLOSE );
-        if ( ctx.getChannel( ).isConnected( ) ) {
-          Channels.write( ctx, writeFuture, response );
+        ctx.sendUpstream( e );
+      }
+    }
+    
+  },
+  MESSAGE_EPOCH {
+    @Override
+    public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+      final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
+      final BaseMessage msg = BaseMessage.extractMessage( e );
+      if ( msg != null && !( msg instanceof ServiceTransitionType ) ) {
+        boolean rightEpoch = ( msg.get_epoch( ) == null || ( msg.get_epoch( ) == Topology.getInstance( ).epoch( ) ) );
+        if ( rightEpoch ) {
+          ctx.sendUpstream( e );
+        } else {
+          Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
+          ComponentId compId = ComponentIds.lookup( compClass );
+          Component comp = Components.lookup( compId );
+          this.sendError( ctx, e, comp );
         }
       }
+    }
+  };
+  protected void sendError( ChannelHandlerContext ctx, ChannelEvent e, Component comp ) {
+    e.getFuture( ).cancel( );
+    HttpResponse response = null;
+    if ( !comp.enabledServices( ).isEmpty( ) ) {
+      response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.MOVED_PERMANENTLY );
+      response.setHeader( HttpHeaders.Names.LOCATION, comp.enabledServices( ).first( ).getUri( ).toASCIIString( ) );
     } else {
-      ctx.sendUpstream( e );
+      response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND );
+    }
+    ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
+    writeFuture.addListener( ChannelFutureListener.CLOSE );
+    if ( ctx.getChannel( ).isConnected( ) ) {
+      Channels.write( ctx, writeFuture, response );
     }
   }
 }

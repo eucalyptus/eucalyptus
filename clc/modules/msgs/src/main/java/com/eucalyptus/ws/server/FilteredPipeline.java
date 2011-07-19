@@ -92,8 +92,9 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
   private final void addSystemHandlers( final ChannelPipeline pipeline ) {
     if ( this.msgReceiver != null ) {
       pipeline.addLast( "internal-only-restriction", InternalOnlyHandler.INSTANCE );
+      pipeline.addLast( "msg-epoch-check", SystemChecksHandler.MESSAGE_EPOCH );
     }
-    pipeline.addLast( "service-state-check", ServiceStateCheckHandler.INSTANCE );
+    pipeline.addLast( "service-state-check", SystemChecksHandler.SERVICE_STATE );
     pipeline.addLast( "service-specific-mangling", ServiceHackeryHandler.INSTANCE );
     pipeline.addLast( "service-sink", new ServiceContextHandler( ) );
   }
