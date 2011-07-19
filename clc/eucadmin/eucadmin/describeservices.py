@@ -94,7 +94,8 @@ class DescribeServices(AWSQueryRequest):
 
     def __init__(self, **args):
       if 'debug' in args and args['debug'] >= 2:
-        self.ServicePath = InternalServicePath
+        print args
+        ServicePath = InternalServicePath
       AWSQueryRequest.__init__(self, **args)
       self.list_markers = ['euca:serviceStatuses']
       self.item_markers = ['euca:item']
