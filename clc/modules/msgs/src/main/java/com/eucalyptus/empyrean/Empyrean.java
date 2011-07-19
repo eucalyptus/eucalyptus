@@ -199,19 +199,4 @@ public class Empyrean extends ComponentId.Unpartioned {
     
   }
   
-  private static void setupServiceState( InetAddress addr, ComponentId compId ) throws ServiceRegistrationException, ExecutionException {
-    try {
-      Component comp = Components.lookup( compId );
-      ServiceConfiguration config = ( Internets.testLocal( addr ) )
-        ? comp.initRemoteService( addr )
-        : comp.initRemoteService( addr );//TODO:GRZE:REVIEW: use of initRemote
-      if ( Component.State.INITIALIZED.ordinal( ) >= config.lookupState( ).ordinal( ) ) {
-        comp.loadService( config ).get( );
-      }
-      Topology.enable( config );
-    } catch ( InterruptedException ex ) {
-      Thread.currentThread( ).interrupt( );
-    }
-  }
-  
 }

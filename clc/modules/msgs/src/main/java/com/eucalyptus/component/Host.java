@@ -87,13 +87,10 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   private Boolean                    hasBootstrapped;
   private AtomicLong                 timestamp        = new AtomicLong( System.currentTimeMillis( ) );
   private Long                       lastTime         = 0l;
-  private ServiceConfiguration       serviceConfiguration;
   private Integer                    epoch;
   
-  Host( Address jgroupsId, InetAddress bindAddress, Integer epoch, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> hostAddresses,
-        ServiceConfiguration configuration ) {
+  Host( Address jgroupsId, InetAddress bindAddress, Integer epoch, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> hostAddresses ) {
     this.groupsId = jgroupsId;
-    this.serviceConfiguration = configuration;
     this.bindAddress = bindAddress;
     this.update( epoch, hasDb, hasBootstrapped, hostAddresses );
   }
@@ -172,14 +169,6 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   public String toString( ) {
     return String.format( "Host:id=%s:bindAddr=%s:allAddrs=%s:db=%s:booted=%s:lastTime=%s", this.groupsId, this.bindAddress, this.hostAddresses,
                           this.hasDatabase, this.hasBootstrapped, new Date( this.lastTime ) );
-  }
-  
-  public ServiceConfiguration getServiceConfiguration( ) {
-    return this.serviceConfiguration;
-  }
-  
-  public void setServiceConfiguration( ServiceConfiguration serviceConfiguration ) {
-    this.serviceConfiguration = serviceConfiguration;
   }
   
   public boolean isLocalHost( ) {

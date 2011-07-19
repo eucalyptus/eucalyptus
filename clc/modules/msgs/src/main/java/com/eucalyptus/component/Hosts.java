@@ -114,7 +114,7 @@ public class Hosts {
   public static List<Host> listRemoteDatabases( ) {
     return Lists.newArrayList( Iterables.filter( Hosts.list( ), NonLocalDbFilter.INSTANCE ) );
   }
-
+  
   public static boolean contains( Address jgroupsId ) {
     return hostMap.containsKey( jgroupsId );
   }
@@ -189,26 +189,16 @@ public class Hosts {
         InetAddress addr = updatedHost.getBindAddress( );
         ServiceConfiguration ephemeralConfig = ServiceConfigurations.createEphemeral( empyrean, addr );
         if ( !empyrean.hasService( ephemeralConfig ) ) {
-          try {
-            ServiceConfiguration config = empyrean.initRemoteService( addr );
-            empyrean.loadService( ephemeralConfig ).get( );
-            entry = new Host( updatedHost.getGroupsId( ), updatedHost.getBindAddress( ), updatedHost.getEpoch( ),
-                              updatedHost.hasDatabase( ),
-                              updatedHost.hasBootstrapped( ),
-                              updatedHost.getHostAddresses( ), config );
-            Host temp = hostMap.putIfAbsent( entry.getGroupsId( ), entry );
-            if ( temp == null ) {
-              Mbeans.register( entry );
-            } else {
-              entry = temp;
-            }
-          } catch ( ServiceRegistrationException ex ) {
-            LOG.error( ex, ex );
-          } catch ( ExecutionException ex ) {
-            LOG.error( ex, ex );
-          } catch ( InterruptedException ex ) {
-            Thread.currentThread( ).interrupt( );
-            LOG.error( ex, ex );
+          Empyrean.setupServiceDependencies( addr );
+          entry = new Host( updatedHost.getGroupsId( ), updatedHost.getBindAddress( ), updatedHost.getEpoch( ),
+                            updatedHost.hasDatabase( ),
+                            updatedHost.hasBootstrapped( ),
+                            updatedHost.getHostAddresses( ) );
+          Host temp = hostMap.putIfAbsent( entry.getGroupsId( ), entry );
+          if ( temp == null ) {
+            Mbeans.register( entry );
+          } else {
+            entry = temp;
           }
         }
       }
