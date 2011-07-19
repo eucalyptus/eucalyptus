@@ -1,15 +1,8 @@
 package com.eucalyptus.cloud;
 
-import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Hashtable;
-import java.util.Map;
 import java.util.NoSuchElementException;
-import javax.management.JMX;
-import javax.management.MBeanServer;
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
 import net.sf.hajdbc.InactiveDatabaseMBean;
 import net.sf.hajdbc.sql.DriverDatabaseClusterMBean;
 import org.apache.log4j.Logger;
@@ -30,11 +23,8 @@ import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.Mbeans;
-import com.google.common.collect.MapMaker;
-import com.google.common.collect.Maps;
-import com.google.gwt.thirdparty.guava.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap;
 
 @DiscoverableServiceBuilder( Eucalyptus.class )
 @Handles( { RegisterEucalyptusType.class, DeregisterEucalyptusType.class, DescribeEucalyptusType.class, EucalyptusConfiguration.class,
