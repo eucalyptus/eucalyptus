@@ -63,6 +63,7 @@
 
 package com.eucalyptus.ws.server;
 
+import java.net.URI;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -84,6 +85,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.empyrean.ServiceTransitionType;
 import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Logs;
@@ -95,7 +97,7 @@ public enum SystemChecksHandler implements ChannelUpstreamHandler {
   SERVICE_STATE {
     @Override
     public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-      final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
+      final MappingHttpRequest request = MappingHttpMessage.extractMessage( e );
       final BaseMessage msg = BaseMessage.extractMessage( e );
       if ( msg != null ) {
         try {
@@ -105,7 +107,7 @@ public enum SystemChecksHandler implements ChannelUpstreamHandler {
           if ( comp.isEnabledLocally( ) ) {
             ctx.sendUpstream( e );
           } else {
-            this.sendError( ctx, e, comp );
+            this.sendError( ctx, e, comp, request.getServicePath( ) );
           }
         } catch ( Exception ex ) {
           Logs.extreme( ).error( ex, ex );
@@ -120,7 +122,7 @@ public enum SystemChecksHandler implements ChannelUpstreamHandler {
   MESSAGE_EPOCH {
     @Override
     public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-      final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
+      final MappingHttpRequest request = MappingHttpMessage.extractMessage( e );
       final BaseMessage msg = BaseMessage.extractMessage( e );
       if ( msg != null ) {
         try {
@@ -133,7 +135,7 @@ public enum SystemChecksHandler implements ChannelUpstreamHandler {
             Class<? extends ComponentId> compClass = ComponentMessages.lookup( msg );
             ComponentId compId = ComponentIds.lookup( compClass );
             Component comp = Components.lookup( compId );
-            this.sendError( ctx, e, comp );
+            this.sendError( ctx, e, comp, request.getServicePath( ) );
           }
         } catch ( Exception ex ) {
           Logs.extreme( ).error( ex, ex );
@@ -142,12 +144,14 @@ public enum SystemChecksHandler implements ChannelUpstreamHandler {
       }
     }
   };
-  protected void sendError( ChannelHandlerContext ctx, ChannelEvent e, Component comp ) {
+  protected void sendError( ChannelHandlerContext ctx, ChannelEvent e, Component comp, String originalPath ) {
     e.getFuture( ).cancel( );
     HttpResponse response = null;
     if ( !comp.enabledServices( ).isEmpty( ) ) {
       response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.MOVED_PERMANENTLY );
-      response.setHeader( HttpHeaders.Names.LOCATION, comp.enabledServices( ).first( ).getUri( ).toASCIIString( ) );
+      URI serviceUri = comp.enabledServices( ).first( ).getUri( );
+      String redirectUri = serviceUri.toASCIIString( ) + originalPath.replace( serviceUri.getPath( ), "" );
+      response.setHeader( HttpHeaders.Names.LOCATION, redirectUri );
     } else {
       response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND );
     }

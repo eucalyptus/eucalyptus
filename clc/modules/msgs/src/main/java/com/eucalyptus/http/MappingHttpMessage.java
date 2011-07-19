@@ -175,8 +175,10 @@ public abstract class MappingHttpMessage extends DefaultHttpMessage implements H
   public static <T extends MappingHttpMessage> T extractMessage( ChannelEvent e ) {
     if ( e instanceof MessageEvent ) {
       final MessageEvent msge = ( MessageEvent ) e;
-      if ( msge.getMessage( ) instanceof MappingHttpMessage  ) {
+      if ( msge.getMessage( ) instanceof MappingHttpRequest ) {
         return ( T ) msge.getMessage( );
+      } else if ( msge.getMessage( ) instanceof MappingHttpResponse ) {
+          return ( T ) msge.getMessage( );
       } else {
         return null;
       }
