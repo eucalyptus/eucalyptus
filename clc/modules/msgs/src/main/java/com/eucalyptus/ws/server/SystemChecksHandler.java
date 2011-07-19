@@ -126,6 +126,7 @@ public enum SystemChecksHandler implements ChannelUpstreamHandler {
         try {
           if ( msg instanceof ServiceTransitionType ) {
             Topology.touch( ( ServiceTransitionType ) msg );
+            ctx.sendUpstream( e );
           } else if ( Topology.check( msg ) ) {
             ctx.sendUpstream( e );
           } else {
