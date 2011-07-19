@@ -130,7 +130,7 @@ public class SystemBootstrapper {
     } catch ( Throwable t ) {
       t.printStackTrace( );
       LOG.fatal( t, t );
-      System.exit( 1 );
+      System.exit( 123 );
       return false;
     }
   }
