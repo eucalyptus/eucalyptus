@@ -93,11 +93,11 @@ class DescribeServices(AWSQueryRequest):
               ]
 
     def __init__(self, **args):
-      if 'debug' in self.args and self.args['debug'] >= 2:
+      if 'debug' in args and args['debug'] >= 2:
         self.ServicePath = InternalServicePath
-        AWSQueryRequest.__init__(self, **args)
-        self.list_markers = ['euca:serviceStatuses']
-        self.item_markers = ['euca:item']
+      AWSQueryRequest.__init__(self, **args)
+      self.list_markers = ['euca:serviceStatuses']
+      self.item_markers = ['euca:item']
   
     def get_connection(self, **args):
         if self.connection is None:
