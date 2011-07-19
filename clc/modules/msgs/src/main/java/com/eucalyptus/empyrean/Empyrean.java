@@ -63,7 +63,6 @@
 
 package com.eucalyptus.empyrean;
 
-import static com.eucalyptus.component.ComponentId.LOG;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
