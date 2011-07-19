@@ -63,8 +63,11 @@
 
 package com.eucalyptus.empyrean;
 
+import static com.eucalyptus.component.ComponentId.LOG;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -73,14 +76,19 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.HostManager;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Hosts;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.Internets;
-import com.google.common.collect.Lists;
 
 public class Empyrean extends ComponentId.Unpartioned {
-  
+  private static Logger LOG = Logger.getLogger( Empyrean.class );
   public static final Empyrean INSTANCE = new Empyrean( ); //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
                                                            
   @Override
@@ -135,7 +143,7 @@ public class Empyrean extends ComponentId.Unpartioned {
     
     @Override
     public boolean load( ) throws Exception {
-      System.setProperty("jgroups.udp.jdbc.bind_addr",Internets.localHostAddress());
+      System.setProperty( "jgroups.udp.jdbc.bind_addr", Internets.localHostAddress( ) );
       Groovyness.run( "setup_dbpool.groovy" );
       return true;
     }
@@ -166,4 +174,45 @@ public class Empyrean extends ComponentId.Unpartioned {
     }
     
   }
+  
+  public static boolean setupServiceDependencies( InetAddress addr ) {
+    if ( !Internets.testLocal( addr ) && !Internets.testReachability( addr ) ) {
+      LOG.warn( "Failed to reach host for cloud controller: " + addr );
+      return false;
+    } else {
+      try {
+        setupServiceState( addr, Empyrean.INSTANCE );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        return false;
+      }
+      for ( ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
+        try {
+          if ( compId.isAlwaysLocal( ) ) {
+            setupServiceState( addr, compId );
+          }
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+      return true;
+    }
+    
+  }
+  
+  private static void setupServiceState( InetAddress addr, ComponentId compId ) throws ServiceRegistrationException, ExecutionException {
+    try {
+      Component comp = Components.lookup( compId );
+      ServiceConfiguration config = ( Internets.testLocal( addr ) )
+        ? comp.initRemoteService( addr )
+        : comp.initRemoteService( addr );//TODO:GRZE:REVIEW: use of initRemote
+      if ( Component.State.INITIALIZED.ordinal( ) >= config.lookupState( ).ordinal( ) ) {
+        comp.loadService( config ).get( );
+      }
+      Topology.enable( config );
+    } catch ( InterruptedException ex ) {
+      Thread.currentThread( ).interrupt( );
+    }
+  }
+  
 }
