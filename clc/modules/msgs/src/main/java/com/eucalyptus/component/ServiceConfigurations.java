@@ -47,13 +47,13 @@ public class ServiceConfigurations {
         db.commit( );
         return componentList;
       } catch ( PersistenceException ex ) {
-        LOG.error( ex, ex );
+        LOG.trace( ex );
         db.rollback( );
         throw ex;
       } catch ( Throwable ex ) {
-        LOG.error( ex, ex );
+        LOG.trace( ex );
         db.rollback( );
-        throw new PersistenceException( "Service configuration lookup failed for: " + LogUtil.dumpObject( example ) );
+        throw new PersistenceException( "Service configuration lookup failed for: " + LogUtil.dumpObject( example ), ex );
       }
     }
     
@@ -66,13 +66,13 @@ public class ServiceConfigurations {
         db.rollback( );
         return existingName;
       } catch ( PersistenceException ex ) {
-        LOG.error( ex, ex );
+        LOG.trace( ex );
         db.rollback( );
         throw ex;
       } catch ( Throwable ex ) {
-        LOG.error( ex, ex );
+        LOG.trace( ex );
         db.rollback( );
-        throw new PersistenceException( "Service configuration lookup failed for: " + LogUtil.dumpObject( example ) );
+        throw new PersistenceException( "Service configuration lookup failed for: " + LogUtil.dumpObject( example ), ex );
       }
     }
     
@@ -85,15 +85,15 @@ public class ServiceConfigurations {
         db.commit( );
         EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, config.toString( ) ).info( );
       } catch ( PersistenceException ex ) {
-        LOG.error( ex, ex );
+        LOG.trace( ex );
         EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, "FAILED", config.toString( ) ).error( );
         db.rollback( );
         throw ex;
       } catch ( Throwable ex ) {
-        LOG.error( ex, ex );
+        LOG.trace( ex );
         EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, "FAILED", config.toString( ) ).error( );
         db.rollback( );
-        throw new PersistenceException( "Service configuration storing failed for: " + LogUtil.dumpObject( config ) );
+        throw new PersistenceException( "Service configuration storing failed for: " + LogUtil.dumpObject( config ), ex );
       }
       return config;
     }
@@ -109,15 +109,15 @@ public class ServiceConfigurations {
         db.commit( );
         EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED, config.toString( ) ).info( );
       } catch ( PersistenceException ex ) {
-        LOG.error( ex, ex );
+        LOG.trace( ex );
         EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED, "FAILED", config.toString( ) ).error( );
         db.rollback( );
         throw ex;
       } catch ( Throwable ex ) {
-        LOG.error( ex, ex );
+        LOG.trace( ex );
         EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED, "FAILED", config.toString( ) ).error( );
         db.rollback( );
-        throw new PersistenceException( "Service configuration removal failed for: " + LogUtil.dumpObject( config ) );
+        throw new PersistenceException( "Service configuration removal failed for: " + LogUtil.dumpObject( config ), ex );
       }
       return config;
     }

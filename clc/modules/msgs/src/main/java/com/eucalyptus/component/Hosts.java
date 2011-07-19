@@ -186,30 +186,29 @@ public class Hosts {
       } else {
         Component empyrean = Components.lookup( Empyrean.class );
         ComponentId empyreanId = empyrean.getComponentId( );
-        for ( InetAddress addr : updatedHost.getHostAddresses( ) ) {
-          ServiceConfiguration ephemeralConfig = ServiceConfigurations.createEphemeral( empyrean, addr );
-          if ( !empyrean.hasService( ephemeralConfig ) ) {
-            try {
-              ServiceConfiguration config = empyrean.initRemoteService( addr );
-              empyrean.loadService( ephemeralConfig ).get( );
-              entry = new Host( updatedHost.getGroupsId( ), updatedHost.getBindAddress( ), updatedHost.getEpoch( ),
-                                updatedHost.hasDatabase( ),
-                                updatedHost.hasBootstrapped( ),
-                                updatedHost.getHostAddresses( ), config );
-              Host temp = hostMap.putIfAbsent( entry.getGroupsId( ), entry );
-              if ( temp == null ) {
-                Mbeans.register( entry );
-              } else {
-                entry = temp;
-              }
-            } catch ( ServiceRegistrationException ex ) {
-              LOG.error( ex, ex );
-            } catch ( ExecutionException ex ) {
-              LOG.error( ex, ex );
-            } catch ( InterruptedException ex ) {
-              Thread.currentThread( ).interrupt( );
-              LOG.error( ex, ex );
+        InetAddress addr = updatedHost.getBindAddress( );
+        ServiceConfiguration ephemeralConfig = ServiceConfigurations.createEphemeral( empyrean, addr );
+        if ( !empyrean.hasService( ephemeralConfig ) ) {
+          try {
+            ServiceConfiguration config = empyrean.initRemoteService( addr );
+            empyrean.loadService( ephemeralConfig ).get( );
+            entry = new Host( updatedHost.getGroupsId( ), updatedHost.getBindAddress( ), updatedHost.getEpoch( ),
+                              updatedHost.hasDatabase( ),
+                              updatedHost.hasBootstrapped( ),
+                              updatedHost.getHostAddresses( ), config );
+            Host temp = hostMap.putIfAbsent( entry.getGroupsId( ), entry );
+            if ( temp == null ) {
+              Mbeans.register( entry );
+            } else {
+              entry = temp;
             }
+          } catch ( ServiceRegistrationException ex ) {
+            LOG.error( ex, ex );
+          } catch ( ExecutionException ex ) {
+            LOG.error( ex, ex );
+          } catch ( InterruptedException ex ) {
+            Thread.currentThread( ).interrupt( );
+            LOG.error( ex, ex );
           }
         }
       }
