@@ -93,6 +93,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.BundleInstanceChecker;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Lookups;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -407,6 +408,7 @@ public class VmControl {
       } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
         throw new EucalyptusCloudException( "Failed to bundle requested vm because it is not currently 'running': " + request.getInstanceId( ) );
       } else if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
+    	BundleInstanceChecker.check(request);
         final BundleTask bundleTask = new BundleTask( v.getInstanceId( ).replaceFirst( "i-", "bun-" ), v.getInstanceId( ), request.getBucket( ),
                                                       request.getPrefix( ) );
         if ( v.startBundleTask( bundleTask ) ) {
@@ -418,8 +420,7 @@ public class VmControl {
         } else {
           throw new EucalyptusCloudException( "Instance is already being bundled: " + v.getBundleTask( ).getBundleId( ) );
         }
-        LOG
-           .info( EventRecord
+        LOG.info( EventRecord
                              .here( BundleCallback.class, EventType.BUNDLE_PENDING, ctx.getUserFullName( ).toString( ), v.getBundleTask( ).getBundleId( ),
                                     v.getInstanceId( ) ) );
         final BundleCallback callback = new BundleCallback( request );
@@ -430,6 +431,8 @@ public class VmControl {
       } else {
         throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
       }
+    } catch (EucalyptusCloudException e) {
+	throw e;
     } catch ( final Exception e ) {
       throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
     }

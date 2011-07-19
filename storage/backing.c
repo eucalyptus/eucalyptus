@@ -107,7 +107,7 @@ int init_backing_store (const char * conf_instances_path, unsigned int conf_work
         logprintfl (EUCAERROR, "error: INSTANCE_PATH not specified\n");
         return ERROR;
     }
-    strncpy (instances_path, conf_instances_path, sizeof (instances_path));
+    safe_strncpy (instances_path, conf_instances_path, sizeof (instances_path));
     if (check_directory (instances_path)) {
 	    logprintfl (EUCAERROR, "error: INSTANCE_PATH (%s) does not exist!\n", instances_path);
         return ERROR;
@@ -232,7 +232,7 @@ ncInstance * load_instance_struct (const char * instanceId)
 	    logprintfl (EUCADEBUG, "load_instance_struct: out of memory for instance struct\n");
 	    return NULL;
     }
-    strncpy (instance->instanceId, instanceId, sizeof (instance->instanceId));
+    safe_strncpy (instance->instanceId, instanceId, sizeof (instance->instanceId));
 
     // we don't know userId, so we'll look for instanceId in every user's
     // directory (we're assuming that instanceIds are unique in the system)
@@ -251,7 +251,7 @@ ncInstance * load_instance_struct (const char * instanceId)
         
         snprintf(tmp_path, sizeof (tmp_path), "%s/%s/%s", user_paths, dir_entry->d_name, instance->instanceId);
         if (stat(tmp_path, &mystat)==0) {
-            strncpy (instance->userId, dir_entry->d_name, sizeof (instance->userId));
+            safe_strncpy (instance->userId, dir_entry->d_name, sizeof (instance->userId));
             break; // found it
         }
     }
@@ -370,9 +370,10 @@ int clone_bundling_backing (ncInstance *instance, const char* filePrefix, char* 
 	logprintfl (EUCAERROR, "[%s] couldn't create the destination blob for bundling (%s)", instance->instanceId, id);
 	goto error;
     }
+
+    if(strlen(dest_blob->blocks_path) > 0)
+        snprintf(blockPath, MAX_PATH, "%s", dest_blob->blocks_path);
     
-    if(dest_blob->blocks_path)
-	snprintf(blockPath, MAX_PATH, "%s", dest_blob->blocks_path);
     // copy blob (will 'dd' eventually)
     if(blockblob_copy(src_blob, 0, dest_blob, 0, src_blob->size_bytes) != OK) {
  	logprintfl (EUCAERROR, "[%s] couldn't copy block blob for bundling (%s)", instance->instanceId, id);
@@ -453,7 +454,7 @@ int destroy_instance_backing (ncInstance * instance, int do_destroy_files)
         if (n>0){
             while (n--) {
                struct dirent *entry = files[n];
-               if( entry !=NULL && entry->d_name != NULL && strncmp(entry->d_name, ".",1)!=0 && strncmp(entry->d_name, "..", 2)!=0){
+               if( entry !=NULL && strncmp(entry->d_name, ".",1)!=0 && strncmp(entry->d_name, "..", 2)!=0){
                     snprintf(toDelete, MAX_PATH, "%s/%s", instance->instancePath, entry->d_name);
                     unlink(toDelete);
                     free(entry);

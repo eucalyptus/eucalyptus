@@ -123,7 +123,7 @@ import com.eucalyptus.upgrade.UpgradeScript;
 import com.eucalyptus.util.Counters;
 
 class upgrade_20_30 extends AbstractUpgradeScript {
-    static final String FROM_VERSION = "2.0.3";
+    static final List<String> FROM_VERSION = ["eee-2.0.2", "eee-2.0.1", "2.0.2", "2.0.3"];
     static final String TO_VERSION = "eee-3.0.0";
     private static Logger LOG = Logger.getLogger( upgrade_20_30.class );
     private static List<Class> entities = new ArrayList<Class>();
@@ -144,7 +144,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     public Boolean accepts( String from, String to ) {
         // We should support multiple from versions, but need
         // to decide which ones. 2.0.[1-9](eee)? for example
-        if(TO_VERSION.equals(to))
+        if(TO_VERSION.equals(to) and FROM_VERSION.contains(from))
             return true;
         return false;
     }
@@ -152,26 +152,12 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     @Override
     public void upgrade(File oldEucaHome, File newEucaHome) {
         // Do this in stages and bail out if something goes seriously wrong.
-        // TODO: Perhaps we should raise an appropriate exception.
-        if (!upgradeCluster(oldEucaHome)) {
-            return;
-        } else if (!upgradeAuth()) {
-            return;
-        } else if (!upgradeKeyPairs()) {
-            return;
-        } else if (!upgradeNetwork()) {
-            return;
-        } else if (!upgradeWalrus()) {
-            return;
-        } else if (!upgradeStorage()) {
-            return;
-        } else if (!upgradeSAN()) {
-            return;
-        }
-        
+        parts = [ 'Cluster', 'Auth', 'KeyPairs', 'Network', 'Walrus', 'Storage', 'SAN' ]
+        parts.each { this."upgrade${it}"(); }
+                
+        // Do object upgrades which follow the entity map / setter map pattern
         buildEntityMap();
         def altEntityMap = [ vm_types:'eucalyptus_general' ];
-
 
         Set<String> entityKeys = entityMap.keySet();
         for (String entityKey : entityKeys) {
@@ -227,7 +213,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         List<GroovyRowResult> rowResults;
         try {
             rowResults = conn.rows("SELECT * FROM " + entityKey);
-                        LOG.info("Got " + rowResults.size().toString() + " results from " + entityKey);
+            LOG.debug("Got " + rowResults.size().toString() + " results from " + entityKey);
             EntityWrapper db =  EntityWrapper.get(entityMap.get(entityKey));
                         
             for (GroovyRowResult rowResult : rowResults) {
@@ -271,8 +257,8 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             LOG.debug("Upgraded: " + entityKey);
             db.commit();
         } catch (SQLException e) {
-            LOG.error(e);
-            return;
+            LOG.error(e); 
+            throw e;
         }        
     }
 
@@ -323,6 +309,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             }
         } catch (SQLException e) {
             LOG.error(e);
+            throw e;
         }
         return setterMap;
     }
@@ -385,6 +372,14 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         def image_conn = StandalonePersistence.getConnection("eucalyptus_images");
         def stor_conn = StandalonePersistence.getConnection("eucalyptus_storage");
         def walrus_conn = StandalonePersistence.getConnection("eucalyptus_walrus");
+
+        def userInfoFields = [ "user_real_name":"Full Name",
+                           "user_email":"Email",
+                           "user_telephone_number":"Telephone",
+                           "user_affiliation":"Affiliation",
+                           "user_project_description":"ProjectDescription",
+                           "user_project_pi_name":"ProjectPI" ];
+
         conn.rows('SELECT * FROM auth_users').each {
             def account = null;
             def accountProxy = null;
@@ -396,7 +391,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             def userName = "admin"
             while (account == null) {
                 try { 
-                    println "adding account ${ accountName }"
+                    LOG.debug("adding account ${ accountName }");
                     EntityWrapper<AccountEntity> dbAcct = EntityWrapper.get(AccountEntity.class);
                     account = new AccountEntity(accountName);
                     dbAcct.add(account);
@@ -415,7 +410,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             user.setPassword( it.auth_user_password );
             user.setToken(it.auth_user_token );
             userIdMap.put(it.auth_user_name, user.getUserId());
-            println "added " + account;
+            LOG.debug("added " + account);
             conn.rows("""SELECT c.* FROM auth_users
                          JOIN auth_user_has_x509 on auth_users.id=auth_user_has_x509.auth_user_id
                          JOIN auth_x509 c on auth_user_has_x509.auth_x509_id=c.id
@@ -428,18 +423,9 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             def uInfo = gen_conn.firstRow("""SELECT * FROM Users WHERE Users.user_name=${ it.auth_user_name }""");
             if (uInfo != null) {
                 Map<String, String> info = new HashMap<String, String>( );
-                if (uInfo.user_real_name != null)
-                    info.put("Full Name", uInfo.user_real_name);
-                if (uInfo.user_email != null)
-                    info.put("Email", uInfo.user_email);
-                if (uInfo.user_telephone_number != null)
-                    info.put("Telephone", uInfo.user_telephone_number);
-                if (uInfo.user_affiliation != null)
-                    info.put("Affiliation", uInfo.user_affiliation);
-                if (uInfo.user_project_description != null)
-                    info.put("ProjectDescription", uInfo.user_project_description);
-                if (uInfo.user_project_pi_name != null)
-                    info.put("ProjectPI", uInfo.user_project_pi_name);
+                userInfoFields.each { k,v ->
+                    if (uInfo[k] != null) { info.put(v, uInfo[k]); }
+                }
                 user.setInfo( info );
             }
 
@@ -458,7 +444,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             def ufn = UserFullName.getInstance(user);
             gen_conn.rows("""SELECT * FROM Images WHERE image_owner_id=${ it.auth_user_name }""").each { img ->
                 EntityWrapper<ImageInfo> dbGen = EntityWrapper.get(ImageInfo.class);
-                println "Adding image ${img.image_name}"
+                LOG.debug("Adding image ${img.image_name}");
                 def path = img.image_path.split("/");
                 // We cannot get the checksum or bundle size without reading
                 // the manifest, so leave them as null.
@@ -534,7 +520,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 v.setLocalDevice(vol.localdevice);
                 v.setRemoteDevice(vol.remotedevice);
                 v.setSize(vol.size);
-                println "Adding volume ${ vol.displayname } for ${ it.auth_user_name }"
+                LOG.debug("Adding volume ${ vol.displayname } for ${ it.auth_user_name }");
                 dbVol.add(v);
                 dbVol.commit();
             }
@@ -546,7 +532,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 Snapshot s = new Snapshot( ufn, snap.displayname, snap.parentvolume, scName, scName);
                 initMetaClass(s, s.class);
                 s.setState(State.valueOf(snap.state));
-                println "Adding snapshot ${ snap.displayname } for ${ it.auth_user_name }"
+                LOG.debug("Adding snapshot ${ snap.displayname } for ${ it.auth_user_name }");
                 dbSnap.add(s);
                 dbSnap.commit();
             }
@@ -598,7 +584,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 
         def walrus_conn = StandalonePersistence.getConnection("eucalyptus_walrus");
         walrus_conn.rows('SELECT * FROM Buckets').each{
-            println "Adding bucket: ${it.bucket_name}"
+            LOG.debug("Adding bucket: ${it.bucket_name}");
             
             EntityWrapper<BucketInfo> dbBucket = EntityWrapper.get(BucketInfo.class);
             try {
@@ -617,7 +603,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 walrus_conn.rows("""SELECT g.* FROM bucket_has_grants has_thing 
                                     LEFT OUTER JOIN Grants g on g.grant_id=has_thing.grant_id
                                     WHERE has_thing.bucket_id=${ it.bucket_id }""").each{  grant ->
-                    println "--> grant: ${it.bucket_id}/${grant.user_id}"
+                    LOG.debug("--> grant: ${it.bucket_id}/${grant.user_id}");
                     GrantInfo grantInfo = new GrantInfo();
                                         initMetaClass(grantInfo, grantInfo.class);
                     
@@ -634,11 +620,11 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             } catch (Throwable t) {
                 t.printStackTrace();
                 dbBucket.rollback();
-                return false;
+                throw t;
             }
         }
         walrus_conn.rows('SELECT * FROM Objects').each{
-            println "Adding object: ${it.bucket_name}/${it.object_name}"
+            LOG.debug("Adding object: ${it.bucket_name}/${it.object_name}");
             EntityWrapper<ObjectInfo> dbObject = EntityWrapper.get(ObjectInfo.class);
             try {
                 ObjectInfo objectInfo = new ObjectInfo(it.bucket_name, it.object_key);
@@ -661,7 +647,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 walrus_conn.rows("""SELECT g.* FROM object_has_grants has_thing 
                                     LEFT OUTER JOIN Grants g on g.grant_id=has_thing.grant_id 
                                     WHERE has_thing.object_id=${ it.object_id }""").each{  grant ->
-                    println "--> grant: ${it.object_name}/${grant.user_id}"
+                    LOG.debug("--> grant: ${it.object_name}/${grant.user_id}")
                     GrantInfo grantInfo = new GrantInfo();
                     initMetaClass(grantInfo, grantInfo.class);
                     grantInfo.setUserId(accountIdMap.get(safeUserMap.get(grant.user_id)));
@@ -675,7 +661,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 walrus_conn.rows("""SELECT m.* FROM object_has_metadata has_thing 
                                     LEFT OUTER JOIN MetaData m on m.metadata_id=has_thing.metadata_id 
                                     WHERE has_thing.object_id=${ it.object_id }""").each{  metadata ->
-                    println "--> metadata: ${it.object_name}/${metadata.name}"
+                    LOG.debug("--> metadata: ${it.object_name}/${metadata.name}")
                     MetaDataInfo mInfo = new MetaDataInfo();
                     initMetaClass(mInfo, mInfo.class);
                     mInfo.setObjectName(it.object_name);
@@ -688,7 +674,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             } catch (Throwable t) {
                 t.printStackTrace();
                 dbObject.rollback();
-                return false;
+                throw t;
             }
         }
         return true;
@@ -704,7 +690,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         gen_conn.rows('SELECT * FROM metadata_network_group').each {
             EntityWrapper<NetworkRulesGroup> dbGen = EntityWrapper.get(NetworkRulesGroup.class);
             try {
-                // Why is this broken on Ubuntu?
+                // Why is this sometimes broken on Ubuntu?
                 UserFullName ufn = UserFullName.getInstance(userIdMap.get(it.metadata_user_name));
                 def uniqueName = "${ it.metadata_user_name }_${it.metadata_display_name}";
                 if ( it.metadata_user_name == 'admin' && it.metadata_display_name == 'default' ) {
@@ -713,7 +699,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 def rulesGroup = new NetworkRulesGroup(ufn, uniqueName, it.metadata_network_group_description);
                 initMetaClass(rulesGroup, rulesGroup.class);
                 rulesGroup.setDisplayName(uniqueName);
-                println "Adding network rules for ${ it.metadata_user_name }/${it.metadata_display_name}";
+                LOG.debug("Adding network rules for ${ it.metadata_user_name }/${it.metadata_display_name}");
                 gen_conn.rows("""SELECT r.* 
                                  FROM metadata_network_group_has_rules 
                                  LEFT OUTER JOIN metadata_network_rule r 
@@ -731,7 +717,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                         IpRange ipRange = new IpRange(iprange.metadata_network_rule_ip_range_value);
                         initMetaClass(ipRange, ipRange.class);
                         networkRule.getIpRanges().add(ipRange);
-                        println "IP Range: ${iprange.metadata_network_rule_ip_range_value}";
+                        LOG.debug("IP Range: ${iprange.metadata_network_rule_ip_range_value}");
                     }
                     gen_conn.rows("""SELECT peer.* 
                                      FROM metadata_network_rule_has_peer_network 
@@ -742,18 +728,18 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                         initMetaClass(networkPeer, networkPeer.class);
                         networkRule.getNetworkPeers().add(networkPeer);
 
-                        println "Peer: " + networkPeer;
+                        LOG.debug("Peer: " + networkPeer);
                     }
                     rulesGroup.getNetworkRules().add(networkRule);
                 } 
 
-                println "adding rules group: " + rulesGroup;
+                LOG.debug("adding rules group: " + rulesGroup);
                 dbGen.add(rulesGroup);
                 dbGen.commit();
             } catch (Throwable t) {
                 t.printStackTrace();
                 dbGen.rollback();
-                return false;
+                throw t;
             }
         }
         return true;
@@ -794,38 +780,54 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         return true;
     }
 
+    def has_table(conn, tableName) {
+        try {
+            conn.firstRow("SELECT * FROM ${tableName}");
+            return true;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
     public boolean upgradeSAN() {
+        // Only eee
         def stor_conn = StandalonePersistence.getConnection("eucalyptus_storage");
         EntityWrapper<SANVolumeInfo> dbsvi = EntityWrapper.get(SANVolumeInfo.class);
-        stor_conn.rows('SELECT * FROM EquallogicVolumeInfo').each{
-            SANVolumeInfo sanvol = new SANVolumeInfo(it.volumeId, it.iqn, it.size);
-            initMetaClass(sanvol, sanvol.class);
-            sanvol.setStoreUser(it.storeUser);
-            sanvol.setScName(it.scName);
-            sanvol.setEncryptedPassword(it.encryptedPassword);
-            sanvol.setStatus(it.status);
-            sanvol.setSnapshotOf(it.snapshot_of);
-            dbsvi.add(sanvol);
-        }
-        dbsvi.commit()
+        if has_table(stor_conn, "EquallogicVolumeInfo") {
+            stor_conn.rows('SELECT * FROM EquallogicVolumeInfo').each{
+                SANVolumeInfo sanvol = new SANVolumeInfo(it.volumeId, it.iqn, it.size);
+                initMetaClass(sanvol, sanvol.class);
+                sanvol.setStoreUser(it.storeUser);
+                sanvol.setScName(it.scName);
+                sanvol.setEncryptedPassword(it.encryptedPassword);
+                sanvol.setStatus(it.status);
+                sanvol.setSnapshotOf(it.snapshot_of);
+                dbsvi.add(sanvol);
+            }
+            dbsvi.commit()
+        } 
 
-        EntityWrapper<IgroupInfo> dbigroup = EntityWrapper.get(IgroupInfo.class);
-        stor_conn.rows('SELECT * FROM Igroups').each{
-            IgroupInfo igroup = new IgroupInfo(it.igroup_name, it.volume_name, it.iqn);
-            dbigroup.add(igroup);
+        if has_table(stor_conn, "Igroups") {
+            EntityWrapper<IgroupInfo> dbigroup = EntityWrapper.get(IgroupInfo.class);
+            stor_conn.rows('SELECT * FROM Igroups').each{
+                IgroupInfo igroup = new IgroupInfo(it.igroup_name, it.volume_name, it.iqn);
+                dbigroup.add(igroup);
+            }
+            dbigroup.commit();
         }
-        dbigroup.commit();
 
-        EntityWrapper<SANInfo> dbsaninfo = EntityWrapper.get(SANInfo.class);
-        stor_conn.rows('SELECT * FROM san_info').each{
-            SANInfo s = new SANInfo(it.storage_name, it.san_host, it.san_user, it.san_password);
-            dbsaninfo.add(s);
+        if has_tables(stor_conn, "san_info") {
+            EntityWrapper<SANInfo> dbsaninfo = EntityWrapper.get(SANInfo.class);
+            stor_conn.rows('SELECT * FROM san_info').each{
+                SANInfo s = new SANInfo(it.storage_name, it.san_host, it.san_user, it.san_password);
+                dbsaninfo.add(s);
+            }
+            dbsaninfo.commit();
         }
-        dbsaninfo.commit();
         return true;
     }
     
-    public boolean upgradeCluster(oldEucaHome) {
+    public boolean upgradeCluster() {
         def oldHome = System.getProperty( "euca.upgrade.old.dir" );
         def config_conn = StandalonePersistence.getConnection("eucalyptus_config");
         def config_auth = StandalonePersistence.getConnection("eucalyptus_auth");
@@ -843,7 +845,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                  pem = new PEMReader(new FileReader("${ oldHome }/var/lib/eucalyptus/keys/${ it.config_component_name }/cluster-pk.pem"));
                  KeyPair clusterKeyPair = (KeyPair) pem.readObject();
                  pem.close();
-                 print "Adding Partition ${ it.config_component_name }";
+                 LOG.debug("Adding Partition ${ it.config_component_name }");
                  Partition p = new Partition(it.config_component_name, 
                                              clusterKeyPair, 
                                              X509CertHelper.toCertificate(clCert.auth_x509_pem_certificate), 
@@ -851,7 +853,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                                              X509CertHelper.toCertificate(nodeCert.auth_x509_pem_certificate));
                  dbPart.add(p);
                  dbPart.commit();
-                 print "Adding Cluster ${ it.config_component_name }";
+                 LOG.debug("Adding Cluster ${ it.config_component_name }");
                  // First argument is Partition name
                  ClusterConfiguration clcfg = new ClusterConfiguration(it.config_component_name, it.config_component_name, it.config_component_hostname, it.config_component_port);
                  dbCluster.add(clcfg);

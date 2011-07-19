@@ -1387,7 +1387,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
 	char *mac;
 	rc = ip2mac(vnetconfig, resourceCacheStage->resources[i].ip, &mac);
 	if (!rc) {
-	  strncpy(resourceCacheStage->resources[i].mac, mac, 24);
+	  safe_strncpy(resourceCacheStage->resources[i].mac, mac, 24);
 	  free(mac);
 	  logprintfl(EUCADEBUG, "refresh_resources(): discovered MAC '%s' for host %s(%s)\n", resourceCacheStage->resources[i].mac, resourceCacheStage->resources[i].hostname, resourceCacheStage->resources[i].ip);
 	}
@@ -1516,14 +1516,14 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	      
 	      // instance info that the CC maintains
 	      myInstance->ncHostIdx = i;
-	      strncpy(myInstance->serviceTag, resourceCacheStage->resources[i].ncURL, 64);
+	      safe_strncpy(myInstance->serviceTag, resourceCacheStage->resources[i].ncURL, 64);
 	      {
 		char *ip=NULL;
 		if (!strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) {
 		  if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC") ) {
 		    rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
 		    if (!rc) {
-		      strncpy(myInstance->ccnet.publicIp, ip, 24);
+		      safe_strncpy(myInstance->ccnet.publicIp, ip, 24);
 		    }
 		  }
 		}
@@ -1534,7 +1534,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 		if (!strcmp(myInstance->ccnet.privateIp, "0.0.0.0")) {
 		  rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
 		  if (!rc) {
-		    strncpy(myInstance->ccnet.privateIp, ip, 24);
+		    safe_strncpy(myInstance->ccnet.privateIp, ip, 24);
 		  }
 		}
 		
@@ -1769,20 +1769,20 @@ void print_netConfig(char *prestr, netConfig *in) {
 int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   int i;
   
-  strncpy(dst->uuid, src->uuid, 48);
-  strncpy(dst->instanceId, src->instanceId, 16);
-  strncpy(dst->reservationId, src->reservationId, 16);
-  strncpy(dst->accountId, src->userId, 48);
-  strncpy(dst->amiId, src->imageId, 16);
-  strncpy(dst->kernelId, src->kernelId, 16);
-  strncpy(dst->ramdiskId, src->ramdiskId, 16);
-  strncpy(dst->keyName, src->keyName, 1024);
-  strncpy(dst->launchIndex, src->launchIndex, 64);
-  strncpy(dst->platform, src->platform, 64);
-  strncpy(dst->bundleTaskStateName, src->bundleTaskStateName, 64);
-  strncpy(dst->createImageTaskStateName, src->createImageTaskStateName, 64);
-  strncpy(dst->userData, src->userData, 4096);
-  strncpy(dst->state, src->stateName, 16);
+  safe_strncpy(dst->uuid, src->uuid, 48);
+  safe_strncpy(dst->instanceId, src->instanceId, 16);
+  safe_strncpy(dst->reservationId, src->reservationId, 16);
+  safe_strncpy(dst->accountId, src->userId, 48);
+  safe_strncpy(dst->amiId, src->imageId, 16);
+  safe_strncpy(dst->kernelId, src->kernelId, 16);
+  safe_strncpy(dst->ramdiskId, src->ramdiskId, 16);
+  safe_strncpy(dst->keyName, src->keyName, 1024);
+  safe_strncpy(dst->launchIndex, src->launchIndex, 64);
+  safe_strncpy(dst->platform, src->platform, 64);
+  safe_strncpy(dst->bundleTaskStateName, src->bundleTaskStateName, 64);
+  safe_strncpy(dst->createImageTaskStateName, src->createImageTaskStateName, 64);
+  safe_strncpy(dst->userData, src->userData, 4096);
+  safe_strncpy(dst->state, src->stateName, 16);
   dst->ts = src->launchTime;
 
   memcpy(&(dst->ncnet), &(src->ncnet), sizeof(netConfig));
@@ -3679,8 +3679,8 @@ int init_config(void) {
 
   sem_mywait(CONFIG);
   // set up the current config   
-  strncpy(config->eucahome, eucahome, MAX_PATH);
-  strncpy(config->policyFile, policyFile, MAX_PATH);
+  safe_strncpy(config->eucahome, eucahome, MAX_PATH);
+  safe_strncpy(config->policyFile, policyFile, MAX_PATH);
   //  snprintf(config->proxyPath, MAX_PATH, "%s/var/lib/eucalyptus/dynserv/data", config->eucahome);
   snprintf(config->proxyPath, MAX_PATH, "%s", proxyPath);
   config->use_proxy = use_proxy;
@@ -3978,6 +3978,7 @@ int reconfigureNetworkFromCLC() {
   fd = safe_mkstemp(chainmapfile);
   if (fd < 0) {
     logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot open chainmapfile '%s'\n", chainmapfile);
+    if (cloudIp) free(cloudIp);
     unlink(clcnetfile);
     return(1);
   }
@@ -4139,11 +4140,11 @@ void shawn() {
 int allocate_ccResource(ccResource *out, char *ncURL, char *ncService, int ncPort, char *hostname, char *mac, char *ip, int maxMemory, int availMemory, int maxDisk, int availDisk, int maxCores, int availCores, int state, int laststate, time_t stateChange, time_t idleStart) {
 
   if (out != NULL) {
-    if (ncURL) strncpy(out->ncURL, ncURL, 128);
-    if (ncService) strncpy(out->ncService, ncService, 128);
-    if (hostname) strncpy(out->hostname, hostname, 128);
-    if (mac) strncpy(out->mac, mac, 24);
-    if (ip) strncpy(out->ip, ip, 24);
+    if (ncURL) safe_strncpy(out->ncURL, ncURL, 128);
+    if (ncService) safe_strncpy(out->ncService, ncService, 128);
+    if (hostname) safe_strncpy(out->hostname, hostname, 128);
+    if (mac) safe_strncpy(out->mac, mac, 24);
+    if (ip) safe_strncpy(out->ip, ip, 24);
     
     out->ncPort = ncPort;
     out->maxMemory = maxMemory;
@@ -4202,32 +4203,32 @@ int free_instanceNetwork(char *mac, int vlan, int force, int dolock) {
 int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *accountId, char *state, char *ccState, time_t ts, char *reservationId, netConfig *ccnet, netConfig *ncnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform, char *bundleTaskStateName, char groupNames[][32], ncVolume *volumes, int volumesSize) {
   if (out != NULL) {
     bzero(out, sizeof(ccInstance));
-    if (id) strncpy(out->instanceId, id, 16);
-    if (amiId) strncpy(out->amiId, amiId, 16);
-    if (kernelId) strncpy(out->kernelId, kernelId, 16);
-    if (ramdiskId) strncpy(out->ramdiskId, ramdiskId, 16);
+    if (id) safe_strncpy(out->instanceId, id, 16);
+    if (amiId) safe_strncpy(out->amiId, amiId, 16);
+    if (kernelId) safe_strncpy(out->kernelId, kernelId, 16);
+    if (ramdiskId) safe_strncpy(out->ramdiskId, ramdiskId, 16);
     
-    if (amiURL) strncpy(out->amiURL, amiURL, 512);
-    if (kernelURL) strncpy(out->kernelURL, kernelURL, 512);
-    if (ramdiskURL) strncpy(out->ramdiskURL, ramdiskURL, 512);
+    if (amiURL) safe_strncpy(out->amiURL, amiURL, 512);
+    if (kernelURL) safe_strncpy(out->kernelURL, kernelURL, 512);
+    if (ramdiskURL) safe_strncpy(out->ramdiskURL, ramdiskURL, 512);
     
-    if (state) strncpy(out->state, state, 16);
-    if (state) strncpy(out->ccState, ccState, 16);
-    if (accountId) strncpy(out->accountId, accountId, 48);
-    if (reservationId) strncpy(out->reservationId, reservationId, 16);
-    if (keyName) strncpy(out->keyName, keyName, 1024);
+    if (state) safe_strncpy(out->state, state, 16);
+    if (state) safe_strncpy(out->ccState, ccState, 16);
+    if (accountId) safe_strncpy(out->accountId, accountId, 48);
+    if (reservationId) safe_strncpy(out->reservationId, reservationId, 16);
+    if (keyName) safe_strncpy(out->keyName, keyName, 1024);
     out->ts = ts;
     out->ncHostIdx = ncHostIdx;
-    if (serviceTag) strncpy(out->serviceTag, serviceTag, 64);
-    if (userData) strncpy(out->userData, userData, 4096);
-    if (launchIndex) strncpy(out->launchIndex, launchIndex, 64);
-    if (platform) strncpy(out->platform, platform, 64);
-    if (bundleTaskStateName) strncpy(out->bundleTaskStateName, bundleTaskStateName, 64);
+    if (serviceTag) safe_strncpy(out->serviceTag, serviceTag, 64);
+    if (userData) safe_strncpy(out->userData, userData, 4096);
+    if (launchIndex) safe_strncpy(out->launchIndex, launchIndex, 64);
+    if (platform) safe_strncpy(out->platform, platform, 64);
+    if (bundleTaskStateName) safe_strncpy(out->bundleTaskStateName, bundleTaskStateName, 64);
     if (groupNames) {
       int i;
       for (i=0; i<64; i++) {
 	if (groupNames[i]) {
-	  strncpy(out->groupNames[i], groupNames[i], 32);
+	  safe_strncpy(out->groupNames[i], groupNames[i], 32);
 	}
       }
     }
