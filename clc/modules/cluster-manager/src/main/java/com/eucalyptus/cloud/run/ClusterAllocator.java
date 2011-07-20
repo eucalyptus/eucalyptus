@@ -73,6 +73,8 @@ import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;
@@ -86,6 +88,7 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.images.BlockStorageImageInfo;
+import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -211,7 +214,7 @@ public class ClusterAllocator extends Thread {
     }
   }
   
-  private void setupVmMessages( final ResourceToken token ) {
+  private void setupVmMessages( final ResourceToken token ) throws MetadataException {
     Integer vlan = null;
     List<String> networkNames = null;
     ArrayList<String> networkIndexes = Lists.newArrayList( );
@@ -231,7 +234,7 @@ public class ClusterAllocator extends Thread {
     final List<String> addresses = Lists.newArrayList( token.getAddresses( ) );
     RunInstancesType request = this.allocInfo.getRequest( );
     String rsvId = this.allocInfo.getReservationId( );
-    VmKeyInfo keyInfo = this.allocInfo.getKeyInfo( );
+    SshKeyPair keyInfo = this.allocInfo.getSshKeyPair( );
     VmTypeInfo vmInfo = this.allocInfo.getVmTypeInfo( );
     String userData = this.allocInfo.getRequest( ).getUserData( );
     Request cb = null;
@@ -279,7 +282,7 @@ public class ClusterAllocator extends Thread {
   }
   
   private Request makeRunRequest( RunInstancesType request, final ResourceToken childToken, UserFullName userFullName, String rsvId,
-                                  VmKeyInfo keyInfo, VmTypeInfo vmInfo, String platform, Integer vlan, List<String> networkNames, String userData ) {
+                                  SshKeyPair keyPair, VmTypeInfo vmInfo, String platform, Integer vlan, List<String> networkNames, String userData ) {
     List<String> macs = Lists.transform( childToken.getInstanceIds( ), new Function<String, String>( ) {
       @Override
       public String apply( String instanceId ) {
@@ -293,7 +296,7 @@ public class ClusterAllocator extends Thread {
     //TODO:GRZE:ASAP use ern here instead of string name -- see KeyPairManager.resolve()
 
     VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ),
-                                   vmInfo, keyInfo, platform != null
+                                   vmInfo, new VmKeyInfo(keyPair.getName( ), keyPair.getPublicKey( ), keyPair.getFingerPrint( )), platform != null
                                      ? platform
                                      : "linux", /** ASAP:FIXME:GRZE **/
                                    childToken.getInstanceIds( ), macs,

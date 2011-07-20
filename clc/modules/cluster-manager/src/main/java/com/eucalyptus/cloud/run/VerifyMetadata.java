@@ -65,12 +65,14 @@ package com.eucalyptus.cloud.run;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
@@ -86,28 +88,25 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.Emis.BootableSet;
-import com.eucalyptus.keys.KeyPairUtil;
-import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.network.NetworkGroupUtil;
+import com.eucalyptus.keys.KeyPairs;
+import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.NetworkRulesGroup;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Joiner;
-import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Sets.SetView;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
-/**
- * NOTE:GRZE: don't get attached to this, it will be removed as the verify pipeline is simplified in
- * the future.
- */
 public class VerifyMetadata {
   private static Logger LOG = Logger.getLogger( VerifyMetadata.class );
   
   interface MetadataVerifier<T> {
     public abstract boolean apply( Allocation allocInfo ) throws MetadataException;
   }
-
   
   public Allocation verify( RunInstancesType request ) throws MetadataException {
     Allocation alloc = Allocations.begin( );
@@ -119,7 +118,6 @@ public class VerifyMetadata {
     return alloc;
   }
   
-
   enum VmTypeVerifier implements MetadataVerifier<Allocation> {
     INSTANCE;
     
@@ -128,12 +126,6 @@ public class VerifyMetadata {
       Context ctx = allocInfo.getContext( );
       User user = ctx.getUser( );
       String instanceType = allocInfo.getRequest( ).getInstanceType( );
-      VmType v = VmTypes.getVmType( ( instanceType == null )
-          ? VmType.M1_SMALL
-          : instanceType );
-      if ( v == null ) {
-        throw new NoSuchMetadataException( "instance type does not exist: " + instanceType );
-      }
       String action = PolicySpec.requestToAction( allocInfo.getRequest( ) );
       try {
         if ( !ctx.hasAdministrativePrivileges( )
@@ -144,7 +136,7 @@ public class VerifyMetadata {
         LOG.error( ex, ex );
         throw new IllegalMetadataAccessException( "Not authorized to allocate vm type " + instanceType + " for " + ctx.getUserFullName( ) );
       }
-      allocInfo.setVmType( v );
+      allocInfo.setVmType( VmTypes.getVmType( instanceType ) );
       return true;
     }
   }
@@ -200,33 +192,23 @@ public class VerifyMetadata {
     
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
-      if ( SshKeyPair.NO_KEY_NAME.equals( allocInfo.getRequest( ).getKeyName( ) ) || allocInfo.getRequest( ).getKeyName( ) == null ) {
-        //ASAP:FIXME:GRZE
+      if ( allocInfo.getRequest( ).getKeyName( ) == null || "".equals( allocInfo.getRequest( ).getKeyName( ) ) ) {
         if ( Image.Platform.windows.name( ).equals( allocInfo.getBootSet( ).getMachine( ).getPlatform( ) ) ) {
           throw new InvalidMetadataException( "You must specify a keypair when running a windows vm: " + allocInfo.getRequest( ).getImageId( ) );
         } else {
-          allocInfo.setKeyInfo( new VmKeyInfo( ) );
+          allocInfo.setSshKeyPair( KeyPairs.noKey( ) );
           return true;
         }
       }
       Context ctx = allocInfo.getContext( );
       RunInstancesType request = allocInfo.getRequest( );
-      String action = PolicySpec.requestToAction( request );
       String keyName = request.getKeyName( );
-      Account account = ctx.getAccount( );
       if ( !ctx.hasAdministrativePrivileges( )
-           && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, keyName, account, action, ctx.getUser( ) ) ) {
+           && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, keyName, ctx.getAccount( ),
+                                         PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
         throw new IllegalMetadataAccessException( "Not authorized to use keypair " + keyName + " by " + ctx.getUser( ).getName( ) );
       }
-      try {
-        SshKeyPair keypair = KeyPairUtil.getUserKeyPair( ctx.getUserFullName( ), keyName );
-        if ( keypair == null ) {
-          throw new NoSuchMetadataException( "Failed to find keypair: " + keyName );
-        }
-        allocInfo.setKeyInfo( new VmKeyInfo( keypair.getDisplayName( ), keypair.getPublicKey( ), keypair.getFingerPrint( ) ) );
-      } catch ( EucalyptusCloudException ex ) {
-        throw new InvalidMetadataException( "Failed to find keypair: " + keyName, ex );
-      }
+      allocInfo.setSshKeyPair( KeyPairs.lookup( ctx.getUserFullName( ), keyName ) );
       return true;
     }
   }
@@ -237,35 +219,31 @@ public class VerifyMetadata {
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
       Context ctx = allocInfo.getContext( );
-      NetworkGroupUtil.makeDefault( ctx.getUserFullName( ) );
-      RunInstancesType request = allocInfo.getRequest( );
-      String action = PolicySpec.requestToAction( request );
-      User requestUser = ctx.getUser( );
-      ArrayList<String> networkNames = new ArrayList<String>( request.getGroupSet( ) );
-      if ( networkNames.size( ) < 1 ) {
-        networkNames.add( "default" );
+      NetworkGroups.makeDefault( ctx.getUserFullName( ) );
+      
+      Set<String> networkNames = Sets.newHashSet( allocInfo.getRequest( ).getGroupSet( ) );
+      if ( networkNames.isEmpty( ) ) {
+        networkNames.add( NetworkGroups.defaultNetworkName( ) );
       }
+      
       for ( String groupName : networkNames ) {
         if ( !ctx.hasAdministrativePrivileges( )
-             && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, groupName, ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+             && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, groupName, ctx.getAccount( ),
+                                           PolicySpec.requestToAction( allocInfo.getRequest( ) ), ctx.getUser( ) ) ) {
           throw new IllegalMetadataAccessException( "Not authorized to use network group " + groupName + " for " + ctx.getUser( ).getName( ) );
         }
       }
       
-      try {
-        Map<String, NetworkRulesGroup> networkRuleGroups = new HashMap<String, NetworkRulesGroup>( );
-        for ( String groupName : networkNames ) {
-          NetworkRulesGroup group = NetworkGroupUtil.getUserNetworkRulesGroup( ctx.getUserFullName( ), groupName );
-          networkRuleGroups.put( groupName, group );
-          allocInfo.getNetworks( ).add( group.getVmNetwork( ) );
-        }
-        ArrayList<String> userNetworks = new ArrayList<String>( networkRuleGroups.keySet( ) );
-        if ( !userNetworks.containsAll( networkNames ) ) {
-          networkNames.removeAll( userNetworks );
-          throw new NoSuchMetadataException( "Failed to find security group info for: " + networkNames );
-        }
-      } catch ( EucalyptusCloudException ex ) {
-        throw new InvalidMetadataException( "Failed to find security group info for: " + networkNames, ex );
+      Map<String, NetworkRulesGroup> networkRuleGroups = Maps.newHashMap( );
+      for ( String groupName : networkNames ) {
+        NetworkRulesGroup group = NetworkGroups.lookup( ctx.getUserFullName( ), groupName );
+        networkRuleGroups.put( groupName, group );
+      }
+      Set<String> missingNets = Sets.difference( networkNames, networkRuleGroups.keySet( ) );
+      if ( !missingNets.isEmpty( ) ) {
+        throw new NoSuchMetadataException( "Failed to find security group info for: " + missingNets );
+      } else {
+        allocInfo.setNetworkRules( networkRuleGroups );
       }
       return true;
     }

@@ -104,6 +104,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
+import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -289,7 +290,6 @@ public class SystemState {
         @Override
         public void fire( ImageInfo t ) {}
       } );
-      VmKeyInfo keyInfo = null;
       SshKeyPair key = null;
       if ( runVm.getKeyValue( ) != null || !"".equals( runVm.getKeyValue( ) ) ) {
         try {
@@ -299,13 +299,12 @@ public class SystemState {
             }
           } );
         } catch ( Exception e ) {
-          key = SshKeyPair.NO_KEY;
+          key = KeyPairs.noKey( );
         }
       } else {
-        key = SshKeyPair.NO_KEY;
+        key = KeyPairs.noKey( );
       }
-      keyInfo = new VmKeyInfo( key.getDisplayName( ), key.getPublicKey( ), key.getFingerPrint( ) );
-      VmTypeInfo vmType = runVm.getInstanceType( );
+      VmType vmType = VmTypes.getVmType( runVm.getInstanceType( ).getName( ) );
       List<Network> networks = new ArrayList<Network>( );
       
       for ( String netName : runVm.getGroupNames( ) ) {
@@ -345,14 +344,12 @@ public class SystemState {
           }
         }
       }
-      VmInstance vm = new VmInstance( ownerId, instanceId, instanceUuid, reservationId, launchIndex, placement, userData, keyInfo, vmType,
+      VmInstance vm = new VmInstance( ownerId, instanceId, instanceUuid, reservationId, launchIndex, placement, userData, runVm.getInstanceType( ), key, vmType,
                                       img.getPlatform( ).toString( ),
                                       networks,
                                       Integer.toString( runVm.getNetParams( ).getNetworkIndex( ) ) );
       vm.clearPending( );
-      vm.setLaunchTime( runVm.getLaunchTime( ) );
       vm.updatePublicAddress( VmInstance.DEFAULT_IP );
-      vm.setKeyInfo( keyInfo );
       VmInstances.getInstance( ).register( vm );
     } catch ( NoSuchElementException e ) {
       ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );

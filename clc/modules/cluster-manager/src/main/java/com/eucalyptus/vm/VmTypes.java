@@ -73,6 +73,7 @@ import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cloud.Image.StaticDiskImage;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
@@ -83,6 +84,7 @@ import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmTypes {
+  private static String DEFAULT_TYPE_NAME = "m1.small";//TODO:GRZE:@Configurable
 
   public static VmTypeInfo asVmTypeInfo( VmType vmType, BootableImageInfo img ) throws MetadataException {
     Long imgSize = img.getImageSizeBytes( );
@@ -205,14 +207,26 @@ public class VmTypes {
     }
   }
 
-  public static synchronized VmType getVmType( String name ) {
+  public static synchronized VmType getVmType( String name ) throws NoSuchMetadataException {
     getSingleton( ).update( );
-    return getSingleton( ).vmTypeMap.get( name );
+    if( name == null ) {
+      return getSingleton( ).vmTypeMap.get( VmTypes.DEFAULT_TYPE_NAME );
+    } else {
+      if(getSingleton( ).vmTypeMap.containsKey( name ) ) {
+        return getSingleton( ).vmTypeMap.get( name );
+      } else {
+        throw new NoSuchMetadataException( "instance type does not exist: " + name );
+      }
+    }
   }
 
   public static synchronized NavigableSet<VmType> list( ) {
     getSingleton( ).update( );
     return new TreeSet<VmType>( getSingleton( ).vmTypeMap.values( ) );
+  }
+
+  public static String defaultTypeName( ) {
+    return DEFAULT_TYPE_NAME;
   }
 
 }

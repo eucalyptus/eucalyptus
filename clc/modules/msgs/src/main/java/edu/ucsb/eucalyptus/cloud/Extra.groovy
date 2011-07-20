@@ -85,7 +85,6 @@ public class Pair {
     this.left = left;
     this.right = right;
   }
-  
 }
 
 public class VmDescribeType extends EucalyptusMessage {
@@ -128,7 +127,7 @@ public class VmInfo extends EucalyptusData {
   ArrayList<AttachedVolume> volumes = new ArrayList<AttachedVolume>();
   String placement;
   String platform;
-  String bundleTaskStateName;  
+  String bundleTaskStateName;
   String createImageStateName;
   
   ArrayList<String> productCodes = new ArrayList<String>();
@@ -137,8 +136,6 @@ public class VmInfo extends EucalyptusData {
   public String toString( ) {
     return "VmInfo ${reservationId} ${instanceId} ${ownerId} ${stateName} ${instanceType} ${imageId} ${kernelId} ${ramdiskId} ${launchIndex} ${serviceTag} ${netParams} ${volumes}";
   }
-  
-  
 }
 
 public class VmRunType extends EucalyptusMessage {
@@ -189,11 +186,10 @@ public class VmRunType extends EucalyptusMessage {
   public String toString( ) {
     return String.format(
     "VmRunType [instanceIds=%s, keyInfo=%s, launchIndex=%s, max=%s, min=%s, networkIndexList=%s, networkNames=%s, reservationId=%s, userData=%s, vlan=%s, vmTypeInfo=%s]",
-    this.instanceIds, this.keyInfo, this.launchIndex, 
+    this.instanceIds, this.keyInfo, this.launchIndex,
     this.max, this.min, this.networkIndexList, this.networkNames, this.reservationId,
     this.userData, this.vlan, this.vmTypeInfo );
-  }  
-  
+  }
 }
 
 public class VirtualBootRecord extends EucalyptusData implements Cloneable {
@@ -203,16 +199,17 @@ public class VirtualBootRecord extends EucalyptusData implements Cloneable {
   String guestDeviceName = "none";
   Long size = -1l;
   String format = "none";
-
-  def VirtualBootRecord() {}
+  
+  def VirtualBootRecord() {
+  }
   
   def VirtualBootRecord(final id, final resourceLocation, final type, final guestDeviceName, final size, final format) {
-	  this.id = id;
-	  this.resourceLocation = resourceLocation;
-	  this.type = type;
-	  this.guestDeviceName = guestDeviceName;
-	  this.size = size;
-	  this.format = format;
+    this.id = id;
+    this.resourceLocation = resourceLocation;
+    this.type = type;
+    this.guestDeviceName = guestDeviceName;
+    this.size = size;
+    this.format = format;
   }
   
   public boolean isBlockStorage() {
@@ -229,8 +226,9 @@ public class VmKeyInfo extends EucalyptusData {
   String name = "";
   String value = "";
   String fingerprint = "";
-
-  def VmKeyInfo() {}
+  
+  def VmKeyInfo() {
+  }
   
   def VmKeyInfo(final name, final value, final fingerprint) {
     this.name = name;
@@ -241,7 +239,7 @@ public class VmKeyInfo extends EucalyptusData {
   @Override
   public String toString( ) {
     return String.format( "VmKeyInfo [fingerprint=%s, name=%s, value=%s]", this.fingerprint, this.name, this.value );
-  }  
+  }
 }
 
 public class NodeInfo implements Comparable {
@@ -254,7 +252,8 @@ public class NodeInfo implements Comparable {
   NodeCertInfo certs = new NodeCertInfo();
   NodeLogInfo logs = new NodeLogInfo();
   
-  def NodeInfo() {}
+  def NodeInfo() {
+  }
   
   def NodeInfo(final String serviceTag ) {
     this.serviceTag = serviceTag;
@@ -263,8 +262,8 @@ public class NodeInfo implements Comparable {
     this.certs.setServiceTag(this.serviceTag);
     this.logs.setServiceTag(this.serviceTag);
   }
-
-    def NodeInfo(final NodeType nodeType) {
+  
+  def NodeInfo(final NodeType nodeType) {
     this.serviceTag = nodeType.getServiceTag( );
     this.iqn = nodeType.getIqn( );
     this.name = (new URI(this.serviceTag)).getHost();
@@ -320,5 +319,4 @@ public class NodeInfo implements Comparable {
   public String toString( ) {
     return "NodeInfo name=${name} lastSeen=${lastSeen} serviceTag=${serviceTag} iqn=${iqn}";
   }
-
 }

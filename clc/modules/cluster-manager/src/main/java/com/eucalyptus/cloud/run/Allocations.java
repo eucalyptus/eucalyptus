@@ -64,6 +64,7 @@
 package com.eucalyptus.cloud.run;
 
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.address.Address;
@@ -84,9 +85,11 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.SshKeyPair;
+import com.eucalyptus.network.NetworkRulesGroup;
 import com.eucalyptus.util.Counters;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.vm.VmType;
+import com.eucalyptus.vm.VmTypes;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
@@ -98,24 +101,23 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class Allocations {
   public static class Allocation implements HasRequest {
-    private final Context             context;
-    private final RunInstancesType    request;
-    private final UserFullName        ownerFullName;
-    private final List<Network>       networks          = Lists.newArrayList( );
-    private final List<ResourceToken> allocationTokens  = Lists.newArrayList( );
-    private final List<String>        addresses         = Lists.newArrayList( );
-    private final List<Volume>        persistentVolumes = Lists.newArrayList( );
-    private final List<Volume>        transientVolumes  = Lists.newArrayList( );
-    private final List<Integer>       networkIndexList  = Lists.newArrayList( );
-    private final String              reservationId;
-    private byte[]                    userData;
-    private Partition                 partition;
-    private Long                      reservationIndex;
-    private VmKeyInfo                 keyInfo;
-    private SshKeyPair                sshKeyPair;
-    private BootableSet               bootSet;
-    private VmType                    vmType;
-    private VmTypeInfo                vmTypeInfo;
+    private final Context                  context;
+    private final RunInstancesType         request;
+    private final UserFullName             ownerFullName;
+    private final List<Network>            networks          = Lists.newArrayList( );
+    private final List<ResourceToken>      allocationTokens  = Lists.newArrayList( );
+    private final List<String>             addresses         = Lists.newArrayList( );
+    private final List<Volume>             persistentVolumes = Lists.newArrayList( );
+    private final List<Volume>             transientVolumes  = Lists.newArrayList( );
+    private final List<Integer>            networkIndexList  = Lists.newArrayList( );
+    private final String                   reservationId;
+    private byte[]                         userData;
+    private Partition                      partition;
+    private Long                           reservationIndex;
+    private SshKeyPair                     sshKeyPair;
+    private BootableSet                    bootSet;
+    private VmType                         vmType;
+    private Map<String, NetworkRulesGroup> networkRulesGroups;
     
     private Allocation( ) {
       super( );
@@ -127,7 +129,7 @@ public class Allocations {
       } catch ( NoSuchContextException ex ) {}
       this.ownerFullName = temp;
       if ( this.request.getInstanceType( ) == null || "".equals( this.request.getInstanceType( ) ) ) {
-        this.request.setInstanceType( VmInstance.DEFAULT_TYPE );
+        this.request.setInstanceType( VmTypes.defaultTypeName( ) );
       }
       this.reservationIndex = Counters.getIdBlock( request.getMaxCount( ) );
       this.reservationId = VmInstances.getId( this.reservationIndex, 0 ).replaceAll( "i-", "r-" );
@@ -237,10 +239,6 @@ public class Allocations {
       }
     }
     
-    public VmTypeInfo getVmTypeInfo( ) {
-      return this.vmTypeInfo;
-    }
-    
     public VmType getVmType( ) {
       return this.vmType;
     }
@@ -249,8 +247,7 @@ public class Allocations {
       return this.partition;
     }
     
-    public void setBootableSet( BootableSet bootSet ) throws MetadataException {
-      this.vmTypeInfo = bootSet.populateVirtualBootRecord( this.vmType );
+    public void setBootableSet( BootableSet bootSet ) {
       this.bootSet = bootSet;
     }
     
@@ -286,23 +283,12 @@ public class Allocations {
       return this.reservationId;
     }
     
-    public VmKeyInfo getKeyInfo( ) {
-      return this.keyInfo;
-    }
-    
     public BootableSet getBootSet( ) {
       return this.bootSet;
     }
     
     public Context getContext( ) {
       return this.context;
-    }
-    
-    /**
-     * @param vmKeyInfo
-     */
-    public void setKeyInfo( VmKeyInfo vmKeyInfo ) {
-      this.keyInfo = vmKeyInfo;
     }
     
     public void setPartition( Partition partition2 ) {
@@ -315,6 +301,22 @@ public class Allocations {
     
     public List<Volume> getTransientVolumes( ) {
       return this.transientVolumes;
+    }
+    
+    public SshKeyPair getSshKeyPair( ) {
+      return this.sshKeyPair;
+    }
+    
+    public void setSshKeyPair( SshKeyPair sshKeyPair ) {
+      this.sshKeyPair = sshKeyPair;
+    }
+    
+    public void setNetworkRules( Map<String, NetworkRulesGroup> networkRuleGroups ) {
+      this.networkRulesGroups = networkRuleGroups;
+    }
+
+    public VmTypeInfo getVmTypeInfo( ) throws MetadataException {
+      return this.bootSet.populateVirtualBootRecord( vmType );
     }
   }
   

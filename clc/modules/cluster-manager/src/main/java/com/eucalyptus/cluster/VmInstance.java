@@ -95,6 +95,7 @@ import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.vm.BundleTask;
 import com.eucalyptus.records.EventRecord;
@@ -105,6 +106,7 @@ import com.eucalyptus.util.HasName;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.vm.VmState;
+import com.eucalyptus.vm.VmType;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -166,50 +168,54 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   @Column( name = "vm_user_data" )
   private final byte[]                                userData;
   @Column( name = "vm_launch_time" )
-  private Date                                        launchTime          = new Date( );
+  private final Date                                  launchTime;
   @Column( name = "vm_password_data" )
   private String                                      passwordData;
-  @Transient
+  @Column( name = "vm_private_networking" )
   private Boolean                                     privateNetwork;
   @Column( name = "vm_block_bytes" )
-  private Long                                        blockBytes          = 0l;
+  private Long                                        blockBytes;
   @Column( name = "vm_network_bytes" )
-  private Long                                        networkBytes        = 0l;
+  private Long                                        networkBytes;
+  @Column( name = "vm_ssh_key_pair" )
+  private SshKeyPair                                  sshKeyPair;
+  @Column( name = "vm_type" )
+  private final VmType                                vmType;
+  
   @Transient
   private final ConcurrentMap<String, AttachedVolume> transientVolumes    = new ConcurrentSkipListMap<String, AttachedVolume>( );
   @Transient
   private final ConcurrentMap<String, AttachedVolume> persistentVolumes   = new ConcurrentSkipListMap<String, AttachedVolume>( );
   @Transient
-  private SshKeyPair                                  sshKeyPair;
-  @Transient
   private String                                      platform;
   @Transient
-  private VmKeyInfo                                   keyInfo;
-  @Transient
-  private VmTypeInfo                                  vmTypeInfo;
+  private VmTypeInfo                                  vbr;
   @Transient
   private final List<Network>                         networks            = Lists.newArrayList( );
   @Transient
   private final NetworkConfigType                     networkConfig       = new NetworkConfigType( );
   @Transient
   private final AtomicMarkableReference<VmState>      state               = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
-
   
   public VmInstance( final UserFullName owner,
                      final String instanceId, final String instanceUuid,
                      final String reservationId, final int launchIndex,
                      final String placement,
                      final byte[] userData,
-                     final VmKeyInfo keyInfo, final VmTypeInfo vmTypeInfo,
+                     final VmTypeInfo vbr, final SshKeyPair sshKeyPair, final VmType vmType,
                      final String platform,
                      final List<Network> networks, final String networkIndex ) {
     super( owner, instanceId );
+    this.launchTime = new Date( );
+    this.blockBytes = 0l;
+    this.networkBytes = 0l;
     this.reservationId = reservationId;
     this.launchIndex = launchIndex;
     this.instanceUuid = instanceUuid;
     this.instanceId = instanceId;
     this.owner = owner;
     this.clusterName = placement;
+    this.vbr = vbr;
     String p = null;
     try {
       ClusterConfiguration query = new ClusterConfiguration( );
@@ -223,8 +229,8 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     this.partitionName = p;
     this.userData = userData;
     this.platform = platform;
-    this.keyInfo = keyInfo;
-    this.vmTypeInfo = vmTypeInfo;
+    this.sshKeyPair = sshKeyPair;
+    this.vmType = vmType;
     this.networks.addAll( networks );
     this.networkConfig.setMacAddress( "d0:0d:" + VmInstances.asMacAddress( this.instanceId ) );
     this.networkConfig.setIpAddress( DEFAULT_IP );
@@ -375,7 +381,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   
   private void store( ) {
     try {
-      ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getInstanceUuid( ), this.getDisplayName( ), this.vmTypeInfo.getName( ),
+      ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getInstanceUuid( ), this.getDisplayName( ), this.vmType.getName( ),
                                                                     this.getOwner( ).getNamespace( ), this.getOwner( ).getName( ),
                                                                     this.clusterName, this.partitionName, this.networkBytes, this.blockBytes ) );
     } catch ( EventFailedException ex ) {
@@ -405,7 +411,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
 //    m.put( "ami-manifest-path", this.getImageInfo( ).getImageLocation( ) );
     m.put( "hostname", this.getPublicAddress( ) );
     m.put( "instance-id", this.getInstanceId( ) );
-    m.put( "instance-type", this.getVmTypeInfo( ).getName( ) );
+    m.put( "instance-type", this.getVmType( ).getName( ) );
     if ( dns ) {
       m.put( "local-hostname", this.getNetworkConfig( ).getPrivateDnsName( ) );
     } else {
@@ -433,10 +439,10 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     m.put( "block-device-mapping/swap", "sda3" );
     m.put( "block-device-mapping/root", "/dev/sda1" );
     
-    m.put( "public-keys/", "0=" + this.getKeyInfo( ).getName( ) );
+    m.put( "public-keys/", "0=" + this.getSshKeyPair( ).getName( ) );
     m.put( "public-keys/0", "openssh-key" );
     m.put( "public-keys/0/", "openssh-key" );
-    m.put( "public-keys/0/openssh-key", this.getKeyInfo( ).getValue( ) );
+    m.put( "public-keys/0/openssh-key", this.getSshKeyPair( ).getPublicKey( ) );
     
     m.put( "placement/", "availability-zone" );
     m.put( "placement/availability-zone", this.getPartition( ) );
@@ -602,19 +608,19 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
 //ASAP:FIXME:GRZE: restore.
     runningInstance.setProductCodes( new ArrayList<String>( ) );
     try {
-      runningInstance.setImageId( this.vmTypeInfo.lookupRoot( ).getId( ) );
+      runningInstance.setImageId( this.vbr.lookupRoot( ).getId( ) );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
       runningInstance.setImageId( "unknown" );
     }
     try {
-      runningInstance.setKernel( this.vmTypeInfo.lookupKernel( ).getId( ) );
+      runningInstance.setKernel( this.vbr.lookupKernel( ).getId( ) );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
       runningInstance.setKernel( "unknown" );
     }
     try {
-      runningInstance.setRamdisk( this.vmTypeInfo.lookupRamdisk( ).getId( ) );
+      runningInstance.setRamdisk( this.vbr.lookupRamdisk( ).getId( ) );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
       runningInstance.setRamdisk( "unknown" );
@@ -641,11 +647,11 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     
     runningInstance.setReason( this.getReason( ) );
     
-    if ( this.getKeyInfo( ) != null )
-      runningInstance.setKeyName( this.getKeyInfo( ).getName( ) );
+    if ( this.getSshKeyPair( ) != null )
+      runningInstance.setKeyName( this.getSshKeyPair( ).getName( ) );
     else runningInstance.setKeyName( "" );
     
-    runningInstance.setInstanceType( this.getVmTypeInfo( ).getName( ) );
+    runningInstance.setInstanceType( this.getVmType( ).getName( ) );
     runningInstance.setPlacement( this.partitionName );
     
     runningInstance.setLaunchTime( this.launchTime );
@@ -670,10 +676,6 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   public boolean hasPublicAddress( ) {
     NetworkConfigType conf = getNetworkConfig( );
     return conf != null && !( DEFAULT_IP.equals( conf.getIgnoredPublicIp( ) ) || conf.getIpAddress( ).equals( conf.getIgnoredPublicIp( ) ) );
-  }
-  
-  public void setLaunchTime( final Date launchTime ) {
-    this.launchTime = launchTime;
   }
   
   public String getReservationId( ) {
@@ -704,10 +706,6 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     return this.userData;
   }
   
-  public VmKeyInfo getKeyInfo( ) {
-    return keyInfo;
-  }
-  
   public String getConsoleOutputString( ) {
     return new String( Base64.encode( this.consoleOutput.toString( ).getBytes( ) ) );
   }
@@ -726,16 +724,8 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     }
   }
   
-  public void setKeyInfo( final VmKeyInfo keyInfo ) {
-    this.keyInfo = keyInfo;
-  }
-  
-  public VmTypeInfo getVmTypeInfo( ) {
-    return vmTypeInfo;
-  }
-  
-  public void setVmTypeInfo( final VmTypeInfo vmTypeInfo ) {
-    this.vmTypeInfo = vmTypeInfo;
+  public VmType getVmType( ) {
+    return this.vmType;
   }
   
   public List<Network> getNetworks( ) {
@@ -750,23 +740,23 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   }
   
   public String getPrivateAddress( ) {
-    return networkConfig.getIpAddress( );
+    return this.networkConfig.getIpAddress( );
   }
   
   public String getPublicAddress( ) {
-    return networkConfig.getIgnoredPublicIp( );
+    return this.networkConfig.getIgnoredPublicIp( );
   }
   
   public String getPrivateDnsName( ) {
-    return networkConfig.getPrivateDnsName( );
+    return this.networkConfig.getPrivateDnsName( );
   }
   
   public String getPublicDnsName( ) {
-    return networkConfig.getPublicDnsName( );
+    return this.networkConfig.getPublicDnsName( );
   }
   
-  public NetworkConfigType getNetworkConfig( ) {
-    return networkConfig;
+  private NetworkConfigType getNetworkConfig( ) {
+    return this.networkConfig;
   }
   
   private AttachedVolume resolveVolumeId( String volumeId ) throws NoSuchElementException {
@@ -887,8 +877,8 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     return String
                  .format(
                           "VmInstance [instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
-                          this.instanceId, this.keyInfo, this.launchIndex, this.launchTime, this.networkConfig, this.networks, this.getOwner( ),
-                          this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch, this.userData, this.vmTypeInfo,
+                          this.instanceId, this.sshKeyPair, this.launchIndex, this.launchTime, this.networkConfig, this.networks, this.getOwner( ),
+                          this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch, this.userData, this.vmType,
                           this.transientVolumes );
   }
   
@@ -951,6 +941,10 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   
   public String getInstanceUuid( ) {
     return this.instanceUuid;
+  }
+  
+  public SshKeyPair getSshKeyPair( ) {
+    return this.sshKeyPair;
   }
   
 }
