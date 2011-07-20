@@ -69,6 +69,8 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.config.RegisterClusterType;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.google.common.base.Predicate;

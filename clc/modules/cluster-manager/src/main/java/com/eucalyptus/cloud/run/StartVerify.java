@@ -213,7 +213,7 @@ public class StartVerify {
         }
         allocInfo.setKeyInfo( new VmKeyInfo( keypair.getDisplayName( ), keypair.getPublicKey( ), keypair.getFingerPrint( ) ) );
       } catch ( EucalyptusCloudException ex ) {
-        throw new InvalidMetadataException( "Failed to find keypair: " + keyName + " because of " + ex.getMessage( ), ex );
+        throw new InvalidMetadataException( "Failed to find keypair: " + keyName, ex );
       }
       return true;
     }
@@ -250,10 +250,10 @@ public class StartVerify {
         ArrayList<String> userNetworks = new ArrayList<String>( networkRuleGroups.keySet( ) );
         if ( !userNetworks.containsAll( networkNames ) ) {
           networkNames.removeAll( userNetworks );
-          throw new NoSuchMetadataException( "Failed to find " + networkNames );
+          throw new NoSuchMetadataException( "Failed to find security group info for: " + networkNames );
         }
       } catch ( EucalyptusCloudException ex ) {
-        throw new InvalidMetadataException( "Failed to find " + networkNames + " because of " + ex.getMessage( ), ex );
+        throw new InvalidMetadataException( "Failed to find security group info for: " + networkNames, ex );
       }
       return true;
     }

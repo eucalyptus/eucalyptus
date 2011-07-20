@@ -10,9 +10,13 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmTypeAvailability;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -126,7 +130,7 @@ public class NodeResourceAllocator implements ResourceAllocator {
         return Lists.newArrayList( sorted.values( ) );
       }
     } else {
-      Cluster cluster = Clusters.getInstance( ).lookup( clusterName );
+      Cluster cluster = Clusters.getInstance( ).lookup( Partitions.lookupService( ClusterController.class, clusterName ) );
       if ( cluster == null ) {
         throw new NotEnoughResourcesAvailable( "Can't find cluster " + clusterName );
       }
