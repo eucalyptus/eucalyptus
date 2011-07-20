@@ -101,13 +101,25 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
  * NOTE:GRZE: don't get attached to this, it will be removed as the verify pipeline is simplified in
  * the future.
  */
-public class StartVerify {
-  private static Logger LOG = Logger.getLogger( StartVerify.class );
+public class VerifyMetadata {
+  private static Logger LOG = Logger.getLogger( VerifyMetadata.class );
   
   interface MetadataVerifier<T> {
     public abstract boolean apply( Allocation allocInfo ) throws MetadataException;
   }
+
   
+  public Allocation verify( RunInstancesType request ) throws MetadataException {
+    Allocation alloc = Allocations.begin( );
+    VmTypeVerifier.INSTANCE.apply( alloc );
+    PartitionVerifier.INSTANCE.apply( alloc );
+    ImageVerifier.INSTANCE.apply( alloc );
+    KeyPairVerifier.INSTANCE.apply( alloc );
+    NetworkGroupVerifier.INSTANCE.apply( alloc );
+    return alloc;
+  }
+  
+
   enum VmTypeVerifier implements MetadataVerifier<Allocation> {
     INSTANCE;
     
@@ -257,16 +269,6 @@ public class StartVerify {
       }
       return true;
     }
-  }
-  
-  public Allocation verify( RunInstancesType request ) throws MetadataException {
-    Allocation alloc = Allocations.begin( );
-    VmTypeVerifier.INSTANCE.apply( alloc );
-    PartitionVerifier.INSTANCE.apply( alloc );
-    ImageVerifier.INSTANCE.apply( alloc );
-    KeyPairVerifier.INSTANCE.apply( alloc );
-    NetworkGroupVerifier.INSTANCE.apply( alloc );
-    return alloc;
   }
   
 }
