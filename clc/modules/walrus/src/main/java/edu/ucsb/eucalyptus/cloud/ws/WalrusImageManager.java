@@ -339,6 +339,7 @@ public class WalrusImageManager {
 
 					//Unencrypt image
 					try {
+                                                db.commit();
 						Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding", "BC");
 						IvParameterSpec salt = new IvParameterSpec(iv);
 						SecretKey keySpec = new SecretKeySpec(key, "AES");
@@ -355,7 +356,6 @@ public class WalrusImageManager {
 						LOG.error(ex);
 						throw new WalrusException("Unable to delete: " + encryptedImageKey);
 					}
-					db.commit();
 					return decryptedImageKey;
 				}
 			}

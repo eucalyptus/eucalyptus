@@ -63,10 +63,15 @@
 
 package com.eucalyptus.component;
 
+import java.util.List;
+import com.eucalyptus.component.Component.State;
 import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Lists;
 
 public class Services {
   
@@ -107,5 +112,45 @@ public class Services {
 //    } else {
       return new MessagableService( config );
 //    }
+  }
+
+  public static final Predicate<ServiceConfiguration> enabledService( ) {
+    return new Predicate<ServiceConfiguration>( ) {
+      
+      @Override
+      public boolean apply( ServiceConfiguration arg0 ) {
+        return Component.State.ENABLED.isIn( arg0 );
+      }
+    };
+  }
+
+  public static Predicate<ServiceConfiguration> serviceInPartition( final Partition partition ) {
+    return new Predicate<ServiceConfiguration>( ) {
+      
+      @Override
+      public boolean apply( ServiceConfiguration arg0 ) {
+        return partition.getName( ).equals( arg0.getPartition( ) ) && Component.State.ENABLED.isIn( arg0 );
+      }
+    };
+  }
+
+  public static List<ServiceConfiguration> collect( Predicate<ServiceConfiguration> predicate ) {
+    List<ServiceConfiguration> configs = Lists.newArrayList( );
+    for( Component comp : Components.list( ) ) {
+      for( ServiceConfiguration config : comp.lookupServiceConfigurations( ) ) {
+        try {
+          if( predicate.apply( config ) ) {
+            Logs.exhaust( ).debug( "ServiceConfigurations.collect( ) accepted config " + config + " for predicate: " + predicate.getClass( ) );
+            configs.add( config );
+          } else {
+            Logs.exhaust( ).debug( "ServiceConfigurations.collect( ) rejected config " + config + " for predicate: " + predicate.getClass( ) );
+          }
+        } catch ( Exception ex ) {
+          Logs.exhaust( ).debug( "ServiceConfigurations.collect( ) failed for config " + config + " using predicate: " + predicate.getClass( ) + " because of " + ex.getMessage( ) );
+          ServiceConfigurations.LOG.error( ex , ex );
+        }
+      }
+    }
+    return configs;
   }
 }

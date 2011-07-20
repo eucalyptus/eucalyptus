@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,60 +61,127 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.config
+package com.eucalyptus.bootstrap;
 
-import java.io.Serializable
-import javax.persistence.Column
-import javax.persistence.PersistenceContext
-import javax.persistence.Table
-import javax.persistence.Transient
-import org.hibernate.annotations.Cache
-import org.hibernate.annotations.CacheConcurrencyStrategy
-import org.hibernate.annotations.Entity
-import com.eucalyptus.component.ComponentId
-import com.eucalyptus.component.ComponentPart
-import com.eucalyptus.component.id.ClusterController
+import org.apache.log4j.Logger;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
 
-@Entity @javax.persistence.Entity
-@PersistenceContext(name="eucalyptus_config")
-@Table( name = "config_clusters" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ComponentPart(ClusterController.class)
-public class ClusterConfiguration extends ComponentConfiguration implements Serializable {
-  @Transient
-  private static String DEFAULT_SERVICE_PATH = "/axis2/services/EucalyptusCC";
-  @Transient
-  private static String INSECURE_SERVICE_PATH = "/axis2/services/EucalyptusGL";
-  @Column(name="minvlan")
-  Integer minVlan;
-  @Column(name="maxvlan")
-  Integer maxVlan;
+public class Databases {
+  private static final ScriptedDbBootstrapper singleton   = new ScriptedDbBootstrapper( );
+  private static Logger                       LOG         = Logger.getLogger( Databases.class );
+  private static final String                 DB_NAME     = "eucalyptus";
+  public static final String                  DB_USERNAME = DB_NAME;
+
+  public static String getUserName( ) {
+    return DB_USERNAME;
+  }
   
-  public ClusterConfiguration( ) {
+  public static String getDatabaseName( ) { 
+    return DB_NAME;
+  }
+  
+  public static String getPassword( ) {
+    return SystemIds.databasePassword( );
+  }
+  
+  public static String getDriverName( ) {
+    return singleton.getDriverName( );
+  }
+  
+  public static String getJdbcDialect( ) {
+    return singleton.getJdbcDialect( );
+  }
+  
+  public static String getHibernateDialect( ) {
+    return singleton.getHibernateDialect( );
+  }
+  
+  public static DatabaseBootstrapper getBootstrapper( ) {
+    return singleton;
+  }
+  
+  public static void initialize( ) {
+    singleton.init( );
+  }
+  
+  @RunDuring( Bootstrap.Stage.DatabaseInit )
+  @Provides( Empyrean.class )
+  @DependsLocal( Eucalyptus.class )
+  public static class ScriptedDbBootstrapper extends Bootstrapper.Simple implements DatabaseBootstrapper {
+    DatabaseBootstrapper db;
     
-  }
-  public ClusterConfiguration( String partition, String name, String hostName, Integer port ) {
-    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
-  }
-  public ClusterConfiguration( String partition, String name, String hostName, Integer port, Integer minVlan, Integer maxVlan ) {
-    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
-    this.minVlan = minVlan;
-    this.maxVlan = maxVlan;
-  }
-  public String getInsecureServicePath() {
-    return INSECURE_SERVICE_PATH;
-  }
-  public String getInsecureUri() {
-    return "http://" + this.getHostName() + ":" + this.getPort() + INSECURE_SERVICE_PATH;
+    public ScriptedDbBootstrapper( ) {
+      super( );
+      try {
+        this.db = Groovyness.newInstance( "setup_db" );
+      } catch ( ScriptExecutionFailedException ex ) {
+        LOG.error( ex, ex );
+      }
+    }
+    
+    public boolean load( ) throws Exception {
+      return this.db.load( );
+    }
+    
+    public boolean start( ) throws Exception {
+      return this.db.start( );
+    }
+    
+    public boolean stop( ) throws Exception {
+      return this.db.stop( );
+    }
+    
+    public void destroy( ) throws Exception {
+      this.db.destroy( );
+    }
+    
+    public boolean isRunning( ) {
+      return this.db.isRunning( );
+    }
+    
+    public void hup( ) {
+      this.db.hup( );
+    }
+    
+    public String getDriverName( ) {
+      return this.db.getDriverName( );
+    }
+    
+    @Override
+    public String getJdbcDialect( ) {
+      return this.db.getJdbcDialect( );
+    }
+    
+    @Override
+    public String getHibernateDialect( ) {
+      return this.db.getHibernateDialect( );
+    }
+    
+    @Override
+    public void init( ) {
+      this.db.init( );
+    }
+    
+    public static DatabaseBootstrapper getInstance( ) {
+      return singleton;
+    }
+    
+    @Override
+    public String getUriPattern( ) {
+      return this.db.getUriPattern( );
+    }
+
+    @Override
+    public boolean check( ) throws Exception {
+      return this.db.isRunning( );
+    }
   }
   
-  @Override
-  public Boolean isVmLocal() {
-    return false;
-  }
-  @Override
-  public Boolean isHostLocal( ) {
-    return true;
+  public static String getUriPattern( ) {
+    return singleton.getUriPattern( );
   }
   
 }

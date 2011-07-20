@@ -72,7 +72,7 @@ import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.config.Configuration;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.BaseDirectory;
 
 import java.net.*;
@@ -151,7 +151,7 @@ public class WalrusProperties {
 	//15 minutes
 	public final static long EXPIRATION_LIMIT = 900000;
 
-	static { GroovyUtil.loadConfig("walrusprops.groovy"); }
+	static { Groovyness.loadConfig("walrusprops.groovy"); }
 
 	public enum VersioningStatus {
 		Enabled, Disabled, Suspended

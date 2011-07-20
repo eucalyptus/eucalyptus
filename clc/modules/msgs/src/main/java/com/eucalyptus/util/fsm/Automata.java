@@ -138,6 +138,9 @@ public class Automata {
             } catch ( final ExistingTransitionException ex ) {
               Logs.exhaust( ).error( ex, ex );
               throw new UndeclaredThrowableException( ex.getCause( ) );
+            } catch ( final InterruptedException ex ) {
+              Thread.currentThread( ).interrupt( );
+              throw new RuntimeException( ex );
             } catch ( final UndeclaredThrowableException ex ) {
               Logs.exhaust( ).error( ex, ex );
               throw ex;

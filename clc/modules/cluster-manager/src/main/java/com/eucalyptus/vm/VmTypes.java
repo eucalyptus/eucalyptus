@@ -92,15 +92,16 @@ public class VmTypes {
     if ( img instanceof StaticDiskImage ) {
       if( Image.Platform.windows.equals( img.getPlatform( ) ) ) {
         vmTypeInfo  = VmTypes.InstanceStoreWindowsVmTypeInfoMapper.INSTANCE.apply( vmType );
+        vmTypeInfo.setEphemeral( 0, "sdb", vmType.getDisk( )*1024l*1024l*1024l - imgSize /**bytes**/ );
       } else {
         vmTypeInfo = VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( vmType );
+        vmTypeInfo.setEphemeral( 0, "sda2", vmType.getDisk( )*1024l*1024l*1024l - imgSize /**bytes**/ );
       }
       vmTypeInfo.setRoot( img.getDisplayName( ), ( ( StaticDiskImage ) img ).getManifestLocation( ), imgSize );
-      vmTypeInfo.setEphemeral( 0, "/dev/sdb", vmType.getDisk( )*1024l*1024l*1024l - imgSize /**bytes**/ );
     } else if ( img instanceof BlockStorageImageInfo ) {
       vmTypeInfo = VmTypes.BlockStorageVmTypeInfoMapper.INSTANCE.apply( vmType );
       vmTypeInfo.setEbsRoot( img.getDisplayName( ), null, imgSize );
-      vmTypeInfo.setEphemeral( 0, "/dev/sdb", vmType.getDisk( )*1024l*1024l*1024l /**bytes**/ );
+      vmTypeInfo.setEphemeral( 0, "sdb", vmType.getDisk( )*1024l*1024l*1024l /**bytes**/ );
     } else {
       throw new EucalyptusCloudException( "Failed to identify the root machine image type: " + img );
     }
@@ -114,7 +115,7 @@ public class VmTypes {
     public VmTypeInfo apply( VmType arg0 ) {
       return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda1" ) {
         {
-          this.setSwap( "sda2", 512 * 1024l * 1024l );
+          this.setSwap( "sda3", 512 * 1024l * 1024l );
         }
       };
     }
@@ -125,7 +126,7 @@ public class VmTypes {
     
     @Override
     public VmTypeInfo apply( VmType arg0 ) {
-      return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "hda" );
+      return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda" );
     }
   };
 

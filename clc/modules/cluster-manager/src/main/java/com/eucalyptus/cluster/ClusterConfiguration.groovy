@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@
  *    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  *    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
  *    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-` *    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ *    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  *    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  *    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
  *    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
@@ -61,27 +61,61 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.ws.util;
+package com.eucalyptus.cluster
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.component.Component;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.ComponentMessages;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import java.io.Serializable
+import javax.persistence.Column
+import javax.persistence.PersistenceContext
+import javax.persistence.Table
+import javax.persistence.Transient
+import org.hibernate.annotations.Cache
+import org.hibernate.annotations.CacheConcurrencyStrategy
+import org.hibernate.annotations.Entity
+import com.eucalyptus.component.ComponentId
+import com.eucalyptus.component.ComponentPart
+import com.eucalyptus.component.id.ClusterController
+import com.eucalyptus.config.ComponentConfiguration
 
-public class RequestQueue {
-  public static String ENDPOINT = "RequestQueue";
-  private static Logger  LOG = Logger.getLogger( RequestQueue.class );
-  private static boolean acceptable;
+@Entity @javax.persistence.Entity
+@PersistenceContext(name="eucalyptus_config")
+@Table( name = "config_clusters" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@ComponentPart(ClusterController.class)
+public class ClusterConfiguration extends ComponentConfiguration implements Serializable {
+  @Transient
+  private static String DEFAULT_SERVICE_PATH = "/axis2/services/EucalyptusCC";
+  @Transient
+  private static String INSECURE_SERVICE_PATH = "/axis2/services/EucalyptusGL";
+  @Column(name="minvlan")
+  Integer minVlan;
+  @Column(name="maxvlan")
+  Integer maxVlan;
   
-  public BaseMessage handle( BaseMessage msg ) {
-    LOG.info( String.format( "%s:%s:%s:%s:%s", RequestQueue.class, EventType.MSG_RECEIVED, msg.getCorrelationId( ), Contexts.lookup( ).getUserFullName( ), msg.toSimpleString( ) ) );
-    return msg;
+  public ClusterConfiguration( ) {
+    
+  }
+  public ClusterConfiguration( String partition, String name, String hostName, Integer port ) {
+    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
+  }
+  public ClusterConfiguration( String partition, String name, String hostName, Integer port, Integer minVlan, Integer maxVlan ) {
+    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
+    this.minVlan = minVlan;
+    this.maxVlan = maxVlan;
+  }
+  public String getInsecureServicePath() {
+    return INSECURE_SERVICE_PATH;
+  }
+  public String getInsecureUri() {
+    return "http://" + this.getHostName() + ":" + this.getPort() + INSECURE_SERVICE_PATH;
+  }
+  
+  @Override
+  public Boolean isVmLocal() {
+    return false;
+  }
+  @Override
+  public Boolean isHostLocal( ) {
+    return true;
   }
   
 }
