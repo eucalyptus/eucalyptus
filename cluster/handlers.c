@@ -2322,7 +2322,10 @@ int doGetConsoleOutput(ncMetadata *ccMeta, char *instId, char **outConsoleOutput
 
   done=0;
   for (j=start; j<stop && !done; j++) {
-    if (*outConsoleOutput) free(*outConsoleOutput);
+    if (*outConsoleOutput) {
+      free(*outConsoleOutput);
+      *outConsoleOutput = NULL;
+    }
 
     // if not talking to Eucalyptus NC (but, e.g., a Broker)
     if (!strstr(resourceCacheLocal.resources[j].ncURL, "EucalyptusNC")) {
