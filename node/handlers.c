@@ -829,7 +829,7 @@ static int init (void)
 
     init_iscsi (nc_state.home);
 
-	/* set default in the paths. the driver will override */
+	// set default in the paths. the driver will override
 	nc_state.config_network_path[0] = '\0';
 	nc_state.gen_libvirt_cmd_path[0] = '\0';
 	nc_state.xm_cmd_path[0] = '\0';
@@ -1429,3 +1429,7 @@ int generate_attach_xml(char *localDevReal, char *remoteDev, struct nc_state_t *
         return rc;
 }
 
+ncInstance * find_global_instance (const char * instanceId)
+{
+    return NULL;
+}
