@@ -90,48 +90,66 @@ permission notice:
 #include "diskutil.h"
 #include "vnetwork.h"
 
-int verify_helpers (char **helpers, char **helpers_path, int LASTHELPER) 
+// Given an array of pointers to command names (e.g., "ls", "dd", etc.),
+// as well as either an array of NULL pointers or pointers to full paths,
+// either the full paths are verified or system $PATH is searched for 
+// the names and full paths are pointed to by helpers_path[] entries. 
+// Number of missing entries is returned or -1 for error.
+int verify_helpers (char **helpers, char **helpers_path, int num_helpers) 
 {
-    int i, done, rc, j;
-    char *tok, *toka, *path, *helper, file[MAX_PATH], *save, *savea;
     int missing_helpers = 0;
-    struct stat statbuf;
     
-    for (i=0; i<LASTHELPER; i++) {
-        tok = getenv("PATH");
-        if (!tok) return (1);
-        path = strdup(tok);
-        if (!path) {
-            return(1);
-        }
-        
-        tok = strtok_r(path, ":", &save);
-        done=0;
-        while(tok && !done) {
-            helper = strdup(helpers[i]);
-            toka = strtok_r(helper, ",", &savea);
-            while(toka && !done) {
-                snprintf(file, MAX_PATH, "%s/%s", tok, toka);
-                rc = stat(file, &statbuf);
-                if (rc) {
-                } else {
-                    if (S_ISREG(statbuf.st_mode)) {
-                        done++;
-                    }
-                }
-                toka = strtok_r(NULL, ":", &savea);
+    for (int i=0; i<num_helpers; i++) {
+        struct stat statbuf;
+        int done = 0;
+
+        // full path was given, so it just needs to be verified
+        if (helpers_path[i]!=NULL) {
+            int rc = stat (helpers_path[i], &statbuf);
+            if (!rc && S_ISREG(statbuf.st_mode)) {
+                done++;
             }
-            tok = strtok_r(NULL, ":", &save);
-            if (helper) free(helper);
+
+        } else { // no full path was given, so search $PATH
+            char *tok, *toka, *path, *helper, *save, *savea;
+
+            tok = getenv("PATH");
+            if (!tok) return -1;
+            path = strdup(tok);
+            if (!path) {
+                return -1;
+            }
+            
+            tok = strtok_r(path, ":", &save);
+            done=0;
+            while (tok && !done) {
+                helper = strdup(helpers[i]);
+                toka = strtok_r(helper, ",", &savea);
+                while (toka && !done) {
+                    char file[MAX_PATH];
+
+                    snprintf(file, MAX_PATH, "%s/%s", tok, toka);
+                    int rc = stat(file, &statbuf);
+                    if (!rc) {
+                        if (S_ISREG(statbuf.st_mode)) {
+                            helpers_path[i] = strdup(file);
+                            done++;
+                        }
+                    }
+                    toka = strtok_r(NULL, ":", &savea);
+                }
+                tok = strtok_r(NULL, ":", &save);
+                if (helper) free(helper);
+            }
+            free(path);
         }
+
         if (!done) {
             missing_helpers++;
             logprintfl (EUCAINFO, "did not find '%s' in path\n", helpers[i]);
         } else {
-            helpers_path[i] = strdup(file);
             logprintfl (EUCAINFO, "found '%s' at '%s'\n", helpers[i], helpers_path[i]);
         }
-        free(path);
     }
     
     return missing_helpers;
