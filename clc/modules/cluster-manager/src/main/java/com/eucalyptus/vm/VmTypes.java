@@ -71,6 +71,8 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cloud.Image.StaticDiskImage;
+import com.eucalyptus.cloud.util.InvalidMetadataException;
+import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
@@ -82,10 +84,10 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmTypes {
 
-  public static VmTypeInfo asVmTypeInfo( VmType vmType, BootableImageInfo img ) throws EucalyptusCloudException {
+  public static VmTypeInfo asVmTypeInfo( VmType vmType, BootableImageInfo img ) throws MetadataException {
     Long imgSize = img.getImageSizeBytes( );
     if ( imgSize > 1024l * 1024l * 1024l * vmType.getDisk( ) ) {
-      throw new EucalyptusCloudException( "image too large [size=" + imgSize / ( 1024l * 1024l ) + "MB] for instance type " + vmType.getName( ) + " [disk="
+      throw new InvalidMetadataException( "image too large [size=" + imgSize / ( 1024l * 1024l ) + "MB] for instance type " + vmType.getName( ) + " [disk="
                                           + vmType.getDisk( ) * 1024l + "MB]" );
     }
     VmTypeInfo vmTypeInfo = null;
@@ -103,7 +105,7 @@ public class VmTypes {
       vmTypeInfo.setEbsRoot( img.getDisplayName( ), null, imgSize );
       vmTypeInfo.setEphemeral( 0, "sdb", vmType.getDisk( )*1024l*1024l*1024l /**bytes**/ );
     } else {
-      throw new EucalyptusCloudException( "Failed to identify the root machine image type: " + img );
+      throw new InvalidMetadataException( "Failed to identify the root machine image type: " + img );
     }
     return vmTypeInfo;
   }

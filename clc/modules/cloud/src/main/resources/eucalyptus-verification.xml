@@ -91,9 +91,12 @@
       <component class="com.eucalyptus.cloud.run.StartVerify" />
       <outbound>
         <outbound-pass-through-router>
+          <outbound-endpoint ref="FinishedVerifyWS" />
+        </outbound-pass-through-router>
+<!--         <outbound-pass-through-router>
           <outbound-endpoint ref="VmTypeVerifyWS" />
         </outbound-pass-through-router>
-      </outbound>
+ -->      </outbound>
     </service>
 
     <service name="VmTypeVerify">

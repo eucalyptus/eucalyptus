@@ -71,6 +71,7 @@ import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.Clusters;
@@ -82,8 +83,8 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.images.Emis.BootableSet;
+import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.util.Counters;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.vm.VmType;
 import com.google.common.collect.Lists;
@@ -106,14 +107,15 @@ public class Allocations {
     private final List<Volume>        persistentVolumes = Lists.newArrayList( );
     private final List<Volume>        transientVolumes  = Lists.newArrayList( );
     private final List<Integer>       networkIndexList  = Lists.newArrayList( );
+    private final String              reservationId;
     private byte[]                    userData;
     private Partition                 partition;
     private Long                      reservationIndex;
-    private String                    reservationId;
     private VmKeyInfo                 keyInfo;
+    private SshKeyPair                sshKeyPair;
     private BootableSet               bootSet;
     private VmType                    vmType;
-    private VmTypeInfo vmTypeInfo;
+    private VmTypeInfo                vmTypeInfo;
     
     private Allocation( ) {
       super( );
@@ -238,7 +240,7 @@ public class Allocations {
     public VmTypeInfo getVmTypeInfo( ) {
       return this.vmTypeInfo;
     }
-
+    
     public VmType getVmType( ) {
       return this.vmType;
     }
@@ -247,7 +249,7 @@ public class Allocations {
       return this.partition;
     }
     
-    public void setBootableSet( BootableSet bootSet ) throws EucalyptusCloudException {
+    public void setBootableSet( BootableSet bootSet ) throws MetadataException {
       this.vmTypeInfo = bootSet.populateVirtualBootRecord( this.vmType );
       this.bootSet = bootSet;
     }
@@ -306,11 +308,11 @@ public class Allocations {
     public void setPartition( Partition partition2 ) {
       this.partition = partition2;
     }
-
+    
     public List<Volume> getPersistentVolumes( ) {
       return this.persistentVolumes;
     }
-
+    
     public List<Volume> getTransientVolumes( ) {
       return this.transientVolumes;
     }

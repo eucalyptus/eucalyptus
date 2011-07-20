@@ -95,6 +95,7 @@ import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.vm.BundleTask;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -133,21 +134,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   @Transient
   private static String                               SEND_USER_TERMINATE = "SIGTERM";
   @Transient
-  private final List<Network>                         networks            = Lists.newArrayList( );
-  @Transient
-  private final NetworkConfigType                     networkConfig       = new NetworkConfigType( );
-  @Transient
-  private String                                      platform;
-  @Transient
-  private VmKeyInfo                                   keyInfo;
-  @Transient
-  private VmTypeInfo                                  vmTypeInfo;
-  @Transient
-  private final AtomicMarkableReference<VmState>      state               = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
-  @Transient
   private final AtomicMarkableReference<BundleTask>   bundleTask          = new AtomicMarkableReference<BundleTask>( null, false );
-  @Transient
-  private final ConcurrentMap<String, AttachedVolume> volumes             = new ConcurrentSkipListMap<String, AttachedVolume>( );
   @Transient
   private final StopWatch                             stopWatch           = new StopWatch( );
   @Transient
@@ -188,6 +175,25 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   private Long                                        blockBytes          = 0l;
   @Column( name = "vm_network_bytes" )
   private Long                                        networkBytes        = 0l;
+  @Transient
+  private final ConcurrentMap<String, AttachedVolume> transientVolumes    = new ConcurrentSkipListMap<String, AttachedVolume>( );
+  @Transient
+  private final ConcurrentMap<String, AttachedVolume> persistentVolumes   = new ConcurrentSkipListMap<String, AttachedVolume>( );
+  @Transient
+  private SshKeyPair                                  sshKeyPair;
+  @Transient
+  private String                                      platform;
+  @Transient
+  private VmKeyInfo                                   keyInfo;
+  @Transient
+  private VmTypeInfo                                  vmTypeInfo;
+  @Transient
+  private final List<Network>                         networks            = Lists.newArrayList( );
+  @Transient
+  private final NetworkConfigType                     networkConfig       = new NetworkConfigType( );
+  @Transient
+  private final AtomicMarkableReference<VmState>      state               = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
+
   
   public VmInstance( final UserFullName owner,
                      final String instanceId, final String instanceUuid,
@@ -645,7 +651,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     runningInstance.setLaunchTime( this.launchTime );
     
     runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( "/dev/sda1" ) );
-    for ( AttachedVolume attachedVol : this.volumes.values( ) ) {
+    for ( AttachedVolume attachedVol : this.transientVolumes.values( ) ) {
       runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ), attachedVol.getStatus( ),
                                                                               attachedVol.getAttachTime( ) ) );
     }
@@ -764,7 +770,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   }
   
   private AttachedVolume resolveVolumeId( String volumeId ) throws NoSuchElementException {
-    AttachedVolume v = this.volumes.get( volumeId );
+    AttachedVolume v = this.transientVolumes.get( volumeId );
     if ( v == null ) {
       throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getInstanceId( ) + " and volume " + volumeId );
     } else {
@@ -773,7 +779,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   }
   
   public AttachedVolume removeVolumeAttachment( String volumeId ) throws NoSuchElementException {
-    AttachedVolume v = this.volumes.remove( volumeId );
+    AttachedVolume v = this.transientVolumes.remove( volumeId );
     if ( v == null ) {
       throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getInstanceId( ) + " and volume " + volumeId );
     } else {
@@ -792,7 +798,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   }
   
   public AttachedVolume lookupVolumeAttachment( Predicate<AttachedVolume> pred ) throws NoSuchElementException {
-    AttachedVolume v = Iterables.find( this.volumes.values( ), pred );
+    AttachedVolume v = Iterables.find( this.transientVolumes.values( ), pred );
     if ( v == null ) {
       throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getInstanceId( ) + " using predicate "
                                         + pred.getClass( ).getCanonicalName( ) );
@@ -802,20 +808,20 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   }
   
   public <T> Iterable<T> transformVolumeAttachments( Function<? super AttachedVolume, T> function ) throws NoSuchElementException {
-    return Iterables.transform( this.volumes.values( ), function );
+    return Iterables.transform( this.transientVolumes.values( ), function );
   }
   
   public boolean eachVolumeAttachment( Predicate<AttachedVolume> pred ) throws NoSuchElementException {
-    return Iterables.all( this.volumes.values( ), pred );
+    return Iterables.all( this.transientVolumes.values( ), pred );
   }
   
   public void addVolumeAttachment( AttachedVolume volume ) {
     String volumeId = volume.getVolumeId( );
     volume.setStatus( "attaching" );
     volume.setInstanceId( this.getInstanceId( ) );
-    AttachedVolume v = this.volumes.put( volumeId, volume );
+    AttachedVolume v = this.transientVolumes.put( volumeId, volume );
     if ( v != null ) {
-      this.volumes.replace( volumeId, v );
+      this.transientVolumes.replace( volumeId, v );
     }
   }
   
@@ -883,7 +889,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
                           "VmInstance [instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
                           this.instanceId, this.keyInfo, this.launchIndex, this.launchTime, this.networkConfig, this.networks, this.getOwner( ),
                           this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch, this.userData, this.vmTypeInfo,
-                          this.volumes );
+                          this.transientVolumes );
   }
   
   public int getNetworkIndex( ) {
