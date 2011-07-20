@@ -2334,7 +2334,7 @@ int doGetConsoleOutput(ncMetadata *ccMeta, char *instId, char **outConsoleOutput
             snprintf(pwfile, MAX_PATH, "%s/var/lib/eucalyptus/windows/%s/console.append.log", config->eucahome, instId);
 
             char *rawconsole=NULL;
-            if (!check_file(pwfile)) { // the console log file should exist for a Windows guest (with encrypted passoword in it)
+            if (!check_file(pwfile)) { // the console log file should exist for a Windows guest (with encrypted password in it)
                     rawconsole = file2str(pwfile);
             } else { // the console log file will not exist for a Linux guest
                     rawconsole = strdup ("not implemented");
