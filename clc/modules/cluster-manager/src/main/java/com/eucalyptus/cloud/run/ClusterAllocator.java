@@ -61,7 +61,7 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.sla;
+package com.eucalyptus.cloud.run;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -73,7 +73,6 @@ import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
-import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Networks;

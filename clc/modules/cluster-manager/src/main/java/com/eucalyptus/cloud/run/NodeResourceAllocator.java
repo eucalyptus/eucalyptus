@@ -1,11 +1,10 @@
-package com.eucalyptus.sla;
+package com.eucalyptus.cloud.run;
 
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.Clusters;
@@ -109,8 +108,8 @@ public class NodeResourceAllocator implements ResourceAllocator {
     return available;
   }
   
-  private List<Cluster> doPrivilegedLookup( String clusterName, String vmTypeName, final String action, final User requestUser ) throws NotEnoughResourcesAvailable {
-    if ( "default".equals( clusterName ) ) {
+  private List<Cluster> doPrivilegedLookup( String partitionName, String vmTypeName, final String action, final User requestUser ) throws NotEnoughResourcesAvailable {
+    if ( "default".equals( partitionName ) ) {
       Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
         @Override
         public boolean apply( final Cluster c ) {
@@ -130,12 +129,12 @@ public class NodeResourceAllocator implements ResourceAllocator {
         return Lists.newArrayList( sorted.values( ) );
       }
     } else {
-      Cluster cluster = Clusters.getInstance( ).lookup( Partitions.lookupService( ClusterController.class, clusterName ) );
+      Cluster cluster = Clusters.getInstance( ).lookup( Partitions.lookupService( ClusterController.class, partitionName ) );
       if ( cluster == null ) {
-        throw new NotEnoughResourcesAvailable( "Can't find cluster " + clusterName );
+        throw new NotEnoughResourcesAvailable( "Can't find cluster " + partitionName );
       }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_AVAILABILITYZONE, clusterName, null, action, requestUser ) ) {
-        throw new NotEnoughResourcesAvailable( "Not authorized to use cluster " + clusterName + " for " + requestUser.getName( ) );
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_AVAILABILITYZONE, partitionName, null, action, requestUser ) ) {
+        throw new NotEnoughResourcesAvailable( "Not authorized to use cluster " + partitionName + " for " + requestUser.getName( ) );
       }
       return Lists.newArrayList( cluster );
     }

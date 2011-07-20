@@ -61,10 +61,9 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.sla;
+package com.eucalyptus.cloud.run;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.cloud.run.Allocations.Allocation;
 
 public class PrivateNetworkAllocator implements ResourceAllocator {
   private static Logger LOG = Logger.getLogger( PrivateNetworkAllocator.class );

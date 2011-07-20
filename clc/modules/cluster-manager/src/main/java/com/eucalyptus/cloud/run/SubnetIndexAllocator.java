@@ -61,9 +61,8 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.sla;
+package com.eucalyptus.cloud.run;
 
-import com.eucalyptus.cloud.run.Allocations.Allocation;
 
 public class SubnetIndexAllocator implements ResourceAllocator {
 

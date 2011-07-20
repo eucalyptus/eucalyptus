@@ -1,6 +1,5 @@
-package com.eucalyptus.sla;
+package com.eucalyptus.cloud.run;
 
-import com.eucalyptus.cloud.run.Allocations.Allocation;
 
 public interface ResourceAllocator {
   public void allocate( Allocation allocInfo ) throws Exception;
