@@ -66,7 +66,7 @@ import com.eucalyptus.bootstrap.SystemIds
 import groovy.xml.MarkupBuilder
 import org.apache.log4j.Logger
 import org.logicalcobwebs.proxool.ProxoolFacade
-import com.eucalyptus.bootstrap.BootstrapArgs
+import com.eucalyptus.bootstrap.Databases
 import com.eucalyptus.bootstrap.SystemIds
 import com.eucalyptus.component.ComponentIds
 import com.eucalyptus.component.Host
@@ -82,7 +82,7 @@ Logger LOG = Logger.getLogger( "setup_dbpool" );
 ClassLoader.getSystemClassLoader().loadClass('org.logicalcobwebs.proxool.ProxoolDriver');
 ClassLoader.getSystemClassLoader().loadClass('net.sf.hajdbc.local.LocalStateManager');
 
-String real_jdbc_driver = 'com.mysql.jdbc.Driver';
+String real_jdbc_driver = Databases.getDriverName( );
 String pool_db_driver = 'net.sf.hajdbc.sql.Driver';
 String pool_db_url = 'jdbc:ha-jdbc:eucalyptus';
 String db_pass = SystemIds.databasePassword( );
@@ -117,7 +117,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
           'auto-activate-schedule':'0 * * ? * *',
           balancer:'load', //(simple|random|round-robin|load)
           'default-sync': 'passive',
-          dialect:'net.sf.hajdbc.dialect.MySQLDialect',
+          dialect:Databases.getJdbcDialect( ),
           'failure-detect-schedule':'0 * * ? * *',
           'meta-data-cache':'none',//(none|lazy|eager)
           'transaction-mode':'serial',//(parallel|serial)

@@ -8,6 +8,7 @@ import net.sf.hajdbc.sql.DriverDatabaseClusterMBean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.component.AbstractServiceBuilder;
@@ -124,7 +125,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   private void startDbPool( ServiceConfiguration config ) {
     String dbPass = SystemIds.databasePassword( );
     final String hostName = config.getHostName( );
-    String realJdbcDriver = "com.mysql.jdbc.Driver";
+    String realJdbcDriver = Databases.getDriverName( );
     
     for ( String ctx : PersistenceContexts.list( ) ) {
       final String contextName = ctx.startsWith( "eucalyptus_" )
@@ -160,9 +161,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
     }
   }
   private void stopDbPool( ServiceConfiguration config ) {
-    String dbPass = SystemIds.databasePassword( );
     final String hostName = config.getHostName( );
-    String realJdbcDriver = "com.mysql.jdbc.Driver";
     
     for ( String ctx : PersistenceContexts.list( ) ) {
       final String contextName = ctx.startsWith( "eucalyptus_" )
