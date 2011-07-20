@@ -76,8 +76,9 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
@@ -149,7 +150,8 @@ public class ClusterState {
     int min = 2;
     int max = 4095;
     try {
-      for ( ClusterConfiguration cc : ServiceConfigurations.getConfigurations( ClusterConfiguration.class ) ) {
+      for ( ServiceConfiguration conf : ServiceConfigurations.list( ClusterController.class ) ) {
+        ClusterConfiguration cc = ( ClusterConfiguration ) conf;
         if ( cc.getMinVlan( ) != null ) min = cc.getMinVlan( ) > min ? cc.getMinVlan( ) : min;
         if ( cc.getMaxVlan( ) != null ) max = cc.getMaxVlan( ) < max ? cc.getMaxVlan( ) : max;
       }
@@ -182,19 +184,9 @@ public class ClusterState {
     this.clusterName = clusterName;
   }
   
-  public NetworkToken extantAllocation( String accountId, String networkName, String networkUuid, int vlan ) throws NetworkAlreadyExistsException {
-    AccountFullName accountFn;
-    try {
-      accountFn = Accounts.lookupAccountFullNameById( accountId );
-    } catch ( Exception ex ) {
-      try {
-        accountFn = Accounts.lookupAccountFullNameByUserId( accountId );
-      } catch ( RuntimeException ex1 ) {
-        LOG.error( ex1 , ex1 );
-        throw ex1;
-      }
-    }
-    NetworkToken netToken = new NetworkToken( this.clusterName, accountFn, networkName, networkUuid, vlan );
+  public NetworkToken extantAllocation( String userId, String networkName, String networkUuid, int vlan ) throws NetworkAlreadyExistsException {
+    UserFullName userFn = UserFullName.getInstance( userId );
+    NetworkToken netToken = new NetworkToken( this.clusterName, userFn, networkName, networkUuid, vlan );
     if ( !ClusterState.availableVlans.remove( vlan ) ) {
       throw new NetworkAlreadyExistsException( );
     }

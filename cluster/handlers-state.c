@@ -175,7 +175,7 @@ int doStopService(ncMetadata *ccMeta) {
 }
 
 int doEnableService(ncMetadata *ccMeta) {
-  int i, rc, ret=0;
+  int i, rc, ret=0, done=0;
 
   rc = initialize(ccMeta);
   if (rc) {
@@ -187,13 +187,28 @@ int doEnableService(ncMetadata *ccMeta) {
 
   sem_mywait(CONFIG);
   if (config->ccState != ENABLED) {
-    // tell monitor thread to (re)enable
+    // tell monitor thread to (re)enable  
+    config->kick_monitor_running = 0;
     config->kick_network = 1;
     config->kick_dhcp = 1;
     config->kick_enabled = 1;
     ccChangeState(ENABLED);
   }
   sem_mypost(CONFIG);  
+
+  // wait for a minute to make sure CC is running again
+  done=0;
+  for (i=0; i<60 && !done; i++) {
+    sem_mywait(CONFIG);
+    if (config->kick_monitor_running) {
+      done++;
+    }
+    sem_mypost(CONFIG);
+    if (!done) {
+      logprintfl(EUCADEBUG, "EnableService(): waiting for monitor to re-initialize (%d/60)\n", i);
+      sleep(1);
+    }
+  }
 
   logprintfl(EUCAINFO, "EnableService(): done\n");
   
@@ -286,9 +301,11 @@ int instIpSync(ccInstance *inst, void *in) {
     logprintfl(EUCAERROR, "instIpSync(): CC and NC vlans differ instanceId=%s CCvlan=%d NCvlan=%d\n", inst->instanceId, inst->ccnet.vlan, inst->ncnet.vlan);
   }
   inst->ccnet.vlan = inst->ncnet.vlan;
-  if (!vnetconfig->networks[inst->ccnet.vlan].active) {
-    logprintfl(EUCAWARN, "instIpSync(): detected instance from NC that is running in a currently inactive network; will attempt to re-activate network '%d'\n", inst->ccnet.vlan);
-    ret++;
+  if (inst->ccnet.vlan >= 0) {
+    if (!vnetconfig->networks[inst->ccnet.vlan].active) {
+      logprintfl(EUCAWARN, "instIpSync(): detected instance from NC that is running in a currently inactive network; will attempt to re-activate network '%d'\n", inst->ccnet.vlan);
+      ret++;
+    }
   }
 
   // networkIndex cases
@@ -323,7 +340,7 @@ int instNetParamsSet(ccInstance *inst, void *in) {
     return(0);
   }
 
-  logprintfl(EUCADEBUG, "instNetParamsSet(): instanceId=%s publicIp=%s privateIp=%s privateMac=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.privateMac);
+  logprintfl(EUCADEBUG, "instNetParamsSet(): instanceId=%s publicIp=%s privateIp=%s privateMac=%s vlan=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.privateMac, inst->ccnet.vlan);
 
   if (inst->ccnet.vlan >= 0) {
     // activate network
@@ -445,6 +462,11 @@ int clean_network_state(void) {
   if (rc) {
   }
   rc = vnetApplySingleTableRule(tmpvnetconfig, "filter", "-P FORWARD ACCEPT");
+  if (rc) {
+  }
+
+  // tunnels
+  rc = vnetSetCCS(tmpvnetconfig, NULL, 0);
   if (rc) {
   }
   

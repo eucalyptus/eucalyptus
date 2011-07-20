@@ -270,8 +270,9 @@ int get_instance_xml(		const char *gen_libvirt_cmd_path,
 void * monitoring_thread(	void *arg);
 void * startup_thread(		void *arg);
 
-int generate_attach_xml(char *localDevReal, char *remoteDev, struct nc_state_t *nc, char *xml);
+int generate_attach_xml(char *localDevReal, char *remoteDev, struct nc_state_t *nc, ncInstance *instance, char *xml);
 int get_instance_stats(virDomainPtr dom, ncInstance *instance);
+ncInstance * find_global_instance (const char * instanceId);
 
 // bundling structure
 struct bundling_params_t {

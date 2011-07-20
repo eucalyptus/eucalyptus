@@ -73,13 +73,12 @@ import org.apache.log4j.Logger;
 import org.apache.ws.security.WSConstants;
 import org.apache.ws.security.WSEncryptionPart;
 import org.apache.xml.security.signature.XMLSignature;
-import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.w3c.dom.Element;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.auth.principal.FakePrincipals;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.WSSecurity;
@@ -110,7 +109,7 @@ public class InternalWsSecHandler extends WsSecHandler {
   }
   
   @Override
-  public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
+  public void incomingMessage( MessageEvent event ) throws Exception {
     final Object o = event.getMessage( );
     if ( o instanceof MappingHttpRequest ) {
       final MappingHttpMessage httpRequest = ( MappingHttpMessage ) o;
@@ -122,7 +121,7 @@ public class InternalWsSecHandler extends WsSecHandler {
       try {
         X509Certificate cert = WSSecurity.verifySignature( secNode, sig );
         Logs.exhaust( ).debug( cert );
-        if ( cert == null || !cert.equals( SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( ) ) ) {
+        if ( cert == null || !cert.equals( SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( ) ) ) {
           throw new WebServicesException( "Authentication failed: The following certificate is not trusted:\n " + cert );
         }
       } catch ( Exception ex ) {

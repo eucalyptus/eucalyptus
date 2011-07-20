@@ -7,15 +7,16 @@ import java.security.Signature;
 import java.security.SignatureException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 
 public enum Signatures {
-  SHA256withRSA;
+  SHA256withRSA,
+  SHA1WithRSA;
   private static Logger LOG = Logger.getLogger( Signatures.class );
 
   public String trySign( Class<? extends ComponentId> component, byte[] data ) {
-    PrivateKey pk = SystemCredentialProvider.getCredentialProvider( component ).getPrivateKey( );
+    PrivateKey pk = SystemCredentials.getCredentialProvider( component ).getPrivateKey( );
     return trySign( pk, data );
   }
   /**

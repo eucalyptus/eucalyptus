@@ -177,6 +177,18 @@ public abstract class AbstractKeyStore {
     return this.fileName;
   }
 
+  public void remove( String alias ) {
+    try {
+      this.keyStore.deleteEntry( alias );
+      this.store( );
+    } catch ( KeyStoreException ex ) {
+      LOG.error( ex , ex );
+    } catch ( IOException ex ) {
+      LOG.error( ex , ex );
+    } catch ( GeneralSecurityException ex ) {
+      LOG.error( ex , ex );
+    }
+  }
   public void remove( ) {
     ( new File( this.fileName ) ).delete( );
   }

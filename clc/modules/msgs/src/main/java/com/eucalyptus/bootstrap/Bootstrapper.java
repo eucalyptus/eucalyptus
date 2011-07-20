@@ -66,7 +66,6 @@ package com.eucalyptus.bootstrap;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.system.Ats;
@@ -92,10 +91,242 @@ import com.google.common.collect.Lists;
  * @see SystemBootstrapper#load()
  * @see SystemBootstrapper#start()
  */
-public abstract class Bootstrapper {
+public abstract class Bootstrapper implements Comparable<Bootstrapper> {
+  public static abstract class Simple extends Bootstrapper {
+    
+    @Override
+    public boolean check( ) throws Exception {
+      return true;
+    }
+    
+    @Override
+    public void destroy( ) throws Exception {}
+    
+    @Override
+    public boolean disable( ) throws Exception {
+      return true;
+    }
+    
+    @Override
+    public boolean enable( ) throws Exception {
+      return true;
+    }
+    
+    @Override
+    public boolean load( ) throws Exception {
+      return true;
+    }
+    
+    @Override
+    public boolean start( ) throws Exception {
+      return true;
+    }
+    
+    @Override
+    public boolean stop( ) throws Exception {
+      return true;
+    }
+    
+  }
+  
   private static Logger     LOG           = Logger.getLogger( Bootstrapper.class );
-  private List<ComponentId> dependsLocal  = getDependsLocal( );
-  private List<ComponentId> dependsRemote = getDependsRemote( );
+  private List<ComponentId> dependsLocal  = this.getDependsLocal( );
+  
+  private List<ComponentId> dependsRemote = this.getDependsRemote( );
+  
+  /**
+   * Check the status of the bootstrapped resource.
+   * 
+   * @note Intended for future use. May become {@code abstract}.
+   * @return true when all is clear
+   * @throws Exception should contain detail any malady which may be present.
+   */
+  public abstract boolean check( ) throws Exception;
+  
+  /**
+   * Check that all DependsLocal components are local.
+   * 
+   * @return true if all local dependencies are satisfied.
+   */
+  public boolean checkLocal( ) {
+    for ( final ComponentId c : this.getDependsLocal( ) ) {
+      try {
+        if ( Components.lookup( c ).isRunningRemoteMode( ) || !Components.lookup( c ).hasLocalService( ) ) {
+          return false;
+        }
+      } catch ( final NoSuchElementException ex ) {
+        return false;
+      }
+    }
+    return true;
+  }
+  
+  /**
+   * Check that all DependsRemote components are remote.
+   * 
+   * @return true if all remote dependencies are satisfied.
+   */
+  public boolean checkRemote( ) {
+    for ( final ComponentId c : this.getDependsRemote( ) ) {
+      try {
+        if ( Components.lookup( c ).hasLocalService( ) ) {
+          return false;
+        }
+      } catch ( final NoSuchElementException ex ) {}
+    }
+    return true;
+  }
+  
+  /**
+   * Initiate a forced shutdown releasing all used resources and effectively unloading the this
+   * bootstrapper.
+   * 
+   * @note Intended for future use. May become {@code abstract}.
+   * @throws Exception
+   */
+  public abstract void destroy( ) throws Exception;
+  
+  /**
+   * Enter an idle/passive state.
+   * 
+   * @return
+   * @throws Exception
+   */
+  public abstract boolean disable( ) throws Exception;
+  
+  /**
+   * Perform the enable phase of bootstrap -- this occurs when the service associated with this
+   * bootstrapper is made active and should bring the resource to an active operational state.
+   * 
+   * @return
+   * @throws Exception
+   */
+  public abstract boolean enable( ) throws Exception;
+  
+  @Override
+  public boolean equals( final Object obj ) {
+    if ( obj == null ) {
+      return false;
+    } else {
+      return this.getClass( ).equals( obj.getClass( ) );
+    }
+  }
+  
+  /**
+   * The Bootstrap.Stage during which the bootstrapper executes.
+   * 
+   * @note If the {@link RunDuring} annotation is not specified on this class bootstrap will fail
+   *       and the system will exit.
+   * @see BootstrapException#throwFatal(String)
+   * @return Bootstrap.Stage
+   */
+  public Bootstrap.Stage getBootstrapStage( ) {
+    if ( !Ats.from( this.getClass( ) ).has( RunDuring.class ) ) {
+      throw BootstrapException.throwFatal( "Bootstrap class does not specify execution stage (RunDuring.value=Bootstrap.Stage): " + this.getClass( ) );
+    } else {
+      return Ats.from( this.getClass( ) ).get( RunDuring.class ).value( );
+    }
+  }
+  
+  /**
+   * Get the list of {@link ComponentId}s which must be on the local system for this bootstrapper to
+   * be executable.
+   * 
+   * @note If the {@link DependsLocal} annotation is not specified this bootstrapper will always
+   *       execute.
+   * @see {@link DependsLocal}
+   * @see BootstrapException#throwFatal(String)
+   * @return List<Component> which must present on the local system for this bootstrapper to
+   *         execute.
+   */
+  public List<ComponentId> getDependsLocal( ) {
+    if ( this.dependsLocal != null ) {
+      return this.dependsLocal;
+    } else {
+      if ( !Ats.from( this.getClass( ) ).has( DependsLocal.class ) ) {
+        this.dependsLocal = Lists.newArrayListWithExpectedSize( 0 );
+      } else {
+        this.dependsLocal = Lists.newArrayList( );
+        for ( final Class<?> compIdClass : Ats.from( this.getClass( ) ).get( DependsLocal.class ).value( ) ) {
+          if ( !ComponentId.class.isAssignableFrom( compIdClass ) ) {
+            LOG.error( "Ignoring specified @Depends which does not extend ComponentId: " + compIdClass );
+          } else {
+            try {
+              LOG.trace( "Adding @Depends to " + this.getClass( ) + ": " + compIdClass );
+              this.dependsLocal.add( ( ComponentId ) compIdClass.newInstance( ) );
+            } catch ( final InstantiationException ex ) {
+              LOG.error( ex, ex );
+            } catch ( final IllegalAccessException ex ) {
+              LOG.error( ex, ex );
+            }
+          }
+        }
+      }
+      return this.dependsLocal;
+    }
+  }
+  
+  /**
+   * Get the list of {@link ComponentId}s which must be present on a remote system for this
+   * bootstrapper to be execute.
+   * 
+   * @note If the {@link DependsRemote} annotation is not specified this bootstrapper will always
+   *       execute.
+   * @see {@link DependsRemote}
+   * @see BootstrapException#throwFatal(String)
+   * @return List<Component> which must <b>not</b> present on the local system for this bootstrapper
+   *         to execute.
+   */
+  public List<ComponentId> getDependsRemote( ) {
+    if ( this.dependsRemote != null ) {
+      return this.dependsRemote;
+    } else {
+      if ( !Ats.from( this.getClass( ) ).has( DependsRemote.class ) ) {
+        this.dependsRemote = Lists.newArrayListWithExpectedSize( 0 );
+      } else {
+        this.dependsRemote = Lists.newArrayList( );
+        for ( final Class<?> compIdClass : Ats.from( this.getClass( ) ).get( DependsRemote.class ).value( ) ) {
+          if ( !ComponentId.class.isAssignableFrom( compIdClass ) ) {
+            LOG.error( "Ignoring specified @Depends which does not use ComponentId" );
+          } else {
+            try {
+              this.dependsRemote.add( ( ComponentId ) compIdClass.newInstance( ) );
+            } catch ( final InstantiationException ex ) {
+              LOG.error( ex, ex );
+            } catch ( final IllegalAccessException ex ) {
+              LOG.error( ex, ex );
+            }
+          }
+        }
+      }
+      return this.dependsRemote;
+    }
+  }
+  
+  /**
+   * The Component to which this bootstrapper belongs and on whose behalf it executes.
+   * 
+   * @return Component
+   */
+  @SuppressWarnings( "unchecked" )
+  public <T extends ComponentId> Class<T> getProvides( ) {
+    if ( !Ats.from( this.getClass( ) ).has( Provides.class ) ) {
+      Exceptions.eat( "Bootstrap class does not specify the component which it @Provides.  Fine.  For now we pretend you had put @Provides(ComponentId.class) or something similar instead of System.exit(-1): "
+                      + this.getClass( ) );
+      return ( Class<T> ) ComponentId.class;
+    } else {
+      return Ats.from( this.getClass( ) ).get( Provides.class ).value( );
+    }
+    
+  }
+  
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + this.getClass( ).hashCode( );
+    return result;
+  }
   
   /**
    * Perform the {@link SystemBootstrapper#load()} phase of bootstrap.
@@ -119,15 +350,6 @@ public abstract class Bootstrapper {
   public abstract boolean start( ) throws Exception;
   
   /**
-   * Perform the enable phase of bootstrap -- this occurs when the service associated with this
-   * bootstrapper is made active and should bring the resource to an active operational state.
-   * 
-   * @return
-   * @throws Exception
-   */
-  public abstract boolean enable( ) throws Exception;
-  
-  /**
    * Initiate a graceful shutdown
    * 
    * @note Intended for future use. May become {@code abstract}.
@@ -135,191 +357,6 @@ public abstract class Bootstrapper {
    * @throws Exception
    */
   public abstract boolean stop( ) throws Exception;
-  
-  /**
-   * Initiate a forced shutdown releasing all used resources and effectively unloading the this
-   * bootstrapper.
-   * 
-   * @note Intended for future use. May become {@code abstract}.
-   * @throws Exception
-   */
-  public abstract void destroy( ) throws Exception;
-  
-  /**
-   * Enter an idle/passive state.
-   * 
-   * @return
-   * @throws Exception
-   */
-  public abstract boolean disable( ) throws Exception;
-  
-  /**
-   * Check the status of the bootstrapped resource.
-   * 
-   * @note Intended for future use. May become {@code abstract}.
-   * @return true when all is clear
-   * @throws Exception should contain detail any malady which may be present.
-   */
-  public abstract boolean check( ) throws Exception;
-  
-  /**
-   * Get the list of {@link ComponentId}s which must be on the local system for this bootstrapper to
-   * be executable.
-   * 
-   * @note If the {@link DependsLocal} annotation is not specified this bootstrapper will always
-   *       execute.
-   * @see {@link DependsLocal}
-   * @see BootstrapException#throwFatal(String)
-   * @return List<Component> which must present on the local system for this bootstrapper to
-   *         execute.
-   */
-  public List<ComponentId> getDependsLocal( ) {
-    if ( dependsLocal != null ) {
-      return dependsLocal;
-    } else {
-      if ( !Ats.from( this.getClass( ) ).has( DependsLocal.class ) ) {
-        dependsLocal = Lists.newArrayListWithExpectedSize( 0 );
-      } else {
-        dependsLocal = Lists.newArrayList( );
-        for ( Class compIdClass : Ats.from( this.getClass( ) ).get( DependsLocal.class ).value( ) ) {
-          if ( !ComponentId.class.isAssignableFrom( compIdClass ) ) {
-            LOG.error( "Ignoring specified @Depends which does not extend ComponentId: " + compIdClass );
-          } else {
-            try {
-              LOG.trace( "Adding @Depends to " + this.getClass( ) + ": " + compIdClass );
-              dependsLocal.add( ( ComponentId ) compIdClass.newInstance( ) );
-            } catch ( InstantiationException ex ) {
-              LOG.error( ex, ex );
-            } catch ( IllegalAccessException ex ) {
-              LOG.error( ex, ex );
-            }
-          }
-        }
-      }
-      return dependsLocal;
-    }
-  }
-  
-  /**
-   * Get the list of {@link ComponentId}s which must be present on a remote system for this
-   * bootstrapper to be execute.
-   * 
-   * @note If the {@link DependsRemote} annotation is not specified this bootstrapper will always
-   *       execute.
-   * @see {@link DependsRemote}
-   * @see BootstrapException#throwFatal(String)
-   * @return List<Component> which must <b>not</b> present on the local system for this bootstrapper
-   *         to execute.
-   */
-  public List<ComponentId> getDependsRemote( ) {
-    if ( dependsRemote != null ) {
-      return dependsRemote;
-    } else {
-      if ( !Ats.from( this.getClass( ) ).has( DependsRemote.class ) ) {
-        dependsRemote = Lists.newArrayListWithExpectedSize( 0 );
-      } else {
-        dependsRemote = Lists.newArrayList( );
-        for ( Class compIdClass : Ats.from( this.getClass( ) ).get( DependsRemote.class ).value( ) ) {
-          if ( !ComponentId.class.isAssignableFrom( compIdClass ) ) {
-            LOG.error( "Ignoring specified @Depends which does not use ComponentId" );
-          } else {
-            try {
-              dependsRemote.add( ( ComponentId ) compIdClass.newInstance( ) );
-            } catch ( InstantiationException ex ) {
-              LOG.error( ex, ex );
-            } catch ( IllegalAccessException ex ) {
-              LOG.error( ex, ex );
-            }
-          }
-        }
-      }
-      return dependsRemote;
-    }
-  }
-  
-  /**
-   * The Bootstrap.Stage during which the bootstrapper executes.
-   * 
-   * @note If the {@link RunDuring} annotation is not specified on this class bootstrap will fail
-   *       and the system will exit.
-   * @see BootstrapException#throwFatal(String)
-   * @return Bootstrap.Stage
-   */
-  public Bootstrap.Stage getBootstrapStage( ) {
-    if ( !Ats.from( this.getClass( ) ).has( RunDuring.class ) ) {
-      throw BootstrapException.throwFatal( "Bootstrap class does not specify execution stage (RunDuring.value=Bootstrap.Stage): " + this.getClass( ) );
-    } else {
-      return Ats.from( this.getClass( ) ).get( RunDuring.class ).value( );
-    }
-  }
-  
-  /**
-   * The Component to which this bootstrapper belongs and on whose behalf it executes.
-   * 
-   * @return Component
-   */
-  public <T extends ComponentId> Class<T> getProvides( ) {
-    if ( !Ats.from( this.getClass( ) ).has( Provides.class ) ) {
-      Exceptions.eat( "Bootstrap class does not specify the component which it @Provides.  Fine.  For now we pretend you had put @Provides(ComponentId.class) or something similar instead of System.exit(-1): "
-                      + this.getClass( ) );
-      return ( Class<T> ) ComponentId.class;
-    } else {
-      return ( Class<T> ) Ats.from( this.getClass( ) ).get( Provides.class ).value( );
-    }
-    
-  }
-  
-  /**
-   * Check that all DependsLocal components are local.
-   * 
-   * @return true if all local dependencies are satisfied.
-   */
-  public boolean checkLocal( ) {
-    for ( ComponentId c : this.getDependsLocal( ) ) {
-      try {
-        if ( Components.lookup( c ).isRunningRemoteMode( ) || !Components.lookup( c ).hasLocalService( ) ) {
-          return false;
-        }
-      } catch ( NoSuchElementException ex ) {
-        return false;
-      }
-    }
-    return true;
-  }
-  
-  /**
-   * Check that all DependsRemote components are remote.
-   * 
-   * @return true if all remote dependencies are satisfied.
-   */
-  public boolean checkRemote( ) {
-    for ( ComponentId c : this.getDependsRemote( ) ) {
-      try {
-        if ( Components.lookup( c ).hasLocalService( ) ) {
-          return false;
-        }
-      } catch ( NoSuchElementException ex ) {
-      }
-    }
-    return true;
-  }
-  
-  @Override
-  public boolean equals( Object obj ) {
-    return this.getClass( ).equals( obj.getClass( ) );
-  }
-  
-  /**
-   * HARDCORE DEPRECATED: Implement {@link Bootstrapper#load()} instead. To obtain a reference to
-   * the current stage of bootstrap use {@link Bootstrap#getCurrentStage()}.
-   * 
-   * @see Bootstrapper#load()
-   * @see Bootstrap#getCurrentStage()
-   */
-  @Deprecated
-  public boolean load( Stage current ) throws Exception {
-    return this.load( );
-  }
   
   /**
    * @see java.lang.Object#toString()
@@ -331,4 +368,8 @@ public abstract class Bootstrapper {
                           this.dependsLocal, this.dependsRemote );
   }
   
+  @Override
+  public int compareTo( Bootstrapper o ) {
+    return this.getClass( ).toString( ).compareTo( o.getClass( ).toString( ) );
+  }
 }

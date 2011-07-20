@@ -83,7 +83,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Notifications;
@@ -183,7 +183,7 @@ public class X509Download extends HttpServlet {
       x509 = Certs.generateCertificate( keyPair, u.getName( ) );
       x509.checkValidity( );
       u.addCertificate( x509 );
-      cloudCert = SystemCredentialProvider.getCredentialProvider( Eucalyptus.class ).getCertificate( );
+      cloudCert = SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( );
     } catch ( Exception e ) {
       LOG.fatal( e, e );
       throw e;
@@ -222,7 +222,7 @@ public class X509Download extends HttpServlet {
       sb.append( "\nexport AWS_CREDENTIAL_FILE=${EUCA_KEY_DIR}/iamrc" );
       sb.append( "\nexport EC2_USER_ID='" + userNumber + "'" );
       sb.append( "\nalias ec2-bundle-image=\"ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_PRIVATE_KEY} --user ${EC2_ACCOUNT_NUMBER} --ec2cert ${EUCALYPTUS_CERT}\"" );
-      sb.append( "\nalias ec2-upload-bundle=\"ec2-upload-bundle -a ${EC2_ACCESS_KEY} -s ${EC2_SECRET_KEY} --url ${S3_URL} --ec2cert ${EUCALYPTUS_CERT}\"" );
+      sb.append( "\nalias ec2-upload-bundle=\"ec2-upload-bundle -a ${EC2_ACCESS_KEY} -s ${EC2_SECRET_KEY} --url ${S3_URL}\"" );
       sb.append( "\n" );
       zipOut.putArchiveEntry( entry = new ZipArchiveEntry( "eucarc" ) );
       entry.setUnixMode( 0600 );

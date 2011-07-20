@@ -66,8 +66,8 @@ import java.io.File;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
 
 public enum BaseDirectory {
   HOME( "euca.home" ), VAR( "euca.var.dir" ), CONF( "euca.conf.dir" ), LIB( "euca.lib.dir" ), LOG( "euca.log.dir" );
@@ -121,12 +121,12 @@ public enum BaseDirectory {
   
   private void assertPermissions( ) {
     try {
-      GroovyUtil.exec( "chown " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+      Groovyness.exec( "chown " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOGG.error( ex, ex );
     }
     try {
-      GroovyUtil.exec( "chmod og+rwX " + this.toString( ) );
+      Groovyness.exec( "chmod og+rwX " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOGG.error( ex, ex );
     }

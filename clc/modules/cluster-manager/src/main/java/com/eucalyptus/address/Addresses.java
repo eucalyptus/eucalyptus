@@ -254,7 +254,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
               Addresses.system( vm );
             } catch ( NoSuchElementException ex ) {}
           }
-        } ).dispatch( addr.getCluster( ) );
+        } ).dispatch( addr.getPartition( ) );
       } else {
         addr.release( );
       }

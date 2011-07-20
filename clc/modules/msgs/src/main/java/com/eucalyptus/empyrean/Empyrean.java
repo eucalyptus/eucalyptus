@@ -63,6 +63,7 @@
 
 package com.eucalyptus.empyrean;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -74,11 +75,16 @@ import com.eucalyptus.bootstrap.HostManager;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Hosts;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.util.Internets;
 
 public class Empyrean extends ComponentId.Unpartioned {
-  
+  private static Logger LOG = Logger.getLogger( Empyrean.class );
   public static final Empyrean INSTANCE = new Empyrean( ); //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
                                                            
   @Override
@@ -116,94 +122,42 @@ public class Empyrean extends ComponentId.Unpartioned {
   
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.PersistenceInit )
-  public static class PersistenceContextBootstrapper extends Bootstrapper {
+  public static class PersistenceContextBootstrapper extends Bootstrapper.Simple {
     private static Logger LOG = Logger.getLogger( PersistenceContextBootstrapper.class );
     
     @Override
     public boolean load( ) throws Exception {
-      GroovyUtil.evaluateScript( "setup_persistence.groovy" );
-      return true;
-    }
-    
-    @Override
-    public boolean start( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public boolean enable( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public boolean stop( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public void destroy( ) throws Exception {}
-    
-    @Override
-    public boolean disable( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public boolean check( ) throws Exception {
+      System.setProperty( "jgroups.udp.bind_addr", Internets.localHostAddress( ) );
+      Groovyness.run( "setup_persistence.groovy" );
       return true;
     }
   }
   
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.PoolInit )
-  public static class DatabasePoolBootstrapper extends Bootstrapper {
+  public static class DatabasePoolBootstrapper extends Bootstrapper.Simple {
     
     @Override
     public boolean load( ) throws Exception {
-      GroovyUtil.evaluateScript( "setup_dbpool.groovy" );
+      System.setProperty( "jgroups.udp.jdbc.bind_addr", Internets.localHostAddress( ) );
+      Groovyness.run( "setup_dbpool.groovy" );
       return true;
     }
     
-    @Override
-    public boolean start( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public boolean enable( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public boolean stop( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public void destroy( ) throws Exception {}
-    
-    @Override
-    public boolean disable( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public boolean check( ) throws Exception {
-      return true;
-    }
   }
   
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.RemoteConfiguration )
-  public static class HostMembershipBootstrapper extends Bootstrapper {
+  public static class HostMembershipBootstrapper extends Bootstrapper.Simple {
     private static final Logger LOG = Logger.getLogger( Empyrean.HostMembershipBootstrapper.class );
+    
     @Override
     public boolean load( ) throws Exception {
       try {
         HostManager.getInstance( );
         LOG.info( "Started membership channel " + HostManager.getMembershipGroupName( ) );
         while ( !HostManager.isReady( ) ) {
-          TimeUnit.SECONDS.sleep( 1 );
+          TimeUnit.SECONDS.sleep( 5 );
           LOG.info( "Waiting for system view with database..." );
         }
         LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
@@ -215,32 +169,54 @@ public class Empyrean extends ComponentId.Unpartioned {
       }
     }
     
-    @Override
-    public boolean start( ) throws Exception {
+  }
+  
+  public static boolean setupServiceDependencies( InetAddress addr ) {
+    if ( !Internets.testLocal( addr ) && !Internets.testReachability( addr ) ) {
+      LOG.warn( "Failed to reach host for cloud controller: " + addr );
+      return false;
+    } else {
+      try {
+        setupServiceState( addr, Empyrean.INSTANCE );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        return false;
+      }
+      for ( ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
+        try {
+          if ( compId.isAlwaysLocal( ) ) {
+            setupServiceState( addr, compId );
+          }
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
       return true;
     }
     
-    @Override
-    public boolean enable( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public boolean stop( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public void destroy( ) throws Exception {}
-    
-    @Override
-    public boolean disable( ) throws Exception {
-      return true;
-    }
-    
-    @Override
-    public boolean check( ) throws Exception {
-      return true;
+  }
+  
+  public static boolean teardownServiceDependencies( InetAddress addr ) {
+    if ( !Internets.testLocal( addr ) ) {
+      LOG.warn( "Failed to reach host for cloud controller: " + addr );
+      return false;
+    } else {
+      try {
+        for ( ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
+          try {
+            if ( compId.isAlwaysLocal( ) ) {
+              ServiceConfiguration dependsConfig = ServiceConfigurations.lookupByName( compId.getClass( ), addr.getHostAddress( ) );
+              Topology.stop( dependsConfig );
+            }
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+        }
+        return true;
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        return false;
+      }
     }
     
   }

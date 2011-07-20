@@ -1,6 +1,5 @@
 package com.eucalyptus.auth.ldap;
 
-import java.util.List;
 import java.util.Set;
 import javax.naming.InvalidNameException;
 import javax.naming.ldap.LdapName;
@@ -12,6 +11,7 @@ import com.eucalyptus.auth.LicParseException;
 import com.eucalyptus.auth.json.JsonUtils;
 import com.eucalyptus.auth.lic.LicSpec;
 import com.google.common.collect.Sets;
+import com.google.gwt.thirdparty.guava.common.base.Strings;
 
 /**
  * Parser of ldap integration configuration (LIC). LIC is in JSON format.
@@ -75,12 +75,22 @@ public class LicParser {
   private void parseLdapService( JSONObject licJson, LdapIntegrationConfiguration lic ) throws JSONException {
     JSONObject ldapServiceObj = JsonUtils.getRequiredByType( JSONObject.class, licJson, LicSpec.LDAP_SERVICE );
     lic.setServerUrl( validateServerUrl( JsonUtils.getRequiredByType( String.class, ldapServiceObj, LicSpec.SERVER_URL ) ) );
-    lic.setAuthMethod( validateAuthMethod( JsonUtils.getRequiredByType( String.class, ldapServiceObj, LicSpec.AUTH_METHOD ) ) );
+    lic.setAuthMethod( validateAuthMethod( JsonUtils.getRequiredByType( String.class, ldapServiceObj, LicSpec.AUTH_METHOD ), false ) );
     lic.setAuthPrincipal( validateNonEmpty( JsonUtils.getRequiredByType( String.class, ldapServiceObj, LicSpec.AUTH_PRINCIPAL ) ) );
     lic.setAuthCredentials( validateNonEmpty( JsonUtils.getRequiredByType( String.class, ldapServiceObj, LicSpec.AUTH_CREDENTIALS ) ) );
     lic.setUseSsl( "true".equalsIgnoreCase( JsonUtils.getRequiredByType( String.class, ldapServiceObj, LicSpec.USE_SSL ) ) );
-  }
+    lic.setIgnoreSslCertValidation( "true".equalsIgnoreCase( JsonUtils.getByType( String.class, ldapServiceObj, LicSpec.IGNORE_SSL_CERT_VALIDATION ) ) );
+    lic.setKrb5Conf( validateKrb5Conf( lic.getAuthMethod( ), JsonUtils.getByType( String.class, ldapServiceObj, LicSpec.KRB5_CONF ) ) );
+    lic.setUserAuthMethod( validateAuthMethod( JsonUtils.getByType( String.class, ldapServiceObj, LicSpec.USER_AUTH_METHOD ), true ) );
+}
   
+  private String validateKrb5Conf( String authMethod, String krb5Conf ) throws JSONException {
+    if ( LDAP_AUTH_METHOD_SASL_GSSAPI.equals( authMethod ) && Strings.isNullOrEmpty( krb5Conf ) ) {
+      throw new JSONException( "krb5.conf must be specified for GSSAPI/KerberosV5" );
+    }
+    return krb5Conf;
+  }
+
   private String validateServerUrl( String url ) throws JSONException {
     if ( isEmpty( url ) || !url.startsWith( LDAP_URL_PREFIX ) ) {
       throw new JSONException( "Invalid server url " + url );
@@ -88,9 +98,9 @@ public class LicParser {
     return url;
   }
   
-  private String validateAuthMethod( String method ) throws JSONException {
-    if ( isEmpty( method) || !LDAP_AUTH_METHODS.contains( method ) ) {
-      throw new JSONException( "Unsupported LDAP authentication method " + method );
+  private String validateAuthMethod( String method, boolean allowEmpty ) throws JSONException {
+    if ( ( !allowEmpty && isEmpty( method) ) || ( !isEmpty( method ) && !LDAP_AUTH_METHODS.contains( method ) ) ) {
+      throw new JSONException( "Unsupported LDAP authentication method " + ( method != null ? method : "null" ) );
     }
     return method;
   }
@@ -199,6 +209,7 @@ public class LicParser {
       } catch ( NumberFormatException e ) {
         throw new JSONException( "Invalid sync interval value" );
       }
+      lic.setCleanDeletion( "true".equalsIgnoreCase( JsonUtils.getByType( String.class, sync, LicSpec.CLEAN_DELETION ) ) );
     }
   }
   

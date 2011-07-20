@@ -10,8 +10,8 @@ that describes a Eucalyptus instance to be launched.
     <xsl:output encoding="UTF-8" indent="yes" method="xml"/>
     <xsl:template match="/">
         <!-- sanity check on the hypervisor type - we only know 'kvm' and 'xen' -->
-        <xsl:if test="/instance/hypervisor/@type != 'kvm' and /instance/hypervisor/@type != 'xen'">
-            <xsl:message terminate="yes">ERROR: invalid or unset /instance/hypervisor/@type parameter</xsl:message>
+        <xsl:if test="/instance/hypervisor/@type != 'kvm' and /instance/hypervisor/@type != 'xen'"> 
+           <xsl:message terminate="yes">ERROR: invalid or unset /instance/hypervisor/@type parameter</xsl:message>
         </xsl:if>
         <domain>
             <xsl:attribute name="type">
@@ -39,20 +39,18 @@ that describes a Eucalyptus instance to be launched.
                         <xsl:if test="/instance/kernel!=''">
                             <kernel>
                                 <xsl:value-of select="/instance/kernel"/>
-                            </kernel>
-                            <cmdline>root=/dev/sda1 console=ttyS0</cmdline>
-                            <xsl:choose>
-                                <xsl:when test="/instance/os/@virtioRoot = 'true'">
-                                    <root>/dev/vda1</root>
-                                </xsl:when>
-                                <xsl:when test="/instance/os/@virtioRoot = 'false'">
-                                    <root>/dev/sda1</root>
-                                </xsl:when>
-                                <xsl:otherwise>
-                                    <xsl:message terminate="yes">ERROR: invalid or unset /instance/os/@virtioRoot parameter</xsl:message>
-                                </xsl:otherwise>
-                            </xsl:choose>
+                            </kernel> 
                         </xsl:if>
+                        <xsl:choose>
+                            <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@virtioRoot = 'true'">
+                                 <cmdline>root=/dev/vda1 console=ttyS0</cmdline>
+                                 <root>/dev/vda1</root>
+                            </xsl:when>
+                            <xsl:otherwise>
+			         <cmdline>root=/dev/sda1 console=ttyS0</cmdline>
+                                 <root>/dev/sda1</root>
+                            </xsl:otherwise>
+                        </xsl:choose>
                     </xsl:when>
                     <xsl:when test="/instance/os/@platform = 'windows'">
                         <!-- Windows-specific configuration -->
@@ -114,25 +112,59 @@ that describes a Eucalyptus instance to be launched.
                             </xsl:choose>
                         </source>
                         <target>
-                            <xsl:attribute name="dev">
-                                <xsl:value-of select="@targetDeviceName"/>
-                            </xsl:attribute>
-                            <xsl:attribute name="bus">
-                                <xsl:value-of select="@targetDeviceBus"/>
-                            </xsl:attribute>
+	                    <xsl:choose> 
+			       <xsl:when test="/instance/hypervisor/@type='kvm' and /instance/os/@platform='windows'">
+                                   <xsl:attribute name="bus">virtio</xsl:attribute>
+			  	   <xsl:attribute name="dev"> 
+                                        <xsl:call-template name="string-replace-all">
+ 		    		           <xsl:with-param name="text" select="@targetDeviceName"/>
+		  		           <xsl:with-param name="replace" select="'sd'"/>
+                                           <xsl:with-param name="by" select="'vd'"/>
+ 				        </xsl:call-template>
+                                   </xsl:attribute>
+	                       </xsl:when>
+			       <xsl:when test="/instance/hypervisor/@type='xen' and /instance/os/@platform='windows'"> 
+                                  <xsl:attribute name="bus">xen</xsl:attribute>
+				  <xsl:attribute name="dev">
+					<xsl:call-template name="string-replace-all">
+					    <xsl:with-param name="text" select="@targetDeviceName"/>
+					    <xsl:with-param name="replace" select="'sd'"/>
+				            <xsl:with-param name="by" select="'xvd'"/>
+                                        </xsl:call-template>
+				  </xsl:attribute>
+			       </xsl:when>
+                               <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@virtioRoot = 'true'"> 
+                                   <xsl:attribute name="bus">virtio</xsl:attribute>
+                                   <xsl:attribute name="dev">
+                                        <xsl:call-template name="string-replace-all">
+                                           <xsl:with-param name="text" select="@targetDeviceName"/>
+                                           <xsl:with-param name="replace" select="'sd'"/>
+                                           <xsl:with-param name="by" select="'vd'"/>
+                                        </xsl:call-template>
+                                   </xsl:attribute>
+                               </xsl:when>
+			       <xsl:otherwise>
+			           <xsl:attribute name="dev">
+                               		<xsl:value-of select="@targetDeviceName"/>
+                            	   </xsl:attribute>
+                            	   <xsl:attribute name="bus">
+                               		<xsl:value-of select="@targetDeviceBus"/>
+                            	   </xsl:attribute>
+			        </xsl:otherwise>
+	                    </xsl:choose>
                         </target>
                     </disk>
-                    <xsl:if test="/instance/disks/floppyPath != ''">
-                        <disk type="file" device="floppy">
-                            <source>
-                                <xsl:attribute name="file">
-                                    <xsl:value-of select="/instance/disks/floppyPath"/>
-                                </xsl:attribute>
-                            </source>
-                            <target dev="fda"/>
-                        </disk>
-                    </xsl:if>
                 </xsl:for-each>
+                <xsl:if test="/instance/disks/floppyPath != ''">
+                    <disk type="file" device="floppy">
+                        <source>
+                            <xsl:attribute name="file">
+                               <xsl:value-of select="/instance/disks/floppyPath"/>
+                            </xsl:attribute>
+                        </source>
+                        <target dev="fda"/>
+                    </disk>
+                </xsl:if>
                 <!-- network cards -->
                 <xsl:for-each select="/instance/nics/nic">
                     <interface type="bridge">
@@ -147,11 +179,11 @@ that describes a Eucalyptus instance to be launched.
                             </xsl:attribute>
                         </mac>
                         <xsl:choose>
-                            <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@virtioRoot = 'true'">
+                            <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@platform = 'windows'">
                                 <model type="virtio"/>
                             </xsl:when>
-                            <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@platform = 'windows'">
-                                <model type="rtl8139"/>
+                            <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@virtioRoot = 'true'">
+                                <model type="virtio"/>
                             </xsl:when>
                             <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@platform = 'linux'">
                                 <model type="e1000"/>
@@ -183,5 +215,25 @@ that describes a Eucalyptus instance to be launched.
                 <!-- <graphics type='vnc' port='-1' autoport='yes' keymap='en-us' listen='0.0.0.0'/> -->
             </devices>
         </domain>
+    </xsl:template>
+    <xsl:template name="string-replace-all">
+        <xsl:param name="text" />
+        <xsl:param name="replace" />
+        <xsl:param name="by" />
+        <xsl:choose>
+            <xsl:when test="contains($text, $replace)">
+                <xsl:value-of select="substring-before($text,$replace)" />
+                <xsl:value-of select="$by" />
+                    <xsl:call-template name="string-replace-all">
+                        <xsl:with-param name="text"
+                           select="substring-after($text,$replace)" />
+                        <xsl:with-param name="replace" select="$replace" />
+                        <xsl:with-param name="by" select="$by" />
+                    </xsl:call-template>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:value-of select="$text" />
+            </xsl:otherwise>
+        </xsl:choose>
     </xsl:template>
 </xsl:transform>

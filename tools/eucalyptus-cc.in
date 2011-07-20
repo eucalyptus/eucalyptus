@@ -217,9 +217,11 @@ do_status() {
 do_fullclean() {
 	pidfiles="`ls -1 $EUCALYPTUS/var/run/eucalyptus/vtund*.pid 2>/dev/null`"
         pids=""
+        sids=""
         for pidfile in $pidfiles ; do
             if [ -s $pidfile ]; then
                 pid=`cat $pidfile 2> /dev/null`
+                sids="$pid $sids"
                 morepids="$pid"
                 for i in `pgrep -P $pid`; do
                     morepids="$morepids `echo $i`"
@@ -231,14 +233,17 @@ do_fullclean() {
         done
         if [ -n "$pids" ]; then
             kill -15 $pids >/dev/null 2>&1
+            pkill -15 -s $sids >/dev/null 2>&1
         fi
 
+        dopkill=0
         for pid in $pids ; do
             timeout=5
             while [ $timeout -gt 0 ]; do
                 if ps $pid > /dev/null 2>&1 ; then
                     sleep 1
                     timeout=$(($timeout - 1))
+                    dopkill=1
                 else
                     break
                 fi
@@ -247,25 +252,30 @@ do_fullclean() {
                 kill -9 ${pid} >/dev/null 2>&1
             fi
         done
+        if [ $dopkill -gt 0 ]; then
+            pkill -9 -s $sids >/dev/null 2>&1
+        fi
 
 	rm -f $EUCALYPTUS/var/lib/eucalyptus/CC/*
 	rm -f /dev/shm/*eucalyptusCC*    
 }
 
 do_stop() {
-	pidfile="$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid"
+        pidfile="$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid"
 
-	# let's be sure we are killing the right process
-	if ! do_status ; then
-		rm -f $pidfile
-		return 
-	fi
-        # now kill the services
+        # let's be sure we are killing the right process                                                                                                                                                                                    
+        if ! do_status ; then
+                rm -f $pidfile
+                return
+        fi
+        # now kill the services                                                                                                                                                                                                             
         pidfiles="$EUCALYPTUS/var/run/eucalyptus/net/euca-dhcp.pid $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid $EUCALYPTUS/var/run/eucalyptus/httpd-dynserv.pid"
         pids=""
+        sids=""
         for pidfile in $pidfiles ; do
             if [ -s $pidfile ]; then
                 pid=`cat $pidfile 2> /dev/null`
+                sids="$pid $sids"
                 morepids="$pid"
                 for i in `pgrep -P $pid`; do
                     morepids="$morepids `echo $i`"
@@ -277,14 +287,17 @@ do_stop() {
         done
         if [ -n "$pids" ]; then
             kill -15 $pids >/dev/null 2>&1
+            pkill -9 -s $sids >/dev/null 2>&1
         fi
 
+        dopkill=0
         for pid in $pids ; do
             timeout=5
             while [ $timeout -gt 0 ]; do
                 if ps $pid > /dev/null 2>&1 ; then
                     sleep 1
                     timeout=$(($timeout - 1))
+                    dopkill=1
                 else
                     break
                 fi
@@ -293,6 +306,9 @@ do_stop() {
                 kill -9 ${pid} >/dev/null 2>&1
             fi
         done
+        if [ $dopkill -gt 0 ]; then
+            pkill -9 -s $sids >/dev/null 2>&1
+        fi
 }
 
 # Read configuration variable file if it is present

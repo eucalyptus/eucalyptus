@@ -92,7 +92,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.auth.login.WalrusWrappedComponentCredentials;

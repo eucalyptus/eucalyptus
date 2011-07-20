@@ -69,7 +69,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.google.common.collect.Lists;
@@ -79,10 +79,10 @@ public class ComponentIds {
   private static final Map<Class, ComponentId> compIdMap        = new HashMap<Class, ComponentId>( );
   
   public static boolean shouldBootstrapLocally( ComponentId c ) {
-    boolean cloudLocal = Bootstrap.isCloudController( ) && c.isCloudLocal( ) && !c.isRegisterable( );
+    boolean cloudLocal = BootstrapArgs.isCloudController( ) && c.isCloudLocal( ) && !c.isRegisterable( );
+    boolean isCloudItself = BootstrapArgs.isCloudController( ) && Eucalyptus.class.equals( c.getClass( ) );
     boolean alwaysLocal = c.isAlwaysLocal( );
     boolean isBootrapperItself = Empyrean.class.equals( c.getClass( ) );
-    boolean isCloudItself = Eucalyptus.class.equals( c.getClass( ) );
     return cloudLocal || alwaysLocal || isBootrapperItself || isCloudItself;
   }
   

@@ -167,9 +167,9 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
     if (netconf != NULL) {
         ncnet.vlan = adb_netConfigType_get_vlan(netconf, env);
         ncnet.networkIndex = adb_netConfigType_get_networkIndex(netconf, env);
-        strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), 24);
-        strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), 24);
-        strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), 24);
+        safe_strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), 24);
+        safe_strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), 24);
+        safe_strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), 24);
     }
 
     int groupNamesSize = adb_instanceType_sizeof_groupNames (instance, env);
@@ -198,7 +198,7 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         groupNames, groupNamesSize
         );
 
-    strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
+    safe_strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
     outInst->blkbytes = adb_instanceType_get_blkbytes(instance, env);
     outInst->netbytes = adb_instanceType_get_netbytes(instance, env);
 
@@ -212,10 +212,10 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
     if (outInst->volumesSize > 0) {
         for (i=0; i<EUCA_MAX_VOLUMES && i<outInst->volumesSize; i++) {
             adb_volumeType_t * volume = adb_instanceType_get_volumes_at (instance, env, i);
-            strncpy (outInst->volumes[i].volumeId, adb_volumeType_get_volumeId (volume, env), CHAR_BUFFER_SIZE);
-            strncpy (outInst->volumes[i].remoteDev, adb_volumeType_get_remoteDev (volume, env), CHAR_BUFFER_SIZE);
-            strncpy (outInst->volumes[i].localDev, adb_volumeType_get_localDev (volume, env), CHAR_BUFFER_SIZE);
-            strncpy (outInst->volumes[i].stateName, adb_volumeType_get_state (volume, env), CHAR_BUFFER_SIZE);
+            safe_strncpy (outInst->volumes[i].volumeId, adb_volumeType_get_volumeId (volume, env), CHAR_BUFFER_SIZE);
+            safe_strncpy (outInst->volumes[i].remoteDev, adb_volumeType_get_remoteDev (volume, env), CHAR_BUFFER_SIZE);
+            safe_strncpy (outInst->volumes[i].localDev, adb_volumeType_get_localDev (volume, env), CHAR_BUFFER_SIZE);
+            safe_strncpy (outInst->volumes[i].stateName, adb_volumeType_get_state (volume, env), CHAR_BUFFER_SIZE);
         }
     }
 

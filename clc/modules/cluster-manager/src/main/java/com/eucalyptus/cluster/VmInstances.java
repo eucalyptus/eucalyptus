@@ -199,7 +199,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
               Addresses.release( address );
             } else {
               EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
-              AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getCluster( ) );
+              AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getPartition( ) );
             }
           } catch ( IllegalStateException e ) {} catch ( Throwable e ) {
             LOG.debug( e, e );
@@ -214,7 +214,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
 //              EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ).debug( );
 //            }
             if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
-              StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getAccount( ), net.getNetworkName( ), net.getUuid( ),
+              StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserFullName( ), net.getNetworkName( ), net.getUuid( ),
                                                                                        net.getVlan( ) ) );
               for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
                 AsyncRequests.newRequest( stopNet.newInstance( ) ).dispatch( c.getConfiguration( ) );

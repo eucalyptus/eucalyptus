@@ -158,6 +158,7 @@ int check_file_newer_than(char *file, time_t mtime);
 // safe version of common fuctions
 char *safe_mkdtemp(char *);
 int safe_mkstemp(char *);
+char* safe_strncpy(char *s1, const char *s2, size_t len);
 
 // argument checker
 int param_check(char *func, ...);

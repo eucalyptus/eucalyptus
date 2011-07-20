@@ -1,5 +1,6 @@
 package com.eucalyptus.util.async;
 
+import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -7,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.NoSuchServiceException;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceEndpoint;
@@ -96,12 +98,17 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   
   /**
    * @see com.eucalyptus.util.async.Request#dispatch(java.lang.String)
-   * @param cluster
+   * @param clusterOrPartition
    * @return
    */
   @Override
-  public CheckedListenableFuture<R> dispatch( String cluster ) {//TODO:GRZE:ASAP: get rid of this method
-    ServiceConfiguration serviceConfig = Components.lookup( ClusterController.class ).lookupServiceConfiguration( cluster );
+  public CheckedListenableFuture<R> dispatch( String clusterOrPartition ) {//TODO:GRZE:ASAP: get rid of this method
+    ServiceConfiguration serviceConfig;
+    try {
+      serviceConfig = Components.lookup( ClusterController.class ).lookupServiceConfiguration( clusterOrPartition );
+    } catch ( NoSuchElementException ex ) {
+      serviceConfig = Partitions.lookupService( ClusterController.class, clusterOrPartition );
+    }
     return this.dispatch( serviceConfig );
   }
   
