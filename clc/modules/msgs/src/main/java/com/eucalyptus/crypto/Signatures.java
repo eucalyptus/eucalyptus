@@ -11,7 +11,8 @@ import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 
 public enum Signatures {
-  SHA256withRSA;
+  SHA256withRSA,
+  SHA1WithRSA;
   private static Logger LOG = Logger.getLogger( Signatures.class );
 
   public String trySign( Class<? extends ComponentId> component, byte[] data ) {

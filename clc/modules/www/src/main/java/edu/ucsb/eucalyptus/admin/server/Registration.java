@@ -77,8 +77,8 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.Walrus;
-import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.util.Internets;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
@@ -114,7 +114,7 @@ public class Registration extends HttpServlet {
   
   private static String blockStorageConfiguration( ) {
     try {
-      if ( !ServiceConfigurations.getConfigurations( StorageControllerConfiguration.class ).isEmpty( ) ) {
+      if ( !ServiceConfigurations.list( Storage.class ).isEmpty( ) ) {
         return "        <Resource>\n" + "          <Name>ebs_snapshots</Name>\n" + "        </Resource>\n" + "        <Resource>\n"
                + "          <Name>ebs_volumes</Name>\n" + "        </Resource>\n";
       }

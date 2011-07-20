@@ -63,9 +63,13 @@
 
 package com.eucalyptus.bootstrap;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.List;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
@@ -74,6 +78,8 @@ import org.jgroups.ChannelClosedException;
 import org.jgroups.ChannelException;
 import org.jgroups.ChannelNotConnectedException;
 import org.jgroups.ExtendedMembershipListener;
+import org.jgroups.Global;
+import org.jgroups.Header;
 import org.jgroups.JChannel;
 import org.jgroups.Message;
 import org.jgroups.PhysicalAddress;
@@ -87,6 +93,7 @@ import com.eucalyptus.component.Host;
 import com.eucalyptus.component.Hosts;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.Event;
@@ -95,26 +102,23 @@ import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.Logs;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class HostManager {
-  private static Logger         LOG = Logger.getLogger( HostManager.class );
-  private final JChannel        membershipChannel;
-  private final PhysicalAddress physicalAddress;
-  private final String          membershipGroupName;
-  private final CurrentView     view;
-  private HostStateListener     stateListener;
-  private static HostManager    singleton;
-  private final Predicate<Host> dbFilter;
-  
-  interface InitRequest {}
-  
-  static class Initialize implements InitRequest, Serializable {}
-  
-  static class NoInitialize implements InitRequest, Serializable {}
+  private static Logger              LOG                   = Logger.getLogger( HostManager.class );
+  private final JChannel             membershipChannel;
+  private final PhysicalAddress      physicalAddress;
+  private final String               membershipGroupName;
+  final CurrentView                  view;
+  private HostStateListener          stateListener;
+  private static HostManager         singleton;
+  private static final AtomicInteger epochSeen             = new AtomicInteger( 0 );
+  private static final long          HOST_ADVERTISE_REMOTE = 15;
+  private static final long          HOST_ADVERTISE_CLOUD  = 8;
   
   private HostManager( ) {
     this.view = new CurrentView( );
@@ -129,20 +133,26 @@ public class HostManager {
       LOG.info( "Starting membership channel... " );
       this.membershipChannel.connect( this.membershipGroupName );
       this.setStateListener( listener );
+      Protocols.registerHeader( EpochHeader.class );
       this.physicalAddress = ( PhysicalAddress ) this.membershipChannel.downcall( new org.jgroups.Event( org.jgroups.Event.GET_PHYSICAL_ADDRESS,
                                                                                                          this.membershipChannel.getAddress( ) ) );
       LOG.info( "Started membership channel: " + this.membershipGroupName );
-      this.dbFilter = new Predicate<Host>( ) {
-        
-        @Override
-        public boolean apply( Host arg0 ) {
-          return arg0.hasDatabase( ) || arg0.getGroupsId( ).equals( HostManager.this.getMembershipChannel( ).getAddress( ) );
-        }
-      };
     } catch ( ChannelException ex ) {
       LOG.fatal( ex, ex );
       throw BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
     }
+  }
+  
+  private void setStateListener( HostStateListener stateListener ) {
+    if ( this.stateListener != null && this.stateListener != stateListener ) {//yes i mean reference equality
+      ListenerRegistry.getInstance( ).deregister( Hertz.class, HostManager.this.stateListener );
+    }
+    this.stateListener = stateListener;
+    ListenerRegistry.getInstance( ).register( Hertz.class, HostManager.this.stateListener );
+  }
+  
+  public static int getMaxSeenEpoch( ) {
+    return HostManager.epochSeen.get( );
   }
   
   public static HostManager getInstance( ) {
@@ -214,6 +224,12 @@ public class HostManager {
     }
     
     private void onMessage( Message msg ) {
+      EpochHeader epochHeader = ( EpochHeader ) msg.getHeader( Protocols.lookupRegisteredId( EpochHeader.class ) );
+      Integer senderEpoch = epochHeader.getValue( );
+      int myEpoch = HostManager.epochSeen.get( );
+      if ( myEpoch < senderEpoch ) {
+        HostManager.epochSeen.compareAndSet( myEpoch, senderEpoch );
+      }
       switch ( this.initializing.get( ) ) {
         case PENDING:
           if ( msg.getObject( ) instanceof InitRequest ) {
@@ -253,8 +269,8 @@ public class HostManager {
     public abstract void fireEvent( Event event );
     
     @Override
-    public final void viewAccepted( View new_view ) {
-      HostManager.this.view.viewAccepted( new_view );
+    public final void viewAccepted( View newView ) {
+      HostManager.this.view.viewAccepted( newView );
       /**
        * this seems dumb at first glance, but the state changing mechanism needs to be separate from
        * the state itself --
@@ -264,28 +280,24 @@ public class HostManager {
     
   }
   
-  private void setStateListener( HostStateListener stateListener ) {
-    if ( this.stateListener != null && this.stateListener != stateListener ) {//yes i mean reference equality
-      ListenerRegistry.getInstance( ).deregister( Hertz.class, HostManager.this.stateListener );
-    }
-    this.stateListener = stateListener;
-    ListenerRegistry.getInstance( ).register( Hertz.class, HostManager.this.stateListener );
-  }
-  
   private class RemoteHostStateListener extends HostStateListener {
+    
+    /**
+     * 
+     */
+    public RemoteHostStateListener( ) {}
+    
     public void initialize( boolean doInit ) {
       if ( doInit ) {
         LOG.info( "Performing first-time system init." );
         try {
           Bootstrap.initializeSystem( );
-//          Eucalyptus.setupServiceDependencies( Internets.localHostInetAddress( ) );
-//          Bootstrap.initBootstrappers( );
-//          HostManager.this.setStateListener( new CloudControllerHostStateHandler( ) );
           System.exit( 123 );
         } catch ( Throwable ex ) {
           LOG.error( ex, ex );
           System.exit( 123 );
         }
+      } else {
       }
     }
     
@@ -310,12 +322,9 @@ public class HostManager {
     
     @Override
     public void fireEvent( Event event ) {
-      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( Bootstrap.isFinished( )
-        ? 15
-        : 3 ) ) {
-        LOG.debug( "Sending state info: " + Hosts.localHost( ) );
+      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( HOST_ADVERTISE_REMOTE ) ) {
         try {
-          HostManager.this.membershipChannel.send( new Message( null, null, Lists.newArrayList( Hosts.localHost( ) ) ) );
+          HostManager.send( null, Lists.newArrayList( Hosts.localHost( ) ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -326,33 +335,43 @@ public class HostManager {
   
   private class CloudControllerHostStateHandler extends HostStateListener {
     
+    public CloudControllerHostStateHandler( ) {}
+    
     @Override
     public void receive( List<Host> hosts ) {
       Component euca = Components.lookup( Eucalyptus.class );
       if ( !Bootstrap.isFinished( ) ) {
-        return;
-      }
-      for ( final Host host : hosts ) {
-        if ( !host.hasBootstrapped( ) && !host.hasDatabase( ) && !host.isLocalHost( ) ) {
-          try {
-            ServiceConfiguration config = euca.getBuilder( ).lookupByHost( host.getBindAddress( ).getHostAddress( ) );
-            LOG.debug( "Requesting first time initialization for remote cloud controller: " + host );
-            HostManager.send( host.getGroupsId( ), new Initialize( ) );
-          } catch ( ServiceRegistrationException ex ) {
-            LOG.trace( ex );
-          }
-        } else if ( !host.hasBootstrapped( ) ) {
-          LOG.debug( "Requesting remote component startup: " + host );
-          HostManager.send( host.getGroupsId( ), new NoInitialize( ) );
+        for ( final Host host : hosts ) {
+          Hosts.update( host );
         }
-        Hosts.update( host );
+        //NOTE:GRZE: setup any existing remote DBs here
+        for ( Host host : Hosts.listRemoteDatabases( ) ) {
+          Eucalyptus.setupServiceDependencies( host.getBindAddress( ) );
+        }
+        HostManager.this.view.markReady( );
+        return;
+      } else {
+        for ( final Host host : hosts ) {
+          Hosts.update( host );
+          if ( !host.hasBootstrapped( ) && !host.isLocalHost( ) ) {/** trigger startup on remote hosts **/
+            try {
+              ServiceConfiguration config = euca.getBuilder( ).lookupByHost( host.getBindAddress( ).getHostAddress( ) );
+              LOG.debug( "Requesting first time initialization for remote cloud controller: " + host );
+              HostManager.send( host.getGroupsId( ), new Initialize( ) );
+            } catch ( Exception ex ) {
+              Logs.exhaust( ).error( ex );
+              LOG.debug( "Requesting remote component startup: " + host );
+              HostManager.send( host.getGroupsId( ), new NoInitialize( ) );
+            }
+          }
+        }
       }
     }
     
     @Override
     public void fireEvent( Event event ) {
-      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( 3 ) && Bootstrap.isFinished( ) ) {
-        HostManager.this.view.sendState( );
+      if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( HOST_ADVERTISE_CLOUD ) && Bootstrap.isFinished( ) ) {
+        HostManager.send( null, ( Serializable ) Hosts.listDatabases( ) );
       }
     }
     
@@ -375,7 +394,7 @@ public class HostManager {
     }
     
     private boolean setInitialView( View oldView, View newView ) {
-      return this.currentView.compareAndSet( oldView, newView, true, !BootstrapArgs.isCloudController( ) );//handle the bootstrap case correctly
+      return this.currentView.compareAndSet( oldView, newView, true, !( BootstrapArgs.isCloudController( ) && oldView == null && newView.size( ) == 1 ) );//handle the bootstrap case correctly
     }
     
     public void viewAccepted( View newView ) {
@@ -397,14 +416,11 @@ public class HostManager {
     }
     
     void markReady( ) {
-      this.currentView.set( this.currentView.getReference( ), false );
+      if ( !this.isReady( ) ) {
+        this.currentView.set( this.currentView.getReference( ), false );
+      }
     }
     
-    public void sendState( ) {
-      final Iterable<Host> dbs = Iterables.filter( Hosts.list( ), HostManager.this.dbFilter );
-      LOG.debug( "Sending state info: \n" + Joiner.on( "\n" ).join( dbs ) );
-      HostManager.send( null, Lists.newArrayList( dbs ) );
-    }
   }
   
   public static String getMembershipGroupName( ) {
@@ -435,26 +451,70 @@ public class HostManager {
   }
   
   public static Future<?> send( final Address dest, final Serializable msg ) {
-    LOG.debug( "Preparing to send message to: " + dest + " with payload " + msg.toString( ) );
     final Message outMsg = new Message( dest, null, msg );
-    LOG.debug( "Outgoing message: " + outMsg );
-    return Threads.lookup( Empyrean.class, HostManager.class ).submit( new Runnable( ) {
+    outMsg.putHeader( Protocols.lookupRegisteredId( EpochHeader.class ), new EpochHeader( Topology.epoch( ) ) );
+    StackTraceElement caller = Thread.currentThread( ).getStackTrace( )[1];
+    LOG.debug( caller.getClassName( ).replaceAll( "^.*\\.","" ) + "." + caller.getMethodName( ) + ":" + caller.getLineNumber( ) + " sending message to: " + dest + " with payload " + msg.toString( ) + " " + outMsg.getHeaders( ) );
+    return Threads.lookup( Empyrean.class, HostManager.class ).limitTo( 8 ).submit( new Runnable( ) {
       
       @Override
       public void run( ) {
-        try {
-          LOG.trace( "Sending message to: " + dest + " with payload " + msg.toString( ) );
-          singleton.membershipChannel.send( outMsg );
-        } catch ( ChannelNotConnectedException ex ) {
-          LOG.error( ex, ex );
-        } catch ( ChannelClosedException ex ) {
-          LOG.error( ex, ex );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+        View v = HostManager.getInstance( ).view.getCurrentView( );
+        if ( dest == null && ( v == null || v.getMembers( ).size( ) <= 1 ) ) {
+          return;
+        } else {
+          try {
+            LOG.trace( "Sending message to: " + dest + " with payload " + msg.toString( ) );
+            singleton.membershipChannel.send( outMsg );
+          } catch ( ChannelNotConnectedException ex ) {
+            LOG.error( ex, ex );
+          } catch ( ChannelClosedException ex ) {
+            LOG.error( ex, ex );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
         }
       }
     } );
     
+  }
+  
+  interface InitRequest {}
+  
+  static class Initialize implements InitRequest, Serializable {}
+  
+  static class NoInitialize implements InitRequest, Serializable {}
+  
+  public static class EpochHeader extends Header {
+    private Integer value;
+    
+    public EpochHeader( ) {
+      super( );
+    }
+    
+    public EpochHeader( Integer value ) {
+      super( );
+      this.value = value;
+    }
+    
+    @Override
+    public void writeTo( DataOutputStream out ) throws IOException {
+      out.writeInt( this.value );
+    }
+    
+    @Override
+    public void readFrom( DataInputStream in ) throws IOException, IllegalAccessException, InstantiationException {
+      this.value = in.readInt( );
+    }
+    
+    @Override
+    public int size( ) {
+      return Global.INT_SIZE;
+    }
+    
+    public Integer getValue( ) {
+      return this.value;
+    }
   }
   
 }

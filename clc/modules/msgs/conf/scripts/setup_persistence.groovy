@@ -63,21 +63,15 @@
 
 import com.eucalyptus.system.SubDirectory;
 
-import groovy.xml.MarkupBuilder
 import org.apache.log4j.Logger
 import org.hibernate.ejb.Ejb3Configuration
-import org.logicalcobwebs.proxool.ProxoolFacade
+import com.eucalyptus.bootstrap.Databases
 import com.eucalyptus.bootstrap.SystemIds
-import com.eucalyptus.component.Components
-import com.eucalyptus.component.ServiceConfiguration
-import com.eucalyptus.component.id.Database
 import com.eucalyptus.entities.PersistenceContexts
-import com.eucalyptus.system.SubDirectory
-import com.eucalyptus.util.Internets
 
-Logger LOG = Logger.getLogger( "after_database" );
+Logger LOG = Logger.getLogger( "setup_persistence" );
 
-String real_jdbc_driver = 'com.mysql.jdbc.Driver';
+String real_jdbc_driver = Databases.getDriverName( );;
 String pool_db_driver = 'net.sf.hajdbc.sql.Driver';
 String pool_db_url = 'jdbc:ha-jdbc:eucalyptus';
 String db_pass = SystemIds.databasePassword( );
@@ -105,7 +99,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
   hibernate_config.putAll(default_hiber_config)
   hibernate_config.putAll( [
         /** jdbc driver **/
-        'hibernate.dialect': 'org.hibernate.dialect.MySQLInnoDBDialect',
+        'hibernate.dialect': Databases.getHibernateDialect( ),
         /** db pools **/
         'hibernate.connection.provider_class': 'org.hibernate.connection.ProxoolConnectionProvider',
         'hibernate.proxool.pool_alias': "eucalyptus_${context_name}",

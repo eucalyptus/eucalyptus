@@ -151,7 +151,6 @@ public class ServiceBootstrapper extends Bootstrapper {
   
   @Override
   public boolean load( ) {
-    ServiceBootstrapper.maybeBootstrapDatabase( );
     ServiceBootstrapper.execute( new Predicate<ServiceConfiguration>( ) {
       
       @Override
@@ -174,20 +173,6 @@ public class ServiceBootstrapper extends Bootstrapper {
     return true;
   }
 
-  private static void maybeBootstrapDatabase( ) throws NoSuchElementException {
-    Component euca = Components.lookup( Eucalyptus.class );
-    try {
-      for( ServiceConfiguration config : euca.getBuilder( ).list( ) ) {
-        InetAddress addr = config.getInetAddress( );
-        if( Internets.testLocal( addr ) ) {
-          Eucalyptus.setupServiceDependencies( addr );
-        }
-      }
-    } catch ( ServiceRegistrationException ex1 ) {
-      LOG.error( ex1 , ex1 );
-    }
-  }
-  
   @Override
   public boolean start( ) throws Exception {
     ServiceBootstrapper.execute( new Predicate<ServiceConfiguration>( ) {

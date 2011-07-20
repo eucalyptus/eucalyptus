@@ -82,6 +82,7 @@ static int debug = 0;
 #define __error(format,...) do { fprintf(stderr,"[error:%04d] ", __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ ); } while(0)
 #define EUCA_LIB_DIR "/usr/share/eucalyptus"
 #define EUCA_ETC_DIR "/etc/eucalyptus/cloud.d"
+#define EUCA_CLASSCACHE_DIR "/var/run/eucalyptus/classcache"
 #define EUCA_SCRIPT_DIR "/etc/eucalyptus/cloud.d/scripts"
 #define EUCA_MAIN "com/eucalyptus/bootstrap/SystemBootstrapper"
 #define EUCA_RET_RELOAD 123

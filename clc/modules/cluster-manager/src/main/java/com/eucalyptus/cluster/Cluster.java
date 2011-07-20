@@ -102,7 +102,6 @@ import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.GatherLogService;
-import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.config.RegisterClusterType;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;

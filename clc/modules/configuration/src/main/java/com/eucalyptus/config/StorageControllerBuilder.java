@@ -49,7 +49,7 @@ public class StorageControllerBuilder extends AbstractServiceBuilder<StorageCont
   @Override
   public List<StorageControllerConfiguration> list( ) throws ServiceRegistrationException {
     try {
-      return ServiceConfigurations.getConfigurations( StorageControllerConfiguration.class );
+      return ServiceConfigurations.list( Storage.class );
     } catch ( PersistenceException e ) {
       return super.list( );
     }
@@ -77,7 +77,7 @@ public class StorageControllerBuilder extends AbstractServiceBuilder<StorageCont
     StorageControllerConfiguration config = this.newInstance( partition, name, host, port );
     try {
       Partition part = Partitions.lookup( config );
-      ServiceConfigurations.getInstance( ).store( config );
+      ServiceConfigurations.store( config );
       part.syncKeysToDisk( );
     } catch ( ServiceRegistrationException ex ) {
       Partitions.maybeRemove( config.getPartition( ) );

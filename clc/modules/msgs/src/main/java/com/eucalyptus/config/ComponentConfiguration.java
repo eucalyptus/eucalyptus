@@ -319,7 +319,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     try {
       return Partitions.lookup( this );
     } catch ( ServiceRegistrationException ex ) {
-      return Partition.fakePartition( this.getComponentId( ) );
+      return Partitions.lookupInternal( this );
     }
   }
   

@@ -70,11 +70,12 @@ import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.config.WalrusConfiguration;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.BaseDirectory;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 
@@ -123,7 +124,7 @@ public class StorageProperties {
 	public final static int SNAP_RESERVE = 20;
 	public static double NETAPP_META_OVERHEAD = 5;
 
-	static { GroovyUtil.loadConfig("storageprops.groovy"); }
+	static { Groovyness.loadConfig("storageprops.groovy"); }
 
 	public static void updateName() {
 	  try {
@@ -149,11 +150,11 @@ public class StorageProperties {
 	}
 
 	public static void updateWalrusUrl() {
-		List<WalrusConfiguration> walrusConfigs;
+		List<ServiceConfiguration> walrusConfigs;
 		try {
-			walrusConfigs = ServiceConfigurations.getConfigurations( WalrusConfiguration.class );
+			walrusConfigs = ServiceConfigurations.list( Walrus.class );
 			if(walrusConfigs.size() > 0) {
-				WalrusConfiguration walrusConfig = walrusConfigs.get(0);
+			  ServiceConfiguration walrusConfig = walrusConfigs.get(0);
 				WALRUS_URL = walrusConfig.getUri().toASCIIString( );
 				StorageProperties.enableSnapshots = true;
 				LOG.info("Setting WALRUS_URL to: " + WALRUS_URL);
