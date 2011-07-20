@@ -63,7 +63,9 @@
 
 package com.eucalyptus.cloud.run;
 
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -84,8 +86,14 @@ public class ImageVerify {
     String imageId = msg.getImageId( );
     VmType vmType = allocInfo.getVmType( );
     Partition partition = allocInfo.getPartition( );
-    BootableSet bootSet = Emis.newBootableSet( vmType, partition, imageId );
-    allocInfo.setBootableSet( bootSet );
+    try {
+      BootableSet bootSet = Emis.newBootableSet( vmType, partition, imageId );
+      allocInfo.setBootableSet( bootSet );
+    } catch ( AuthException ex ) {
+      throw new EucalyptusCloudException( ex );
+    } catch ( MetadataException ex ) {
+      throw new EucalyptusCloudException( ex );
+    }
     return allocInfo;
   }
   
