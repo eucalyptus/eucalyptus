@@ -85,6 +85,9 @@
   <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" synchronous="false" />
   <endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" synchronous="false" />
   <endpoint name="EmpyreanRequestQueueEndpoint" address="vm://EmpyreanRequestQueue" synchronous="false" />
+  <spring:beans>
+    <spring:import resource="classpath:empyrean-model.xml" />
+  </spring:beans>
   #foreach( $component in $components )
       <endpoint name="${component.getEntryPoint()}" address="vm://${component.getEntryPoint()}" synchronous="false" />
   #end 
@@ -124,8 +127,5 @@
       </outbound>
     </service>
   </model>
-  <spring:beans>
-    <spring:import resource="classpath:empyrean-model.xml" />
-  </spring:beans>
 
 </mule>

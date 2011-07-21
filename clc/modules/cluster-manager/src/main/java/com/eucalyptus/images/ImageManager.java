@@ -79,6 +79,7 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
@@ -141,7 +142,8 @@ public class ImageManager {
           LOG.trace( "Rejecting image " + t.getFullName( ) + " because user is not allowed." );
           return false;
         }
-        if ( !ctx.hasAdministrativePrivileges( ) && !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, t.getDisplayName( ), t.getOwner( ) ) ) {
+        if ( !ctx.hasAdministrativePrivileges( )
+             && !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, t.getDisplayName( ), t.getOwner( ) ) ) {
           LOG.error( "Accessing image " + t.getDisplayName( ) + " is denied by permission of " + ctx.getUser( ).getName( ) );
           return false;
         }
@@ -186,17 +188,24 @@ public class ImageManager {
       }
     }
     ImageInfo imageInfo = null;
-    final String rootDevName = ( request.getRootDeviceName( ) != null ) ? request.getRootDeviceName( ) : "/dev/sda1";
+    final String rootDevName = ( request.getRootDeviceName( ) != null )
+      ? request.getRootDeviceName( )
+      : "/dev/sda1";
     final String eki = request.getKernelId( );
     final String eri = request.getRamdiskId( );
     if ( request.getImageLocation( ) != null ) {
       ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
       LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
       List<DeviceMapping> vbr = Lists.transform( request.getBlockDeviceMappings( ), Images.deviceMappingGenerator( imageInfo ) );
-      imageInfo = Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), eki, eri, manifest );
+      Image.Architecture arch = ( request.getArchitecture( ) == null
+        ? null
+        : Image.Architecture.valueOf( request.getArchitecture( ) ) );
+      imageInfo = Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, null, eki, eri,
+                                             manifest );
       imageInfo.getDeviceMappings( ).addAll( vbr );
     } else if ( rootDevName != null && Iterables.any( request.getBlockDeviceMappings( ), Images.findEbsRoot( rootDevName ) ) ) {
-      imageInfo = Images.createFromDeviceMapping( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), eki, eri, rootDevName, request.getBlockDeviceMappings( ) );
+      imageInfo = Images.createFromDeviceMapping( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), eki, eri, rootDevName,
+                                                  request.getBlockDeviceMappings( ) );
     } else {
       throw new EucalyptusCloudException( "Malformed registration. A request must specify either " +
                                           "a manifest path or a snapshot to use for BFE. Provided values are: imageLocation="

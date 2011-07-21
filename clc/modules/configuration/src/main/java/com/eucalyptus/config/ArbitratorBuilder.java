@@ -44,7 +44,7 @@ public class ArbitratorBuilder extends AbstractServiceBuilder<ArbitratorConfigur
   @Override
   public List<ArbitratorConfiguration> list( ) throws ServiceRegistrationException {
     try {
-      return ServiceConfigurations.getConfigurations( ArbitratorConfiguration.class );
+      return ServiceConfigurations.list( Arbitrator.class );
     } catch ( PersistenceException e ) {
       return super.list( );
     }

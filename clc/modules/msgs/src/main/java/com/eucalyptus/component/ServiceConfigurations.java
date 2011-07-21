@@ -8,46 +8,120 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.ServiceChecks.CheckException;
-import com.eucalyptus.component.ServiceChecks.Severity;
-import com.eucalyptus.component.Topology.ServiceKey;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.records.EventClass;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.Logs;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
 
 public class ServiceConfigurations {
-  private static Logger                       LOG       = Logger.getLogger( ServiceConfigurations.class );
-  private static ServiceConfigurationProvider singleton = new DatabaseServiceConfigurationProvider( );
-
-  public static List<ServiceConfiguration> collect( Predicate<ServiceConfiguration> predicate ) {
-    List<ServiceConfiguration> configs = Lists.newArrayList( );
-    for( Component comp : Components.list( ) ) {
-      for( ServiceConfiguration config : comp.lookupServiceConfigurations( ) ) {
-        try {
-          if( predicate.apply( config ) ) {
-            Logs.exhaust( ).debug( "ServiceConfigurations.collect( ) accepted config " + config + " for predicate: " + predicate.getClass( ) );
-            configs.add( config );
-          } else {
-            Logs.exhaust( ).debug( "ServiceConfigurations.collect( ) rejected config " + config + " for predicate: " + predicate.getClass( ) );
-          }
-        } catch ( Exception ex ) {
-          Logs.exhaust( ).debug( "ServiceConfigurations.collect( ) failed for config " + config + " using predicate: " + predicate.getClass( ) + " because of " + ex.getMessage( ) );
-          LOG.error( ex , ex );
-        }
+  static Logger LOG = Logger.getLogger( ServiceConfigurations.class );
+  
+  public interface Provider {
+    public abstract <T extends ServiceConfiguration> List<T> list( T type );
+    
+    public abstract <T extends ServiceConfiguration> T store( T t );
+    
+    public abstract <T extends ServiceConfiguration> T remove( T t );
+    
+    public abstract <T extends ServiceConfiguration> T lookup( T type );
+  }
+  
+  private enum DatabaseProvider implements Provider {
+    INSTANCE;
+    
+    public <T extends ServiceConfiguration> List<T> list( T example ) {
+      EntityWrapper<T> db = EntityWrapper.get( example );
+      List<T> componentList;
+      try {
+        componentList = db.query( example );
+        db.commit( );
+        return componentList;
+      } catch ( PersistenceException ex ) {
+        LOG.trace( ex );
+        db.rollback( );
+        throw ex;
+      } catch ( Throwable ex ) {
+        LOG.trace( ex );
+        db.rollback( );
+        throw new PersistenceException( "Service configuration lookup failed for: " + LogUtil.dumpObject( example ), ex );
       }
     }
-    return configs;
+    
+    @Override
+    public <T extends ServiceConfiguration> T lookup( T example ) {
+      EntityWrapper<T> db = EntityWrapper.get( example );
+      T existingName = null;
+      try {
+        existingName = db.getUnique( example );
+        db.rollback( );
+        return existingName;
+      } catch ( PersistenceException ex ) {
+        LOG.trace( ex );
+        db.rollback( );
+        throw ex;
+      } catch ( Throwable ex ) {
+        LOG.trace( ex );
+        db.rollback( );
+        throw new PersistenceException( "Service configuration lookup failed for: " + LogUtil.dumpObject( example ), ex );
+      }
+    }
+    
+    @Override
+    public <T extends ServiceConfiguration> T store( T config ) {
+      EntityWrapper<T> db = EntityWrapper.get( config );
+      try {
+        db.add( config );
+        config = db.getUnique( config );
+        db.commit( );
+        EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, config.toString( ) ).info( );
+      } catch ( PersistenceException ex ) {
+        LOG.trace( ex );
+        EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, "FAILED", config.toString( ) ).error( );
+        db.rollback( );
+        throw ex;
+      } catch ( Throwable ex ) {
+        LOG.trace( ex );
+        EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, "FAILED", config.toString( ) ).error( );
+        db.rollback( );
+        throw new PersistenceException( "Service configuration storing failed for: " + LogUtil.dumpObject( config ), ex );
+      }
+      return config;
+    }
+    
+    @Override
+    public <T extends ServiceConfiguration> T remove( T config ) {
+      EntityWrapper<T> db = EntityWrapper.get( config );
+      try {
+        T searchConfig = ( T ) config.getClass( ).newInstance( );
+        searchConfig.setName( config.getName( ) );
+        T exists = db.getUnique( searchConfig );
+        db.delete( exists );
+        db.commit( );
+        EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED, config.toString( ) ).info( );
+      } catch ( PersistenceException ex ) {
+        LOG.trace( ex );
+        EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED, "FAILED", config.toString( ) ).error( );
+        db.rollback( );
+        throw ex;
+      } catch ( Throwable ex ) {
+        LOG.trace( ex );
+        EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_DEREGISTERED, "FAILED", config.toString( ) ).error( );
+        db.rollback( );
+        throw new PersistenceException( "Service configuration removal failed for: " + LogUtil.dumpObject( config ), ex );
+      }
+      return config;
+    }
+    
   }
   
   public static Function<ServiceConfiguration, ServiceStatusType> asServiceStatus( final boolean showEvents, final boolean showEventStacks ) {
@@ -156,8 +230,8 @@ public class ServiceConfigurations {
     
   }
   
-  public static ServiceConfigurationProvider getInstance( ) {
-    return singleton;
+  private static Provider getProvider( ) {
+    return DatabaseProvider.INSTANCE;
   }
   
   public static ServiceConfiguration createEphemeral( ComponentId compId, String partition, String name, URI remoteUri ) {
@@ -173,82 +247,47 @@ public class ServiceConfigurations {
     return createEphemeral( component.getComponentId( ), host );
   }
   
-  public static <T extends ServiceConfiguration> List<T> getConfigurations( Class<T> type ) throws PersistenceException {
-    if ( !ComponentConfiguration.class.isAssignableFrom( type ) ) {
+  public static <T extends ServiceConfiguration, C extends ComponentId> List<T> list( Class<C> type ) throws PersistenceException {
+    if ( !ComponentId.class.isAssignableFrom( type ) ) {
       throw new PersistenceException( "Unknown configuration type passed: " + type.getCanonicalName( ) );
-    }
-    EntityWrapper<T> db = EntityWrapper.get( type );
-    List<T> componentList;
-    try {
-      componentList = db.query( type.newInstance( ) );
-      db.commit( );
-      return componentList;
-    } catch ( PersistenceException ex ) {
-      LOG.error( ex, ex );
-      db.rollback( );
-      throw ex;
-    } catch ( Throwable ex ) {
-      LOG.error( ex, ex );
-      db.rollback( );
-      throw new PersistenceException( ex );
+    } else {
+      T example = ( T ) ServiceBuilders.lookup( type ).newInstance( );
+      return ServiceConfigurations.list( example );
     }
   }
   
-  public static <T extends ServiceConfiguration> List<T> getPartitionConfigurations( Class<T> type, String partition ) throws PersistenceException, NoSuchElementException {
-    if ( !ComponentConfiguration.class.isAssignableFrom( type ) ) {
+  public static <T extends ServiceConfiguration, C extends ComponentId> List<T> listPartition( Class<C> type, String partition ) throws PersistenceException, NoSuchElementException {
+    if ( !ComponentId.class.isAssignableFrom( type ) ) {
       throw new PersistenceException( "Unknown configuration type passed: " + type.getCanonicalName( ) );
     }
-    EntityWrapper<T> db = EntityWrapper.get( type );
-    List<T> componentList;
-    try {
-      T conf = type.newInstance( );
-      conf.setPartition( partition );
-      componentList = db.query( conf );
-      if ( componentList.isEmpty( ) ) {
-        throw new NoSuchElementException( "Failed to lookup registration for " + type.getSimpleName( ) + " in partition: " + partition );
-      }
-      db.commit( );
-      return componentList;
-    } catch ( NoSuchElementException ex ) {
-      db.rollback( );
-      throw ex;
-    } catch ( PersistenceException ex ) {
-      LOG.error( ex, ex );
-      db.rollback( );
-      throw ex;
-    } catch ( Throwable ex ) {
-      LOG.error( ex, ex );
-      db.rollback( );
-      throw new PersistenceException( ex );
-    }
+    T example = ( T ) ServiceBuilders.lookup( type ).newInstance( );
+    example.setPartition( partition );
+    return list( example );
   }
   
-  public static <T extends ServiceConfiguration> T getConfiguration( Class<T> type, String uniqueName ) throws PersistenceException, NoSuchElementException {
-    if ( !ComponentConfiguration.class.isAssignableFrom( type ) ) {
+  public static <T extends ServiceConfiguration, C extends ComponentId> T lookupByName( Class<C> type, String name ) {
+    if ( !ComponentId.class.isAssignableFrom( type ) ) {
       throw new PersistenceException( "Unknown configuration type passed: " + type.getCanonicalName( ) );
     }
-    EntityWrapper<T> db = EntityWrapper.get( type );
-    try {
-      T conf = type.newInstance( );
-      conf.setName( uniqueName );
-      T configuration = db.getUnique( conf );
-      db.commit( );
-      return configuration;
-    } catch ( EucalyptusCloudException ex ) {
-      LOG.trace( ex );
-      db.rollback( );
-      throw new NoSuchElementException( ex.getMessage( ) );
-    } catch ( PersistenceException ex ) {
-      LOG.error( ex, ex );
-      db.rollback( );
-      throw ex;
-    } catch ( Throwable ex ) {
-      LOG.error( ex, ex );
-      db.rollback( );
-      throw new PersistenceException( ex );
-    }
+    T example = ( T ) ServiceBuilders.lookup( type ).newInstance( );
+    example.setName( name );
+    return lookup( example );
+  }
+  
+  public static <T extends ServiceConfiguration> List<T> list( T type ) {
+    return getProvider( ).list( type );
+  }
+  
+  public static <T extends ServiceConfiguration> T store( T t ) {
+    return getProvider( ).store( t );
+  }
+  
+  public static <T extends ServiceConfiguration> T remove( T t ) {
+    return getProvider( ).remove( t );
+  }
+  
+  public static <T extends ServiceConfiguration> T lookup( T type ) {
+    return getProvider( ).lookup( type );
   }
 
-
-  
 }

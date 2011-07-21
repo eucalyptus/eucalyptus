@@ -290,7 +290,7 @@ public class Components {
     
   }
   
-  public enum Predicates implements Predicate<Component> {
+  private enum Predicates implements Predicate<Component> {
     BOOTSTRAP_LOCALS {
       @Override
       public boolean apply( Component c ) {
@@ -311,26 +311,6 @@ public class Components {
         NavigableSet<ServiceConfiguration> services = c.lookupServiceConfigurations( );
         return services.isEmpty( ) ? false : Component.State.ENABLED.equals( services.first( ).lookupState( ) );
       }
-    };
-    
-    public static final Predicate<ServiceConfiguration> enabledService( ) {
-      return new Predicate<ServiceConfiguration>( ) {
-        
-        @Override
-        public boolean apply( ServiceConfiguration arg0 ) {
-          return Component.State.ENABLED.isIn( arg0 );
-        }
-      };
-    }
-    
-    public static Predicate<ServiceConfiguration> serviceInPartition( final String partitionName ) {
-      return new Predicate<ServiceConfiguration>( ) {
-        
-        @Override
-        public boolean apply( ServiceConfiguration arg0 ) {
-          return partitionName.equals( arg0.getPartition( ) ) && Component.State.ENABLED.isIn( arg0 );
-        }
-      };
     }
 
   }

@@ -92,7 +92,6 @@ import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Dns;
-import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
@@ -207,7 +206,9 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     this.clusterName = placement;
     String p = null;
     try {
-      p = ServiceConfigurations.getConfiguration( ClusterConfiguration.class, this.clusterName ).getPartition( );
+      ClusterConfiguration query = new ClusterConfiguration( );
+      query.setName( this.clusterName );
+      p = ServiceConfigurations.lookup( query ).getPartition( );
     } catch ( PersistenceException ex ) {
       p = placement;
       /** ASAP:GRZE: review **/

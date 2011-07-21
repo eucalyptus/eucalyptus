@@ -2,6 +2,7 @@ package com.eucalyptus.bootstrap;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -15,12 +16,17 @@ import java.util.SortedSet;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import javax.persistence.PersistenceContext;
+import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
+import org.jibx.binding.Loader;
+import org.jibx.binding.Utility;
+import org.jibx.runtime.JiBXException;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.BaseDirectory;
+import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Function;
 import com.google.common.collect.ArrayListMultimap;
@@ -32,18 +38,56 @@ import com.google.common.collect.Sets;
  * TODO: DOCUMENT
  */
 public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscovery> {
-  private static Logger                         LOG       = Logger.getLogger( ServiceJarDiscovery.class );
-  private static SortedSet<ServiceJarDiscovery> discovery = Sets.newTreeSet( );
-  private static Multimap<Class, String>        classList = ArrayListMultimap.create( );
+  private static Logger                         LOG         = Logger.getLogger( ServiceJarDiscovery.class );
+  private static SortedSet<ServiceJarDiscovery> discovery   = Sets.newTreeSet( );
+  private static Multimap<Class, String>        classList   = ArrayListMultimap.create( );
+  private static List<String>                   bindingList = Lists.newArrayList( );
   
-  @SuppressWarnings( { "deprecation", "unchecked" } )
-  private static void processFile( final File f ) throws IOException {
-    final JarFile jar = new JarFile( f );
-    final Properties props = new Properties( );
-    final List<JarEntry> jarList = Collections.list( jar.entries( ) );
-    LOG.trace( "-> Trying to load component info from " + f.getAbsolutePath( ) );
-    for ( final JarEntry j : jarList ) {
-      if ( j.getName( ).matches( ".*\\.class.{0,1}" ) ) {
+  enum JarFilePass {
+    BINDINGS {
+      @Override
+      public void process( File f ) throws Exception {
+        final JarFile jar = new JarFile( f );
+        final Properties props = new Properties( );
+        final List<JarEntry> jarList = Collections.list( jar.entries( ) );
+        LOG.trace( "-> Trying to load message binding info from " + f.getAbsolutePath( ) );
+        for ( final JarEntry j : jarList ) {
+          try {
+            if ( j.getName( ).matches( ".*\\-binding.xml" ) ) {
+              LOG.info( "Loading binding from: " + f.getAbsolutePath( ) + "!/" + j.getName( ) );
+              bindingList.add( j.getName( ) );
+            }
+          } catch ( RuntimeException ex ) {
+            LOG.error( ex, ex );
+            jar.close( );
+            throw ex;
+          }
+        }
+        jar.close( );
+      }
+    },
+    CLASSES {
+      @Override
+      public void process( File f ) throws Exception {
+        final JarFile jar = new JarFile( f );
+        final Properties props = new Properties( );
+        final List<JarEntry> jarList = Collections.list( jar.entries( ) );
+        LOG.trace( "-> Trying to load component info from " + f.getAbsolutePath( ) );
+        for ( final JarEntry j : jarList ) {
+          try {
+            if ( j.getName( ).matches( ".*\\.class.{0,1}" ) ) {
+              handleClassFile( f, j );
+            }
+          } catch ( RuntimeException ex ) {
+            LOG.error( ex, ex );
+            jar.close( );
+            throw ex;
+          }
+        }
+        jar.close( );
+      }
+      
+      private void handleClassFile( final File f, final JarEntry j ) throws IOException, RuntimeException {
         final String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
         try {
           final Class candidate = ClassLoader.getSystemClassLoader( ).loadClass( classGuess );
@@ -54,7 +98,6 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
               discovery.add( discover );
             } catch ( final Exception e ) {
               LOG.fatal( e, e );
-              jar.close( );
               throw new RuntimeException( e );
             }
           }
@@ -62,8 +105,9 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
           LOG.debug( e, e );
         }
       }
-    }
-    jar.close( );
+      
+    };
+    public abstract void process( final File f ) throws Exception;
   }
   
   private static void doDiscovery( ) {
@@ -73,7 +117,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
            && !f.getName( ).matches( ".*-ext-.*" ) ) {
         LOG.debug( "Found eucalyptus component jar: " + f.getName( ) );
         try {
-          ServiceJarDiscovery.processFile( f );
+          ServiceJarDiscovery.JarFilePass.CLASSES.process( f );
         } catch ( final Throwable e ) {
           LOG.error( e.getMessage( ) );
           continue;
@@ -90,7 +134,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
              && !f.getName( ).matches( ".*-ext-.*" ) ) {
         LOG.debug( "Found eucalyptus component jar: " + f.getName( ) );
         try {
-          ServiceJarDiscovery.processFile( f );
+          ServiceJarDiscovery.JarFilePass.CLASSES.process( f );
         } catch ( final Throwable e ) {
           LOG.error( e.getMessage( ) );
           continue;
@@ -166,6 +210,35 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     return this.getDistinctPriority( ).compareTo( that.getDistinctPriority( ) );
   }
   
+  public static void compileBindings( ) {
+    BootstrapClassLoader jibxLoader = BootstrapClassLoader.getInstance( );
+    final File libDir = new File( BaseDirectory.LIB.toString( ) );
+    for ( final File f : libDir.listFiles( ) ) {
+      if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
+           && !f.getName( ).matches( ".*-ext-.*" ) ) {
+        EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_SERVICE_JAR, f.getName( ) ).info( );
+        try {
+//          ServiceJarDiscovery.JarFilePass.BINDINGS.process( f );
+        } catch ( final Throwable e ) {
+          Bootstrap.LOG.error( e.getMessage( ) );
+          continue;
+        }
+      }
+    }
+    try {
+      for ( String binding : bindingList ) {
+        jibxLoader.loadResourceBinding( binding ); 
+      }
+      jibxLoader.processBindings( );
+    } catch ( JiBXException ex ) {
+      LOG.error( ex, ex );
+      throw new Error( "Failed to prepare the system while trying to compile bindings: " + ex.getMessage( ), ex );
+    } catch ( IOException ex ) {
+      LOG.error( ex, ex );
+      throw new Error( "Failed to prepare the system while trying to compile bindings: " + ex.getMessage( ), ex );
+    }
+  }
+  
   public static void processLibraries( ) {
     final File libDir = new File( BaseDirectory.LIB.toString( ) );
     for ( final File f : libDir.listFiles( ) ) {
@@ -173,7 +246,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
            && !f.getName( ).matches( ".*-ext-.*" ) ) {
         EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_SERVICE_JAR, f.getName( ) ).info( );
         try {
-          processFile( f );
+          ServiceJarDiscovery.JarFilePass.CLASSES.process( f );
         } catch ( final Throwable e ) {
           Bootstrap.LOG.error( e.getMessage( ) );
           continue;

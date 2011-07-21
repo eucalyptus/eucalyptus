@@ -71,24 +71,49 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
-import org.jgroups.View;
-import org.jgroups.ViewId;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.HostManager;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.Mbeans;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class Hosts {
+  enum DbFilter implements Predicate<Host> {
+    INSTANCE;
+    @Override
+    public boolean apply( Host arg0 ) {
+      return arg0.hasDatabase( );
+    }
+    
+  }
+  
+  enum NonLocalDbFilter implements Predicate<Host> {
+    INSTANCE;
+    @Override
+    public boolean apply( Host arg0 ) {
+      return !arg0.isLocalHost( ) && DbFilter.INSTANCE.apply( arg0 );
+    }
+    
+  }
+  
   private static final Logger                       LOG     = Logger.getLogger( Hosts.class );
   private static final ConcurrentMap<Address, Host> hostMap = new ConcurrentHashMap<Address, Host>( );
   
   public static List<Host> list( ) {
     return Lists.newArrayList( hostMap.values( ) );
+  }
+  
+  public static List<Host> listDatabases( ) {
+    return Lists.newArrayList( Iterables.filter( Hosts.list( ), DbFilter.INSTANCE ) );
+  }
+  
+  public static List<Host> listRemoteDatabases( ) {
+    return Lists.newArrayList( Iterables.filter( Hosts.list( ), NonLocalDbFilter.INSTANCE ) );
   }
   
   public static boolean contains( Address jgroupsId ) {
@@ -124,7 +149,7 @@ public class Hosts {
     } else {
       ret = hostMap.get( localJgroupsId );
     }
-    ret.update( BootstrapArgs.isCloudController( ), Bootstrap.isFinished( ), Internets.getAllInetAddresses( ) );
+    ret.update( Topology.epoch( ), BootstrapArgs.isCloudController( ), Bootstrap.isFinished( ), Internets.getAllInetAddresses( ) );
     return ret;
   }
   
@@ -136,7 +161,7 @@ public class Hosts {
       for ( Address addr : removeMembers ) {
         Host removedHost = hostMap.remove( addr );
         removedHosts.add( removedHost );
-        LOG.warn( "Failure detected for host: " + removedHost );
+        LOG.warn( "Failure detected for host: " + removedHost );//TODO:GRZE: review.
       }
     }
     LOG.debug( "Current host entries: " );
@@ -146,6 +171,10 @@ public class Hosts {
     LOG.debug( "Removed host entries: " );
     for ( Host host : removedHosts ) {
       LOG.debug( "-> " + host );
+      if ( host.hasDatabase( ) ) {
+        Eucalyptus.teardownServiceDependencies( host.getBindAddress( ) );
+      }
+      Empyrean.teardownServiceDependencies( host.getBindAddress( ) );
     }
     return removedHosts;
   }
@@ -158,32 +187,23 @@ public class Hosts {
       Host entry = null;
       if ( hostMap.containsKey( updatedHost.getGroupsId( ) ) ) {
         entry = hostMap.get( updatedHost.getGroupsId( ) );
-        entry.update( updatedHost.hasDatabase( ), updatedHost.hasBootstrapped( ), updatedHost.getHostAddresses( ) );
+        entry.update( updatedHost.getEpoch( ), updatedHost.hasDatabase( ), updatedHost.hasBootstrapped( ), updatedHost.getHostAddresses( ) );
       } else {
         Component empyrean = Components.lookup( Empyrean.class );
         ComponentId empyreanId = empyrean.getComponentId( );
-        for ( InetAddress addr : updatedHost.getHostAddresses( ) ) {
-          ServiceConfiguration ephemeralConfig = ServiceConfigurations.createEphemeral( empyrean, addr );
-          if ( !empyrean.hasService( ephemeralConfig ) ) {
-            try {
-              ServiceConfiguration config = empyrean.initRemoteService( addr );
-              empyrean.loadService( ephemeralConfig ).get( );
-              entry = new Host( updatedHost.getGroupsId( ), updatedHost.getBindAddress( ), updatedHost.hasDatabase( ), updatedHost.hasBootstrapped( ),
-                                updatedHost.getHostAddresses( ), config );
-              Host temp = hostMap.putIfAbsent( entry.getGroupsId( ), entry );
-              if ( temp == null ) {
-                Mbeans.register( entry );
-              } else {
-                entry = temp;
-              }
-            } catch ( ServiceRegistrationException ex ) {
-              LOG.error( ex, ex );
-            } catch ( ExecutionException ex ) {
-              LOG.error( ex, ex );
-            } catch ( InterruptedException ex ) {
-              Thread.currentThread( ).interrupt( );
-              LOG.error( ex, ex );
-            }
+        InetAddress addr = updatedHost.getBindAddress( );
+        ServiceConfiguration ephemeralConfig = ServiceConfigurations.createEphemeral( empyrean, addr );
+        if ( !empyrean.hasService( ephemeralConfig ) ) {
+          Empyrean.setupServiceDependencies( addr );
+          entry = new Host( updatedHost.getGroupsId( ), updatedHost.getBindAddress( ), updatedHost.getEpoch( ),
+                            updatedHost.hasDatabase( ),
+                            updatedHost.hasBootstrapped( ),
+                            updatedHost.getHostAddresses( ) );
+          Host temp = hostMap.putIfAbsent( entry.getGroupsId( ), entry );
+          if ( temp == null ) {
+            Mbeans.register( entry );
+          } else {
+            entry = temp;
           }
         }
       }

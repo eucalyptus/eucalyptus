@@ -88,7 +88,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   
   private void cleanup( ) {
     try {
-      if ( this.session.get( ) != null ) {
+      if ( this.session != null && this.session.get( ) != null ) {
         this.session.clear( );
       }
       this.delegate = null;
