@@ -462,7 +462,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 def ckSum = null;
                 def ckSumType = null;
                 def platform = Image.Platform.valueOf("linux");
-                def cachedImg = connMap['eucalyptus_general'].firstRow("""SELECT manifest_name,size sz FROM ImageCache 
+                def cachedImg = connMap['eucalyptus_walrus'].firstRow("""SELECT manifest_name,size sz FROM ImageCache 
                                                       WHERE bucket_name=${ path[0] }
                                                       AND manifest_name=${ path[1] }""");
                 if (cachedImg != null)
