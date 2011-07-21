@@ -748,7 +748,7 @@ class EucaConf(object):
                     if node not in current_nodes:
                         current_nodes.append(node)
                     if not self._sync_node(node):
-                        self.print_sync_error()
+                        self._print_sync_error()
             self.config['NODES'] = ' '.join(current_nodes)
             print '...done'
 
