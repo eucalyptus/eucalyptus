@@ -169,6 +169,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             }
             String contextName = getContextName(entityKey);
             if (optionalTables.contains(entityKey) && !has_table(contextName, entityKey)) {
+                LOG.info("table ${entityKey} does not exist; skipping.");
                 continue;
             }
             Sql conn;
@@ -790,8 +791,10 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     }
 
     def has_table(dbName, tableName) {
+        // NB: http://programmingitch.blogspot.com/2010/10/be-careful-using-gstrings-for-sql.html
         try {
-            connMap[dbName].firstRow("SELECT * FROM ${tableName}");
+            def query = "SELECT * FROM ${tableName}".toString();
+            connMap[dbName].firstRow(query);
             return true;
         } catch (Throwable t) {
             return false;
