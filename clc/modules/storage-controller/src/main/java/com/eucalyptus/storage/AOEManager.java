@@ -87,7 +87,7 @@ public class AOEManager implements StorageExportManager {
 	public native int exportVolume(String iface, String lvName, int major, int minor);
 
 	@Override
-	public void checkPreconditions() throws EucalyptusCloudException, ExecutionException {
+	public void checkPreconditions() throws EucalyptusCloudException {
 		String returnValue;
 		returnValue = SystemUtil.run(new String[]{OverlayManager.eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "which", "vblade"});
 		if(returnValue.length() == 0) {
