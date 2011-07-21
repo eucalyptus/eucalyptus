@@ -280,6 +280,8 @@ public class ISCSIManager implements StorageExportManager {
 					String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(i)});
 				} catch (EucalyptusCloudException e) {
 					tid = i;
+				}
+				if (tid > -1) {
 					break;
 				}
 				i = (i + 1) % Integer.MAX_VALUE;
