@@ -127,10 +127,10 @@ public class EntityWrapper<TYPE> {
       this.tx = new TxHandle( persistenceContext );
     } catch ( Throwable e ) {
       if ( Logs.EXTREME ) {
-        Logs.extreme( ).debug( Joiner.on(":").join(  EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.fail( ), e.getMessage( ) ) );
+        Logs.extreme( ).debug( Joiner.on(":").join(  EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.fail( ), "" + e.getMessage( ) ) );
       }
-      PersistenceErrorFilter.exceptionCaught( e );
-      throw ( RuntimeException ) e;
+      RecoverablePersistenceException ex = PersistenceErrorFilter.exceptionCaught( e );
+      throw new RuntimeException( ex );
     }
     if ( Logs.EXTREME ) {
       Logs.extreme( ).debug( Joiner.on(":").join(  EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.end( ), Long.toString( this.tx.splitOperation( ) ),

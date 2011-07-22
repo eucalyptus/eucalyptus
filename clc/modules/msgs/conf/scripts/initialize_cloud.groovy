@@ -2,8 +2,8 @@ import java.util.Properties
 import org.apache.log4j.Logger
 import org.hibernate.ejb.Ejb3Configuration
 import com.eucalyptus.bootstrap.Bootstrap
-import com.eucalyptus.bootstrap.BootstrapArgs;
-import com.eucalyptus.bootstrap.MysqlDatabaseBootstrapper
+import com.eucalyptus.bootstrap.BootstrapArgs
+import com.eucalyptus.bootstrap.Databases
 import com.eucalyptus.bootstrap.ServiceJarDiscovery
 import com.eucalyptus.bootstrap.SystemIds
 import com.eucalyptus.component.Component
@@ -19,21 +19,23 @@ import com.eucalyptus.entities.PersistenceContextDiscovery
 import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.system.DirectoryBootstrapper
 import com.eucalyptus.util.Internets
-import com.mysql.management.MysqldResource
 
 
 Logger LOG = Logger.getLogger( Bootstrap.class );
 if( BootstrapArgs.isInitializeSystem( ) ) {
   new DirectoryBootstrapper( ).load( );
   ServiceJarDiscovery.doSingleDiscovery(  new ComponentDiscovery( ) );
-  [ new ServiceBuilderDiscovery( ), new PersistenceContextDiscovery( ) ].each{
+  [
+    new ServiceBuilderDiscovery( ),
+    new PersistenceContextDiscovery( )
+  ].each{
     ServiceJarDiscovery.runDiscovery( it );
   }
   SystemCredentials.initialize( );
 }
 Component dbComp = Components.lookup( Database.class );
 try {
-  MysqldResource mysql = MysqlDatabaseBootstrapper.initialize( );
+  Databases.initialize( );
   try {
     props = [
           "hibernate.archive.autodetection": "jar, class, hbm",
@@ -42,12 +44,12 @@ try {
           "hibernate.connection.autocommit": "true",
           "hibernate.hbm2ddl.auto": "update",
           "hibernate.generate_statistics": "true",
-          "hibernate.connection.driver_class": "com.mysql.jdbc.Driver",
+          "hibernate.connection.driver_class": Databases.getDriverName( ),
           "hibernate.connection.username": "eucalyptus",
-          "hibernate.connection.password": SystemIds.databasePassword( ),
+          "hibernate.connection.password": Databases.getPassword( ),
           "hibernate.bytecode.use_reflection_optimizer": "true",
           "hibernate.cglib.use_reflection_optimizer": "true",
-          "hibernate.dialect": "org.hibernate.dialect.MySQLInnoDBDialect",
+          "hibernate.dialect": Databases.getHibernateDialect( ),
           "hibernate.cache.provider_class": "org.hibernate.cache.TreeCache",
           "hibernate.cache.region.factory_class": "org.hibernate.cache.jbc2.SharedJBossCacheRegionFactory",
           "hibernate.cache.region.jbc2.cfg.shared": "eucalyptus_jboss_cache.xml",
@@ -72,12 +74,13 @@ try {
       final ServiceConfiguration newComponent = ServiceBuilders.lookup( Eucalyptus.class ).add( Eucalyptus.INSTANCE.name( ), Internets.localHostAddress( ), Internets.localHostAddress( ), 8773 );
       LOG.info( "Added registration for this cloud controller: " + newComponent.toString() );
     }
+    Databases.getBootstrapper( ).destroy( );
   } catch( Exception ex ) {
+    Databases.getBootstrapper( ).destroy( );
     LOG.error( ex, ex );
     System.exit( 1 );
-  } finally {
-    mysql.shutdown( );
   }
 } catch( Exception ex ) {
+  Databases.getBootstrapper( ).destroy( );
   LOG.error( ex, ex );
 }

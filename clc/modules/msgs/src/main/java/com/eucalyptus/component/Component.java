@@ -191,12 +191,13 @@ public class Component implements HasName<Component> {
 //      return false;
 //    }
   }
-
+  
   /**
    * True if the component has not been explicitly configured as running in remote-mode where only
    * partial services are provided locally. That is, even if
    * the code is available locally we do not prepare the service bootstrappers to run, but the local
-   * service endpoint is still configured (i.e. for {@link com.eucalyptus.component.id.ComponentService.dns}).
+   * service endpoint is still configured (i.e. for
+   * {@link com.eucalyptus.component.id.ComponentService.dns}).
    * 
    * @return true if the component has not been explicitly marked as remote.
    */
@@ -280,10 +281,9 @@ public class Component implements HasName<Component> {
     if ( !this.isAvailableLocally( ) ) {
       throw new ServiceRegistrationException( "The component " + this.getName( ) + " is not being loaded automatically." );
     } else {
-      URI uri = this.getComponentId( ).getLocalEndpointUri( );
       String fakeName = Internets.localHostAddress( );
       ServiceConfiguration config = this.getBuilder( ).newInstance( this.getComponentId( ).getPartition( ), fakeName,
-                                                                    uri.getHost( ), uri.getPort( ) );
+                                                                    Internets.localHostAddress( ), this.getComponentId( ).getPort( ) );
       this.serviceRegistry.register( config );
       return config;
     }
@@ -320,9 +320,9 @@ public class Component implements HasName<Component> {
     if ( State.PRIMORDIAL.equals( config.lookupState( ) ) || State.INITIALIZED.equals( config.lookupState( ) ) ) {
       try {
         CheckedListenableFuture<ServiceConfiguration> ret = Automata.sequenceTransitions( config,
-                                      Component.State.PRIMORDIAL,
-                                      Component.State.INITIALIZED,
-                                      Component.State.LOADED ).call( );//.get( );
+                                                                                          Component.State.PRIMORDIAL,
+                                                                                          Component.State.INITIALIZED,
+                                                                                          Component.State.LOADED ).call( );//.get( );
         ret.get( );
         return ret;
       } catch ( Throwable ex ) {
@@ -381,13 +381,13 @@ public class Component implements HasName<Component> {
   }
   
   public NavigableSet<ServiceConfiguration> enabledServices( ) {
-    return Sets.newTreeSet( Iterables.filter( this.serviceRegistry.getServices( ), Components.Predicates.enabledService( ) ) );
+    return Sets.newTreeSet( Iterables.filter( this.serviceRegistry.getServices( ), Services.enabledService( ) ) );
   }
   
-  NavigableSet<ServiceConfiguration> enabledPartitionServices( final String partitionName ) {
+  NavigableSet<ServiceConfiguration> enabledPartitionServices( final Partition partition ) {
     Iterable<ServiceConfiguration> services = Iterables.filter( this.serviceRegistry.getServices( ),
-                                                                Predicates.and( Components.Predicates.enabledService( ),
-                                                                                Components.Predicates.serviceInPartition( partitionName ) ) );
+                                                                Predicates.and( Services.enabledService( ),
+                                                                                Services.serviceInPartition( partition ) ) );
     return Sets.newTreeSet( services );
   }
   
@@ -492,7 +492,8 @@ public class Component implements HasName<Component> {
      * Obtain a snapshot of the current service state. Note that this method creates a new set and
      * changes to the returned set will not be reflected in the underlying services set.
      * 
-     * @return {@link NavigableSet<Service>} of the registered service of this {@link Component} type.
+     * @return {@link NavigableSet<Service>} of the registered service of this {@link Component}
+     *         type.
      */
     public NavigableSet<ServiceConfiguration> getServices( ) {
       return Sets.newTreeSet( this.services.keySet( ) );
@@ -503,7 +504,8 @@ public class Component implements HasName<Component> {
      * 
      * @param fullName
      * @return {@link Service} instance of the deregistered service.
-     * @throws NoSuchElementException if no {@link Service} is registered with the provided {@link FullName}
+     * @throws NoSuchElementException if no {@link Service} is registered with the provided
+     *           {@link FullName}
      */
     public Service deregister( ServiceConfiguration config ) throws NoSuchElementException {
       Service ret = this.services.remove( config );
@@ -520,13 +522,14 @@ public class Component implements HasName<Component> {
       try {
         ListenerRegistry.getInstance( ).deregister( Hertz.class, ret );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
       return ret;
     }
     
     /**
-     * Returns the {@link Service} instance which was registered with the provided {@link ServiceConfiguration}, if it exists. If a service with the given name
+     * Returns the {@link Service} instance which was registered with the provided
+     * {@link ServiceConfiguration}, if it exists. If a service with the given name
      * does not exist a
      * NoSuchElementException is thrown.
      * 
@@ -590,13 +593,13 @@ public class Component implements HasName<Component> {
                               config.toString( ) ).info( );
           Logs.exhaust( ).debug( "Registered service " + ret + " for configuration: " + config );
         } catch ( IllegalStateException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         } catch ( ExecutionException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         } catch ( InterruptedException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         } catch ( ExistingTransitionException ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         }
       }
       return ret;

@@ -84,7 +84,6 @@ import org.jboss.netty.handler.stream.ChunkedInput;
 
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
-import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
 
@@ -131,7 +130,7 @@ public class FileSystemStorageManager implements StorageManager {
 			} else {
 				LOG.info(returnValue);
 			}
-		} catch(ExecutionException ex) {
+		} catch(EucalyptusCloudException ex) {
 			String error = "Unable to run command: " + ex.getMessage();
 			LOG.error(error);
 			throw new EucalyptusCloudException(error);
@@ -385,7 +384,7 @@ public class FileSystemStorageManager implements StorageManager {
 		});
 	}
 
-	private String removeLoopback(String loDevName) throws ExecutionException {
+	private String removeLoopback(String loDevName) throws EucalyptusCloudException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-d", loDevName});
 	}
 
@@ -410,45 +409,45 @@ public class FileSystemStorageManager implements StorageManager {
 		return -1;
 	}
 
-	private String findFreeLoopback() throws ExecutionException {
+	private String findFreeLoopback() throws EucalyptusCloudException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "losetup", "-f"}).replaceAll("\n", "");
 	}
 
-	private String removeLogicalVolume(String lvName) throws ExecutionException {
+	private String removeLogicalVolume(String lvName) throws EucalyptusCloudException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvremove", "-f", lvName});
 	}
 
-	private String reduceVolumeGroup(String vgName, String pvName) throws ExecutionException {
+	private String reduceVolumeGroup(String vgName, String pvName) throws EucalyptusCloudException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgreduce", vgName, pvName});
 	}
 
-	private String removePhysicalVolume(String loDevName) throws ExecutionException {
+	private String removePhysicalVolume(String loDevName) throws EucalyptusCloudException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "pvremove", loDevName});
 	}
 
-	private String createVolumeFromLv(String lvName, String volumeKey) throws ExecutionException {
+	private String createVolumeFromLv(String lvName, String volumeKey) throws EucalyptusCloudException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "dd", "if=" + lvName, "of=" + volumeKey, "bs=1M"});
 	}
 
-	private String enableLogicalVolume(String lvName) throws ExecutionException {
+	private String enableLogicalVolume(String lvName) throws EucalyptusCloudException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvchange", "-ay", lvName});
 	}
 
-	private String disableLogicalVolume(String lvName) throws ExecutionException {
+	private String disableLogicalVolume(String lvName) throws EucalyptusCloudException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvchange", "-an", lvName});
 	}
 
-	private String removeVolumeGroup(String vgName) throws ExecutionException {
+	private String removeVolumeGroup(String vgName) throws EucalyptusCloudException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "vgremove", vgName});
 	}
 
-	private String getLvmVersion() throws ExecutionException {
+	private String getLvmVersion() throws EucalyptusCloudException {
 		return SystemUtil.run(new String[]{eucaHome + EUCA_ROOT_WRAPPER, "lvm", "version"});
 	}
 
 
 
-	public String createLoopback(String fileName) throws EucalyptusCloudException, ExecutionException {
+	public String createLoopback(String fileName) throws EucalyptusCloudException {
 		int number_of_retries = 0;
 		int status = -1;
 		String loDevName;

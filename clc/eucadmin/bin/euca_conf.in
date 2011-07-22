@@ -82,6 +82,10 @@ CheckableServicesString = '|'.join(CheckableServices)
 EnableableServices = ['cloud', 'walrus', 'sc', 'vmwarebroker']
 EnableableServicesString = '|'.join(EnableableServices)
 
+RegisterHelp = """
+Detailed help on register/deregister operations goes here.
+"""
+
 class EucaConf(object):
 
     def __init__(self, filepath=None):
@@ -309,6 +313,9 @@ class EucaConf(object):
                                dest=RegOptions['component'][2],
                                metavar='<component name>',
                                help='Name of the component')
+        self.parser.add_option('--help-register', action='store_true',
+                               default=False,
+                               help='Display help on register/deregister')
         self.options, self.args = self.parser.parse_args()
         if len(self.args) > 0:
             filepath = self.args[0]
@@ -708,7 +715,7 @@ class EucaConf(object):
                   use_scp=(not self.options.no_scp))
         return req.sync()
 
-    def _print_sync_error(self):
+    def _print_sync_error(self, node):
         print 'ERROR: could not synchronize keys with %s' % node
         print 'The configuration will not have this node.'
         ssh_key = self.get_sshkey()
@@ -741,7 +748,7 @@ class EucaConf(object):
                     if node not in current_nodes:
                         current_nodes.append(node)
                     if not self._sync_node(node):
-                        self.print_sync_error()
+                        self._print_sync_error(node)
             self.config['NODES'] = ' '.join(current_nodes)
             print '...done'
 
@@ -749,8 +756,15 @@ class EucaConf(object):
         if self.options.dereg_nodes:
             current_nodes = self.config['NODES'].split()
             for node in self.options.dereg_nodes:
-                current_nodes.remove(node)
+                if node in current_nodes:
+                    current_nodes.remove(node)
+                else:
+                    print 'Node %s is not currently registered' % node
             self.config['NODES'] = ' '.join(current_nodes)
+
+    def do_help_register(self):
+        if self.options.help_register:
+            print RegisterHelp
 
 if __name__ == "__main__":
     ec = EucaConf()

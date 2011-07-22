@@ -11,6 +11,7 @@ import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.blockstorage.Snapshots;
 import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.Image.Architecture;
 import com.eucalyptus.cloud.Image.StaticDiskImage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -407,7 +408,7 @@ public class Images {
     }
   }
   
-  public static ImageInfo createFromManifest( UserFullName creator, String imageNameArg, String imageDescription, String eki, String eri, ImageManifest manifest ) throws EucalyptusCloudException {
+  public static ImageInfo createFromManifest( UserFullName creator, String imageNameArg, String imageDescription, Image.Architecture requestArch, Image.Platform requestPlatform, String eki, String eri, ImageManifest manifest ) throws EucalyptusCloudException {
     PutGetImageInfo ret = null;
     String imageName = ( imageNameArg != null )
       ? imageNameArg
@@ -424,20 +425,26 @@ public class Images {
     eri = ( eri != null )
       ? eri
       : ImageConfiguration.getInstance( ).getDefaultRamdiskId( );
+    Image.Architecture imageArch = ( requestArch != null )
+      ? requestArch
+      : manifest.getArchitecture( );
+    Image.Platform imagePlatform = ( requestPlatform != null )
+      ? requestPlatform
+      : manifest.getPlatform( );
     switch ( manifest.getImageType( ) ) {
       case kernel:
         ret = new KernelImageInfo( creator, ImageUtil.newImageId( Image.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ),
-                                   imageName, imageDescription, manifest.getSize( ), manifest.getArchitecture( ), manifest.getPlatform( ),
+                                   imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
                                     manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ) );
         break;
       case ramdisk:
         ret = new RamdiskImageInfo( creator, ImageUtil.newImageId( Image.Type.ramdisk.getTypePrefix( ), manifest.getImageLocation( ) ),
-                                    imageName, imageDescription, manifest.getSize( ), manifest.getArchitecture( ), manifest.getPlatform( ),
+                                    imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
                                     manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ) );
         break;
       case machine:
         ret = new MachineImageInfo( creator, ImageUtil.newImageId( Image.Type.machine.getTypePrefix( ), manifest.getImageLocation( ) ),
-                                    imageName, imageDescription, manifest.getSize( ), manifest.getArchitecture( ), manifest.getPlatform( ),
+                                    imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
                                     manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri );
         break;
     }
@@ -468,7 +475,7 @@ public class Images {
       return ret;
     }
   }
-
+  
   private static void maybeUpdateDefault( PutGetImageInfo ret ) {
     final String id = ret.getDisplayName( );
     if ( Image.Type.kernel.equals( ret.getImageType( ) ) && ImageConfiguration.getInstance( ).getDefaultKernelId( ) == null ) {
@@ -480,7 +487,7 @@ public class Images {
           }
         } );
       } catch ( ExecutionException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     } else if ( Image.Type.ramdisk.equals( ret.getImageType( ) ) && ImageConfiguration.getInstance( ).getDefaultRamdiskId( ) == null ) {
       try {
@@ -491,7 +498,7 @@ public class Images {
           }
         } );
       } catch ( ExecutionException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     }
   }

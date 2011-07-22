@@ -86,7 +86,7 @@ import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.crypto.Digest;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.client.ServiceDispatcher;
@@ -110,7 +110,7 @@ public class WalrusBucketLogger {
 	private ConcurrentHashMap<String, LogFileEntry> logFileMap;
 	ScheduledExecutorService logger;
 
-	static { GroovyUtil.loadConfig("walruslogger.groovy"); }
+	static { Groovyness.loadConfig("walruslogger.groovy"); }
 
 	public WalrusBucketLogger() {
 		logData = new LinkedBlockingQueue<BucketLogData>();

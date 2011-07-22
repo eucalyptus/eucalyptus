@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -57,88 +57,65 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: Neil Soman <neil@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package edu.ucsb.eucalyptus.util;
 
-import org.apache.log4j.Logger;
+package com.eucalyptus.cluster
 
-import com.eucalyptus.util.EucalyptusCloudException;
-import java.io.File;
+import java.io.Serializable
+import javax.persistence.Column
+import javax.persistence.PersistenceContext
+import javax.persistence.Table
+import javax.persistence.Transient
+import org.hibernate.annotations.Cache
+import org.hibernate.annotations.CacheConcurrencyStrategy
+import org.hibernate.annotations.Entity
+import com.eucalyptus.component.ComponentId
+import com.eucalyptus.component.ComponentPart
+import com.eucalyptus.component.id.ClusterController
+import com.eucalyptus.config.ComponentConfiguration
 
-public class SystemUtil {
-	private static Logger LOG = Logger.getLogger(SystemUtil.class);
-
-	public static String run(String[] command) throws EucalyptusCloudException {
-		try
-		{
-			String commandString = "";
-			for(String part : command) {
-				commandString += part + " ";
-			}
-			LOG.debug("Running command: " + commandString);
-			Runtime rt = Runtime.getRuntime();
-			Process proc = rt.exec(command);
-			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-			StreamConsumer output = new StreamConsumer(proc.getInputStream());
-			error.start();
-			output.start();
-			int returnValue = proc.waitFor();
-			output.join();
-			if(returnValue != 0) {
-				throw new EucalyptusCloudException(error.getReturnValue());
-			}
-			return output.getReturnValue();
-		} catch (Throwable t) {
-			LOG.error(t, t);
-		}
-		return "";
-	}
-
-	public static int runAndGetCode(String[] command) {
-		try
-		{
-			String commandString = "";
-			for(String part : command) {
-				commandString += part + " ";
-			}
-			LOG.debug("Running command: " + commandString);
-			Runtime rt = Runtime.getRuntime();
-			Process proc = rt.exec(command);
-			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-			StreamConsumer output = new StreamConsumer(proc.getInputStream());
-			error.start();
-			output.start();
-			int returnValue = proc.waitFor();
-			return returnValue;
-		} catch (Throwable t) {
-			LOG.error(t, t);
-		}
-		return -1;
-	}
-
-	public static void shutdownWithError(String errorMessage) {
-		LOG.fatal(errorMessage);
-		throw new IllegalStateException(errorMessage);
-		// Shutting the system down is never an option for a component anymore.		
-		//		System.exit(0xEC2);
-	}        
-
-	public static void setEucaReadWriteOnly(String filePath) throws EucalyptusCloudException {
-		File file = new File(filePath);
-		try {
-			file.setReadable(false, false);
-			file.setWritable(false, false);
-			file.setExecutable(false, false);
-			file.setReadable(true, true);
-			file.setWritable(true, true);
-			file.setExecutable(true, true);
-		} catch(SecurityException ex) {
-			LOG.error(ex);
-			throw new EucalyptusCloudException(ex);
-		}
-
-	}
+@Entity @javax.persistence.Entity
+@PersistenceContext(name="eucalyptus_config")
+@Table( name = "config_clusters" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@ComponentPart(ClusterController.class)
+public class ClusterConfiguration extends ComponentConfiguration implements Serializable {
+  @Transient
+  private static String DEFAULT_SERVICE_PATH = "/axis2/services/EucalyptusCC";
+  @Transient
+  private static String INSECURE_SERVICE_PATH = "/axis2/services/EucalyptusGL";
+  @Column(name="minvlan")
+  Integer minVlan;
+  @Column(name="maxvlan")
+  Integer maxVlan;
+  
+  public ClusterConfiguration( ) {
+    
+  }
+  public ClusterConfiguration( String partition, String name, String hostName, Integer port ) {
+    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
+  }
+  public ClusterConfiguration( String partition, String name, String hostName, Integer port, Integer minVlan, Integer maxVlan ) {
+    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
+    this.minVlan = minVlan;
+    this.maxVlan = maxVlan;
+  }
+  public String getInsecureServicePath() {
+    return INSECURE_SERVICE_PATH;
+  }
+  public String getInsecureUri() {
+    return "http://" + this.getHostName() + ":" + this.getPort() + INSECURE_SERVICE_PATH;
+  }
+  
+  @Override
+  public Boolean isVmLocal() {
+    return false;
+  }
+  @Override
+  public Boolean isHostLocal( ) {
+    return true;
+  }
+  
 }
