@@ -103,3 +103,8 @@ class ConfigFile(dict):
                 self['DISABLE_ISCSI'] = 'Y'
         else:
             self._read_config_data(oldconfig)
+
+        # I can't think of any case where EUCALYPTUS setting should not be
+        # self.path minus /etc/eucalyptus/eucalyptus.conf
+        self['EUCALYPTUS'] = "/".join(self.path.split("/")[:-3]) or "/"
+
