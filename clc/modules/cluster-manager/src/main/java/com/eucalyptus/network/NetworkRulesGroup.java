@@ -172,7 +172,7 @@ public class NetworkRulesGroup extends UserMetadata<NetworkRulesGroup.State> imp
   
   public Network getVmNetwork( ) {
     List<PacketFilterRule> pfRules = Lists.transform( this.getNetworkRules( ), this.ruleTransform );
-    Network vmNetwork = new Network( UserFullName.getInstance( this.getOwnerUserId( ) ), this.getDisplayName( ), this.getId( ), pfRules );
+    Network vmNetwork = new Network( UserFullName.getInstance( this.getOwnerUserId( ) ), this.getDisplayName( ), this.getId( )/**TODO:GRZE:this is surely wrong**/, pfRules );
     return vmNetwork;
   }
   
@@ -235,6 +235,10 @@ public class NetworkRulesGroup extends UserMetadata<NetworkRulesGroup.State> imp
   @Override
   public int compareTo( NetworkSecurityGroup that ) {
     return this.getFullName( ).toString( ).compareTo( that.getFullName( ).toString( ) );
+  }
+
+  public String getClusterNetworkName( ) {
+    return this.getOwnerUserId( ) + "-" + this.getDisplayName( );
   }
   
 }

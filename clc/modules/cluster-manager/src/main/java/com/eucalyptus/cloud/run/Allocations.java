@@ -104,7 +104,6 @@ public class Allocations {
     private final Context                  context;
     private final RunInstancesType         request;
     private final UserFullName             ownerFullName;
-    private final List<Network>            networks          = Lists.newArrayList( );
     private final List<ResourceToken>      allocationTokens  = Lists.newArrayList( );
     private final List<String>             addresses         = Lists.newArrayList( );
     private final List<Volume>             persistentVolumes = Lists.newArrayList( );
@@ -147,15 +146,16 @@ public class Allocations {
     }
     
     public Network getPrimaryNetwork( ) {
-      if ( this.networks.size( ) < 1 ) {
+      if ( this.networkRulesGroups.size( ) < 1 ) {
         throw new IllegalArgumentException( "At least one network group must be specified." );
       } else {
-        Network firstNet = this.networks.get( 0 );
+        NetworkRulesGroup firstRules = this.networkRulesGroups.values( ).iterator( ).next( );
+        Network firstNet;
         try {
-          firstNet = Networks.getInstance( ).lookup( firstNet.getName( ) );
+          firstNet = Networks.getInstance( ).lookup( firstRules.getClusterNetworkName( ) );
         } catch ( NoSuchElementException e ) {
-          Networks.getInstance( ).registerIfAbsent( firstNet, Networks.State.ACTIVE );
-          firstNet = Networks.getInstance( ).lookup( firstNet.getName( ) );
+          Networks.getInstance( ).registerIfAbsent( firstRules.getVmNetwork( ), Networks.State.ACTIVE );
+          firstNet = Networks.getInstance( ).lookup( firstRules.getClusterNetworkName( ) );
         }
         return firstNet;
       }
