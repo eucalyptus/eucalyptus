@@ -219,7 +219,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     this.imagePublic = aPublic;
   }
   
-  private Set<LaunchPermission> getPermissions( ) {
+  public Set<LaunchPermission> getPermissions( ) {
     return permissions;
   }
   
@@ -262,6 +262,18 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
 //      return false;
 //    }
 //    return result[0];
+  }
+  
+  /**
+   * Can only be called in a transaction.
+   * 
+   * @param requestAccountId
+   * @return
+   */
+  public boolean checkPermissionForTx( final String requestAccountId ) {
+    return getImagePublic( ) ||
+           getOwnerAccountId( ).equals( requestAccountId ) ||
+           getPermissions( ).contains( new LaunchPermission( this, requestAccountId ) );
   }
   
   public ImageInfo resetPermission( ) {

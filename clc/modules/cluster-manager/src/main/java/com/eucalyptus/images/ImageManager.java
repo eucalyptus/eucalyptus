@@ -64,8 +64,10 @@
 
 package com.eucalyptus.images;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
@@ -115,59 +117,72 @@ import edu.ucsb.eucalyptus.msgs.ResetImageAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ResetImageAttributeType;
 
 public class ImageManager {
+  
   public static Logger LOG = Logger.getLogger( ImageManager.class );
   
+  private static final String ALL = "all";
+  private static final String SELF = "self";
+
   public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException {
     DescribeImagesResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    final Account requestAccount = ctx.getAccount( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
-    final List<String> imageList = request.getImagesSet( );
-    final List<String> owners = request.getOwnersSet( );
-    final List<String> executable = request.getExecutableBySet( );
-    final boolean showPublic = executable.remove( "all" );
-    final boolean showMyImages = owners.remove( "self" );
-    final boolean showMyAllowedImages = executable.remove( "self" );
+    final Set<String> imageSelectionSet = request.getImagesSet( ) != null ? new HashSet<String>( request.getImagesSet( ) ) : new HashSet<String>( );
+    final Set<String> ownerSelectionSet = request.getOwnersSet( ) != null ? new HashSet<String>( request.getOwnersSet( ) ) : new HashSet<String>( );
+    if ( ownerSelectionSet.remove( SELF ) ) {
+      ownerSelectionSet.add( requestAccountId );
+    }
+    final Set<String> exeBySelectionSet = request.getExecutableBySet( ) != null ? new HashSet<String>( request.getExecutableBySet( ) ) : new HashSet<String>( );
+    final boolean exeByNonEmpty = exeBySelectionSet.size( ) > 0;
+    final boolean exeByHasSelf = exeBySelectionSet.remove( SELF );
+    final boolean exeByHasAll = exeBySelectionSet.remove( ALL );
+    
     final Predicate<ImageInfo> imageFilter = new Predicate<ImageInfo>( ) {
+      /**
+       * @param t
+       * @param accountIds
+       * @return true if image t has launch permission for any of the account in accountIds
+       */
+      private boolean allowsAny( ImageInfo t, Set<String> accountIds ) {
+        final Set<LaunchPermission> permissions = t.getPermissions( );
+        for ( String aid : accountIds ) {
+          if ( permissions.contains( new LaunchPermission( t, aid ) ) ) {
+            return true;
+          }
+        }
+        return false;
+      }
       
       @Override
       public boolean apply( ImageInfo t ) {
-        if ( showMyImages && requestAccountId.equals( t.getOwnerAccountId( ) ) ) {
-          LOG.trace( "Considering image " + t.getFullName( ) + " because user wants to see their images and is owner." );
-        } else if ( showMyAllowedImages && t.isAllowed( requestAccount ) ) {
-          LOG.trace( "Considering image " + t.getFullName( ) + " because user wants to see their executable images and is allowed." );
-        } else if ( showPublic && t.getImagePublic( ) ) {
-          LOG.trace( "Considering image " + t.getFullName( ) + " because user wants to see public images and it is public." );
-        } else if ( !t.isAllowed( requestAccount ) ) {
-          LOG.trace( "Rejecting image " + t.getFullName( ) + " because user is not allowed." );
+        // Check if selected by specified images
+        if ( imageSelectionSet.size( ) > 0 && !imageSelectionSet.contains( t.getDisplayName( ) ) ) {
           return false;
         }
-        if ( !ctx.hasAdministrativePrivileges( )
-             && !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, t.getDisplayName( ), t.getOwner( ) ) ) {
-          LOG.error( "Accessing image " + t.getDisplayName( ) + " is denied by permission of " + ctx.getUser( ).getName( ) );
+        // Make sure the request account can access the image
+        if ( !ctx.hasAdministrativePrivileges( ) && !t.checkPermissionForTx( requestAccountId ) ) {
           return false;
         }
-        if ( !imageList.isEmpty( ) && !imageList.contains( t.getDisplayName( ) ) ) {
-          LOG.trace( "Rejecting image " + t.getFullName( ) + " because user provide an image id list which does not contain the result: " + imageList );
+        // Check if selected by specified owner account ID
+        if ( ownerSelectionSet.size( ) > 0 && !ownerSelectionSet.contains( t.getOwnerAccountId( ) ) ) {
           return false;
-        } else if ( !owners.isEmpty( ) && !owners.contains( t.getOwnerAccountId( ) ) ) {
-          LOG.trace( "Rejecting image " + t.getFullName( ) + " because user provide an image id list which does not contain the result: " + owners );
-          return false;
-        } else if ( !executable.isEmpty( ) ) {
-          for ( String accountId : executable ) {
-            try {
-              if ( "self".equals( accountId ) || ctx.hasAdministrativePrivileges( ) || t.isAllowed( Accounts.lookupAccountById( accountId ) ) ) {
-                return true;
-              }
-            } catch ( AuthException ex ) {
-              LOG.error( ex );
-            }
+        }
+        // Check if selected by explicit account permissions
+        if ( exeByNonEmpty ) {
+          if ( !( ( exeByHasAll && t.getImagePublic( ) ) ||   // public
+                  ( exeByHasSelf && !t.getImagePublic( ) ) || // implicit or explicit, but no public
+                  ( exeBySelectionSet.size( ) > 0 && t.getOwnerAccountId( ).equals( requestAccountId ) && allowsAny( t, exeBySelectionSet ) ) // owned by self and executable by someone 
+                ) ) {
+            return false;
           }
-          LOG.trace( "Rejecting image " + t.getFullName( ) + " because user provide an image id list which does not contain the result: " + owners );
+        }
+        // Check IAM permission at the end
+        if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, t.getDisplayName( ), t.getOwner( ) ) ) {
           return false;
         }
         return true;
       }
+      
     };
     List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), imageFilter, Images.TO_IMAGE_DETAILS );
     reply.getImagesSet( ).addAll( imageDetailsList );
