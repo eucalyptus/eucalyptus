@@ -81,6 +81,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.NetworkSecurityGroup;
+import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.UserMetadata;
@@ -171,9 +172,16 @@ public class NetworkRulesGroup extends UserMetadata<NetworkRulesGroup.State> imp
   }
   
   public Network getVmNetwork( ) {
-    List<PacketFilterRule> pfRules = Lists.transform( this.getNetworkRules( ), this.ruleTransform );
-    Network vmNetwork = new Network( UserFullName.getInstance( this.getOwnerUserId( ) ), this.getDisplayName( ), this.getId( )/**TODO:GRZE:this is surely wrong**/, pfRules );
-    return vmNetwork;
+    Network asNet;
+    try {
+      asNet = Networks.getInstance( ).lookup( this.getClusterNetworkName( ) );
+    } catch ( Exception ex ) {
+      List<PacketFilterRule> pfRules = Lists.transform( this.getNetworkRules( ), this.ruleTransform );
+      Network vmNetwork = new Network( UserFullName.getInstance( this.getOwnerUserId( ) ), this.getDisplayName( ), this.getId( )/**TODO:GRZE:this is surely wrong**/, pfRules );
+      Networks.getInstance( ).registerIfAbsent( vmNetwork, Networks.State.ACTIVE );
+      asNet = Networks.getInstance( ).lookup(  this.getClusterNetworkName( ) );
+    }
+    return asNet;
   }
   
   @Override

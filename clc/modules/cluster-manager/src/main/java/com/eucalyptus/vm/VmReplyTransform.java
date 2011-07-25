@@ -69,6 +69,7 @@ import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.network.NetworkRulesGroup;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;

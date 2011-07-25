@@ -150,14 +150,7 @@ public class Allocations {
         throw new IllegalArgumentException( "At least one network group must be specified." );
       } else {
         NetworkRulesGroup firstRules = this.networkRulesGroups.values( ).iterator( ).next( );
-        Network firstNet;
-        try {
-          firstNet = Networks.getInstance( ).lookup( firstRules.getClusterNetworkName( ) );
-        } catch ( NoSuchElementException e ) {
-          Networks.getInstance( ).registerIfAbsent( firstRules.getVmNetwork( ), Networks.State.ACTIVE );
-          firstNet = Networks.getInstance( ).lookup( firstRules.getClusterNetworkName( ) );
-        }
-        return firstNet;
+        return firstRules.getVmNetwork( );
       }
     }
     
