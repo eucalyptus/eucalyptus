@@ -90,6 +90,8 @@ import com.eucalyptus.util.Counters;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
@@ -182,7 +184,13 @@ public class Allocations {
     }
     
     public List<Network> getNetworks( ) {
-      return this.networks;
+      return Lists.newArrayList( Iterables.transform( this.networkRulesGroups.values( ), new Function<NetworkRulesGroup, Network>( ) {
+        
+        @Override
+        public Network apply( NetworkRulesGroup input ) {
+          return input.getVmNetwork( );
+        }
+      } ) );
     }
     
     public ResourceToken requestResourceToken( ClusterNodeState state, String vmTypeName, int tryAmount, int maxAmount ) throws NotEnoughResourcesAvailable {
@@ -307,7 +315,7 @@ public class Allocations {
     public void setNetworkRules( Map<String, NetworkRulesGroup> networkRuleGroups ) {
       this.networkRulesGroups = networkRuleGroups;
     }
-
+    
     public VmTypeInfo getVmTypeInfo( ) throws MetadataException {
       return this.bootSet.populateVirtualBootRecord( vmType );
     }
