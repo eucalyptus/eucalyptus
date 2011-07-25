@@ -139,45 +139,64 @@ public class ImageManager {
     
     final Predicate<ImageInfo> imageFilter = new Predicate<ImageInfo>( ) {
       /**
-       * @param t
+       * @param image
        * @param accountIds
-       * @return true if image t has launch permission for any of the account in accountIds
+       * @return true if image has launch permission for any of the account in accountIds
        */
-      private boolean allowsAny( ImageInfo t, Set<String> accountIds ) {
-        final Set<LaunchPermission> permissions = t.getPermissions( );
+      private boolean allowsAny( ImageInfo image, Set<String> accountIds ) {
+        final Set<LaunchPermission> permissions = image.getPermissions( );
         for ( String aid : accountIds ) {
-          if ( permissions.contains( new LaunchPermission( t, aid ) ) ) {
+          if ( permissions.contains( new LaunchPermission( image, aid ) ) ) {
             return true;
           }
         }
         return false;
       }
       
+      /**
+       * @param image
+       * @param accountId
+       * @return true if image has launch permission including public, explicit and implicit
+       */
+      private boolean hasLaunchPermission( ImageInfo image, String accountId ) {
+        return image.getImagePublic( ) || hasExplicitOrImplicitLaunchPermission( image, accountId );
+      }
+      
+      /**
+       * @param image
+       * @param accountId
+       * @return true if image has explicit or implicit launch permission
+       */
+      private boolean hasExplicitOrImplicitLaunchPermission( ImageInfo image, String accountId ) {
+        return image.getOwnerAccountId( ).equals( accountId ) ||
+               image.getPermissions( ).contains( new LaunchPermission( image, accountId ) );
+      }
+      
       @Override
-      public boolean apply( ImageInfo t ) {
+      public boolean apply( ImageInfo image ) {
         // Check if selected by specified images
-        if ( imageSelectionSet.size( ) > 0 && !imageSelectionSet.contains( t.getDisplayName( ) ) ) {
+        if ( imageSelectionSet.size( ) > 0 && !imageSelectionSet.contains( image.getDisplayName( ) ) ) {
           return false;
         }
         // Make sure the request account can access the image
-        if ( !ctx.hasAdministrativePrivileges( ) && !t.checkPermissionForTx( requestAccountId ) ) {
+        if ( !ctx.hasAdministrativePrivileges( ) && !hasLaunchPermission( image, requestAccountId ) ) {
           return false;
         }
         // Check if selected by specified owner account ID
-        if ( ownerSelectionSet.size( ) > 0 && !ownerSelectionSet.contains( t.getOwnerAccountId( ) ) ) {
+        if ( ownerSelectionSet.size( ) > 0 && !ownerSelectionSet.contains( image.getOwnerAccountId( ) ) ) {
           return false;
         }
         // Check if selected by explicit account permissions
         if ( exeByNonEmpty ) {
-          if ( !( ( exeByHasAll && t.getImagePublic( ) ) ||   // public
-                  ( exeByHasSelf && !t.getImagePublic( ) ) || // implicit or explicit, but no public
-                  ( exeBySelectionSet.size( ) > 0 && t.getOwnerAccountId( ).equals( requestAccountId ) && allowsAny( t, exeBySelectionSet ) ) // owned by self and executable by someone 
+          if ( !( ( exeByHasAll && image.getImagePublic( ) ) ||   // public
+                  ( exeByHasSelf && hasExplicitOrImplicitLaunchPermission( image, requestAccountId ) ) || // implicit or explicit, but no public
+                  ( exeBySelectionSet.size( ) > 0 && image.getOwnerAccountId( ).equals( requestAccountId ) && allowsAny( image, exeBySelectionSet ) ) // owned by self and executable by someone 
                 ) ) {
             return false;
           }
         }
         // Check IAM permission at the end
-        if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, t.getDisplayName( ), t.getOwner( ) ) ) {
+        if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, image.getDisplayName( ), image.getOwner( ) ) ) {
           return false;
         }
         return true;

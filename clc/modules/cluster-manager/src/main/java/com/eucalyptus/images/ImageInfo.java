@@ -264,18 +264,6 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
 //    return result[0];
   }
   
-  /**
-   * Can only be called in a transaction.
-   * 
-   * @param requestAccountId
-   * @return
-   */
-  public boolean checkPermissionForTx( final String requestAccountId ) {
-    return getImagePublic( ) ||
-           getOwnerAccountId( ).equals( requestAccountId ) ||
-           getPermissions( ).contains( new LaunchPermission( this, requestAccountId ) );
-  }
-  
   public ImageInfo resetPermission( ) {
     try {
       Transactions.one( new ImageInfo( this.displayName ), new Tx<ImageInfo>( ) {
