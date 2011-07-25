@@ -83,7 +83,35 @@ EnableableServices = ['cloud', 'walrus', 'sc', 'vmwarebroker']
 EnableableServicesString = '|'.join(EnableableServices)
 
 RegisterHelp = """
-Print help here.
+euca_conf provides two alternatives for component registration. The
+first alternative is compatible with the previous version of euca_conf
+and uses positional arguments. For example:
+
+euca_conf --register-cluster Part001 192.168.51.108
+
+would register a new cluster on host 192.168.51.108. In previous
+versions of the tool, the first argument would be interpreted as the
+"clustername" but now, with HA, this argument is interpreted as the
+partition name. Rather than requiring an additional positional
+argument for the component name required for registration, this
+approach will generate a component name for the user by concatenating
+the resource type (in this case "cluster") with the host name. So, in
+this case the component name would be "cluster-192.168.51.108". This
+allows previous scripts to continue working unchanged in the new
+version of the tool.
+
+The second, and preferred, approach uses explicit options for the
+partition name, the component name and the host name required for
+registration. For example:
+
+euca_conf --register-cluster --partition Part001 --component MyCluster --host 192.168.51.108
+
+Alternatively, you could use the short form of the options like this:
+
+euca_conf --register-cluster -P Part001 -C MyCluster -H 192.168.51.108
+
+or any combination thereof. The options can be provided in any order
+and can appear before or after the --register-* option.
 """
 
 class EucaConf(object):
