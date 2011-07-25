@@ -181,7 +181,7 @@
       <inbound>
         <inbound-endpoint ref="StartVerifyWS" />
       </inbound>
-      <component class="com.eucalyptus.cloud.run.Verifymetadata" />
+      <component class="com.eucalyptus.cloud.run.VerifyMetadata" />
       <outbound>
         <outbound-pass-through-router>
           <outbound-endpoint ref="FinishedVerifyWS" />
