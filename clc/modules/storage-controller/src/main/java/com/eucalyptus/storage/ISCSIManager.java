@@ -97,7 +97,7 @@ public class ISCSIManager implements StorageExportManager {
 	private static Logger LOG = Logger.getLogger(ISCSIManager.class);
 	private static String ROOT_WRAP = BaseDirectory.HOME.toString() + StorageProperties.EUCA_ROOT_WRAPPER;
 	@Override
-	public void checkPreconditions() throws EucalyptusCloudException, ExecutionException {
+	public void checkPreconditions() throws EucalyptusCloudException {
 		String returnValue;
 		returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--help"});
 		if(returnValue.length() == 0) {
@@ -112,11 +112,11 @@ public class ISCSIManager implements StorageExportManager {
 		}
 	}
 
-	public void addUser(String username, String password) throws ExecutionException {
+	public void addUser(String username, String password) throws EucalyptusCloudException {
 		SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "account", "--user", username, "--password", password});
 	}
 
-	public void deleteUser(String username) throws ExecutionException {
+	public void deleteUser(String username) throws EucalyptusCloudException {
 		SystemUtil.run(new String[]{ROOT_WRAP , "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "account", "--user", username});
 	}
 
@@ -232,7 +232,7 @@ public class ISCSIManager implements StorageExportManager {
 			if(!checkUser("eucalyptus")) {
 				try {
 					addUser("eucalyptus", BlockStorageUtil.decryptSCTargetPassword(userInfo.getEncryptedPassword()));
-				} catch (ExecutionException e1) {
+				} catch (EucalyptusCloudException e1) {
 					LOG.error(e1);					
 					return;
 				}
@@ -243,7 +243,7 @@ public class ISCSIManager implements StorageExportManager {
 			password = password.substring(0,16);
 			try {
 				addUser("eucalyptus", password);
-			} catch (ExecutionException e1) {
+			} catch (EucalyptusCloudException e1) {
 				LOG.error(e1);
 				dbUser.rollback();
 				return;
@@ -278,14 +278,11 @@ public class ISCSIManager implements StorageExportManager {
 			do {
 				try {
 					String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(i)});
-					if(returnValue.length() == 0) {
-						tid = i;
-						break;
-					}
-				} catch (ExecutionException e) {
-					LOG.error(e);
-					iscsiVolumeInfo.setTid(-1);
-					return;
+				} catch (EucalyptusCloudException e) {
+					tid = i;
+				}
+				if (tid > -1) {
+					break;
 				}
 				i = (i + 1) % Integer.MAX_VALUE;
 			} while(i != tid);

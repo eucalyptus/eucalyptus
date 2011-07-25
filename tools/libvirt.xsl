@@ -10,8 +10,8 @@ that describes a Eucalyptus instance to be launched.
     <xsl:output encoding="UTF-8" indent="yes" method="xml"/>
     <xsl:template match="/">
         <!-- sanity check on the hypervisor type - we only know 'kvm' and 'xen' -->
-        <xsl:if test="/instance/hypervisor/@type != 'kvm' and /instance/hypervisor/@type != 'xen'">
-            <xsl:message terminate="yes">ERROR: invalid or unset /instance/hypervisor/@type parameter</xsl:message>
+        <xsl:if test="/instance/hypervisor/@type != 'kvm' and /instance/hypervisor/@type != 'xen'"> 
+           <xsl:message terminate="yes">ERROR: invalid or unset /instance/hypervisor/@type parameter</xsl:message>
         </xsl:if>
         <domain>
             <xsl:attribute name="type">
@@ -39,20 +39,18 @@ that describes a Eucalyptus instance to be launched.
                         <xsl:if test="/instance/kernel!=''">
                             <kernel>
                                 <xsl:value-of select="/instance/kernel"/>
-                            </kernel>
-                            <cmdline>root=/dev/sda1 console=ttyS0</cmdline>
-                            <xsl:choose>
-                                <xsl:when test="/instance/os/@virtioRoot = 'true'">
-                                    <root>/dev/vda1</root>
-                                </xsl:when>
-                                <xsl:when test="/instance/os/@virtioRoot = 'false'">
-                                    <root>/dev/sda1</root>
-                                </xsl:when>
-                                <xsl:otherwise>
-                                    <xsl:message terminate="yes">ERROR: invalid or unset /instance/os/@virtioRoot parameter</xsl:message>
-                                </xsl:otherwise>
-                            </xsl:choose>
+                            </kernel> 
                         </xsl:if>
+                        <xsl:choose>
+                            <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@virtioRoot = 'true'">
+                                 <cmdline>root=/dev/vda1 console=ttyS0</cmdline>
+                                 <root>/dev/vda1</root>
+                            </xsl:when>
+                            <xsl:otherwise>
+			         <cmdline>root=/dev/sda1 console=ttyS0</cmdline>
+                                 <root>/dev/sda1</root>
+                            </xsl:otherwise>
+                        </xsl:choose>
                     </xsl:when>
                     <xsl:when test="/instance/os/@platform = 'windows'">
                         <!-- Windows-specific configuration -->
@@ -135,6 +133,16 @@ that describes a Eucalyptus instance to be launched.
                                         </xsl:call-template>
 				  </xsl:attribute>
 			       </xsl:when>
+                               <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@virtioRoot = 'true'"> 
+                                   <xsl:attribute name="bus">virtio</xsl:attribute>
+                                   <xsl:attribute name="dev">
+                                        <xsl:call-template name="string-replace-all">
+                                           <xsl:with-param name="text" select="@targetDeviceName"/>
+                                           <xsl:with-param name="replace" select="'sd'"/>
+                                           <xsl:with-param name="by" select="'vd'"/>
+                                        </xsl:call-template>
+                                   </xsl:attribute>
+                               </xsl:when>
 			       <xsl:otherwise>
 			           <xsl:attribute name="dev">
                                		<xsl:value-of select="@targetDeviceName"/>

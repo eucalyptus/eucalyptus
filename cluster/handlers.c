@@ -2322,28 +2322,38 @@ int doGetConsoleOutput(ncMetadata *ccMeta, char *instId, char **outConsoleOutput
 
   done=0;
   for (j=start; j<stop && !done; j++) {
-    if (*outConsoleOutput) free(*outConsoleOutput);
-
-    if (!strstr(resourceCacheLocal.resources[j].ncURL, "EucalyptusNC")) {
-      //if (1) {
-      char pwfile[MAX_PATH];
-      char *rawconsole=NULL;
+    if (*outConsoleOutput) {
+      free(*outConsoleOutput);
       *outConsoleOutput = NULL;
-      snprintf(pwfile, MAX_PATH, "%s/var/lib/eucalyptus/windows/%s/console.append.log", config->eucahome, instId);
-      if (!check_file(pwfile)) {
-	rawconsole = file2str(pwfile);
-	if (rawconsole) {
-	  *outConsoleOutput = base64_enc((unsigned char *)rawconsole, strlen(rawconsole));
-	}
-      }
-      if (!*outConsoleOutput) {
-	rc = 1;
-      } else {
-	rc = 0;
-      }
-    } else {
-      timeout = ncGetTimeout(op_start, timeout, (stop - start), j);
-      rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncGetConsoleOutput", instId, outConsoleOutput);
+    }
+
+    // if not talking to Eucalyptus NC (but, e.g., a Broker)
+    if (!strstr(resourceCacheLocal.resources[j].ncURL, "EucalyptusNC")) {
+            char pwfile[MAX_PATH];
+            *outConsoleOutput = NULL;
+            snprintf(pwfile, MAX_PATH, "%s/var/lib/eucalyptus/windows/%s/console.append.log", config->eucahome, instId);
+
+            char *rawconsole=NULL;
+            if (!check_file(pwfile)) { // the console log file should exist for a Windows guest (with encrypted password in it)
+                    rawconsole = file2str(pwfile);
+            } else { // the console log file will not exist for a Linux guest
+                    rawconsole = strdup ("not implemented");
+            }
+            if (rawconsole) {
+                    *outConsoleOutput = base64_enc((unsigned char *)rawconsole, strlen(rawconsole));
+                    free (rawconsole);
+            }
+            // set the return code accordingly
+            if (!*outConsoleOutput) {
+                    rc = 1;
+            } else {
+                    rc = 0;
+            }
+            done++; // quit on the first host, since they are not queried remotely 
+
+    } else { // otherwise, we *are* talking to a Eucalyptus NC, so make the remote call
+            timeout = ncGetTimeout(op_start, timeout, (stop - start), j);
+            rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncGetConsoleOutput", instId, outConsoleOutput);
     }
 
     if (rc) {
