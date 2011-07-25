@@ -305,9 +305,42 @@ public class VmControl {
     return reply;
   }
   
-  public StopInstancesResponseType stopInstances( final StopInstancesType request ) {
+  public StopInstancesResponseType stopInstances( final StopInstancesType request ) throws EucalyptusCloudException {
     final StopInstancesResponseType reply = request.getReply( );
-    return reply;
+    try {
+      final Context ctx = Contexts.lookup( );
+      final List<TerminateInstancesItemType> results = reply.getInstancesSet( );
+      Iterables.all( request.getInstancesSet( ), new Predicate<String>( ) {
+        @Override
+        public boolean apply( final String instanceId ) {
+          try {
+            final VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
+            if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
+              final int oldCode = v.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
+              final String oldState = v.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
+              results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
+              if ( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
+                v.setState( VmState.SHUTTING_DOWN, Reason.USER_TERMINATED );
+              }
+            }
+            return true;
+          } catch ( final NoSuchElementException e ) {
+            try {
+              VmInstances.getInstance( ).lookupDisabled( instanceId ).setState( VmState.BURIED, Reason.BURIED );
+              return true;
+            } catch ( final NoSuchElementException e1 ) {
+              return false;
+            }
+          }
+        }
+      } );
+      reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
+      return reply;
+    } catch ( final Throwable e ) {
+      LOG.error( e );
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( e.getMessage( ) );
+    }
   }
   
   public ResetInstanceAttributeResponseType resetInstanceAttribute( final ResetInstanceAttributeType request ) {
