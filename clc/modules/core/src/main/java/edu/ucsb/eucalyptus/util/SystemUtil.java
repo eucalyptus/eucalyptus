@@ -71,7 +71,7 @@ import java.io.File;
 public class SystemUtil {
 	private static Logger LOG = Logger.getLogger(SystemUtil.class);
 
-	public static String run(String[] command) throws EucalyptusCloudException {
+	public static String run(String[] command) {
 		try
 		{
 			String commandString = "";

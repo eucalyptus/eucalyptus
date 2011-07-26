@@ -216,36 +216,27 @@ public class OverlayManager implements LogicalStorageManager {
 
 	private boolean logicalVolumeExists(String lvName) {
 		boolean success = false;
-		try {
-			String returnValue = SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "lvdisplay", lvName});
-			if(returnValue.length() > 0) {
-				success = true;
-			}
-		} catch(EucalyptusCloudException ex) {			
+		String returnValue = SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "lvdisplay", lvName});
+		if(returnValue.length() > 0) {
+			success = true;
 		}
 		return success;
 	}
 
 	private boolean volumeGroupExists(String vgName) {
 		boolean success = false;
-		try {
-			String returnValue = SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "vgdisplay", vgName});
-			if(returnValue.length() > 0) {
-				success = true;
-			}
-		} catch(EucalyptusCloudException ex) {			
+		String returnValue = SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "vgdisplay", vgName});
+		if(returnValue.length() > 0) {
+			success = true;
 		}
 		return success;
 	}
 
 	private boolean physicalVolumeExists(String pvName) {
 		boolean success = false;
-		try {
-			String returnValue = SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "pvdisplay", pvName});
-			if(returnValue.length() > 0) {
-				success = true;
-			}
-		} catch(EucalyptusCloudException ex) {			
+		String returnValue = SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "pvdisplay", pvName});
+		if(returnValue.length() > 0) {
+			success = true;
 		}
 		return success;
 	}
@@ -1318,15 +1309,10 @@ public class OverlayManager implements LogicalStorageManager {
 		volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo volumeInfo = volumeManager.getVolumeInfo(volumeId);
 		if(volumeInfo != null) {
-			try {
-				SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, 
-						"dd", "if=" + volumePath, 
-						"of=" + lvmRootDirectory + File.separator + volumeInfo.getVgName() + 
-						File.separator + volumeInfo.getLvName(), "bs=" + StorageProperties.blockSize});			
-			} catch (EucalyptusCloudException e) {
-				LOG.error(e);
-				throw new EucalyptusCloudException(e);
-			}
+			SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, 
+					"dd", "if=" + volumePath, 
+					"of=" + lvmRootDirectory + File.separator + volumeInfo.getVgName() + 
+					File.separator + volumeInfo.getLvName(), "bs=" + StorageProperties.blockSize});
 		} else {
 			volumeManager.abort();
 			throw new EucalyptusCloudException("Unable to find volume with id: " + volumeId);
@@ -1359,14 +1345,9 @@ public class OverlayManager implements LogicalStorageManager {
 		}
 		volumeManager.finish();
 		String snapFileName = getStorageRootDirectory() + File.separator + snapshotId;
-		try {
-			SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, 
-					"dd", "if=" + snapPath, 
-					"of=" + snapFileName, "bs=" + StorageProperties.blockSize});			
-		} catch (EucalyptusCloudException e) {
-			LOG.error(e);
-			throw new EucalyptusCloudException(e);
-		}
+		SystemUtil.run(new String[]{eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, 
+				"dd", "if=" + snapPath, 
+				"of=" + snapFileName, "bs=" + StorageProperties.blockSize});
 		volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo();
 		snapshotInfo.setVolumeId(snapshotId);
