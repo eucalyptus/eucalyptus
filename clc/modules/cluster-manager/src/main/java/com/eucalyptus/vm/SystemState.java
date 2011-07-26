@@ -210,6 +210,10 @@ public class SystemState {
     
     if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && splitTime > SHUT_DOWN_TIME ) {
       vm.setState( VmState.TERMINATED, Reason.EXPIRED );
+    } else if ( VmState.STOPPING.equals( vm.getState( ) ) && splitTime > SHUT_DOWN_TIME ) {
+        vm.setState( VmState.STOPPED, Reason.EXPIRED );
+    } else if ( VmState.STOPPING.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
+      vm.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
     } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
       vm.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
     } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )

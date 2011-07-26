@@ -69,6 +69,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import com.eucalyptus.auth.Accounts;
@@ -96,6 +97,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.BundleInstanceChecker;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Lookups;
+import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.vm.SystemState.Reason;
@@ -130,6 +132,7 @@ import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
 import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeType;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.StartInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.StartInstancesType;
 import edu.ucsb.eucalyptus.msgs.StopInstancesResponseType;
@@ -300,8 +303,22 @@ public class VmControl {
     return reply;
   }
   
-  public StartInstancesResponseType startInstances( final StartInstancesType request ) {
+  public StartInstancesResponseType startInstances( final StartInstancesType request ) throws EucalyptusCloudException {
+    Context ctx = Contexts.lookup( );
     final StartInstancesResponseType reply = request.getReply( );
+    for ( String instanceId : request.getInstancesSet( ) ) {
+      VmInstance v = null;
+      try {
+        v = VmInstances.getInstance( ).lookup( instanceId );
+      } catch ( NoSuchElementException ex ) {
+        try {
+          v = Transactions.find( VmInstance.named( ctx.getUserFullName( ), instanceId ) );
+        } catch ( ExecutionException ex1 ) {
+          throw new EucalyptusCloudException( "Failed to locate instance information for instance id: " + instanceId );
+        }
+      }
+      //TODO:GRZE:here here here.
+    }
     return reply;
   }
   
@@ -423,7 +440,7 @@ public class VmControl {
     reply.set_return( true );
     Component walrus = Components.lookup( Walrus.class );
     NavigableSet<ServiceConfiguration> configs = walrus.lookupServiceConfigurations( );
-    if( configs.isEmpty( ) || !Component.State.ENABLED.isIn( configs.first( ) ) ) {
+    if ( configs.isEmpty( ) || !Component.State.ENABLED.isIn( configs.first( ) ) ) {
       throw new EucalyptusCloudException( "Failed to bundle instance because there is no available walrus service at the moment." );
     }
     final String walrusUrl = configs.first( ).getUri( ).toASCIIString( );
@@ -441,7 +458,7 @@ public class VmControl {
       } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
         throw new EucalyptusCloudException( "Failed to bundle requested vm because it is not currently 'running': " + request.getInstanceId( ) );
       } else if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
-    	BundleInstanceChecker.check(request);
+        BundleInstanceChecker.check( request );
         final BundleTask bundleTask = new BundleTask( v.getInstanceId( ).replaceFirst( "i-", "bun-" ), v.getInstanceId( ), request.getBucket( ),
                                                       request.getPrefix( ) );
         if ( v.startBundleTask( bundleTask ) ) {
@@ -464,8 +481,8 @@ public class VmControl {
       } else {
         throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
       }
-    } catch (EucalyptusCloudException e) {
-	throw e;
+    } catch ( EucalyptusCloudException e ) {
+      throw e;
     } catch ( final Exception e ) {
       throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
     }

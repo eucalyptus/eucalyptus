@@ -138,6 +138,8 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   @Transient
   private static String                               SEND_USER_TERMINATE = "SIGTERM";
   @Transient
+  private static String                               SEND_USER_STOP      = "SIGSTOP";
+  @Transient
   private final AtomicMarkableReference<BundleTask>   bundleTask          = new AtomicMarkableReference<BundleTask>( null, false );
   @Transient
   private final StopWatch                             stopWatch           = new StopWatch( );
@@ -244,6 +246,25 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     this.store( );
   }
   
+  private VmInstance( UserFullName userFullName, String instanceId2 ) {
+    super( userFullName, instanceId2 );
+    this.instanceId = instanceId2;
+    this.launchTime = null;
+    this.instanceUuid = null;
+    this.launchIndex = null;
+    this.blockBytes = null;
+    this.networkBytes = null;
+    this.reservationId = null;
+    this.owner = null;
+    this.clusterName = null;
+    this.vbr = null;
+    this.partitionName = null;
+    this.userData = null;
+    this.platform = null;
+    this.sshKeyPair = null;
+    this.vmType = null;
+  }
+
   public void updateBlockBytes( long blkbytes ) {
     this.blockBytes += blkbytes;
   }
@@ -335,17 +356,17 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
       if ( !this.reasonDetails.contains( SEND_USER_TERMINATE ) ) {
         this.addReasonDetail( SEND_USER_TERMINATE );
       }
-    } else if ( VmState.SHUTTING_DOWN.equals( newState ) && VmState.STOPPING.equals( oldState ) && Reason.USER_TERMINATED.equals( reason ) ) {
+    } else if ( VmState.STOPPING.equals( newState ) && VmState.STOPPING.equals( oldState ) && Reason.USER_STOPPED.equals( reason ) ) {
       VmInstances.cleanUp( this );
-      if ( !this.reasonDetails.contains( SEND_USER_TERMINATE ) ) {
-        this.addReasonDetail( SEND_USER_TERMINATE );
+      if ( !this.reasonDetails.contains( SEND_USER_STOP ) ) {
+        this.addReasonDetail( SEND_USER_STOP );
       }
     } else if ( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) {
       VmInstances.getInstance( ).deregister( this.getName( ) );
       try {
         Transactions.delete( this );
       } catch ( ExecutionException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
     } else if ( !this.getState( ).equals( newState ) ) {
       if ( Reason.APPEND.equals( reason ) ) {
@@ -957,6 +978,10 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   
   public SshKeyPair getSshKeyPair( ) {
     return this.sshKeyPair;
+  }
+
+  public static VmInstance named( UserFullName userFullName, String instanceId2 ) {
+    return new VmInstance( userFullName, instanceId2 );
   }
   
 }
