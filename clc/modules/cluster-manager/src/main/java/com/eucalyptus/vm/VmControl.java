@@ -320,7 +320,7 @@ public class VmControl {
               final String oldState = v.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
               results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
               if ( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
-                v.setState( VmState.SHUTTING_DOWN, Reason.USER_TERMINATED );
+                v.setState( VmState.STOPPING, Reason.USER_STOPPED );
               }
             }
             return true;

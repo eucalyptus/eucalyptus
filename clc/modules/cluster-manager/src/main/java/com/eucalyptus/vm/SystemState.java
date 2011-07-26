@@ -140,6 +140,7 @@ public class SystemState {
     EXPIRED( "Instance expired after not being reported for %s ms.", SystemState.SHUT_DOWN_TIME ),
     FAILED( "The instance failed to start on the NC." ),
     USER_TERMINATED( "User initiated terminate." ),
+    USER_STOPPED( "User initiated stop." ),
     BURIED( "Instance buried after timeout of %s ms.", SystemState.BURY_TIME ),
     APPEND( "" );
     private String   message;
@@ -175,7 +176,7 @@ public class SystemState {
     for ( String vmId : unreportedVms ) {
       try {
         VmInstance vm = VmInstances.getInstance( ).lookup( vmId );
-        if ( vm.getSplitTime( ) > SHUT_DOWN_TIME ) {
+        if ( vm.getSplitTime( ) > SHUT_DOWN_TIME && !VmState.STOPPED.equals( vm.getState( ) ) && !VmState.STOPPING.equals( vm.getState( ) ) ) {
           vm.setState( VmState.TERMINATED, Reason.EXPIRED );
         }
       } catch ( NoSuchElementException e ) {}

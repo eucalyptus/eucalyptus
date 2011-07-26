@@ -335,6 +335,11 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
       if ( !this.reasonDetails.contains( SEND_USER_TERMINATE ) ) {
         this.addReasonDetail( SEND_USER_TERMINATE );
       }
+    } else if ( VmState.SHUTTING_DOWN.equals( newState ) && VmState.STOPPING.equals( oldState ) && Reason.USER_TERMINATED.equals( reason ) ) {
+      VmInstances.cleanUp( this );
+      if ( !this.reasonDetails.contains( SEND_USER_TERMINATE ) ) {
+        this.addReasonDetail( SEND_USER_TERMINATE );
+      }
     } else if ( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) {
       VmInstances.getInstance( ).deregister( this.getName( ) );
       try {
