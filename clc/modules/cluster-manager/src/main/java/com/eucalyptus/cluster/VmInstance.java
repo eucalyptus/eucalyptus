@@ -265,6 +265,23 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     this.vmType = null;
   }
 
+  private VmInstance( ) {
+    this.instanceId = null;
+    this.launchTime = null;
+    this.instanceUuid = null;
+    this.launchIndex = null;
+    this.blockBytes = null;
+    this.networkBytes = null;
+    this.reservationId = null;
+    this.owner = null;
+    this.clusterName = null;
+    this.vbr = null;
+    this.partitionName = null;
+    this.userData = null;
+    this.platform = null;
+    this.sshKeyPair = null;
+    this.vmType = null;
+  }
   public void updateBlockBytes( long blkbytes ) {
     this.blockBytes += blkbytes;
   }
