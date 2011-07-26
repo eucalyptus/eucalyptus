@@ -72,6 +72,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import javax.persistence.Column;
 import javax.persistence.Lob;
@@ -103,6 +104,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.Transactions;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.vm.VmState;
@@ -335,6 +337,11 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
       }
     } else if ( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) {
       VmInstances.getInstance( ).deregister( this.getName( ) );
+      try {
+        Transactions.delete( this );
+      } catch ( ExecutionException ex ) {
+        LOG.error( ex , ex );
+      }
     } else if ( !this.getState( ).equals( newState ) ) {
       if ( Reason.APPEND.equals( reason ) ) {
         reason = this.reason;

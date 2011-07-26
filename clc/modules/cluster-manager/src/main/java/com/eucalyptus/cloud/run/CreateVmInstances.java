@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.cloud.run;
 
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -75,6 +76,7 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Transactions;
 import com.eucalyptus.vm.VmTypes;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
@@ -104,12 +106,22 @@ public class CreateVmInstances {
         for ( Integer networkIndex : token.getPrimaryNetwork( ).getIndexes( ) ) {
           VmInstance vmInst = getVmInstance( userFullName, allocInfo, reservationId, token, vmIndex++, networkIndex );
           VmInstances.getInstance( ).register( vmInst );
+          try {
+            Transactions.save( vmInst );
+          } catch ( ExecutionException ex ) {
+            LOG.error( ex , ex );
+          }
           token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
         }
       } else {
         for ( int i = 0; i < token.getAmount( ); i++ ) {
           VmInstance vmInst = getVmInstance( userFullName, allocInfo, reservationId, token, vmIndex++, -1 );
           VmInstances.getInstance( ).register( vmInst );
+          try {
+            Transactions.save( vmInst );
+          } catch ( ExecutionException ex ) {
+            LOG.error( ex , ex );
+          }
           token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
         }
       }
