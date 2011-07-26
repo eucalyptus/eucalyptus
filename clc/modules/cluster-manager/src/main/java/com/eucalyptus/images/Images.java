@@ -11,6 +11,7 @@ import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.blockstorage.Snapshots;
 import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.Image.Architecture;
 import com.eucalyptus.cloud.Image.StaticDiskImage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -18,7 +19,6 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.TransactionFireException;
-import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.TypeMapping;
@@ -68,7 +68,7 @@ public class Images {
       i.setDescription( arg0.getDescription( ) );
       i.setArchitecture( arg0.getArchitecture( ).toString( ) );
       i.setImageId( arg0.getDisplayName( ) );
-      i.setImageLocation( arg0.getImageLocation( ) );
+      i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageOwnerId( arg0.getOwnerAccountId( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
       i.setImageState( arg0.getState( ).toString( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
@@ -94,12 +94,45 @@ public class Images {
       i.setDescription( arg0.getDescription( ) );
       i.setArchitecture( arg0.getArchitecture( ).toString( ) );
       i.setImageId( arg0.getDisplayName( ) );
-      i.setImageLocation( arg0.getImageLocation( ) );
+      i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageOwnerId( arg0.getOwnerAccountId( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
       i.setImageState( arg0.getState( ).toString( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
       i.setIsPublic( arg0.getImagePublic( ) );
       i.setPlatform( Image.Platform.linux.toString( ) );
+//      i.setStateReason( arg0.getStateReason( ) );//TODO:GRZE:NOW
+//      i.setVirtualizationType( arg0.getVirtualizationType( ) );//TODO:GRZE:NOW
+//      i.getProductCodes().addAll( arg0.getProductCodes() );//TODO:GRZE:NOW
+//      i.getTags().addAll( arg0.getTags() );//TODO:GRZE:NOW
+//      i.setHypervisor( arg0.getHypervisor( ) );//TODO:GRZE:NOW
+      return i;
+    }
+  }
+  
+  @TypeMapper
+  public enum BlockStorageImageDetails implements TypeMapping<BlockStorageImageInfo, ImageDetails> {
+    INSTANCE;
+    
+    @Override
+    public ImageDetails apply( BlockStorageImageInfo arg0 ) {
+      ImageDetails i = new ImageDetails( );
+      i.setName( arg0.getImageName( ) );
+      i.setDescription( arg0.getDescription( ) );
+      i.setArchitecture( arg0.getArchitecture( ).toString( ) );
+      i.setRootDeviceName( "/dev/sda1" );
+      i.setRootDeviceType( "ebs" );
+      i.setImageId( arg0.getDisplayName( ) );
+      i.setImageLocation( arg0.getOwnerAccountId( ) + "/" + arg0.getImageName( ) );
+      i.setImageOwnerId( arg0.getOwnerAccountId( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
+      i.setImageState( arg0.getState( ).toString( ) );
+      i.setImageType( arg0.getImageType( ).toString( ) );
+      i.setIsPublic( arg0.getImagePublic( ) );
+      i.setImageType( arg0.getImageType( ).toString( ) );
+      i.setKernelId( arg0.getKernelId( ) );
+      i.setRamdiskId( arg0.getRamdiskId( ) );
+      i.setPlatform( arg0.getPlatform( ).toString( ) );
+      i.setPlatform( Image.Platform.linux.toString( ) );
+      i.getBlockDeviceMappings( ).addAll( Collections2.transform( arg0.getDeviceMappings( ), DeviceMappingDetails.INSTANCE ) );
 //      i.setStateReason( arg0.getStateReason( ) );//TODO:GRZE:NOW
 //      i.setVirtualizationType( arg0.getVirtualizationType( ) );//TODO:GRZE:NOW
 //      i.getProductCodes().addAll( arg0.getProductCodes() );//TODO:GRZE:NOW
@@ -123,8 +156,8 @@ public class Images {
       i.setRootDeviceName( "/dev/sda1" );
       i.setRootDeviceType( "instance-store" );
       i.setImageId( arg0.getDisplayName( ) );
-      i.setImageLocation( arg0.getImageLocation( ) );
-      i.setImageLocation( arg0.getImageLocation( ) );
+      i.setImageLocation( arg0.getManifestLocation( ) );
+      i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageOwnerId( arg0.getOwnerAccountId( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
       i.setImageState( arg0.getState( ).toString( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
@@ -133,7 +166,6 @@ public class Images {
       i.setKernelId( arg0.getKernelId( ) );
       i.setRamdiskId( arg0.getRamdiskId( ) );
       i.setPlatform( arg0.getPlatform( ).toString( ) );
-      i.setPlatform( Image.Platform.linux.toString( ) );
       i.getBlockDeviceMappings( ).addAll( Collections2.transform( arg0.getDeviceMappings( ), DeviceMappingDetails.INSTANCE ) );
 //      i.setStateReason( arg0.getStateReason( ) );//TODO:GRZE:NOW
 //      i.setVirtualizationType( arg0.getVirtualizationType( ) );//TODO:GRZE:NOW
@@ -272,6 +304,7 @@ public class Images {
   public static MachineImageInfo exampleMachineWithImageId( final String imageId ) {
     return new MachineImageInfo( imageId );
   }
+  
   public static BlockStorageImageInfo exampleBlockStorageWithImageId( final String imageId ) {
     return new BlockStorageImageInfo( imageId );
   }
@@ -319,8 +352,12 @@ public class Images {
     };
   }
   
-  public static ImageInfo createFromDeviceMapping( UserFullName userFullName, String rootDeviceName, final List<BlockDeviceMappingItemType> blockDeviceMappings ) throws EucalyptusCloudException {
+  public static ImageInfo createFromDeviceMapping( UserFullName userFullName, String imageName, String imageDescription,
+                                                   String eki, String eri,
+                                                   String rootDeviceName, final List<BlockDeviceMappingItemType> blockDeviceMappings ) throws EucalyptusCloudException {
     Context ctx = Contexts.lookup( );
+    Image.Architecture imageArch = Image.Architecture.x86_64;//TODO:GRZE:OMGFIXME: track parent vol info; needed here 
+    Image.Platform imagePlatform = Image.Platform.linux;//TODO:GRZE:OMGFIXME: track parent vol info; needed here
     BlockDeviceMappingItemType rootBlockDevice = Iterables.find( blockDeviceMappings, findEbsRoot( rootDeviceName ) );
     String snapshotId = rootBlockDevice.getEbs( ).getSnapshotId( );
     try {
@@ -329,19 +366,39 @@ public class Images {
         throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice
                                             + " because of: you must the owner of the source snapshot." );
       }
-      BlockStorageImageInfo ret = new BlockStorageImageInfo( generateImageId( Image.Type.machine.getTypePrefix( ), snapshotId ),
-                                                             snap.getDisplayName( ),
-                                                             ( snap.getVolumeSize( ) >= rootBlockDevice.getSize( ) )
-                                                               ? snap.getVolumeSize( )
-                                                               : rootBlockDevice.getEbs( ).getVolumeSize( ),
-                                                             Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) ) );
-      ret = Transactions.save( ret, new Callback<BlockStorageImageInfo>( ) {
-        
-        @Override
-        public void fire( BlockStorageImageInfo t ) {
-          t.getDeviceMappings( ).addAll( Lists.transform( blockDeviceMappings, Images.deviceMappingGenerator( t ) ) );
-        }
-      } );
+      Integer snapVolumeSize = snap.getVolumeSize( );
+      Integer suppliedVolumeSize = ( rootBlockDevice.getEbs( ).getVolumeSize( ) != null )
+        ? rootBlockDevice.getEbs( ).getVolumeSize( )
+        : -1;
+      suppliedVolumeSize = ( suppliedVolumeSize == null )
+        ? rootBlockDevice.getSize( )
+        : suppliedVolumeSize;
+      Integer targetVolumeSizeGB = ( snapVolumeSize <= suppliedVolumeSize )
+        ? suppliedVolumeSize
+        : snapVolumeSize;
+      Long imageSizeBytes = targetVolumeSizeGB * 1024l * 1024l * 1024l;
+      Boolean targetDeleteOnTermination = Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) );
+      String imageId = generateImageId( Image.Type.machine.getTypePrefix( ), snapshotId );
+//GRZE:REVIEW: almost certainly do not want to assert a default kernel/ramdisk for bfe.
+//      eki = ( eki != null ) ? eki : ImageConfiguration.getInstance( ).getDefaultKernelId( );
+//      eri = ( eri != null ) ? eri : ImageConfiguration.getInstance( ).getDefaultRamdiskId( );
+      
+      BlockStorageImageInfo ret = new BlockStorageImageInfo( userFullName, imageId, imageName, imageDescription, imageSizeBytes,
+                                                             imageArch, imagePlatform,
+                                                             eki, eri,
+                                                             snap.getDisplayName( ), targetDeleteOnTermination );
+      EntityWrapper<BlockStorageImageInfo> db = EntityWrapper.get( BlockStorageImageInfo.class );
+      try {
+        ret = db.merge( ret );
+        ret.getDeviceMappings( ).addAll( Lists.transform( blockDeviceMappings, Images.deviceMappingGenerator( ret ) ) );
+        ret.setState( Image.State.available );
+        db.commit( );
+        LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + userFullName );
+      } catch ( Exception e ) {
+        db.rollback( );
+        throw new EucalyptusCloudException( "Failed to register image using snapshot: " + snapshotId + " because of: " + e.getMessage( ), e );
+      }
+      
       return ret;
     } catch ( TransactionFireException ex ) {
       throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice + " because of: " + ex.getMessage( ) );
@@ -351,30 +408,44 @@ public class Images {
     }
   }
   
-  public static ImageInfo createFromManifest( UserFullName creator, String imageNameArg, String imageDescription, String eki, String eri, ImageManifest manifest ) throws EucalyptusCloudException {
+  public static ImageInfo createFromManifest( UserFullName creator, String imageNameArg, String imageDescription, Image.Architecture requestArch, Image.Platform requestPlatform, String eki, String eri, ImageManifest manifest ) throws EucalyptusCloudException {
     PutGetImageInfo ret = null;
     String imageName = ( imageNameArg != null )
       ? imageNameArg
       : manifest.getName( );
-    eki = ( eki != null ) ? eki : manifest.getKernelId( );
-    eki = ( eki != null ) ? eki : ImageConfiguration.getInstance( ).getDefaultKernelId( );
-    eri = ( eri != null ) ? eri : manifest.getRamdiskId( );
-    eri = ( eri != null ) ? eri : ImageConfiguration.getInstance( ).getDefaultRamdiskId( );
+    eki = ( eki != null )
+      ? eki
+      : manifest.getKernelId( );
+    eki = ( eki != null )
+      ? eki
+      : ImageConfiguration.getInstance( ).getDefaultKernelId( );
+    eri = ( eri != null )
+      ? eri
+      : manifest.getRamdiskId( );
+    eri = ( eri != null )
+      ? eri
+      : ImageConfiguration.getInstance( ).getDefaultRamdiskId( );
+    Image.Architecture imageArch = ( requestArch != null )
+      ? requestArch
+      : manifest.getArchitecture( );
+    Image.Platform imagePlatform = ( requestPlatform != null )
+      ? requestPlatform
+      : manifest.getPlatform( );
     switch ( manifest.getImageType( ) ) {
       case kernel:
         ret = new KernelImageInfo( creator, ImageUtil.newImageId( Image.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ),
-                                   imageName, imageDescription, manifest.getImageLocation( ), manifest.getSize( ), manifest.getBundledSize( ),
-                                    manifest.getArchitecture( ), manifest.getPlatform( ) );
+                                   imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
+                                    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ) );
         break;
       case ramdisk:
         ret = new RamdiskImageInfo( creator, ImageUtil.newImageId( Image.Type.ramdisk.getTypePrefix( ), manifest.getImageLocation( ) ),
-                                    imageName, imageDescription, manifest.getImageLocation( ), manifest.getSize( ), manifest.getBundledSize( ),
-                                    manifest.getArchitecture( ), manifest.getPlatform( ) );
+                                    imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
+                                    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ) );
         break;
       case machine:
         ret = new MachineImageInfo( creator, ImageUtil.newImageId( Image.Type.machine.getTypePrefix( ), manifest.getImageLocation( ) ),
-                                    imageName, imageDescription, manifest.getImageLocation( ), manifest.getSize( ), manifest.getBundledSize( ),
-                                    manifest.getArchitecture( ), manifest.getPlatform( ), eki, eri );
+                                    imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
+                                    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri );
         break;
     }
     if ( ret == null ) {
@@ -396,11 +467,39 @@ public class Images {
 //      imageInfo.addProductCode( p );
 //    }
 //    imageInfo.grantPermission( ctx.getAccount( ) );
+      maybeUpdateDefault( ret );
       LOG.info( "Triggering cache population in Walrus for: " + ret.getDisplayName( ) );
       if ( ret instanceof Image.StaticDiskImage ) {
         WalrusUtil.triggerCaching( ( StaticDiskImage ) ret );
       }
       return ret;
+    }
+  }
+  
+  private static void maybeUpdateDefault( PutGetImageInfo ret ) {
+    final String id = ret.getDisplayName( );
+    if ( Image.Type.kernel.equals( ret.getImageType( ) ) && ImageConfiguration.getInstance( ).getDefaultKernelId( ) == null ) {
+      try {
+        ImageConfiguration.modify( new Callback<ImageConfiguration>( ) {
+          @Override
+          public void fire( ImageConfiguration t ) {
+            t.setDefaultKernelId( id );
+          }
+        } );
+      } catch ( ExecutionException ex ) {
+        LOG.error( ex, ex );
+      }
+    } else if ( Image.Type.ramdisk.equals( ret.getImageType( ) ) && ImageConfiguration.getInstance( ).getDefaultRamdiskId( ) == null ) {
+      try {
+        ImageConfiguration.modify( new Callback<ImageConfiguration>( ) {
+          @Override
+          public void fire( ImageConfiguration t ) {
+            t.setDefaultRamdiskId( id );
+          }
+        } );
+      } catch ( ExecutionException ex ) {
+        LOG.error( ex, ex );
+      }
     }
   }
   

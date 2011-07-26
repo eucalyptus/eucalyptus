@@ -8,7 +8,7 @@ public class SearchResultCache {
 
   private static final Logger LOG = Logger.getLogger( SearchResultCache.class.getName( ) );
   
-  private static final SearchRange NULL_SORT = new SearchRange( -1, 0, -1, true );
+  private static final SearchRange NULL_SORT = new SearchRange( -1, 0, -999, true );
   
   private SearchRange sort = NULL_SORT;
   private int totalSize = 0;
@@ -84,6 +84,7 @@ public class SearchResultCache {
       this.sort = newResult.getRange( );
       this.totalSize = newResult.getTotalSize( );
       this.descs.addAll( newResult.getDescs( ) );
+      LOG.log( Level.INFO, "After restart: " + this.getDescs( ) );
     }
   }
   

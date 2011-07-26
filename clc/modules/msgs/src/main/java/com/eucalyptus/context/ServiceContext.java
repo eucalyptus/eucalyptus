@@ -123,7 +123,7 @@ public class ServiceContext {
       ctx = Contexts.createWrapped( dest, ( BaseMessage ) msg );
     }
     try {
-      LOG.debug( "ServiceContext.send(" + dest + ":" + msg.getClass( ).getCanonicalName( )/*, Exceptions.filterStackTrace( new RuntimeException( ), 3 )*/ );
+//      LOG.debug( "ServiceContext.send(" + dest + ":" + msg.getClass( ).getCanonicalName( )/*, Exceptions.filterStackTrace( new RuntimeException( ), 3 )*/ );
       MuleMessage reply = ServiceContextManager.getClient( ).sendDirect( dest, null, new DefaultMuleMessage( msg ) );
       
       if ( reply.getExceptionPayload( ) != null ) {
@@ -134,7 +134,7 @@ public class ServiceContext {
       }
     } catch ( Throwable e ) {
       throw Exceptions.trace( new ServiceDispatchException( "Failed to send message " + msg.getClass( ).getSimpleName( ) + " to service " + dest
-                                                                  + " because of " + e.getMessage( ), e ) );
+                                                                  + " because: " + e.getMessage( ), e ) );
     } finally {
       Contexts.clear( ctx );
       RequestContext.setEvent( context );

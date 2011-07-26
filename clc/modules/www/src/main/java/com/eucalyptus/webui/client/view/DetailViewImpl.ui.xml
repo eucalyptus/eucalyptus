@@ -41,10 +41,10 @@
     
     <ui:style field="gridStyle" type="com.eucalyptus.webui.client.view.DetailViewImpl.GridStyle">
         .grid {
-        	width:100%;
             font-size:80%;
             font-style:italic;
-            color:#333333;
+            color:#333333;          
+        	width:100%;
         }
         .grid td {
         	padding-top:4px;
@@ -52,14 +52,15 @@
             vertical-align:middle;
         }
         .grid input[type='text'], .grid input[type='password'], .grid textarea {
+        	color:#222222;
             width:98%;
-            background-color:#DDDDDD;
             border-style: solid;
             border-width: 1px;
             border-color: #999999 #CCCCCC #CCCCCC #999999;        
         }
         .grid input[type='text'][readonly=''], .grid input[type='password'][readonly=''], .grid textarea[readonly=''] {
         	background-color:#EEEEEE;
+        	border:none;
         }
     </ui:style>
     
@@ -80,9 +81,9 @@
                     <tbody>
                         <tr>
                             <td>
-                                <g:Anchor styleName="{global.buttonCss.button}" ui:field="save">
+                                <g:Button ui:field="save">
                                     <span class="{global.buttonCss.floppy} {global.buttonCss.icon}"/>Save
-                                </g:Anchor>                            
+                                </g:Button>                            
                             </td>
                         </tr>
                     </tbody>

@@ -65,8 +65,8 @@
 
 package edu.ucsb.eucalyptus.msgs;
 
-import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.component.ComponentMessage;
+import com.eucalyptus.component.ComponentMessage
+import com.eucalyptus.component.id.Storage
 
 public class StorageResponseType extends BaseMessage {
 	def StorageResponseType() {}
@@ -147,7 +147,7 @@ public class CreateStorageVolumeType extends StorageRequestType {
 	def CreateStorageVolumeType() {
 	}
 	
-	def CreateStorageVolumeType(final String volumeId, final String size, final String snapshotId, final String parentVolumeId) {
+	def CreateStorageVolumeType(final String volumeId, final Integer size, final String snapshotId, final String parentVolumeId) {
 		this.volumeId = volumeId;
 		this.size = size;
 		this.snapshotId = snapshotId;

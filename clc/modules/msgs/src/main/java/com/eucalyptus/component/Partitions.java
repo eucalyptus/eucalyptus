@@ -69,7 +69,12 @@ import java.security.cert.X509Certificate;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.Partition.Fake;
+import com.eucalyptus.component.auth.SystemCredentials;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.crypto.Certs;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -101,23 +106,34 @@ public class Partitions {
       return false;
     }
   }
+
+  private static Partition lookupByName( String partitionName ) throws NoSuchElementException {
+    EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
+    Partition p = null;
+    try {
+      p = db.getUnique( Partition.newInstanceNamed( partitionName ) );
+      db.commit( );
+      return p;
+    } catch ( EucalyptusCloudException ex1 ) {
+      db.rollback( );
+      throw new NoSuchElementException( "Failed to lookup partition for " + partitionName );
+    }
+  }
   
   public static Partition lookup( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    if ( config.getComponentId( ).isPartitioned( ) ) {
-      final String partitionName = config.getPartition( );
-      EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
-      Partition p = null;
+    if ( config.getComponentId( ).isPartitioned( ) && config.getComponentId( ).isRegisterable( ) ) {
+      Partition p;
       try {
-        p = db.getUnique( Partition.newInstanceNamed( partitionName ) );
-        db.commit( );
-      } catch ( EucalyptusCloudException ex1 ) {
-        db.rollback( );
+        p = Partitions.lookupByName( config.getPartition( ) );
+      } catch ( NoSuchElementException ex ) {
         LOG.warn( "Failed to lookup partition for " + config + ".  Generating new partition configuration." );
         p = Partitions.generatePartition( config );
       }
       return p;
+    } else if ( config.getComponentId( ).isPartitioned( ) ) {
+      return Partitions.lookupByName( config.getPartition( ) );
     } else {
-      return Partition.fakePartition( config.getComponentId( ) );
+      return Partitions.lookupInternal( config );
     }
   }
   
@@ -167,6 +183,10 @@ public class Partitions {
   
   @Deprecated
   public static ServiceConfiguration lookupService( Class<? extends ComponentId> compClass, String partition ) {
+    return lookupService( compClass, Partitions.lookupByName( partition ) );
+  }
+
+  public static ServiceConfiguration lookupService( Class<? extends ComponentId> compClass, Partition partition ) {
     NavigableSet<ServiceConfiguration> services = Components.lookup( compClass ).enabledPartitionServices( partition );
     if ( services.isEmpty( ) ) {
       throw new NoSuchElementException( "Failed to find service of type: " + compClass.getSimpleName( ) + " in partition: " + partition );
@@ -174,4 +194,29 @@ public class Partitions {
       return services.first( );
     }
   }
+
+  public static Partition lookupInternal( final ServiceConfiguration config ) {
+    ComponentId compId = config.getComponentId( );
+    if ( compId.isPartitioned( ) ) {
+      throw new IllegalArgumentException( "Provided compId is partitioned: " + compId.getFullName( ) );
+    } else {
+      if ( compId.isAlwaysLocal( ) ) {
+        return new Partition( ).new Fake( config.getHostName( ), SystemCredentials.getCredentialProvider( Empyrean.class ).getKeyPair( ),
+                                          SystemCredentials.getCredentialProvider( Empyrean.class ).getCertificate( ) );
+      } else if ( compId.isCloudLocal( ) ) {
+        return new Partition( ).new Fake( config.getHostName( ), SystemCredentials.getCredentialProvider( Eucalyptus.class ).getKeyPair( ),
+                                          SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( ) );
+      } else {
+        if ( !compId.hasCredentials( ) ) {
+          ComponentId p = ComponentIds.lookup( compId.getPartition( ) );
+          return new Partition( ).new Fake( compId.getPartition( ), SystemCredentials.getCredentialProvider( p ).getKeyPair( ),
+                                            SystemCredentials.getCredentialProvider( p ).getCertificate( ) );
+        } else {
+          return new Partition( ).new Fake( compId.getPartition( ), SystemCredentials.getCredentialProvider( compId ).getKeyPair( ),
+                                            SystemCredentials.getCredentialProvider( compId ).getCertificate( ) );
+        }
+      }
+    }
+  }
+
 }

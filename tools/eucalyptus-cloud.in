@@ -84,11 +84,6 @@ NAME=""
 ANT="`which ant 2> /dev/null`"
 EUCA_USER="eucalyptus"
 
-# available services
-WALRUS_WS="N"
-CLOUD_WS="N"
-STORAGE_WS="N"
-
 if [ "$EUID" != "0" ]; then
 	echo "Eucalyptus init scripts must be run as root."
 	exit 1
@@ -140,37 +135,33 @@ export EUCALYPTUS
 
 pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
 
-# read in the services which should be running
-read_ws_list() {
-	STORAGE_WS="N"
-	WALRUS_WS="N"
-	VMWAREBROKER_WS="N"
-	CLOUD_WS="N"	
-	NAME=""
+do_upgrade() {
+        while IFS=: read -r a b; do
+                OLD_EUCA_VERSION=$a
+                OLD_EUCA_PATH=$b
+        done < $EUCALYPTUS/etc/eucalyptus/.upgrade
 
-	for x in `cat $EUCALYPTUS/var/lib/eucalyptus/services 2> /dev/null` ; do
-		case $x in
-		walrus)
-			WALRUS_WS="Y"
-			NAME="walrus $NAME"
-			;;
-		sc) 
-			STORAGE_WS="Y"
-			NAME="sc $NAME"
-			;;
-		vmwarebroker)
-			VMWAREBROKER_WS="Y"
-			NAME="vmwarebroker $NAME"
-			;;
-		cloud)
-			CLOUD_WS="Y"
-			NAME="cloud $NAME"
-			;;
-		*)
-			echo "Unknown service! ($x)"
-			;;
-		esac
-	done
+        if [ "$OLD_EUCA_VERSION" = "@EUCA_VERSION@" ]; then
+            # No need to upgrade to the same version
+            return
+        fi
+
+        # Remove old unpacked webapp area
+        rm -rf $EUCALYPTUS/var/run/eucalyptus/webapp
+
+        # Attempt db upgrade
+        echo "Attempting database upgrade from $OLD_EUCA_VERSION at $OLD_EUCA_PATH..."
+	$EUCALYPTUS/usr/share/eucalyptus/euca_upgrade --old $OLD_EUCA_PATH --new $EUCALYPTUS --db --user $EUCA_USER
+	case "$?" in
+	0)
+		echo "done."
+		rm -f $EUCALYPTUS/etc/eucalyptus/.upgrade
+		;;
+        1)
+		echo "Upgrade failed. Aborting start."
+		exit 1
+		;;
+	esac
 }
 
 do_start() {
@@ -193,54 +184,14 @@ do_start() {
 	if [ "$DISABLE_EBS" = "Y" ]; then
 		CLOUD_OPTS="$CLOUD_OPTS --disable-storage"
 	fi
-	if [ "$DISABLE_ISCSI" != "N" ]; then
+	if [ "$DISABLE_ISCSI" = "Y" ]; then
 		CLOUD_OPTS="$CLOUD_OPTS --disable-iscsi"
 	fi
 
-	# enabled services
-	if [ "$STORAGE_WS" != "Y" ]; then
-		if [ "$DISABLE_EBS" != "Y" ]; then
-			CLOUD_OPTS="$CLOUD_OPTS --disable-storage"
-		fi
-	else
-		if [ "$DISABLE_EBS" = "Y" ]; then
-			echo "DISABLE_EBS is set in eucalyptus.conf: not starting the sc"
-		else
-			if ! $EUCALYPTUS/usr/sbin/euca_conf --check sc ; then
-				exit 1
-			fi
-		fi
-	fi
-	if [ "$WALRUS_WS" != "Y" ]; then
-		CLOUD_OPTS="$CLOUD_OPTS --disable-walrus"
-	else
-		if ! $EUCALYPTUS/usr/sbin/euca_conf --check walrus ; then
-			exit 1
-		fi
-	fi
-	if [ "$VMWAREBROKER_WS" != "Y" ]; then
-		CLOUD_OPTS="$CLOUD_OPTS --disable-vmwarebroker"
-	else
-    		if ! $EUCALYPTUS/usr/sbin/euca_conf --check vmwarebroker ; then
-			exit 1
-		fi
-		if ! $EUCALYPTUS/usr/lib/eucalyptus/euca_imager fsck ; then
-		    exit 1
-		fi
-	fi
-	if [ "$CLOUD_WS" != "Y" ]; then
-		CLOUD_OPTS="$CLOUD_OPTS --disable-cloud"
-	else
-		if ! $EUCALYPTUS/usr/sbin/euca_conf --check cloud ; then
-			exit 1
-		fi
-	fi
-
-	if [ "${STORAGE_WS}${CLOUD_WS}${WALRUS_WS}${VMWAREBROKER_WS}" = "NNNN" ]; then
-		# nothing to start
-		NAME="none"
-		return 0
-	fi
+        #Check if we need to upgrade
+        if [ -e $EUCALYPTUS/etc/eucalyptus/.upgrade ]; then
+                do_upgrade
+        fi
 
     # try log4j for a bit, see if anyone panics. $EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
 	ulimit -n 4096
@@ -250,31 +201,49 @@ do_start() {
 }
 
 do_status() {
-	if [ -s ${pidfile} ]; then
-		pid=`cat ${pidfile} 2> /dev/null`
-		if ! ps axww|grep $pid|grep eucalyptus-cloud.pid > /dev/null; then
-			# pid file is not matching
-			rm -f ${pidfile}
-			return 1
-		fi
-	else
-		# no pidfile, no running services
-		return 1
-	fi
+    local inpid="$1"
+    local ret=0
 
-	return $?
+    if [ -z "$inpid" ]; then
+        if [ -s ${pidfile} ]; then
+            pid=`cat ${pidfile} 2> /dev/null`
+        else
+            # no input pid, no pidfile, can't do anything
+            return 1
+        fi
+    else
+        pid="$inpid"
+    fi
+
+    ppid=`ps -p $pid -o ppid=`
+    if [ -n "$ppid" ]; then
+        if ! ps axww|grep $ppid|grep eucalyptus-cloud.pid >/dev/null; then
+            # pid file is not matching parent pid
+            ret=1
+        fi
+    fi
+    if [ -n "$pid" ]; then
+        if ! ps axww|grep $pid|grep eucalyptus-cloud.pid > /dev/null; then
+            # pid file is not matching
+            ret=1
+        fi
+    fi
+
+    return $ret
 }
 
 do_stop() {
 	# now stop the service
 	if [ -s "${pidfile}" ]; then
 		pid=`cat $pidfile 2> /dev/null`
+                ppid=`ps -p $pid -o ppid=`
 		kill $pid > /dev/null 2>&1
 	else
 		return
 	fi
 
 	# let's way few seconds than kill harder
+	# let's do this temporarily.
 	timeout=20
 	while [ $timeout -gt 0 ]; do
 		if do_status ; then
@@ -286,6 +255,7 @@ do_stop() {
 	done
 	if [ $timeout -eq 0 ]; then
 		kill -9 $pid > /dev/null 2>&1 
+		kill -9 $ppid > /dev/null 2>&1
 	fi
 	rm -f $pidfile
 
@@ -298,13 +268,12 @@ fi
 
 # set the library path correctly
 export VDDK_HOME="@VDDK_HOME@"
-export LD_LIBRARY_PATH="$EUCALYPTUS/usr/lib/eucalyptus:$VDDK_HOME/lib:$VDDK_HOME/lib/vmware-vix-disklib/lib32:$VDDK_HOME/lib/vmware-vix-disklib/lib64/" # to ensure euca_imager finds VDDK libs
-export PATH="$EUCALYPTUS/usr/lib/eucalyptus:$PATH" # to ensure euca_imager has euca_rootwrap
+
+# moved these to the euca_imager wrapper itself
+#export LD_LIBRARY_PATH="$EUCALYPTUS/usr/lib/eucalyptus:$VDDK_HOME/lib:$VDDK_HOME/lib/vmware-vix-disklib/lib32:$VDDK_HOME/lib/vmware-vix-disklib/lib64/" # to ensure euca_imager finds VDDK libs
+#export PATH="$EUCALYPTUS/usr/lib/eucalyptus:$PATH" # to ensure euca_imager has euca_rootwrap
 
 #VERBOSE="yes"
-
-# read services to start
-read_ws_list
 
 case "$1" in
   start)
@@ -319,7 +288,7 @@ case "$1" in
 	# let's check there is no previous cloud running
 	if do_status ; then
 		echo
-		echo "another $DESC is already running!"
+		echo "$DESC are already running!"
 		if [ "$VERBOSE" != no ]; then
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 1
@@ -363,7 +332,7 @@ case "$1" in
 	# let's check there is a previous cloud running
 	if ! do_status ; then
 		echo
-		echo "no $DESC is running!"
+		echo "$DESC are running!"
 		if [ "$VERBOSE" != no ]; then
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 1
@@ -388,7 +357,7 @@ case "$1" in
   	;;
   status)
 	if do_status ; then
-		echo "$DESC ($NAME) is/are running"
+		echo "$DESC are running"
 	else
 		exit 3
 	fi

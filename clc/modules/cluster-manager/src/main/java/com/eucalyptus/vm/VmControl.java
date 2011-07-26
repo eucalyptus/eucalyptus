@@ -69,11 +69,13 @@ import java.util.Date;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
@@ -90,23 +92,17 @@ import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
-import com.eucalyptus.vm.BundleInstanceResponseType;
-import com.eucalyptus.vm.BundleInstanceType;
-import com.eucalyptus.vm.BundleTask;
-import com.eucalyptus.vm.CancelBundleTaskResponseType;
-import com.eucalyptus.vm.CancelBundleTaskType;
-import com.eucalyptus.vm.DescribeBundleTasksResponseType;
-import com.eucalyptus.vm.DescribeBundleTasksType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.BundleInstanceChecker;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Lookups;
+import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.vm.SystemState.Reason;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
@@ -136,6 +132,7 @@ import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
 import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeType;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.StartInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.StartInstancesType;
 import edu.ucsb.eucalyptus.msgs.StopInstancesResponseType;
@@ -150,8 +147,8 @@ public class VmControl {
   
   private static Logger LOG = Logger.getLogger( VmControl.class );
   
-  public VmAllocationInfo allocate( final VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    return vmAllocInfo;
+  public Allocation allocate( final Allocation allocInfo ) throws EucalyptusCloudException {
+    return allocInfo;
   }
   
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
@@ -306,14 +303,61 @@ public class VmControl {
     return reply;
   }
   
-  public StartInstancesResponseType startInstances( final StartInstancesType request ) {
+  public StartInstancesResponseType startInstances( final StartInstancesType request ) throws EucalyptusCloudException {
+    Context ctx = Contexts.lookup( );
     final StartInstancesResponseType reply = request.getReply( );
+    for ( String instanceId : request.getInstancesSet( ) ) {
+      VmInstance v = null;
+      try {
+        v = VmInstances.getInstance( ).lookup( instanceId );
+      } catch ( NoSuchElementException ex ) {
+        try {
+          v = Transactions.find( VmInstance.named( ctx.getUserFullName( ), instanceId ) );
+        } catch ( ExecutionException ex1 ) {
+          throw new EucalyptusCloudException( "Failed to locate instance information for instance id: " + instanceId );
+        }
+      }
+      //TODO:GRZE:here here here.
+    }
     return reply;
   }
   
-  public StopInstancesResponseType stopInstances( final StopInstancesType request ) {
+  public StopInstancesResponseType stopInstances( final StopInstancesType request ) throws EucalyptusCloudException {
     final StopInstancesResponseType reply = request.getReply( );
-    return reply;
+    try {
+      final Context ctx = Contexts.lookup( );
+      final List<TerminateInstancesItemType> results = reply.getInstancesSet( );
+      Iterables.all( request.getInstancesSet( ), new Predicate<String>( ) {
+        @Override
+        public boolean apply( final String instanceId ) {
+          try {
+            final VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
+            if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
+              final int oldCode = v.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
+              final String oldState = v.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
+              results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
+              if ( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
+                v.setState( VmState.STOPPING, Reason.USER_STOPPED );
+              }
+            }
+            return true;
+          } catch ( final NoSuchElementException e ) {
+            try {
+              VmInstances.getInstance( ).lookupDisabled( instanceId ).setState( VmState.BURIED, Reason.BURIED );
+              return true;
+            } catch ( final NoSuchElementException e1 ) {
+              return false;
+            }
+          }
+        }
+      } );
+      reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
+      return reply;
+    } catch ( final Throwable e ) {
+      LOG.error( e );
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( e.getMessage( ) );
+    }
   }
   
   public ResetInstanceAttributeResponseType resetInstanceAttribute( final ResetInstanceAttributeType request ) {
@@ -396,7 +440,7 @@ public class VmControl {
     reply.set_return( true );
     Component walrus = Components.lookup( Walrus.class );
     NavigableSet<ServiceConfiguration> configs = walrus.lookupServiceConfigurations( );
-    if( configs.isEmpty( ) || !Component.State.ENABLED.isIn( configs.first( ) ) ) {
+    if ( configs.isEmpty( ) || !Component.State.ENABLED.isIn( configs.first( ) ) ) {
       throw new EucalyptusCloudException( "Failed to bundle instance because there is no available walrus service at the moment." );
     }
     final String walrusUrl = configs.first( ).getUri( ).toASCIIString( );
@@ -414,6 +458,7 @@ public class VmControl {
       } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
         throw new EucalyptusCloudException( "Failed to bundle requested vm because it is not currently 'running': " + request.getInstanceId( ) );
       } else if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
+        BundleInstanceChecker.check( request );
         final BundleTask bundleTask = new BundleTask( v.getInstanceId( ).replaceFirst( "i-", "bun-" ), v.getInstanceId( ), request.getBucket( ),
                                                       request.getPrefix( ) );
         if ( v.startBundleTask( bundleTask ) ) {
@@ -425,8 +470,7 @@ public class VmControl {
         } else {
           throw new EucalyptusCloudException( "Instance is already being bundled: " + v.getBundleTask( ).getBundleId( ) );
         }
-        LOG
-           .info( EventRecord
+        LOG.info( EventRecord
                              .here( BundleCallback.class, EventType.BUNDLE_PENDING, ctx.getUserFullName( ).toString( ), v.getBundleTask( ).getBundleId( ),
                                     v.getInstanceId( ) ) );
         final BundleCallback callback = new BundleCallback( request );
@@ -437,6 +481,8 @@ public class VmControl {
       } else {
         throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
       }
+    } catch ( EucalyptusCloudException e ) {
+      throw e;
     } catch ( final Exception e ) {
       throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
     }

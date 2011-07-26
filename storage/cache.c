@@ -70,7 +70,7 @@ int set_cache_dir (const char * path)
         logprintfl (EUCAERROR, "failed to set cache directory to '%s'\n", path);
         return 1;
     }
-    strncpy (cache_path, path, EUCA_MAX_PATH);
+    safe_strncpy (cache_path, path, EUCA_MAX_PATH);
     return 0;
 }
 
@@ -383,7 +383,8 @@ int set_work_dir (const char * path)
         logprintfl (EUCAERROR, "failed to set work directory to '%s'\n", path);
         return 1;
     }
-    strncpy (work_path, path, EUCA_MAX_PATH);
+    safe_strncpy (work_path, path, EUCA_MAX_PATH);
+
     return 0;
 }
 
@@ -430,7 +431,7 @@ char * alloc_tmp_file (const char * name_base, long long size)
     }
 
     snprintf (path, EUCA_MAX_PATH, "%s/%s-XXXXXX", get_work_dir(), name_base);
-    int tmp_fd = mkstemp (path);
+    int tmp_fd = safe_mkstemp (path);
     if (tmp_fd<0) {
         logprintfl (EUCAERROR, "error: failed to create a temporary file under %s\n", path);
         free(path);
@@ -458,7 +459,7 @@ disk_item * alloc_disk_item (const char * id, const long long content_size, cons
         logprintfl (EUCAERROR, "error: out of memory in alloc_disk_item()\n");
         return di;
     }
-    strncpy (di->id, id, EUCA_MAX_PATH);
+    safe_strncpy (di->id, id, EUCA_MAX_PATH);
     if (cache_item) {
         snprintf (di->base, EUCA_MAX_PATH, "%s/%s",      get_cache_dir(), di->id);
         snprintf (di->path, EUCA_MAX_PATH, "%s/content", di->base);
@@ -694,7 +695,7 @@ output_file * preprocess_output_path (const char * id, artifacts_spec * spec, bo
     }
     o->do_work = use_work;
     o->do_cache = use_cache;
-    strncpy (o->id, id, sizeof (o->id));
+    safe_strncpy (o->id, id, sizeof (o->id));
 
     // is there a valid work copy already?
     o->work_copy = find_disk_item (id, FALSE);
@@ -807,7 +808,7 @@ output_file * preprocess_output_path (const char * id, artifacts_spec * spec, bo
     }
 
     if (result_path) {
-        strncpy (o->path, result_path, sizeof (o->path));
+        safe_strncpy (o->path, result_path, sizeof (o->path));
     }
 
  cleanup:

@@ -67,7 +67,9 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
     container.setWidget( view );
     
     LOG.log( Level.INFO, "Search " + getTitle( ) + ": " + place.getSearch( ) );
-    doSearch( place.getSearch( ), new SearchRange( 0, pageSize ) );
+    // At the beginning, don't sort
+    range = new SearchRange( 0, pageSize, -1/*sortField*/, true );
+    doSearch( place.getSearch( ), range );
   }
   
   @Override
@@ -75,7 +77,13 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
     this.clientFactory.getShellView( ).getDetailView( ).clear( );
     this.clientFactory.getShellView( ).hideDetail( );
   }
-  
+
+  @Override
+  public void onCancel( ) {
+    this.clientFactory.getShellView( ).getDetailView( ).clear( );
+    this.clientFactory.getShellView( ).hideDetail( );
+  }
+
   protected void displayData( SearchResult result ) {
     if ( this.place != this.clientFactory.getMainPlaceController( ).getWhere( ) ) {
       LOG.log( Level.INFO, "Place was changed prematurely" );
@@ -121,6 +129,25 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
     descs.addAll( cache.getDescs( ) );
     descs.addAll( selected.getExtraFieldDescs( ) );
     this.clientFactory.getShellView( ).getDetailView( ).showData( descs, selected.getRow( ) );          
+  }
+ 
+  public void onAction( String key ) {
+    //Nothing to do.
+  }
+  
+  public void cancel( String subject ) {
+    //Nothing to do.
+  }
+  
+  protected static String getField( ArrayList<String> values, int index ) {
+    if ( values != null && values.size( ) > index ) {
+      return values.get( index );
+    }
+    return null;
+  }
+  
+  protected static String emptyForNull( String s ) {
+    return s == null ? "" : s;
   }
   
   protected abstract void doSearch( String query, SearchRange range );

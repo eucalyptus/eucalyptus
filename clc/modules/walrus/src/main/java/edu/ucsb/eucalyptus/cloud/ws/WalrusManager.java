@@ -204,6 +204,7 @@ import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import edu.ucsb.eucalyptus.util.WalrusDataQueue;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
+import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class WalrusManager {
 	private static Logger LOG = Logger.getLogger(WalrusManager.class);
@@ -227,19 +228,25 @@ public class WalrusManager {
 	}
 
 	public void check() throws EucalyptusCloudException {
-		File bukkitDir = new File(WalrusInfo.getWalrusInfo().getStorageDir());
-		if (!bukkitDir.exists()) {
-			if (!bukkitDir.mkdirs()) {
+		String bukkitDir = WalrusInfo.getWalrusInfo().getStorageDir();
+		File bukkits = new File(WalrusInfo.getWalrusInfo().getStorageDir());
+		if (!bukkits.exists()) {
+			if (!bukkits.mkdirs()) {
 				LOG.fatal("Unable to make bucket root directory: "
-						+ WalrusInfo.getWalrusInfo().getStorageDir());
+						+ bukkitDir);
 				throw new EucalyptusCloudException(
 				"Invalid bucket root directory");
 			}
-		} else if (!bukkitDir.canWrite()) {
+		} else if (!bukkits.canWrite()) {
 			LOG.fatal("Cannot write to bucket root directory: "
-					+ WalrusInfo.getWalrusInfo().getStorageDir());
+					+ bukkitDir);
 			throw new EucalyptusCloudException("Invalid bucket root directory");
 		}
+                try {
+                        SystemUtil.setEucaReadWriteOnly(bukkitDir);
+                } catch (EucalyptusCloudException ex) {
+                        LOG.fatal(ex);
+                }
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo();
 		List<BucketInfo> bucketInfos = db.query(bucketInfo);
@@ -430,9 +437,8 @@ public class WalrusManager {
 	}
 
 	private boolean checkBucketName(String bucketName) {
-		if(!(bucketName.matches("^[A-Za-z0-9].*") || bucketName.contains(".") || 
-				bucketName.contains("-")))
-			return false;
+                if(!bucketName.matches("^[A-Za-z0-9][A-Za-z0-9._-]+"))
+                        return false;
 		if(bucketName.length() < 3 || bucketName.length() > 255)
 			return false;
 		String[] addrParts = bucketName.split("\\.");
@@ -455,11 +461,13 @@ public class WalrusManager {
 	}
 
 	private boolean checkDNSNaming(String bucketName) {
-		if(bucketName.contains("_"))
-			return false;
+ 		if(!bucketName.matches("^[a-z0-9][a-z0-9.-]+"))
+                        return false;
 		if(bucketName.length() < 3 || bucketName.length() > 63)
 			return false;
 		if(bucketName.endsWith("-"))
+			return false;
+	        if(bucketName.contains(".."))
 			return false;
 		if(bucketName.contains("-." ) || bucketName.contains(".-"))
 			return false;

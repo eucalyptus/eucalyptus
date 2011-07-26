@@ -34,8 +34,8 @@ import inspect
 import os
 import sys
 import boto.utils
-import boto.exception
 import eucadmin.configfile
+from boto.roboto.awsqueryservice import NoCredentialsError
 
 import bdb
 import traceback
@@ -47,7 +47,7 @@ except ImportError:
 def euca_except_hook(debugger_flag, debug_flag):
     def excepthook(typ, value, tb):
         if typ is bdb.BdbQuit:
-            sys.exit(1) 
+            sys.exit(1)
         sys.excepthook = sys.__excepthook__
 
         if debugger_flag and sys.stdout.isatty() and sys.stdin.isatty():
@@ -74,11 +74,45 @@ RegOptions = {
     'component' : ['-C', '--component', 'component_name']}
 
 # list of services which can be checked
-CheckableServices = ['cc', 'cloud', 'nc', 'sc',
+CheckableServices = ['common', 'cc', 'cloud', 'nc', 'sc',
                      'walrus', 'vmware', 'vmwarebroker']
+CheckableServicesString = '|'.join(CheckableServices)
 
 # list of services which can be enabled/disabled
 EnableableServices = ['cloud', 'walrus', 'sc', 'vmwarebroker']
+EnableableServicesString = '|'.join(EnableableServices)
+
+RegisterHelp = """
+euca_conf provides two alternatives for component registration. The
+first alternative is compatible with the previous version of euca_conf
+and uses positional arguments. For example:
+
+euca_conf --register-cluster Part001 192.168.51.108
+
+would register a new cluster on host 192.168.51.108. In previous
+versions of the tool, the first argument would be interpreted as the
+"clustername" but now, with HA, this argument is interpreted as the
+partition name. Rather than requiring an additional positional
+argument for the component name required for registration, this
+approach will generate a component name for the user by concatenating
+the resource type (in this case "cluster") with the host name. So, in
+this case the component name would be "cluster-192.168.51.108". This
+allows previous scripts to continue working unchanged in the new
+version of the tool.
+
+The second, and preferred, approach uses explicit options for the
+partition name, the component name and the host name required for
+registration. For example:
+
+euca_conf --register-cluster --partition Part001 --component MyCluster --host 192.168.51.108
+
+Alternatively, you could use the short form of the options like this:
+
+euca_conf --register-cluster -P Part001 -C MyCluster -H 192.168.51.108
+
+or any combination thereof. The options can be provided in any order
+and can appear before or after the --register-* option.
+"""
 
 class EucaConf(object):
 
@@ -87,6 +121,9 @@ class EucaConf(object):
         self.config = None
         self.specified_options = {}
         self.parser = optparse.OptionParser()
+        self.parser.add_option('--initialize', action='store_true',
+                               dest='initialize', default=False,
+                               help='Do one-time initialize of CLC')
         self.parser.add_option('--heartbeat', action='store', type='string',
                                help='get heartbeat data for <host>')
         self.parser.add_option('--synckey', action='store_true',
@@ -122,13 +159,24 @@ class EucaConf(object):
                                action='append', type='string',
                                dest='dereg_nodes', metavar='"host host..."',
                                help='remove nodes from EUCALYPTUS')
-        self.parser.add_option('--register-cluster', 
+        self.parser.add_option('--register-cloud',
+                               action='callback',  callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name',
+                                                           'host_name']},
+                               help='add new clc to EUCALYPTUS')
+        self.parser.add_option('--deregister-cloud',
+                               action='callback', callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name']},
+                               help='remove clc from EUCALYPTUS')
+        self.parser.add_option('--register-cluster',
                                action='callback',  callback=self.reg_callback,
                                callback_kwargs={'needs' : ['partition_name',
                                                            'component_name',
                                                            'host_name']},
                                help='add new cluster to EUCALYPTUS')
-        self.parser.add_option('--deregister-cluster', 
+        self.parser.add_option('--deregister-cluster',
                                action='callback', callback=self.reg_callback,
                                callback_kwargs={'needs' : ['partition_name',
                                                            'component_name']},
@@ -171,6 +219,9 @@ class EucaConf(object):
         self.parser.add_option('--list-walruses', action='store_true',
                                dest='list_walruses', default=False,
                                help='list registered walrus(es)')
+        self.parser.add_option('--list-clouds', action='store_true',
+                               dest='list_clouds', default=False,
+                               help='list registered CLCs')
         self.parser.add_option('--list-clusters', action='store_true',
                                dest='list_clusters', default=False,
                                help='list registered CCs')
@@ -246,25 +297,25 @@ class EucaConf(object):
         self.parser.add_option('--import-conf', action='store',
                                type='string', dest='import_conf_file',
                                help='import vars from another eucalyptus.conf')
+        self.parser.add_option('--upgrade-conf', action='store',
+                               type='string', dest='upgrade_conf_file',
+                               help='upgrade eucalyptus.conf from old installation')
         self.parser.add_option('--setup', action='store_true',
                                dest='do_setup', default=False,
                                help='perform initial setup')
-        self.parser.add_option('--enable {cloud|sc|walrus|vmwarebroker}',
-                               action='store', type='choice',
-                               choices=['cloud', 'sc', 'walrus',
-                                        'vmwarebroker'],
-                               dest='enable_what', metavar='<service>',
+        self.parser.add_option('--enable {%s}' % EnableableServicesString,
+                               action='append', type='choice',
+                               choices=EnableableServices,
+                               dest='enable_whats', metavar='<service>',
                                help='enable service at next start}')
-        self.parser.add_option('--disable {cloud|sc|walrus|vmwarebroker',
+        self.parser.add_option('--disable {%s}' % EnableableServicesString,
+                               action='append', type='choice',
+                               choices=EnableableServices,
+                               dest='disable_whats', metavar='<service>',
+                               help='disable service at next start}')
+        self.parser.add_option('--check {common|vmware}',
                                action='store', type='choice',
-                               choices=['cloud', 'sc', 'walrus',
-                                        'vmwarebroker'],
-                               dest='disable_what', metavar='<service>',
-                               help='disable service at next start')
-        self.parser.add_option('--check {nc|cc|cloud|sc|walrus|vmware|vmwarebroker}',
-                               action='store', type='choice',
-                               choices=['nc', 'cc', 'cloud', 'sc',
-                                        'walrus', 'vmware', 'vmwarebroker'],
+                               choices=CheckableServices,
                                dest='check_what', metavar='<service>',
                                help='pre-flight checks')
         self.parser.add_option('--debug', action='store_true',
@@ -290,6 +341,9 @@ class EucaConf(object):
                                dest=RegOptions['component'][2],
                                metavar='<component name>',
                                help='Name of the component')
+        self.parser.add_option('--help-register', action='store_true',
+                               default=False,
+                               help='Display help on register/deregister')
         self.options, self.args = self.parser.parse_args()
         if len(self.args) > 0:
             filepath = self.args[0]
@@ -350,7 +404,7 @@ class EucaConf(object):
         considered an error.
 
         The explicit options take precedence over positional args.
-        
+
         Any options supplied prior to the --register-* option
         can be found by looking in the parser.values data
         for the appropriate variable name
@@ -367,6 +421,11 @@ class EucaConf(object):
                 if value:
                     opts.append(opt_name)
         for opt in parser.rargs:
+            # If option was specified as foo=bar we get the whole
+            # expression here and need to split it to have only
+            # the option name.
+            if '=' in opt:
+                opt = opt.split('=')[0]
             for reg_opt in RegOptions.values():
                 if opt == reg_opt[0] or opt == reg_opt[1]:
                     opts.append(reg_opt[2])
@@ -412,13 +471,22 @@ class EucaConf(object):
             if name.startswith('do_') and inspect.ismethod(method):
                 method()
 
+    def do_initialize(self):
+        if self.options.initialize:
+            cls = boto.utils.find_class('eucadmin.initialize',
+                                        'Initialize')
+            obj = cls(self.config)
+            sys.exit(obj.main())
+
     def do_get_credentials(self):
         if self.options.get_credentials:
             cls = boto.utils.find_class('eucadmin.getcredentials',
                                         'GetCredentials')
-            obj = cls(self.config, self.options.get_credentials,
-                      self.options.cred_account, self.options.cred_user)
-            obj.main()
+            obj = cls()
+            obj.main(euca_home=self.config['EUCALYPTUS'],
+                     account=self.options.cred_account,
+                     user=self.options.cred_user,
+                     zipfile=self.options.get_credentials)
 
     def do_setup(self):
         if self.options.do_setup:
@@ -427,36 +495,29 @@ class EucaConf(object):
             req.main()
 
     def do_check(self):
-        if self.options.check_what:
-            if self.options.check_what not in CheckableServices:
-                print 'check requires one of %s' % CheckableServices
-                sys.exit(1)
+        if self.options.check_what in CheckableServices:
+            # All previously supported options, plus common, will
+            # now just call check.common
             cls = boto.utils.find_class('eucadmin.check', 'Check')
             req = cls(self.config, self.options.check_what)
-            req.main()
+            req.common()
             if len(req.messages) > 0:
                 print 'The following messages should be reviewed:'
                 for msg in req.messages:
                     print '\t%s' % msg
             sys.exit(req.status)
+        elif self.options.check_what == 'vmware':
+            print 'do vmware check here'
 
     def do_enable(self):
-        if self.options.enable_what:
-            if self.options.enable_what not in EnableableServices:
-                print 'enable requires one of %s' % EnableableServices
-                sys.exit(1)
-            cls = boto.utils.find_class('eucadmin.enable', 'Enable')
-            req = cls(self.config, self.options.enable_what, True)
-            req.main()
+        if self.options.enable_whats:
+            # This is now a no-op.  Just return success.
+            sys.exit(0)
 
     def do_disable(self):
-        if self.options.disable_what:
-            if self.options.disable_what not in EnableableServices:
-                print 'disable requires one of %s' % EnableableServices
-                sys.exit(1)
-            cls = boto.utils.find_class('eucadmin.enable', 'Enable')
-            req = cls(self.config, self.options.disable_what, False)
-            req.main()
+        if self.options.disable_whats:
+            # This is now a no-op.  Just return success.
+            sys.exit(0)
 
     def do_heartbeat(self):
         if self.options.heartbeat:
@@ -464,11 +525,23 @@ class EucaConf(object):
             req = cls(self.options.heartbeat)
             req.cli_formatter()
 
+    def do_upgrade_conf(self):
+        if self.options.upgrade_conf_file:
+            print 'Upgrading from %s' % self.options.upgrade_conf_file
+            self.config.mergefile(self.options.upgrade_conf_file)
+            
     def _do_list(self, option_name, module_name, class_name):
         if getattr(self.options, option_name):
             cls = boto.utils.find_class(module_name, class_name)
             req = cls(debug=self.debug)
-            data = req.main()
+            try:
+                data = req.main()
+            except NoCredentialsError:
+                url = 'http://localhost:8773/services/Eucalyptus'
+                ak, sk = self._get_accesskey_secretkey(url)
+                req = cls(aws_access_key_id=ak, aws_secret_access_key=sk,
+                          url=url, debug=self.debug)
+                data = req.main()
             req.cli_formatter(data)
 
     def do_list_nodes(self):
@@ -480,6 +553,11 @@ class EucaConf(object):
         self._do_list('list_walruses',
                       'eucadmin.describewalruses',
                       'DescribeWalruses')
+
+    def do_list_clouds(self):
+        self._do_list('list_clouds',
+                      'eucadmin.describeeucalyptus',
+                      'DescribeEucalyptus')
 
     def do_list_clusters(self):
         self._do_list('list_clusters',
@@ -506,6 +584,17 @@ class EucaConf(object):
                       'eucadmin.describeservices',
                       'DescribeServices')
 
+    def _get_accesskey_secretkey(self, url):
+        print 'No credentials found, attempting local authentication'
+        gc_cls = boto.utils.find_class('eucadmin.getcredentials',
+                                       'GetCredentials')
+        obj = gc_cls(euca_home=self.config['EUCALYPTUS'],
+                     account=self.options.cred_account,
+                     user=self.options.cred_user,
+                     zipfile='notused')
+        s = obj.get_accesskey_secretkey()
+        return s.split('\t')
+        
     def _do_register(self, module_name, class_name, port_option):
         partition = self.options.partition_name
         component_name = self.options.component_name
@@ -518,9 +607,32 @@ class EucaConf(object):
             port = None
         cls = boto.utils.find_class(module_name, class_name)
         req = cls(debug=self.debug)
-        data = req.main(partition=partition, name=component_name,
-                        port=port, host=host)
+        try:
+            data = req.main(partition=partition, name=component_name,
+                            port=port, host=host)
+        except NoCredentialsError:
+            url = 'http://localhost:8773/services/Eucalyptus'
+            ak, sk = self._get_accesskey_secretkey(url)
+            req = cls(aws_access_key_id=ak, aws_secret_access_key=sk,
+                      url=url, debug=self.debug)
+            data = req.main(partition=partition, name=component_name,
+                            port=port, host=host)
         req.cli_formatter(data)
+
+    def do_register_cloud(self):
+        if hasattr(self.options, 'register_cloud'):
+            self._do_register('eucadmin.registereucalyptus',
+                              'RegisterEucalyptus', None)
+            if not self.options.no_sync:
+                path1 = os.path.join(self.config['EUCALYPTUS'],
+                                     'var/lib/eucalyptus/keys')
+                path2 = os.path.join(path1, self.options.partition_name)
+                cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
+                req = cls([path1, path2], path1,
+                          self.options.host_name, ['euca.p12'],
+                          use_rsync=(not self.options.no_rsync),
+                          use_scp=(not self.options.no_scp))
+                req.sync()
 
     def do_register_cluster(self):
         if hasattr(self.options, 'register_cluster'):
@@ -582,9 +694,22 @@ class EucaConf(object):
         if hasattr(self.options, option_name):
             cls = boto.utils.find_class(module_name, class_name)
             req = cls(debug=self.debug)
-            data = req.main(partition=self.options.partition_name,
-                            name=self.options.component_name)
+            try:
+                data = req.main(partition=self.options.partition_name,
+                                name=self.options.component_name)
+            except NoCredentialsError:
+                url = 'http://localhost:8773/services/Eucalyptus'
+                ak, sk = self._get_accesskey_secretkey(url)
+                req = cls(aws_access_key_id=ak, aws_secret_access_key=sk,
+                          url=url, debug=self.debug)
+                data = req.main(partition=self.options.partition_name,
+                                name=self.options.component_name)
             req.cli_formatter(data)
+
+    def do_deregister_cloud(self):
+        self._do_deregister('deregister_cloud',
+                            'eucadmin.deregistereucalyptus',
+                            'DeregisterEucalyptus')
 
     def do_deregister_cluster(self):
         self._do_deregister('deregister_cluster',
@@ -618,12 +743,12 @@ class EucaConf(object):
                   use_scp=(not self.options.no_scp))
         return req.sync()
 
-    def _print_sync_error(self):
+    def _print_sync_error(self, node):
         print 'ERROR: could not synchronize keys with %s' % node
         print 'The configuration will not have this node.'
         ssh_key = self.get_sshkey()
         if not ssh_key:
-            print 'User %s may have to run ssh-keygen!'
+            print 'User $EUCA_USER may have to run ssh-keygen!'
         else:
             print "Hint: to setup passwordless login to the nodes as"
             print "user $EUCA_USER, you can"
@@ -643,13 +768,15 @@ class EucaConf(object):
             msg = 'INFO: We expect all nodes to have eucalyptus'
             msg += ' installed in $EUCALYPTUS for key synchronization.'
             print msg
-            nodes_to_add = self.options.reg_nodes
             current_nodes = self.config['NODES'].split()
-            for node in nodes_to_add:
-                if node not in current_nodes:
-                    current_nodes.append(node)
-                if not self._sync_node(node):
-                    self.print_sync_error()
+
+            for node_string in self.options.reg_nodes:
+                nodes_to_add = node_string.split()
+                for node in nodes_to_add:
+                    if node not in current_nodes:
+                        current_nodes.append(node)
+                    if not self._sync_node(node):
+                        self._print_sync_error(node)
             self.config['NODES'] = ' '.join(current_nodes)
             print '...done'
 
@@ -657,8 +784,15 @@ class EucaConf(object):
         if self.options.dereg_nodes:
             current_nodes = self.config['NODES'].split()
             for node in self.options.dereg_nodes:
-                current_nodes.remove(node)
+                if node in current_nodes:
+                    current_nodes.remove(node)
+                else:
+                    print 'Node %s is not currently registered' % node
             self.config['NODES'] = ' '.join(current_nodes)
+
+    def do_help_register(self):
+        if self.options.help_register:
+            print RegisterHelp
 
 if __name__ == "__main__":
     ec = EucaConf()

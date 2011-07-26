@@ -12,21 +12,18 @@ import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
-import org.hibernate.event.EventListeners;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.util.Assertions;
-import com.eucalyptus.util.Logs;
-import com.eucalyptus.util.LogUtil;
 
 public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   private static Logger                                   LOG         = Logger.getLogger( TxHandle.class );
   private static ConcurrentNavigableMap<String, TxHandle> outstanding = new ConcurrentSkipListMap<String, TxHandle>( );
   
-  private EntityManager                             em;
+  private EntityManager                                   em;
   private final WeakReference<Session>                    session;
-  private EntityTransaction                         delegate;
+  private EntityTransaction                               delegate;
   private final Exception                                 owner;
   private final Calendar                                  startTime;
   private final String                                    txUuid;
@@ -36,7 +33,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   
   public TxHandle( String ctx ) {
     this.txUuid = String.format( "%s:%s", ctx, UUID.randomUUID( ).toString( ) );
-    this.owner = new RuntimeException( );
+    this.owner = new Exception( );
     this.startTime = Calendar.getInstance( );
     this.stopWatch = new StopWatch( );
     this.stopWatch.start( );
@@ -48,11 +45,12 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
       this.delegate = this.em.getTransaction( );
       this.delegate.begin( );
       this.session = new WeakReference<Session>( ( Session ) this.em.getDelegate( ) );
-      outstanding.put( this.txUuid, this );
     } catch ( Throwable e ) {
       this.rollback( );
       LOG.error( e, e );
       throw new RuntimeException( e );
+    } finally {
+      outstanding.put( this.txUuid, this );
     }
   }
   
@@ -87,17 +85,20 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
       this.cleanup( );
     }
   }
-
+  
   private void cleanup( ) {
-    if ( this.session != null ) {
-      this.session.clear( );
+    try {
+      if ( this.session != null && this.session.get( ) != null ) {
+        this.session.clear( );
+      }
+      this.delegate = null;
+      if ( this.em != null ) {
+        this.em.close( );
+      }
+      this.em = null;
+    } finally {
+      outstanding.remove( this.txUuid );
     }
-    this.delegate = null;
-    if ( this.em != null ) {
-      this.em.close( );
-    }
-    this.em = null;
-    outstanding.remove( this.txUuid );
   }
   
   private void verifyOpen( ) {
@@ -114,8 +115,8 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
       if ( this.delegate != null && this.delegate.isActive( ) ) {
         this.delegate.rollback( );
         LOG.debug( e, e );
-        throw e;
       }
+      throw e;
     } finally {
       cleanup( );
     }
@@ -196,14 +197,14 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   public String toString( ) {
     return String.format( "TxHandle:txUuid=%s:startTime=%s:splitTime=%s", this.txUuid, this.startTime, this.splitTime );
   }
-
+  
   public static class TxWatchdog implements EventListener {
     
     @Override
     public void fireEvent( Event event ) {
-      if( event instanceof ClockTick ) {
-        for( TxHandle tx : TxHandle.outstanding.values( ) ) {
-          if( tx.isExpired( ) ) {
+      if ( event instanceof ClockTick ) {
+        for ( TxHandle tx : TxHandle.outstanding.values( ) ) {
+          if ( tx.isExpired( ) ) {
             LOG.error( "Found expired TxHandle: " + tx );
             LOG.error( tx.owner, tx.owner );
           }
@@ -211,5 +212,5 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
       }
     }
   }
-
+  
 }

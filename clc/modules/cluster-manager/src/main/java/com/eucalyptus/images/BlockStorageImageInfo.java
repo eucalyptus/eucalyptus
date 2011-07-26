@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -77,64 +77,77 @@ import com.eucalyptus.cloud.Image;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "blockstorage" )
-public class BlockStorageImageInfo extends ImageInfo {
-  @Column( name = "image_snapshot_id" )
+public class BlockStorageImageInfo extends ImageInfo implements BootableImageInfo {
+  @Column( name = "metadata_image_snapshot_id" )
   private String  snapshotId;
-  @Column( name = "image_volume_size" )
-  private Integer volumeSize;
-  @Column( name = "image_del_vol_on_terminate" )
+  @Column( name = "metadata_image_del_vol_on_terminate" )
   private Boolean deleteOnTerminate;
+  @Column( name = "metadata_image_kernel_id" )
+  private String  kernelId;
+  @Column( name = "metadata_image_ramdisk_id" )
+  private String  ramdiskId;
   
   BlockStorageImageInfo( ) {
-    super( );
-    this.setImageType( Image.Type.machine );
+    super( Image.Type.machine );
   }
   
   BlockStorageImageInfo( String imageId ) {
-    super( imageId );
-    this.setImageType( Image.Type.machine );
+    super( Image.Type.machine , imageId );
   }
   
-  BlockStorageImageInfo( String imageId, String snapshotId, Integer volumeSize, Boolean deleteOnTerminate ) {
-    super( imageId );
+  BlockStorageImageInfo( UserFullName userFullName, String imageId, String imageName, String imageDescription, Long imageSizeBytes,
+                         Image.Architecture arch, Image.Platform platform,
+                         String kernelId, String ramdiskId,
+                         String snapshotId, Boolean deleteOnTerminate ) {
+    super( userFullName, imageId, Image.Type.machine, imageName, imageDescription, imageSizeBytes, arch, platform );
+    this.kernelId = kernelId;
+    this.ramdiskId = ramdiskId;
     this.snapshotId = snapshotId;
-    this.volumeSize = volumeSize;
     this.deleteOnTerminate = deleteOnTerminate;
-    this.setImageType( Image.Type.machine );
   }
   
-  BlockStorageImageInfo( UserFullName userFullName, String imageId, String imageName, String imageDescription,
-                         String snapshotId, Integer volumeSize, Boolean deleteOnTerminate,
-                         Image.Architecture arch, Image.Platform platform ) {
-    super( userFullName, imageId, imageName, imageDescription, arch, platform );
-    this.snapshotId = snapshotId;
-    this.volumeSize = volumeSize;
-    this.deleteOnTerminate = deleteOnTerminate;
-    
-  }
-
   public String getSnapshotId( ) {
     return this.snapshotId;
   }
-
+  
   public void setSnapshotId( String snapshotId ) {
     this.snapshotId = snapshotId;
   }
-
-  public Integer getVolumeSize( ) {
-    return this.volumeSize;
-  }
-
-  public void setVolumeSize( Integer volumeSize ) {
-    this.volumeSize = volumeSize;
-  }
-
+  
   public Boolean getDeleteOnTerminate( ) {
     return this.deleteOnTerminate;
   }
-
+  
   public void setDeleteOnTerminate( Boolean deleteOnTerminate ) {
     this.deleteOnTerminate = deleteOnTerminate;
+  }
+  
+  @Override
+  public String getKernelId( ) {
+    return this.kernelId;
+  }
+  
+  public void setKernelId( String kernelId ) {
+    this.kernelId = kernelId;
+  }
+  
+  @Override
+  public String getRamdiskId( ) {
+    return this.ramdiskId;
+  }
+  
+  public void setRamdiskId( String ramdiskId ) {
+    this.ramdiskId = ramdiskId;
+  }
+  
+  @Override
+  public boolean hasKernel( ) {
+    return this.getKernelId( ) != null;
+  }
+  
+  @Override
+  public boolean hasRamdisk( ) {
+    return this.getRamdiskId( ) != null;
   }
   
 }

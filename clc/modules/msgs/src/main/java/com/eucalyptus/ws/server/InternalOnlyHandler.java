@@ -74,16 +74,16 @@ import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpResponse;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-@ChannelPipelineCoverage("all")
-public class InternalOnlyHandler implements ChannelUpstreamHandler {
-  
+@ChannelPipelineCoverage( "all" )
+public enum InternalOnlyHandler implements ChannelUpstreamHandler {
+  INSTANCE;
   @Override
   public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
     final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
     final BaseMessage msg = BaseMessage.extractMessage( e );
-    if( request != null && msg != null ) {
+    if ( request != null && msg != null ) {
       final User user = Contexts.lookup( request.getCorrelationId( ) ).getUser( );
-      if( user.isSystemInternal( ) || user.isSystemInternal( ) ) {
+      if ( user.isSystemInternal( ) || user.isSystemAdmin( ) ) {
         ctx.sendUpstream( e );
       } else {
         Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );

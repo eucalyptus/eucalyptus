@@ -4,13 +4,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.mule.RequestContext;
 import org.mule.api.MuleMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.Assertions;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.HasRequest;
 
 public class Contexts {
   private static Logger                          LOG             = Logger.getLogger( Contexts.class );
@@ -69,13 +68,19 @@ public class Contexts {
     }
     Object o = muleMsg.getPayload( );
     if ( o != null && o instanceof BaseMessage ) {
-      String correlationId = ( ( BaseMessage ) o ).getCorrelationId( );
       try {
-        return Contexts.lookup( correlationId );
+        return Contexts.lookup( ( ( BaseMessage ) o ).getCorrelationId( ) );
       } catch ( NoSuchContextException e ) {
         LOG.error( e, e );
         throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request.", e );
       }
+    } else if ( o != null && o instanceof HasRequest ) {
+        try {
+          return Contexts.lookup( ( ( HasRequest ) o ).getRequest( ).getCorrelationId( ) );
+        } catch ( NoSuchContextException e ) {
+          LOG.error( e, e );
+          throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request.", e );
+        }
     } else {
       throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request." );
     }

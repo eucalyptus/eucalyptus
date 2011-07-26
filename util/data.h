@@ -66,6 +66,7 @@ permission notice:
 
 #include <pthread.h>
 #include "eucalyptus.h"
+#include "misc.h" // boolean
 
 #define SMALL_CHAR_BUFFER_SIZE 64
 #define CHAR_BUFFER_SIZE 512
@@ -287,9 +288,11 @@ typedef struct ncInstance_t {
     char xmlFilePath [CHAR_BUFFER_SIZE];
     char libvirtFilePath [CHAR_BUFFER_SIZE];
     char consoleFilePath [CHAR_BUFFER_SIZE];
+    char floppyFilePath [CHAR_BUFFER_SIZE];
     char hypervisorType [SMALL_CHAR_BUFFER_SIZE];
     hypervisorCapabilityType hypervisorCapability;
-    int combinePartitions; // hypervisor works only with disks (all except Xen)
+    boolean combinePartitions; // hypervisor works only with disks (all except Xen)
+    boolean do_inject_key; // whether or not NC injects SSH key into this instance (eucalyptus.conf option)
 
     // passed into NC via runInstances for safekeeping
     char userData[CHAR_BUFFER_SIZE*10];
@@ -301,7 +304,8 @@ typedef struct ncInstance_t {
     // updated by NC upon Attach/DetachVolume
     ncVolume volumes[EUCA_MAX_VOLUMES];
     int volumesSize;
-  
+
+    // reported by NC back, for report generation
     long long blkbytes, netbytes;
 } ncInstance;
 

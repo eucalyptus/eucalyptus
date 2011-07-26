@@ -63,10 +63,12 @@
 
 package com.eucalyptus.component
 
-import java.net.URI;
-import com.eucalyptus.config.ComponentConfiguration;
+import java.net.URI
+import javax.persistence.Transient
+import com.eucalyptus.config.ComponentConfiguration
 
 class EphemeralConfiguration extends ComponentConfiguration {
+  private static final long serialVersionUID = 1;
   URI         uri;
   ComponentId c;
   

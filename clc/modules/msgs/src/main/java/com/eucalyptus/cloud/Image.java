@@ -4,14 +4,13 @@ import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.HasOwningAccount;
 
 @PolicyResourceType( vendor = PolicySpec.VENDOR_EC2, resource = PolicySpec.EC2_RESOURCE_IMAGE )
 public interface Image extends HasFullName<Image>, HasOwningAccount {
   
   public interface StaticDiskImage extends Image {
-    public abstract String getImageLocation( );
+    public abstract String getManifestLocation( );
     public abstract String getSignature( );
   }
     
@@ -74,15 +73,15 @@ public interface Image extends HasFullName<Image>, HasOwningAccount {
   }
   
   public enum Hypervisor {
-    xen, kvm, vmware
+    xen, kvm, other
   }
   
   public enum DeviceMappingType {
-    suppress, ephemeral, blockstorage
+    root, swap, suppress, ephemeral, blockstorage
   }
   
   public enum Architecture {
-    i386, x86_64
+    i386, x86_64, other
   }
   
   public enum Platform {

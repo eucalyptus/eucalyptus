@@ -80,17 +80,17 @@ public class PropertiesService extends ComponentId.Unpartioned {
   }
   
   @Override
-  public Boolean hasDispatcher( ) {
-    return true;
-  }
-  
-  @Override
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
     return new ArrayList<Class<? extends ComponentId>>( ) {
       {
         this.add( Eucalyptus.class );
       }
     };
+  }
+  
+  @Override
+  public boolean isAdminService( ) {
+    return true;
   }
   
 }

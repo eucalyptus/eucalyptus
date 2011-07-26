@@ -15,22 +15,62 @@
         <g:north size="36">
             <g:HTMLPanel addStyleNames="{style.toolbar}">
                 <table>
-                    <colgroup width="100px"/>
-                    <colgroup width="10px"/>
-                    <colgroup width="100px"/>
+                    <colgroup width="1px"/>
+                    <colgroup width="20px"/>
+                    <colgroup width="1px"/>
+                    <colgroup width="1px"/>
+                    <colgroup width="20px"/>                    
+                    <colgroup width="1px"/>
+                    <colgroup width="1px"/>
+                    <colgroup width="1px"/>
+                    <colgroup width="20px"/>                    
+                    <colgroup width="1px"/>
+                    <colgroup width="1px"/>                    
                     <tbody>
                         <tr>
                             <td>
-                                <g:Anchor styleName="{global.buttonCss.button}" ui:field="newButton">
-                                    <span class="{global.buttonCss.plus} {global.buttonCss.icon}"/>New user
-                                </g:Anchor>                            
+                                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button} {global.buttonCss.small}" ui:field="delButton">
+                                    <span class="{global.buttonCss.minus} {global.buttonCss.icon}"/>Delete users
+                                </g:Anchor>
                             </td>
                             <td>&nbsp;</td>
                             <td>
-                                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button}" ui:field="delButton">
-                                    <span class="{global.buttonCss.minus} {global.buttonCss.icon}"/>Delete user
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.left}" ui:field="addToGroupsButton">
+                                    <span class="{global.buttonCss.group} {global.buttonCss.icon}"/>Add to groups
+                                </g:Anchor>                            
+                            </td>
+                            <td>
+                                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.right}" ui:field="removeFromGroupsButton">
+                                    <span class="{global.buttonCss.group} {global.buttonCss.icon}"/>Remove from groups
+                                </g:Anchor>                            
+                            </td>                            
+                            <td>&nbsp;</td>                            
+                            <td>
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.left}" ui:field="addPolicyButton">
+                                    <span class="{global.buttonCss.lock} {global.buttonCss.icon}"/>Add policy
                                 </g:Anchor>
                             </td>
+                            <td>
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.middle}" ui:field="addKeyButton">
+                                    <span class="{global.buttonCss.key} {global.buttonCss.icon}"/>Add key
+                                </g:Anchor>
+                            </td>
+                            <td>                             
+                                <g:Anchor styleName="{global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.right}" ui:field="addCertButton">
+                                    <span class="{global.buttonCss.sun} {global.buttonCss.icon}"/>Add certificate
+                                </g:Anchor>                            
+                            </td>
+                            <td>&nbsp;</td>
+                            <td>                             
+                                <g:Anchor styleName="{global.buttonCss.positive} {global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.left}" ui:field="approveButton">
+                                    <span class="{global.buttonCss.check} {global.buttonCss.icon}"/>Approve
+                                </g:Anchor>                            
+                            </td>
+                            <td>                             
+                                <g:Anchor styleName="{global.buttonCss.negative} {global.buttonCss.button} {global.buttonCss.small} {global.buttonCss.right}" ui:field="rejectButton">
+                                    <span class="{global.buttonCss.x} {global.buttonCss.icon}"/>Reject
+                                </g:Anchor>                            
+                            </td>                            
                         </tr>
                     </tbody>
                 </table>

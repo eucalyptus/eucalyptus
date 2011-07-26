@@ -72,20 +72,23 @@ import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
-import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.Callback;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
+import edu.ucsb.eucalyptus.cloud.ResourceToken;
+import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 
 public class ClusterState {
   private static Logger                           LOG                   = Logger.getLogger( ClusterState.class );
@@ -147,7 +150,8 @@ public class ClusterState {
     int min = 2;
     int max = 4095;
     try {
-      for ( ClusterConfiguration cc : ServiceConfigurations.getConfigurations( ClusterConfiguration.class ) ) {
+      for ( ServiceConfiguration conf : ServiceConfigurations.list( ClusterController.class ) ) {
+        ClusterConfiguration cc = ( ClusterConfiguration ) conf;
         if ( cc.getMinVlan( ) != null ) min = cc.getMinVlan( ) > min ? cc.getMinVlan( ) : min;
         if ( cc.getMaxVlan( ) != null ) max = cc.getMaxVlan( ) < max ? cc.getMaxVlan( ) : max;
       }
@@ -180,19 +184,20 @@ public class ClusterState {
     this.clusterName = clusterName;
   }
   
-  public NetworkToken extantAllocation( String accountId, String networkName, String networkUuid, int vlan ) throws NetworkAlreadyExistsException {
-    NetworkToken netToken = new NetworkToken( this.clusterName, accountId, networkName, networkUuid, vlan );
+  public NetworkToken extantAllocation( String userId, String networkName, String networkUuid, int vlan ) throws NetworkAlreadyExistsException {
+    UserFullName userFn = UserFullName.getInstance( userId );
+    NetworkToken netToken = new NetworkToken( this.clusterName, userFn, networkName, networkUuid, vlan );
     if ( !ClusterState.availableVlans.remove( vlan ) ) {
       throw new NetworkAlreadyExistsException( );
     }
     return netToken;
   }
   
-  private static NetworkToken getNetworkAllocation( String accountId, String clusterName, String networkName ) throws NotEnoughResourcesAvailable {
+  public static NetworkToken getNetworkAllocation( UserFullName userFullName, ResourceToken rscToken, String networkName ) throws NotEnoughResourcesAvailable {
     ClusterState.trim( );
     try {
       Network network = getVlanAssignedNetwork( networkName );      
-      NetworkToken token = network.createNetworkToken( clusterName );
+      NetworkToken token = network.createNetworkToken( rscToken.getCluster( ) );
       EventRecord.caller( NetworkToken.class, EventType.TOKEN_RESERVED, token.toString( ) ).info( );
       return token;
     } catch ( NoSuchElementException e ) {

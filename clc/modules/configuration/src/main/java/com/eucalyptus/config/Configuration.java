@@ -74,10 +74,11 @@ import com.eucalyptus.component.ComponentRegistrationHandler;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
-import com.eucalyptus.component.ServiceBuilderRegistry;
+import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.TypeMapper;
@@ -163,7 +164,7 @@ public class Configuration {
   
   public DescribeNodesResponseType listComponents( final DescribeNodesType request ) throws EucalyptusCloudException {
     final DescribeNodesResponseType reply = ( DescribeNodesResponseType ) request.getReply( );
-    reply.setRegistered( ( ArrayList<NodeComponentInfoType> ) GroovyUtil.evaluateScript( "describe_nodes" ) );
+    reply.setRegistered( ( ArrayList<NodeComponentInfoType> ) Groovyness.run( "describe_nodes" ) );
     return reply;
   }
   
@@ -177,26 +178,7 @@ public class Configuration {
     final Component component = Components.oneWhichHandles( request.getClass( ) );
     final ServiceBuilder builder = component.getBuilder( );
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) );
-    if ( "state".equals( request.getAttribute( ) ) ) {
-      ServiceConfiguration conf;
-      try {
-        conf = builder.lookupByName( request.getName( ) );
-      } catch ( final ServiceRegistrationException e ) {
-        LOG.info( builder.getClass( ).getSimpleName( ) + ": lookupByName failed." );
-        LOG.error( e, e );
-        throw e;
-      }
-      if ( "enable".startsWith( request.getValue( ).toLowerCase( ) ) ) {
-        try {
-          builder.getComponent( ).enableTransition( conf ).get( );
-        } catch ( final Exception ex ) {
-          LOG.error( ex, ex );
-          throw new EucalyptusCloudException( ex.getMessage( ), ex );
-        }
-      } else if ( "disable".startsWith( request.getValue( ).toLowerCase( ) ) ) {
-        builder.getComponent( ).disableTransition( conf );
-      }
-    }
+    LOG.error( "Nothing to do while processing: " + request );
     return reply;
   }
   
@@ -227,7 +209,7 @@ public class Configuration {
         }
       }
     } else {
-      for ( final ServiceConfiguration config : ServiceBuilderRegistry.handles( request.getClass( ) ).list( ) ) {
+      for ( final ServiceConfiguration config : ServiceBuilders.handles( request.getClass( ) ).list( ) ) {
         ComponentInfoType info = TypeMappers.transform( config, ComponentInfoType.class );
         if( !Boolean.TRUE.equals( request.getVerbose( ) ) ) {
           info.setDetail( "" );

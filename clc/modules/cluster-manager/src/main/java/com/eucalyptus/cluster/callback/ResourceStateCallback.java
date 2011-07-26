@@ -2,11 +2,12 @@ package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.VmTypes;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.vm.VmType;
+import com.eucalyptus.vm.VmTypes;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesType;
+import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, DescribeResourcesType, DescribeResourcesResponseType> {
   private static Logger LOG = Logger.getLogger( ResourceStateCallback.class );
@@ -15,8 +16,12 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
     super( new DescribeResourcesType( ) {
       {
         regarding( );
-        for ( VmType v : VmTypes.list( ) ) {
-          getInstanceTypes( ).add( v.getAsVmTypeInfo( ) );
+        for ( VmType arg0 : VmTypes.list( ) ) {
+          getInstanceTypes( ).add( new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda1" ) {
+            {
+              this.setSwap( "sda2", 512 * 1024l * 1024l );
+            }
+          } );
         }
       }
     } );

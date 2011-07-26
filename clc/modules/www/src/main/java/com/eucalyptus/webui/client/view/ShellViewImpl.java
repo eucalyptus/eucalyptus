@@ -117,18 +117,25 @@ public class ShellViewImpl extends Composite implements ShellView {
   @Override
   public void showLogConsole( ) {
     DockLayoutPanel parent = (DockLayoutPanel) this.getWidget( );
-    parent.setWidgetSize( this.log, LOG_HEIGHT );    
+    parent.setWidgetSize( this.log, LOG_HEIGHT );
+    parent.animate( ANIMATE_DURATION );
   }
 
   @Override
   public void hideLogConsole( ) {
     DockLayoutPanel parent = (DockLayoutPanel) this.getWidget( );
-    parent.setWidgetSize( this.log, 0 );    
+    parent.setWidgetSize( this.log, 0 );
+    parent.animate( ANIMATE_DURATION );
   }
 
   @Override
   public DetailView getDetailView( ) {
     return this.detail;
+  }
+
+  @Override
+  public LogView getLogView( ) {
+    return this.log;
   }
 
 }

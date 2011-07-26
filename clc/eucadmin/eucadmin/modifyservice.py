@@ -31,10 +31,11 @@
 from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
 import eucadmin
+import os
 
 class ModifyService(AWSQueryRequest):
   
-    ServicePath = '/services/Configuration'
+    ServicePath = '/services/Empyrean'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Modify service state'
     Params = [

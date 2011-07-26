@@ -5,7 +5,7 @@
 	<wsp:Policy>
           <sp:InitiatorToken>
             <wsp:Policy>
-              <sp:X509Token sp:IncludeToken="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy/IncludeToken/Always">
+              <sp:X509Token sp:IncludeToken="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy/IncludeToken/Always">a
                 <wsp:Policy>
                   <sp:RequireEmbeddedTokenReference/>
                   <sp:WssX509V3Token10/>
@@ -36,7 +36,7 @@
             </wsp:Policy>
           </sp:Layout>
 
-	  <!-- <sp:IncludeTimestamp/> -->
+	  <sp:IncludeTimestamp/>
           <sp:OnlySignEntireHeadersAndBody/>
 	  <!-- <sp:EncryptSignature/> -->
         </wsp:Policy>
@@ -46,10 +46,12 @@
         <wsp:Policy>
           <sp:MustSupportRefKeyIdentifier/>
           <sp:MustSupportRefEmbeddedToken/>
+	  <sp:MustSupportRefIssuerSerial/>
         </wsp:Policy>
       </sp:Wss10>
 
       <sp:SignedParts xmlns:sp="http://schemas.xmlsoap.org/ws/2005/07/securitypolicy">
+	<sp:Body/>
         <sp:Header Namespace="http://www.w3.org/2005/08/addressing"/>
       </sp:SignedParts>
 
@@ -58,13 +60,7 @@
 	<rampc:Certificate>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/SERVER-CERT</rampc:Certificate>
 	<rampc:PrivateKey>EUCALYPTUS_HOME/var/lib/eucalyptus/keys/SERVER-KEY</rampc:PrivateKey>
 	<!-- <rampc:TimeToLive>14400</rampc:TimeToLive> -->
-	<!--
-	    <rampc:PasswordType>PlainText</rampc:PasswordType>
-	    <rampc:PasswordCallbackClass>/home/nurmi/eucalyptus/danroot//var/lib/eucalyptus/keys/libpwcb.so</rampc:PasswordCallbackClass>
-	    <rampc:ReceiverCertificate>/home/nurmi/eucalyptus/danroot//var/lib/eucalyptus/keys/cloud-cert.pem</rampc:ReceiverCertificate>
-	    <rampc:Certificate>/home/nurmi/eucalyptus/danroot//var/lib/eucalyptus/keys/cluster-cert.pem</rampc:Certificate>
-	    <rampc:PrivateKey>/home/nurmi/eucalyptus/danroot//var/lib/eucalyptus/keys/cluster-pk.pem</rampc:PrivateKey> 
-	-->
+	<rampc:ClockSkewBuffer>20</rampc:ClockSkewBuffer>
       </rampc:RampartConfig>
     </wsp:All>
   </wsp:ExactlyOne>

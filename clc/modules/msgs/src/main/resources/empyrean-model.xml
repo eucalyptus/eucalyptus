@@ -11,6 +11,11 @@
   <endpoint name="EmpyreanVM" address="vm://Empyrean" synchronous="false" />
   <endpoint name="EmpyreanInternalVM" address="vm://EmpyreanInternal" synchronous="true" />
   <endpoint name="EmpyreanReplyQueueVM" address="vm://EmpyreanReplyQueue" synchronous="false" />
+  <euca:endpoint name="EmpyreanWS" connector-ref="eucaws" address="http://127.0.0.1:8773/services/Empyrean"
+    synchronous="true" />
+  <euca:endpoint name="EmpyreanInternalWS" connector-ref="eucaws" address="http://127.0.0.1:8773/internal/BootstrapInternal"
+    synchronous="true" />
+
   <model name="empyrean">
     <default-service-exception-strategy>
       <outbound-endpoint ref="EmpyreanReplyQueueVM" />
@@ -31,6 +36,7 @@
     <service name="EmpyreanService">
       <inbound>
         <inbound-endpoint ref="EmpyreanVM" />
+        <inbound-endpoint ref="EmpyreanWS" />
       </inbound>
       <component class="com.eucalyptus.ws.EmpyreanService" />
       <outbound>
@@ -51,6 +57,7 @@
   <model name="empyrean-internal">
     <service name="EmpyreanInternal">
       <inbound>
+        <inbound-endpoint ref="EmpyreanInternalWS" />
         <inbound-endpoint ref="EmpyreanInternalVM" />
       </inbound>
       <component class="com.eucalyptus.ws.EmpyreanService" />

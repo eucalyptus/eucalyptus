@@ -52,18 +52,25 @@
         	font-size:80%;
             font-style:italic;
             color:#333333;
-            text-align:left;      
+            margin-left:4px;
+            margin-top:4px;
+            float:left;
         }
         .fullHeight {
         	height:100%;
+        }
+        .icon {
+        	margin-top:4px;
+        	margin-left:4px;
+        	float:left;
         }
     </ui:style>
         
     <g:HTMLPanel styleName="{style.footerBar}">
         <div class="{style.horizontalLeft} {style.logDiv}">
-            <div class="{style.vcenter}">
-                <g:Label styleName="{style.log}" ui:field="status">This is sample log line.</g:Label>
-            </div>
+            <g:Image styleName="{style.icon}" url="themes/active/barloading.gif" ui:field="loadingIcon"/>
+            <g:Image styleName="{style.icon}" url="themes/active/redx.png" ui:field="errorIcon"/>
+            <g:Label styleName="{style.log}" ui:field="status"></g:Label>
         </div>
         <div class="{style.horizontalRight} {style.rightDiv}">
             <div class="{style.vcenter}">

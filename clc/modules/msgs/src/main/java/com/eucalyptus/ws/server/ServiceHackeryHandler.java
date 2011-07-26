@@ -65,9 +65,11 @@ package com.eucalyptus.ws.server;
 
 import java.util.UUID;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -86,17 +88,16 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 
-@ChannelPipelineCoverage( "one" )
-public class ServiceHackeryHandler extends SimpleChannelHandler {
-  private static Logger                     LOG               = Logger.getLogger( ServiceHackeryHandler.class );
+@ChannelPipelineCoverage( "all" )
+public enum ServiceHackeryHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
+  INSTANCE;
+  private static Logger LOG = Logger.getLogger( ServiceHackeryHandler.class );
   
-  public ServiceHackeryHandler( ) {}
-  
-  @Override
-  public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {//FIXME: handle exceptions cleanly.
-    LOG.trace( ctx.getChannel( ), e.getCause( ) );
-    Channels.fireExceptionCaught( ctx.getChannel( ), e.getCause( ) );
-  }
+//  @Override
+//  public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {//FIXME: handle exceptions cleanly.
+//    LOG.trace( ctx.getChannel( ), e.getCause( ) );
+//    Channels.fireExceptionCaught( ctx.getChannel( ), e.getCause( ) );
+//  }
   
   @SuppressWarnings( "unchecked" )
   @Override
@@ -104,7 +105,7 @@ public class ServiceHackeryHandler extends SimpleChannelHandler {
     if ( e instanceof MessageEvent ) {
       final MessageEvent msge = ( MessageEvent ) e;
       if ( msge.getMessage( ) instanceof NullPayload ) {
-        LOG.error( "Received NULL response: " + ((NullPayload)msge.getMessage( )).toString( ) );
+        LOG.error( "Received NULL response: " + ( ( NullPayload ) msge.getMessage( ) ).toString( ) );
         msge.getFuture( ).cancel( );
       } else if ( msge.getMessage( ) instanceof HttpResponse ) {
         ctx.sendDownstream( e );
@@ -113,12 +114,14 @@ public class ServiceHackeryHandler extends SimpleChannelHandler {
       } else if ( msge.getMessage( ) instanceof BaseMessage ) {// Handle single request-response MEP
         BaseMessage reply = ( BaseMessage ) ( ( MessageEvent ) e ).getMessage( );
         if ( reply instanceof WalrusDataGetResponseType //TODO:GRZE:FIXME:FIXME:FIXME:WTF
-            && !( reply instanceof GetObjectResponseType && ( ( GetObjectResponseType ) reply ).getBase64Data( ) != null ) ) {
-         e.getFuture( ).cancel( );
-         return;
-       } else {
-         ctx.sendDownstream( msge );
-       }
+             && !( reply instanceof GetObjectResponseType && ( ( GetObjectResponseType ) reply ).getBase64Data( ) != null ) ) {
+          e.getFuture( ).cancel( );
+          return;
+        } else {
+          ctx.sendDownstream( msge );
+        }
+      } else if ( msge.getMessage( ) instanceof Throwable ) {
+        ctx.sendDownstream( e );
       } else {
         e.getFuture( ).cancel( );
         LOG.warn( "Non-specific type being written to the channel. Not dropping this message causes breakage:" + msge.getMessage( ).getClass( ) );
@@ -130,24 +133,24 @@ public class ServiceHackeryHandler extends SimpleChannelHandler {
       ctx.sendDownstream( e );
     }
   }
-    
+  
   @Override
   public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
     final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
     final BaseMessage msg = BaseMessage.extractMessage( e );
-    if ( request != null && msg != null ) {      
+    if ( request != null && msg != null ) {
       EventRecord.here( ServiceHackeryHandler.class, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ).trace( );
       final User user = Contexts.lookup( request.getCorrelationId( ) ).getUser( );
-
+      
       this.mangleCorrelationId( ctx, msg );
       this.mangleAdminDescribe( request, msg, user );
-
+      
       ctx.sendUpstream( e );
     } else {
       ctx.sendUpstream( e );
     }
   }
-
+  
   private void mangleCorrelationId( final ChannelHandlerContext ctx, final BaseMessage msg ) {//TODO:ASAP:GRZE wth is this for???
     if ( msg.getCorrelationId( ) == null ) {
       String corrId = null;
@@ -159,11 +162,11 @@ public class ServiceHackeryHandler extends SimpleChannelHandler {
       msg.setCorrelationId( corrId );
     }
   }
-
+  
   private void mangleAdminDescribe( final MappingHttpMessage request, final BaseMessage msg, final User user ) {//TODO:ASAP:GRZE fix this mangling somewhere else.
     final String userAgent = request.getHeader( HttpHeaders.Names.USER_AGENT );
     if ( ( userAgent != null ) && userAgent.matches( ".*EucalyptusAdminAccess" ) && msg.getClass( ).getSimpleName( ).startsWith( "Describe" ) ) {
-      msg.markUnprivileged( );
+      msg.markUnprivileged( );//TODO:GRZE:FIXME this doesn't do what it used to
     }
   }
   

@@ -55,7 +55,7 @@
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -70,7 +70,7 @@
 
 #define BLOBSTORE_MAX_PATH 1024
 #define MAX_BLOCKMAP_SIZE 32
-#define MAX_DM_NAME 64                 // e.g. euca-819312998196-i-4336096F-prt-00512swap-ac8d5670
+#define MAX_DM_NAME 128                // e.g. euca-819312998196-i-4336096F-prt-00512swap-ac8d5670
 #define MAX_DM_PATH (MAX_DM_NAME+12)   // e.g. /dev/mapper/euca-819312998196-i-4336096F-prt-00512swap-ac8d5670 
 #define MAX_DM_LINE (MAX_DM_PATH*2+40) // e.g. 0 1048576 snapshot $DM1 $DM2 p 16
 
@@ -203,6 +203,7 @@ blobstore * blobstore_open ( const char * path,
                              blobstore_format_t format,
                              blobstore_revocation_t revocation_policy,
                              blobstore_snapshot_t snapshot_policy);
+int blobstore_fsck (blobstore * bs, int (* examiner) (const blockblob * bb));
 int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** results ); // returns a list of blockblobs matching an expression
 int blobstore_delete_regex (blobstore * bs, const char * regex); // delete all blobs in blobstore that match regex, return number deleted or -1 if error
 int blobstore_close ( blobstore * bs ); // releases a reference, allowing others to change some parameters (revocation policy) or delete the store, and frees the blobstore handle
@@ -212,6 +213,9 @@ const char * blobstore_get_last_msg (); // returns last message logged inside bl
 const char * blobstore_get_last_trace(); // returns last error stack trace logged inside blobstore
 const char * blobstore_get_error_str ( blobstore_error_t error ); // description of the error
 void blobstore_set_error_function ( void (* fn) (const char * msg)); // sets the function that will be handed error messages (instead of sending them to stdout)
+
+int blobstore_init (void);
+int blobstore_cleanup (void);
 
 // blockblob operations
 

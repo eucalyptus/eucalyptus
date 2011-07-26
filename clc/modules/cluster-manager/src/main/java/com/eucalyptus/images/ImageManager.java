@@ -64,7 +64,6 @@
 
 package com.eucalyptus.images;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import javax.xml.xpath.XPath;
@@ -80,6 +79,7 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
@@ -87,7 +87,6 @@ import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Lookups;
@@ -96,7 +95,6 @@ import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceType;
 import edu.ucsb.eucalyptus.msgs.CreateImageResponseType;
@@ -115,31 +113,9 @@ import edu.ucsb.eucalyptus.msgs.RegisterImageResponseType;
 import edu.ucsb.eucalyptus.msgs.RegisterImageType;
 import edu.ucsb.eucalyptus.msgs.ResetImageAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ResetImageAttributeType;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ImageManager {
   public static Logger LOG = Logger.getLogger( ImageManager.class );
-  
-  public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    RunInstancesType msg = vmAllocInfo.getRequest( );
-    String imageId = msg.getImageId( );
-    BootableSet bootSet = Emis.newBootableSet( imageId );
-    vmAllocInfo.setPlatform( bootSet.getMachine( ).getPlatform( ).name( ) );
-    
-    if ( bootSet.isLinux( ) ) {
-      bootSet = Emis.bootsetWithKernel( bootSet );
-      bootSet = Emis.bootsetWithRamdisk( bootSet );
-    }
-    ArrayList<String> ancestorIds = Lists.newArrayList( );//TODO:GRZE:OMGFIXME fixme ImageUtil.getAncestors( msg.getUserId( ), diskInfo.getImageLocation( ) );
-    
-    Emis.checkStoredImage( bootSet );
-    
-    VmTypeInfo vmType = vmAllocInfo.getVmTypeInfo( );
-    bootSet.populateVirtualBootRecord( vmType );
-    
-    return vmAllocInfo;
-  }
   
   public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException {
     DescribeImagesResponseType reply = request.getReply( );
@@ -166,7 +142,8 @@ public class ImageManager {
           LOG.trace( "Rejecting image " + t.getFullName( ) + " because user is not allowed." );
           return false;
         }
-        if ( !ctx.hasAdministrativePrivileges( ) && !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, t.getDisplayName( ), t.getOwner( ) ) ) {
+        if ( !ctx.hasAdministrativePrivileges( )
+             && !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, t.getDisplayName( ), t.getOwner( ) ) ) {
           LOG.error( "Accessing image " + t.getDisplayName( ) + " is denied by permission of " + ctx.getUser( ).getName( ) );
           return false;
         }
@@ -211,17 +188,24 @@ public class ImageManager {
       }
     }
     ImageInfo imageInfo = null;
-    final String rootDevName = ( request.getRootDeviceName( ) != null ) ? request.getRootDeviceName( ) : "/dev/sda1";
+    final String rootDevName = ( request.getRootDeviceName( ) != null )
+      ? request.getRootDeviceName( )
+      : "/dev/sda1";
     final String eki = request.getKernelId( );
     final String eri = request.getRamdiskId( );
     if ( request.getImageLocation( ) != null ) {
       ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
       LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
       List<DeviceMapping> vbr = Lists.transform( request.getBlockDeviceMappings( ), Images.deviceMappingGenerator( imageInfo ) );
-      imageInfo = Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), eki, eri, manifest );
+      Image.Architecture arch = ( request.getArchitecture( ) == null
+        ? null
+        : Image.Architecture.valueOf( request.getArchitecture( ) ) );
+      imageInfo = Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, null, eki, eri,
+                                             manifest );
       imageInfo.getDeviceMappings( ).addAll( vbr );
     } else if ( rootDevName != null && Iterables.any( request.getBlockDeviceMappings( ), Images.findEbsRoot( rootDevName ) ) ) {
-      imageInfo = Images.createFromDeviceMapping( ctx.getUserFullName( ), rootDevName, request.getBlockDeviceMappings( ) );
+      imageInfo = Images.createFromDeviceMapping( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), eki, eri, rootDevName,
+                                                  request.getBlockDeviceMappings( ) );
     } else {
       throw new EucalyptusCloudException( "Malformed registration. A request must specify either " +
                                           "a manifest path or a snapshot to use for BFE. Provided values are: imageLocation="
@@ -418,10 +402,10 @@ public class ImageManager {
       throw new EucalyptusCloudException( "Cannot create an image from an instance which is not in either the 'running' or 'stopped' state: "
                                           + vm.getInstanceId( ) + " is in state " + vm.getState( ).getName( ) );
     }
-    if ( !"ebs".equals( vm.getVmTypeInfo( ).lookupRoot( ).getType( ) ) && !ctx.hasAdministrativePrivileges( ) ) {
-      throw new EucalyptusCloudException( "Cannot create an image from an instance which is not booted from a volume: " + vm.getInstanceId( ) + " is in state "
-                                          + vm.getState( ).getName( ) );
-    }
+//    if ( !"ebs".equals( vm.getVmTypeInfo( ).lookupRoot( ).getType( ) ) && !ctx.hasAdministrativePrivileges( ) ) {
+//      throw new EucalyptusCloudException( "Cannot create an image from an instance which is not booted from a volume: " + vm.getInstanceId( ) + " is in state "
+//                                          + vm.getState( ).getName( ) );
+//    }
     Cluster cluster = null;
     try {
       cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );

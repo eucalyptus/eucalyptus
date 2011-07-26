@@ -72,7 +72,6 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.KeyPair;
 import com.eucalyptus.component.ComponentIds;
@@ -97,30 +96,15 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPai
   String                   fingerPrint;
   @Transient
   private FullName          fullName;
-  @Transient
-  public static String     NO_KEY_NAME = "";
-  @Transient
-  public static SshKeyPair NO_KEY      = new SshKeyPair( FakePrincipals.NOBODY_USER_ERN, "", "", "" );
-  
   public SshKeyPair( ) {}
   
-  public SshKeyPair( String accountId, String keyName ) {
-    this.setOwnerAccountId( accountId );
-    this.setDisplayName( keyName );
+  public SshKeyPair( UserFullName userFullName, String keyName ) {
+    super( userFullName, keyName );
     this.uniqueName = this.getFullName( ).toString( );
   }
-  
-  public SshKeyPair( String accountId ) {
-    this.setOwnerAccountId( accountId );
-  }
-  
+
   public SshKeyPair( UserFullName user ) {
     super( user );
-  }
-  
-  public SshKeyPair( UserFullName user, String keyName ) {
-    super( user, keyName );
-    this.uniqueName = this.getFullName( ).toString( );
   }
   
   public SshKeyPair( UserFullName user, String keyName, String publicKey, String fingerPrint ) {

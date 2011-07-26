@@ -76,7 +76,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceEndpoint;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class MappingHttpRequest extends MappingHttpMessage implements HttpRequest {
@@ -213,14 +212,16 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     return value;
   }
   
-  public void logMessage( ) {
-    LOG.trace( "============================================" );
-    LOG.trace( "HTTP" + this.getProtocolVersion( ) + " " + this.getMethod( ) + " " + this.getUri( ) );
+  public String logMessage( ) {
+    StringBuffer buf = new StringBuffer();
+    buf.append( "============================================\n" );
+    buf.append( "HTTP" ).append( this.getProtocolVersion( ) ).append( " " ).append( this.getMethod( ) ).append( " " ).append( this.getUri( ) ).append( "\n" );
     for( String s : this.getHeaderNames( ) ) {
-      LOG.trace( s + ": " + this.getHeader( s ) ); 
+      buf.append( s ).append( ": " ).append( this.getHeader( s ) ).append( "\n" ); 
     }
-    LOG.trace( "============================================" );
-    LOG.trace( this.getContent( ).toString( "UTF-8" ) );
-    LOG.trace( "============================================" );
+    buf.append( "============================================\n" );
+    buf.append( this.getContent( ).toString( "UTF-8" ) ).append( "\n" );
+    buf.append( "============================================\n" );
+    return buf.toString( );
   }
 }

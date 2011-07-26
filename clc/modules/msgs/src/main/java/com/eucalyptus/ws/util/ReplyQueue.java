@@ -63,8 +63,6 @@
  */
 package com.eucalyptus.ws.util;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -72,7 +70,6 @@ import org.mule.RequestContext;
 import org.mule.api.MessagingException;
 import org.mule.api.MuleException;
 import org.mule.api.MuleMessage;
-import org.mule.api.service.ServiceException;
 import org.mule.message.ExceptionMessage;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.context.Context;
@@ -81,13 +78,10 @@ import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.WebServicesException;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
+import edu.ucsb.eucalyptus.msgs.HasRequest;
 
 public class ReplyQueue {
   public static Logger LOG = Logger.getLogger( ReplyQueue.class );
@@ -111,6 +105,14 @@ public class ReplyQueue {
         return;
       } else {
         LOG.error( "Failed to identify request context for recieved error: " + exMsg.toString( ) );
+        cause = new WebServicesException( "Failed to identify request context for recieved error: " + exMsg.toString( ) + " while handling error: " + cause.getMessage( ), cause, HttpResponseStatus.NOT_ACCEPTABLE );
+        try {
+          Context ctx = Contexts.lookup( );
+          Channels.fireExceptionCaught( ctx.getChannel( ), cause );
+        } catch ( IllegalContextAccessException ex ) {
+          LOG.error( ex );
+          LOG.error( cause, cause );
+        }
       }
     } else if ( cause instanceof MuleException ) {
       LOG.error( "Error service request: " + cause.getMessage( ), cause );
@@ -137,8 +139,8 @@ public class ReplyQueue {
     BaseMessage ret = null;
     if ( payload instanceof BaseMessage ) {
       ret = ( BaseMessage ) payload;
-    } else if ( payload instanceof VmAllocationInfo ) {
-      ret = ( ( VmAllocationInfo ) payload ).getRequest( );
+    } else if ( payload instanceof HasRequest ) {
+      ret = ( ( HasRequest ) payload ).getRequest( );
     } else if ( payload instanceof String ) {
       try {
         ret = ( BaseMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( ( String ) payload );
@@ -149,8 +151,8 @@ public class ReplyQueue {
       payload = RequestContext.getEvent( ).getMessage( ).getPayload( );
       if ( payload instanceof BaseMessage ) {
         ret = ( BaseMessage ) payload;
-      } else if ( payload instanceof VmAllocationInfo ) {
-        ret = ( ( VmAllocationInfo ) payload ).getRequest( );
+//      } else if ( payload instanceof Allocation ) {
+//        ret = ( ( Allocation ) payload ).getRequest( );
       } else if ( payload instanceof String ) {
         try {
           ret = ( BaseMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( ( String ) payload );

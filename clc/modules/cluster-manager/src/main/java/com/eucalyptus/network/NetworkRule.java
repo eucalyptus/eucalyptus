@@ -200,6 +200,12 @@ public class NetworkRule extends AbstractPersistent {
     if ( protocol == null ) {
       if ( other.protocol != null ) return false;
     } else if ( !protocol.equals( other.protocol ) ) return false;
+    if ( ipRanges == null ) {
+      if (other.ipRanges != null ) return false;
+    } else if ( !ipRanges.equals( other.ipRanges ) ) return false;
+    if ( networkPeers == null ) {
+      if (other.networkPeers != null ) return false;
+    } else if ( !networkPeers.equals( other.networkPeers ) ) return false;
     return true;
   }
   

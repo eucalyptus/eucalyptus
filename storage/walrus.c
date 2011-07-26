@@ -55,7 +55,7 @@
   SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
   BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
   OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
@@ -72,6 +72,8 @@
 #include <curl/curl.h>
 #include <curl/easy.h>
 #include <pthread.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #if defined(HAVE_ZLIB_H)
 #include <zlib.h>
 #endif
@@ -115,7 +117,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     int code = ERROR;
     char url [BUFSIZE];
 
-    strncpy (url, requested_url, BUFSIZE);
+    safe_strncpy (url, requested_url, BUFSIZE);
 #if defined(CAN_GZIP)
     if (do_compress)
         snprintf (url, BUFSIZE, "%s%s", requested_url, "?IsCompressed=true");
@@ -137,7 +139,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
         return code;
     }
 
-    int fd = open (outfile, O_CREAT | O_WRONLY); // we do not truncate the file
+    int fd = open (outfile, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR); // we do not truncate the file
     if (fd==-1 || lseek (fd, 0, SEEK_SET)==-1) {
         logprintfl (EUCAERROR, "{%u} walrus_request: failed to open %s for writing\n", (unsigned int)pthread_self(), outfile);
         return code;
@@ -356,7 +358,7 @@ char * walrus_get_digest (const char * url)
        return digest_path;
     }
 
-    int tmp_fd = mkstemp (digest_path);
+    int tmp_fd = safe_mkstemp (digest_path);
     if (tmp_fd<0) {
         logprintfl (EUCAERROR, "{%u} error: failed to create a digest file %s\n", (unsigned int)pthread_self(), digest_path);
     } else {

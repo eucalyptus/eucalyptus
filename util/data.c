@@ -88,9 +88,9 @@ int allocate_virtualMachine(virtualMachine *out, const virtualMachine *in)
 
 int allocate_netConfig(netConfig *out, char *pvMac, char *pvIp, char *pbIp, int vlan, int networkIndex) {
   if (out != NULL) {
-    if (pvMac) strncpy(out->privateMac,pvMac,24);
-    if (pvIp) strncpy(out->privateIp,pvIp,24);
-    if (pbIp) strncpy(out->publicIp,pbIp,24);
+    if (pvMac) safe_strncpy(out->privateMac,pvMac,24);
+    if (pvIp) safe_strncpy(out->privateIp,pvIp,24);
+    if (pbIp) safe_strncpy(out->publicIp,pbIp,24);
     out->networkIndex = networkIndex;
     out->vlan = vlan;
   }
@@ -133,22 +133,22 @@ ncInstance * allocate_instance (char *uuid,
     if (!inst) return(NULL);
 
     if (userData) {
-        strncpy(inst->userData, userData, CHAR_BUFFER_SIZE*10);
+        safe_strncpy(inst->userData, userData, CHAR_BUFFER_SIZE*10);
     }
 
     if (launchIndex) {
-        strncpy(inst->launchIndex, launchIndex, CHAR_BUFFER_SIZE);
+        safe_strncpy(inst->launchIndex, launchIndex, CHAR_BUFFER_SIZE);
     }
 
     if (platform) {
-        strncpy(inst->platform, platform, CHAR_BUFFER_SIZE);
+        safe_strncpy(inst->platform, platform, CHAR_BUFFER_SIZE);
     }
 
     inst->groupNamesSize = groupNamesSize;
     if (groupNames && groupNamesSize) {
         int i;
         for (i=0; groupNames[i] && i<groupNamesSize; i++) {
-            strncpy(inst->groupNames[i], groupNames[i], CHAR_BUFFER_SIZE);
+            safe_strncpy(inst->groupNames[i], groupNames[i], CHAR_BUFFER_SIZE);
         }
     }
     inst->volumesSize = 0;
@@ -158,32 +158,32 @@ ncInstance * allocate_instance (char *uuid,
     }
     
     if (uuid) {
-      strncpy(inst->uuid, uuid, CHAR_BUFFER_SIZE);
+      safe_strncpy(inst->uuid, uuid, CHAR_BUFFER_SIZE);
     }
 
     if (instanceId) {
-      strncpy(inst->instanceId, instanceId, CHAR_BUFFER_SIZE);
+      safe_strncpy(inst->instanceId, instanceId, CHAR_BUFFER_SIZE);
     }
 
     if (keyName) {
-      strncpy(inst->keyName, keyName, CHAR_BUFFER_SIZE*4);
+      safe_strncpy(inst->keyName, keyName, CHAR_BUFFER_SIZE*4);
     }
 
     if (reservationId) {
-      strncpy(inst->reservationId, reservationId, CHAR_BUFFER_SIZE);
+      safe_strncpy(inst->reservationId, reservationId, CHAR_BUFFER_SIZE);
     }
 
     if (stateName) {
-      strncpy(inst->stateName, stateName, CHAR_BUFFER_SIZE);
+      safe_strncpy(inst->stateName, stateName, CHAR_BUFFER_SIZE);
     }
     if (userId) {
-      strncpy(inst->userId, userId, CHAR_BUFFER_SIZE);
+      safe_strncpy(inst->userId, userId, CHAR_BUFFER_SIZE);
     }
     if (params) {
       memcpy(&(inst->params), params, sizeof(virtualMachine));
     }
     inst->stateCode = stateCode;
-    strncpy (inst->bundleTaskStateName, bundling_progress_names [NOT_BUNDLING], CHAR_BUFFER_SIZE);
+    safe_strncpy (inst->bundleTaskStateName, bundling_progress_names [NOT_BUNDLING], CHAR_BUFFER_SIZE);
     inst->expiryTime = expiryTime;
     return inst;
 }
@@ -213,12 +213,12 @@ ncResource * allocate_resource (char *nodeStatus,
     if (!nodeStatus) return NULL;
     if (!(res = malloc(sizeof(ncResource)))) return NULL;
     bzero(res, sizeof(ncResource));
-    strncpy(res->nodeStatus, nodeStatus, CHAR_BUFFER_SIZE);
+    safe_strncpy(res->nodeStatus, nodeStatus, CHAR_BUFFER_SIZE);
     if (iqn) {
-      strncpy(res->iqn, iqn, CHAR_BUFFER_SIZE);
+      safe_strncpy(res->iqn, iqn, CHAR_BUFFER_SIZE);
     }
     if (publicSubnets) {
-      strncpy(res->publicSubnets, publicSubnets, CHAR_BUFFER_SIZE);
+      safe_strncpy(res->publicSubnets, publicSubnets, CHAR_BUFFER_SIZE);
     }
     res->memorySizeMax = memorySizeMax;
     res->memorySizeAvailable = memorySizeAvailable;
@@ -370,11 +370,11 @@ ncVolume * add_volume (ncInstance * instance, char *volumeId, char *remoteDev, c
     if ( ! strncmp (v->volumeId, volumeId, CHAR_BUFFER_SIZE) ) {
         return NULL; /* already there */
     } else {
-        strncpy (v->volumeId, volumeId, CHAR_BUFFER_SIZE);
-        strncpy (v->remoteDev, remoteDev, CHAR_BUFFER_SIZE);
-        strncpy (v->localDev, localDev , CHAR_BUFFER_SIZE);
-        strncpy (v->localDevReal, localDevReal , CHAR_BUFFER_SIZE);
-	strncpy (v->stateName, stateName , CHAR_BUFFER_SIZE);
+        safe_strncpy (v->volumeId, volumeId, CHAR_BUFFER_SIZE);
+        safe_strncpy (v->remoteDev, remoteDev, CHAR_BUFFER_SIZE);
+        safe_strncpy (v->localDev, localDev , CHAR_BUFFER_SIZE);
+        safe_strncpy (v->localDevReal, localDevReal , CHAR_BUFFER_SIZE);
+	safe_strncpy (v->stateName, stateName , CHAR_BUFFER_SIZE);
         instance->volumesSize++;
     }
 

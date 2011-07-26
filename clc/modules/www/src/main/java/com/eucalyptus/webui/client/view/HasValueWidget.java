@@ -1,11 +1,7 @@
 package com.eucalyptus.webui.client.view;
 
-import com.google.gwt.user.client.ui.Widget;
-
-public interface HasValueWidget {
+public interface HasValueWidget extends HasWidget {
 
   String getValue( );
-  
-  Widget getWidget( );
   
 }

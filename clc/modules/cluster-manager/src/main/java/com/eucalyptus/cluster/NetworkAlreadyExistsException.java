@@ -63,6 +63,22 @@
  */
 package com.eucalyptus.cluster;
 
-public class NetworkAlreadyExistsException extends Throwable {
+public class NetworkAlreadyExistsException extends Exception {
+
+  public NetworkAlreadyExistsException( ) {
+    super( );
+  }
+
+  public NetworkAlreadyExistsException( String message, Throwable cause ) {
+    super( message, cause );
+  }
+
+  public NetworkAlreadyExistsException( String message ) {
+    super( message );
+  }
+
+  public NetworkAlreadyExistsException( Throwable cause ) {
+    super( cause );
+  }
 
 }
