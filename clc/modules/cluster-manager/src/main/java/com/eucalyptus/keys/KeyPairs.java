@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,40 +61,26 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cloud.run;
+package com.eucalyptus.keys;
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.component.Partition;
-import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.util.NotEnoughResourcesAvailable;
-import com.google.common.base.Joiner;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
+import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.util.Transactions;
 
-/**
- * NOTE:GRZE: don't get attached to this, it will be removed as the verify pipeline is simplified in the future.
- */
-public class PartitionVerify {
+public class KeyPairs {
+  private static SshKeyPair NO_KEY      = new SshKeyPair( FakePrincipals.NOBODY_USER_ERN, "", "", "" );
+  public static String      NO_KEY_NAME = "";
   
-  private static Logger LOG = Logger.getLogger( PartitionVerify.class );
+  public static SshKeyPair noKey( ) {
+    return NO_KEY;
+  }
   
-  public Allocation verify( Allocation allocInfo ) throws NotEnoughResourcesAvailable {
-    RunInstancesType request = allocInfo.getRequest( );
-    String zoneName = request.getAvailabilityZone( );
-    if ( Clusters.getInstance( ).listValues( ).isEmpty( ) ) {
-      LOG.debug( "enabled values: " + Joiner.on( "\n" ).join( Clusters.getInstance( ).listValues( ) ) );
-      LOG.debug( "disabled values: " + Joiner.on( "\n" ).join( Clusters.getInstance( ).listValues( ) ) );
-      throw new NotEnoughResourcesAvailable( "Not enough resources: no cluster controller is currently available to run instances." );
-    } else if ( Partitions.exists( zoneName ) ) {
-      Partition partition = Partitions.lookupService( ClusterController.class, zoneName ).lookupPartition( );
-      allocInfo.setPartition( partition );
-    } else {
-      String defaultZone = Clusters.getInstance( ).listValues( ).get( 0 ).getPartition( );
-      Partition partition = Partitions.lookupService( ClusterController.class, defaultZone ).lookupPartition( );
-      allocInfo.setPartition( partition );
+  public static SshKeyPair lookup( UserFullName userFullName, String keyName ) throws NoSuchMetadataException {
+    try {
+      return Transactions.find( new SshKeyPair( userFullName, keyName ) );
+    } catch ( Throwable e ) {
+      throw new NoSuchMetadataException( "Failed to find key pair: " + keyName + " for " + userFullName, e );
     }
-    return allocInfo;
   }
 }
