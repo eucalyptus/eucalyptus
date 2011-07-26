@@ -138,39 +138,6 @@ public class ImageManager {
     final boolean exeByHasAll = exeBySelectionSet.remove( ALL );
     
     final Predicate<ImageInfo> imageFilter = new Predicate<ImageInfo>( ) {
-      /**
-       * @param image
-       * @param accountIds
-       * @return true if image has launch permission for any of the account in accountIds
-       */
-      private boolean allowsAny( ImageInfo image, Set<String> accountIds ) {
-        final Set<LaunchPermission> permissions = image.getPermissions( );
-        for ( String aid : accountIds ) {
-          if ( permissions.contains( new LaunchPermission( image, aid ) ) ) {
-            return true;
-          }
-        }
-        return false;
-      }
-      
-      /**
-       * @param image
-       * @param accountId
-       * @return true if image has launch permission including public, explicit and implicit
-       */
-      private boolean hasLaunchPermission( ImageInfo image, String accountId ) {
-        return image.getImagePublic( ) || hasExplicitOrImplicitLaunchPermission( image, accountId );
-      }
-      
-      /**
-       * @param image
-       * @param accountId
-       * @return true if image has explicit or implicit launch permission
-       */
-      private boolean hasExplicitOrImplicitLaunchPermission( ImageInfo image, String accountId ) {
-        return image.getOwnerAccountId( ).equals( accountId ) ||
-               image.getPermissions( ).contains( new LaunchPermission( image, accountId ) );
-      }
       
       @Override
       public boolean apply( ImageInfo image ) {
@@ -179,7 +146,7 @@ public class ImageManager {
           return false;
         }
         // Make sure the request account can access the image
-        if ( !ctx.hasAdministrativePrivileges( ) && !hasLaunchPermission( image, requestAccountId ) ) {
+        if ( !ctx.hasAdministrativePrivileges( ) && !image.hasPermissionForOne( requestAccountId ) ) {
           return false;
         }
         // Check if selected by specified owner account ID
@@ -189,8 +156,8 @@ public class ImageManager {
         // Check if selected by explicit account permissions
         if ( exeByNonEmpty ) {
           if ( !( ( exeByHasAll && image.getImagePublic( ) ) ||   // public
-                  ( exeByHasSelf && hasExplicitOrImplicitLaunchPermission( image, requestAccountId ) ) || // implicit or explicit, but no public
-                  ( exeBySelectionSet.size( ) > 0 && image.getOwnerAccountId( ).equals( requestAccountId ) && allowsAny( image, exeBySelectionSet ) ) // owned by self and executable by someone 
+                  ( exeByHasSelf && image.hasExplicitOrImplicitPermissionForOne( requestAccountId ) ) || // implicit or explicit, but no public
+                  ( exeBySelectionSet.size( ) > 0 && image.getOwnerAccountId( ).equals( requestAccountId ) && image.hasExplicitPermissionForAny( exeBySelectionSet ) ) // owned by self and executable by someone 
                 ) ) {
             return false;
           }
@@ -270,14 +237,15 @@ public class ImageManager {
   public DeregisterImageResponseType deregister( DeregisterImageType request ) throws EucalyptusCloudException {
     DeregisterImageResponseType reply = request.getReply( );
     Context ctx = Contexts.lookup( );
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
-      ImageInfo imgInfo = EntityWrapper.get( ImageInfo.class ).lookupAndClose( Images.exampleWithImageId( request.getImageId( ) ) );
-      if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ),
-                                   UserFullName.getInstance( imgInfo.getOwnerUserId( ) ) ) ) {
-        Images.deregisterImage( imgInfo.getDisplayName( ) );
-      } else {
-        throw new EucalyptusCloudException( "Only the owner of a registered image or the administrator can deregister it." );
+      ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
+      if ( !ctx.hasAdministrativePrivileges( ) ) {
+        if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), UserFullName.getInstance( imgInfo.getOwnerUserId( ) ) ) ) {
+          throw new EucalyptusCloudException( "Only the owner of a registered image or the administrator can deregister it." );
+        }
       }
+      Images.deregisterImage( imgInfo.getDisplayName( ) );
       return reply;
     } catch ( NoSuchImageException ex ) {
       LOG.trace( ex );
@@ -287,6 +255,8 @@ public class ImageManager {
       LOG.trace( ex );
       reply.set_return( false );
       return reply;
+    } finally {
+      db.commit( );
     }
   }
   
@@ -315,15 +285,19 @@ public class ImageManager {
   public DescribeImageAttributeResponseType describeImageAttribute( DescribeImageAttributeType request ) throws EucalyptusCloudException {
     DescribeImageAttributeResponseType reply = ( DescribeImageAttributeResponseType ) request.getReply( );
     reply.setImageId( request.getImageId( ) );
+    final Context ctx = Contexts.lookup( );
+    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
     
     if ( request.getAttribute( ) != null ) request.applyAttribute( );
     
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
-      if ( !imgInfo.isAllowed( Contexts.lookup( ).getAccount( ) ) ||
-           !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), imgInfo.getOwner( ) ) ) {
-        throw new EucalyptusCloudException( "Permission to describe image attribute is denied" );
+      if ( !ctx.hasAdministrativePrivileges( ) ) {
+        if ( !imgInfo.hasPermissionForOne( requestAccountId ) ||
+             !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), imgInfo.getOwner( ) ) ) {
+          throw new EucalyptusCloudException( "Permission to describe image attribute is denied" );
+        }
       }
       if ( request.getKernel( ) != null ) {
         reply.setRealResponse( reply.getKernel( ) );
@@ -366,9 +340,8 @@ public class ImageManager {
       } else {
         throw new EucalyptusCloudException( "invalid image attribute request." );
       }
-    } catch ( EucalyptusCloudException e ) {
+    } finally {
       db.commit( );
-      throw e;
     }
     return reply;
   }
@@ -402,12 +375,16 @@ public class ImageManager {
   public ResetImageAttributeResponseType resetImageAttribute( ResetImageAttributeType request ) throws EucalyptusCloudException {
     ResetImageAttributeResponseType reply = ( ResetImageAttributeResponseType ) request.getReply( );
     reply.set_return( true );
+    final Context ctx = Contexts.lookup( );
+    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
-      if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), imgInfo.getOwner( ) ) ) {
+      if ( ctx.hasAdministrativePrivileges( ) || 
+           ( imgInfo.hasPermissionForOne( requestAccountId ) && 
+               Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), imgInfo.getOwner( ) ) ) ) {
         imgInfo.resetPermission( );
-        db.commit( );
+        db.commit( );          
       } else {
         db.rollback( );
         reply.set_return( false );
