@@ -122,6 +122,8 @@ public class ImageManager {
   
   private static final String ALL = "all";
   private static final String SELF = "self";
+  
+  private static final String ADD = "add";
 
   public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException {
     DescribeImagesResponseType reply = request.getReply( );
@@ -236,14 +238,15 @@ public class ImageManager {
   
   public DeregisterImageResponseType deregister( DeregisterImageType request ) throws EucalyptusCloudException {
     DeregisterImageResponseType reply = request.getReply( );
-    Context ctx = Contexts.lookup( );
+    final Context ctx = Contexts.lookup( );
+    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
-      if ( !ctx.hasAdministrativePrivileges( ) ) {
-        if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), UserFullName.getInstance( imgInfo.getOwnerUserId( ) ) ) ) {
-          throw new EucalyptusCloudException( "Only the owner of a registered image or the administrator can deregister it." );
-        }
+      if ( !ctx.hasAdministrativePrivileges( ) &&
+          ( !imgInfo.getOwnerAccountId( ).equals( requestAccountId ) || 
+            !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), imgInfo.getOwner( ) ) ) ) {
+        throw new EucalyptusCloudException( "Not authorized to deregister image" );
       }
       Images.deregisterImage( imgInfo.getDisplayName( ) );
       return reply;
@@ -348,27 +351,46 @@ public class ImageManager {
   
   public ModifyImageAttributeResponseType modifyImageAttribute( ModifyImageAttributeType request ) throws EucalyptusCloudException {
     ModifyImageAttributeResponseType reply = ( ModifyImageAttributeResponseType ) request.getReply( );
-    Context ctx = Contexts.lookup( );
-    
-    if ( request.getAttribute( ) != null ) request.applyAttribute( );
-    
-    if ( request.getProductCodes( ).isEmpty( ) ) {
-      reply.set_return( ImageUtil.modifyImageInfo( request ) );
-    } else {
-      EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
-      ImageInfo imgInfo = null;
-      try {
-        imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
-        for ( String productCode : request.getProductCodes( ) ) {
-          imgInfo.addProductCode( productCode );
-        }
-        db.commit( );
-        reply.set_return( true );
-      } catch ( EucalyptusCloudException e ) {
-        db.rollback( );
-        reply.set_return( false );
+    final Context ctx = Contexts.lookup( );
+    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
+
+    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    ImageInfo imgInfo = null;
+    try {
+      imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
+      if ( !ctx.hasAdministrativePrivileges( ) &&
+           ( !imgInfo.getOwnerAccountId( ).equals( requestAccountId ) || 
+             !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), imgInfo.getOwner( ) ) ) ) {
+        throw new EucalyptusCloudException( "Not authorized to modify image attribute" );
       }
+      // Product codes
+      for ( String productCode : request.getProductCodes( ) ) {
+        imgInfo.addProductCode( productCode );
+      }
+      // Launch permissions
+      if ( request.getAttribute( ) != null ) {
+        if ( ADD.equals( request.getOperationType( ) ) ) {
+          imgInfo.addPermissions( request.getQueryUserId( ) );
+          // Only "all" is valid
+          if ( !request.getQueryUserGroup( ).isEmpty( ) ) {
+            imgInfo.setImagePublic( true );
+          }
+        } else {
+          imgInfo.removePermissions( request.getQueryUserId( ) );
+          // Only "all" is valid
+          if ( !request.getQueryUserGroup( ).isEmpty( ) ) {
+            imgInfo.setImagePublic( false );
+          }
+        }
+      }
+      db.commit( );
+      reply.set_return( true );
+    } catch ( EucalyptusCloudException e ) {
+      LOG.error( e, e );
+      db.rollback( );
+      reply.set_return( false );
     }
+
     return reply;
   }
   
@@ -381,7 +403,7 @@ public class ImageManager {
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( ctx.hasAdministrativePrivileges( ) || 
-           ( imgInfo.hasPermissionForOne( requestAccountId ) && 
+           ( imgInfo.getOwnerAccountId( ).equals( requestAccountId ) && 
                Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), imgInfo.getOwner( ) ) ) ) {
         imgInfo.resetPermission( );
         db.commit( );          
@@ -390,6 +412,7 @@ public class ImageManager {
         reply.set_return( false );
       }
     } catch ( EucalyptusCloudException e ) {
+      LOG.error( e, e );
       db.rollback( );
       reply.set_return( false );
     }

@@ -87,6 +87,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.Image;
@@ -503,6 +504,48 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   public boolean hasExplicitOrImplicitPermissionForOne( String accountId ) {
     return getOwnerAccountId( ).equals( accountId ) ||
            getPermissions( ).contains( new LaunchPermission( this, accountId ) );
+  }
+  
+  /**
+   * Add launch permissions.
+   * 
+   * Can only be used within the scope of a db transaction.
+   * 
+   * @param accountIds
+   */
+  public void addPermissions( List<String> accountIds ) {
+    for ( String aid : accountIds ) {
+      try {
+        // Verify account ID
+        Account account = Accounts.lookupAccountById( aid );
+        LaunchPermission perm = new LaunchPermission( this, account.getAccountNumber( ) );
+        if ( !getPermissions( ).contains( perm ) ) {
+          getPermissions( ).add( perm );
+        }
+      } catch ( Exception e ) {
+        LOG.error( e, e );
+      }
+    }
+  }
+
+  /**
+   * Remove launch permissions.
+   * 
+   * Can only be used within the scope of a db transaction.
+   * 
+   * @param accountIds
+   */
+  public void removePermissions( List<String> accountIds ) {
+    for ( String aid : accountIds ) {
+      try {
+        // Verify account ID
+        Account account = Accounts.lookupAccountById( aid );
+        LaunchPermission perm = new LaunchPermission( this, account.getAccountNumber( ) );
+        getPermissions( ).remove( perm );
+      } catch ( Exception e ) {
+        LOG.error( e, e );
+      }
+    }    
   }
   
 }
