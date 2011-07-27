@@ -119,11 +119,15 @@ public class Allocations {
     private BootableSet                    bootSet;
     private VmType                         vmType;
     private Map<String, NetworkRulesGroup> networkRulesGroups;
+    private final int minCount;
+    private final int maxCount;
     
-    private Allocation( ) {
+    private Allocation( RunInstancesType request ) {
       super( );
       this.context = Contexts.lookup( );
-      this.request = ( RunInstancesType ) this.context.getRequest( );
+      this.request = request;
+      this.minCount = request.getMinCount( );
+      this.maxCount = request.getMaxCount( );
       UserFullName temp = FakePrincipals.NOBODY_USER_ERN;
       try {
         temp = Contexts.lookup( request.getCorrelationId( ) ).getUserFullName( );
@@ -319,9 +323,17 @@ public class Allocations {
     public VmTypeInfo getVmTypeInfo( ) throws MetadataException {
       return this.bootSet.populateVirtualBootRecord( vmType );
     }
+
+    public int getMinCount( ) {
+      return this.minCount;
+    }
+
+    public int getMaxCount( ) {
+      return this.maxCount;
+    }
   }
   
-  public static Allocation begin( ) {
-    return new Allocation( );
+  public static Allocation begin( RunInstancesType request ) {
+    return new Allocation( request );
   }
 }

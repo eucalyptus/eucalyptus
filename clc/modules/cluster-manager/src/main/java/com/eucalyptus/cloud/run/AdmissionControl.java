@@ -155,10 +155,10 @@ public class AdmissionControl {
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
       RunInstancesType request = allocInfo.getRequest( );
-      String clusterName = request.getAvailabilityZone( );
-      String vmTypeName = request.getInstanceType( );
-      final int minAmount = request.getMinCount( );
-      final int maxAmount = request.getMaxCount( );
+      String clusterName = allocInfo.getPartition( ).getName( );
+      String vmTypeName = allocInfo.getVmType( ).getName( );
+      final int minAmount = allocInfo.getMinCount( );
+      final int maxAmount = allocInfo.getMaxCount( );
       Context ctx = Contexts.lookup( );
       //if ( ctx.getGroups( ).isEmpty( ) ) {
       if ( false ) {
