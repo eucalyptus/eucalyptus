@@ -113,7 +113,7 @@ public class VerifyMetadata {
     return handle( request );
   }
   
-  private Allocation handle( RunInstancesType request ) throws MetadataException {
+  public static Allocation handle( RunInstancesType request ) throws MetadataException {
     Allocation alloc = Allocations.begin( request );
     for ( MetadataVerifier v : verifiers ) {
       v.apply( alloc );

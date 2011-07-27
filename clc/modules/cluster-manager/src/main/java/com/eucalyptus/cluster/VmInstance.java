@@ -652,6 +652,10 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     }
   }
   
+  public String getImageId( ) {
+    return this.vbr.lookupRoot( ).getId( );
+  }
+  
   public RunningInstancesItemType getAsRunningInstanceItemType( ) {
     boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     RunningInstancesItemType runningInstance = new RunningInstancesItemType( );

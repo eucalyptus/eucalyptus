@@ -75,7 +75,10 @@ import org.mule.RequestContext;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cloud.run.AdmissionControl;
+import com.eucalyptus.cloud.run.VerifyMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
@@ -307,17 +310,36 @@ public class VmControl {
     Context ctx = Contexts.lookup( );
     final StartInstancesResponseType reply = request.getReply( );
     for ( String instanceId : request.getInstancesSet( ) ) {
-      VmInstance v = null;
+      VmInstance vm = null;
       try {
-        v = VmInstances.getInstance( ).lookup( instanceId );
+        vm = VmInstances.getInstance( ).lookup( instanceId );
       } catch ( NoSuchElementException ex ) {
         try {
-          v = Transactions.find( VmInstance.named( ctx.getUserFullName( ), instanceId ) );
+          vm = Transactions.find( VmInstance.named( ctx.getUserFullName( ), instanceId ) );
         } catch ( ExecutionException ex1 ) {
           throw new EucalyptusCloudException( "Failed to locate instance information for instance id: " + instanceId );
         }
+        final VmInstance v = vm;
+        try {
+          RunInstancesType runRequest = new RunInstancesType( ) {
+            { 
+              this.setMinCount( 1 );
+              this.setMaxCount( 1 );
+              this.setImageId( v.getImageId( ) );
+              this.setAvailabilityZone( v.getPartition( ) );
+              this.getGroupSet( ).addAll( v.getNetworkNames( ) );
+              this.setInstanceType( v.getVmType( ).getName( ) );
+            }
+          };
+          Allocation allocInfo = VerifyMetadata.handle( runRequest );
+          allocInfo = AdmissionControl.handle( allocInfo );
+          final int oldCode = v.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
+          final String oldState = v.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
+          reply.getInstancesSet( ).add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
+        } catch ( MetadataException ex1 ) {
+          LOG.error( ex1, ex1 );
+        }
       }
-      //TODO:GRZE:here here here.
     }
     return reply;
   }
