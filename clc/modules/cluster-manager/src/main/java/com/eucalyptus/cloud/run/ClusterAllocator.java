@@ -232,7 +232,7 @@ public class ClusterAllocator extends Thread {
     }
     
     final List<String> addresses = Lists.newArrayList( token.getAddresses( ) );
-    RunInstancesType request = this.allocInfo.getRequest( );
+    BaseMessage request = this.allocInfo.getRequest( );
     String rsvId = this.allocInfo.getReservationId( );
     SshKeyPair keyInfo = this.allocInfo.getSshKeyPair( );
     VmTypeInfo vmInfo = this.allocInfo.getVmTypeInfo( );
@@ -281,7 +281,7 @@ public class ClusterAllocator extends Thread {
     }
   }
   
-  private Request makeRunRequest( RunInstancesType request, final ResourceToken childToken, UserFullName userFullName, String rsvId,
+  private Request makeRunRequest( BaseMessage request, final ResourceToken childToken, UserFullName userFullName, String rsvId,
                                   SshKeyPair keyPair, VmTypeInfo vmInfo, String platform, Integer vlan, List<String> networkNames, String userData ) {
     List<String> macs = Lists.transform( childToken.getInstanceIds( ), new Function<String, String>( ) {
       @Override

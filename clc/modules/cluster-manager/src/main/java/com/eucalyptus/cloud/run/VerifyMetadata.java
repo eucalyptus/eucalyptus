@@ -64,8 +64,6 @@
 package com.eucalyptus.cloud.run;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -91,34 +89,35 @@ import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.NetworkRulesGroup;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Joiner;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Sets.SetView;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class VerifyMetadata {
   private static Logger LOG = Logger.getLogger( VerifyMetadata.class );
   
-  interface MetadataVerifier<T> {
+  interface MetadataVerifier {
     public abstract boolean apply( Allocation allocInfo ) throws MetadataException;
   }
   
-  public Allocation verify( RunInstancesType request ) throws MetadataException {
-    Allocation alloc = Allocations.begin( );
-    VmTypeVerifier.INSTANCE.apply( alloc );
-    PartitionVerifier.INSTANCE.apply( alloc );
-    ImageVerifier.INSTANCE.apply( alloc );
-    KeyPairVerifier.INSTANCE.apply( alloc );
-    NetworkGroupVerifier.INSTANCE.apply( alloc );
+  private static final ArrayList<? extends MetadataVerifier> verifiers = Lists.newArrayList( VmTypeVerifier.INSTANCE, PartitionVerifier.INSTANCE,
+                                                                                                ImageVerifier.INSTANCE, KeyPairVerifier.INSTANCE,
+                                                                                                NetworkGroupVerifier.INSTANCE );
+  
+  public static Allocation handle( RunInstancesType request ) throws MetadataException {
+    Allocation alloc = Allocations.begin( request );
+    for ( MetadataVerifier v : verifiers ) {
+      v.apply( alloc );
+    }
     return alloc;
   }
   
-  enum VmTypeVerifier implements MetadataVerifier<Allocation> {
+  enum VmTypeVerifier implements MetadataVerifier {
     INSTANCE;
     
     @Override
@@ -141,7 +140,7 @@ public class VerifyMetadata {
     }
   }
   
-  enum PartitionVerifier implements MetadataVerifier<Allocation> {
+  enum PartitionVerifier implements MetadataVerifier {
     INSTANCE;
     
     @Override
@@ -155,16 +154,18 @@ public class VerifyMetadata {
       } else if ( Partitions.exists( zoneName ) ) {
         Partition partition = Partitions.lookupService( ClusterController.class, zoneName ).lookupPartition( );
         allocInfo.setPartition( partition );
-      } else {
+      } else if ( "default".equals( zoneName ) ) {
         String defaultZone = Clusters.getInstance( ).listValues( ).get( 0 ).getPartition( );
         Partition partition = Partitions.lookupService( ClusterController.class, defaultZone ).lookupPartition( );
         allocInfo.setPartition( partition );
+      } else {
+        throw new VerificationException( "Not enough resources: no cluster controller is currently available to run instances." );
       }
       return true;
     }
   }
   
-  enum ImageVerifier implements MetadataVerifier<Allocation> {
+  enum ImageVerifier implements MetadataVerifier {
     INSTANCE;
     
     @Override
@@ -187,7 +188,7 @@ public class VerifyMetadata {
     }
   }
   
-  enum KeyPairVerifier implements MetadataVerifier<Allocation> {
+  enum KeyPairVerifier implements MetadataVerifier {
     INSTANCE;
     
     @Override
@@ -213,7 +214,7 @@ public class VerifyMetadata {
     }
   }
   
-  enum NetworkGroupVerifier implements MetadataVerifier<Allocation> {
+  enum NetworkGroupVerifier implements MetadataVerifier {
     INSTANCE;
     
     @Override
