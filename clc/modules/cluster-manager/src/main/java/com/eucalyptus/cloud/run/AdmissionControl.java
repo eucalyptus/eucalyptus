@@ -116,13 +116,8 @@ public class AdmissionControl {
                                                          }
                                                        };
   
-  public Allocation evaluate( Allocation allocInfo ) throws EucalyptusCloudException {
-    Allocation ret = handle( allocInfo );
-    EventRecord.here( this.getClass( ), EventType.VM_RESERVED, LogUtil.dumpObject( allocInfo ) ).trace( );
-    return ret;
-  }
-
   public static Allocation handle( Allocation allocInfo ) throws EucalyptusCloudException {
+    EventRecord.here( AdmissionControl.class, EventType.VM_RESERVED, LogUtil.dumpObject( allocInfo ) ).trace( );
     List<ResourceAllocator> finished = Lists.newArrayList( );
     
     for ( ResourceAllocator allocator : pending ) {

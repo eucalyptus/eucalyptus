@@ -109,10 +109,6 @@ public class VerifyMetadata {
                                                                                                 ImageVerifier.INSTANCE, KeyPairVerifier.INSTANCE,
                                                                                                 NetworkGroupVerifier.INSTANCE );
   
-  public Allocation verify( RunInstancesType request ) throws MetadataException {
-    return handle( request );
-  }
-  
   public static Allocation handle( RunInstancesType request ) throws MetadataException {
     Allocation alloc = Allocations.begin( request );
     for ( MetadataVerifier v : verifiers ) {
