@@ -105,6 +105,7 @@ import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Transactions;
+import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.vm.VmState;
@@ -264,7 +265,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     this.sshKeyPair = null;
     this.vmType = null;
   }
-
+  
   private VmInstance( ) {
     this.instanceId = null;
     this.launchTime = null;
@@ -282,6 +283,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     this.sshKeyPair = null;
     this.vmType = null;
   }
+  
   public void updateBlockBytes( long blkbytes ) {
     this.blockBytes += blkbytes;
   }
@@ -435,6 +437,18 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
                                                                     this.getOwner( ).getNamespace( ), this.getOwner( ).getName( ),
                                                                     this.clusterName, this.partitionName, this.networkBytes, this.blockBytes ) );
     } catch ( EventFailedException ex ) {
+      LOG.error( ex, ex );
+    }
+    try {
+      Transactions.one( VmInstance.named( ( UserFullName ) this.getOwner( ), this.getDisplayName( ) ), new Callback<VmInstance>( ) {
+        
+        @Override
+        public void fire( VmInstance t ) {
+          t.setBlockBytes( VmInstance.this.getBlockBytes( ) );
+          t.setNetworkBytes( VmInstance.this.getNetworkBytes( ) );
+        }
+      } );
+    } catch ( ExecutionException ex ) {
       LOG.error( ex, ex );
     }
   }
@@ -996,7 +1010,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   public SshKeyPair getSshKeyPair( ) {
     return this.sshKeyPair;
   }
-
+  
   public static VmInstance named( UserFullName userFullName, String instanceId2 ) {
     return new VmInstance( userFullName, instanceId2 );
   }

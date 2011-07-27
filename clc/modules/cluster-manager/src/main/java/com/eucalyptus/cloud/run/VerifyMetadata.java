@@ -63,10 +63,6 @@
 
 package com.eucalyptus.cloud.run;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.log4j.Logger;
@@ -91,14 +87,11 @@ import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.NetworkRulesGroup;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Sets.SetView;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class VerifyMetadata {
