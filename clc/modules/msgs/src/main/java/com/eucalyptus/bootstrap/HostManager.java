@@ -297,8 +297,7 @@ public class HostManager {
           LOG.error( ex, ex );
           System.exit( 123 );
         }
-      } else {
-      }
+      } else {}
     }
     
     @Override
@@ -353,7 +352,8 @@ public class HostManager {
       } else {
         for ( final Host host : hosts ) {
           Hosts.update( host );
-          if ( !host.hasBootstrapped( ) && !host.isLocalHost( ) ) {/** trigger startup on remote hosts **/
+          if ( !host.hasBootstrapped( ) && !host.isLocalHost( ) ) {
+            /** trigger startup on remote hosts **/
             try {
               ServiceConfiguration config = euca.getBuilder( ).lookupByHost( host.getBindAddress( ).getHostAddress( ) );
               LOG.debug( "Requesting first time initialization for remote cloud controller: " + host );
@@ -454,7 +454,8 @@ public class HostManager {
     final Message outMsg = new Message( dest, null, msg );
     outMsg.putHeader( Protocols.lookupRegisteredId( EpochHeader.class ), new EpochHeader( Topology.epoch( ) ) );
     StackTraceElement caller = Thread.currentThread( ).getStackTrace( )[1];
-    LOG.debug( caller.getClassName( ).replaceAll( "^.*\\.","" ) + "." + caller.getMethodName( ) + ":" + caller.getLineNumber( ) + " sending message to: " + dest + " with payload " + msg.toString( ) + " " + outMsg.getHeaders( ) );
+    LOG.debug( caller.getClassName( ).replaceAll( "^.*\\.", "" ) + "." + caller.getMethodName( ) + ":" + caller.getLineNumber( ) + " sending message to: "
+               + dest + " with payload " + msg.toString( ) + " " + outMsg.getHeaders( ) );
     return Threads.lookup( Empyrean.class, HostManager.class ).limitTo( 8 ).submit( new Runnable( ) {
       
       @Override

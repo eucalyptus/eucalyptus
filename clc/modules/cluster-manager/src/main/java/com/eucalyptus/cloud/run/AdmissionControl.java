@@ -116,7 +116,8 @@ public class AdmissionControl {
                                                          }
                                                        };
   
-  public Allocation evaluate( Allocation allocInfo ) throws EucalyptusCloudException {
+  public static Allocation handle( Allocation allocInfo ) throws EucalyptusCloudException {
+    EventRecord.here( AdmissionControl.class, EventType.VM_RESERVED, LogUtil.dumpObject( allocInfo ) ).trace( );
     List<ResourceAllocator> finished = Lists.newArrayList( );
     
     for ( ResourceAllocator allocator : pending ) {
@@ -146,7 +147,6 @@ public class AdmissionControl {
         throw new EucalyptusCloudException( e.getMessage( ), e );
       }
     }
-    EventRecord.here( this.getClass( ), EventType.VM_RESERVED, LogUtil.dumpObject( allocInfo ) ).trace( );
     return allocInfo;
   }
   
@@ -155,10 +155,10 @@ public class AdmissionControl {
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
       RunInstancesType request = allocInfo.getRequest( );
-      String clusterName = request.getAvailabilityZone( );
-      String vmTypeName = request.getInstanceType( );
-      final int minAmount = request.getMinCount( );
-      final int maxAmount = request.getMaxCount( );
+      String clusterName = allocInfo.getPartition( ).getName( );
+      String vmTypeName = allocInfo.getVmType( ).getName( );
+      final int minAmount = allocInfo.getMinCount( );
+      final int maxAmount = allocInfo.getMaxCount( );
       Context ctx = Contexts.lookup( );
       //if ( ctx.getGroups( ).isEmpty( ) ) {
       if ( false ) {
