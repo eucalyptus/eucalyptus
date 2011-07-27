@@ -80,7 +80,7 @@ public class PolicyEngineImpl implements PolicyEngine {
    * 4. Otherwise, check local (intra-account) authorizations.
    *    If explicitly or default denied, access is DENIED.
    *    If explicitly allowed, access is GRANTED.
-   *
+   * 
    * (non-Javadoc)
    * @see com.eucalyptus.auth.api.PolicyEngine#evaluateAuthorization(java.lang.Class, java.lang.String, java.lang.String)
    */
@@ -95,19 +95,17 @@ public class PolicyEngineImpl implements PolicyEngine {
         String userId = requestUser.getUserId( );
         Account account = requestUser.getAccount( );
         
-        /* TODO(wenye): have correct implementation of global authorization when we unify all the permissions.
         // Check global (inter-account) authorizations first
         Decision decision = processAuthorizations( lookupGlobalAuthorizations( resourceType, account ), action, resourceName, keyEval, contractEval );
         if ( ( decision == Decision.DENY )
-            || ( decision == Decision.DEFAULT && resourceAccount.getAccountNumber( ) != null && !resourceAccount.getAccountNumber( ).equals( account.getAccountNumber( ) ) ) ) {
+            || ( decision == Decision.DEFAULT && resourceAccount != null && resourceAccount.getAccountNumber( ) != null && !resourceAccount.getAccountNumber( ).equals( account.getAccountNumber( ) ) ) ) {
           LOG.debug( "Request is rejected by global authorization check, due to decision " + decision );
           throw new AuthException( AuthException.ACCESS_DENIED ); 
         }
-        */
         // Account admin can do everything within the account
         if ( !requestUser.isAccountAdmin( ) ) {
           // If not denied by global authorizations, check local (intra-account) authorizations.
-          Decision decision = processAuthorizations( lookupLocalAuthorizations( resourceType, requestUser ), action, resourceName, keyEval, contractEval );
+          decision = processAuthorizations( lookupLocalAuthorizations( resourceType, requestUser ), action, resourceName, keyEval, contractEval );
           // Denied by explicit or default deny
           if ( decision == Decision.DENY || decision == Decision.DEFAULT ) {
             LOG.debug( "Request is rejected by local authorization check, due to decision " + decision );

@@ -129,6 +129,8 @@ public class ImageManager {
     DescribeImagesResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
+    final User requestUser = ctx.getUser( );
+    final String action = PolicySpec.requestToAction( request );
     final Set<String> imageSelectionSet = request.getImagesSet( ) != null ? new HashSet<String>( request.getImagesSet( ) ) : new HashSet<String>( );
     final Set<String> ownerSelectionSet = request.getOwnersSet( ) != null ? new HashSet<String>( request.getOwnersSet( ) ) : new HashSet<String>( );
     if ( ownerSelectionSet.remove( SELF ) ) {
@@ -165,7 +167,7 @@ public class ImageManager {
           }
         }
         // Check IAM permission at the end
-        if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, image.getDisplayName( ), image.getOwner( ) ) ) {
+        if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, image.getDisplayName( ), null, action, requestUser ) ) {
           return false;
         }
         return true;
@@ -180,8 +182,8 @@ public class ImageManager {
   
   public RegisterImageResponseType register( RegisterImageType request ) throws EucalyptusCloudException {
     final Context ctx = Contexts.lookup( );
-    User requestUser = Contexts.lookup( ).getUser( );
-    String action = PolicySpec.requestToAction( request );
+    final User requestUser = Contexts.lookup( ).getUser( );
+    final String action = PolicySpec.requestToAction( request );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, "", ctx.getAccount( ), action, requestUser ) ) {
         throw new EucalyptusCloudException( "Register image is not allowed for " + requestUser.getName( ) );
@@ -240,12 +242,15 @@ public class ImageManager {
     DeregisterImageResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
+    final User requestUser = Contexts.lookup( ).getUser( );
+    final String action = PolicySpec.requestToAction( request );
+
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
-          ( !imgInfo.getOwnerAccountId( ).equals( requestAccountId ) || 
-            !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), imgInfo.getOwner( ) ) ) ) {
+          ( !imgInfo.getOwnerAccountId( ).equals( requestAccountId ) ||
+            !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), null, action, requestUser ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to deregister image" );
       }
       Images.deregisterImage( imgInfo.getDisplayName( ) );
@@ -290,17 +295,18 @@ public class ImageManager {
     reply.setImageId( request.getImageId( ) );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
+    final User requestUser = Contexts.lookup( ).getUser( );
+    final String action = PolicySpec.requestToAction( request );
     
     if ( request.getAttribute( ) != null ) request.applyAttribute( );
     
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
-      if ( !ctx.hasAdministrativePrivileges( ) ) {
-        if ( !imgInfo.hasPermissionForOne( requestAccountId ) ||
-             !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), imgInfo.getOwner( ) ) ) {
-          throw new EucalyptusCloudException( "Permission to describe image attribute is denied" );
-        }
+      if ( !ctx.hasAdministrativePrivileges( ) &&
+          ( !imgInfo.getOwnerAccountId( ).equals( requestAccountId ) ||
+            !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), null, action, requestUser ) ) ) {
+        throw new EucalyptusCloudException( "Not authorized to describe image attribute" );
       }
       if ( request.getKernel( ) != null ) {
         reply.setRealResponse( reply.getKernel( ) );
@@ -353,14 +359,16 @@ public class ImageManager {
     ModifyImageAttributeResponseType reply = ( ModifyImageAttributeResponseType ) request.getReply( );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
-
+    final User requestUser = ctx.getUser( );
+    final String action = PolicySpec.requestToAction( request );
+    
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     ImageInfo imgInfo = null;
     try {
       imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
-           ( !imgInfo.getOwnerAccountId( ).equals( requestAccountId ) || 
-             !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), imgInfo.getOwner( ) ) ) ) {
+           ( !imgInfo.getOwnerAccountId( ).equals( requestAccountId ) ||
+             !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), null, action, requestUser ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to modify image attribute" );
       }
       // Product codes
@@ -399,12 +407,14 @@ public class ImageManager {
     reply.set_return( true );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
+    final User requestUser = ctx.getUser( );
+    final String action = PolicySpec.requestToAction( request );
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( ctx.hasAdministrativePrivileges( ) || 
            ( imgInfo.getOwnerAccountId( ).equals( requestAccountId ) && 
-               Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), imgInfo.getOwner( ) ) ) ) {
+             Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), null, action, requestUser ) ) ) {
         imgInfo.resetPermission( );
         db.commit( );          
       } else {
