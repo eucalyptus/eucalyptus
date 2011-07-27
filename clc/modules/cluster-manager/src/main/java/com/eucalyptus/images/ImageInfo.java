@@ -250,19 +250,19 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   
   public boolean checkPermission( final Account account ) {
     return true;
-//    final boolean[] result = { false };
-//    try {
-//      Transactions.one( new ImageInfo( this.displayName ), new Tx<ImageInfo>( ) {
-//        @Override
-//        public void fire( ImageInfo t ) throws Throwable {
-//          result[0] = t.getPermissions( ).contains( new LaunchPermission( t, account.getId( ) ) );
-//        }
-//      }
-//                  );
-//    } catch ( ExecutionException e ) {
-//      return false;
-//    }
-//    return result[0];
+  }
+  
+  public boolean checkPermission( final String accountId ) {
+    final boolean[] result = { false };
+    Transactions.each( new ImageInfo( this.displayName ), new Callback<ImageInfo>( ) {
+
+      @Override
+      public void fire( ImageInfo t ) {
+        result[0] = t.hasPermissionForOne( accountId );
+      }
+        
+    } );
+    return result[0];
   }
   
   public ImageInfo resetPermission( ) {
