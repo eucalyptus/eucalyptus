@@ -63,10 +63,18 @@
 
 package com.eucalyptus.images;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicyAnnotationRegistry;
+import com.eucalyptus.auth.policy.PolicyResourceType;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cloud.Image.StaticDiskImage;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
@@ -78,7 +86,9 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.HasOwningAccount;
 import com.eucalyptus.util.Lookup;
 import com.eucalyptus.util.Lookups;
 import com.eucalyptus.vm.VmType;
@@ -239,10 +249,10 @@ public class Emis {
   public static BootableSet newBootableSet( VmType vmType, Partition partition, String imageId ) throws MetadataException, AuthException {
     BootableSet bootSet = null;
     try {
-      bootSet = new BootableSet( Lookups.doPrivileged( imageId, LookupMachine.INSTANCE ) );
+      bootSet = new BootableSet( doPrivileged( imageId, LookupMachine.INSTANCE ) );
     } catch ( Exception e ) {
       try {
-        bootSet = new BootableSet( Lookups.doPrivileged( imageId, LookupBlockStorage.INSTANCE ) );
+        bootSet = new BootableSet( doPrivileged( imageId, LookupBlockStorage.INSTANCE ) );
       } catch ( IllegalContextAccessException ex ) {
         throw new VerificationException( ex );
       } catch ( NoSuchElementException ex ) {
@@ -263,7 +273,7 @@ public class Emis {
     String kernelId = determineKernelId( bootSet );
     LOG.debug( "Determined the appropriate kernelId to be " + kernelId + " for " + bootSet.toString( ) );
     try {
-      KernelImageInfo kernel = Lookups.doPrivileged( kernelId, LookupKernel.INSTANCE );
+      KernelImageInfo kernel = doPrivileged( kernelId, LookupKernel.INSTANCE );
       return new NoRamdiskBootableSet( bootSet.getMachine( ), kernel );
     } catch ( Exception ex ) {
       throw new NoSuchMetadataException( "Failed to lookup kernel image information: " + kernelId + " because of: " + ex.getMessage( ), ex );
@@ -277,7 +287,7 @@ public class Emis {
       return bootSet;
     } else {
       try {
-        RamdiskImageInfo ramdisk = Lookups.doPrivileged( ramdiskId, LookupRamdisk.INSTANCE );
+        RamdiskImageInfo ramdisk = doPrivileged( ramdiskId, LookupRamdisk.INSTANCE );
         return new TrifectaBootableSet( bootSet.getMachine( ), bootSet.getKernel( ), ramdisk );
       } catch ( Exception ex ) {
         throw new NoSuchMetadataException( "Failed to lookup ramdisk image information: " + ramdiskId + " because of: " + ex.getMessage( ), ex );
@@ -369,5 +379,52 @@ public class Emis {
       LOG.error( ex, ex );
     }
   }
+  
+  /**
+   * Uses the provided {@code lookupFunction} to resolve the {@code identifier} to the underlying
+   * object {@code T} with privileges determined by the current messaging context.
+   * 
+   * @param <T> type of object which needs looking up
+   * @param identifier identifier of the desired object
+   * @param lookupFunction class which resolves string identifiers to the underlying object
+   * @return the object corresponding with the given {@code identifier}
+   * @throws AuthException if the user is not authorized
+   * @throws PersistenceException if an error occurred in the underlying retrieval mechanism
+   * @throws NoSuchElementException if the requested {@code identifier} does not exist and the user is authorized.
+   * @throws IllegalContextAccessException if the current request context cannot be determined.
+   */
+  private static <T extends ImageInfo> T doPrivileged( String identifier, Lookup<T> lookupFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + lookupFunction + " typed as " + Classes.genericsToClasses( lookupFunction ) );
+    List<Class> lookupTypes = Classes.genericsToClasses( lookupFunction );
+    if( lookupTypes.isEmpty( ) ) {
+      throw new IllegalArgumentException( "Failed to find required generic type for lookup " + lookupFunction.getClass( ) + " so the policy type for looking up " + identifier + " cannot be determined." );
+    } else {
+      PolicyResourceType type = PolicyAnnotationRegistry.extractResourceType( lookupTypes.get( 0 ) );
+      final Context ctx = Contexts.lookup( );
+      final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
+      final User requestUser = ctx.getUser( );
+      final String action = PolicySpec.requestToAction( ctx.getRequest( ) );
+
+      try {
+        T requestedObject = lookupFunction.lookup( identifier );
+        if( requestedObject == null ) {
+          throw new NoSuchElementException( "Failed to lookup requested " + type + " with id " + identifier + " using " + lookupFunction.getClass( ) ); 
+        }
+        if ( !ctx.hasAdministrativePrivileges( ) &&
+             ( !requestedObject.checkPermission( requestAccountId ) ||
+               !Permissions.isAuthorized( type.vendor( ), type.resource( ), identifier, null, action, requestUser ) ) ) {
+          throw new AuthException( "Not authorized to use " + type.resource( ) + " identified by " + identifier + " as the user " + requestUser.getName( ) );
+        }
+        return requestedObject;
+      } catch ( NoSuchElementException ex ) {
+        throw ex;
+      } catch ( AuthException ex ) {
+        throw ex;
+      } catch ( Throwable ex ) {
+        throw new PersistenceException( "Error occurred while attempting to lookup " + identifier + " using lookup: " + lookupFunction + " typed as " + Classes.genericsToClasses( lookupFunction ) );
+      }
+    }
+  }
+  
   
 }
