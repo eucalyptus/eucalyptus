@@ -77,5 +77,5 @@ class ModifyWalrusAttribute(AWSQueryRequest):
     def main(self, **args):
         return self.send(**args)
 
-    def main_cli():
+    def main_cli(self):
         self.do_cli()
