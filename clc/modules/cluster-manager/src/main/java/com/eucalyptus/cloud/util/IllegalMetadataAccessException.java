@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,33 +61,24 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cloud.run;
+package com.eucalyptus.cloud.util;
 
-import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.component.Partition;
-import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.images.BlockStorageImageInfo;
-import com.eucalyptus.images.Emis;
-import com.eucalyptus.images.Emis.BootableSet;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.vm.VmType;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
+public class IllegalMetadataAccessException extends MetadataException {
 
-/**
- * NOTE:GRZE: don't get attached to this, it will be removed as the verify pipeline is simplified in the future.
- */
-public class ImageVerify {
-  public Allocation verify( Allocation allocInfo ) throws EucalyptusCloudException {
-    RunInstancesType msg = allocInfo.getRequest( );
-    String imageId = msg.getImageId( );
-    VmType vmType = allocInfo.getVmType( );
-    Partition partition = allocInfo.getPartition( );
-    BootableSet bootSet = Emis.newBootableSet( vmType, partition, imageId );
-    allocInfo.setBootableSet( bootSet );
-    return allocInfo;
+  public IllegalMetadataAccessException( ) {
+    super( );
   }
-  
+
+  public IllegalMetadataAccessException( String message, Throwable cause ) {
+    super( message, cause );
+  }
+
+  public IllegalMetadataAccessException( String message ) {
+    super( message );
+  }
+
+  public IllegalMetadataAccessException( Throwable cause ) {
+    super( cause );
+  }
 
 }

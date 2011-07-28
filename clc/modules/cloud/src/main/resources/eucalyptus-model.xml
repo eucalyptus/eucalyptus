@@ -74,7 +74,6 @@
     <spring:beans>
         <spring:import resource="classpath:eucalyptus-services.xml"/>
         <spring:import resource="classpath:eucalyptus-userdata.xml"/>
-        <spring:import resource="classpath:eucalyptus-verification.xml"/>
         <spring:import resource="classpath:eucalyptus-runtime.xml"/>
         <spring:import resource="classpath:eucalyptus-storage.xml"/>
     </spring:beans>

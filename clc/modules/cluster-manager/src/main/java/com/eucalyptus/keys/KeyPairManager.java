@@ -79,7 +79,7 @@ public class KeyPairManager {
       }
     }
     try {
-      KeyPairUtil.getUserKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
+      KeyPairs.lookup( ctx.getUserFullName( ), request.getKeyName( ) );
     } catch ( Exception e1 ) {
       PrivateKey pk = KeyPairUtil.createUserKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
       reply.setKeyFingerprint( Certs.getFingerPrint( pk ) );
@@ -112,7 +112,7 @@ public class KeyPairManager {
       }
     }
     try {
-      KeyPairUtil.getUserKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
+      KeyPairs.lookup( ctx.getUserFullName( ), request.getKeyName( ) );
     } catch ( Exception e1 ) {
       SshKeyPair newKey = new SshKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
       newKey.setPublicKey( request.getPublicKeyMaterial( ) );

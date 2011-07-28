@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,19 +61,24 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.sla;
+package com.eucalyptus.cloud.util;
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.cloud.run.Allocations.Allocation;
+public class NoSuchMetadataException extends MetadataException {
 
-public class PrivateNetworkAllocator implements ResourceAllocator {
-  private static Logger LOG = Logger.getLogger( PrivateNetworkAllocator.class );
-  
-  public void allocate( Allocation allocInfo ) throws Exception {
-    allocInfo.requestNetworkTokens( );
+  public NoSuchMetadataException( ) {
+    super( );
   }
-  
-  public void fail( Allocation allocInfo, Throwable t ) {
-    allocInfo.releaseNetworkAllocationTokens( );
+
+  public NoSuchMetadataException( String message, Throwable cause ) {
+    super( message, cause );
   }
+
+  public NoSuchMetadataException( String message ) {
+    super( message );
+  }
+
+  public NoSuchMetadataException( Throwable cause ) {
+    super( cause );
+  }
+
 }
