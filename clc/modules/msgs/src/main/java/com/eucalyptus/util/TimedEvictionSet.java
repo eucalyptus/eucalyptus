@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
+import org.mortbay.naming.local.localContextRoot;
 
 public class TimedEvictionSet<E extends Comparable> implements Set<E> {
   private static Logger LOG = Logger.getLogger( TimedEvictionSet.class );
@@ -22,11 +23,19 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
   class TimestampedElement implements Comparable<TimestampedElement> {
     private E element;
     private Long timeNanos;
+    
     public TimestampedElement( E element ) {
       super( );
       this.element = element;
       this.timeNanos = System.nanoTime( );
     }
+    
+    public TimestampedElement( E element, Long nanos) {
+    	super();
+    	this.element = element;
+    	this.timeNanos = nanos;
+    }
+    
     @Override
     public int hashCode( ) {
       final int prime = 31;
@@ -78,12 +87,29 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
       this.timestamps.add( elem );
       return true;
     } else {
-      TimestampedElement elem = new TimestampedElement( e );
-      if( this.timestamps.contains( elem ) && TimeUnit.SECONDS.convert( System.nanoTime( ) - elem.getTimestamp( ), TimeUnit.NANOSECONDS ) < 2 ) {
+    	// create a fake element with the time in the past
+    	// TODO:Vika: replace '3' with a configurable variable
+    	Long now = System.nanoTime( );
+    	Long timeNanos = now - TimeUnit.NANOSECONDS.convert(3, TimeUnit.SECONDS);
+    	TimestampedElement fakeElem = new TimestampedElement( e, timeNanos );
+    	NavigableSet<TimestampedElement> elems = this.timestamps.tailSet(fakeElem, true);
+    	for(Iterator<TimestampedElement> iter = elems.iterator(); iter.hasNext();) {
+    		TimestampedElement elem = iter.next();
+    		E sig = elem.get();
+    		if(e.equals(sig)) {
+    			LOG.debug("Found elem with signature " + sig + " with time " + elem.timeNanos
+    					+ " <= (" + now + " - " + 3 + ")");
+    			return true;
+    		}
+    	}
+    	// a replay attack
+    	return false;
+      // NOTES: contains() will only be true if they arrive at exactly the same time
+      /*if( this.timestamps.contains( elem ) && TimeUnit.SECONDS.convert( System.nanoTime( ) - elem.getTimestamp( ), TimeUnit.NANOSECONDS ) < 2 ) {
         return true;
       } else {
         return false;
-      }
+      }*/
     }
   }
   
