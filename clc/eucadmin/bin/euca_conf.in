@@ -397,7 +397,7 @@ class EucaConf(object):
                  'node-pk.pem', 'cluster-pk.pem']
         for file in files:
             full_path = os.path.join(path, file)
-            if not os.path.isfile(full_path)
+            if not os.path.isfile(full_path):
                 missing.append(full_path)
         return missing
 
