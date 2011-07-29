@@ -389,6 +389,18 @@ class EucaConf(object):
                 return False
         return True
 
+    def check_local_credentials(self):
+        missing = []
+        path = os.path.join(self.config['EUCALYPTUS'],
+                            'var/lib/eucalyptus/keys')
+        files = ['node-cert.pem', 'cluster-cert.pem', 'cloud-cert.pem',
+                 'node-pk.pem', 'cluster-pk.pem']
+        for file in files:
+            full_path = os.path.join(path, file)
+            if not os.path.isfile(full_path)
+                missing.append(full_path)
+        return missing
+
     def option_callback(self, option, opt_str, value, parser, optname=None):
         self.specified_options[optname] = value
 
@@ -441,6 +453,8 @@ class EucaConf(object):
         else:
             if action == 'register' and 'component_name' in needs:
                 needs.remove('component_name')
+            if res_type == 'walrus' and 'partition_name' in needs:
+                needs.remove('partition_name')
             if len(parser.rargs) < len(needs):
                 parser.error('incomplete args to %s' % opt_str)
             for arg in parser.rargs[0:len(needs)]:
@@ -452,6 +466,8 @@ class EucaConf(object):
                 setattr(parser.values, 'component_name',
                         '%s-%s' % (res_type, getattr(parser.values,
                                                      'host_name')))
+            if res_type == 'walrus':
+                setattr(parser.values, 'partition_name', 'walrus')
             del parser.rargs[:len(needs)]
         setattr(parser.values, '%s_%s' % (action, res_type), True)
 
@@ -764,6 +780,12 @@ class EucaConf(object):
         if self.options.reg_nodes:
             if not self.check_local_service('CC'):
                 print 'CC must be local service to run this command'
+                sys.exit(1)
+            missing = self.check_local_credentials()
+            if missing:
+                print 'The following expected credentials are missing:'
+                for cred in missing:
+                    print '\t%s' % cred
                 sys.exit(1)
             msg = 'INFO: We expect all nodes to have eucalyptus'
             msg += ' installed in $EUCALYPTUS for key synchronization.'
