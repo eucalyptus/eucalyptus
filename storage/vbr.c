@@ -124,17 +124,22 @@ int vbr_add_ascii (const char * spec_str, virtualMachine * vm_type)
     char * dev_spec = strtok (NULL, ":");
     char * loc_spec = strtok (NULL, ":");
     if (type_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'type' specification in VBR '%s'\n", spec_str); goto out_error; }
-    strncpy (vbr->typeName, type_spec, sizeof (vbr->typeName));
+    safe_strncpy (vbr->typeName, type_spec, sizeof (vbr->typeName));
+
     if (id_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'id' specification in VBR '%s'\n", spec_str); goto out_error; }
-    strncpy (vbr->id, id_spec, sizeof (vbr->id));
+    safe_strncpy (vbr->id, id_spec, sizeof (vbr->id));
+
     if (size_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'size' specification in VBR '%s'\n", spec_str); goto out_error; }
     vbr->size = atoi (size_spec);
+
     if (format_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'format' specification in VBR '%s'\n", spec_str); goto out_error; }
-    strncpy (vbr->formatName, format_spec, sizeof (vbr->formatName));
+    safe_strncpy (vbr->formatName, format_spec, sizeof (vbr->formatName));
+
     if (dev_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'guestDeviceName' specification in VBR '%s'\n", spec_str); goto out_error; }
-    strncpy (vbr->guestDeviceName, dev_spec, sizeof (vbr->guestDeviceName));
+    safe_strncpy (vbr->guestDeviceName, dev_spec, sizeof (vbr->guestDeviceName));
+
     if (loc_spec==NULL) { logprintfl (EUCAERROR, "error: invalid 'resourceLocation' specification in VBR '%s'\n", spec_str); goto out_error; }
-    strncpy (vbr->resourceLocation, spec_str + (loc_spec - spec_copy), sizeof (vbr->resourceLocation));
+    safe_strncpy (vbr->resourceLocation, spec_str + (loc_spec - spec_copy), sizeof (vbr->resourceLocation));
     
     free (spec_copy);
     return 0;
@@ -191,7 +196,7 @@ parse_rec ( // parses the VBR as supplied by a client or user, checks values, an
         } else {
             vbr->locationType = NC_LOCATION_URL;
         }
-        strncpy (vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
+        safe_strncpy (vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
     } else if (strcasestr (vbr->resourceLocation, "iqn://") == vbr->resourceLocation ||
                strchr (vbr->resourceLocation, ',')) { // TODO: remove this transitionary iSCSI crutch?
         vbr->locationType = NC_LOCATION_IQN;
@@ -241,7 +246,7 @@ parse_rec ( // parses the VBR as supplied by a client or user, checks values, an
         if (strstr (vbr->guestDeviceName, "/dev/") == vbr->guestDeviceName) {
             logprintfl (EUCAWARN, "Warning: trimming off invalid prefix '/dev/' from guestDeviceName '%s'\n", vbr->guestDeviceName);
             char buf [10];
-            strncpy (buf, vbr->guestDeviceName + 5, sizeof (buf));
+            safe_strncpy (buf, vbr->guestDeviceName + 5, sizeof (buf));
             strncpy (vbr->guestDeviceName, buf, sizeof (vbr->guestDeviceName));
         }
         
@@ -424,9 +429,9 @@ vbr_legacy ( // constructs VBRs for {image|kernel|ramdisk}x{Id|URL} entries (DEP
             
             { // create root partition VBR
                 virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
-                strncpy (vbr->resourceLocation, imageURL, sizeof (vbr->resourceLocation));
+                safe_strncpy (vbr->resourceLocation, imageURL, sizeof (vbr->resourceLocation));
                 strncpy (vbr->guestDeviceName, "sda1", sizeof (vbr->guestDeviceName));
-                strncpy (vbr->id, imageId, sizeof (vbr->id));
+                safe_strncpy (vbr->id, imageId, sizeof (vbr->id));
                 strncpy (vbr->typeName, "machine", sizeof (vbr->typeName));
                 vbr->size = -1;
                 strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
@@ -507,11 +512,11 @@ static void update_vbr_with_backing_info (artifact * a)
 
     assert (a->bb);
     if (! a->must_be_file && strlen (blockblob_get_dev (a->bb))) {
-        strncpy (vbr->backingPath, blockblob_get_dev (a->bb), sizeof (vbr->backingPath));
+        safe_strncpy (vbr->backingPath, blockblob_get_dev (a->bb), sizeof (vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_BLOCK;
     } else {
         assert (blockblob_get_file (a->bb));
-        strncpy (vbr->backingPath, blockblob_get_file (a->bb), sizeof (vbr->backingPath));
+        safe_strncpy (vbr->backingPath, blockblob_get_file (a->bb), sizeof (vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_FILE;
     }
     vbr->size = a->bb->size_bytes;
@@ -689,7 +694,7 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
 
     // add partition information to MBR
     for (int i=1; i<map_entries; i++) { // map [0] is for the MBR
-        logprintfl (EUCAINFO, "[%s] adding partition %d to partition table\n", a->instanceId, i);
+        logprintfl (EUCAINFO, "[%s] adding partition %d to partition table (%s)\n", a->instanceId, i, blockblob_get_dev (a->bb));
         if (diskutil_part (blockblob_get_dev (a->bb),  // issues `parted mkpart`
                            "primary", // TODO: make this work with more than 4 partitions
                            NULL, // do not create file system
@@ -744,7 +749,11 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
             logprintfl (EUCAERROR, "[%s] error: failed to make disk bootable\n", a->instanceId, root_part);
             goto unmount;
         }
-        
+        // change user of the blob device back to 'eucalyptus' (grub sets it to 'root')
+        sleep (1); // without this, perms on dev-mapper devices can flip back, presumably because in-kernel ops complete after grub process finishes
+        if (diskutil_ch (blockblob_get_dev (a->bb), EUCALYPTUS_ADMIN, NULL, 0) != OK) {
+            logprintfl (EUCAINFO, "[%s] error: failed to change user for '%s' to '%s'\n", a->instanceId, dev, EUCALYPTUS_ADMIN);
+        }
         bootification_failed = 0;
         
     unmount:
@@ -758,7 +767,6 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
             logprintfl (EUCAINFO, "[%s] error: failed to remove %s (there may be a resource leak): %s\n", a->instanceId, mnt_pt, strerror(errno));
             bootification_failed = 1;
         }
-        
         if (bootification_failed)
             goto cleanup;
     }
@@ -780,7 +788,7 @@ static int iqn_creator (artifact * a)
         return ERROR;
     } 
     // update VBR with device location
-    strncpy (vbr->backingPath, dev, sizeof (vbr->backingPath));
+    safe_strncpy (vbr->backingPath, dev, sizeof (vbr->backingPath));
     vbr->backingType = SOURCE_TYPE_BLOCK;
 
     return OK;
@@ -798,7 +806,7 @@ static int aoe_creator (artifact * a)
         return ERROR;
     } 
     // update VBR with device location
-    strncpy (vbr->backingPath, dev, sizeof (vbr->backingPath));
+    safe_strncpy (vbr->backingPath, dev, sizeof (vbr->backingPath));
     vbr->backingType = SOURCE_TYPE_BLOCK;
 
     return OK;
@@ -885,7 +893,10 @@ static int copy_creator (artifact * a)
             logprintfl (EUCAINFO, "[%s] error: failed to change user and/or permissions for '%s'\n", a->instanceId, path);
             goto unmount;
         }
-        
+        // change user of the blob device back to 'eucalyptus' (tune and maybe other commands above set it to 'root')
+        if (diskutil_ch (dev, EUCALYPTUS_ADMIN, NULL, 0) != OK) {
+            logprintfl (EUCAINFO, "[%s] error: failed to change user for '%s' to '%s'\n", a->instanceId, dev, EUCALYPTUS_ADMIN);
+        }
         injection_failed = 0;
 
     unmount:
@@ -1007,13 +1018,13 @@ artifact * art_alloc (const char * id, const char * sig, long long size_bytes, b
 
     static int seq = 0;
     a->seq = ++seq; // not thread safe, but seq's are just for debugging
-    strncpy (a->instanceId, current_instanceId, sizeof (a->instanceId)); // for logging
+    safe_strncpy (a->instanceId, current_instanceId, sizeof (a->instanceId)); // for logging
     logprintfl (EUCADEBUG, "[%s] allocated artifact %03d|%s size=%lld vbr=%u cache=%d file=%d\n", a->instanceId,  seq, id, size_bytes, vbr, may_be_cached, must_be_file);
 
     if (id)
-        strncpy (a->id, id, sizeof (a->id));
+        safe_strncpy (a->id, id, sizeof (a->id));
     if (sig)
-        strncpy (a->sig, sig, sizeof (a->sig));
+        safe_strncpy (a->sig, sig, sizeof (a->sig));
     a->size_bytes = size_bytes;
     a->may_be_cached = may_be_cached;
     a->must_be_file = must_be_file;
@@ -1124,9 +1135,9 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean do_make_work_c
 
         artifact * a2 = NULL;
         char art_id [48];
-        strncpy (art_id, a->id, sizeof (art_id));
+        safe_strncpy (art_id, a->id, sizeof (art_id));
         char art_sig [ART_SIG_MAX];
-        strncpy (art_sig, a->sig, sizeof (art_sig));
+        safe_strncpy (art_sig, a->sig, sizeof (art_sig));
 
         if (sshkey) { // if SSH key is included, recalculate sig and ID
             if (strlen(sshkey) > sizeof(a->sshkey)) {
@@ -1299,7 +1310,7 @@ free:
 // (same effect as passing it into vbr_alloc_tree)
 void art_set_instanceId (const char * instanceId) 
 {
-    strncpy (current_instanceId, instanceId, sizeof (current_instanceId));
+    safe_strncpy (current_instanceId, instanceId, sizeof (current_instanceId));
 }
 
 artifact * // returns pointer to the root of artifact tree or NULL on error
@@ -1311,7 +1322,7 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
                 const char * instanceId) // ID of the instance (for logging purposes only)
 {
     if (instanceId)
-        strncpy (current_instanceId, instanceId, sizeof (current_instanceId));
+        safe_strncpy (current_instanceId, instanceId, sizeof (current_instanceId));
 
     // sort vbrs into prereq [] and parts[] so they can be approached in the right order
     virtualBootRecord * prereq_vbrs [EUCA_MAX_VBRS];
@@ -1485,7 +1496,7 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
     if (work_prefix && strlen (work_prefix))
         snprintf (id_work, sizeof (id_work), "%s/%s", work_prefix, a->id);
     else 
-        strncpy (id_work, a->id, sizeof (id_work));
+        safe_strncpy (id_work, a->id, sizeof (id_work));
     
     // see if a file and if it exists
     if (a->id_is_path) {
@@ -1708,9 +1719,9 @@ static void add_vbr (virtualMachine * vm,
     virtualBootRecord * vbr = vm->virtualBootRecord + vm->virtualBootRecordLen++;
     vbr->size = size;
     if (formatName)
-        strncpy (vbr->formatName, formatName, sizeof (vbr->formatName));
+        safe_strncpy (vbr->formatName, formatName, sizeof (vbr->formatName));
     if (id)
-        strncpy (vbr->id, id, sizeof (vbr->id));
+        safe_strncpy (vbr->id, id, sizeof (vbr->id));
     vbr->format = format;
     vbr->type = type;
     vbr->locationType = locationType;
@@ -1718,7 +1729,7 @@ static void add_vbr (virtualMachine * vm,
     vbr->partitionNumber = partitionNumber;
     vbr->guestDeviceBus = guestDeviceBus;
     if (preparedResourceLocation)
-        strncpy (vbr->preparedResourceLocation, preparedResourceLocation, sizeof (vbr->preparedResourceLocation));
+        safe_strncpy (vbr->preparedResourceLocation, preparedResourceLocation, sizeof (vbr->preparedResourceLocation));
 }
 
 static int next_instances_slot = 0;
@@ -1733,7 +1744,7 @@ static int provision_vm (const char * id, const char * sshkey, const char * eki,
 {
     pthread_mutex_lock (&competitors_mutex);
     virtualMachine * vm = &(vm_slots [next_instances_slot]); // we don't use vm_slots[] pointers in code
-    strncpy (vm_ids [next_instances_slot], id, PATH_MAX);
+    safe_strncpy (vm_ids [next_instances_slot], id, PATH_MAX);
     next_instances_slot++;
     pthread_mutex_unlock (&competitors_mutex);
 
@@ -1744,7 +1755,7 @@ static int provision_vm (const char * id, const char * sshkey, const char * eki,
     add_vbr (vm, VBR_SIZE, NC_FORMAT_EXT3, "ext3", "none", NC_RESOURCE_EPHEMERAL, NC_LOCATION_NONE, 0, 3, BUS_TYPE_SCSI, NULL);
     add_vbr (vm, VBR_SIZE, NC_FORMAT_SWAP, "swap", "none", NC_RESOURCE_SWAP,      NC_LOCATION_NONE, 0, 2, BUS_TYPE_SCSI, NULL);
 
-    strncpy (current_instanceId, strstr (id, "/") + 1, sizeof (current_instanceId));
+    safe_strncpy (current_instanceId, strstr (id, "/") + 1, sizeof (current_instanceId));
     artifact * sentinel = vbr_alloc_tree (vm, FALSE, do_make_work_copy, sshkey, id);
     if (sentinel == NULL) {
         printf ("error: vbr_alloc_tree failed id=%s\n", id);

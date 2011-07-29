@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.ws;
 
+import java.net.InetAddress;
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
@@ -72,6 +73,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
@@ -83,8 +85,10 @@ import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.ServiceTransitions;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Internets;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
@@ -138,7 +142,7 @@ public class ServiceBootstrapper extends Bootstrapper {
       
       @Override
       public boolean apply( final ServiceConfiguration config ) {
-        boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( ) || Bootstrap.isCloudController( );
+        boolean ret = config.getComponentId( ).isAlwaysLocal( ) || config.isVmLocal( ) || BootstrapArgs.isCloudController( );
         LOG.debug( "ServiceBootstrapper.shouldLoad(" + config.toString( ) + "):" + ret );
         return ret;
       }
@@ -168,7 +172,7 @@ public class ServiceBootstrapper extends Bootstrapper {
     } );
     return true;
   }
-  
+
   @Override
   public boolean start( ) throws Exception {
     ServiceBootstrapper.execute( new Predicate<ServiceConfiguration>( ) {
@@ -220,7 +224,7 @@ public class ServiceBootstrapper extends Bootstrapper {
         }
       } else if ( comp.hasLocalService( ) ) {
         final ServiceConfiguration config = comp.getLocalServiceConfiguration( );
-        if ( config.isVmLocal( ) || ( Bootstrap.isCloudController( ) && config.isHostLocal( ) ) ) {
+        if ( config.isVmLocal( ) || ( BootstrapArgs.isCloudController( ) && config.isHostLocal( ) ) ) {
           predicate.apply( config );
         }
       }

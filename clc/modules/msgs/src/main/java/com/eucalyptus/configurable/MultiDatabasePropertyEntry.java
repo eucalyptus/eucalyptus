@@ -68,7 +68,7 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
           return null;
         }
         if ( f.isAnnotationPresent( ConfigurableField.class ) ) {
-          LOG.debug( "Checking field: " + c.getName( ) + "." + f.getName( ) );
+          LOG.trace( "Checking field: " + c.getName( ) + "." + f.getName( ) );
           ConfigurableField annote = f.getAnnotation( ConfigurableField.class );
           String fqPrefix = classAnnote.root( );
           String alias = classAnnote.alias( );

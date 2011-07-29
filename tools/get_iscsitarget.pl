@@ -16,6 +16,7 @@ if (!-x $ISCSIADM) {
 $dev_string = untaint(shift @ARGV);
 
 ($euca_home, $ip, $store, $passwd, $lun, $auth_mode) = parse_devstring($dev_string);
+$store =~ s/\.$//g;
 
 if (length($euca_home) <= 0) {
     print STDERR "EUCALYPTUS path is not defined.\n";

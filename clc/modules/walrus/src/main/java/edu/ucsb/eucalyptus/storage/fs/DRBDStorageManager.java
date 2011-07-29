@@ -186,7 +186,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	 * @return
 	 * @throws ExecutionException
 	 */
-	private boolean isMounted() throws ExecutionException {
+	private boolean isMounted() throws EucalyptusCloudException {
 		String returnValue = SystemUtil.run(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "cat", "/proc/mounts"});
 		if(returnValue.length() > 0) {
 			if(returnValue.contains(DRBDInfo.getDRBDInfo().getBlockDevice())) {
@@ -415,6 +415,10 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		try {
 			if(isMounted()) {
 				unmountPrimary();
+			}
+			if(!isSecondary()) {
+				//make secondary
+				makeSecondary();
 			}
 		} catch(ExecutionException ex) {
 			throw new EucalyptusCloudException(ex);

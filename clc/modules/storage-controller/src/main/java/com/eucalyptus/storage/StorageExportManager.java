@@ -71,7 +71,7 @@ import java.util.concurrent.ExecutionException;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 
 public interface StorageExportManager {
-	public void checkPreconditions() throws EucalyptusCloudException, ExecutionException;
+	public void checkPreconditions() throws EucalyptusCloudException;
 	
     public int exportVolume(String iface, String lvName, int major, int minor);
 

@@ -107,7 +107,7 @@ int init_backing_store (const char * conf_instances_path, unsigned int conf_work
         logprintfl (EUCAERROR, "error: INSTANCE_PATH not specified\n");
         return ERROR;
     }
-    strncpy (instances_path, conf_instances_path, sizeof (instances_path));
+    safe_strncpy (instances_path, conf_instances_path, sizeof (instances_path));
     if (check_directory (instances_path)) {
 	    logprintfl (EUCAERROR, "error: INSTANCE_PATH (%s) does not exist!\n", instances_path);
         return ERROR;
@@ -129,12 +129,19 @@ int init_backing_store (const char * conf_instances_path, unsigned int conf_work
             logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
             return ERROR;
         }
-        // TODO: run through cache and verify checksums?
-        // TODO: run through cache and work and clean up unused stuff?
+        if (blobstore_fsck (cache_bs, NULL)) { // TODO: verify checksums?
+            logprintfl (EUCAERROR, "ERROR: cache failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            return ERROR;
+        }
     }
     work_bs = blobstore_open (work_path, work_limit_blocks, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
     if (work_bs==NULL) {
         logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_error_str(blobstore_get_error()));
+        blobstore_close (cache_bs);
+        return ERROR;
+    }
+    if (blobstore_fsck (work_bs, NULL)) {
+        logprintfl (EUCAERROR, "ERROR: work directory failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
         blobstore_close (cache_bs);
         return ERROR;
     }
@@ -232,7 +239,7 @@ ncInstance * load_instance_struct (const char * instanceId)
 	    logprintfl (EUCADEBUG, "load_instance_struct: out of memory for instance struct\n");
 	    return NULL;
     }
-    strncpy (instance->instanceId, instanceId, sizeof (instance->instanceId));
+    safe_strncpy (instance->instanceId, instanceId, sizeof (instance->instanceId));
 
     // we don't know userId, so we'll look for instanceId in every user's
     // directory (we're assuming that instanceIds are unique in the system)
@@ -251,7 +258,7 @@ ncInstance * load_instance_struct (const char * instanceId)
         
         snprintf(tmp_path, sizeof (tmp_path), "%s/%s/%s", user_paths, dir_entry->d_name, instance->instanceId);
         if (stat(tmp_path, &mystat)==0) {
-            strncpy (instance->userId, dir_entry->d_name, sizeof (instance->userId));
+            safe_strncpy (instance->userId, dir_entry->d_name, sizeof (instance->userId));
             break; // found it
         }
     }
@@ -329,6 +336,7 @@ int create_instance_backing (ncInstance * instance)
         art_free (sentinel);
     return ret;
 }
+
 #define BLOBSTORE_FIND_TIMEOUT_USEC 1000LL
 int clone_bundling_backing (ncInstance *instance, const char* filePrefix, char* blockPath)
 {
@@ -346,44 +354,45 @@ int clone_bundling_backing (ncInstance *instance, const char* filePrefix, char* 
     
     if( (found=blobstore_search (work_bs, work_regex, &matches) <= 0 ) ) {
         logprintfl (EUCAERROR, "[%s] error: failed to find blob in %s %d\n", instance->instanceId, path, found);
-	return ERROR;
+        return ERROR;
     }
-
+    
     for (blockblob_meta * bm = matches; bm; bm=bm->next) {
         blockblob * bb = blockblob_open (work_bs, bm->id, 0, 0, NULL, BLOBSTORE_FIND_TIMEOUT_USEC);
-        if (bb!=NULL && bb->snapshot_type == BLOBSTORE_SNAPSHOT_DM) {
-	//    logprintfl (EUCAINFO, "[%s] snapshot type blockblob found [%s] [%lld]", instance->instanceId, bb->blocks_path, bb->size_bytes);
-	    src_blob = bb;
-	    break;
-        }else if (bb!=NULL)
-	    blockblob_close(bb);
+        if (bb!=NULL && bb->snapshot_type == BLOBSTORE_SNAPSHOT_DM && strstr(bb->blocks_path,"emi-") != NULL) { // root image contains substr 'emi-'
+            src_blob = bb;
+            break;
+        } else if (bb!=NULL) {
+            blockblob_close(bb);
+        }
     } 
     if (!src_blob) {
-	logprintfl (EUCAERROR, "[%s] couldn't find the blob to clone from", instance->instanceId);
+        logprintfl (EUCAERROR, "[%s] couldn't find the blob to clone from", instance->instanceId);
         goto error;
     }
     set_id (instance, NULL, workPath, sizeof (workPath));
-    snprintf(id, sizeof(id), "%s/%s", workPath, filePrefix);
-
+    snprintf (id, sizeof(id), "%s/%s", workPath, filePrefix);
+    
     // open destination blob 
     dest_blob = blockblob_open (work_bs, id, src_blob->size_bytes, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, NULL, BLOBSTORE_FIND_TIMEOUT_USEC); 
     if (!dest_blob) {
-	logprintfl (EUCAERROR, "[%s] couldn't create the destination blob for bundling (%s)", instance->instanceId, id);
-	goto error;
+        logprintfl (EUCAERROR, "[%s] couldn't create the destination blob for bundling (%s)", instance->instanceId, id);
+        goto error;
     }
     
-    if(dest_blob->blocks_path)
-	snprintf(blockPath, MAX_PATH, "%s", dest_blob->blocks_path);
+    if (strlen (dest_blob->blocks_path) > 0)
+        snprintf (blockPath, MAX_PATH, "%s", dest_blob->blocks_path);
+    
     // copy blob (will 'dd' eventually)
-    if(blockblob_copy(src_blob, 0, dest_blob, 0, src_blob->size_bytes) != OK) {
- 	logprintfl (EUCAERROR, "[%s] couldn't copy block blob for bundling (%s)", instance->instanceId, id);
-	goto error;
+    if (blockblob_copy (src_blob, 0, dest_blob, 0, src_blob->size_bytes) != OK) {
+        logprintfl (EUCAERROR, "[%s] couldn't copy block blob for bundling (%s)", instance->instanceId, id);
+        goto error;
     }
-
+    
     goto free;
-error: 
-   ret = ERROR; 
-free:
+ error: 
+    ret = ERROR; 
+ free:
     // free the search results
     for (blockblob_meta * bm = matches; bm;) {
         blockblob_meta * next = bm->next;
@@ -392,10 +401,10 @@ free:
     } 
     
     if(src_blob)
-	blockblob_close(src_blob);
+        blockblob_close(src_blob);
     if(dest_blob)
-	blockblob_close(dest_blob);
-   return ret;
+        blockblob_close(dest_blob);
+    return ret;
 }
 
 int destroy_instance_backing (ncInstance * instance, int do_destroy_files)
@@ -448,13 +457,13 @@ int destroy_instance_backing (ncInstance * instance, int do_destroy_files)
 
         // bundle instance will leave additional files
         // let's delete every file in the directory
-        struct direct **files;
+        struct dirent **files;
         int n = scandir(instance->instancePath, &files, 0, alphasort);
         char toDelete[MAX_PATH];
         if (n>0){
             while (n--) {
                struct dirent *entry = files[n];
-               if( entry !=NULL && entry->d_name != NULL && strncmp(entry->d_name, ".",1)!=0 && strncmp(entry->d_name, "..", 2)!=0){
+               if( entry !=NULL && strncmp(entry->d_name, ".",1)!=0 && strncmp(entry->d_name, "..", 2)!=0){
                     snprintf(toDelete, MAX_PATH, "%s/%s", instance->instancePath, entry->d_name);
                     unlink(toDelete);
                     free(entry);

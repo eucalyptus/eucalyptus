@@ -66,13 +66,16 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.cluster.ClusterState;
-import com.eucalyptus.cluster.VmTypes;
 import com.eucalyptus.component.ComponentRegistrationHandler;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.config.ClusterConfiguration;
+import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.config.DeregisterClusterType;
 import com.eucalyptus.config.DeregisterComponentType;
@@ -82,8 +85,8 @@ import com.eucalyptus.config.RegisterClusterType;
 import com.eucalyptus.config.RegisterComponentType;
 import com.eucalyptus.config.RegisterStorageControllerType;
 import com.eucalyptus.config.RegisterWalrusType;
-import com.eucalyptus.config.StorageControllerConfiguration;
-import com.eucalyptus.config.WalrusConfiguration;
+import com.eucalyptus.config.StorageControllerConfiguration;//NOTE:GRZE: importing component private config type, should only reference ServiceConfiguration
+import com.eucalyptus.config.WalrusConfiguration;//NOTE:GRZE: importing component private config type, should only reference ServiceConfiguration
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
@@ -91,6 +94,7 @@ import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.vm.VmType;
+import com.eucalyptus.vm.VmTypes;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -112,10 +116,10 @@ public class RemoteInfoHandler {
   
   public static synchronized void setClusterList( List<ClusterInfoWeb> newClusterList ) throws EucalyptusCloudException {
     //FIXME: Min/max vlans values should be updated
-    List<ClusterConfiguration> clusterConfig = Lists.newArrayList( );
-    for ( ClusterInfoWeb clusterWeb : newClusterList ) {
+    List<ServiceConfiguration> clusterConfig = Lists.newArrayList( );
+    for ( final ClusterInfoWeb clusterWeb : newClusterList ) {
       try {
-        ClusterConfiguration ccConfig = ServiceConfigurations.getConfiguration( ClusterConfiguration.class, clusterWeb.getName( ) );
+        ClusterConfiguration ccConfig = ServiceConfigurations.lookupByName( ClusterController.class, clusterWeb.getName( ) );
         ccConfig.setMaxVlan( clusterWeb.getMaxVlans( ) );
         ccConfig.setMinVlan( clusterWeb.getMinVlans( ) );
         EntityWrapper.get( ccConfig ).mergeAndCommit( ccConfig );
@@ -131,8 +135,10 @@ public class RemoteInfoHandler {
   public static synchronized List<ClusterInfoWeb> getClusterList( ) throws EucalyptusCloudException {
     List<ClusterInfoWeb> clusterList = new ArrayList<ClusterInfoWeb>( );
     try {
-      for ( ClusterConfiguration c : ServiceConfigurations.getConfigurations( ClusterConfiguration.class ) )
+      for ( ServiceConfiguration serviceConfig : ServiceConfigurations.list( ClusterController.class ) ) {//NOTE:GRZE: depending on referencing the Cluster-specific configuration type is not a safe assumption as that is a component-private type
+        ClusterConfiguration c = (ClusterConfiguration ) serviceConfig; 
         clusterList.add( new ClusterInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ), c.getMinVlan( ), c.getMaxVlan( ) ) );
+      }
     } catch ( Throwable e ) {
       LOG.debug( "Got an error while trying to retrieving storage controller configuration list", e );
     }
@@ -140,7 +146,7 @@ public class RemoteInfoHandler {
   }
   
   public static synchronized void setStorageList( List<StorageInfoWeb> newStorageList ) throws EucalyptusCloudException {
-    List<StorageControllerConfiguration> storageControllerConfig = Lists.newArrayList( );
+    List<ServiceConfiguration> storageControllerConfig = Lists.newArrayList( );
     List<Runnable> dispatchParameters = Lists.newArrayList( );
     for ( StorageInfoWeb storageControllerWeb : newStorageList ) {
       final StorageControllerConfiguration scConfig = new StorageControllerConfiguration( null /**ASAP: FIXME: GRZE **/, storageControllerWeb.getName( ), storageControllerWeb.getHost( ),
@@ -170,7 +176,7 @@ public class RemoteInfoHandler {
   
   public static synchronized List<StorageInfoWeb> getStorageList( ) throws EucalyptusCloudException {
     List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>( );
-    for ( ClusterConfiguration cc : ServiceConfigurations.getConfigurations( ClusterConfiguration.class ) ) {
+    for ( final ServiceConfiguration cc : ServiceConfigurations.list( ClusterController.class ) ) {
       try {
         if ( Internets.testLocal( cc.getHostName( ) ) && !Components.lookup( "storage" ).isEnabledLocally( ) ) {
           storageList.add( StorageInfoWeb.DEFAULT_SC );
@@ -181,7 +187,7 @@ public class RemoteInfoHandler {
       }
       StorageControllerConfiguration c;
       try {
-        c = ServiceConfigurations.getConfiguration( StorageControllerConfiguration.class, cc.getName( ) );
+        c = ServiceConfigurations.lookup( new StorageControllerConfiguration() {{ this.setName( cc.getName( ) ); }} );
         StorageInfoWeb scInfo = new StorageInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ) );
         try {
           GetStorageConfigurationResponseType getStorageConfigResponse = RemoteInfoHandler.sendForStorageInfo( cc, c );
@@ -203,7 +209,7 @@ public class RemoteInfoHandler {
     return storageList;
   }
   
-  private static GetStorageConfigurationResponseType sendForStorageInfo( ClusterConfiguration cc, StorageControllerConfiguration c ) throws EucalyptusCloudException {
+  private static GetStorageConfigurationResponseType sendForStorageInfo( ServiceConfiguration cc, ServiceConfiguration c ) throws EucalyptusCloudException {
     GetStorageConfigurationType getStorageConfiguration = new GetStorageConfigurationType( c.getName( ) );
     Dispatcher scDispatch = ServiceDispatcher.lookup( c );
     GetStorageConfigurationResponseType getStorageConfigResponse = scDispatch.send( getStorageConfiguration );
@@ -211,7 +217,7 @@ public class RemoteInfoHandler {
   }
   
   public static synchronized void setWalrusList( List<WalrusInfoWeb> newWalrusList ) throws EucalyptusCloudException {
-    List<WalrusConfiguration> walrusConfig = Lists.newArrayList( );
+    List<ServiceConfiguration> walrusConfig = Lists.newArrayList( );
     for ( WalrusInfoWeb walrusControllerWeb : newWalrusList ) {
       walrusConfig.add( new WalrusConfiguration( walrusControllerWeb.getName( ), walrusControllerWeb.getHost( ), walrusControllerWeb.getPort( ) ) );
     }
@@ -229,7 +235,7 @@ public class RemoteInfoHandler {
   public static synchronized List<WalrusInfoWeb> getWalrusList( ) throws EucalyptusCloudException {
     List<WalrusInfoWeb> walrusList = new ArrayList<WalrusInfoWeb>( );
     try {
-      for ( WalrusConfiguration c : ServiceConfigurations.getConfigurations( WalrusConfiguration.class ) ) {
+      for ( ServiceConfiguration c : ServiceConfigurations.list( Walrus.class ) ) {
         GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType( WalrusProperties.NAME );
         Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) );
         GetWalrusConfigurationResponseType getWalrusConfigResponse = scDispatch.send( getWalrusConfiguration );
@@ -267,17 +273,17 @@ public class RemoteInfoHandler {
     }
   }
   
-  public static void updateClusterConfigurations( List<ClusterConfiguration> clusterConfigs ) throws EucalyptusCloudException {
-    updateComponentConfigurations( ServiceConfigurations.getConfigurations( ClusterConfiguration.class ), clusterConfigs );
+  public static void updateClusterConfigurations( List<ServiceConfiguration> clusterConfigs ) throws EucalyptusCloudException {
+    updateComponentConfigurations( ServiceConfigurations.list( ClusterController.class ), clusterConfigs );
     ClusterState.trim( );
   }
   
-  public static void updateStorageControllerConfigurations( List<StorageControllerConfiguration> storageControllerConfigs ) throws EucalyptusCloudException {
-    updateComponentConfigurations( ServiceConfigurations.getConfigurations( StorageControllerConfiguration.class ), storageControllerConfigs );
+  public static void updateStorageControllerConfigurations( List<ServiceConfiguration> storageControllerConfigs ) throws EucalyptusCloudException {
+    updateComponentConfigurations( ServiceConfigurations.list( Storage.class ), storageControllerConfigs );
   }
   
-  public static void updateWalrusConfigurations( List<WalrusConfiguration> walrusConfigs ) throws EucalyptusCloudException {
-    updateComponentConfigurations( ServiceConfigurations.getConfigurations( WalrusConfiguration.class ), walrusConfigs );
+  public static void updateWalrusConfigurations( List<ServiceConfiguration> walrusConfigs ) throws EucalyptusCloudException {
+    updateComponentConfigurations( ServiceConfigurations.list( Walrus.class ), walrusConfigs );
   }
   
   private static void updateComponentConfigurations( List componentConfigs, List newComponentConfigs ) throws EucalyptusCloudException {

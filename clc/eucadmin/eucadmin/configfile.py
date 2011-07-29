@@ -35,8 +35,8 @@ import eucadmin.command
 class ConfigFile(dict):
 
     ChangeCmd = r"""sed -i "s<^[[:blank:]#]*\(%s\).*<\1=\"%s\"<" %s"""
-    CommentCmd = r"""sed -i "s<^[[:blank:]]*\($%s.*\)<#\1<" %s"""
-    UncommentCmd = r"""sed -i "s<^[#[:blank:]]*\($%s.*\)<\1<" %s"""
+    CommentCmd = r"""sed -i "s<^[[:blank:]]*\(%s.*\)<#\1<" %s"""
+    UncommentCmd = r"""sed -i "s<^[#[:blank:]]*\(%s.*\)<\1<" %s"""
 
     def __init__(self, filepath, test=False):
         dict.__init__(self)
@@ -44,10 +44,6 @@ class ConfigFile(dict):
         self._save_to_file = False
         self.path = os.path.expanduser(filepath)
         self.path = os.path.expandvars(self.path)
-        if not os.access(self.path, os.F_OK):
-            raise IOError('The file (%s) does not exist' % self.path)
-        if not os.access(self.path, os.W_OK):
-            raise IOError("You don't have write access to %s" % self.path)
         self.need_backup = True
         self._read_config_data()
         self._save_to_file = True
@@ -59,8 +55,16 @@ class ConfigFile(dict):
             cmd = eucadmin.command.Command(cmd_str)
         dict.__setitem__(self, key, value)
 
-    def _read_config_data(self):
-        fp = open(self.path)
+    def _read_config_data(self, path=None):
+        if not path:
+            path = self.path
+
+        if not os.access(path, os.F_OK):
+            raise IOError('The file (%s) does not exist' % path)
+        if path == self.path and not os.access(path, os.W_OK):
+            raise IOError("You don't have write access to %s" % path)
+
+        fp = open(path)
         for line in fp.readlines():
             if not line.startswith('#'):
                 t = line.split('=', 1)
@@ -74,15 +78,33 @@ class ConfigFile(dict):
             self.need_backup = False
 
     def comment(self, pattern):
-        self.backup()
+        self._backup()
         cmd_str = self.CommentCmd % (pattern, self.path)
         cmd = eucadmin.command.Command(cmd_str)
         if pattern in self:
             del self[pattern]
 
     def uncomment(self, pattern):
-        self.backup()
+        self._backup()
         cmd_str = self.UncommentCmd % (pattern, self.path)
         cmd = eucadmin.command.Command(cmd_str)
         self['pattern'] = ''
         
+    def mergefile(self, oldconfig):
+        old_version = ''
+        old_version_file = os.path.join(os.path.dirname(oldconfig), 'eucalyptus-version')
+        if os.access(old_version_file, os.F_OK):
+            old_version = open(old_version_file).readlines()[0].strip()
+      
+        if old_version.startswith('2') or old_version.startswith('eee-2'):
+            self.comment('DISABLE_ISCSI')
+            self._read_config_data(oldconfig)
+            if not self.has_key('DISABLE_ISCSI'):
+                self['DISABLE_ISCSI'] = 'Y'
+        else:
+            self._read_config_data(oldconfig)
+
+        # I can't think of any case where EUCALYPTUS setting should not be
+        # self.path minus /etc/eucalyptus/eucalyptus.conf
+        self['EUCALYPTUS'] = "/".join(self.path.split("/")[:-3]) or "/"
+

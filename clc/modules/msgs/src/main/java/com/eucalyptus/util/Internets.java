@@ -73,15 +73,15 @@ import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import org.apache.http.conn.util.InetAddressUtils;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -90,35 +90,49 @@ import com.google.common.collect.Lists;
 import com.google.common.net.InetAddresses;
 
 public class Internets {
-  private static Logger                  LOG               = Logger.getLogger( Internets.class );
-  private static final String            localId           = localhostIdentifier( );
-  private static final InetAddress       localHostAddr     = determineLocalAddress( );
-  private static final List<InetAddress> localHostAddrList = Lists.newArrayList( );
+  private static Logger                                   LOG               = Logger.getLogger( Internets.class );
+  private static final ConcurrentMap<String, InetAddress> localHostAddrList = new ConcurrentHashMap<String, InetAddress>( );
+  private static final InetAddress                        localHostAddr     = determineLocalAddress( );
+  private static final String                             localId           = localHostIdentifier( );
   
-  public static List<InetAddress> localAddresses( ) {
-    return localHostAddrList;
-  }
-  
+//  public static List<InetAddress> localInetAddresses( ) {
+//    return localHostAddrList;
+//  }
+//  
   private static InetAddress determineLocalAddress( ) {
     InetAddress laddr = null;
-    if ( !Bootstrap.parseBindAddrs( ).isEmpty( ) ) {
+    LOG.info( "Trying to determine local bind address based on cli (--bind-addr)... " );
+    if ( !BootstrapArgs.bindAddresses( ).isEmpty( ) ) {
       laddr = lookupBindAddresses( );
     }
     if ( laddr == null ) {
-      try {
-        String localAddr = ( String ) GroovyUtil.eval( "hi=\"ip -o route get 4.2.2.1\".execute();hi.waitFor();hi.text" );
-        String[] parts = localAddr.replaceAll( ".*src *", "" ).split( " " );
-        if ( parts.length >= 1 ) {
-          laddr = InetAddresses.forString( parts[0] );
-        }
-      } catch ( ScriptExecutionFailedException ex ) {
-        LOG.error( ex, ex );
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
-      }
+      LOG.info( "Trying to determine local bind address based on the default route... " );
+      laddr = lookupDefaultRoute( );
     }
     if ( laddr == null ) {
+      LOG.info( "Trying to determine local bind address based on a netmask and scope maximizing heuristic... " );
       laddr = Internets.getAllInetAddresses( ).get( 0 );
+    }
+    LOG.info( "==> Decided to use local bind address: " + laddr );
+    System.setProperty( "bind.address", laddr.getHostAddress( ) );
+    System.setProperty( "jgroups.bind_addr", laddr.getHostAddress( ) );
+    System.setProperty( "jgroups.udp.bind_addr", laddr.getHostAddress( ) );
+    
+    return laddr;
+  }
+  
+  private static InetAddress lookupDefaultRoute( ) {
+    InetAddress laddr = null;
+    try {
+      String localAddr = ( String ) Groovyness.eval( "hi=\"ip -o route get 4.2.2.1\".execute();hi.waitFor();hi.text" );
+      String[] parts = localAddr.replaceAll( ".*src *", "" ).split( " " );
+      if ( parts.length >= 1 ) {
+        laddr = InetAddresses.forString( parts[0] );
+      }
+    } catch ( ScriptExecutionFailedException ex ) {
+      LOG.error( ex, ex );
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
     }
     return laddr;
   }
@@ -127,27 +141,28 @@ public class Internets {
     InetAddress laddr = null;
     List<InetAddress> locallyBoundAddrs = Internets.getAllInetAddresses( );
     boolean err = false;
-    for ( String addrStr : Bootstrap.parseBindAddrs( ) ) {
+    for ( String addrStr : BootstrapArgs.bindAddresses( ) ) {
       try {
         InetAddress next = InetAddress.getByName( addrStr );
         laddr = ( laddr == null )
           ? next
           : laddr;
         NetworkInterface iface = NetworkInterface.getByInetAddress( next );
-        if ( locallyBoundAddrs.contains( locallyBoundAddrs ) ) {
-          localHostAddrList.add( next );
+        if ( locallyBoundAddrs.contains( InetAddress.getByName( addrStr ) ) ) {
+          localHostAddrList.put( next.getHostAddress( ), next );
           LOG.info( "Identified local bind address: " + addrStr + " on interface " + iface.toString( ) );
         } else {
-          LOG.error( "Ignoring --bind-addr=" + addrStr + " as it is not bound to a local interface.\n  Known addresses are: "
+          LOG.error( "Failed to find specified --bind-addr=" + addrStr + " as it is not bound to a local interface.\n  Known addresses are: "
                      + Joiner.on( ", " ).join( locallyBoundAddrs ) );
+          System.exit( 1 );
         }
       } catch ( UnknownHostException ex ) {
         LOG.fatal( "Invalid argument given for --bind-addr=" + addrStr + " " + ex.getMessage( ) );
-        LOG.debug( ex, ex );
+        LOG.error( ex, ex );
         err = true;
       } catch ( SocketException ex ) {
         LOG.fatal( "Invalid argument given for --bind-addr=" + addrStr + " " + ex.getMessage( ) );
-        LOG.debug( ex, ex );
+        LOG.error( ex, ex );
         err = true;
       }
       if ( err ) {
@@ -165,10 +180,10 @@ public class Internets {
     return localHostInetAddress( ).getHostAddress( );
   }
   
-  public static String localhostIdentifier( ) {
+  public static String localHostIdentifier( ) {
     return localId != null
       ? localId
-      : Joiner.on( ":" ).join( getAllAddresses( ) );
+      : localHostInetAddress( ).getHostAddress( );
   }
   
   public static List<NetworkInterface> getNetworkInterfaces( ) {
@@ -210,6 +225,13 @@ public class Internets {
   public static List<InetAddress> getAllInetAddresses( ) {
     List<InetAddress> addrs = Lists.newArrayList( );
     for ( NetworkInterface iface : Internets.getNetworkInterfaces( ) ) {
+      try {
+        if ( iface.isPointToPoint( ) ) {
+          continue;
+        }
+      } catch ( SocketException ex ) {
+        LOG.error( ex, ex );
+      }
       for ( InterfaceAddress iaddr : iface.getInterfaceAddresses( ) ) {
         InetAddress addr = iaddr.getAddress( );
         if ( addr instanceof Inet4Address ) {

@@ -253,7 +253,7 @@ void change_state(	ncInstance *instance,
         return;
     }
 
-    strncpy(instance->stateName, instance_state_names[instance->stateCode], CHAR_BUFFER_SIZE);
+    safe_strncpy(instance->stateName, instance_state_names[instance->stateCode], CHAR_BUFFER_SIZE);
     if (old_state != state) {
         logprintfl (EUCADEBUG, "[%s] state change for instance: %s -> %s (%s)\n",
                     instance->instanceId, 
@@ -390,7 +390,7 @@ refresh_instance_info(	struct nc_state_t *nc,
                 if (!rc) {
                     if(ip) {
                         logprintfl (EUCAINFO, "[%s] discovered public IP %s for instance\n", instance->instanceId, ip);
-                        strncpy(instance->ncnet.publicIp, ip, 24);
+                        safe_strncpy(instance->ncnet.publicIp, ip, 24);
                         free(ip);
                     }
                 }
@@ -401,7 +401,7 @@ refresh_instance_info(	struct nc_state_t *nc,
             if (!rc) {
                 if(ip) {
                     logprintfl (EUCAINFO, "[%s] discovered private IP %s for instance\n", instance->instanceId, ip);
-                    strncpy(instance->ncnet.privateIp, ip, 24);
+                    safe_strncpy(instance->ncnet.privateIp, ip, 24);
                     free(ip);
                 }
             }
@@ -552,7 +552,8 @@ void *startup_thread (void * arg)
         goto free;
     }
 
-    strncpy (instance->params.guestNicDeviceName, brname, sizeof (instance->params.guestNicDeviceName));
+    safe_strncpy (instance->params.guestNicDeviceName, brname, sizeof (instance->params.guestNicDeviceName));
+
     if (nc_state.config_use_virtio_net) {
         instance->params.nicType = NIC_TYPE_VIRTIO;
     } else {
@@ -564,7 +565,8 @@ void *startup_thread (void * arg)
     }
     logprintfl (EUCAINFO, "[%s] started network\n", instance->instanceId);
 
-    strncpy (instance->hypervisorType, nc_state.H->name, sizeof (instance->hypervisorType)); // set the hypervisor type
+    safe_strncpy (instance->hypervisorType, nc_state.H->name, sizeof (instance->hypervisorType)); // set the hypervisor type
+
     instance->hypervisorCapability = nc_state.capability; // set the cap (xen/hw/hw+xen)
     instance->combinePartitions = nc_state.convert_to_disk; 
     instance->do_inject_key = nc_state.do_inject_key;
@@ -751,7 +753,7 @@ static int init (void)
 		nc_state.home[0] = '\0';
 		do_warn = 1;
 	} else {
-		strncpy(nc_state.home, tmp, MAX_PATH);
+		strncpy(nc_state.home, tmp, MAX_PATH - 1);
     }
 
 	/* set the minimum log for now */
@@ -827,7 +829,7 @@ static int init (void)
 
     init_iscsi (nc_state.home);
 
-	/* set default in the paths. the driver will override */
+	// set default in the paths. the driver will override
 	nc_state.config_network_path[0] = '\0';
 	nc_state.gen_libvirt_cmd_path[0] = '\0';
 	nc_state.xm_cmd_path[0] = '\0';
@@ -1427,3 +1429,7 @@ int generate_attach_xml(char *localDevReal, char *remoteDev, struct nc_state_t *
         return rc;
 }
 
+ncInstance * find_global_instance (const char * instanceId)
+{
+    return NULL;
+}

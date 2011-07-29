@@ -29,5 +29,5 @@
 import eucadmin.registerarbitrator
 
 if __name__ == "__main__":
-    r = eucadmin.registerarbitrators.RegisterArbitrator()
+    r = eucadmin.registerarbitrator.RegisterArbitrator()
     r.main_cli()

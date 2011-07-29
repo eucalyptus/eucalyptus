@@ -43,3 +43,5 @@ clc/modules/www/conf/eucalyptus-web.properties
 clc/modules/www/src/main/java/edu/ucsb/eucalyptus/admin/public/themes/active
 clc/.deprecated/*/build
 
+.settings/grze_localhost.launch
+.settings/grze_office.launch

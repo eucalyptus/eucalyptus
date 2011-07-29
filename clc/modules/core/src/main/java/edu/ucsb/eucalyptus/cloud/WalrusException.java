@@ -65,6 +65,8 @@
 
 package edu.ucsb.eucalyptus.cloud;
 
+import java.io.IOException;
+
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.util.EucalyptusCloudException;

@@ -30,19 +30,6 @@ public class KeyPairUtil {
     return keys;
   }
 
-  public static SshKeyPair getUserKeyPair( UserFullName userFullName, String keyName ) throws EucalyptusCloudException {
-    EntityWrapper<SshKeyPair> db = EntityWrapper.get( SshKeyPair.class );;
-    SshKeyPair key = null;
-    try {
-      key = db.getUnique( new SshKeyPair( userFullName, keyName ) );
-      db.commit( );
-    } catch ( Throwable e ) {
-      db.rollback( );
-      throw new EucalyptusCloudException( "Failed to find key pair: " + keyName + " for account " + userFullName.getAccountNumber( ), e );
-    }
-    return key;
-  }
-
   public static SshKeyPair deleteUserKeyPair( UserFullName userFullName, String keyName ) throws EucalyptusCloudException {
     EntityWrapper<SshKeyPair> db = EntityWrapper.get( SshKeyPair.class );;
     SshKeyPair key = null;

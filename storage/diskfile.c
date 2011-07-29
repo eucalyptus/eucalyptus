@@ -47,7 +47,7 @@ diskfile * df_create (const char * path, const long long limit_bytes, boolean ze
         return NULL;
     }
 
-    strncpy (df->path, path, sizeof (df->path));
+    safe_strncpy (df->path, path, sizeof (df->path));
     df->limit_bytes = round_down_sec (limit_bytes); // ensure we do not exceed the limit
     df->size_sectors = df->limit_bytes/SECTOR_SIZE;
 
@@ -84,7 +84,7 @@ diskfile * df_open (const char * path)
         return NULL;
     }
 
-    strncpy (df->path, path, sizeof (df->path));
+    safe_strncpy (df->path, path, sizeof (df->path));
     df->size_sectors = df->limit_bytes/SECTOR_SIZE;
 
     // discover the partitions, if any
@@ -293,7 +293,7 @@ int df_mount (diskfile * df, const int part, const char * path)
         return ERROR;
     }
 
-    strncpy (p->mntpt, path, sizeof (p->mntpt));
+    safe_strncpy (p->mntpt, path, sizeof (p->mntpt));
     if (diskutil_mount (p->lodev, p->mntpt)!=OK) {
         logprintfl (EUCAERROR, "error: failed to mount '%s' on '%s'\n", p->lodev, path);
         ret = ERROR;

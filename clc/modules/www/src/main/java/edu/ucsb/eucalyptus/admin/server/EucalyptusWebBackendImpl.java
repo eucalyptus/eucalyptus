@@ -100,9 +100,9 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.Walrus;
-import com.eucalyptus.config.ClusterConfiguration;
-import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.SubDirectory;
@@ -1204,7 +1204,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
 	@Override
 	public List<String> getZones(final String sessionId) throws Exception {
 		List<String> zones = new ArrayList<String>();
-		for ( ClusterConfiguration cluster : ServiceConfigurations.getConfigurations( ClusterConfiguration.class ) ) {
+		for ( ServiceConfiguration cluster : ServiceConfigurations.list( ClusterController.class ) ) {
 		  zones.add( cluster.getName( ) );
 		}
 		return zones;
@@ -1263,13 +1263,13 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
       reports.add( new ReportInfo( SERVICE_GROUP, serviceFq, SERVICE_GROUP, 1, compId.name( ), conf.getName( ), conf.getHostName( ) ) );
     } else if( compId  instanceof com.eucalyptus.component.id.ClusterController ) {
       reports.add( new ReportInfo( SERVICE_GROUP, "CC @ "+conf.getHostName( ), SERVICE_GROUP, 1, compId.name( ), conf.getName( ), conf.getHostName( ) ) );
-      Cluster cluster = Clusters.getInstance( ).lookup( conf.getName( ) );
+      final Cluster cluster = Clusters.getInstance( ).lookup( conf.getName( ) );
       for( String nodeTag : cluster.getNodeTags( ) ) {
         URI uri = URI.create( nodeTag );
         reports.add( new ReportInfo( SERVICE_GROUP, "NC @ " + uri.getHost( ), SERVICE_GROUP, 1, "node", conf.getName( ), uri.getHost( ) ) );
       }
       try {
-        ServiceConfiguration scConfig = ServiceConfigurations.getConfiguration( StorageControllerConfiguration.class, cluster.getName( ) );
+        ServiceConfiguration scConfig = ServiceConfigurations.lookupByName( Storage.class, cluster.getPartition( ) );
         reports.add( new ReportInfo( SERVICE_GROUP, "SC @ " + scConfig.getHostName( ), SERVICE_GROUP, 1, scConfig.getComponentId( ).name( ), scConfig.getName( ), scConfig.getHostName( ) ) );        
       } catch ( PersistenceException e ) {
         LOG.error( e.getMessage( ), e );

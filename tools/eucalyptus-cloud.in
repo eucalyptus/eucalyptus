@@ -184,7 +184,7 @@ do_start() {
 	if [ "$DISABLE_EBS" = "Y" ]; then
 		CLOUD_OPTS="$CLOUD_OPTS --disable-storage"
 	fi
-	if [ "$DISABLE_ISCSI" != "N" ]; then
+	if [ "$DISABLE_ISCSI" = "Y" ]; then
 		CLOUD_OPTS="$CLOUD_OPTS --disable-iscsi"
 	fi
 
@@ -243,7 +243,7 @@ do_stop() {
 	fi
 
 	# let's way few seconds than kill harder
-	# let's not.
+	# let's do this temporarily.
 	timeout=20
 	while [ $timeout -gt 0 ]; do
 		if do_status ; then
@@ -254,8 +254,8 @@ do_stop() {
 		fi
 	done
 	if [ $timeout -eq 0 ]; then
-		kill $pid > /dev/null 2>&1 
-		kill $ppid > /dev/null 2>&1
+		kill -9 $pid > /dev/null 2>&1 
+		kill -9 $ppid > /dev/null 2>&1
 	fi
 	rm -f $pidfile
 
@@ -288,7 +288,7 @@ case "$1" in
 	# let's check there is no previous cloud running
 	if do_status ; then
 		echo
-		echo "another $DESC is already running!"
+		echo "$DESC are already running!"
 		if [ "$VERBOSE" != no ]; then
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 1
@@ -332,7 +332,7 @@ case "$1" in
 	# let's check there is a previous cloud running
 	if ! do_status ; then
 		echo
-		echo "no $DESC is running!"
+		echo "$DESC are running!"
 		if [ "$VERBOSE" != no ]; then
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 1

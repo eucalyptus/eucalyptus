@@ -73,6 +73,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.empyrean.ServiceId;
@@ -289,7 +290,7 @@ public class Components {
     
   }
   
-  public enum Predicates implements Predicate<Component> {
+  private enum Predicates implements Predicate<Component> {
     BOOTSTRAP_LOCALS {
       @Override
       public boolean apply( Component c ) {
@@ -299,7 +300,7 @@ public class Components {
     ARE_ENABLED_LOCAL {
       @Override
       public boolean apply( Component c ) {
-        boolean cloudLocal = Bootstrap.isCloudController( ) && c.getComponentId( ).isCloudLocal( );
+        boolean cloudLocal = BootstrapArgs.isCloudController( ) && c.getComponentId( ).isCloudLocal( );
         boolean alwaysLocal = c.getComponentId( ).isAlwaysLocal( );
         boolean runningLocal = c.isEnabledLocally( );
         return cloudLocal || alwaysLocal || runningLocal;
@@ -310,26 +311,6 @@ public class Components {
         NavigableSet<ServiceConfiguration> services = c.lookupServiceConfigurations( );
         return services.isEmpty( ) ? false : Component.State.ENABLED.equals( services.first( ).lookupState( ) );
       }
-    };
-    
-    public static final Predicate<ServiceConfiguration> enabledService( ) {
-      return new Predicate<ServiceConfiguration>( ) {
-        
-        @Override
-        public boolean apply( ServiceConfiguration arg0 ) {
-          return Component.State.ENABLED.isIn( arg0 );
-        }
-      };
-    }
-    
-    public static Predicate<ServiceConfiguration> serviceInPartition( final String partitionName ) {
-      return new Predicate<ServiceConfiguration>( ) {
-        
-        @Override
-        public boolean apply( ServiceConfiguration arg0 ) {
-          return partitionName.equals( arg0.getPartition( ) ) && Component.State.ENABLED.isIn( arg0 );
-        }
-      };
     }
 
   }

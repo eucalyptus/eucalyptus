@@ -76,7 +76,6 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Logs;
@@ -90,7 +89,7 @@ import com.google.common.collect.Lists;
 public class SystemBootstrapper {
   private static final String       SEP = " -- ";
   
-  private static Logger             LOG = Logger.getLogger( SystemBootstrapper.class );
+  static Logger                     LOG = Logger.getLogger( SystemBootstrapper.class );
   
   private static SystemBootstrapper singleton;
   private static ThreadGroup        singletonGroup;
@@ -109,13 +108,17 @@ public class SystemBootstrapper {
     return singleton;
   }
   
-  public SystemBootstrapper( ) {}
+  public SystemBootstrapper( ) {
+//    BootstrapClassLoader.init( );
+  }
   
   public boolean init( ) throws Exception {
+//    BootstrapClassLoader.init( );
     Logs.init( );
+    BootstrapArgs.init( );
     Security.addProvider( new BouncyCastleProvider( ) );
     try {
-      if( !Bootstrap.isInitializeSystem( ) ) {
+      if ( !BootstrapArgs.isInitializeSystem( ) ) {
         Bootstrap.init( );
         Bootstrap.Stage stage = Bootstrap.transition( );
         stage.load( );
@@ -127,24 +130,21 @@ public class SystemBootstrapper {
     } catch ( Throwable t ) {
       t.printStackTrace( );
       LOG.fatal( t, t );
-      System.exit( 1 );
+      System.exit( 123 );
       return false;
-    }
-  }
-
-  private static void initializeSystem( ) {
-    try {
-      GroovyUtil.evaluateScript( "initialize_cloud.groovy" );
-      System.exit( 0 );
-    } catch ( Throwable ex ) {
-      LOG.error( ex , ex );
-      System.exit( 1 );
     }
   }
   
   public boolean load( ) throws Throwable {
-    if( Bootstrap.isInitializeSystem( ) ) {
-      SystemBootstrapper.initializeSystem( );
+//    BootstrapClassLoader.init( );
+    if ( BootstrapArgs.isInitializeSystem( ) ) {
+      try {
+        Bootstrap.initializeSystem( );
+        System.exit( 0 );
+      } catch ( Throwable ex ) {
+        LOG.error( ex, ex );
+        System.exit( 1 );
+      }
     } else {
       try {
         // TODO: validation-api
@@ -159,7 +159,7 @@ public class SystemBootstrapper {
       } catch ( Throwable t ) {
         t.printStackTrace( );
         LOG.fatal( t, t );
-        System.exit( 1 );
+        System.exit( 123 );
         throw t;
       }
       for ( Component c : Components.whichCanLoad( ) ) {
@@ -170,6 +170,7 @@ public class SystemBootstrapper {
   }
   
   public boolean start( ) throws Throwable {
+//    BootstrapClassLoader.init( );
     try {
       /** @NotNull */
       Bootstrap.Stage stage = Bootstrap.transition( );
@@ -182,7 +183,7 @@ public class SystemBootstrapper {
       throw t;
     } catch ( Throwable t ) {
       LOG.fatal( t, t );
-      System.exit( 1 );
+      System.exit( 123 );
       throw t;
     }
     for ( final Component c : Components.whichCanLoad( ) ) {

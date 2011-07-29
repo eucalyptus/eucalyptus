@@ -26,8 +26,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import eucadmin.deregistercloud
+import eucadmin.deregistereucalyptus
 
 if __name__ == "__main__":
-    r = eucadmin.deregistercloud.DeregisterCloud()
+    r = eucadmin.deregistereucalyptus.DeregisterEucalyptus()
     r.main_cli()

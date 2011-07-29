@@ -82,6 +82,38 @@ CheckableServicesString = '|'.join(CheckableServices)
 EnableableServices = ['cloud', 'walrus', 'sc', 'vmwarebroker']
 EnableableServicesString = '|'.join(EnableableServices)
 
+RegisterHelp = """
+euca_conf provides two alternatives for component registration. The
+first alternative is compatible with the previous version of euca_conf
+and uses positional arguments. For example:
+
+euca_conf --register-cluster Part001 192.168.51.108
+
+would register a new cluster on host 192.168.51.108. In previous
+versions of the tool, the first argument would be interpreted as the
+"clustername" but now, with HA, this argument is interpreted as the
+partition name. Rather than requiring an additional positional
+argument for the component name required for registration, this
+approach will generate a component name for the user by concatenating
+the resource type (in this case "cluster") with the host name. So, in
+this case the component name would be "cluster-192.168.51.108". This
+allows previous scripts to continue working unchanged in the new
+version of the tool.
+
+The second, and preferred, approach uses explicit options for the
+partition name, the component name and the host name required for
+registration. For example:
+
+euca_conf --register-cluster --partition Part001 --component MyCluster --host 192.168.51.108
+
+Alternatively, you could use the short form of the options like this:
+
+euca_conf --register-cluster -P Part001 -C MyCluster -H 192.168.51.108
+
+or any combination thereof. The options can be provided in any order
+and can appear before or after the --register-* option.
+"""
+
 class EucaConf(object):
 
     def __init__(self, filepath=None):
@@ -309,6 +341,9 @@ class EucaConf(object):
                                dest=RegOptions['component'][2],
                                metavar='<component name>',
                                help='Name of the component')
+        self.parser.add_option('--help-register', action='store_true',
+                               default=False,
+                               help='Display help on register/deregister')
         self.options, self.args = self.parser.parse_args()
         if len(self.args) > 0:
             filepath = self.args[0]
@@ -492,9 +527,8 @@ class EucaConf(object):
 
     def do_upgrade_conf(self):
         if self.options.upgrade_conf_file:
-            #TODO: A no-op for now
-            print 'Upgrade from %s now' % self.options.upgrade_conf_file
-            sys.exit(0)
+            print 'Upgrading from %s' % self.options.upgrade_conf_file
+            self.config.mergefile(self.options.upgrade_conf_file)
             
     def _do_list(self, option_name, module_name, class_name):
         if getattr(self.options, option_name):
@@ -522,7 +556,7 @@ class EucaConf(object):
 
     def do_list_clouds(self):
         self._do_list('list_clouds',
-                      'eucadmin.describeclouds',
+                      'eucadmin.describeeucalyptus',
                       'DescribeEucalyptus')
 
     def do_list_clusters(self):
@@ -587,7 +621,7 @@ class EucaConf(object):
 
     def do_register_cloud(self):
         if hasattr(self.options, 'register_cloud'):
-            self._do_register('eucadmin.registercloud',
+            self._do_register('eucadmin.registereucalyptus',
                               'RegisterEucalyptus', None)
             if not self.options.no_sync:
                 path1 = os.path.join(self.config['EUCALYPTUS'],
@@ -674,7 +708,7 @@ class EucaConf(object):
 
     def do_deregister_cloud(self):
         self._do_deregister('deregister_cloud',
-                            'eucadmin.deregistercloud',
+                            'eucadmin.deregistereucalyptus',
                             'DeregisterEucalyptus')
 
     def do_deregister_cluster(self):
@@ -709,12 +743,12 @@ class EucaConf(object):
                   use_scp=(not self.options.no_scp))
         return req.sync()
 
-    def _print_sync_error(self):
+    def _print_sync_error(self, node):
         print 'ERROR: could not synchronize keys with %s' % node
         print 'The configuration will not have this node.'
         ssh_key = self.get_sshkey()
         if not ssh_key:
-            print 'User %s may have to run ssh-keygen!'
+            print 'User $EUCA_USER may have to run ssh-keygen!'
         else:
             print "Hint: to setup passwordless login to the nodes as"
             print "user $EUCA_USER, you can"
@@ -742,7 +776,7 @@ class EucaConf(object):
                     if node not in current_nodes:
                         current_nodes.append(node)
                     if not self._sync_node(node):
-                        self.print_sync_error()
+                        self._print_sync_error(node)
             self.config['NODES'] = ' '.join(current_nodes)
             print '...done'
 
@@ -750,8 +784,15 @@ class EucaConf(object):
         if self.options.dereg_nodes:
             current_nodes = self.config['NODES'].split()
             for node in self.options.dereg_nodes:
-                current_nodes.remove(node)
+                if node in current_nodes:
+                    current_nodes.remove(node)
+                else:
+                    print 'Node %s is not currently registered' % node
             self.config['NODES'] = ' '.join(current_nodes)
+
+    def do_help_register(self):
+        if self.options.help_register:
+            print RegisterHelp
 
 if __name__ == "__main__":
     ec = EucaConf()

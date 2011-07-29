@@ -128,7 +128,7 @@ public class Threads {
     if ( execServices.containsKey( groupName ) ) {
       return execServices.get( groupName );
     } else {
-      LOG.debug( "CREATE thread threadpool named: " + groupName );
+      LOG.trace( "CREATE thread threadpool named: " + groupName );
       final ThreadPool f = new ThreadPool( groupName );
       if ( execServices.putIfAbsent( f.getName( ), f ) != null ) {
         LOG.warn( "SHUTDOWN:" + f.getName( ) + " Freeing duplicate thread pool..." );

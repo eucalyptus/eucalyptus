@@ -2,13 +2,16 @@ package com.eucalyptus.component;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.io.StringWriter;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.MissingFormatArgumentException;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -28,7 +31,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-public abstract class ComponentId implements HasName<ComponentId>, HasFullName<ComponentId> {
+public abstract class ComponentId implements HasName<ComponentId>, HasFullName<ComponentId>, Serializable {
   private static Logger       LOG         = Logger.getLogger( ComponentId.class );
   private static final String EMPTY_MODEL = "  <mule xmlns=\"http://www.mulesource.org/schema/mule/core/2.0\"\n"
                                             +
@@ -413,4 +416,22 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public boolean isRegisterable( ) {
     return !( ServiceBuilders.lookup( this ) instanceof DummyServiceBuilder );
   }
+
+  protected static ServiceConfiguration setupServiceState( InetAddress addr, ComponentId compId ) throws ServiceRegistrationException, ExecutionException {
+    try {
+      Component comp = Components.lookup( compId );
+      ServiceConfiguration config = ( Internets.testLocal( addr ) )
+        ? comp.initRemoteService( addr )
+        : comp.initRemoteService( addr );//TODO:GRZE:REVIEW: use of initRemote
+      if ( Component.State.INITIALIZED.ordinal( ) >= config.lookupState( ).ordinal( ) ) {
+        comp.loadService( config ).get( );
+      }
+      Topology.enable( config );
+      return config;
+    } catch ( InterruptedException ex ) {
+      Thread.currentThread( ).interrupt( );
+      return null;
+    }
+  }
+  
 }
