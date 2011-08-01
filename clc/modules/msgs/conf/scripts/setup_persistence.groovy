@@ -114,6 +114,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
         'hibernate.cache.use_second_level_cache': 'true',
         'hibernate.cache.use_query_cache': 'true',
         'hibernate.cache.jbc.query.localonly': 'true',
+        'hibernate.cache.default_cache_concurrency_strategy': 'transactional',
         'hibernate.cache.region.factory_class': 'com.eucalyptus.bootstrap.CacheRegionFactory',
         'hibernate.cache.region.jbc2.cfg.shared': 'eucalyptus_jboss_cache.xml',
         'hibernate.cache.region.jbc2.cfg.multiplexer.stacks': 'eucalyptus_cache_jgroups.xml',
