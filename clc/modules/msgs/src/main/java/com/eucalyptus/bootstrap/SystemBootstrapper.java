@@ -108,12 +108,9 @@ public class SystemBootstrapper {
     return singleton;
   }
   
-  public SystemBootstrapper( ) {
-//    BootstrapClassLoader.init( );
-  }
+  public SystemBootstrapper( ) {}
   
   public boolean init( ) throws Exception {
-//    BootstrapClassLoader.init( );
     Logs.init( );
     BootstrapArgs.init( );
     Security.addProvider( new BouncyCastleProvider( ) );
@@ -136,7 +133,6 @@ public class SystemBootstrapper {
   }
   
   public boolean load( ) throws Throwable {
-//    BootstrapClassLoader.init( );
     if ( BootstrapArgs.isInitializeSystem( ) ) {
       try {
         Bootstrap.initializeSystem( );
@@ -170,7 +166,6 @@ public class SystemBootstrapper {
   }
   
   public boolean start( ) throws Throwable {
-//    BootstrapClassLoader.init( );
     try {
       /** @NotNull */
       Bootstrap.Stage stage = Bootstrap.transition( );
