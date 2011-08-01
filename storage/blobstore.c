@@ -1527,7 +1527,6 @@ blockblob * blockblob_open ( blobstore * bs,
                              unsigned long long timeout_usec ) // maximum wait, in microseconds
 {
     long long size_blocks = round_up_sec (size_bytes) / 512;
-
     if (flags & ~(BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL)) {
         ERR (BLOBSTORE_ERROR_INVAL, "only _CREAT and _EXCL flags are allowed");
         return NULL;
@@ -1579,6 +1578,7 @@ blockblob * blockblob_open ( blobstore * bs,
     int saved_errno = 0;
     int created_blob = 0;
     bb->fd = open_and_lock (bb->blocks_path, flags | BLOBSTORE_FLAG_RDWR, timeout_usec, BLOBSTORE_FILE_PERM); // blobs are always opened with exclusive write access
+
     if (bb->fd != -1) { 
         struct stat sb;
         if (fstat (bb->fd, &sb)==-1) {
