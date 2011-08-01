@@ -83,7 +83,35 @@ EnableableServices = ['cloud', 'walrus', 'sc', 'vmwarebroker']
 EnableableServicesString = '|'.join(EnableableServices)
 
 RegisterHelp = """
-Detailed help on register/deregister operations goes here.
+euca_conf provides two alternatives for component registration. The
+first alternative is compatible with the previous version of euca_conf
+and uses positional arguments. For example:
+
+euca_conf --register-cluster Part001 192.168.51.108
+
+would register a new cluster on host 192.168.51.108. In previous
+versions of the tool, the first argument would be interpreted as the
+"clustername" but now, with HA, this argument is interpreted as the
+partition name. Rather than requiring an additional positional
+argument for the component name required for registration, this
+approach will generate a component name for the user by concatenating
+the resource type (in this case "cluster") with the host name. So, in
+this case the component name would be "cluster-192.168.51.108". This
+allows previous scripts to continue working unchanged in the new
+version of the tool.
+
+The second, and preferred, approach uses explicit options for the
+partition name, the component name and the host name required for
+registration. For example:
+
+euca_conf --register-cluster --partition Part001 --component MyCluster --host 192.168.51.108
+
+Alternatively, you could use the short form of the options like this:
+
+euca_conf --register-cluster -P Part001 -C MyCluster -H 192.168.51.108
+
+or any combination thereof. The options can be provided in any order
+and can appear before or after the --register-* option.
 """
 
 class EucaConf(object):
@@ -361,6 +389,18 @@ class EucaConf(object):
                 return False
         return True
 
+    def check_local_credentials(self):
+        missing = []
+        path = os.path.join(self.config['EUCALYPTUS'],
+                            'var/lib/eucalyptus/keys')
+        files = ['node-cert.pem', 'cluster-cert.pem', 'cloud-cert.pem',
+                 'node-pk.pem', 'cluster-pk.pem']
+        for file in files:
+            full_path = os.path.join(path, file)
+            if not os.path.isfile(full_path):
+                missing.append(full_path)
+        return missing
+
     def option_callback(self, option, opt_str, value, parser, optname=None):
         self.specified_options[optname] = value
 
@@ -413,6 +453,8 @@ class EucaConf(object):
         else:
             if action == 'register' and 'component_name' in needs:
                 needs.remove('component_name')
+            if res_type == 'walrus' and 'partition_name' in needs:
+                needs.remove('partition_name')
             if len(parser.rargs) < len(needs):
                 parser.error('incomplete args to %s' % opt_str)
             for arg in parser.rargs[0:len(needs)]:
@@ -424,6 +466,8 @@ class EucaConf(object):
                 setattr(parser.values, 'component_name',
                         '%s-%s' % (res_type, getattr(parser.values,
                                                      'host_name')))
+            if res_type == 'walrus':
+                setattr(parser.values, 'partition_name', 'walrus')
             del parser.rargs[:len(needs)]
         setattr(parser.values, '%s_%s' % (action, res_type), True)
 
@@ -615,7 +659,7 @@ class EucaConf(object):
                                      'var/lib/eucalyptus/keys')
                 path2 = os.path.join(path1, self.options.partition_name)
                 cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
-                req = cls([path1, path2], path1, self.options.host_name,
+                req = cls([path2], path1, self.options.host_name,
                           ['node-cert.pem', 'cluster-cert.pem',
                            'cluster-pk.pem', 'node-pk.pem',
                            'vtunpass', 'cloud-cert.pem'],
@@ -715,12 +759,12 @@ class EucaConf(object):
                   use_scp=(not self.options.no_scp))
         return req.sync()
 
-    def _print_sync_error(self):
+    def _print_sync_error(self, node):
         print 'ERROR: could not synchronize keys with %s' % node
         print 'The configuration will not have this node.'
         ssh_key = self.get_sshkey()
         if not ssh_key:
-            print 'User %s may have to run ssh-keygen!'
+            print 'User $EUCA_USER may have to run ssh-keygen!'
         else:
             print "Hint: to setup passwordless login to the nodes as"
             print "user $EUCA_USER, you can"
@@ -737,6 +781,12 @@ class EucaConf(object):
             if not self.check_local_service('CC'):
                 print 'CC must be local service to run this command'
                 sys.exit(1)
+            missing = self.check_local_credentials()
+            if missing:
+                print 'The following expected credentials are missing:'
+                for cred in missing:
+                    print '\t%s' % cred
+                sys.exit(1)
             msg = 'INFO: We expect all nodes to have eucalyptus'
             msg += ' installed in $EUCALYPTUS for key synchronization.'
             print msg
@@ -748,7 +798,7 @@ class EucaConf(object):
                     if node not in current_nodes:
                         current_nodes.append(node)
                     if not self._sync_node(node):
-                        self.print_sync_error()
+                        self._print_sync_error(node)
             self.config['NODES'] = ' '.join(current_nodes)
             print '...done'
 
