@@ -86,6 +86,9 @@ public interface CloudMetadata<T> extends HasFullName<T>, CloudVendorInfo {
     public abstract String getUniqueName( );
   }
   
+  @PolicyResourceType( "address" )
+  public interface AddressMetadata extends HasFullName<AddressMetadata>, HasOwningAccount {}
+
   @PolicyResourceType( "volume" )
   public interface VolumeMetadata extends CloudMetadata<VolumeMetadata> {}
   
