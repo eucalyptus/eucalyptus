@@ -61,32 +61,20 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component.id;
+package com.eucalyptus.util;
 
-import com.eucalyptus.component.ComponentId;
+import java.util.NoSuchElementException;
+import javax.persistence.PersistenceException;
 
+public interface TypeResolver<T extends HasOwningAccount> {
 
-public class Walrus extends ComponentId.Unpartioned {
-
-  @Override
-  public String getLocalEndpointName( ) {
-    return "vm://BukkitInternal";
-  }
+  /**
+   * Lookup the object {@code T} referenced by {@code identifier}. 
+   * @param identifier
+   * @return T the object referenced by the given {@code identifier}
+   * @throws PersistenceException if an error occurred in the underlying retrieval mechanism
+   * @throws NoSuchElementException if the requested {@code identifier} does not exist and the user is authorized.
+   */
+  public T lookup( String identifier );
   
-  @Override
-  public Boolean hasCredentials( ) {
-    return true;
-  }
-  
-  @Override
-  public boolean isUserService( ) {
-    return true;
-  }
-
-  @Override
-  public String getVendorName( ) {
-    return "s3";
-  }
-
-
 }

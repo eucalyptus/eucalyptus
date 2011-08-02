@@ -71,10 +71,10 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.SnapshotMetadata;
+import com.eucalyptus.cloud.CloudMetadata;
+import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.StorageProperties;
 
@@ -83,14 +83,14 @@ import com.eucalyptus.util.StorageProperties;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_snapshots" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
+public class Snapshot extends UserMetadata<State> implements CloudMetadata.SnapshotMetadata {
   @Column( name = "metadata_snapshot_vol_size" )
   private Integer  volumeSize;
-  @Column( name = "metadata_snapshot_parentvolume", updatable=false )
+  @Column( name = "metadata_snapshot_parentvolume", updatable = false )
   private String   parentVolume;
-  @Column( name = "metadata_snapshot_vol_sc", updatable=false )
+  @Column( name = "metadata_snapshot_vol_sc", updatable = false )
   private String   volumeSc;
-  @Column( name = "metadata_snapshot_vol_partition", updatable=false )
+  @Column( name = "metadata_snapshot_vol_partition", updatable = false )
   private String   volumePartition;
   @Transient
   private FullName fullName;
@@ -99,41 +99,16 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     super( );
   }
   
-  public Snapshot( final UserFullName userFullName, final String displayName ) {
+  Snapshot( final UserFullName userFullName, final String displayName ) {
     super( userFullName, displayName );
   }
   
-  public Snapshot( final UserFullName userFullName, final String displayName, final String parentVolume, final String volumeScName, final String volumePartition ) {
+  Snapshot( final UserFullName userFullName, final String displayName, final String parentVolume, final String volumeScName, final String volumePartition ) {
     this( userFullName, displayName );
     this.parentVolume = parentVolume;
     this.volumeSc = volumeScName;
     this.volumePartition = volumePartition;
     super.setState( State.NIHIL );
-  }
-  
-  public Snapshot( final String accountId, final String displayName ) {
-    this.setOwnerAccountId( accountId );
-    this.setDisplayName( displayName );
-  }
-  
-  public static Snapshot named( final UserFullName userFullName, String snapshotId ) {
-    //return new Snapshot( userFullName, snapshotId );
-    String accountId = null;
-    if ( userFullName != null ) {
-      accountId = userFullName.getAccountNumber( );
-    }
-    Snapshot v = new Snapshot( accountId, snapshotId );
-    return v;
-  }
-  
-  public static Snapshot ownedBy( final UserFullName userFullName ) {
-    //return new Snapshot( userFullName, null );
-    String accountId = null;
-    if ( userFullName != null ) {
-      accountId = userFullName.getAccountNumber( );
-    }
-    Snapshot v = new Snapshot( accountId, null );
-    return v;
   }
   
   public String mapState( ) {
@@ -190,12 +165,10 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   
   @Override
   public FullName getFullName( ) {
-    return this.fullName == null
-      ? this.fullName = FullName.create.vendor( "euca" )
-                                       .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
-                                       .namespace( this.getOwnerAccountId( ) )
-                                       .relativeId( "snapshot", this.getDisplayName( ) )
-      : this.fullName;
+    return FullName.create.vendor( "euca" )
+                          .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
+                          .namespace( this.getOwnerAccountNumber( ) )
+                          .relativeId( "snapshot", this.getDisplayName( ) );
   }
   
   public Integer getVolumeSize( ) {
@@ -225,7 +198,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   public void setVolumePartition( String volumePartition ) {
     this.volumePartition = volumePartition;
   }
-
+  
   public String getVolumeSc( ) {
     return this.volumeSc;
   }

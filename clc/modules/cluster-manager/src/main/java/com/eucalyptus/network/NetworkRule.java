@@ -94,7 +94,7 @@ public class NetworkRule extends AbstractPersistent {
   Integer          lowPort;
   @Column( name = "metadata_network_rule_high_port" )
   Integer          highPort;
-  @OneToMany( cascade = { CascadeType.REMOVE, CascadeType.MERGE, CascadeType.PERSIST }, fetch = FetchType.EAGER )
+  @OneToMany( cascade = { CascadeType.REMOVE, CascadeType.MERGE, CascadeType.PERSIST }, fetch = FetchType.EAGER )//GRZE:WTF: why not all?
   @JoinTable( name = "metadata_network_rule_has_ip_range", joinColumns = { @JoinColumn( name = "metadata_network_rule_id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_rule_ip_range_id" ) } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   Set<IpRange>     ipRanges     = new HashSet<IpRange>( );
@@ -201,10 +201,10 @@ public class NetworkRule extends AbstractPersistent {
       if ( other.protocol != null ) return false;
     } else if ( !protocol.equals( other.protocol ) ) return false;
     if ( ipRanges == null ) {
-      if (other.ipRanges != null ) return false;
+      if ( other.ipRanges != null ) return false;
     } else if ( !ipRanges.equals( other.ipRanges ) ) return false;
     if ( networkPeers == null ) {
-      if (other.networkPeers != null ) return false;
+      if ( other.networkPeers != null ) return false;
     } else if ( !networkPeers.equals( other.networkPeers ) ) return false;
     return true;
   }

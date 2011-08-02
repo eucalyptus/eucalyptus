@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,82 +61,24 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.entities;
+package com.eucalyptus.network;
 
-import javax.persistence.Column;
-import javax.persistence.MappedSuperclass;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.FakePrincipals;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.HasOwningUser;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
 
-@MappedSuperclass
-public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMetadata<STATE> implements HasOwningUser {
-  @Column( name = "metadata_user_id" )
-  protected String ownerUserId;
-  @Column( name = "metadata_user_name" )
-  protected String ownerUserName;
-  
-  public UserMetadata( ) {}
-  
-  public UserMetadata( UserFullName user ) {
-    super( user );
-    this.ownerUserId = user != null ? user.getUniqueId( ) : null;
-    this.ownerUserName = user != null ? user.getUserName( ) : null;
-  }
-  
-  public UserMetadata( UserFullName user, String displayName ) {
-    super( user, displayName );
-    this.ownerUserId = user != null ? user.getUniqueId( ) : null;
-    this.ownerUserName = user != null ? user.getUserName( ) : null;
-  }
-  
-  @Override
-  public FullName getOwner( ) {
-    if ( super.owner == null && this.getOwnerUserId( ) == null ) {
-      this.setOwner( FakePrincipals.NOBODY_USER_ERN );
-    } else if( super.owner == null && FakePrincipals.NOBODY_USER_ERN.getUserId( ).equals( this.getOwnerUserId( ) ) ) {
-      this.setOwner( FakePrincipals.NOBODY_USER_ERN );
-    } else if( super.owner == null && this.getOwnerUserId( ) != null ) {
-      this.setOwner( UserFullName.getInstance( this.ownerUserId ) );
-    }
-    return super.owner;
-  }
-  
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = super.hashCode( );
-    result = prime * result + ( ( ownerUserId == null )
-      ? 0
-      : ownerUserId.hashCode( ) );
-    return result;
-  }
-  
-  public String getOwnerUserId( ) {
-    return this.ownerUserId;
-  }
-  
-  public void setOwnerUserId( String ownerUserId ) {
-    this.ownerUserId = ownerUserId;
-  }
-  
-  public String getOwnerUserName( ) {
-    return this.ownerUserName;
-  }
-  
-  public void setOwnerUserName( String ownerUserName ) {
-    this.ownerUserName = ownerUserName;
-  }
+@Entity
+@javax.persistence.Entity
+@PersistenceContext( name = "eucalyptus_cloud" )
+@Table( name = "metadata_network_index" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class PrivateNetworkIndex {
+  enum State {
+    ILLEGAL, FREE, PENDING, USED, OUTLAW,
+  };
 
-  @Override
-  protected void setOwner( FullName owner ) {
-    UserFullName userFullName = ( UserFullName ) owner;
-    this.setOwnerUserId( userFullName.getUserId( ) );
-    this.setOwnerUserName( userFullName.getUserName( ) );
-    super.setOwner( owner );
-  }
-
-  
+  private Long index;
+  private State state;
 }

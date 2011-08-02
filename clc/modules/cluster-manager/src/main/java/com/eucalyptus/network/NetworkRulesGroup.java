@@ -63,92 +63,89 @@
 
 package com.eucalyptus.network;
 
-import java.util.ArrayList;
-import java.util.List;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
-import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.NetworkSecurityGroup;
-import com.eucalyptus.cluster.Networks;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
+import com.eucalyptus.cloud.CloudMetadata;
+import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.entities.UserMetadata;
-import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
-import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.Network;
+import com.google.common.collect.Collections2;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 
-@Entity @javax.persistence.Entity
+@Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class NetworkRulesGroup extends UserMetadata<NetworkRulesGroup.State> implements NetworkSecurityGroup {
-  enum State { available, removing }
-  @Column( name = "metadata_network_group_user_network_group_name", unique = true )
-  private String            uniqueName;                                          //bogus field to enforce uniqueness
+public class NetworkRulesGroup extends UserMetadata<NetworkRulesGroup.State> implements CloudMetadata.NetworkSecurityGroup {
+  enum State {
+    DISABLED,
+    AWAITING_PEER,
+    PENDING,
+    ACTIVE
+  }
+  
+  @Column( name = "metadata_network_group_unique_name", unique = true )
+  private String           uniqueName;//bogus field to enforce uniqueness
+  @Column( name = "metadata_network_group_perm_uuid", unique = true )
+  private String           permanentUuid;
   @Column( name = "metadata_network_group_description" )
-  private String            description;
-  @OneToMany( cascade = { CascadeType.ALL }, fetch = FetchType.EAGER )
+  private String           description;
+  @OneToMany( cascade = { CascadeType.ALL } )
+  @Fetch(FetchMode.JOIN)
   @JoinTable( name = "metadata_network_group_has_rules", joinColumns = { @JoinColumn( name = "id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_rule_id" ) } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private List<NetworkRule> networkRules         = new ArrayList<NetworkRule>( );
+  private Set<NetworkRule> networkRules         = new HashSet<NetworkRule>( );
   @Transient
-  private FullName          fullName;
-  public static String      NETWORK_DEFAULT_NAME = "default";
+  public static String     NETWORK_DEFAULT_NAME = "default";
   
-  public static NetworkRulesGroup named( UserFullName userFullName, String groupName ) {
-    return new NetworkRulesGroup( userFullName, groupName );
+  NetworkRulesGroup( ) {}
+  
+  NetworkRulesGroup( final OwnerFullName ownerFullName ) {
+    super( ownerFullName );
   }
   
-  public NetworkRulesGroup( ) {}
-  
-  public NetworkRulesGroup( final UserFullName userFullName ) {
-    super( userFullName );
+  NetworkRulesGroup( final OwnerFullName ownerFullName, final String groupName ) {
+    super( ownerFullName, groupName );
   }
   
-  public NetworkRulesGroup( final UserFullName userFullName, final String groupName ) {
-    super( userFullName, groupName );
-    this.fullName = FullName.create.vendor( "euca" )
-                                   .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
-                                   .namespace( this.getOwnerAccountId( ) )
-                                   .relativeId( "security-group", this.getDisplayName( ) );
-    this.uniqueName = this.fullName.toString( );
-    this.setState( State.available );
-  }
-  
-  public NetworkRulesGroup( final UserFullName userFullName, final String groupName, final String groupDescription ) {
-    this( userFullName, groupName );
-    Assertions.assertNotNull( groupDescription );
+  NetworkRulesGroup( final OwnerFullName ownerFullName, final String groupName, final String groupDescription ) {
+    this( ownerFullName, groupName );
+    assertThat( groupDescription, notNullValue( ) );
     this.description = groupDescription;
   }
   
-  public NetworkRulesGroup( final UserFullName userFullName, final String groupName, final String description, final List<NetworkRule> networkRules ) {
-    this( userFullName, groupName, description );
-    Assertions.assertNotNull( networkRules );
-    this.networkRules = networkRules;
-  }
-  
-  @Deprecated
-  public String getUniqueName( ) {
-    return this.uniqueName;
-  }
-  
-  public void setUniqueName( String uniqueName ) {
-    this.uniqueName = uniqueName;
+  @PrePersist
+  @PreUpdate
+  private void generateOnCommit( ) {
+    if ( this.permanentUuid == null ) {
+      this.permanentUuid = UUID.randomUUID( ).toString( );
+    }
+    if ( this.getState( ) == null ) {
+      this.setState( State.PENDING );
+    }
   }
   
   public String getDescription( ) {
@@ -159,29 +156,28 @@ public class NetworkRulesGroup extends UserMetadata<NetworkRulesGroup.State> imp
     this.description = description;
   }
   
-  public List<NetworkRule> getNetworkRules( ) {
+  public Set<NetworkRule> getNetworkRules( ) {
     return this.networkRules;
   }
   
-  public void setNetworkRules( List<NetworkRule> networkRules ) {
+  private void setNetworkRules( Set<NetworkRule> networkRules ) {
     this.networkRules = networkRules;
-  }
-  
-  public static NetworkRulesGroup getDefaultGroup( UserFullName userFullName ) {
-    return new NetworkRulesGroup( userFullName, NETWORK_DEFAULT_NAME, "default group", new ArrayList<NetworkRule>( ) );
   }
   
   public Network getVmNetwork( ) {
     Network asNet;
     try {
-      asNet = Networks.getInstance( ).lookup( this.getClusterNetworkName( ) );
+      asNet = Networks.getInstance( ).lookup( this );
     } catch ( Exception ex ) {
-      List<PacketFilterRule> pfRules = Lists.transform( this.getNetworkRules( ), this.ruleTransform );
-      Network vmNetwork = new Network( UserFullName.getInstance( this.getOwnerUserId( ) ), this.getDisplayName( ), this.getId( )/**TODO:GRZE:this is surely wrong**/, pfRules );
-      Networks.getInstance( ).registerIfAbsent( vmNetwork, Networks.State.ACTIVE );
-      asNet = Networks.getInstance( ).lookup(  this.getClusterNetworkName( ) );
+      Network vmNetwork = new Network( this );
+      asNet = Networks.getInstance( ).register( vmNetwork, Networks.State.ACTIVE );
     }
     return asNet;
+  }
+
+  public Collection<PacketFilterRule> lookupPacketFilterRules( ) {
+    Collection<PacketFilterRule> pfRules = Collections2.transform( this.getNetworkRules( ), this.ruleTransform );
+    return pfRules;
   }
   
   @Override
@@ -191,16 +187,19 @@ public class NetworkRulesGroup extends UserMetadata<NetworkRulesGroup.State> imp
   
   @Override
   public FullName getFullName( ) {
-    return this.fullName;
+    return FullName.create.vendor( "euca" )
+                          .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
+                          .namespace( this.getOwnerAccountNumber( ) )
+                          .relativeId( "security-group", this.getDisplayName( ) );
   }
   
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = super.hashCode( );
-    result = prime * result + ( ( uniqueName == null )
+    result = prime * result + ( ( this.uniqueName == null )
       ? 0
-      : uniqueName.hashCode( ) );
+      : this.uniqueName.hashCode( ) );
     return result;
   }
   
@@ -227,7 +226,7 @@ public class NetworkRulesGroup extends UserMetadata<NetworkRulesGroup.State> imp
                                                                         @Override
                                                                         public PacketFilterRule apply( NetworkRule from ) {
                                                                           PacketFilterRule pfrule = new PacketFilterRule(
-                                                                                                                          NetworkRulesGroup.this.getOwnerAccountId( ),
+                                                                                                                          NetworkRulesGroup.this.getOwnerAccountNumber( ),
                                                                                                                           NetworkRulesGroup.this.getDisplayName( ),
                                                                                                                           from.getProtocol( ),
                                                                                                                           from.getLowPort( ),
@@ -242,11 +241,32 @@ public class NetworkRulesGroup extends UserMetadata<NetworkRulesGroup.State> imp
   
   @Override
   public int compareTo( NetworkSecurityGroup that ) {
-    return this.getFullName( ).toString( ).compareTo( that.getFullName( ).toString( ) );
+    return this.getUniqueName( ).compareTo( that.getUniqueName( ) );
   }
-
+  
   public String getClusterNetworkName( ) {
     return this.getOwnerUserId( ) + "-" + this.getDisplayName( );
+  }
+  
+  public void setUniqueName( String uniqueName ) {
+    this.uniqueName = uniqueName;
+  }
+  
+  public String getUniqueName( ) {
+    return this.uniqueName;
+  }
+
+  public String getPermanentUuid( ) {
+    return this.permanentUuid;
+  }
+
+  /**
+   * GRZE:TODO: eliminate these symbols
+   */
+  public void returnNetworkIndex( Integer net ) {}
+
+  public Integer allocateNetworkIndex( String cluster ) {
+    return null;
   }
   
 }

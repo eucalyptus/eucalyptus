@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,81 +61,47 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.entities;
+package com.eucalyptus.cloud;
 
-import javax.persistence.Column;
-import javax.persistence.MappedSuperclass;
-import javax.persistence.Transient;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.util.FullName;
+import com.eucalyptus.auth.policy.PolicyResourceType;
+import com.eucalyptus.auth.policy.PolicyVendor;
+import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasOwningAccount;
 
-@MappedSuperclass
-public abstract class AccountMetadata<STATE extends Enum<STATE>> extends AbstractStatefulPersistent<STATE> implements HasOwningAccount {
-  @Column( name = "metadata_account_id" )
-  protected String   ownerAccountId;
-  @Transient
-  protected FullName owner;
+/**
+ * GRZE:WARN: values are intentionally opaque strings and /not/ a symbolic reference. do not change
+ * them.
+ * 
+ * @see PolicyResourceType
+ * @see PolicyResourceType#NO_VALUE_SPECIFED
+ * @see PolicyVendor
+ **/
+@PolicyVendor( "ec2" )
+public interface CloudMetadata<T> extends HasFullName<T>, CloudVendorInfo {
+  @PolicyResourceType( "keypair" )
+  public interface KeyPair extends CloudMetadata<KeyPair> {}
   
-  public AccountMetadata( ) {}
-  
-  public AccountMetadata( AccountFullName account ) {
-    this.ownerAccountId = account != null
-      ? account.getAccountNumber( )
-      : null;
+  @PolicyResourceType( "securitygroup" )
+  public interface NetworkSecurityGroup extends CloudMetadata<NetworkSecurityGroup> {
+    public abstract String getUniqueName( );
   }
   
-  public AccountMetadata( AccountFullName account, String displayName ) {
-    super( displayName );
-    this.ownerAccountId = account != null
-      ? account.getAccountNumber( )
-      : null;
-  }
+  @PolicyResourceType( "volume" )
+  public interface VolumeMetadata extends CloudMetadata<VolumeMetadata> {}
   
-  @Override
-  public FullName getOwner( ) {
-    if ( this.owner == null ) {
-      return ( this.owner = Accounts.lookupAccountFullNameById( this.ownerAccountId ) );
-    } else {
-      return this.owner;
-    }
-  }
+  @PolicyResourceType( "snapshot" )
+  public interface SnapshotMetadata extends CloudMetadata<SnapshotMetadata> {}
   
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = super.hashCode( );
-    result = prime * result + ( ( ownerAccountId == null )
-      ? 0
-      : ownerAccountId.hashCode( ) );
-    result = prime * result + ( ( displayName == null )
-      ? 0
-      : displayName.hashCode( ) );
-    return result;
-  }
+  @PolicyResourceType( "instance" )
+  public interface VirtualMachineInstance extends CloudMetadata<VirtualMachineInstance> {}
   
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) return true;
-    if ( !super.equals( obj ) ) return false;
-    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
-    AccountMetadata other = ( AccountMetadata ) obj;
-    if ( ownerAccountId == null ) {
-      if ( other.ownerAccountId != null ) return false;
-    } else if ( !ownerAccountId.equals( other.ownerAccountId ) ) return false;
-    return true;
-  }
-  
-  public String getOwnerAccountId( ) {
-    return this.ownerAccountId;
-  }
-  
-  public void setOwnerAccountId( String ownerAccountId ) {
-    this.ownerAccountId = ownerAccountId;
-  }
-  
-  protected void setOwner( FullName owner ) {
-    this.owner = owner;
+  @PolicyResourceType( "vmtype" )
+  public interface VirtualMachineType extends CloudMetadata<VirtualMachineType> {
+    public abstract Integer getMemory( );
+    
+    public abstract Integer getCpu( );
+    
+    public abstract Integer getDisk( );
+    
   }
 }

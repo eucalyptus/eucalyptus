@@ -8,11 +8,16 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.cluster.NetworkAlreadyExistsException;
+import com.eucalyptus.network.Network;
+import com.eucalyptus.network.NetworkGroupUtil;
+import com.eucalyptus.network.NetworkGroups;
+import com.eucalyptus.network.NetworkRulesGroup;
+import com.eucalyptus.network.Networks;
+import com.eucalyptus.network.PrivateNetworkIndices;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.msgs.DescribeNetworksResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeNetworksType;
@@ -37,42 +42,7 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
    */
   @Override
   public void fire( DescribeNetworksResponseType reply ) {
-    for ( Network net : Networks.getInstance( ).listValues( ) ) {
-      net.trim( reply.getAddrIndexMax( ), reply.getAddrIndexMax( ) );
-    }
-    this.getSubject( ).getState( ).setAddressCapacity( reply.getAddrsPerNet( ) );
-    this.getSubject( ).getState( ).setMode( reply.getUseVlans( ) );
-    for ( NetworkInfoType netInfo : reply.getActiveNetworks( ) ) {
-      try {
-        UserFullName userFn = UserFullName.getInstance( netInfo.getUserId( ) );
-        Network net = null;
-        try {
-          net = Networks.getInstance( ).lookup( netInfo.getUserId( ) + "-" + netInfo.getNetworkName( ) );
-          if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
-            NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), userFn, netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
-            netToken = net.addTokenIfAbsent( netToken );
-          }
-        } catch ( NoSuchElementException e1 ) {
-          net = new Network( userFn, netInfo.getNetworkName( ), netInfo.getUuid( ) );
-          if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
-            NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), userFn, netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
-            netToken = net.addTokenIfAbsent( netToken );
-          }
-        }
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
-      }
-    }
-    
-    for ( Network net : Networks.getInstance( ).listValues( Networks.State.ACTIVE ) ) {
-      net.trim( reply.getAddrIndexMax( ), reply.getAddrIndexMax( ) );
-    }
-    List<Cluster> ccList = Clusters.getInstance( ).listValues( );
-    int ccNum = ccList.size( );
-    for ( Cluster c : ccList ) {
-      ccNum -= c.getState( ).getMode( );
-    }
-    
+    NetworkGroups.update( reply.getUseVlans( ), reply.getAddrsPerNet( ), reply.getAddrIndexMax( ), reply.getAddrIndexMax( ), reply.getActiveNetworks( ) );    
   }
   
   /**

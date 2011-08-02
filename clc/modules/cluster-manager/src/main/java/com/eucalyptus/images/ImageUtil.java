@@ -92,7 +92,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.Lookups;
+import com.eucalyptus.util.TypeClerk;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType;
@@ -364,7 +364,7 @@ public class ImageUtil {
       db.rollback( );
       return false;
     }
-    if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, imageId, imgInfo.getOwner( ) ) ) {
+    if ( TypeClerk.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, imageId, imgInfo.getOwner( ) ) ) {
       return false;
     }
     try {
@@ -410,7 +410,7 @@ public class ImageUtil {
       List<ImageInfo> images = db.query( new ImageInfo( ) );
       int imageNum = 0;
       for ( ImageInfo img : images ) {
-        if ( img.getOwnerAccountId( ).equals( accountId ) ) {
+        if ( img.getOwnerAccountNumber( ).equals( accountId ) ) {
           imageNum ++;
         }
       }

@@ -67,22 +67,24 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.network.IpRange;
+import com.eucalyptus.network.Network;
 import com.eucalyptus.network.NetworkGroupUtil;
+import com.eucalyptus.network.NetworkPeer;
+import com.eucalyptus.network.NetworkRule;
+import com.eucalyptus.network.NetworkRulesGroup;
 import com.eucalyptus.util.ByteArray;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 import edu.ucsb.eucalyptus.msgs.VmNetworkPeer;
 
-public class TopologyMetadata implements Function<MetadataRequest, ByteArray> {
-  private static Logger LOG = Logger.getLogger( TopologyMetadata.class );
+public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArray> {
+  private static Logger LOG = Logger.getLogger( NetworkGroupsMetadata.class );
   private static Lock                    lock       = new ReentrantLock( );
   private static Long                    lastTime   = 0l;
   private static AtomicReference<String> topoString = new AtomicReference<String>( null );
@@ -102,28 +104,23 @@ public class TopologyMetadata implements Function<MetadataRequest, ByteArray> {
           Multimap<String, String> rules = ArrayListMultimap.create( );
           for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
             if( VmState.RUNNING.ordinal( ) < vm.getState( ).ordinal( ) ) continue;
-            Network network = vm.getNetworks( ).get( 0 );
-            try {
-              network = NetworkGroupUtil.getUserNetworkRulesGroup( network.getUserFullName( ), network.getNetworkName( ) ).getVmNetwork( );
-              networks.put( network.getName( ), vm.getPrivateAddress( ) );
-              if ( !rules.containsKey( network.getName( ) ) ) {
-                
-                for ( PacketFilterRule pf : network.getRules( ) ) {
-                  String rule = String.format( "-P %s -%s %d%s%d ", pf.getProtocol( ), ( "icmp".equals( pf.getProtocol( ) )
+            for ( NetworkRulesGroup ruleGroup : vm.getNetworkRulesGroups( ) ) {
+              networks.put( ruleGroup.getPermanentUuid( ), vm.getPrivateAddress( ) );
+              if ( !rules.containsKey( ruleGroup.getPermanentUuid( ) ) ) {
+                for ( NetworkRule netRule : ruleGroup.getNetworkRules( ) ) {
+                  String rule = String.format( "-P %s -%s %d%s%d ", netRule.getProtocol( ), ( "icmp".equals( netRule.getProtocol( ) )
                     ? "t"
-                    : "p" ), pf.getPortMin( ), ( "icmp".equals( pf.getProtocol( ) )
+                    : "p" ), netRule.getLowPort( ), ( "icmp".equals( netRule.getProtocol( ) )
                     ? ":"
-                    : "-" ), pf.getPortMax( ) );
-                  for ( VmNetworkPeer peer : pf.getPeers( ) ) {
-                    rules.put( network.getName( ), String.format( "%s -o %s -u %s", rule, peer.getSourceNetworkName( ), peer.getUserName( ) ) );
+                    : "-" ), netRule.getHighPort( ) );
+                  for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {
+                    rules.put( ruleGroup.getName( ), String.format( "%s -o %s -u %s", rule, peer.getGroupName( ), peer.getUserQueryKey( ) ) );
                   }
-                  for ( String cidr : pf.getSourceCidrs( ) ) {
-                    rules.put( network.getName( ), String.format( "%s -s %s", rule, cidr ) );
+                  for ( IpRange cidr : netRule.getIpRanges( ) ) {
+                    rules.put( ruleGroup.getName( ), String.format( "%s -s %s", rule, cidr.getValue( ) ) );
                   }
                 }
               }
-            } catch ( EucalyptusCloudException e ) {
-              LOG.trace( "Topology info not available for unknown group: " + network.getName( ) + " because of " + e.getMessage( ), e );
             }
           }
           for ( String networkName : rules.keySet( ) ) {

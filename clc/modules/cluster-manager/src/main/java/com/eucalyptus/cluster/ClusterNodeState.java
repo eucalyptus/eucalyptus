@@ -160,7 +160,7 @@ public class ClusterNodeState {
         childToken.getInstanceUuids( ).add( token.getInstanceUuids( ).get( index ) );
       }
       if( primaryNet != null ) {
-        NetworkToken childNet = new NetworkToken( primaryNet.getCluster( ), primaryNet.getUserFullName( ), primaryNet.getNetworkName( ), primaryNet.getNetworkUuid( ), primaryNet.getVlan( ) );
+        NetworkToken childNet = new NetworkToken( primaryNet.getCluster( ), primaryNet.getOwnerFullName( ), primaryNet.getNetworkName( ), primaryNet.getNetworkUuid( ), primaryNet.getVlan( ) );
         childNet.getIndexes( ).add( primaryNet.getIndexes( ).pollFirst( ) );
         childToken.getNetworkTokens( ).add( childNet );
       }

@@ -90,6 +90,8 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.event.AbstractNamedRegistry;
+import com.eucalyptus.network.Network;
+import com.eucalyptus.network.Networks;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -103,7 +105,6 @@ import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.vm.VmState;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Predicate;
-import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -214,7 +215,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
 //              EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ).debug( );
 //            }
             if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
-              StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserFullName( ), net.getNetworkName( ), net.getUuid( ),
+              StopNetworkCallback stopNet = Networks.stop(  new StopNetworkCallback( new NetworkToken( cluster.getPartition( ), net.getOwner( ), net.getNetworkName( ), net.getUuid( ),
                                                                                        net.getVlan( ) ) );
               for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
                 AsyncRequests.newRequest( stopNet.newInstance( ) ).dispatch( c.getConfiguration( ) );
@@ -231,7 +232,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
 
   public static void cleanUp( final VmInstance vm ) {
     try {
-      String networkFqName = !vm.getNetworks( ).isEmpty( ) ? vm.getOwner( ).getName( ) + "-" + vm.getNetworkNames( ).get( 0 ) : null;
+      String networkFqName = !vm.getNetworkRulesGroups( ).isEmpty( ) ? vm.getOwner( ).getAccountNumber( ) + "-" + vm.getNetworkNames( ).first( ) : null;
       Cluster cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
       int networkIndex = vm.getNetworkIndex( );
       VmInstances.cleanUpAttachedVolumes( vm );

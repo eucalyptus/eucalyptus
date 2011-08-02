@@ -63,33 +63,67 @@
 
 package com.eucalyptus.network;
 
-import com.eucalyptus.auth.principal.UserFullName;
+import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
+import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.Transactions;
+import edu.ucsb.eucalyptus.msgs.NetworkInfoType;
 
 public class NetworkGroups {
   private static final String DEFAULT_NETWORK_NAME = "default";
-
-  public static NetworkRulesGroup lookup( UserFullName userFullName, String groupName ) throws NoSuchMetadataException {
+  private static Logger       LOG                  = Logger.getLogger( NetworkGroups.class );
+  
+  public static NetworkRulesGroup lookup( final String uuid ) throws NoSuchMetadataException {
     try {
-      return Transactions.find( new NetworkRulesGroup( userFullName, groupName ) );
+      return Transactions.find( new NetworkRulesGroup( ) {
+        {
+          this.setUniqueName( uuid );
+        }
+      } );
     } catch ( Exception ex ) {
-      throw new NoSuchMetadataException( "Failed to find security group: " + groupName + " for " + userFullName, ex );
+      throw new NoSuchMetadataException( "Failed to find security group: " + uuid, ex );
     }
   }
-
-  public static void makeDefault( UserFullName userFullName ) {
+  
+  public static NetworkRulesGroup lookup( OwnerFullName ownerFullName, String groupName ) throws NoSuchMetadataException {
+    if ( defaultNetworkName( ).equals( groupName ) ) {
+      return createDefault( ownerFullName );
+    } else {
+      try {
+        return Transactions.find( new NetworkRulesGroup( ownerFullName, groupName ) );
+      } catch ( Exception ex ) {
+        throw new NoSuchMetadataException( "Failed to find security group: " + groupName + " for " + ownerFullName, ex );
+      }
+    }
+  }
+  
+  static NetworkRulesGroup createDefault( OwnerFullName ownerFullName ) {
     try {
-      NetworkGroupUtil.getUserNetworkRulesGroup( userFullName, NetworkRulesGroup.NETWORK_DEFAULT_NAME );
+      return lookup( ownerFullName, NetworkRulesGroup.NETWORK_DEFAULT_NAME );
     } catch ( Exception e ) {
       try {
-        NetworkGroupUtil.createUserNetworkRulesGroup( userFullName, NetworkRulesGroup.NETWORK_DEFAULT_NAME, "default group" );
-      } catch ( Exception e1 ) {}
+        return create( ownerFullName, NetworkRulesGroup.NETWORK_DEFAULT_NAME, "default group" );
+      } catch ( Exception e1 ) {
+        throw new RuntimeException( "Failed to create default group: " + ownerFullName.toString( ) );
+      }
     }
   }
-
+  
   public static String defaultNetworkName( ) {
     return DEFAULT_NETWORK_NAME;
   }
+  
+  public static NetworkRulesGroup create( OwnerFullName ownerFullName, String groupName, String groupDescription ) {
+    try {
+      return Transactions.save( new NetworkRulesGroup( ownerFullName, groupName, groupDescription ) );
+    } catch ( ExecutionException ex ) {
+      LOG.error( ex, ex );
+      throw new RuntimeException( "Failed to create group: " + groupName + " for user: " + ownerFullName );
+    }
+  }
 
+  public static void update( Integer useVlans, Integer addrsPerNet, Integer addrIndexMax, Integer addrIndexMax2, ArrayList<NetworkInfoType> activeNetworks ) {}
+  
 }

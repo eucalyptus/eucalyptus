@@ -73,22 +73,6 @@ import edu.ucsb.eucalyptus.cloud.VirtualBootRecord
 
 
 
-public class HeartbeatType extends EucalyptusMessage {
-  ArrayList<HeartbeatComponentType> components = new ArrayList<HeartbeatComponentType>();
-  ArrayList<ComponentType> started = new ArrayList<ComponentType>();
-  ArrayList<ComponentType> stopped = new ArrayList<ComponentType>();
-}
-public class HeartbeatResponseType extends EucalyptusMessage {}
-public class HeartbeatComponentType extends EucalyptusData {
-  String component;
-  String name;
-  public HeartbeatComponentType( String component, String name ) {
-    super( );
-    this.component = component;
-    this.name = name;
-  }
-}
-
 public class ComponentType extends EucalyptusData {
   String component;
   String name;
@@ -98,7 +82,8 @@ public class ComponentType extends EucalyptusData {
     this.name = name;
     this.uri = uri;
   }
-  public ComponentType( ) {}  
+  public ComponentType( ) {
+  }
   public ServiceConfiguration toConfiguration() {
     URI realUri = URI.create( this.getUri( ) );
     final ComponentId c = ComponentId.lookup( component );
@@ -110,39 +95,39 @@ public class ComponentProperty extends EucalyptusData {
   private String displayName;
   private String value;
   private String qualifiedName;
-    
+  
   public ComponentProperty(String type, String displayName, String value, String qualifiedName) {
     this.type = type;
-  this.displayName = displayName;
-  this.value = value;
-  this.qualifiedName = qualifiedName;
-  }     
+    this.displayName = displayName;
+    this.value = value;
+    this.qualifiedName = qualifiedName;
+  }
   public String getType() {
-  return type;
+    return type;
   }
   public void setType(String type) {
-  this.type = type;
+    this.type = type;
   }
   public String getQualifiedName() {
-  return qualifiedName;
+    return qualifiedName;
   }
   public void setQualifiedName(String qualifiedName) {
-  this.qualifiedName = qualifiedName;
+    this.qualifiedName = qualifiedName;
   }
   public String getDisplayName() {
-  return displayName;
+    return displayName;
   }
   public void setDisplayName(String displayName) {
-  this.displayName = displayName;
+    this.displayName = displayName;
   }
   public String getValue() {
-  return value;
+    return value;
   }
   public void setValue(String value) {
-  this.value = value;
-  }     
+    this.value = value;
+  }
 }
-public class StorageStateType extends EucalyptusMessage{
+public class StorageStateType extends BaseMessage{
   private String name;
   def StorageStateType() {
   }
@@ -152,7 +137,7 @@ public class StorageStateType extends EucalyptusMessage{
   }
 }
 
-public class WalrusStateType extends EucalyptusMessage{
+public class WalrusStateType extends BaseMessage{
   private String name;
   
   def WalrusStateType() {
@@ -164,9 +149,15 @@ public class WalrusStateType extends EucalyptusMessage{
 }
 
 
+/**
+ * GRZE:WARN: anything inheriting from this is (and /should be/) treated as in the 'ec2' vendor namespace as far as the IAM implementation is concerned. 
+ * There is no reason to annotate /any/ message which inherits from this class:
+ * - to get vendor namespace use ComponentId.getVendorName()
+ * - to get action use 
+ */
 @ComponentMessage(Eucalyptus.class)
 public class EucalyptusMessage extends BaseMessage implements Cloneable, Serializable {
-    
+  
   public EucalyptusMessage() {
     super();
   }
@@ -185,11 +176,10 @@ public class EucalyptusMessage extends BaseMessage implements Cloneable, Seriali
     this.userId = userId;
     this.effectiveUserId = userId;
   }
-
+  
   public MetaClass getMetaClass() {
     return metaClass;
   }
-  
 }
 
 public class ExceptionResponseType extends BaseMessage {
@@ -198,7 +188,8 @@ public class ExceptionResponseType extends BaseMessage {
   String requestType = "not available";
   Throwable exception;
   HttpResponseStatus httpStatus = HttpResponseStatus.BAD_REQUEST;
-  public ExceptionResponseType() {}
+  public ExceptionResponseType() {
+  }
   public ExceptionResponseType( BaseMessage msg, String message, Throwable exception ) {
     this.message = message!=null?message:"not available";
     this.setUserId( msg.getUserId( ) );
@@ -206,7 +197,7 @@ public class ExceptionResponseType extends BaseMessage {
     this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
     this.exception = exception;
     this.set_return(false);
-  } 
+  }
   public ExceptionResponseType( BaseMessage msg, String message, HttpResponseStatus httpStatus, Throwable exception ) {
     this.httpStatus = httpStatus;
     this.message = message!=null?message:"not available"
@@ -215,7 +206,7 @@ public class ExceptionResponseType extends BaseMessage {
     this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
     this.exception = exception;
     this.set_return(false);
-  } 
+  }
 }
 
 public class EucalyptusErrorMessageType extends EucalyptusMessage {
@@ -242,7 +233,6 @@ public class EucalyptusErrorMessageType extends EucalyptusMessage {
   public String toString() {
     return String.format("SERVICE: %s PROBLEM: %s MSG-TYPE: %s", this.source, this.message, this.requestType);
   }
-  
 }
 
 public class EucalyptusData implements BaseData {
@@ -257,7 +247,6 @@ public class EucalyptusData implements BaseData {
   public Object clone(){
     return super.clone();
   }
-
 }
 /** *******************************************************************************/
 public class DescribeResourcesType extends EucalyptusMessage {
@@ -271,10 +260,10 @@ public class NodeType extends EucalyptusData {
     return "NodeType ${URI.create(serviceTag).getHost()} ${iqn}";
   }
 }
-public class DescribeResourcesResponseType extends EucalyptusMessage {
+public class DescribeResourcesResponseType extends CloudClusterMessage {
   ArrayList<ResourceType> resources = new ArrayList<ResourceType>();
   ArrayList<NodeType> nodes = new ArrayList<NodeType>();
-  ArrayList<String> serviceTags = new ArrayList<String>();  
+  ArrayList<String> serviceTags = new ArrayList<String>();
   
   public String toString() {
     String out = "";
@@ -304,23 +293,23 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
     this.cores = cores;
     this.rootDeviceName = rootDevice;
   }
-
+  
   public VmTypeInfo child( ) {
     VmTypeInfo child = new VmTypeInfo( this.name, this.memory, this.disk, this.cores, this.rootDeviceName );
     child.deviceMappings.addAll( this.deviceMappings );
     child.virtualBootRecord.addAll( this.virtualBootRecord.collect{ (VirtualBootRecord) it.clone() } );
     return child;
   }
-    
+  
   @Override
   public String toString() {
     return "VmTypeInfo ${name} mem=${memory} disk=${disk} cores=${cores}";
   }
   
   public void setEbsRoot( String imageId, String iqn, Long sizeBytes ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes/1024l, resourceLocation : "${iqn}", guestDeviceName : this.rootDeviceName, type : "ebs" ) );//TODO:GRZE: folow up on the iqn:// 
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes/1024l, resourceLocation : "${iqn}", guestDeviceName : this.rootDeviceName, type : "ebs" ) );//TODO:GRZE: folow up on the iqn://
   }
-
+  
   public void setRoot( String imageId, String location, Long sizeBytes ) {
     this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes/1024l, resourceLocation : "walrus://${location}", guestDeviceName : this.rootDeviceName, type : "machine" ) );
   }
@@ -328,19 +317,19 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
   public void setKernel( String imageId, String location ) {
     this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : "walrus://${location}", type : "kernel" ) );
   }
-
+  
   public void setRamdisk( String imageId, String location ) {
     this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : "walrus://${location}", type : "ramdisk" ) );
   }
-
+  
   protected void setSwap( String deviceName, Long sizeBytes ) {
     this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes/1024l, , type : "swap", format : "swap" ) );
   }
-
+  
   public void setEphemeral( Integer index, String deviceName, Long sizeBytes ) {
     this.virtualBootRecord.add( new VirtualBootRecord( type : "ephemeral" + index, guestDeviceName : deviceName, size : sizeBytes/1024l ) );
   }
-
+  
   public VirtualBootRecord lookupRoot( ) throws NoSuchElementException {
     VirtualBootRecord ret;
     if (( ret = this.virtualBootRecord.find{ VirtualBootRecord vbr -> vbr.type == "machine" })==null ) {
@@ -375,7 +364,7 @@ public class ResourceType extends EucalyptusData {
   int maxInstances;
   int availableInstances;
   public String toString() {
-    return "ResourceType ${instanceType} ${availableInstances} / ${maxInstances}"; 
+    return "ResourceType ${instanceType} ${availableInstances} / ${maxInstances}";
   }
 }
 public class NetworkConfigType extends EucalyptusData {
@@ -399,7 +388,6 @@ public class NetworkConfigType extends EucalyptusData {
   public String toString() {
     return "NetworkConfig ${vlan} ${networkIndex} ${ipAddress} ${ignoredPublicIp} ${privateDnsName} ${publicDnsName}";
   }
-  
 }
 
 public class NetworkParameters extends EucalyptusData {
@@ -465,7 +453,6 @@ public class PacketFilterRule extends EucalyptusData {
     this.sourceNetworkNames.add( peer.getSourceNetworkName() );
     this.sourceUserNames.add(peer.userName);
   }
-  
 }
 
 public class VmNetworkPeer  extends EucalyptusData {
@@ -506,8 +493,10 @@ public class VmNetworkPeer  extends EucalyptusData {
 }
 
 
+public class CloudGatherLogMessage extends EucalyptusMessage {
+}
 
-public class GetLogsType extends EucalyptusMessage implements Comparable {
+public class GetLogsType extends CloudGatherLogMessage implements Comparable {
   String serviceTag;
   def GetLogsType(){
   }
@@ -518,10 +507,10 @@ public class GetLogsType extends EucalyptusMessage implements Comparable {
     return this.serviceTag.compareTo(((GetLogsType)o).serviceTag);
   }
 }
-public class GetLogsResponseType extends EucalyptusMessage {
+public class GetLogsResponseType extends CloudGatherLogMessage {
   NodeLogInfo logs = new NodeLogInfo();
 }
-public class GetKeysType extends EucalyptusMessage implements Comparable {
+public class GetKeysType extends CloudGatherLogMessage implements Comparable {
   String serviceTag;
   def GetKeysType(){
   }
@@ -532,9 +521,8 @@ public class GetKeysType extends EucalyptusMessage implements Comparable {
   public int compareTo(Object o) {
     return this.serviceTag.compareTo(((GetKeysType)o).serviceTag);
   }
-  
 }
-public class GetKeysResponseType extends EucalyptusMessage {
+public class GetKeysResponseType extends CloudGatherLogMessage {
   NodeCertInfo certs = new NodeCertInfo();
 }
 
@@ -555,7 +543,6 @@ public class NodeCertInfo extends EucalyptusData implements Comparable {
     ", ncCert='" + ncCert + '\'' +
     ']';
   }
-  
 }
 
 public class NodeLogInfo extends EucalyptusData implements Comparable {
@@ -568,25 +555,9 @@ public class NodeLogInfo extends EucalyptusData implements Comparable {
   public int compareTo(Object o) {
     return this.serviceTag.compareTo(((NodeLogInfo)o).serviceTag);
   }
-  
 }
 
-public class HeartbeatMessage extends EucalyptusMessage implements Cloneable, Serializable {
-  String heartbeatId;
-  
-  def HeartbeatMessage(final String heartbeatId) {
-    this.heartbeatId = heartbeatId;
-  }
-  
-  def HeartbeatMessage() {
-  }
-  
-  
-}
-
-
-
-public class StatEventRecord extends EucalyptusMessage {
+public class StatEventRecord extends BaseMessage {
   
   protected String service = "Eucalyptus";
   protected String version = "Unknown";
@@ -612,7 +583,7 @@ public class ComponentMessageType extends BaseMessage {
   
   def ComponentMessageType() {
   }
-
+  
   def ComponentMessageType(String component) {
     this.component = component;
   }

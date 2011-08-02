@@ -66,7 +66,7 @@ package com.eucalyptus.cluster.callback;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.network.Networks;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.BroadcastCallback;
 import com.google.common.collect.Lists;

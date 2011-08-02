@@ -66,6 +66,7 @@ package com.eucalyptus.blockstorage;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -130,7 +131,7 @@ public class Snapshots {
     }
     try {
       ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, true, snap.getVolumeSize( ), snap.getOwnerUserId( ),
-                                                                   snap.getOwnerAccountId( ), snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
+                                                                   snap.getOwnerAccountNumber( ), snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
     } catch ( EventFailedException ex ) {
       LOG.error( ex, ex );
     }
@@ -151,7 +152,14 @@ public class Snapshots {
   }
   
   public static Snapshot lookup( UserFullName userFullName, String snapshotId ) throws ExecutionException {
-    return Transactions.find( Snapshot.named( userFullName, snapshotId ) );
+    return Transactions.find( Snapshots.named( userFullName, snapshotId ) );
   }
   
+  public static Snapshot lookup( AccountFullName accountFullName, String snapshotId ) throws ExecutionException {
+    return Transactions.find( Snapshots.named( accountFullName, snapshotId ) );
+  }
+
+  public static Snapshot named( final UserFullName userFullName, String snapshotId ) {
+    return new Snapshot( userFullName, snapshotId );
+  }
 }

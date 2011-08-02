@@ -15,6 +15,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.RecoverablePersistenceException;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.TypeClerk;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -36,6 +37,10 @@ public class NetworkGroupManager {
   
   public CreateSecurityGroupResponseType create( CreateSecurityGroupType request ) throws EucalyptusCloudException {
     Context ctx = Contexts.lookup();
+    NetworkGroups.createDefault( ctx.getUserFullName( ) );/** GRZE:WARN: do this /first/, ensure the default group exists to cover some old broken installs **/
+    if ( !TypeClerk.isContextAuthorized( null ) ) {
+      
+    }
     String action = PolicySpec.requestToAction( request );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
@@ -45,9 +50,8 @@ public class NetworkGroupManager {
         throw new EucalyptusCloudException( "Quota exceeded to create network group for " + ctx.getUser( ) );
       }
     }
-    NetworkGroups.makeDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
     CreateSecurityGroupResponseType reply = ( CreateSecurityGroupResponseType ) request.getReply( );
-    NetworkRulesGroup newGroup = new NetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ), request.getGroupDescription( ) ); 
+    NetworkRulesGroup newGroup = NetworkGroups.create( ctx.getUserFullName( ), request.getGroupName( ), request.getGroupDescription( ) ); 
     try {
       EntityWrapper.get( NetworkRulesGroup.class ).mergeAndCommit( newGroup );
       return reply;
@@ -63,7 +67,7 @@ public class NetworkGroupManager {
   
   public DeleteSecurityGroupResponseType delete( DeleteSecurityGroupType request ) throws EucalyptusCloudException {
     Context ctx = Contexts.lookup();
-    NetworkGroups.makeDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
+    NetworkGroups.createDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
     DeleteSecurityGroupResponseType reply = ( DeleteSecurityGroupResponseType ) request.getReply( );
     if ( Contexts.lookup().hasAdministrativePrivileges() && request.getGroupName( ).indexOf( "::" ) != -1 ) {
       String[] nameParts = request.getGroupName( ).split( "::" );
@@ -100,7 +104,7 @@ public class NetworkGroupManager {
   
   public DescribeSecurityGroupsResponseType describe( final DescribeSecurityGroupsType request ) throws EucalyptusCloudException {
     final Context ctx = Contexts.lookup();
-    NetworkGroups.makeDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
+    NetworkGroups.createDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
     final List<String> groupNames = request.getSecurityGroupSet( );
     DescribeSecurityGroupsResponseType reply = ( DescribeSecurityGroupsResponseType ) request.getReply( );
     final List<SecurityGroupItemType> replyList = reply.getSecurityGroupInfo( );
@@ -141,7 +145,7 @@ public class NetworkGroupManager {
   
   public RevokeSecurityGroupIngressResponseType revoke( RevokeSecurityGroupIngressType request ) throws EucalyptusCloudException {
     Context ctx = Contexts.lookup();
-    NetworkGroups.makeDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
+    NetworkGroups.createDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
     RevokeSecurityGroupIngressResponseType reply = ( RevokeSecurityGroupIngressResponseType ) request.getReply( );
     NetworkRulesGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ) );
     if ( !ctx.hasAdministrativePrivileges( ) && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, request.getGroupName( ), ctx.getAccount( ), PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
@@ -167,7 +171,7 @@ public class NetworkGroupManager {
         for ( NetworkRule r : filtered ) {
           ruleGroup.getNetworkRules( ).remove( r );
         }
-        ruleGroup = NetworkGroupUtil.getEntityWrapper( ).mergeAndCommit( ruleGroup );
+        ruleGroup = EntityWrapper.get( NetworkRulesGroup.class ).mergeAndCommit( ruleGroup );
       } catch ( RecoverablePersistenceException ex ) {
         LOG.error( ex , ex );
         throw new EucalyptusCloudException( "RevokeSecurityGroupIngress failed because: " + ex.getMessage( ), ex );
@@ -182,7 +186,7 @@ public class NetworkGroupManager {
       }
       if ( reply.get_return( ) ) {
         try {
-          ruleGroup = NetworkGroupUtil.getEntityWrapper( ).mergeAndCommit( ruleGroup );
+          ruleGroup = EntityWrapper.get( NetworkRulesGroup.class ).mergeAndCommit( ruleGroup );
         } catch ( RecoverablePersistenceException ex ) {
           LOG.error( ex , ex );
           throw new EucalyptusCloudException( "RevokeSecurityGroupIngress failed because: " + ex.getMessage( ), ex );
@@ -196,9 +200,9 @@ public class NetworkGroupManager {
   
   public AuthorizeSecurityGroupIngressResponseType authorize( AuthorizeSecurityGroupIngressType request ) throws Exception {
     Context ctx = Contexts.lookup();
-    NetworkGroups.makeDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
+    NetworkGroups.createDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
     AuthorizeSecurityGroupIngressResponseType reply = ( AuthorizeSecurityGroupIngressResponseType ) request.getReply( );
-    EntityWrapper<NetworkRulesGroup> db = NetworkGroupUtil.getEntityWrapper( );
+    EntityWrapper<NetworkRulesGroup> db = EntityWrapper.get( NetworkRulesGroup.class );
     NetworkRulesGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ) );
     if ( !ctx.hasAdministrativePrivileges( ) && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, request.getGroupName( ), ctx.getAccount( ), PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to authorize network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );

@@ -76,7 +76,6 @@ import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.Partition;
@@ -86,6 +85,7 @@ import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkRulesGroup;
+import com.eucalyptus.network.Networks;
 import com.eucalyptus.util.Counters;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.vm.VmType;
@@ -93,7 +93,6 @@ import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
@@ -151,12 +150,12 @@ public class Allocations {
       return this.request;
     }
     
-    public Network getPrimaryNetwork( ) {
+    public NetworkRulesGroup getPrimaryNetwork( ) {
       if ( this.networkRulesGroups.size( ) < 1 ) {
         throw new IllegalArgumentException( "At least one network group must be specified." );
       } else {
         NetworkRulesGroup firstRules = this.networkRulesGroups.values( ).iterator( ).next( );
-        return firstRules.getVmNetwork( );
+        return firstRules;
       }
     }
     
@@ -187,16 +186,10 @@ public class Allocations {
       }
     }
     
-    public List<Network> getNetworks( ) {
-      return Lists.newArrayList( Iterables.transform( this.networkRulesGroups.values( ), new Function<NetworkRulesGroup, Network>( ) {
-        
-        @Override
-        public Network apply( NetworkRulesGroup input ) {
-          return input.getVmNetwork( );
-        }
-      } ) );
+    public List<NetworkRulesGroup> getNetworkRulesGroups( ) {
+      return Lists.newArrayList( this.networkRulesGroups.values( ) );
     }
-    
+
     public ResourceToken requestResourceToken( ClusterNodeState state, String vmTypeName, int tryAmount, int maxAmount ) throws NotEnoughResourcesAvailable {
       ResourceToken rscToken = state.getResourceAllocation( this.request.getCorrelationId( ), this.ownerFullName, vmTypeName, tryAmount, maxAmount );
       this.allocationTokens.add( rscToken );
@@ -204,7 +197,7 @@ public class Allocations {
     }
     
     public void requestNetworkTokens( ) throws NotEnoughResourcesAvailable {
-      Network net = this.getPrimaryNetwork( );
+      NetworkRulesGroup net = this.getPrimaryNetwork( );
       for ( ResourceToken rscToken : this.allocationTokens ) {
         ClusterState clusterState = Clusters.getInstance( ).lookup( rscToken.getCluster( ) ).getState( );
         NetworkToken networkToken = clusterState.getNetworkAllocation( this.ownerFullName, rscToken, net.getName( ) );
@@ -213,12 +206,12 @@ public class Allocations {
     }
     
     public void requestNetworkIndexes( ) throws NotEnoughResourcesAvailable {
-      Network net = this.getPrimaryNetwork( );
+      NetworkRulesGroup net = this.getPrimaryNetwork( );
       for ( ResourceToken rscToken : this.allocationTokens ) {
         for ( int i = 0; i < rscToken.getAmount( ); i++ ) {
           Integer addrIndex = net.allocateNetworkIndex( rscToken.getCluster( ) );
           if ( addrIndex == null ) {
-            throw new NotEnoughResourcesAvailable( "Not enough addresses left in the network subnet assigned to requested group: " + net.getNetworkName( ) );
+            throw new NotEnoughResourcesAvailable( "Not enough addresses left in the network subnet assigned to requested group: " + net );
           }
           rscToken.getPrimaryNetwork( ).getIndexes( ).add( addrIndex );
         }

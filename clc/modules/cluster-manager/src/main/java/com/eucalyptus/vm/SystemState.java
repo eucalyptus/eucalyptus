@@ -89,10 +89,10 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NetworkAlreadyExistsException;
-import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.TerminateCallback;
@@ -106,15 +106,19 @@ import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
+import com.eucalyptus.network.Network;
 import com.eucalyptus.network.NetworkGroupUtil;
+import com.eucalyptus.network.NetworkGroups;
+import com.eucalyptus.network.NetworkRulesGroup;
+import com.eucalyptus.network.Networks;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
@@ -211,7 +215,7 @@ public class SystemState {
     if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && splitTime > SHUT_DOWN_TIME ) {
       vm.setState( VmState.TERMINATED, Reason.EXPIRED );
     } else if ( VmState.STOPPING.equals( vm.getState( ) ) && splitTime > SHUT_DOWN_TIME ) {
-        vm.setState( VmState.STOPPED, Reason.EXPIRED );
+      vm.setState( VmState.STOPPED, Reason.EXPIRED );
     } else if ( VmState.STOPPING.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
       vm.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
     } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
@@ -279,7 +283,7 @@ public class SystemState {
       String instanceUuid = runVm.getUuid( );
       String instanceId = runVm.getInstanceId( );
       String reservationId = runVm.getReservationId( );
-      UserFullName ownerId = UserFullName.getInstance( runVm.getOwnerId( ) );
+      final UserFullName ownerId = UserFullName.getInstance( runVm.getOwnerId( ) );
       String placement = cluster;
       byte[] userData = new byte[0];
       if ( runVm.getUserData( ) != null && runVm.getUserData( ).length( ) > 1 ) {
@@ -310,46 +314,21 @@ public class SystemState {
         key = KeyPairs.noKey( );
       }
       VmType vmType = VmTypes.getVmType( runVm.getInstanceType( ).getName( ) );
-      List<Network> networks = new ArrayList<Network>( );
-      
-      for ( String netName : runVm.getGroupNames( ) ) {
-        Network notwork = null;
-        try {
-          notwork = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + netName );
-          networks.add( notwork );
+      List<NetworkRulesGroup> networks = Lists.transform( runVm.getGroupNames( ), new Function<String, NetworkRulesGroup>( ) {
+
+        @Override
+        public NetworkRulesGroup apply( String arg0 ) {
           try {
-            NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName,
-                                                                                                                          notwork.getUuid( ),
-                                                                                                                          runVm.getNetParams( ).getVlan( ) );
-            notwork.addTokenIfAbsent( netToken );
-          } catch ( NetworkAlreadyExistsException e ) {
-            LOG.trace( e );
-          }
-          notwork.extantNetworkIndex( runVm.getPlacement( ), runVm.getNetParams( ).getNetworkIndex( ) );
-        } catch ( NoSuchElementException e1 ) {
-          try {
-            //TODO:GRZE:RESTORE
-            try {
-              notwork = NetworkGroupUtil.getUserNetworkRulesGroup( UserFullName.getInstance( runVm.getOwnerId( ) ), netName ).getVmNetwork( );
-            } catch ( Exception e ) {
-              notwork = NetworkGroupUtil.getUserNetworkRulesGroup( UserFullName.getInstance( runVm.getOwnerId( ) ), "default" ).getVmNetwork( );
-            }
-            networks.add( notwork );
-            NetworkToken netToken = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getState( ).extantAllocation( runVm.getOwnerId( ), netName,
-                                                                                                                          notwork.getUuid( ),
-                                                                                                                          runVm.getNetParams( ).getVlan( ) );
-            notwork.addTokenIfAbsent( netToken );
-            Networks.getInstance( ).registerIfAbsent( notwork, Networks.State.ACTIVE );
-//          } catch ( EucalyptusCloudException e ) {
-//            LOG.error( e );
-//            ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-//            Callbacks.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
-          } catch ( NetworkAlreadyExistsException e ) {
-            LOG.trace( e );
+            return NetworkGroups.lookup( ownerId, arg0 );
+          } catch ( NoSuchMetadataException ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
+            throw new RuntimeException( "Failed to find information for group owned by: " + ownerId + " which is called " + arg0 );
           }
         }
-      }
-      VmInstance vm = new VmInstance( ownerId, instanceId, instanceUuid, reservationId, launchIndex, placement, userData, runVm.getInstanceType( ), key, vmType,
+      } );
+      VmInstance vm = new VmInstance( ownerId, instanceId, instanceUuid, reservationId, launchIndex, placement, userData, runVm.getInstanceType( ), key,
+                                      vmType,
                                       img.getPlatform( ).toString( ),
                                       networks,
                                       Integer.toString( runVm.getNetParams( ).getNetworkIndex( ) ) );

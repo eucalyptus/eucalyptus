@@ -81,6 +81,10 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
     this.modelContent = loadModel( );
   }
+
+  public String getVendorName( ) {
+    return "euca";
+  }
   
   private String loadModel( ) {
     StringWriter out = new StringWriter( );

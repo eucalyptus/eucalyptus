@@ -220,7 +220,7 @@ public class VerifyMetadata {
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
       Context ctx = allocInfo.getContext( );
-      NetworkGroups.makeDefault( ctx.getUserFullName( ) );
+      NetworkGroups.createDefault( ctx.getUserFullName( ) );
       
       Set<String> networkNames = Sets.newHashSet( allocInfo.getRequest( ).getGroupSet( ) );
       if ( networkNames.isEmpty( ) ) {

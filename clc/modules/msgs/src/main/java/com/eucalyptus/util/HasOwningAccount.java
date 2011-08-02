@@ -64,6 +64,6 @@
 package com.eucalyptus.util;
 
 public interface HasOwningAccount {
-  public abstract String getOwnerAccountId( );
-  public abstract FullName getOwner( );
+  public abstract String getOwnerAccountNumber( );
+  public abstract OwnerFullName getOwner( );
 }

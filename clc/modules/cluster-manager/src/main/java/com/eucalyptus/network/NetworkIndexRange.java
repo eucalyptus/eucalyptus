@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,20 +61,23 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.util;
+package com.eucalyptus.network;
 
-import java.util.NoSuchElementException;
-import javax.persistence.PersistenceException;
-
-public interface Lookup<T extends HasOwningAccount> {
-
-  /**
-   * Lookup the object {@code T} referenced by {@code identifier}. 
-   * @param identifier
-   * @return T the object referenced by the given {@code identifier}
-   * @throws PersistenceException if an error occurred in the underlying retrieval mechanism
-   * @throws NoSuchElementException if the requested {@code identifier} does not exist and the user is authorized.
-   */
-  public T lookup( String identifier );
+public class NetworkIndexRange {
+  final Integer min;
+  final Integer max;
   
+  public NetworkIndexRange( Integer min, Integer max ) {
+    super( );
+    this.min = min;
+    this.max = max;
+  }
+  
+  public int min( ) {
+    return this.min;
+  }
+  
+  public int max( ) {
+    return this.max;
+  }
 }

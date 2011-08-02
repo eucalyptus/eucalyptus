@@ -203,7 +203,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       }
       Account addrAccount = null;
       try {
-        addrAccount = Accounts.lookupAccountById( address.getOwnerAccountId( ) );
+        addrAccount = Accounts.lookupAccountById( address.getOwnerAccountNumber( ) );
       } catch ( AuthException e ) {
         throw new EucalyptusCloudException( e );
       }
@@ -215,6 +215,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   }
   
   public static Address allocate( BaseMessage request ) throws EucalyptusCloudException, NotEnoughResourcesAvailable {
+    //GRZE:WARN: not here.
     Context ctx = Contexts.lookup( );
     String action = PolicySpec.requestToAction( request );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
@@ -225,6 +226,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         throw new EucalyptusCloudException( "Exceeded quota in allocating address by " + ctx.getUser( ).getName( ) );
       }
     }
+    
     //TODO(wenye): add quota restriction.
 //TODO:GRZE:FIXME    Addresses.policyLimits( userId, isAdministrator );
     return Addresses.getAddressManager( ).allocateNext( ctx.getUserFullName( ) );

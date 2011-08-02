@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,32 +61,15 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component.id;
+package com.eucalyptus.auth.policy;
 
-import com.eucalyptus.component.ComponentId;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-
-public class Walrus extends ComponentId.Unpartioned {
-
-  @Override
-  public String getLocalEndpointName( ) {
-    return "vm://BukkitInternal";
-  }
-  
-  @Override
-  public Boolean hasCredentials( ) {
-    return true;
-  }
-  
-  @Override
-  public boolean isUserService( ) {
-    return true;
-  }
-
-  @Override
-  public String getVendorName( ) {
-    return "s3";
-  }
-
-
+@Target( { ElementType.TYPE } )
+@Retention( RetentionPolicy.RUNTIME )
+public @interface PolicyVendor {
+  String value( );
 }

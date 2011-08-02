@@ -1,7 +1,7 @@
 package edu.ucsb.eucalyptus.msgs;
 
 
-public class VPNMessageType extends EucalyptusMessage {
+public class VpmMessage extends EucalyptusMessage {
 }
 
 public class AttachmentType extends EucalyptusData {
@@ -76,141 +76,141 @@ public class DhcpOptionsType extends EucalyptusData {
 public class DhcpValueType extends EucalyptusData {
   String value;
 }
-public class CreateCustomerGatewayType extends VPNMessageType {
+public class CreateCustomerGatewayType extends VpmMessage {
   String type;
   String ipAddress;
   Integer bgpAsn;
 }
-public class CreateCustomerGatewayResponseType extends VPNMessageType {
+public class CreateCustomerGatewayResponseType extends VpmMessage {
   String requestId;
   CustomerGatewayType customerGateway;
 }
 
-public class DeleteCustomerGatewayType extends VPNMessageType {
+public class DeleteCustomerGatewayType extends VpmMessage {
   String customerGatewayId;
 }
-public class DeleteCustomerGatewayResponseType extends VPNMessageType {
+public class DeleteCustomerGatewayResponseType extends VpmMessage {
 }
 
-public class DescribeCustomerGatewaysType extends VPNMessageType {
+public class DescribeCustomerGatewaysType extends VpmMessage {
   ArrayList<String> customerGatewaySet;
   ArrayList<Filter> filterSet;
 }
-public class DescribeCustomerGatewaysResponseType extends VPNMessageType {
+public class DescribeCustomerGatewaysResponseType extends VpmMessage {
   ArrayList<CustomerGatewayType> customerGatewaySet;
 }
-public class CreateVpnGatewayType extends VPNMessageType {
+public class CreateVpnGatewayType extends VpmMessage {
   String type;
   String availabilityZone;
 }
-public class CreateVpnGatewayResponseType extends VPNMessageType {
+public class CreateVpnGatewayResponseType extends VpmMessage {
   String requestId;
   String vpnGateway;
 }
 
-public class DeleteVpnGatewayType extends VPNMessageType {
+public class DeleteVpnGatewayType extends VpmMessage {
   String vpnGatewayId;
 }
-public class DeleteVpnGatewayResponseType extends VPNMessageType {
+public class DeleteVpnGatewayResponseType extends VpmMessage {
 }
-public class DescribeVpnGatewaysType extends VPNMessageType {
+public class DescribeVpnGatewaysType extends VpmMessage {
   ArrayList<String> vpnGatewaySet;
   ArrayList<Filter> filterSet;
 }
-public class DescribeVpnGatewaysResponseType extends VPNMessageType {
+public class DescribeVpnGatewaysResponseType extends VpmMessage {
   ArrayList<VpnGatewayType> vpnGatewaySet;
 }
-public class CreateVpnConnectionType extends VPNMessageType {
+public class CreateVpnConnectionType extends VpmMessage {
   String type;
   String customerGatewayId;
   String vpnGatewayId;
 }
-public class CreateVpnConnectionResponseType extends VPNMessageType {
+public class CreateVpnConnectionResponseType extends VpmMessage {
   VpnConnectionType vpnConnection;
 }
-public class DeleteVpnConnectionType extends VPNMessageType {
+public class DeleteVpnConnectionType extends VpmMessage {
   String vpnConnectionId;
 }
-public class DeleteVpnConnectionResponseType extends VPNMessageType {
+public class DeleteVpnConnectionResponseType extends VpmMessage {
 }
-public class DescribeVpnConnectionsType extends VPNMessageType {
+public class DescribeVpnConnectionsType extends VpmMessage {
   ArrayList<String> vpnConnectionSet;
   ArrayList<Filter> filterSet;
 }
-public class DescribeVpnConnectionsResponseType extends VPNMessageType {
+public class DescribeVpnConnectionsResponseType extends VpmMessage {
   ArrayList<VpnConnectionType> vpnConnectionSet;
 }
-public class AttachVpnGatewayType extends VPNMessageType {
+public class AttachVpnGatewayType extends VpmMessage {
   String vpnGatewayId;
   String vpcId;
 }
-public class AttachVpnGatewayResponseType extends VPNMessageType {
+public class AttachVpnGatewayResponseType extends VpmMessage {
   AttachmentType attachment;
 }
-public class DetachVpnGatewayType extends VPNMessageType {
+public class DetachVpnGatewayType extends VpmMessage {
   String vpnGatewayId;
   String vpcId;
 }
-public class DetachVpnGatewayResponseType extends VPNMessageType {
+public class DetachVpnGatewayResponseType extends VpmMessage {
 }
-public class CreateVpcType extends VPNMessageType {
+public class CreateVpcType extends VpmMessage {
   String cidrBlock;
 }
-public class CreateVpcResponseType extends VPNMessageType {
+public class CreateVpcResponseType extends VpmMessage {
   VpcType vpc;
 }
-public class DescribeVpcsType extends VPNMessageType {
+public class DescribeVpcsType extends VpmMessage {
   ArrayList<String> vpcSet;
   ArrayList<Filter> filterSet;
 }
-public class DescribeVpcsResponseType extends VPNMessageType {
+public class DescribeVpcsResponseType extends VpmMessage {
   ArrayList<VpcType> vpcSet;
 }
-public class DeleteVpcType extends VPNMessageType {
+public class DeleteVpcType extends VpmMessage {
   String vpcId;
 }
-public class DeleteVpcResponseType extends VPNMessageType {
+public class DeleteVpcResponseType extends VpmMessage {
 }
-public class CreateSubnetType extends VPNMessageType {
+public class CreateSubnetType extends VpmMessage {
   String vpcId;
   String cidrBlock;
   String availabilityZone;
 }
-public class CreateSubnetResponseType extends VPNMessageType {
+public class CreateSubnetResponseType extends VpmMessage {
   SubnetType subnet;
 }
-public class DescribeSubnetsType extends VPNMessageType {
+public class DescribeSubnetsType extends VpmMessage {
   ArrayList<String> subnetSet;
   ArrayList<Filter> filterSet;
 }
-public class DescribeSubnetsResponseType extends VPNMessageType {
+public class DescribeSubnetsResponseType extends VpmMessage {
   ArrayList<SubnetType> subnetSet;
 }
-public class DeleteSubnetType extends VPNMessageType {
+public class DeleteSubnetType extends VpmMessage {
   String subnetId;
 }
-public class DeleteSubnetResponseType extends VPNMessageType {
+public class DeleteSubnetResponseType extends VpmMessage {
 }
-public class DeleteDhcpOptionsType extends VPNMessageType {
+public class DeleteDhcpOptionsType extends VpmMessage {
   String dhcpOptionsId;
 }
-public class DeleteDhcpOptionsResponseType extends VPNMessageType {
+public class DeleteDhcpOptionsResponseType extends VpmMessage {
 }
-public class DescribeDhcpOptionsType extends VPNMessageType {
+public class DescribeDhcpOptionsType extends VpmMessage {
   ArrayList<String> dhcpOptionsSet;
 }
-public class DescribeDhcpOptionsResponseType extends VPNMessageType {
+public class DescribeDhcpOptionsResponseType extends VpmMessage {
   ArrayList<DhcpOptionsType> dhcpOptionsSet;
 }
-public class CreateDhcpOptionsType extends VPNMessageType {
+public class CreateDhcpOptionsType extends VpmMessage {
   ArrayList<DhcpConfigurationItemType> dhcpConfigurationSet;
 }
-public class CreateDhcpOptionsResponseType extends VPNMessageType {
+public class CreateDhcpOptionsResponseType extends VpmMessage {
   DhcpOptionsType dhcpOptions;
 }
-public class AssociateDhcpOptionsType extends VPNMessageType {
+public class AssociateDhcpOptionsType extends VpmMessage {
   String dhcpOptionsId;
   String vpcId;
 }
-public class AssociateDhcpOptionsResponseType extends VPNMessageType {
+public class AssociateDhcpOptionsResponseType extends VpmMessage {
 }

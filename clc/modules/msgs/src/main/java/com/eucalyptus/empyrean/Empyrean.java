@@ -92,6 +92,12 @@ public class Empyrean extends ComponentId.Unpartioned {
     return this.name( );
   }
   
+  @Override
+  public String getVendorName( ) {
+    return "euca";
+  }
+
+  
   public Empyrean( ) {
     super( "Bootstrap" );
   }

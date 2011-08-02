@@ -89,8 +89,8 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasOwningAccount;
-import com.eucalyptus.util.Lookup;
-import com.eucalyptus.util.Lookups;
+import com.eucalyptus.util.TypeResolver;
+import com.eucalyptus.util.TypeClerk;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Preconditions;
@@ -117,7 +117,7 @@ public class Emis {
     
   }
   
-  public enum LookupBlockStorage implements Lookup<BlockStorageImageInfo> {
+  public enum LookupBlockStorage implements TypeResolver<BlockStorageImageInfo> {
     INSTANCE;
     @Override
     public BlockStorageImageInfo lookup( String identifier ) {
@@ -125,7 +125,7 @@ public class Emis {
     }
   }
   
-  public enum LookupMachine implements Lookup<MachineImageInfo> {
+  public enum LookupMachine implements TypeResolver<MachineImageInfo> {
     INSTANCE;
     @Override
     public MachineImageInfo lookup( String identifier ) {
@@ -133,7 +133,7 @@ public class Emis {
     }
   }
   
-  public enum LookupKernel implements Lookup<KernelImageInfo> {
+  public enum LookupKernel implements TypeResolver<KernelImageInfo> {
     INSTANCE;
     @Override
     public KernelImageInfo lookup( String identifier ) {
@@ -141,7 +141,7 @@ public class Emis {
     }
   }
   
-  public enum LookupRamdisk implements Lookup<RamdiskImageInfo> {
+  public enum LookupRamdisk implements TypeResolver<RamdiskImageInfo> {
     INSTANCE;
     @Override
     public RamdiskImageInfo lookup( String identifier ) {
@@ -393,7 +393,7 @@ public class Emis {
    * @throws NoSuchElementException if the requested {@code identifier} does not exist and the user is authorized.
    * @throws IllegalContextAccessException if the current request context cannot be determined.
    */
-  private static <T extends ImageInfo> T doPrivileged( String identifier, Lookup<T> lookupFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  private static <T extends ImageInfo> T doPrivileged( String identifier, TypeResolver<T> lookupFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + lookupFunction + " typed as " + Classes.genericsToClasses( lookupFunction ) );
     List<Class> lookupTypes = Classes.genericsToClasses( lookupFunction );
     if( lookupTypes.isEmpty( ) ) {

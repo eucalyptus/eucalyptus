@@ -68,9 +68,13 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import com.eucalyptus.util.Classes;
 import com.google.common.collect.Lists;
+import com.google.common.collect.MapMaker;
+import com.google.common.collect.Maps;
 
 /**
  * A builder-like utility for interrogating the {@link Annotation}s that may be present on instances
@@ -103,20 +107,25 @@ public class Ats {
   }
   
   public <A extends Annotation> A get( Class<A> annotation ) {
-    for ( AnnotatedElement a : this.ancestry ) {
+    AnnotatedElement decl = find( annotation );
+    return decl == null ? null : decl.getAnnotation( annotation );
+  }
+
+  public <A extends Annotation> AnnotatedElement find( final Class<A> annotation ) {
+    for ( final AnnotatedElement a : this.ancestry ) {
       if ( a.isAnnotationPresent( annotation ) ) {
-        return ( A ) a.getAnnotation( annotation );
+        return a;
       } else if ( a instanceof Class ) {
-        for ( Class inter : ( ( Class ) a ).getInterfaces( ) ) {
+        for ( Class<?> inter : ( ( Class<?> ) a ).getInterfaces( ) ) {
           if ( inter.isAnnotationPresent( annotation ) ) {
-            return ( A ) inter.getAnnotation( annotation );
+            return inter;
           }
         }
       }
     }
-    return ( A ) this.ancestry.get( 0 ).getAnnotation( annotation );
+    return this.ancestry.get( 0 );
   }
-  
+
   public static Ats from( Object o ) {
     if ( o instanceof Class ) {
       return new Ats( ( AnnotatedElement ) o );

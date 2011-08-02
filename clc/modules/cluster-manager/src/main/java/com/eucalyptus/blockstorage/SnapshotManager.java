@@ -82,7 +82,7 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.Lookups;
+import com.eucalyptus.util.TypeClerk;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Predicate;
@@ -136,7 +136,7 @@ public class SnapshotManager {
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
     edu.ucsb.eucalyptus.msgs.Snapshot snapMsg = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
     snapMsg.setProgress( "0%" );
-    snapMsg.setOwnerId( snap.getOwnerAccountId( ) );
+    snapMsg.setOwnerId( snap.getOwnerAccountNumber( ) );
     snapMsg.setVolumeSize( vol.getSize( ).toString( ) );
     reply.setSnapshot( snapMsg );
     return reply;
@@ -154,13 +154,13 @@ public class SnapshotManager {
     final Context ctx = Contexts.lookup( );
     boolean result = false;
     try {
-      result = Transactions.delete( Snapshot.named( ctx.getUserFullName( ), request.getSnapshotId( ) ), new Predicate<Snapshot>( ) {
+      result = Transactions.delete( Snapshots.named( ctx.getUserFullName( ), request.getSnapshotId( ) ), new Predicate<Snapshot>( ) {
         
         @Override
         public boolean apply( Snapshot snap ) {
           if ( !State.EXTANT.equals( snap.getState( ) ) ) {
             return false;
-          } else if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, request.getSnapshotId( ), snap.getOwner( ) ) ) {
+          } else if ( !TypeClerk.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, request.getSnapshotId( ), snap.getOwner( ) ) ) {
             throw Exceptions.undeclared( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ),
                                          new EucalyptusCloudException( ) );
           } else {
@@ -172,7 +172,7 @@ public class SnapshotManager {
                 try {
                   ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, true, snap.getVolumeSize( ),
                                                                                snap.getOwnerUserId( ),
-                                                                               snap.getOwnerAccountId( ), snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
+                                                                               snap.getOwnerAccountNumber( ), snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
                 } catch ( EventFailedException ex ) {
                   LOG.error( ex, ex );
                 }
@@ -199,10 +199,10 @@ public class SnapshotManager {
     
     EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
     try {
-      List<Snapshot> snapshots = db.query( Snapshot.ownedBy( ctx.getUserFullName( ) ) );
+      List<Snapshot> snapshots = db.query( Snapshots.named( ctx.getUserFullName( ), null ) );
       
       for ( Snapshot snap : snapshots ) {
-        if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, snap.getDisplayName( ), snap.getOwner( ) ) ) {
+        if ( !TypeClerk.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, snap.getDisplayName( ), snap.getOwner( ) ) ) {
           LOG.debug( "Skip snapshot " + snap.getDisplayName( ) + " due to access right" );
           continue;
         }
@@ -216,7 +216,7 @@ public class SnapshotManager {
               edu.ucsb.eucalyptus.msgs.Snapshot snapReply = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
               if ( storageSnapshot.getProgress( ) != null ) snapReply.setProgress( storageSnapshot.getProgress( ) );
               snapReply.setVolumeId( storageSnapshot.getVolumeId( ) );
-              snapReply.setOwnerId( snap.getOwnerAccountId( ) );
+              snapReply.setOwnerId( snap.getOwnerAccountNumber( ) );
               reply.getSnapshotSet( ).add( snapReply );
             }
           } catch ( NoSuchElementException e ) {

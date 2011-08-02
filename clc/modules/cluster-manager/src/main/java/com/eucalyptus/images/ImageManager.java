@@ -91,7 +91,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Lookups;
+import com.eucalyptus.util.TypeClerk;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
@@ -154,14 +154,14 @@ public class ImageManager {
           return false;
         }
         // Check if selected by specified owner account ID
-        if ( ownerSelectionSet.size( ) > 0 && !ownerSelectionSet.contains( image.getOwnerAccountId( ) ) ) {
+        if ( ownerSelectionSet.size( ) > 0 && !ownerSelectionSet.contains( image.getOwnerAccountNumber( ) ) ) {
           return false;
         }
         // Check if selected by explicit account permissions
         if ( exeByNonEmpty ) {
           if ( !( ( exeByHasAll && image.getImagePublic( ) ) ||   // public
                   ( exeByHasSelf && image.hasExplicitOrImplicitPermissionForOne( requestAccountId ) ) || // implicit or explicit, but no public
-                  ( exeBySelectionSet.size( ) > 0 && image.getOwnerAccountId( ).equals( requestAccountId ) && image.hasExplicitPermissionForAny( exeBySelectionSet ) ) // owned by self and executable by someone 
+                  ( exeBySelectionSet.size( ) > 0 && image.getOwnerAccountNumber( ).equals( requestAccountId ) && image.hasExplicitPermissionForAny( exeBySelectionSet ) ) // owned by self and executable by someone 
                 ) ) {
             return false;
           }
@@ -249,7 +249,7 @@ public class ImageManager {
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
-          ( !imgInfo.getOwnerAccountId( ).equals( requestAccountId ) ||
+          ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
             !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), null, action, requestUser ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to deregister image" );
       }
@@ -304,7 +304,7 @@ public class ImageManager {
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
-          ( !imgInfo.getOwnerAccountId( ).equals( requestAccountId ) ||
+          ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
             !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), null, action, requestUser ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to describe image attribute" );
       }
@@ -367,7 +367,7 @@ public class ImageManager {
     try {
       imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
-           ( !imgInfo.getOwnerAccountId( ).equals( requestAccountId ) ||
+           ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
              !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), null, action, requestUser ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to modify image attribute" );
       }
@@ -413,7 +413,7 @@ public class ImageManager {
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( ctx.hasAdministrativePrivileges( ) || 
-           ( imgInfo.getOwnerAccountId( ).equals( requestAccountId ) && 
+           ( imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) && 
              Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), null, action, requestUser ) ) ) {
         imgInfo.resetPermission( );
         db.commit( );          
@@ -439,7 +439,7 @@ public class ImageManager {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId( ) );
     }
-    if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, request.getInstanceId( ), vm.getOwner( ) ) ) {
+    if ( !TypeClerk.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, request.getInstanceId( ), vm.getOwner( ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to create an image from instance " + request.getInstanceId( ) + " as " + ctx.getUser( ).getName( ) );
     }
     if ( !VmState.RUNNING.equals( vm.getState( ) ) && !VmState.STOPPED.equals( vm.getState( ) ) ) {

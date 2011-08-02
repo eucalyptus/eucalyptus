@@ -70,7 +70,7 @@ import com.eucalyptus.binding.HttpParameterMapping;
 public class BlockVolumeMessage extends EucalyptusMessage {}
 public class BlockSnapshotMessage extends EucalyptusMessage {}
 
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_CREATEVOLUME )
+
 public class CreateVolumeType extends BlockVolumeMessage {
 
   String size;
@@ -81,14 +81,14 @@ public class CreateVolumeResponseType extends BlockVolumeMessage {
 
   Volume volume = new Volume();
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DELETEVOLUME )
+
 public class DeleteVolumeType extends BlockVolumeMessage {
 
   String volumeId;
 }
 public class DeleteVolumeResponseType extends BlockVolumeMessage {
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBEVOLUMES )
+
 public class DescribeVolumesType extends BlockVolumeMessage {
 
   @HttpParameterMapping (parameter = "VolumeId")
@@ -100,7 +100,7 @@ public class DescribeVolumesResponseType extends BlockVolumeMessage {
 
   ArrayList<Volume> volumeSet = new ArrayList<Volume>();
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_ATTACHVOLUME )
+
 public class AttachVolumeType extends BlockVolumeMessage {
 
   String volumeId;
@@ -112,7 +112,7 @@ public class AttachVolumeResponseType extends BlockVolumeMessage {
 
   AttachedVolume attachedVolume = new AttachedVolume();
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DETACHVOLUME )
+
 public class DetachVolumeType extends BlockVolumeMessage {
 
   String volumeId;
@@ -125,7 +125,7 @@ public class DetachVolumeResponseType extends BlockVolumeMessage {
 
   AttachedVolume detachedVolume = new AttachedVolume();
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_CREATESNAPSHOT )
+
 public class CreateSnapshotType extends BlockSnapshotMessage {
 
   String volumeId;
@@ -135,14 +135,14 @@ public class CreateSnapshotResponseType extends BlockSnapshotMessage {
 
   Snapshot snapshot = new Snapshot();
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DELETESNAPSHOT )
+
 public class DeleteSnapshotType extends BlockSnapshotMessage {
 
   String snapshotId;
 }
 public class DeleteSnapshotResponseType extends BlockSnapshotMessage {
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBESNAPSHOTS )
+
 public class DescribeSnapshotsType extends BlockSnapshotMessage {
 
   @HttpParameterMapping (parameter = "SnapshotId")

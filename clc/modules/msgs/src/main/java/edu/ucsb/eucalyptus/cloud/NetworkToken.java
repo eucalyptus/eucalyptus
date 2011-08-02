@@ -67,84 +67,24 @@ import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.network.NetworkGroups;
+import com.eucalyptus.network.NetworkRulesGroup;
+import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.Transactions;
 
 public class NetworkToken implements Comparable {
-  private final String networkUuid;
-  private final String networkName;
+  private final Integer           vlan;
+  private NavigableSet<Integer>   indexes = new ConcurrentSkipListSet<Integer>( );
+  private final NetworkRulesGroup ruleGroup;
   
-  public String getNetworkUuid( ) {
-    return this.networkUuid;
-  }
-  
-  public String getNetworkName( ) {
-    return this.networkName;
-  }
-  
-  private final String          cluster;
-  private final Integer         vlan;
-  private NavigableSet<Integer> indexes = new ConcurrentSkipListSet<Integer>( );
-  private final String          name;
-  private final UserFullName userFullName;
-  
-  public NetworkToken( final String cluster, final UserFullName userFullName, final String networkName, final String networkUuid, final int vlan ) {
-    this.networkName = networkName;
-    this.networkUuid = networkUuid;
-    this.cluster = cluster;
+  public NetworkToken( final Partition partition, final NetworkRulesGroup ruleGroup, final int vlan ) {
+    this.ruleGroup = ruleGroup;
     this.vlan = vlan;
-    this.userFullName = userFullName;
-    this.name = this.userFullName.getAccountNumber( ) + "-" + this.networkName;
-  }
-  
-  public String getCluster( ) {
-    return this.cluster;
   }
   
   public Integer getVlan( ) {
     return this.vlan;
-  }
-  
-  public UserFullName getUserFullName( ) {
-    return this.userFullName;
-  }
-
-  public String getName( ) {
-    return this.name;
-  }
-  
-  @Override
-  public String toString( ) {
-    return String.format( "NetworkToken:%s:cluster=%s:vlan=%s:indexes=%s", this.name, this.cluster, this.vlan, this.indexes );
-  }
-  
-  @Override
-  public boolean equals( final Object o ) {
-    if ( this == o ) return true;
-    if ( !( o instanceof NetworkToken ) ) return false;
-    NetworkToken that = ( NetworkToken ) o;
-    
-    if ( !this.cluster.equals( that.cluster ) ) return false;
-    if ( !this.networkName.equals( that.networkName ) ) return false;
-    if ( !this.userFullName.getUserId( ).equals( that.userFullName.getUserId( ) ) ) return false;
-    
-    return true;
-  }
-  
-  @Override
-  public int hashCode( ) {
-    int result;
-    
-    result = networkName.hashCode( );
-    result = 31 * result + cluster.hashCode( );
-    result = 31 * result + userFullName.getUserId( ).hashCode( );
-    return result;
-  }
-  
-  @Override
-  public int compareTo( Object o ) {
-    NetworkToken that = ( NetworkToken ) o;
-    return ( !this.cluster.equals( that.cluster ) && ( this.vlan.equals( that.vlan ) ) )
-      ? this.vlan - that.vlan
-      : this.cluster.compareTo( that.cluster );
   }
   
   public void removeIndex( Integer index ) {
@@ -161,6 +101,36 @@ public class NetworkToken implements Comparable {
   
   public NavigableSet<Integer> getIndexes( ) {
     return this.indexes;
+  }
+  
+  public NetworkRulesGroup getRuleGroup( ) {
+    return this.ruleGroup;
+  }
+  
+  @Override
+  public String toString( ) {
+    return String.format( "NetworkToken:%s:cluster=%s:vlan=%s:indexes=%s", this.vlan, this.indexes );
+  }
+  
+  @Override
+  public boolean equals( final Object o ) {
+    if ( this == o ) return true;
+    if ( !( o instanceof NetworkToken ) ) return false;
+    NetworkToken that = ( NetworkToken ) o;
+    return this.ruleGroup.equals( that.ruleGroup );
+  }
+  
+  @Override
+  public int hashCode( ) {
+    int result;
+    result = this.ruleGroup.hashCode( );
+    return result;
+  }
+  
+  @Override
+  public int compareTo( Object o ) {
+    NetworkToken that = ( NetworkToken ) o;
+    return this.ruleGroup.compareTo( that.ruleGroup );
   }
   
 }

@@ -128,7 +128,7 @@ public class VmMetadata {
                                                                                                                                                              keySet( ) ) );
                                                                                                                   }
                                                                                                                 } );
-                                                                                                           put( "network-topology", new TopologyMetadata( ) );
+                                                                                                           put( "network-topology", new NetworkGroupsMetadata( ) );
                                                                                                          }
                                                                                                        };
   

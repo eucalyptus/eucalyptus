@@ -131,9 +131,9 @@ public class AddressManager {
     for ( Address address : Addresses.getInstance( ).listValues( ) ) {
       //TODO:GRZE:FIXME this is not going to last this way.
       Account addrAccount = null;
-      if ( !FakePrincipals.NOBODY_ACCOUNT.getAccountNumber( ).equals( address.getOwnerAccountId( ) ) ) {
+      if ( !FakePrincipals.NOBODY_ACCOUNT.getAccountNumber( ).equals( address.getOwnerAccountNumber( ) ) ) {
         try {
-        addrAccount = Accounts.lookupAccountById( address.getOwnerAccountId( ) );
+        addrAccount = Accounts.lookupAccountById( address.getOwnerAccountNumber( ) );
         } catch ( AuthException e ) {}
       }
       if ( addrAccount != null

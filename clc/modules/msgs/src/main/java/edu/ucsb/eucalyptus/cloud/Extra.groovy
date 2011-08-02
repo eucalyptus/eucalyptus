@@ -87,11 +87,11 @@ public class Pair {
   }
 }
 
-public class VmDescribeType extends EucalyptusMessage {
+public class VmDescribeType extends CloudClusterMessage {
   
   ArrayList<String> instancesSet = new ArrayList<String>();
 }
-public class VmDescribeResponseType extends EucalyptusMessage {
+public class VmDescribeResponseType extends CloudClusterMessage {
   
   String originCluster;
   ArrayList<VmInfo> vms = new ArrayList<VmInfo>();
@@ -100,7 +100,7 @@ public class VmDescribeResponseType extends EucalyptusMessage {
   }
 }
 
-public class VmRunResponseType extends EucalyptusMessage {
+public class VmRunResponseType extends CloudClusterMessage {
   
   ArrayList<VmInfo> vms = new ArrayList<VmInfo>();
 }
@@ -138,7 +138,7 @@ public class VmInfo extends EucalyptusData {
   }
 }
 
-public class VmRunType extends EucalyptusMessage {
+public class VmRunType extends CloudClusterMessage {
   
   /** these are for more convenient binding later on but really should be done differently... sigh    **/
   

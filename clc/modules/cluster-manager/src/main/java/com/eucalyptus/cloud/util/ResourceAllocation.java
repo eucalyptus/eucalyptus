@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,32 +61,48 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component.id;
+package com.eucalyptus.cloud.util;
 
-import com.eucalyptus.component.ComponentId;
-
-
-public class Walrus extends ComponentId.Unpartioned {
-
-  @Override
-  public String getLocalEndpointName( ) {
-    return "vm://BukkitInternal";
+public interface ResourceAllocation<T> {
+  enum State {
+    BANNED, FREE, PENDING, SUBMITTED, EXTANT, RELEASING
   }
   
-  @Override
-  public Boolean hasCredentials( ) {
-    return true;
-  }
+  public State currentState( );
   
-  @Override
-  public boolean isUserService( ) {
-    return true;
-  }
-
-  @Override
-  public String getVendorName( ) {
-    return "s3";
-  }
-
-
+  /**
+   * Request is in-flight on the network (not just in memory) and state updates should be
+   * disregarded until the in-flight request completes (i.e., either with a {@link #allocate()} or
+   * {@link #abort()}).
+   */
+  public void submit( );
+  
+  /**
+   * Resource allocation completed successfully.
+   */
+  public T allocate( );
+  
+  /**
+   * The procedure for gracefully releasing the resource is pending a submitted in-flight request.
+   * Potential references to stale state may exist and should be disregarded until in-flight
+   * requests complete.
+   */
+  public void release( );
+  
+  /**
+   * Dependent external resource state has been cleared and the resource is ready for re-use.
+   */
+  public void teardown( );
+  
+  /**
+   * An intermediate allocation step failed and the allocation should be reset.
+   */
+  public void abort( );
+  
+  /**
+   * Attempt to recover a resource allocation -- e.g., after a system restart. Constraints must be
+   * enforced on valid initial state.
+   */
+  public T reclaim( );
+  
 }

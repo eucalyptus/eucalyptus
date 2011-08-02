@@ -67,6 +67,7 @@ import java.net.InetAddress;
 import java.util.concurrent.ExecutionException;
 import net.sf.jasperreports.engine.xml.JRPenFactory.Top;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.policy.PolicyVendor;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.HostManager;
 import com.eucalyptus.component.Component;
@@ -88,6 +89,11 @@ public class Eucalyptus extends ComponentId.Unpartioned {
     return "vm://EucalyptusRequestQueue";
   }
   
+  @Override
+  public String getVendorName( ) {
+    return "ec2";
+  }
+
   @Override
   public Boolean hasCredentials( ) {
     return true;

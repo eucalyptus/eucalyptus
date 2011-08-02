@@ -63,12 +63,90 @@
 
 package com.eucalyptus.cloud;
 
-import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.util.HasFullName;
+import javax.persistence.Column;
+import javax.persistence.MappedSuperclass;
+import javax.persistence.Transient;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.entities.AbstractStatefulPersistent;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasOwningAccount;
+import com.eucalyptus.util.OwnerFullName;
 
-@PolicyResourceType( vendor = PolicySpec.VENDOR_EC2, resource = PolicySpec.EC2_RESOURCE_INSTANCE )
-public interface VirtualMachineInstance extends HasFullName<VirtualMachineInstance>, HasOwningAccount {
-
+@MappedSuperclass
+public abstract class AccountMetadata<STATE extends Enum<STATE>> extends AbstractStatefulPersistent<STATE> implements HasOwningAccount {
+  @Column( name = "metadata_account_id" )
+  private String ownerAccountNumber;
+  
+  public AccountMetadata( ) {}
+  
+  public AccountMetadata( OwnerFullName owner ) {
+    this.ownerAccountNumber = owner != null
+      ? owner.getAccountNumber( )
+      : null;
+  }
+  
+  public AccountMetadata( OwnerFullName owner, String displayName ) {
+    super( displayName );
+    this.ownerAccountNumber = owner != null
+      ? owner.getAccountNumber( )
+      : null;
+  }
+  
+  @Override
+  public OwnerFullName getOwner( ) {
+    try {
+      return AccountFullName.getInstance( Accounts.lookupAccountById( this.ownerAccountNumber ) );
+    } catch ( AuthException ex ) {
+      throw new RuntimeException( "Failed to identify user with id " + this.ownerAccountNumber + " something has gone seriously wrong.", ex );
+    }
+  }
+  
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( this.ownerAccountNumber == null )
+      ? 0
+      : this.ownerAccountNumber.hashCode( ) );
+    result = prime * result + ( ( this.displayName == null )
+      ? 0
+      : this.displayName.hashCode( ) );
+    return result;
+  }
+  
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) return true;
+    if ( !super.equals( obj ) ) return false;
+    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
+    AccountMetadata other = ( AccountMetadata ) obj;
+    if ( this.ownerAccountNumber == null ) {
+      if ( other.ownerAccountNumber != null ) return false;
+    } else if ( !this.ownerAccountNumber.equals( other.ownerAccountNumber ) ) return false;
+    return true;
+  }
+  
+  /**
+   * @see com.eucalyptus.util.HasOwningAccount#getOwnerAccountNumber()
+   * @see AccountMetadata#getOwnerAccountNumber()
+   */
+  @Deprecated
+  public String getOwnerAccountId( ) {
+    return this.ownerAccountNumber;
+  }
+  
+  @Override
+  public String getOwnerAccountNumber( ) {
+    return this.ownerAccountNumber;
+  }
+  
+  protected void setOwnerAccountNumber( String ownerAccountId ) {
+    this.ownerAccountNumber = ownerAccountId;
+  }
+  
+  protected void setOwner( OwnerFullName owner ) {
+    this.setOwnerAccountNumber( owner.getAccountNumber( ) );
+  }
 }

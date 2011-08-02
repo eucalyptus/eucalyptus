@@ -94,6 +94,7 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.LifecycleEvent;
+import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceChecks;
 import com.eucalyptus.component.ServiceChecks.CheckException;
@@ -949,6 +950,15 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   @Override
   public String getPartition( ) {
     return this.configuration.getPartition( );
+  }
+  
+  public Partition lookupPartition( ) {
+    try {
+      return Partitions.lookup( this.getConfiguration( ) );
+    } catch ( ServiceRegistrationException ex ) {
+      LOG.error( ex , ex );
+      throw new RuntimeException( "Failed to lookup partition for cluster: " + this.getConfiguration( ) + " due to " + ex.getMessage( ), ex );
+    }
   }
   
   @Override

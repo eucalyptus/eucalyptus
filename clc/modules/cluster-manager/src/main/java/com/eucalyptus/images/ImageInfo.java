@@ -91,9 +91,9 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
@@ -255,12 +255,12 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   public boolean checkPermission( final String accountId ) {
     final boolean[] result = { false };
     Transactions.each( new ImageInfo( this.displayName ), new Callback<ImageInfo>( ) {
-
+      
       @Override
       public void fire( ImageInfo t ) {
         result[0] = t.hasPermissionForOne( accountId );
       }
-        
+      
     } );
     return result[0];
   }
@@ -271,7 +271,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
         @Override
         public void fire( final ImageInfo t ) throws Throwable {
           t.getPermissions( ).clear( );
-          t.getPermissions( ).add( new LaunchPermission( t, t.getOwnerAccountId( ) ) );
+          t.getPermissions( ).add( new LaunchPermission( t, t.getOwnerAccountNumber( ) ) );
           t.setImagePublic( ImageConfiguration.getInstance( ).getDefaultVisibility( ) );
         }
       } );
@@ -358,7 +358,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   
   /**
    * @see com.eucalyptus.util.Mappable#getName()
-   * @see com.eucalyptus.entities.UserMetadata#equals(java.lang.Object)
+   * @see com.eucalyptus.cloud.UserMetadata#equals(java.lang.Object)
    * @param o
    * @return
    */
@@ -375,7 +375,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   }
   
   /**
-   * @see com.eucalyptus.entities.UserMetadata#hashCode()
+   * @see com.eucalyptus.cloud.UserMetadata#hashCode()
    * @see com.eucalyptus.util.Mappable#hashCode()
    * @return
    */
@@ -409,12 +409,10 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   
   @Override
   public FullName getFullName( ) {
-    return this.fullName == null
-      ? this.fullName = FullName.create.vendor( "euca" )
-                                       .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
-                                       .namespace( this.getOwnerAccountId( ) )
-                                       .relativeId( "image", this.getDisplayName( ) )
-      : this.fullName;
+    return FullName.create.vendor( "euca" )
+                          .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
+                          .namespace( this.getOwnerAccountNumber( ) )
+                          .relativeId( "image", this.getDisplayName( ) );
   }
   
   public void setImageType( final Type imageType ) {
@@ -502,7 +500,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
    * @return true if image has explicit or implicit launch permission
    */
   public boolean hasExplicitOrImplicitPermissionForOne( String accountId ) {
-    return getOwnerAccountId( ).equals( accountId ) ||
+    return getOwnerAccountNumber( ).equals( accountId ) ||
            getPermissions( ).contains( new LaunchPermission( this, accountId ) );
   }
   
@@ -527,7 +525,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
       }
     }
   }
-
+  
   /**
    * Remove launch permissions.
    * 
@@ -545,7 +543,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
       } catch ( Exception e ) {
         LOG.error( e, e );
       }
-    }    
+    }
   }
   
 }

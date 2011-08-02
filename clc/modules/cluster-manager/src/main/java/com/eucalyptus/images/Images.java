@@ -69,7 +69,7 @@ public class Images {
       i.setArchitecture( arg0.getArchitecture( ).toString( ) );
       i.setImageId( arg0.getDisplayName( ) );
       i.setImageLocation( arg0.getManifestLocation( ) );
-      i.setImageOwnerId( arg0.getOwnerAccountId( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
+      i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
       i.setImageState( arg0.getState( ).toString( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
       i.setIsPublic( arg0.getImagePublic( ) );
@@ -95,7 +95,7 @@ public class Images {
       i.setArchitecture( arg0.getArchitecture( ).toString( ) );
       i.setImageId( arg0.getDisplayName( ) );
       i.setImageLocation( arg0.getManifestLocation( ) );
-      i.setImageOwnerId( arg0.getOwnerAccountId( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
+      i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
       i.setImageState( arg0.getState( ).toString( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
       i.setIsPublic( arg0.getImagePublic( ) );
@@ -122,8 +122,8 @@ public class Images {
       i.setRootDeviceName( "/dev/sda1" );
       i.setRootDeviceType( "ebs" );
       i.setImageId( arg0.getDisplayName( ) );
-      i.setImageLocation( arg0.getOwnerAccountId( ) + "/" + arg0.getImageName( ) );
-      i.setImageOwnerId( arg0.getOwnerAccountId( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
+      i.setImageLocation( arg0.getOwnerAccountNumber( ) + "/" + arg0.getImageName( ) );
+      i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
       i.setImageState( arg0.getState( ).toString( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
       i.setIsPublic( arg0.getImagePublic( ) );
@@ -158,7 +158,7 @@ public class Images {
       i.setImageId( arg0.getDisplayName( ) );
       i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageLocation( arg0.getManifestLocation( ) );
-      i.setImageOwnerId( arg0.getOwnerAccountId( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
+      i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
       i.setImageState( arg0.getState( ).toString( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
       i.setIsPublic( arg0.getImagePublic( ) );
@@ -338,7 +338,7 @@ public class Images {
   public static ImageInfo exampleWithOwnerAccountId( final String ownerId ) {
     return new ImageInfo( ) {
       {
-        setOwnerAccountId( ownerId );
+        setOwnerAccountNumber( ownerId );
       }
     };
   }

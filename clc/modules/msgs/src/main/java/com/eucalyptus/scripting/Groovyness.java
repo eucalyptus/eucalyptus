@@ -48,6 +48,7 @@ public class Groovyness {
       Class groovyClass = loader.parseClass( f );
       groovyObject = ( GroovyObject ) groovyClass.newInstance( );
     } catch ( Exception e ) {
+      LOG.error( e, e );
       throw new ScriptExecutionFailedException( e );
     }
     try {

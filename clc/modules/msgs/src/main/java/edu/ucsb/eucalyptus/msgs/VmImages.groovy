@@ -71,7 +71,7 @@ public class VmImageMessage extends EucalyptusMessage {}
 /** *******************************************************************************/
 public class DeregisterImageResponseType extends VmImageMessage {
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DEREGISTERIMAGE )
+
 public class DeregisterImageType extends VmImageMessage {
 
   String imageId;
@@ -93,7 +93,7 @@ public class DescribeImageAttributeResponseType extends VmImageMessage {
   public boolean hasKernel() { return this.realResponse.is(this.kernel); }
   public boolean hasRamdisk() { return this.realResponse.is(this.ramdisk); }
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBEIMAGEATTRIBUTE )
+
 public class DescribeImageAttributeType extends VmImageMessage {
 
   String imageId;
@@ -118,7 +118,7 @@ public class DescribeImagesResponseType extends VmImageMessage {
 
   ArrayList<ImageDetails> imagesSet = new ArrayList<ImageDetails>();
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBEIMAGES )
+
 public class DescribeImagesType extends VmImageMessage {
 
   @HttpParameterMapping (parameter = "ExecutableBy")
@@ -133,7 +133,7 @@ public class DescribeImagesType extends VmImageMessage {
 /** *******************************************************************************/
 public class ModifyImageAttributeResponseType extends VmImageMessage {
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_MODIFYIMAGEATTRIBUTE )
+
 public class ModifyImageAttributeType extends VmImageMessage {
   String imageId;
   String attribute;
@@ -165,7 +165,7 @@ public class ModifyImageAttributeType extends VmImageMessage {
 public class RegisterImageResponseType extends VmImageMessage {
   String imageId;
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_REGISTERIMAGE )
+
 public class RegisterImageType extends VmImageMessage {
   String imageLocation;
   String amiId;
@@ -181,7 +181,7 @@ public class RegisterImageType extends VmImageMessage {
 /** *******************************************************************************/
 public class ResetImageAttributeResponseType extends VmImageMessage {
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_RESETIMAGEATTRIBUTE )
+
 public class ResetImageAttributeType extends VmImageMessage {
   String imageId;
   @HttpParameterMapping (parameter = "Attribute")
@@ -246,20 +246,10 @@ public class LaunchPermissionItemType extends EucalyptusData {
 
   public boolean isGroup() { return this.group != null }
 }
-/** *******************************************************************************/
-public class EucaRegisterImageType extends VmImageMessage {
-
-  ImageDetails image;
-}
-public class EucaRegisterImageResponseType extends VmImageMessage {
-
-  String imageId;
-}
-
-public class ConfirmProductInstanceResponseType extends EucalyptusMessage {
+public class ConfirmProductInstanceResponseType extends VmImageMessage {
   String ownerId;
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_CONFIRMPRODUCTINSTANCE )
+
 public class ConfirmProductInstanceType extends VmImageMessage {
   String productCode;
   String instanceId;
@@ -274,7 +264,7 @@ public class CreateImageResponseType extends VmImageMessage {
   String imageId;
   public CreateImageResponseType() {  }
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_CREATEIMAGE )
+
 public class CreateImageType extends VmImageMessage {
   String instanceId;
   String name;

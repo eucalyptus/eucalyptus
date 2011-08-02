@@ -73,14 +73,15 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.VolumeMetadata;
+import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
+import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.StorageProperties;
 
-@Entity @javax.persistence.Entity
+@Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_volumes" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -88,9 +89,9 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   @Column( name = "metadata_volume_size" )
   private Integer  size;
   @Column( name = "metadata_volume_sc_name" )
-  private String scName;
+  private String   scName;
   @Column( name = "metadata_volume_partition" )
-  private String   partition;//TODO:GRZE: change to injected ref.
+  private String   partition;      //TODO:GRZE: change to injected ref.
   @Column( name = "metadata_volume_parentsnapshot" )
   private String   parentSnapshot;
   @Lob
@@ -100,12 +101,13 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   private String   localDevice;
   @Transient
   private FullName fullName;
-
+  
   public Volume( ) {
     super( );
   }
   
-  public Volume( final UserFullName userFullName, final String displayName, final Integer size, final String scName, final String partitionName, final String parentSnapshot ) {
+  public Volume( final UserFullName userFullName, final String displayName, final Integer size, final String scName, final String partitionName,
+                 final String parentSnapshot ) {
     super( userFullName, displayName );
     this.size = size;
     this.scName = scName;
@@ -120,7 +122,7 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   }
   
   public Volume( final String accountId, String displayName ) {
-    this.setOwnerAccountId( accountId );
+    this.setOwnerAccountNumber( accountId );
     this.setDisplayName( displayName );
   }
   
@@ -239,21 +241,18 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   public String getPartition( ) {
     return this.partition;
   }
-
+  
   protected void setPartition( String partition ) {
     this.partition = partition;
   }
   
   @Override
   public FullName getFullName( ) {
-    return this.fullName == null
-      ? this.fullName = FullName.create.vendor( "euca" )
-                                       .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
-                                       .namespace( this.getOwnerAccountId( ) )
-                                       .relativeId( "volume", this.getDisplayName( ) )
-      : this.fullName;
+    return FullName.create.vendor( "euca" )
+                          .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
+                          .namespace( this.getOwnerAccountNumber( ) )
+                          .relativeId( "volume", this.getDisplayName( ) );
   }
-  
   
   @Override
   public int compareTo( VolumeMetadata o ) {

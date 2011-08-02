@@ -70,11 +70,12 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.FakePrincipals;
-import com.eucalyptus.cloud.VirtualMachineType;
+import com.eucalyptus.cloud.CloudMetadata.VirtualMachineType;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.OwnerFullName;
 
 @Entity
 @javax.persistence.Entity
@@ -85,16 +86,16 @@ import com.eucalyptus.util.FullName;
 public class VmType extends AbstractPersistent implements VirtualMachineType {
 //  @ConfigurableIdentifier
   @Column( name = "metadata_vm_type_name" )
-  private String       name;
+  private String  name;
 //  @ConfigurableField( description = "Number of CPUs per instance.", displayName = "CPUs" )
   @Column( name = "metadata_vm_type_cpu" )
-  private Integer      cpu;
+  private Integer cpu;
 //  @ConfigurableField( description = "Gigabytes of disk per instance.", displayName = "Disk (GB)" )
   @Column( name = "metadata_vm_type_disk" )
-  private Integer      disk;
+  private Integer disk;
 //  @ConfigurableField( description = "Gigabytes of RAM per instance.", displayName = "RAM (GB)" )
   @Column( name = "metadata_vm_type_memory" )
-  private Integer      memory;
+  private Integer memory;
   
   public VmType( ) {}
   
@@ -181,16 +182,6 @@ public class VmType extends AbstractPersistent implements VirtualMachineType {
   @Override
   public String getPartition( ) {
     return ComponentIds.lookup( Eucalyptus.class ).name( );
-  }
-  
-  @Override
-  public String getOwnerAccountId( ) {
-    return FakePrincipals.SYSTEM_USER_ERN.getAccountNumber( );
-  }
-  
-  @Override
-  public FullName getOwner( ) {
-    return FakePrincipals.SYSTEM_USER_ERN;
   }
   
   @Override

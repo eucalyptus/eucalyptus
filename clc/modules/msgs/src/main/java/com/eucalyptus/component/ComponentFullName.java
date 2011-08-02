@@ -160,11 +160,6 @@ public class ComponentFullName implements FullName {
   }
   
   @Override
-  public final String getName( ) {
-    return this.name;
-  }
-  
-  @Override
   public String toString( ) {
     return this.qName;
   }
@@ -214,12 +209,7 @@ public class ComponentFullName implements FullName {
   
   @Override
   public String getUniqueId( ) {
-    return this.qName;
-  }
-  
-  @Override
-  public String getFullyQualifiedName( ) {
-    return this.toString( );
+    return this.name;
   }
   
 }

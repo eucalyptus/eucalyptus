@@ -10,7 +10,7 @@ import com.eucalyptus.context.Contexts;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
-public class EventRecord extends EucalyptusMessage {
+public class EventRecord extends BaseMessage {
   private static Logger            LOG   = Logger.getLogger( EventRecord.class );
   
   private static Record create( final Class component, final EventClass eventClass, final EventType eventName, final String other, int dist ) {

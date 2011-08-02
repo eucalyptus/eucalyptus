@@ -76,7 +76,6 @@ public class TerminateInstancesResponseType extends VmControlMessage {
   boolean terminated = false;
   ArrayList<TerminateInstancesItemType> instancesSet = new ArrayList<TerminateInstancesItemType>();
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_TERMINATEINSTANCES )
 public class TerminateInstancesType extends VmControlMessage {
 
   @HttpParameterMapping (parameter = "InstanceId")
@@ -90,7 +89,7 @@ public class TerminateInstancesType extends VmControlMessage {
 
 }
 /** *******************************************************************************/
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBEINSTANCES )
+
 public class DescribeInstancesType extends VmControlMessage {
 
   @HttpParameterMapping (parameter = "InstanceId")
@@ -103,7 +102,7 @@ public class DescribeInstancesResponseType extends VmControlMessage {
   ArrayList<ReservationInfoType> reservationSet = new ArrayList<ReservationInfoType>();
 }
 /** *******************************************************************************/
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_REBOOTINSTANCES )
+
 public class RebootInstancesType extends VmControlMessage {
 
   @HttpParameterMapping (parameter = "InstanceId")
@@ -123,7 +122,7 @@ public class RunInstancesResponseType extends VmControlMessage {
   ReservationInfoType rsvInfo;
 }
 
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_RUNINSTANCES )
+
 public class RunInstancesType extends VmControlMessage {
 
   String imageId;
@@ -188,12 +187,12 @@ public class GetConsoleOutputResponseType extends VmControlMessage {
   Date timestamp;
   String output;
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_GETCONSOLEOUTPUT )
+
 public class GetConsoleOutputType extends VmControlMessage {
   @HttpParameterMapping (parameter = "InstanceId.1")
   String instanceId;
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_GETPASSWORDDATA )
+
 public class GetPasswordDataType extends VmControlMessage {
   String instanceId;
 }
@@ -319,7 +318,7 @@ public class StopInstancesResponseType extends VmControlMessage{
   ArrayList<TerminateInstancesItemType> instancesSet = new ArrayList<TerminateInstancesItemType>();
   public StopInstancesResponseType() {  }
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_STOPINSTANCES )
+
 public class StopInstancesType extends VmControlMessage{
   ArrayList<String> instancesSet = new ArrayList<String>();
   Boolean force;
@@ -329,12 +328,12 @@ public class StartInstancesResponseType extends VmControlMessage{
   ArrayList<TerminateInstancesItemType> instancesSet = new ArrayList<TerminateInstancesItemType>();
   public StartInstancesResponseType() {  }
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_STARTINSTANCES )
+
 public class StartInstancesType extends VmControlMessage{
   ArrayList<String> instancesSet = new ArrayList<String>();
   public StartInstancesType() {  }
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_MODIFYINSTANCEATTRIBUTE )
+
 public class ModifyInstanceAttributeType extends VmControlMessage {
   String instanceId;
   Attr element;
@@ -352,7 +351,7 @@ public class ModifyInstanceAttributeType extends VmControlMessage {
 public class ModifyInstanceAttributeResponseType extends VmControlMessage {
   public ModifyInstanceAttributeResponseType() {  }
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_RESETINSTANCEATTRIBUTE )
+
 public class ResetInstanceAttributeType extends VmControlMessage {
   String instanceId;
   public ResetInstanceAttributeType() {  }
@@ -360,7 +359,7 @@ public class ResetInstanceAttributeType extends VmControlMessage {
 public class ResetInstanceAttributeResponseType extends VmControlMessage {
   public ResetInstanceAttributeResponseType() {  }
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBEINSTANCEATTRIBUTE )
+
 public class DescribeInstanceAttributeType extends VmControlMessage {
   String instanceId;
   public DescribeInstanceAttributeType() {  }
@@ -387,7 +386,7 @@ public class MonitorInstancesResponseType extends VmControlMessage {
   ArrayList<MonitorInstanceState> instancesSet = new ArrayList<MonitorInstanceState>();
   public MonitorInstancesResponseType() {  }
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_MONITORINSTANCES )
+
 public class MonitorInstancesType extends VmControlMessage {
   ArrayList<String> instancesSet = new ArrayList<String>();
   public MonitorInstancesType() {  }
@@ -396,7 +395,7 @@ public class UnmonitorInstancesResponseType extends VmControlMessage {
   ArrayList<MonitorInstanceState> instancesSet = new ArrayList<MonitorInstanceState>();
   public UnmonitorInstancesResponseType() {  }
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_UNMONITORINSTANCES )
+
 public class UnmonitorInstancesType extends VmControlMessage {
   ArrayList<String> instancesSet = new ArrayList<String>();
   public MonitorInstancesType() {  }

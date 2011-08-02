@@ -51,7 +51,7 @@ public class KeyPairManager {
       SshKeyPair key = KeyPairUtil.deleteUserKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
       Account keyAccount = null;
       try {
-        keyAccount = Accounts.lookupAccountById( key.getOwnerAccountId( ) );
+        keyAccount = Accounts.lookupAccountById( key.getOwnerAccountNumber( ) );
       } catch ( AuthException e ) {
         throw new EucalyptusCloudException( e );
       }

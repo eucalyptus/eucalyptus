@@ -73,36 +73,42 @@ import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.cloud.KeyPair;
+import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasOwningAccount;
 
-@Entity @javax.persistence.Entity
+@Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_keypairs" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPair {
-  enum State { available, removing }
+public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudMetadata.KeyPair {
+  enum State {
+    available, removing
+  }
+  
   @Column( name = "metadata_keypair_user_keyname", unique = true )
-  String                   uniqueName;                                                                 //bogus field to enforce uniqueness
+  String           uniqueName; //bogus field to enforce uniqueness
   @Lob
   @Column( name = "metadata_keypair_public_key" )
-  String                   publicKey;
+  String           publicKey;
   @Column( name = "metadata_keypair_finger_print" )
-  String                   fingerPrint;
+  String           fingerPrint;
   @Transient
-  private FullName          fullName;
+  private FullName fullName;
+  
   public SshKeyPair( ) {}
   
   public SshKeyPair( UserFullName userFullName, String keyName ) {
     super( userFullName, keyName );
     this.uniqueName = this.getFullName( ).toString( );
   }
-
+  
   public SshKeyPair( UserFullName user ) {
     super( user );
   }
@@ -116,27 +122,27 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPai
   public String getUniqueName( ) {
     return this.uniqueName;
   }
-
+  
   public void setUniqueName( String uniqueName ) {
     this.uniqueName = uniqueName;
   }
-
+  
   public String getPublicKey( ) {
     return this.publicKey;
   }
-
+  
   public void setPublicKey( String publicKey ) {
     this.publicKey = publicKey;
   }
-
+  
   public String getFingerPrint( ) {
     return this.fingerPrint;
   }
-
+  
   public void setFingerPrint( String fingerPrint ) {
     this.fingerPrint = fingerPrint;
   }
-
+  
   @Override
   public String toString( ) {
     return String.format( "SshKeyPair:%s:fingerPrint=%s", this.uniqueName, this.fingerPrint );
@@ -174,7 +180,6 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPai
     return true;
   }
   
-  
   @Override
   public String getPartition( ) {
     return ComponentIds.lookup( Eucalyptus.class ).name( );
@@ -182,14 +187,15 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPai
   
   @Override
   public FullName getFullName( ) {
-    return this.fullName == null ? this.fullName = FullName.create.vendor( "euca" )
-      .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
-      .namespace( this.getOwnerAccountId( ) )
-      .relativeId( "keypair", this.getDisplayName( ) ) : this.fullName;
+    return FullName.create.vendor( "euca" )
+                          .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
+                          .namespace( this.getOwnerAccountNumber( ) )
+                          .relativeId( "keypair", this.getDisplayName( ) );
   }
+  
   @Override
   public int compareTo( KeyPair that ) {
     return this.getFullName( ).toString( ).compareTo( that.getFullName( ).toString( ) );
   }
-
+  
 }

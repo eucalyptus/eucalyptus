@@ -77,6 +77,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.AssignAddressCallback;
@@ -85,7 +86,6 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.entities.AddressMetadata;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -96,7 +96,8 @@ import com.eucalyptus.util.async.NOOP;
 import com.eucalyptus.util.async.RemoteCallback;
 import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 
-@Entity @javax.persistence.Entity
+@Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_addresses" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -208,7 +209,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
       this.instanceId = UNASSIGNED_INSTANCEID;
     }
-    if ( FakePrincipals.NOBODY_USER_ERN.equals( super.owner ) ) {
+    if ( FakePrincipals.NOBODY_USER_ERN.equals( super.getOwner( ) ) ) {
       this.atomicState.set( State.unallocated, true );
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
       this.instanceId = UNASSIGNED_INSTANCEID;
@@ -455,12 +456,15 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return this.atomicState.isMarked( );
   }
   
-  private static void addAddress( Address address ) {
+  private static void addAddress( final Address address ) {
     Address addr = address;
     EntityWrapper<Address> db = EntityWrapper.get( Address.class );
     try {
-      addr = db.getUnique( new Address( address.getName( ) ) );
-      addr.setOwner( address.getOwner( ) );
+      addr = db.getUnique( new Address( address.getName( ) ) {
+        {
+          this.setOwnerAccountNumber( address.getOwnerAccountNumber( ) );
+        }
+      } );
       db.commit( );
     } catch ( RuntimeException e ) {
       db.rollback( );
@@ -543,17 +547,17 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   public static final TypeMapping<Address, AddressInfoType> //
-  describeAddressTypeMapping = 
-    new TypeMapping<Address, AddressInfoType>( ) {
-             @Override
-             public AddressInfoType apply( Address from ) {
-               return new AddressInfoType(
-                                                             from.getDisplayName( ),
-                                                             UNASSIGNED_INSTANCEID.equals( from.getInstanceId( ) )
-                                                               ? null
-                                                               : from.getInstanceId( ) );
-                                                                                                         }
-                                                                                                         };
+                                                            describeAddressTypeMapping =
+                                                                                         new TypeMapping<Address, AddressInfoType>( ) {
+                                                                                           @Override
+                                                                                           public AddressInfoType apply( Address from ) {
+                                                                                             return new AddressInfoType(
+                                                                                                                         from.getDisplayName( ),
+                                                                                                                         UNASSIGNED_INSTANCEID.equals( from.getInstanceId( ) )
+                                                                                                                           ? null
+                                                                                                                           : from.getInstanceId( ) );
+                                                                                           }
+                                                                                         };
   
   public AddressInfoType getDescription( ) {
     String name = this.getName( );
@@ -598,7 +602,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   @Override
   public FullName getFullName( ) {
     return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( ClusterController.class ).name( ) ).namespace( this.getPartition( ) ).relativeId( "public-address",
-                                                                                                                                               this.getName( ) );
+                                                                                                                                                           this.getName( ) );
   }
   
 }

@@ -63,12 +63,96 @@
 
 package com.eucalyptus.cloud;
 
-import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasOwningAccount;
+import javax.persistence.Column;
+import javax.persistence.MappedSuperclass;
+import javax.persistence.Transient;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasOwningUser;
+import com.eucalyptus.util.OwnerFullName;
 
-@PolicyResourceType( vendor = PolicySpec.VENDOR_EC2, resource = PolicySpec.EC2_RESOURCE_SECURITYGROUP )
-public interface NetworkSecurityGroup extends HasFullName<NetworkSecurityGroup>, HasOwningAccount {
-
+@MappedSuperclass
+public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMetadata<STATE> implements HasOwningUser {
+  @Column( name = "metadata_user_id" )
+  protected String ownerUserId;
+  @Column( name = "metadata_user_name" )
+  protected String ownerUserName;
+  @Transient
+  private OwnerFullName tempOwnerFullName;
+  
+  public UserMetadata( ) {}
+  
+  public UserMetadata( OwnerFullName owner ) {
+    super( owner );
+    this.setOwner( owner );
+  }
+  
+  public UserMetadata( OwnerFullName owner, String displayName ) {
+    super( owner, displayName );
+    this.setOwner( owner );
+  }
+  
+  @Override
+  public void setOwner( OwnerFullName owner ) {
+    this.ownerUserId = owner != null
+      ? owner.getUniqueId( )
+      : null;
+    this.ownerUserName = owner != null
+      ? owner.getUserName( )
+      : null;
+    super.setOwner( owner );
+    this.tempOwnerFullName = owner;
+  }
+  
+  @Override
+  public OwnerFullName getOwner( ) {
+    if ( this.tempOwnerFullName == null ) {
+      OwnerFullName tempOwner = super.getOwner( );
+      if ( super.getOwnerAccountNumber( ) == null && this.getOwnerUserId( ) == null ) {
+        tempOwner = FakePrincipals.NOBODY_USER_ERN;
+      } else if ( this.getOwnerAccountNumber( ) == null && FakePrincipals.NOBODY_USER_ERN.getUserId( ).equals( this.getOwnerUserId( ) ) ) {
+        tempOwner = FakePrincipals.NOBODY_USER_ERN;
+      } else if ( this.getOwnerAccountNumber( ) != null && this.getOwnerUserId( ) == null ) {
+        tempOwner = AccountFullName.getInstance( this.getOwnerAccountNumber( ) );
+      } else if ( this.getOwnerAccountNumber( ) == null && this.getOwnerUserId( ) != null ) {
+        tempOwner = UserFullName.getInstance( this.getOwnerUserId( ) );
+      }
+      this.tempOwnerFullName = tempOwner;
+      return this.tempOwnerFullName;
+    } else {
+      return super.getOwner( );
+    }
+  }
+  
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( ownerUserId == null )
+      ? 0
+      : ownerUserId.hashCode( ) );
+    return result;
+  }
+  
+  @Override
+  public String getOwnerUserId( ) {
+    return this.ownerUserId;
+  }
+  
+  public void setOwnerUserId( String ownerUserId ) {
+    this.ownerUserId = ownerUserId;
+  }
+  
+  @Override
+  public String getOwnerUserName( ) {
+    return this.ownerUserName;
+  }
+  
+  public void setOwnerUserName( String ownerUserName ) {
+    this.ownerUserName = ownerUserName;
+  }
+  
 }

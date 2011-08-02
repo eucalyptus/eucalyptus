@@ -70,20 +70,23 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class Classes {
   private static Logger LOG = Logger.getLogger( Classes.class );
+  
   public static Class findAncestor( Object o, Predicate<Class> condition ) {
     return Iterables.find( ancestry( o ), condition );
   }
   
   public static <T> List<T> newInstance( Class<T> type ) {
-    if( !Modifier.isPublic( type.getModifiers( ) ) ) {
+    if ( !Modifier.isPublic( type.getModifiers( ) ) ) {
       throw new InstantiationError( "Attempt to instantiate a class which is not public: " + type.getCanonicalName( ) );
-    } else if( type.isEnum( ) ) {
+    } else if ( type.isEnum( ) ) {
       return Lists.newArrayList( type.getEnumConstants( ) );
     } else {
       try {
@@ -95,32 +98,75 @@ public class Classes {
       }
     }
   }
-
-  public static List<Class> ancestry( Object o ) {
-    Function<Class, Class> parent = new Function<Class, Class>( ) {
-      @Override
-      public Class apply( Class arg0 ) {
-        return arg0.getSuperclass( );
-      }
-    };
-    Function<Class, Class[]> parentInterfaces = new Function<Class, Class[]>( ) {
-      @Override
-      public Class[] apply( Class arg0 ) {
-        return arg0.getInterfaces( );
-      }
-    };
-    List<Class> ret = Lists.newArrayList( );
-    for ( Class t = ( o instanceof Class
-        ? ( Class ) o
-        : o.getClass( ) ); t != Object.class && ret.add( t ); t = parent.apply( t ) ) {
-      ret.addAll( Lists.newArrayList( parentInterfaces.apply( t ) ) );
+  
+  enum WhateverAsClass implements Function<Object, Class> {
+    INSTANCE;
+    @Override
+    public Class apply( Object o ) {
+      return ( o instanceof Class
+          ? ( Class ) o
+          : o.getClass( ) );
     }
-    return ret;
+  }
+  
+  enum ParentClass implements Function<Class, Class> {
+    INSTANCE;
+    @Override
+    public Class apply( Class type ) {
+      return type.getSuperclass( );
+    }
+  }
+  
+  enum TransitiveClosureImplementedInterfaces implements Function<Class[], List<Class>> {
+    INSTANCE;
+    @Override
+    public List<Class> apply( Class... types ) {
+      List<Class> ret = Lists.newArrayList( );
+      for ( Class t : types ) {
+        if ( t.getInterfaces( ).length == 0 ) {
+          continue;
+        } else if ( !t.isInterface( ) ) {
+          ret.addAll( Arrays.asList( t.getInterfaces( ) ) );
+        } else {
+          ret.add( t );
+        }
+      }
+      List<Class> next = TransitiveClosureImplementedInterfaces.INSTANCE.apply( ret.toArray( new Class[] {} ) );
+      ret.addAll( next );
+      return ret;
+    }
+  }
+  
+  private static final Function<Object, Class> toParentClass( ) {
+    return Functions.compose( ParentClass.INSTANCE, WhateverAsClass.INSTANCE );
+  }
+  
+  enum BreadthFirstTransitiveClosure implements Function<Object, List<Class>> {
+    INSTANCE;
+    
+    @Override
+    public List<Class> apply( Object input ) {
+      List<Class> ret = Lists.newArrayList( );
+      if ( input != Object.class ) {
+        Class type = WhateverAsClass.INSTANCE.apply( ret );
+        ret.add( type );
+        List<Class> superInterfaces = TransitiveClosureImplementedInterfaces.INSTANCE.apply( type );
+        ret.addAll( superInterfaces );
+        List<Class> next = BreadthFirstTransitiveClosure.INSTANCE.apply( type.getSuperclass( ) );
+        ret.addAll( next );
+      }
+      return ret;
+    }
+    
+  }
+  
+  public static List<Class> ancestry( Object o ) {
+    return BreadthFirstTransitiveClosure.INSTANCE.apply( o );
   }
   
   public static List<Class> genericsToClasses( Object o ) {
     List<Class> ret = Lists.newArrayList( );
-    if( !o.getClass( ).isEnum( ) ) {
+    if ( !o.getClass( ).isEnum( ) ) {
       ret.addAll( processTypeForGenerics( o.getClass( ).getGenericSuperclass( ) ) );
     }
     ret.addAll( processTypeForGenerics( o.getClass( ).getGenericInterfaces( ) ) );
@@ -133,12 +179,12 @@ public class Classes {
       if ( t instanceof ParameterizedType ) {
         ParameterizedType pt = ( ParameterizedType ) t;
         for ( Type ptType : pt.getActualTypeArguments( ) ) {
-          if( ptType instanceof Class ) {
-            ret.add( (Class) ptType );
+          if ( ptType instanceof Class ) {
+            ret.add( ( Class ) ptType );
           }
         }
       }
-      if( t instanceof Class ) {
+      if ( t instanceof Class ) {
         ret.addAll( processTypeForGenerics( ( ( Class ) t ).getGenericSuperclass( ) ) );
         ret.addAll( processTypeForGenerics( ( ( Class ) t ).getGenericInterfaces( ) ) );
       }

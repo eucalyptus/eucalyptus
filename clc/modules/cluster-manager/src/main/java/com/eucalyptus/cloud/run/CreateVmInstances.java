@@ -155,7 +155,7 @@ public class CreateVmInstances {
                                         allocInfo.getSshKeyPair( ),
                                         allocInfo.getVmType( ),
                                         allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ),
-                                        allocInfo.getNetworks( ),
+                                        allocInfo.getNetworkRulesGroups( ),
                                         networkIndex.toString( ) );
     return vmInst;
   }

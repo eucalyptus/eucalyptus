@@ -1,8 +1,9 @@
-package com.eucalyptus.cluster;
+package com.eucalyptus.network;
 
 import com.eucalyptus.event.StatefulNamedRegistry;
+import com.eucalyptus.util.TypeMapper;
+import com.google.common.base.Function;
 
-import edu.ucsb.eucalyptus.cloud.Network;
 
 public class Networks extends StatefulNamedRegistry<Network, Networks.State>{
 
@@ -28,4 +29,18 @@ public class Networks extends StatefulNamedRegistry<Network, Networks.State>{
     return singleton;
   }
 
+  @TypeMapper
+  enum NetworkRulesGroupToNetwork implements Function<NetworkRulesGroup,Network> {
+    INSTANCE;
+
+    @Override
+    public Network apply( NetworkRulesGroup arg0 ) {
+      return arg0.getVmNetwork( );
+    }
+    
+  }
+
+  public static Network lookup( NetworkRulesGroup ruleGroup ) {
+    return null;
+  }
 }

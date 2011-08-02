@@ -95,7 +95,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.Lookups;
+import com.eucalyptus.util.TypeClerk;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -473,7 +473,7 @@ public class ImageManifests {
         LOG.error( ex, ex );
         throw new EucalyptusCloudException( "Referenced image id is invalid: " + diskId, ex );
       }
-      if ( !Lookups.checkPrivilege( ctx.getRequest( ), PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, diskId, disk.getOwner( ) ) ) {
+      if ( !TypeClerk.checkPrivilege( ctx.getRequest( ), PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, diskId, disk.getOwner( ) ) ) {
         throw new EucalyptusCloudException( "Access to " + disk.getImageType( ).toString( ) + " image " + diskId + " is denied for " + ctx.getUser( ).getName( ) );
       }
     }

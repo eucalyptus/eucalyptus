@@ -61,9 +61,10 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package edu.ucsb.eucalyptus.cloud;
+package com.eucalyptus.network;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -77,70 +78,54 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasOwningAccount;
+import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SortedSetMultimap;
 import com.google.common.collect.TreeMultimap;
+import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 import edu.ucsb.eucalyptus.msgs.VmNetworkPeer;
 
 public class Network implements HasFullName<Network>, HasOwningAccount {
-  public String getNetworkName( ) {
-    return this.networkName;
-  }
-
-  private static final Integer MIN_ADDR = 8;
-  private static final Integer MAX_ADDR = 4096;
-  private static Logger        LOG      = Logger.getLogger( Network.class );
+  private static Logger LOG = Logger.getLogger( Network.class );
   
   enum NetworkIndexState {
-    ILLEGAL, FREE, USED, OUTLAW
+    ILLEGAL, FREE, PENDING, USED, OUTLAW,
   };
   
-  private final String                              uuid;
-  private final AtomicInteger                       vlan          = new AtomicInteger( 0 );
-  private final String                              name;
-  private final String                              networkName;
-  private final UserFullName                     userFullName;
-  private final List<PacketFilterRule>              rules         = new ArrayList<PacketFilterRule>( );
-  private final ConcurrentMap<String, NetworkToken> clusterTokens = new ConcurrentHashMap<String, NetworkToken>( );
+  private static final Integer                                     MIN_ADDR               = 8;
+  private static final Integer                                     MAX_ADDR               = 4096;
   
-  private static class AddressRange {
-    Integer min = 8;
-    Integer max = 4096;
-  }
+  private static final NetworkIndexRange                                INITIAL_BOUNDS         = new NetworkIndexRange( MIN_ADDR, MAX_ADDR );
+  private final String                                             uuid;
+  private final String                                             groupName;
   
-  private static final AddressRange                                INITIAL_BOUNDS         = new AddressRange( );
-  private final AtomicReference<AddressRange>                      addrsPerNet            = new AtomicReference<AddressRange>( INITIAL_BOUNDS );
+  private final AtomicInteger                                      vlan                   = new AtomicInteger( 0 );
+  private final AtomicReference<NetworkIndexRange>                      addrsPerNet            = new AtomicReference<NetworkIndexRange>( INITIAL_BOUNDS );
   
-  private final ConcurrentNavigableMap<Integer, NetworkIndexState> networkIndexes;
+  private final ConcurrentMap<String, NetworkToken>                clusterTokens          = new ConcurrentHashMap<String, NetworkToken>( );
   private final SortedSetMultimap<String, NetworkToken>            volatileActiveNetworks = TreeMultimap.create( );
   private final SortedSetMultimap<String, NetworkToken>            activeNetworks         = Multimaps.synchronizedSortedSetMultimap( volatileActiveNetworks );
-  private final FQDN                                               fullName;
+  private final ConcurrentNavigableMap<Integer, NetworkIndexState> networkIndexes         = new ConcurrentSkipListMap<Integer, NetworkIndexState>( );
+  private final FullName                                           fullName;
+  private NetworkRulesGroup ruleGroup;
   
-  public Network( final UserFullName ownerUserFullName, final String networkName, final String uuid ) {
+  public Network( final OwnerFullName ownerFullName, final String networkName, final String uuid ) {
     this.uuid = uuid;
-    this.userFullName = ownerUserFullName;
-    this.fullName = new FQDN( ownerUserFullName );
-    this.networkName = networkName;
-    this.name = this.userFullName.getUserId( ) + "-" + this.networkName;
-    this.networkIndexes = new ConcurrentSkipListMap<Integer, NetworkIndexState>( ) {
-      {
-        for ( int i = MIN_ADDR; i < MAX_ADDR; i++ ) {
-          put( i, NetworkIndexState.FREE );
-        }
-      }
-    };
+    this.groupName = networkName;
   }
-  public Network( final UserFullName ownerUserFullName, final String networkName, final String uuid, List<PacketFilterRule> pfRules ) {
-    this( ownerUserFullName, networkName, uuid );
-    this.rules.addAll( pfRules );
+  
+  public Network( final NetworkRulesGroup ruleGroup ) {
+    this.ruleGroup = ruleGroup;
+    this.fullName = AccountFullName.getInstance( this.ruleGroup.getOwnerAccountNumber( ), "security-group", this.groupName );
   }
   
   public boolean initVlan( Integer i ) {
@@ -169,16 +154,12 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
     }
   }
   
-  public UserFullName getUserFullName( ) {
-    return this.userFullName;
-  }
-
   public ConcurrentNavigableMap<Integer, NetworkIndexState> getNetworkIndexes( ) {
     return this.networkIndexes;
   }
-
+  
   private NetworkToken getClusterToken( String cluster ) {
-    NetworkToken newToken = new NetworkToken( cluster, this.userFullName, this.networkName, this.uuid, this.vlan.get( ) );
+    NetworkToken newToken = new NetworkToken( cluster, this.ownerFullName, this.groupName, this.uuid, this.vlan.get( ) );
     NetworkToken token = this.clusterTokens.putIfAbsent( cluster, newToken );
     if ( token == null ) {
       return newToken;
@@ -192,37 +173,32 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
   }
   
   public void trim( Integer min, Integer max ) {
-    AddressRange addrRange = new AddressRange( ) {
-      {
-        this.min = min;
-        this.max = max;
-      }
-    };
-    AddressRange oldRange = this.addrsPerNet.getAndSet( addrRange );
-    if ( oldRange.max > addrRange.max ) {
-      for ( int i = addrRange.max; i < oldRange.max; i++ ) {
+    NetworkIndexRange addrRange = new NetworkIndexRange( min, max );
+    NetworkIndexRange oldRange = this.addrsPerNet.getAndSet( addrRange );
+    if ( oldRange.max( ) > addrRange.max( ) ) {
+      for ( int i = addrRange.max( ); i < oldRange.max( ); i++ ) {
         if ( this.networkIndexes.remove( i, NetworkIndexState.ILLEGAL ) || this.networkIndexes.remove( i, NetworkIndexState.FREE ) ) {
           EventRecord.caller( this.getClass( ), EventType.TOKEN_RETURNED, this.fullName.toString( ), "networkIndex", i, "state",
                               this.networkIndexes.get( i ) ).debug( );
         }
       }
     }
-    this.networkIndexes.keySet( ).tailSet( this.addrsPerNet.get( ).max - 1, true ).clear( );
-    this.networkIndexes.keySet( ).headSet( this.addrsPerNet.get( ).min ).clear( );
+    this.networkIndexes.keySet( ).tailSet( this.addrsPerNet.get( ).max( ) - 1, true ).clear( );
+    this.networkIndexes.keySet( ).headSet( this.addrsPerNet.get( ).min( ) ).clear( );
   }
   
   private final Predicate<Map.Entry<Integer, NetworkIndexState>> FIND_FREE_ADDR = new Predicate<Map.Entry<Integer, NetworkIndexState>>( ) {
-                                                                                         @Override
-                                                                                         public boolean apply( Entry<Integer, NetworkIndexState> t ) {
-                                                                                           AddressRange addrRange = Network.this.addrsPerNet.get( );
-                                                                                           return NetworkIndexState.FREE.equals( t.getValue( ) )
+                                                                                  @Override
+                                                                                  public boolean apply( Entry<Integer, NetworkIndexState> t ) {
+                                                                                    NetworkIndexRange addrRange = Network.this.addrsPerNet.get( );
+                                                                                    return NetworkIndexState.FREE.equals( t.getValue( ) )
                                                                                                   && t.getKey( ) > addrRange.min
                                                                                                   && t.getKey( ) < addrRange.max
                                                                                                   && Network.this.networkIndexes.replace( t.getKey( ),
                                                                                                                                           NetworkIndexState.FREE,
-                                                                                                                                          NetworkIndexState.USED );
-                                                                                         }
-                                                                                       };
+                                                                                                                                          NetworkIndexState.PENDING );
+                                                                                  }
+                                                                                };
   
   public Integer allocateNetworkIndex( String cluster ) {
     Integer nextIndex = null;
@@ -230,7 +206,8 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
       nextIndex = Iterables.find( this.networkIndexes.entrySet( ), FIND_FREE_ADDR ).getKey( );
       EventRecord.caller( this.getClass( ), EventType.TOKEN_RESERVED, this.fullName.toString( ), "cluster", cluster, "networkIndex", nextIndex ).debug( );
     } catch ( NoSuchElementException ex ) {
-      EventRecord.caller( this.getClass( ), EventType.TOKEN_RESERVED, "ERROR", this.fullName.toString( ), "cluster", cluster, "networkIndex", nextIndex, ex.getMessage( ) ).debug( );
+      EventRecord.caller( this.getClass( ), EventType.TOKEN_RESERVED, "ERROR", this.fullName.toString( ), "cluster", cluster, "networkIndex", nextIndex,
+                          ex.getMessage( ) ).debug( );
     }
     this.getClusterToken( cluster ).allocateIndex( nextIndex );
     return nextIndex;
@@ -263,13 +240,13 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
     return this.clusterTokens.containsKey( cluster );
   }
   
-  public boolean hasTokens() {
+  public boolean hasTokens( ) {
     
-    for( NetworkToken it : this.clusterTokens.values() ) {
-      if(it.isEmpty()) {
-        this.removeToken(it.getCluster());
+    for ( NetworkToken it : this.clusterTokens.values( ) ) {
+      if ( it.isEmpty( ) ) {
+        this.removeToken( it.getCluster( ) );
       }
-    }    
+    }
     return !this.clusterTokens.values( ).isEmpty( );
   }
   
@@ -279,9 +256,9 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
   
   public boolean isPeer( String peerName, String peerNetworkName ) {
     VmNetworkPeer peer = new VmNetworkPeer( peerName, peerNetworkName );
-    for( PacketFilterRule pf : this.rules ) {
-      if( pf.getPeers( ) != null) {
-        if( pf.getPeers( ).contains( peer ) ) {
+    for ( PacketFilterRule pf : this.rules ) {
+      if ( pf.getPeers( ) != null ) {
+        if ( pf.getPeers( ).contains( peer ) ) {
           return true;
         }
       }
@@ -289,21 +266,11 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
     return false;
   }
   
-  public String getName( ) {
-    return this.name;
-  }
-  
-  class FQDN extends AccountFullName implements FullName {
-    FQDN( UserFullName owner ) {
-      super( owner, "security-group", Network.this.networkName );
-    }
-  }
-  
   @Override
   public String getPartition( ) {
     return "";
   }
-
+  
   @Override
   public FullName getFullName( ) {
     return this.fullName;
@@ -315,18 +282,39 @@ public class Network implements HasFullName<Network>, HasOwningAccount {
   }
   
   @Override
-  public FullName getOwner( ) {
-    return this.userFullName;
+  public OwnerFullName getOwner( ) {
+    return lookupRuleGroup( ).getOwner( );
   }
+  
+  private NetworkRulesGroup lookupRuleGroup( ) {
+    try {
+      return NetworkGroups.lookup( this.uuid );
+    } catch ( NoSuchMetadataException ex ) {
+      LOG.error( ex, ex );
+      throw new RuntimeException( ex );
+    }
+  }
+  
   public String getUuid( ) {
     return this.uuid;
   }
+  
   public List<PacketFilterRule> getRules( ) {
     return this.rules;
   }
+  
   @Override
-  public String getOwnerAccountId( ) {
-    return this.userFullName.getAccountNumber( );
+  public String getOwnerAccountNumber( ) {
+    return this.getOwner( ).getAccountNumber( );
   }
-
+  
+  @Override
+  public final String getName( ) {
+    return this.uuid;
+  }
+  
+  public String getNetworkName( ) {
+    return this.lookupRuleGroup( ).getDisplayName( );
+  }
+  
 }

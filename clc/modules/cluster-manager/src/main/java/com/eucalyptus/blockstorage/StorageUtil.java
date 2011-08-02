@@ -195,10 +195,10 @@ public class StorageUtil {
     }
   }
   
-  public static long countSnapshotByAccount( String accountId ) throws AuthException {
+  public static long countSnapshotByAccount( final String accountId ) throws AuthException {
     EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
     try {
-      List<Snapshot> vols = db.query( new Snapshot( accountId, null/* displayName */ ) );
+      List<Snapshot> vols = db.query( new Snapshot( ) {{this.setOwnerAccountNumber( accountId );}} );
       db.commit( );
       return vols.size( );
     } catch ( Exception e ) {
@@ -210,7 +210,7 @@ public class StorageUtil {
   public static long countSnapshotByUser( String userId ) throws AuthException {
     EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
     try {
-      List<Snapshot> vols = db.query( new Snapshot( UserFullName.getInstance( Accounts.lookupUserById( userId ) ), null/* displayName */ ) );
+      List<Snapshot> vols = db.query( Snapshots.named( UserFullName.getInstance( Accounts.lookupUserById( userId ) ), null/* displayName */ ) );
       db.commit( );
       return vols.size( );
     } catch ( Exception e ) {
