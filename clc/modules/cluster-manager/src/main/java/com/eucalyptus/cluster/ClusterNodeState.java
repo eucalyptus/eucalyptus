@@ -75,6 +75,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.network.NetworkToken;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -83,7 +84,6 @@ import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.msgs.ResourceType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 

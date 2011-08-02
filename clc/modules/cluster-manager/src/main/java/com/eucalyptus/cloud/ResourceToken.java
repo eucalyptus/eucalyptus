@@ -61,7 +61,7 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package edu.ucsb.eucalyptus.cloud;
+package com.eucalyptus.cloud;
 
 import java.util.ArrayList;
 import java.util.Calendar;

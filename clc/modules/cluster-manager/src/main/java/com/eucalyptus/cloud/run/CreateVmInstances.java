@@ -69,6 +69,7 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cluster.Clusters;
@@ -78,7 +79,6 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.vm.VmTypes;
-import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class CreateVmInstances {

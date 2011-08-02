@@ -75,6 +75,7 @@ import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
@@ -88,7 +89,6 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 
 public class ClusterState {

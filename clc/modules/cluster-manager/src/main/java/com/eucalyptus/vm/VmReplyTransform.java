@@ -64,6 +64,7 @@
 package com.eucalyptus.vm;
 
 import java.util.List;
+import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
@@ -72,7 +73,6 @@ import com.eucalyptus.network.NetworkRulesGroup;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
 
