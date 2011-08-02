@@ -108,7 +108,7 @@ public class CreateVmInstances {
           VmInstances.getInstance( ).register( vmInst );
           try {
             Transactions.save( vmInst );
-          } catch ( ExecutionException ex ) {
+          } catch ( Throwable ex ) {
             LOG.error( ex , ex );
           }
           token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
