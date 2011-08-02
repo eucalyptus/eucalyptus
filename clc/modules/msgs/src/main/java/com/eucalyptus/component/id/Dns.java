@@ -66,7 +66,7 @@ package com.eucalyptus.component.id;
 import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
-import com.google.common.collect.Lists;
+import com.eucalyptus.empyrean.Empyrean;
 
 public class Dns extends ComponentId.Unpartioned {
   
@@ -76,16 +76,10 @@ public class Dns extends ComponentId.Unpartioned {
   }
   
   @Override
-  public Boolean hasDispatcher( ) {
-    return true;
-  }
-  
-  @Override
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
     return new ArrayList( ) {
       {
         this.add( Eucalyptus.class );
-        this.add( Any.class );
       }
     };
   }

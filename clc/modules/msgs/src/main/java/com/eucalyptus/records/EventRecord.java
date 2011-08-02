@@ -4,29 +4,27 @@ import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
 import com.eucalyptus.auth.principal.FakePrincipals;
-import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.NoSuchContextException;
-import com.eucalyptus.util.FullName;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 public class EventRecord extends EucalyptusMessage {
   private static Logger            LOG   = Logger.getLogger( EventRecord.class );
   
   private static Record create( final Class component, final EventClass eventClass, final EventType eventName, final String other, int dist ) {
-    EucalyptusMessage msg = tryForMessage( );
+    BaseMessage msg = tryForMessage( );
     StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
     StackTraceElement ste = stack[dist+3<stack.length?dist+3:stack.length-1];
-    FullName userFn = Bootstrap.isFinished( ) ? FakePrincipals.NOBODY_USER_ERN : FakePrincipals.SYSTEM_USER_ERN;
+    String userFn = Bootstrap.isFinished( ) ? "" : "bootstrap";
     try {
       Context ctx = Contexts.lookup( msg.getCorrelationId( ) );
-      userFn = ctx.getUserFullName( );
+      userFn = ctx.getUserFullName( ).toString( );
     } catch ( Exception ex ) {
     }
-    return new LogFileRecord( eventClass, eventName, component, ste, msg == BOGUS ? "" : userFn.toString( ), msg.getCorrelationId( ), other );
+    
+    return new LogFileRecord( eventClass, eventName, component, ste, userFn, msg.getCorrelationId( ), other );
   }
 
   public static Record here( final Class component, final EventClass eventClass, final EventType eventName, final String... other ) {
@@ -55,19 +53,19 @@ public class EventRecord extends EucalyptusMessage {
     return last.length( ) > 1 ? last.substring( 1 ) : last.toString( );
   }
 
-  private static EucalyptusMessage BOGUS  = getBogusMessage( );
-  private static EucalyptusMessage getBogusMessage( ) {
+  private static BaseMessage BOGUS  = getBogusMessage( );
+  private static BaseMessage getBogusMessage( ) {
     EucalyptusMessage hi = new EucalyptusMessage( );
     hi.setCorrelationId( "" );
     hi.setUserId( "" );
     return hi;
   }
-  private static EucalyptusMessage tryForMessage( ) {
-    EucalyptusMessage msg = null;
+  private static BaseMessage tryForMessage( ) {
+    BaseMessage msg = null;
     MuleEvent event = RequestContext.getEvent( );
     if ( event != null ) {
-      if ( event.getMessage( ) != null && event.getMessage( ).getPayload( ) != null && event.getMessage( ).getPayload( ) instanceof EucalyptusMessage ) {
-        msg = ( ( EucalyptusMessage ) event.getMessage( ).getPayload( ) );
+      if ( event.getMessage( ) != null && event.getMessage( ).getPayload( ) != null && event.getMessage( ).getPayload( ) instanceof BaseMessage ) {
+        msg = ( ( BaseMessage ) event.getMessage( ).getPayload( ) );
       }
     }
     return msg == null ? BOGUS : msg;

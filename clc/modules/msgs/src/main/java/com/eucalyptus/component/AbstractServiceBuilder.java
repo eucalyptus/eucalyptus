@@ -63,8 +63,8 @@ package com.eucalyptus.component;
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-import java.net.URI;
 import java.util.List;
+import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
@@ -77,8 +77,8 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     try {
       this.lookupByName( name );
       return true;
-    } catch ( ServiceRegistrationException e ) {
-      throw e;
+    } catch ( PersistenceException e ) {
+      throw new ServiceRegistrationException( e );
     } catch ( Throwable e ) {
       LOG.error( e, e );
       return false;
@@ -87,7 +87,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
   
   @Override
   public List<T> list( ) throws ServiceRegistrationException {
-    return ServiceConfigurations.getInstance( ).list( this.newInstance( ) );
+    return ServiceConfigurations.list( this.newInstance( ) );
   }
   
   @Override
@@ -95,21 +95,21 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     T conf = this.newInstance( );
     conf.setName( name );
     conf.setPartition( partition );
-    return ( T ) ServiceConfigurations.getInstance( ).lookup( conf );
+    return ( T ) ServiceConfigurations.lookup( conf );
   }
   
   @Override
-  public T lookupByName( String name ) throws ServiceRegistrationException {
+  public T lookupByName( String name ) throws ServiceRegistrationException {//TODO:GRZE:RELEASE fix the name uniqueness checking here.
     T conf = this.newInstance( );
     conf.setName( name );
-    return ( T ) ServiceConfigurations.getInstance( ).lookup( conf );
+    return ( T ) ServiceConfigurations.lookup( conf );
   }
   
   @Override
   public T lookupByHost( String hostName ) throws ServiceRegistrationException {
     T conf = this.newInstance( );
     conf.setHostName( hostName );
-    return ( T ) ServiceConfigurations.getInstance( ).lookup( conf );
+    return ( T ) ServiceConfigurations.lookup( conf );
   }
   
   @Override
@@ -117,9 +117,6 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     try {
       if ( !Internets.testGoodAddress( host ) ) {
         throw new EucalyptusCloudException( "Components cannot be registered using local, link-local, or multicast addresses." );
-      } else if ( Internets.testLocal( host ) && !this.getComponent( ).isAvailableLocally( ) ) {
-        throw new EucalyptusCloudException( "You do not have a local " + this.newInstance( ).getClass( ).getSimpleName( ).replaceAll( "Configuration", "" )
-                                            + " enabled (or it is not installed)." );
       }
     } catch ( EucalyptusCloudException e ) {
       throw new ServiceRegistrationException( e.getMessage( ), e );
@@ -129,13 +126,13 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
     ServiceConfiguration existingName = null;
     try {
       existingName = this.lookupByName( name );
-    } catch ( ServiceRegistrationException ex1 ) {
+    } catch ( PersistenceException ex1 ) {
       LOG.trace( "Failed to find existing component registration for name: " + name );
     }
     ServiceConfiguration existingHost = null;
     try {
       existingHost = this.lookupByHost( host );
-    } catch ( ServiceRegistrationException ex1 ) {
+    } catch ( PersistenceException ex1 ) {
       LOG.trace( "Failed to find existing component registration for host: " + host );
     }
     if ( existingName != null && existingHost != null ) {
@@ -154,13 +151,13 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
   @Override
   public T add( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     T config = this.newInstance( partition, name, host, port );
-    return ( T ) ServiceConfigurations.getInstance( ).store( config );
+    return ( T ) ServiceConfigurations.store( config );
   }
   
   @Override
   public T remove( ServiceConfiguration config ) throws ServiceRegistrationException {
     T removeConf = this.lookupByName( config.getName( ) );
-    return ( T ) ServiceConfigurations.getInstance( ).remove( removeConf );
+    return ( T ) ServiceConfigurations.remove( removeConf );
   }
   
 }

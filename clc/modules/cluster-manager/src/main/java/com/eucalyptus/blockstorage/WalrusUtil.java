@@ -73,7 +73,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
@@ -96,7 +96,7 @@ public class WalrusUtil {
   private static Logger LOG = Logger.getLogger( WalrusUtil.class );
   
   public static void triggerCaching( Image.StaticDiskImage imgInfo ) {
-    String[] parts = imgInfo.getImageLocation( ).split( "/" );
+    String[] parts = imgInfo.getManifestLocation( ).split( "/" );
     CacheImageType cache = new CacheImageType( ).regarding( Contexts.lookup( ).getRequest( ) );
     cache.setBucket( parts[0] );
     cache.setKey( parts[1] );
@@ -104,7 +104,7 @@ public class WalrusUtil {
   }
   
   public static void invalidate( Image.StaticDiskImage imgInfo ) {
-    String[] parts = imgInfo.getImageLocation( ).split( "/" );
+    String[] parts = imgInfo.getManifestLocation( ).split( "/" );
     try {
       ServiceDispatcher.lookupSingle( Components.lookup( Walrus.class ) ).dispatch( new FlushCachedImageType( parts[0], parts[1] ) );
     } catch ( Exception e ) {}
@@ -184,7 +184,7 @@ public class WalrusUtil {
           return true;
         }
       }
-      if ( ImageUtil.verifyManifestSignature( SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate(), signature, pad  )) {
+      if ( ImageUtil.verifyManifestSignature( SystemCredentials.getCredentialProvider(Eucalyptus.class).getCertificate(), signature, pad  )) {
         return true;
       }
       for ( User u : Accounts.listAllUsers( ) ) {

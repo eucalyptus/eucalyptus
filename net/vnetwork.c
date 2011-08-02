@@ -97,7 +97,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
     bzero(vnetconfig, sizeof(vnetConfig));
     // always need 'mode' set
     if (mode) {
-      strncpy(vnetconfig->mode, mode, 32);
+      safe_strncpy(vnetconfig->mode, mode, 32);
     } else {
       logprintfl(EUCAERROR, "vnetInit(): VNET_MODE is not set\n");
       return(1);
@@ -182,18 +182,18 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
       return(1);
     }
     
-    if (macPrefix) strncpy(vnetconfig->macPrefix, macPrefix, 5);
-    if (path) strncpy(vnetconfig->path, path, MAX_PATH);
-    if (eucahome) strncpy(vnetconfig->eucahome, eucahome, MAX_PATH);
-    if (pubInterface) strncpy(vnetconfig->pubInterface, pubInterface, 32);
-    if (bridgedev) strncpy(vnetconfig->bridgedev, bridgedev, 32);
-    if (daemon) strncpy(vnetconfig->dhcpdaemon, daemon, MAX_PATH);
-    if (privInterface) strncpy(vnetconfig->privInterface, privInterface, 32);
-    if (dhcpuser) strncpy(vnetconfig->dhcpuser, dhcpuser, 32);
+    if (macPrefix) safe_strncpy(vnetconfig->macPrefix, macPrefix, 6);
+    if (path) safe_strncpy(vnetconfig->path, path, MAX_PATH);
+    if (eucahome) safe_strncpy(vnetconfig->eucahome, eucahome, MAX_PATH);
+    if (pubInterface) safe_strncpy(vnetconfig->pubInterface, pubInterface, 32);
+    if (bridgedev) safe_strncpy(vnetconfig->bridgedev, bridgedev, 32);
+    if (daemon) safe_strncpy(vnetconfig->dhcpdaemon, daemon, MAX_PATH);
+    if (privInterface) safe_strncpy(vnetconfig->privInterface, privInterface, 32);
+    if (dhcpuser) safe_strncpy(vnetconfig->dhcpuser, dhcpuser, 32);
     if (domainname) {
-      strncpy(vnetconfig->euca_domainname, domainname, 256);
+      safe_strncpy(vnetconfig->euca_domainname, domainname, 256);
     } else {
-      strncpy(vnetconfig->euca_domainname, "eucalyptus", strlen("eucalyptus"));
+      strncpy(vnetconfig->euca_domainname, "eucalyptus", strlen("eucalyptus") + 1);
     }
 
     if (localIp) {
@@ -206,6 +206,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
     }
 
     vnetconfig->tunnels.localIpId = -1;
+    vnetconfig->tunnels.localIpIdLast = -1;
     vnetconfig->tunnels.tunneling = 0;
     vnetconfig->role = role;
     vnetconfig->enabled=1;
@@ -219,6 +220,8 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	vnetconfig->numaddrs = atoi(numberofaddrs);
       }
     }
+    vnetconfig->addrIndexMin = NUMBER_OF_CCS;
+    vnetconfig->addrIndexMax = vnetconfig->numaddrs-2;
     
     if (network) vnetconfig->nw = dot2hex(network);
     if (netmask) vnetconfig->nm = dot2hex(netmask);
@@ -305,6 +308,8 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	  if (vnetconfig->numaddrs > NUMBER_OF_PUBLIC_IPS) {
 	    vnetconfig->numaddrs = NUMBER_OF_PUBLIC_IPS;
 	  }
+	  vnetconfig->addrIndexMin = NUMBER_OF_CCS;
+	  vnetconfig->addrIndexMax = vnetconfig->numaddrs-2;
 	}
       }
     } else {
@@ -462,13 +467,13 @@ int vnetAddHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int idx) 
   }
   
   if (idx < 0) {
-    start = 2;
-    stop = vnetconfig->numaddrs-2;
-  } else if (idx >= 2 && idx <= (vnetconfig->numaddrs-2)) {
+    start = vnetconfig->addrIndexMin;
+    stop = vnetconfig->addrIndexMax;
+  } else if (idx >= vnetconfig->addrIndexMin && idx <= (vnetconfig->addrIndexMax)) {
     start = idx;
     stop = idx;
   } else {
-    logprintfl(EUCAERROR, "vnetAddHost(): index out of bounds: idx=%d, min=2 max=%d\n", idx, vnetconfig->numaddrs-2);
+    logprintfl(EUCAERROR, "vnetAddHost(): index out of bounds: idx=%d, min=%d max=%d\n", idx, vnetconfig->addrIndexMin, vnetconfig->addrIndexMax);
     return(1);
   }
 
@@ -518,7 +523,7 @@ int vnetDelHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
   
   done=0;
   //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
-  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
+  for (i=vnetconfig->addrIndexMin; i<=vnetconfig->addrIndexMax && !done; i++) {
     //    if ( (!mac || !strcmp(vnetconfig->networks[vlan].addrs[i].mac, mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
     if ( (!mac || !machexcmp(mac, vnetconfig->networks[vlan].addrs[i].mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
       bzero(&(vnetconfig->networks[vlan].addrs[i]), sizeof(netEntry));
@@ -544,13 +549,13 @@ int vnetRefreshHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int i
   }
 
   if (idx < 0) {
-    start = 2;
-    stop = vnetconfig->numaddrs-2;
-  } else if (idx >= 2 && idx <= (vnetconfig->numaddrs-2)) {
+    start = vnetconfig->addrIndexMin;
+    stop = vnetconfig->addrIndexMax;
+  } else if (idx >= vnetconfig->addrIndexMin && idx <= (vnetconfig->addrIndexMax)) {
     start = idx;
     stop = idx;
   } else {
-    logprintfl(EUCAERROR, "vnetRefreshHost(): index out of bounds: idx=%d, min=2 max=%d\n", idx, vnetconfig->numaddrs-2);
+    logprintfl(EUCAERROR, "vnetRefreshHost(): index out of bounds: idx=%d, min=%d max=%d\n", idx, vnetconfig->addrIndexMin, vnetconfig->addrIndexMax);
     return(1);
   }
   
@@ -596,7 +601,7 @@ int vnetEnableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
   
   done=0;
   //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
-  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
+  for (i=vnetconfig->addrIndexMin; i<=vnetconfig->addrIndexMax && !done; i++) {
     //    if ( (!mac || !strcmp(vnetconfig->networks[vlan].addrs[i].mac, mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
     if ( (!mac || !machexcmp(mac, vnetconfig->networks[vlan].addrs[i].mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
       vnetconfig->networks[vlan].addrs[i].active=1;
@@ -619,7 +624,7 @@ int vnetDisableHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan) {
 
   done=0;
   //  for (i=2; i<NUMBER_OF_HOSTS_PER_VLAN && !done; i++) {
-  for (i=2; i<=vnetconfig->numaddrs-2 && !done; i++) {
+  for (i=vnetconfig->addrIndexMin; i<=vnetconfig->addrIndexMax && !done; i++) {
     //    if ( (!mac || !strcmp(vnetconfig->networks[vlan].addrs[i].mac, mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
     if ( (!mac || !machexcmp(mac, vnetconfig->networks[vlan].addrs[i].mac)) && (!ip || (vnetconfig->networks[vlan].addrs[i].ip == dot2hex(ip)) ) ) {
       vnetconfig->networks[vlan].addrs[i].active=0;
@@ -748,7 +753,7 @@ int vnetSaveTablesToMemory(vnetConfig *vnetconfig) {
     return(1);
   }
   
-  fd = mkstemp(file);
+  fd = safe_mkstemp(file);
   if (fd < 0) {
     free(file);
     return(1);
@@ -801,7 +806,7 @@ int vnetRestoreTablesFromMemory(vnetConfig *vnetconfig) {
   if (!file) {
     return(1);
   }
-  fd = mkstemp(file);
+  fd = safe_mkstemp(file);
   if (fd < 0) {
     free(file);
     return(1);
@@ -886,7 +891,7 @@ int vnetApplySingleTableRule(vnetConfig *vnetconfig, char *table, char *rule) {
   if (!file) {
     return(1);
   }
-  fd = mkstemp(file);
+  fd = safe_mkstemp(file);
   if (fd < 0) {
     free(file);
     return(1);
@@ -1017,9 +1022,9 @@ int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *uuid, char *user, char *
   
   if (param_check("vnetSetVlan", vnetconfig, vlan, user, network)) return(1);
 
-  strncpy(vnetconfig->users[vlan].userName, user, 48);
-  strncpy(vnetconfig->users[vlan].netName, network, 32);
-  if (uuid) strncpy(vnetconfig->users[vlan].uuid, uuid, 48);
+  safe_strncpy(vnetconfig->users[vlan].userName, user, 48);
+  safe_strncpy(vnetconfig->users[vlan].netName, network, 32);
+  if (uuid) safe_strncpy(vnetconfig->users[vlan].uuid, uuid, 48);
   
   return(0);
 }
@@ -1106,7 +1111,7 @@ int vnetGenerateNetworkParams(vnetConfig *vnetconfig, char *instId, int vlan, in
     // search for existing entry
     inip = dot2hex(outprivip);
     found=0;
-    for (i=2; i<vnetconfig->numaddrs-2 && !found; i++) {
+    for (i=vnetconfig->addrIndexMin; i<vnetconfig->addrIndexMax && !found; i++) {
       //      logprintfl(EUCADEBUG, "HELLO: %d %s %s %s %d %d\n", i, outmac, hex2dot(inip), hex2dot(vnetconfig->networks[0].addrs[i].ip), machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac), (vnetconfig->networks[0].addrs[i].ip == inip));
       if (!machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac) && (vnetconfig->networks[0].addrs[i].ip == inip)) {
 	//	logprintfl(EUCADEBUG, "WOOT: %d %s %s %s %d %d\n", i, outmac, hex2dot(inip), hex2dot(vnetconfig->networks[0].addrs[i].ip), machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac), (vnetconfig->networks[0].addrs[i].ip == inip));
@@ -1172,13 +1177,13 @@ int vnetGetNextHost(vnetConfig *vnetconfig, char *mac, char *ip, int vlan, int i
   }
   
   if (idx < 0) {
-    start = 2;
-    stop = vnetconfig->numaddrs-2;
-  } else if (idx >= 2 && idx <= (vnetconfig->numaddrs-2)) {
+    start = vnetconfig->addrIndexMin;
+    stop = vnetconfig->addrIndexMax;
+  } else if (idx >= vnetconfig->addrIndexMin && idx <= (vnetconfig->addrIndexMax)) {
     start = idx;
     stop = idx;
   } else {
-    logprintfl(EUCAERROR, "vnetGetNextHost(): index out of bounds: idx=%d, min=2 max=%d\n", idx, vnetconfig->numaddrs-2);
+    logprintfl(EUCAERROR, "vnetGetNextHost(): index out of bounds: idx=%d, min=%d max=%d\n", idx, vnetconfig->addrIndexMin, vnetconfig->addrIndexMax);
     return(1);
   }
   
@@ -1282,7 +1287,7 @@ int vnetAddDev(vnetConfig *vnetconfig, char *dev) {
     }
   }
   if (foundone >= 0) {
-    strncpy(vnetconfig->etherdevs[foundone], dev, 16);
+    safe_strncpy(vnetconfig->etherdevs[foundone], dev, 16);
   }
   return(0);
 }
@@ -1336,7 +1341,7 @@ int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts) {
       netmask = hex2dot(vnetconfig->networks[i].nm);
       broadcast = hex2dot(vnetconfig->networks[i].bc);
       nameserver = hex2dot(vnetconfig->networks[i].dns);      
-      router = hex2dot(vnetconfig->networks[i].router);
+      router = hex2dot(vnetconfig->networks[i].router + vnetconfig->tunnels.localIpId);
       
       if (vnetconfig->euca_ns != 0) {
 	euca_nameserver = hex2dot(vnetconfig->euca_ns);
@@ -1356,7 +1361,7 @@ int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts) {
       
 
       //      for (j=2; j<NUMBER_OF_HOSTS_PER_VLAN; j++) {
-      for (j=2; j<=vnetconfig->numaddrs-2; j++) {
+      for (j=vnetconfig->addrIndexMin; j<=vnetconfig->addrIndexMax; j++) {
 	if (vnetconfig->networks[i].addrs[j].active == 1) {
 	  newip = hex2dot(vnetconfig->networks[i].addrs[j].ip);
 	  //mac = vnetconfig->networks[i].addrs[j].mac;
@@ -1409,9 +1414,27 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
   snprintf(file, MAX_PATH, "%s/euca-dhcp.pid", vnetconfig->path);
   if (stat(file, &statbuf) == 0) {
     char rootwrap[MAX_PATH];
-    
+    char *tmpstr=NULL;
+    int tmppid = 0, tmpcount;
+
     snprintf(rootwrap, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", vnetconfig->eucahome);
     snprintf(buf, MAX_PATH, "%s/var/run/eucalyptus/net/euca-dhcp.pid", vnetconfig->eucahome);
+
+    // little chunk of code to work-around bad dhcpd that takes some time to populate the pidfile...
+    tmpstr = file2str(buf);
+    if (tmpstr) {
+      tmppid = atoi(tmpstr);
+      free(tmpstr);
+    }
+    for (i=0; i<4 && tmppid <= 0; i++) {
+      usleep(250000);
+      tmpstr = file2str(buf);
+      if (tmpstr) {
+	tmppid = atoi(tmpstr);
+	free(tmpstr);
+      }
+    }
+
     rc = safekillfile(buf, vnetconfig->dhcpdaemon, 9, rootwrap);
     if (rc) {
       logprintfl(EUCAWARN, "vnetKickDHCP(): failed to kill previous dhcp daemon\n");
@@ -1486,13 +1509,31 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
   int i, j, found, lastj, localIpId=-1, rc;
   uint32_t tmpccs[NUMBER_OF_CCS];
   
-  if (ccsLen > NUMBER_OF_CCS) {
-    logprintfl(EUCAERROR, "vnetSetCCS(): specified number of cluster controllers exceeds max '%d'\n", NUMBER_OF_CCS);
+  if (ccsLen < 0 || ccsLen > NUMBER_OF_CCS) {
+    logprintfl(EUCAERROR, "vnetSetCCS(): specified number of cluster controllers out of bounds (in=%d, min=%d, max=%d)\n", ccsLen, 0, NUMBER_OF_CCS);
     return(1);
-  }  else if (ccsLen <= 0) {
-    return(0);
-  }
+  }  
   
+  found=0;
+  for (i=0; i<ccsLen; i++) {
+    logprintfl(EUCADEBUG, "vnetSetCCS(): input CC%d=%s\n", i, ccs[i]);
+    tmpccs[i] = dot2hex(ccs[i]);
+    rc = vnetCheckLocalIP(vnetconfig, tmpccs[i]);
+    if (!rc && !found) {
+      logprintfl(EUCADEBUG, "vnetSetCCS(): local IP found in input list of CCs, setting localIpId: %d\n", i);
+      vnetconfig->tunnels.localIpIdLast = vnetconfig->tunnels.localIpId;
+      vnetconfig->tunnels.localIpId = i;
+      found=1;
+    }    
+  }
+  if (!found) {
+    logprintfl(EUCADEBUG, "vnetSetCCS(): local IP not found in input list of CCs, setting localIpId: %d\n", -1);
+    vnetconfig->tunnels.localIpIdLast = vnetconfig->tunnels.localIpId;
+    vnetconfig->tunnels.localIpId = -1;
+  }
+  return(0);
+
+#if 0
   for (i=0; i<ccsLen; i++) {
     logprintfl(EUCADEBUG, "vnetSetCCS(): input CC=%s\n", ccs[i]);
     found=0;
@@ -1537,15 +1578,18 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
     }
   }
   if (localIpId >= 0) {
+    vnetconfig->tunnels.localIpIdLast = vnetconfig->tunnels.localIpId;
     vnetconfig->tunnels.localIpId = localIpId;
   } else {
     logprintfl(EUCAWARN, "vnetSetCCS(): VNET_LOCALIP is not in list of CCS, tearing down tunnels\n");
     vnetTeardownTunnels(vnetconfig);
     bzero(vnetconfig->tunnels.ccs, sizeof(uint32_t) * NUMBER_OF_CCS);
+    vnetconfig->tunnels.localIpIdLast = vnetconfig->tunnels.localIpId;
     vnetconfig->tunnels.localIpId = -1;
     return(0);
   }
   return(0);
+#endif
 }
 
 int vnetStartInstanceNetwork(vnetConfig *vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr) {
@@ -1609,7 +1653,7 @@ int vnetStopInstanceNetwork(vnetConfig *vnetconfig, int vlan, char *publicIp, ch
 
 int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname) {
   char cmd[MAX_PATH], newdevname[32], newbrname[32], *network=NULL;
-  int rc, slashnet;
+  int rc, slashnet, i;
 
   // check input params...
   if (!vnetconfig || !outbrname) {
@@ -1683,8 +1727,9 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *
   } else if (vlan > 0 && (vnetconfig->role == CC || vnetconfig->role == CLC)) {
 
     vnetconfig->networks[vlan].active = 1;
-    vnetconfig->networks[vlan].addrs[0].active = 1;
-    vnetconfig->networks[vlan].addrs[1].active = 1;
+    for (i=0; i<NUMBER_OF_CCS; i++) {
+      vnetconfig->networks[vlan].addrs[i].active = 1;
+    }
     vnetconfig->networks[vlan].addrs[vnetconfig->numaddrs-1].active = 1;
     
     rc = vnetSetVlan(vnetconfig, vlan, uuid, userName, netName);
@@ -1776,7 +1821,7 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *
       snprintf(newdevname, 32, "%s", vnetconfig->privInterface);
     }
 
-    rc = vnetAddGatewayIP(vnetconfig, vlan, newdevname);
+    rc = vnetAddGatewayIP(vnetconfig, vlan, newdevname, vnetconfig->tunnels.localIpId);
     if (rc) {
       logprintfl(EUCAWARN, "vnetStartNetworkManaged(): failed to add gateway IP to device %s\n", newdevname);
     }
@@ -1993,14 +2038,20 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
   return(0);
 }
 
-int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname) {
+int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname, int localIpId) {
   char *newip, *broadcast;
   int rc, slashnet;
   char cmd[MAX_PATH];
 
-  newip = hex2dot(vnetconfig->networks[vlan].router);
+  if (localIpId < 0) {
+    logprintfl(EUCAWARN, "vnetAddGatewayIP(): negative localIpId supplied, defaulting to base gw\n");
+    localIpId = 0;
+  }
+
+  newip = hex2dot(vnetconfig->networks[vlan].router + localIpId);
   broadcast = hex2dot(vnetconfig->networks[vlan].bc);
-  
+  logprintfl(EUCADEBUG, "vnetAddGatewayIP(): adding gateway IP: %s\n", newip);
+
   //  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ifconfig %s %s netmask %s up", vnetconfig->eucahome, devname, newip, netmask);
   slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
   snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr add %s/%d broadcast %s dev %s", vnetconfig->eucahome, newip, slashnet, broadcast, devname);
@@ -2029,15 +2080,20 @@ int vnetAddGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname) {
   return(0);
 }
 
-int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname) {
+int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname, int localIpId) {
   char *newip, *broadcast;
   int rc;
   int slashnet;
   char cmd[MAX_PATH];
-  
-  newip = hex2dot(vnetconfig->networks[vlan].router);
+
+  if (localIpId < 0) {
+    logprintfl(EUCAWARN, "vnetDelGatewayIP(): negative localIpId supplied, defaulting to base gw\n");
+    localIpId = 0;
+  }
+
+  newip = hex2dot(vnetconfig->networks[vlan].router + localIpId);
   broadcast = hex2dot(vnetconfig->networks[vlan].bc);
-  
+  logprintfl(EUCADEBUG, "vnetDelGatewayIP(): removing gateway IP: %s\n", newip);  
   //  snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap ifconfig %s %s netmask %s up", vnetconfig->eucahome, devname, newip, netmask);
   slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
   //slashnet = 16;
@@ -2067,6 +2123,7 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
   }
   
   vnetconfig->networks[vlan].active = 0;
+  bzero(vnetconfig->networks[vlan].addrs, sizeof(netEntry) * NUMBER_OF_HOSTS_PER_VLAN);
 
   if (!strcmp(vnetconfig->mode, "MANAGED")) {
     snprintf(newbrname, 32, "eucabr%d", vlan);
@@ -2076,11 +2133,7 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
       logprintfl(EUCAERROR, "vnetStopNetworkManaged(): cmd '%s' failed\n", cmd);
       ret = 1;
     }    
-  }
 
-    //  }
-  
-  if (!strcmp(vnetconfig->mode, "MANAGED")) {
     snprintf(newdevname, 32, "%s.%d", vnetconfig->privInterface, vlan);
     rc = check_device(newdevname);
     if (!rc) {
@@ -2125,8 +2178,8 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
       if (rc) {
 	logprintfl(EUCAWARN, "vnetStopNetworkManaged(): could not remove '%s' from list of interfaces\n", newdevname);
       }
-    } 
-    rc = vnetDelGatewayIP(vnetconfig, vlan, newdevname);
+    }
+    rc = vnetDelGatewayIP(vnetconfig, vlan, newdevname, vnetconfig->tunnels.localIpId);
     if (rc) {
       logprintfl(EUCAWARN, "vnetStopNetworkManaged(): failed to delete gateway IP from interface %s\n", newdevname);
     }

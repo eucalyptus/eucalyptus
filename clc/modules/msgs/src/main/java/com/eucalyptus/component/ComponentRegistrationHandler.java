@@ -63,30 +63,86 @@
 
 package com.eucalyptus.component;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ConfigurationService;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.util.Logs;
+import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 
 public class ComponentRegistrationHandler {
   private static Logger LOG = Logger.getLogger( ComponentRegistrationHandler.class );
   
+  static class RegistrationWorker implements Runnable {
+    private final AtomicBoolean             running  = new AtomicBoolean( false );
+    private final BlockingQueue<Runnable>   msgQueue = new LinkedBlockingQueue<Runnable>( );
+    private final ExecutorService           executor = Executors.newFixedThreadPool( 1 );
+    private static final RegistrationWorker worker   = new RegistrationWorker( );
+    
+    private RegistrationWorker( ) {
+      this.executor.submit( this );
+    }
+    
+    public static void submit( Runnable run ) {
+      worker.msgQueue.add( run );
+    }
+    
+    @Override
+    public void run( ) {
+      if ( !this.running.compareAndSet( false, true ) ) {
+        return;
+      } else {
+        while ( this.running.get( ) ) {
+          Runnable event;
+          try {
+            if ( ( event = this.msgQueue.poll( 2000, TimeUnit.MILLISECONDS ) ) != null ) {
+              event.run( );
+            }
+          } catch ( InterruptedException e1 ) {
+            Thread.currentThread( ).interrupt( );
+            return;
+          } catch ( final Throwable e ) {
+            LOG.error( e, e );
+          }
+        }
+        LOG.debug( "Shutting down component registration request queue: " + Thread.currentThread( ).getName( ) );
+      }
+      
+    }
+  }
+  
   public static boolean register( final Component component, String part, String name, String hostName, Integer port ) throws ServiceRegistrationException {
+    
     final ServiceBuilder builder = component.getBuilder( );
     String partition = part;
     
     if ( !component.getComponentId( ).isPartitioned( ) ) {
       partition = name;
-    } else if ( component.getComponentId( ).isCloudLocal( ) ) {
+    } else if ( !component.getComponentId( ).isPartitioned( ) && component.getComponentId( ).isCloudLocal( ) ) {
       partition = Components.lookup( Eucalyptus.class ).getComponentId( ).name( );
     } else if ( partition == null ) {
       LOG.error( "BUG: Provided partition is null.  Using the service name as the partition name for the time being." );
       partition = name;
     }
-    
+    InetAddress addr;
+    try {
+      addr = InetAddress.getByName( hostName );
+    } catch ( UnknownHostException ex1 ) {
+      LOG.error( "Inavlid hostname: " + hostName + " failure: " + ex1.getMessage( ), ex1 );
+      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": registration failed because the hostname " + hostName + " is invalid: "
+                                              + ex1.getMessage( ), ex1 );
+    }
     LOG.info( "Using builder: " + builder.getClass( ).getSimpleName( ) + " for: " + partition + "." + name + "@" + hostName + ":" + port );
     if ( !builder.checkAdd( partition, name, hostName, port ) ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": checkAdd failed." );
@@ -95,31 +151,46 @@ public class ComponentRegistrationHandler {
     
     try {
       final ServiceConfiguration newComponent = builder.add( partition, name, hostName, port );
+      Partition p = Partitions.lookup( newComponent );
+      Logs.exhaust( ).info( p.getCertificate( ) );
+      Logs.exhaust( ).info( p.getNodeCertificate( ) );
       try {
-        final CheckedListenableFuture<ServiceConfiguration> future = component.startTransition( newComponent );
-        Runnable followRunner = new Runnable( ) {
-          public void run( ) {
-            try {
-              future.get( );
-              component.enableTransition( newComponent );
-            } catch ( Exception ex ) {
-              LOG.error( ex,
-                         ex );
-            }
-          }
-        };
-        Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, newComponent.getFullName( ).toString( ) ).submit( followRunner );
+        doServiceStart( newComponent );
       } catch ( Throwable ex ) {
-        builder.remove( newComponent );
         LOG.info( builder.getClass( ).getSimpleName( ) + ": enable failed because of: " + ex.getMessage( ) );
       }
       return true;
     } catch ( Throwable e ) {
       e = Exceptions.filterStackTrace( e );
-      LOG.info( builder.getClass( ).getSimpleName( ) + ": add failed because of: " + e.getMessage( ) );
+      LOG.info( builder.getClass( ).getSimpleName( ) + ": registration failed because of: " + e.getMessage( ) );
       LOG.error( e, e );
-      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": add failed with message: " + e.getMessage( ), e );
+      throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": registration failed with message: " + e.getMessage( ), e );
     }
+  }
+  
+  private static void doServiceStart( final ServiceConfiguration newComponent ) throws ExecutionException {
+    final Component component = newComponent.lookupComponent( );
+    Runnable followRunner = new Runnable( ) {
+      public void run( ) {
+        try {
+          try {
+            Topology.getInstance( ).start( newComponent ).get( );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+          Topology.getInstance( ).enable( newComponent );//.get()
+        } catch ( ServiceRegistrationException ex1 ) {
+          LOG.error( ex1, ex1 );
+        } catch ( IllegalStateException ex1 ) {
+          LOG.error( ex1, ex1 );
+//        } catch ( ExecutionException ex ) {
+//          LOG.error( ex, ex );
+//        } catch ( InterruptedException ex ) {
+//          Thread.currentThread( ).interrupt( );
+        }
+      }
+    };
+    RegistrationWorker.submit( followRunner );
   }
   
   public static boolean deregister( final Component component, String partition, String name ) throws ServiceRegistrationException, EucalyptusCloudException {
@@ -145,11 +216,10 @@ public class ComponentRegistrationHandler {
       throw e;
     }
     try {
-      final CheckedListenableFuture<ServiceConfiguration> future = component.stopTransition( conf );
       Runnable followRunner = new Runnable( ) {
         public void run( ) {
           try {
-            future.get( );
+            Topology.getInstance( ).stop( conf ).get();
             for ( int i = 0; i < 3; i++ ) {
               try {
                 component.destroyTransition( conf );

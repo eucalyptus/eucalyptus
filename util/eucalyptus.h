@@ -81,9 +81,9 @@ permission notice:
 #define EUCALYPTUS_CONNECT_ISCSI    "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/connect_iscsitarget.pl"
 #define EUCALYPTUS_DISCONNECT_ISCSI "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/disconnect_iscsitarget.pl"
 #define EUCALYPTUS_GET_ISCSI "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_iscsitarget.pl"
-#define EUCALYPTUS_NC_CHECK_BUCKET "/usr/bin/euca-check-bucket" // can be overriden from eucalyptus.conf
-#define EUCALYPTUS_NC_BUNDLE_UPLOAD "/usr/bin/euca-bundle-upload" // can be overriden from eucalyptus.conf
-#define EUCALYPTUS_NC_DELETE_BUNDLE "/usr/bin/euca-delete-bundle" // can be overriden from eucalyptus.conf
+#define EUCALYPTUS_NC_CHECK_BUCKET "euca-check-bucket" // can be overriden from eucalyptus.conf
+#define EUCALYPTUS_NC_BUNDLE_UPLOAD "euca-bundle-upload" // can be overriden from eucalyptus.conf
+#define EUCALYPTUS_NC_DELETE_BUNDLE "euca-delete-bundle" // can be overriden from eucalyptus.conf
 
 #define NC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
 #define CC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
@@ -109,6 +109,7 @@ permission notice:
 #define CONFIG_NC_WORK_SIZE "NC_WORK_SIZE"
 #define CONFIG_NC_SWAP_SIZE "SWAP_SIZE"
 #define CONFIG_SAVE_INSTANCES "MANUAL_INSTANCES_CLEANUP"
+#define CONFIG_DISABLE_KEY_INJECTION "DISABLE_KEY_INJECTION"
 #define CONFIG_CONCURRENT_DISK_OPS "CONCURRENT_DISK_OPS"
 #define CONFIG_USE_VIRTIO_NET "USE_VIRTIO_NET"
 #define CONFIG_USE_VIRTIO_DISK "USE_VIRTIO_DISK"

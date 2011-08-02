@@ -59,15 +59,24 @@ public class DatabaseGroupProxy implements Group {
   @Override
   public void setName( final String name ) throws AuthException {
     try {
-      Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
-        public void fire( GroupEntity t ) throws Throwable {
-          t.setName( name );
-        }
-      } );
-    } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to setName for " + this.delegate );
-      throw new AuthException( e );
+      // try looking up the group with the same name first
+      this.getAccount( ).lookupGroupByName( name );
+    } catch ( AuthException ae ) {
+      // not found
+      try {
+        Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
+          public void fire( GroupEntity t ) throws Throwable {
+            t.setName( name );
+          }
+        } );
+      } catch ( ExecutionException e ) {
+        Debugging.logError( LOG, e, "Failed to setName for " + this.delegate );
+        throw new AuthException( e );
+      }
+      return;
     }
+    // found
+    throw new AuthException( "Can not change to a name already in use: " + name );
   }
 
   @Override

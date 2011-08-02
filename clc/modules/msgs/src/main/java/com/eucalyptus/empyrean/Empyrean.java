@@ -63,16 +63,30 @@
 
 package com.eucalyptus.empyrean;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.BootstrapException;
+import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.HostManager;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.id.Any;
-import com.google.common.collect.Lists;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Hosts;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.util.Internets;
 
 public class Empyrean extends ComponentId.Unpartioned {
-  
+  private static Logger LOG = Logger.getLogger( Empyrean.class );
   public static final Empyrean INSTANCE = new Empyrean( ); //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
-                                                            
+                                                           
   @Override
   public String getPartition( ) {
     return this.name( );
@@ -88,17 +102,122 @@ public class Empyrean extends ComponentId.Unpartioned {
   }
   
   @Override
-  public Boolean hasDispatcher( ) {
-    return true;
-  }
-  
-  @Override
   public Boolean hasCredentials( ) {
     return true;
   }
   
   @Override
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return new ArrayList() {{ add( Any.class ); }};
+    return new ArrayList( ) {
+      {
+        add( Empyrean.class );
+      }
+    };
   }
- }
+  
+  @Override
+  public boolean isAdminService( ) {
+    return true;
+  }
+  
+  @Provides( Empyrean.class )
+  @RunDuring( Bootstrap.Stage.PersistenceInit )
+  public static class PersistenceContextBootstrapper extends Bootstrapper.Simple {
+    private static Logger LOG = Logger.getLogger( PersistenceContextBootstrapper.class );
+    
+    @Override
+    public boolean load( ) throws Exception {
+      System.setProperty( "jgroups.udp.bind_addr", Internets.localHostAddress( ) );
+      Groovyness.run( "setup_persistence.groovy" );
+      return true;
+    }
+  }
+  
+  @Provides( Empyrean.class )
+  @RunDuring( Bootstrap.Stage.PoolInit )
+  public static class DatabasePoolBootstrapper extends Bootstrapper.Simple {
+    
+    @Override
+    public boolean load( ) throws Exception {
+      System.setProperty( "jgroups.udp.jdbc.bind_addr", Internets.localHostAddress( ) );
+      Groovyness.run( "setup_dbpool.groovy" );
+      return true;
+    }
+    
+  }
+  
+  @Provides( Empyrean.class )
+  @RunDuring( Bootstrap.Stage.RemoteConfiguration )
+  public static class HostMembershipBootstrapper extends Bootstrapper.Simple {
+    private static final Logger LOG = Logger.getLogger( Empyrean.HostMembershipBootstrapper.class );
+    
+    @Override
+    public boolean load( ) throws Exception {
+      try {
+        HostManager.getInstance( );
+        LOG.info( "Started membership channel " + HostManager.getMembershipGroupName( ) );
+        while ( !HostManager.isReady( ) ) {
+          TimeUnit.SECONDS.sleep( 5 );
+          LOG.info( "Waiting for system view with database..." );
+        }
+        LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
+        return true;
+      } catch ( Exception ex ) {
+        LOG.fatal( ex, ex );
+        BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
+        return false;
+      }
+    }
+    
+  }
+  
+  public static boolean setupServiceDependencies( InetAddress addr ) {
+    if ( !Internets.testLocal( addr ) && !Internets.testReachability( addr ) ) {
+      LOG.warn( "Failed to reach host for cloud controller: " + addr );
+      return false;
+    } else {
+      try {
+        setupServiceState( addr, Empyrean.INSTANCE );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        return false;
+      }
+      for ( ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
+        try {
+          if ( compId.isAlwaysLocal( ) ) {
+            setupServiceState( addr, compId );
+          }
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+      return true;
+    }
+    
+  }
+  
+  public static boolean teardownServiceDependencies( InetAddress addr ) {
+    if ( !Internets.testLocal( addr ) ) {
+      LOG.warn( "Failed to reach host for cloud controller: " + addr );
+      return false;
+    } else {
+      try {
+        for ( ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
+          try {
+            if ( compId.isAlwaysLocal( ) ) {
+              ServiceConfiguration dependsConfig = ServiceConfigurations.lookupByName( compId.getClass( ), addr.getHostAddress( ) );
+              Topology.stop( dependsConfig );
+            }
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+        }
+        return true;
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        return false;
+      }
+    }
+    
+  }
+}

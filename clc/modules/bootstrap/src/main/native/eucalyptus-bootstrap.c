@@ -605,20 +605,24 @@ void euca_load_bootstrapper(void) {
 
 char* java_library_path(euca_opts *args) {
 #define JAVA_PATH_LEN 65536
-	char lib_dir[256], etc_dir[256], script_dir[256], *jar_list =
+	char lib_dir[256], etc_dir[256], script_dir[256], class_cache_dir[256], *jar_list =
 			(char*) malloc(JAVA_PATH_LEN * sizeof(char));
 	__die((strlen(GETARG(args, home)) + strlen(EUCA_LIB_DIR) >= 254),
 			"Directory path too long: %s/%s", GETARG(args, home), EUCA_LIB_DIR);
 	snprintf(lib_dir, 255, "%s%s", GETARG(args, home), EUCA_LIB_DIR);
 	snprintf(etc_dir, 255, "%s%s", GETARG(args, home), EUCA_ETC_DIR);
+	snprintf(class_cache_dir, 255, "%s%s", GETARG(args, home), EUCA_CLASSCACHE_DIR);
 	snprintf(script_dir, 255, "%s%s", GETARG(args, home), EUCA_SCRIPT_DIR);
 	if (!CHECK_ISDIR(lib_dir))
 		__die(1, "Can't find library directory %s", lib_dir);
 	int wb = 0;
 	wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "-Djava.class.path=%s:",
 			etc_dir);
+	wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "%s", class_cache_dir);
 	wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "%s", script_dir);
 	DIR* lib_dir_p = opendir(lib_dir);
+	if(!lib_dir_p)
+	   __die(1, "Can't open library directory %s", lib_dir);
 	struct direct *dir_ent;
 	while ((dir_ent = readdir(lib_dir_p)) != 0) {
 		if (strcmp(dir_ent->d_name, ".") != 0 && strcmp(dir_ent->d_name, "..")
@@ -648,7 +652,7 @@ char* java_library_path(euca_opts *args) {
 				wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, ":%s", jar);
 		}
 	}
-	closedir(lib_dir_p);
+	closedir(lib_dir_p); 
 	return jar_list;
 }
 
@@ -726,6 +730,7 @@ int java_init(euca_opts *args, java_home_t *data) {
 	JVM_ARG(opt[++x], "-Deuca.log.appender=%1$s", GETARG(args, log_appender));
 	if (args->initialize_flag) {
 		JVM_ARG(opt[++x], "-Deuca.initialize=true");
+		JVM_ARG(opt[++x], "-Deuca.remote.dns=true");
 	} else {
 		if (args->remote_dns_flag) {
 			JVM_ARG(opt[++x], "-Deuca.remote.dns=true");
@@ -734,7 +739,12 @@ int java_init(euca_opts *args, java_home_t *data) {
 			JVM_ARG(opt[++x], "-Deuca.disable.iscsi=true");
 		}
 	}
+	if (args->force_remote_bootstrap_flag || args->disable_cloud_flag) {
+		JVM_ARG(opt[++x], "-Deuca.force.remote.bootstrap=true");
+	}
 	if (args->debug_flag) {
+		JVM_ARG(opt[++x], "-XX:+HeapDumpOnOutOfMemoryError");
+		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(args, home));
 		JVM_ARG(opt[++x], "-Xdebug");
 		JVM_ARG(
 				opt[++x],
@@ -747,8 +757,6 @@ int java_init(euca_opts *args, java_home_t *data) {
 	//		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.port=8772");
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.authenticate=false");//TODO:GRZE:RELEASE FIXME to use ssl
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.ssl=false");
-		JVM_ARG(opt[++x], "-XX:+HeapDumpOnOutOfMemoryError");
-		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(args, home));
 	}
 	if (args->verbose_flag ) {
 		JVM_ARG(opt[++x], "-verbose:gc");
@@ -770,9 +778,9 @@ int java_init(euca_opts *args, java_home_t *data) {
 	for (i = 0; i < args->define_given; i++)
 		JVM_ARG(opt[++x], "-D%s", args->define_arg[i]);
 	for (i = 0; i < args->bootstrap_host_given; i++)
-		JVM_ARG(opt[++x], "-Deuca.bootstrap.host.%d=%s", i, args->define_arg[i]);
+		JVM_ARG(opt[++x], "-Deuca.bootstrap.host.%d=%s", i, args->bootstrap_host_arg[i]);
 	for (i = 0; i < args->bind_addr_given; i++)
-		JVM_ARG(opt[++x], "-Deuca.bind.addr.%d=%s", i, args->define_arg[i]);
+		JVM_ARG(opt[++x], "-Deuca.bind.addr.%d=%s", i, args->bind_addr_arg[i]);
 
 	opt[++x].optionString = java_class_path;
 	opt[x].extraInfo = NULL;

@@ -34,6 +34,7 @@
 
 package com.eucalyptus.cloud.ws;
 
+import java.net.InetAddress;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
@@ -51,9 +52,10 @@ public class ComponentService {
 	public BaseMessage handle(ComponentMessageType request) throws EucalyptusCloudException {
 		String component = request.getComponent();
 		String host = request.getHost();
+		String name = request.getName();
 		
 		LOG.info("Component: " + component + "@" + host);
-    ServiceConfiguration service = lookupService( component, host );
+		ServiceConfiguration service = lookupService( component, host, name );
 		if(service.isVmLocal()) {
 			return request;
  		} else {
@@ -68,14 +70,18 @@ public class ComponentService {
  		}
 	}
 
-  private ServiceConfiguration lookupService( String component, String host ) throws EucalyptusCloudException {
-    Component destinationComponent = Components.lookup( component );
-    String canonicalHostName = Internets.toAddress( host ).getCanonicalHostName( );
-    for( ServiceConfiguration s : destinationComponent.lookupServiceConfigurations( ) ) {
-		  if( Internets.toAddress( s.getHostName( ) ).getCanonicalHostName( ).equals( canonicalHostName ) ) {
-		    return s;
-		  }
-		}
-    throw new EucalyptusCloudException("Unable to dispatch message to: " + component + "@" + host);
+  private ServiceConfiguration lookupService( String component, String name, String host ) throws EucalyptusCloudException {
+    Component destComp = Components.lookup( component );
+    if( name != null ) {
+      return destComp.lookupServiceConfiguration( name );
+    } else {
+      InetAddress hostAddress = Internets.toAddress( host );
+      for( ServiceConfiguration s : destComp.lookupServiceConfigurations( ) ) {
+        if( Internets.toAddress( s.getHostName( ) ).equals( hostAddress ) ) {
+          return s;
+        }
+      }
+      throw new EucalyptusCloudException("Unable to dispatch message to: " + component + "@" + host);
+    }
   }
 }

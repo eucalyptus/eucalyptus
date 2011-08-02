@@ -3,6 +3,7 @@ package com.eucalyptus.webui.server;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
@@ -34,7 +35,9 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   private static final long serialVersionUID = 1L;
 
   private static final String WHITESPACE_PATTERN = "\\s+";
-    
+
+  private static final Random RANDOM = new Random( );
+  
   private static User verifySession( Session session ) throws EucalyptusServiceException {
     WebSession ws = WebSessionManager.getInstance( ).getSession( session.getId( ) );
     if ( ws == null ) {
@@ -53,28 +56,20 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     return sq;
   }
 
+  private static void randomDelay( ) {
+    try {
+      Thread.sleep( 200 + RANDOM.nextInt( 800 ) );
+    } catch ( Exception e ) { }
+  }
+  
   @Override
-  public Session login( String fullName, String password ) throws EucalyptusServiceException {
-    if ( fullName == null || password == null ) {
-      throw new EucalyptusServiceException( "Empty user name or password" );
-    }
-    // Parse userId in the follow forms:
-    // 1. "user@account"
-    // 2. any of the parts is missing, using the default: "admin" for user and "eucalyptus" for account.
-    //    So it could be "test" (test@eucalyptus) or "@test" (admin@test).
-    String userName = User.ACCOUNT_ADMIN;
-    String accountName = Account.SYSTEM_ACCOUNT;
-    int at = fullName.indexOf( '@' );
-    if ( at < 0 ) {
-      userName = fullName;
-    } else if ( at == 0 ) {
-      accountName = fullName.substring( 1 );
-    } else {
-      userName = fullName.substring( 0, at );
-      accountName = fullName.substring( at + 1 );
+  public Session login( String accountName, String userName, String password ) throws EucalyptusServiceException {
+    // Simple thwart to automatic login attack.
+    randomDelay( );
+    if ( Strings.isNullOrEmpty( accountName ) || Strings.isNullOrEmpty( userName ) || Strings.isNullOrEmpty( password ) ) {
+      throw new EucalyptusServiceException( "Empty login or password" );
     }
     EuareWebBackend.checkPassword( EuareWebBackend.getUser( userName, accountName ), password );
-    try { Thread.sleep( 500 ); } catch ( Exception e ) { } // Simple thwart to automatic login attack.
     return new Session( WebSessionManager.getInstance( ).newSession( userName, accountName ) );
   }
 
@@ -105,7 +100,11 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   
   @Override
   public SearchResult lookupConfiguration( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    verifySession( session );
+    User user = verifySession( session );
+    if ( !user.isSystemAdmin( ) ) {
+      LOG.error( "Non system admin tries to query system configurations" );
+      throw new EucalyptusServiceException( "Operation can not be authorized" );
+    }
     SearchResult result = new SearchResult( );
     result.setDescs( ConfigurationWebBackend.COMMON_FIELD_DESCS );
     result.addRow( ConfigurationWebBackend.getCloudConfiguration( ) );
@@ -114,13 +113,16 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     result.addRows( ConfigurationWebBackend.getWalrusConfiguration( ) );
     result.setTotalSize( result.length( ) );
     result.setRange( range );
-    LOG.debug( "Configuration result: " + result );
     return result;
   }
   
   @Override
   public void setConfiguration( Session session, SearchResultRow config ) throws EucalyptusServiceException {
-    verifySession( session );
+    User user = verifySession( session );
+    if ( !user.isSystemAdmin( ) ) {
+      LOG.error( "Non system admin tries to change system configurations" );
+      throw new EucalyptusServiceException( "Operation can not be authorized" );
+    }
     if ( config == null ) {
       throw new EucalyptusServiceException( "Empty config to save" );
     }
@@ -150,26 +152,28 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     result.addRows( VmTypeWebBackend.getVmTypes( ) );
     result.setTotalSize( result.length( ) );
     result.setRange( range );
-    LOG.debug( "VmType result: " + result );
     return result;
   }
 
   @Override
   public void setVmType( Session session, SearchResultRow vmType ) throws EucalyptusServiceException {
-    verifySession( session );
+    User user = verifySession( session );
+    if ( !user.isSystemAdmin( ) ) {
+      LOG.error( "Non system admin tries to change VM type definitions" );
+      throw new EucalyptusServiceException( "Operation can not be authorized" );
+    }
     if ( vmType == null ) {
       throw new EucalyptusServiceException( "Empty UI input for VmType" );
     }
-    LOG.debug( "Set VmType: " + vmType );
     VmTypeWebBackend.setVmType( vmType );
   }
 
   
   @Override
   public SearchResult lookupAccount( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    verifySession( session );
+    User user = verifySession( session );
     SearchQuery searchQuery = parseQuery( QueryType.account, search );
-    List<SearchResultRow> rows = EuareWebBackend.searchAccounts( searchQuery );
+    List<SearchResultRow> rows = EuareWebBackend.searchAccounts( user, searchQuery );
     SearchResult result = new SearchResult( rows.size( ), range );
     result.setDescs( EuareWebBackend.ACCOUNT_COMMON_FIELD_DESCS );
     result.setRows( SearchUtil.getRange( rows, range ) );
@@ -178,9 +182,9 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   @Override
   public SearchResult lookupGroup( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    verifySession( session );
+    User user = verifySession( session );
     SearchQuery searchQuery = parseQuery( QueryType.group, search );
-    List<SearchResultRow> searchResult = EuareWebBackend.searchGroups( searchQuery );
+    List<SearchResultRow> searchResult = EuareWebBackend.searchGroups( user, searchQuery );
     SearchResult result = new SearchResult( searchResult.size( ), range );
     result.setDescs( EuareWebBackend.GROUP_COMMON_FIELD_DESCS );
     result.setRows( SearchUtil.getRange( searchResult, range ) );
@@ -189,9 +193,9 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   @Override
   public SearchResult lookupUser( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    verifySession( session );
+    User user = verifySession( session );
     SearchQuery searchQuery = parseQuery( QueryType.user, search );
-    List<SearchResultRow> searchResult = EuareWebBackend.searchUsers( searchQuery );
+    List<SearchResultRow> searchResult = EuareWebBackend.searchUsers( user, searchQuery );
     SearchResult result = new SearchResult( searchResult.size( ), range );
     result.setDescs( EuareWebBackend.USER_COMMON_FIELD_DESCS );
     result.setRows( SearchUtil.getRange( searchResult, range ) );
@@ -200,9 +204,9 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   @Override
   public SearchResult lookupPolicy( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    verifySession( session );
+    User user = verifySession( session );
     SearchQuery searchQuery = parseQuery( QueryType.policy, search );
-    List<SearchResultRow> searchResult = EuareWebBackend.searchPolicies( searchQuery );
+    List<SearchResultRow> searchResult = EuareWebBackend.searchPolicies( user, searchQuery );
     SearchResult result = new SearchResult( searchResult.size( ), range );
     result.setDescs( EuareWebBackend.POLICY_COMMON_FIELD_DESCS );
     result.setRows( SearchUtil.getRange( searchResult, range ) );
@@ -211,9 +215,9 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   @Override
   public SearchResult lookupKey( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    verifySession( session );
+    User user = verifySession( session );
     SearchQuery searchQuery = parseQuery( QueryType.key, search );
-    List<SearchResultRow> searchResult = EuareWebBackend.searchKeys( searchQuery );
+    List<SearchResultRow> searchResult = EuareWebBackend.searchKeys( user, searchQuery );
     SearchResult result = new SearchResult( searchResult.size( ), range );
     result.setDescs( EuareWebBackend.KEY_COMMON_FIELD_DESCS );
     result.setRows( SearchUtil.getRange( searchResult, range ) );
@@ -222,9 +226,9 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   @Override
   public SearchResult lookupCertificate( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    verifySession( session );
+    User user = verifySession( session );
     SearchQuery searchQuery = parseQuery( QueryType.cert, search );
-    List<SearchResultRow> searchResult = EuareWebBackend.searchCerts( searchQuery );
+    List<SearchResultRow> searchResult = EuareWebBackend.searchCerts( user, searchQuery );
     SearchResult result = new SearchResult( searchResult.size( ), range );
     result.setDescs( EuareWebBackend.CERT_COMMON_FIELD_DESCS );
     result.setRows( SearchUtil.getRange( searchResult, range ) );
@@ -233,8 +237,8 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   @Override
   public SearchResult lookupImage( Session session, String search, SearchRange range ) throws EucalyptusServiceException {
-    verifySession( session );
-    List<SearchResultRow> searchResult = ImageWebBackend.searchImages( search );
+    User user = verifySession( session );
+    List<SearchResultRow> searchResult = ImageWebBackend.searchImages( user, search );
     SearchResult result = new SearchResult( searchResult.size( ), range );
     result.setDescs( ImageWebBackend.COMMON_FIELD_DESCS );
     result.setRows( SearchUtil.getRange( searchResult, range ) );
@@ -243,32 +247,32 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   @Override
   public String createAccount( Session session, String accountName ) throws EucalyptusServiceException {
-    verifySession( session );
-    return EuareWebBackend.createAccount( accountName );
+    User user = verifySession( session );
+    return EuareWebBackend.createAccount( user, accountName );
   }
 
   @Override
   public void deleteAccounts( Session session, ArrayList<String> ids ) throws EucalyptusServiceException {
-    verifySession( session );
-    EuareWebBackend.deleteAccounts( ids );
+    User user = verifySession( session );
+    EuareWebBackend.deleteAccounts( user, ids );
   }
 
   @Override
   public void modifyAccount( Session session, ArrayList<String> values ) throws EucalyptusServiceException {
-    verifySession( session );
-    EuareWebBackend.modifyAccount( values );
+    User user = verifySession( session );
+    EuareWebBackend.modifyAccount( user, values );
   }
 
   @Override
   public ArrayList<String> createUsers( Session session, String accountId, String names, String path ) throws EucalyptusServiceException {
-    verifySession( session );
+    User requestUser = verifySession( session );
     if ( Strings.isNullOrEmpty( names ) ) {
       throw new EucalyptusServiceException( "Invalid names for creating users: " + names );
     }
     ArrayList<String> users = Lists.newArrayList( );
     for ( String name : names.split( WHITESPACE_PATTERN ) ) {
       if ( !Strings.isNullOrEmpty( name ) ) {
-        users.add( EuareWebBackend.createUser( accountId, name, path ) );
+        users.add( EuareWebBackend.createUser( requestUser, accountId, name, path ) );
       }
     }
     return users;
@@ -276,14 +280,14 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   @Override
   public ArrayList<String> createGroups( Session session, String accountId, String names, String path ) throws EucalyptusServiceException {
-    verifySession( session );
+    User requestUser = verifySession( session );
     if ( Strings.isNullOrEmpty( names ) ) {
       throw new EucalyptusServiceException( "Invalid names for creating groups: " + names );
     }
     ArrayList<String> groups = Lists.newArrayList( );
     for ( String name : names.split( WHITESPACE_PATTERN ) ) {
       if ( !Strings.isNullOrEmpty( name ) ) {
-        groups.add( EuareWebBackend.createGroup( accountId, name, path ) );
+        groups.add( EuareWebBackend.createGroup( requestUser, accountId, name, path ) );
       }
     }
     return groups;    
@@ -291,62 +295,62 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   @Override
   public void deleteUsers( Session session, ArrayList<String> ids ) throws EucalyptusServiceException {
-    verifySession( session );
-    EuareWebBackend.deleteUsers( ids );
+    User requestUser = verifySession( session );
+    EuareWebBackend.deleteUsers( requestUser, ids );
   }
 
   @Override
   public void deleteGroups( Session session, ArrayList<String> ids ) throws EucalyptusServiceException {
-    verifySession( session );
-    EuareWebBackend.deleteGroups( ids );
+    User requestUser = verifySession( session );
+    EuareWebBackend.deleteGroups( requestUser, ids );
   }
 
   @Override
   public void addAccountPolicy( Session session, String accountId, String name, String document ) throws EucalyptusServiceException {
-    verifySession( session );
-    EuareWebBackend.addAccountPolicy( accountId, name, document );
+    User requestUser = verifySession( session );
+    EuareWebBackend.addAccountPolicy( requestUser, accountId, name, document );
   }
 
   @Override
   public void addUserPolicy( Session session, String userId, String name, String document ) throws EucalyptusServiceException {
-    verifySession( session );
-    EuareWebBackend.addUserPolicy( userId, name, document );
+    User requestUser = verifySession( session );
+    EuareWebBackend.addUserPolicy( requestUser, userId, name, document );
   }
 
   @Override
   public void addGroupPolicy( Session session, String groupId, String name, String document ) throws EucalyptusServiceException {
-    verifySession( session );
-    EuareWebBackend.addGroupPolicy( groupId, name, document );
+    User requestUser = verifySession( session );
+    EuareWebBackend.addGroupPolicy( requestUser, groupId, name, document );
   }
 
   @Override
   public void deletePolicy( Session session, SearchResultRow policySerialized ) throws EucalyptusServiceException {
-    verifySession( session );
-    EuareWebBackend.deletePolicy( policySerialized );
+    User requestUser = verifySession( session );
+    EuareWebBackend.deletePolicy( requestUser, policySerialized );
   }
 
   @Override
   public void deleteAccessKey( Session session, SearchResultRow keySerialized ) throws EucalyptusServiceException {
-    verifySession( session );
-    EuareWebBackend.deleteAccessKey( keySerialized );
+    User requestUser = verifySession( session );
+    EuareWebBackend.deleteAccessKey( requestUser, keySerialized );
   }
 
   @Override
   public void deleteCertificate( Session session, SearchResultRow certSerialized ) throws EucalyptusServiceException {
-    verifySession( session );
-    EuareWebBackend.deleteCertificate( certSerialized );
+    User requestUser = verifySession( session );
+    EuareWebBackend.deleteCertificate( requestUser, certSerialized );
   }
 
   @Override
   public void addUsersToGroupsByName( Session session, String userNames, ArrayList<String> groupIds ) throws EucalyptusServiceException {
-    verifySession( session );
+    User requestUser = verifySession( session );
     if ( Strings.isNullOrEmpty( userNames ) || groupIds == null || groupIds.size( ) < 1 ) {
       throw new EucalyptusServiceException( "Empty names or empty group ids" );
     }
     for ( String groupId : groupIds ) {
       for ( String userName : userNames.split( WHITESPACE_PATTERN ) ) {
         if ( !Strings.isNullOrEmpty( userName ) && !Strings.isNullOrEmpty( groupId ) ) {
-          EuareWebBackend.addUserToGroupByName( userName, groupId );
+          EuareWebBackend.addUserToGroupByName( requestUser, userName, groupId );
         }
       }
     }
@@ -354,27 +358,27 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   @Override
   public void addUsersToGroupsById( Session session, ArrayList<String> userIds, String groupNames ) throws EucalyptusServiceException {
-    verifySession( session );
+    User requestUser = verifySession( session );
     if ( Strings.isNullOrEmpty( groupNames ) || userIds == null || userIds.size( ) < 1 ) {
       throw new EucalyptusServiceException( "Empty names or empty group ids" );
     }
     for ( String userId : userIds ) {
       for ( String groupName : groupNames.split( WHITESPACE_PATTERN ) ) {
-        EuareWebBackend.addUserToGroupById( userId, groupName );
+        EuareWebBackend.addUserToGroupById( requestUser, userId, groupName );
       }
     }
   }
 
   @Override
   public void removeUsersFromGroupsByName( Session session, String userNames, ArrayList<String> groupIds ) throws EucalyptusServiceException {
-    verifySession( session );
+    User requestUser = verifySession( session );
     if ( Strings.isNullOrEmpty( userNames ) || groupIds == null || groupIds.size( ) < 1 ) {
       throw new EucalyptusServiceException( "Empty names or empty group ids" );
     }
     for ( String groupId : groupIds ) {
       for ( String userName : userNames.split( WHITESPACE_PATTERN ) ) {
         if ( !Strings.isNullOrEmpty( userName ) && !Strings.isNullOrEmpty( groupId ) ) {
-          EuareWebBackend.removeUserFromGroupByName( userName, groupId );
+          EuareWebBackend.removeUserFromGroupByName( requestUser, userName, groupId );
         }
       }
     }
@@ -382,94 +386,101 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   @Override
   public void removeUsersFromGroupsById( Session session, ArrayList<String> userIds, String groupNames ) throws EucalyptusServiceException {
-    verifySession( session );
+    User requestUser = verifySession( session );
     if ( Strings.isNullOrEmpty( groupNames ) || userIds == null || userIds.size( ) < 1 ) {
       throw new EucalyptusServiceException( "Empty names or empty group ids" );
     }
     for ( String userId : userIds ) {
       for ( String groupName : groupNames.split( WHITESPACE_PATTERN ) ) {
-        EuareWebBackend.removeUserFromGroupById( userId, groupName );
+        EuareWebBackend.removeUserFromGroupById( requestUser, userId, groupName );
       }
     }
   }
 
   @Override
   public void modifyUser( Session session, ArrayList<String> keys, ArrayList<String> values ) throws EucalyptusServiceException {
-    verifySession( session );
-    EuareWebBackend.modifyUser( keys, values );
+    User requestUser = verifySession( session );
+    EuareWebBackend.modifyUser( requestUser, keys, values );
   }
 
   @Override
   public void modifyGroup( Session session, ArrayList<String> values ) throws EucalyptusServiceException {
-    verifySession( session );
-    EuareWebBackend.modifyGroup( values );
+    User requestUser = verifySession( session );
+    EuareWebBackend.modifyGroup( requestUser, values );
   }
 
   @Override
   public void modifyAccessKey( Session session, ArrayList<String> values ) throws EucalyptusServiceException {
-    verifySession( session );
-    EuareWebBackend.modifyAccessKey( values );
+    User requestUser = verifySession( session );
+    EuareWebBackend.modifyAccessKey( requestUser, values );
   }
 
   @Override
   public void modifyCertificate( Session session, ArrayList<String> values ) throws EucalyptusServiceException {
-    verifySession( session );
-    EuareWebBackend.modifyCertificate( values );
+    User requestUser = verifySession( session );
+    EuareWebBackend.modifyCertificate( requestUser, values );
   }
 
   @Override
   public void addAccessKey( Session session, String userId ) throws EucalyptusServiceException {
-    verifySession( session );
-    EuareWebBackend.addAccessKey( userId );
+    User requestUser = verifySession( session );
+    EuareWebBackend.addAccessKey( requestUser, userId );
   }
 
   @Override
   public void addCertificate( Session session, String userId, String pem ) throws EucalyptusServiceException {
-    verifySession( session );
-    EuareWebBackend.addCertificate( userId, pem );
+    User requestUser = verifySession( session );
+    EuareWebBackend.addCertificate( requestUser, userId, pem );
   }
 
   @Override
   public void changePassword( Session session, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
-    verifySession( session );
-    EuareWebBackend.changeUserPassword( userId, oldPass, newPass, email );
+    User requestUser = verifySession( session );
+    EuareWebBackend.changeUserPassword( requestUser, userId, oldPass, newPass, email );
   }
 
   @Override
   public void signupAccount( String accountName, String password, String email ) throws EucalyptusServiceException {
+    // Simple thwart to automatic signup attack.
+    randomDelay( );
     User admin = EuareWebBackend.createAccount( accountName, password, email );
-    EuareWebBackend.notifyAccountRegistration( admin, accountName, email, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+    if ( admin != null ) {
+      EuareWebBackend.notifyAccountRegistration( admin, accountName, email, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+    }
   }
 
 
   @Override
   public ArrayList<String> approveAccounts( Session session, ArrayList<String> accountNames ) throws EucalyptusServiceException {
-    verifySession( session );
-    return EuareWebBackend.processAccountSignups( accountNames, true, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+    User requestUser = verifySession( session );
+    return EuareWebBackend.processAccountSignups( requestUser, accountNames, true, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
   }
 
   @Override
   public ArrayList<String> rejectAccounts( Session session, ArrayList<String> accountNames ) throws EucalyptusServiceException {
-    verifySession( session );
-    return EuareWebBackend.processAccountSignups( accountNames, false, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+    User requestUser = verifySession( session );
+    return EuareWebBackend.processAccountSignups( requestUser, accountNames, false, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
   }
 
   @Override
   public ArrayList<String> approveUsers( Session session, ArrayList<String> userIds ) throws EucalyptusServiceException {
-    verifySession( session );
-    return EuareWebBackend.processUserSignups( userIds, true, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+    User requestUser = verifySession( session );
+    return EuareWebBackend.processUserSignups( requestUser, userIds, true, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
   }
 
   @Override
   public ArrayList<String> rejectUsers( Session session, ArrayList<String> userIds ) throws EucalyptusServiceException {
-    verifySession( session );
-    return EuareWebBackend.processUserSignups( userIds, false, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+    User requestUser = verifySession( session );
+    return EuareWebBackend.processUserSignups( requestUser, userIds, false, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
   }
 
   @Override
   public void signupUser( String userName, String accountName, String password, String email ) throws EucalyptusServiceException {
+    randomDelay( );
     User user = EuareWebBackend.createUser( userName, accountName, password, email );
-    EuareWebBackend.notifyUserRegistration( user, accountName, email, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+    if ( user != null ) {
+      EuareWebBackend.notifyUserRegistration( user, accountName, email, ServletUtils.getRequestUrl( getThreadLocalRequest( ) ) );
+    }
   }
 
   @Override

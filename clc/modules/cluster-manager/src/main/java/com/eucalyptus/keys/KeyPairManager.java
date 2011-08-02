@@ -3,6 +3,7 @@ package com.eucalyptus.keys;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.math.BigInteger;
 import java.security.PrivateKey;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMWriter;
@@ -11,16 +12,11 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.Image;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Certs;
+import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.cloud.VmAllocationInfo;
-import edu.ucsb.eucalyptus.cloud.VmInfo;
-import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.msgs.CreateKeyPairResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateKeyPairType;
 import edu.ucsb.eucalyptus.msgs.DeleteKeyPairResponseType;
@@ -30,54 +26,27 @@ import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType;
 import edu.ucsb.eucalyptus.msgs.ImportKeyPairResponseType;
 import edu.ucsb.eucalyptus.msgs.ImportKeyPairType;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class KeyPairManager {
   private static Logger LOG = Logger.getLogger( KeyPairManager.class );
-
-  public VmAllocationInfo verify( VmAllocationInfo vmAllocInfo ) throws EucalyptusCloudException {
-    if ( SshKeyPair.NO_KEY_NAME.equals( vmAllocInfo.getRequest().getKeyName() ) || vmAllocInfo.getRequest().getKeyName() == null ) {
-//ASAP:FIXME:GRZE
-      if( Image.Platform.windows.name().equals( vmAllocInfo.getPlatform( ) ) ) {
-        throw new EucalyptusCloudException( "You must specify a keypair when running a windows vm: " + vmAllocInfo.getRequest().getImageId() );
-      } else {
-        vmAllocInfo.setKeyInfo( new VmKeyInfo() );
-        return vmAllocInfo;
-      }
-    }
-    Context ctx = Contexts.lookup();
-    RunInstancesType request = vmAllocInfo.getRequest( );
-    String action = PolicySpec.requestToAction( request );
-    String keyName = request.getKeyName( );
-    Account account = ctx.getAccount( );
-    SshKeyPair keypair = KeyPairUtil.getUserKeyPair( ctx.getUserFullName( ), keyName );
-    if ( keypair == null ) {
-      throw new EucalyptusCloudException( "Failed to find keypair: " + keyName );
-    }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, keyName, account, action, ctx.getUser( ) ) ) {
-      throw new EucalyptusCloudException( "Not authorized to use keypair " + keyName + " by " + ctx.getUser( ).getName( ) );
-    }
-    vmAllocInfo.setKeyInfo( new VmKeyInfo( keypair.getDisplayName( ), keypair.getPublicKey(), keypair.getFingerPrint() ) );
-    return vmAllocInfo;
-  }
-
   
   public DescribeKeyPairsResponseType describe( DescribeKeyPairsType request ) throws Exception {
     DescribeKeyPairsResponseType reply = request.getReply( );
-    Context ctx = Contexts.lookup();
+    Context ctx = Contexts.lookup( );
     for ( SshKeyPair kp : KeyPairUtil.getUserKeyPairs( ctx.getUserFullName( ) ) ) {
       if ( request.getKeySet( ).isEmpty( ) || request.getKeySet( ).contains( kp.getDisplayName( ) ) ) {
-        if ( Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, kp.getDisplayName( ), ctx.getAccount( ), PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+        if ( Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, kp.getDisplayName( ), ctx.getAccount( ),
+                                       PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
           reply.getKeySet( ).add( new DescribeKeyPairsResponseItemType( kp.getDisplayName( ), kp.getFingerPrint( ) ) );
         }
       }
     }
     return reply;
   }
-
+  
   public DeleteKeyPairResponseType delete( DeleteKeyPairType request ) throws EucalyptusCloudException {
     DeleteKeyPairResponseType reply = ( DeleteKeyPairResponseType ) request.getReply( );
-    Context ctx = Contexts.lookup();
+    Context ctx = Contexts.lookup( );
     try {
       SshKeyPair key = KeyPairUtil.deleteUserKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
       Account keyAccount = null;
@@ -86,7 +55,8 @@ public class KeyPairManager {
       } catch ( AuthException e ) {
         throw new EucalyptusCloudException( e );
       }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, request.getKeyName( ), keyAccount, PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, request.getKeyName( ), keyAccount,
+                                      PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
         throw new EucalyptusCloudException( "Permission denied while trying to delete keypair " + key.getName( ) + " by " + ctx.getUser( ) );
       }
       reply.set_return( true );
@@ -95,10 +65,10 @@ public class KeyPairManager {
     }
     return reply;
   }
-
+  
   public CreateKeyPairResponseType create( CreateKeyPairType request ) throws EucalyptusCloudException {
     CreateKeyPairResponseType reply = request.getReply( );
-    com.eucalyptus.context.Context ctx = Contexts.lookup();
+    Context ctx = Contexts.lookup( );
     String action = PolicySpec.requestToAction( request );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
@@ -109,15 +79,15 @@ public class KeyPairManager {
       }
     }
     try {
-      KeyPairUtil.getUserKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
+      KeyPairs.lookup( ctx.getUserFullName( ), request.getKeyName( ) );
     } catch ( Exception e1 ) {
       PrivateKey pk = KeyPairUtil.createUserKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
       reply.setKeyFingerprint( Certs.getFingerPrint( pk ) );
-      ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+      ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
       PEMWriter privOut = new PEMWriter( new OutputStreamWriter( byteOut ) );
       try {
         privOut.writeObject( pk );
-        privOut.close();
+        privOut.close( );
       } catch ( IOException e ) {
         LOG.error( e );
         throw new EucalyptusCloudException( e );
@@ -128,9 +98,40 @@ public class KeyPairManager {
     }
     throw new EucalyptusCloudException( "Creation failed.  Keypair already exists: " + request.getKeyName( ) );
   }
-
-  public ImportKeyPairResponseType importKeyPair(ImportKeyPairType request) {
+  
+  public ImportKeyPairResponseType importKeyPair( ImportKeyPairType request ) throws AuthException {
     ImportKeyPairResponseType reply = request.getReply( );
+    Context ctx = Contexts.lookup( );
+    String action = PolicySpec.requestToAction( request );
+    if ( !ctx.hasAdministrativePrivileges( ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+        throw new AuthException( "Permission denied while trying to create keypair by " + ctx.getUser( ) );
+      }
+      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, "", action, ctx.getUser( ), 1L ) ) {
+        throw new AuthException( "Quota exceeded while trying to create keypair by " + ctx.getUser( ) );
+      }
+    }
+    try {
+      KeyPairs.lookup( ctx.getUserFullName( ), request.getKeyName( ) );
+    } catch ( Exception e1 ) {
+      SshKeyPair newKey = new SshKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
+      newKey.setPublicKey( request.getPublicKeyMaterial( ) );
+      /**
+       * TODO:GRZE:OMGFIXME:RELEASE
+       * Supported formats:
+       * OpenSSH public key format (e.g., the format in ~/.ssh/authorized_keys)
+       * Base64 encoded DER format
+       * SSH public key file format as specified in RFC4716
+       * 
+       * DSA keys are not supported. Make sure your key generator is set up to create RSA keys.
+       * Supported lengths: 1024, 2048, and 4096.
+       */
+      //TODO:GRZE:replace bogus initial impl.
+      byte[] digest = Digest.MD5.get( ).digest( request.getPublicKeyMaterial( ).getBytes( ) );
+      String fingerprint = String.format("%032X",new BigInteger( digest ) );
+      newKey.setFingerPrint( fingerprint );
+      reply.setKeyName( request.getKeyName( ) );
+    }
     return reply;
   }
 }

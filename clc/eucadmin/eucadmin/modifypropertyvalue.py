@@ -35,7 +35,7 @@ from boto.roboto.param import Param
 import eucadmin
 
 def encode_prop(param, dict, value):
-    t = value.split('=')
+    t = value.split('=', 1)
     if len(t) != 2:
         print "Options must be of the form KEY=VALUE: %s" % value
         sys.exit(1)
@@ -43,7 +43,7 @@ def encode_prop(param, dict, value):
     dict['Value'] = t[1]
     
 def encode_prop_from_file(param, dict, value):
-    t = value.split('=')
+    t = value.split('=', 1)
     if len(t) != 2:
         print "Options must be of the form KEY=VALUE: %s" % value
         sys.exit(1)

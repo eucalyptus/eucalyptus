@@ -16,7 +16,6 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 
 public class ConfigurationProperties {
   private static Logger LOG = Logger.getLogger( ConfigurationProperties.class );
@@ -50,7 +49,7 @@ public class ConfigurationProperties {
       }
     }
     List<ConfigurableProperty> prefixProps = PropertyDirectory.getPropertyEntrySet( entrySetName );
-    Map<String,String> properties = Maps.fromProperties( props );
+    Map<String,String> properties = Maps.newHashMap( Maps.fromProperties( props ) );
     props.clear( );
     for( final ConfigurableProperty p : prefixProps ) {
       if( p instanceof StaticPropertyEntry ) {

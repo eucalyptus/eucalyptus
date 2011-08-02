@@ -89,6 +89,7 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NetworkAlreadyExistsException;
 import com.eucalyptus.cluster.Networks;
@@ -96,7 +97,6 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.config.ClusterConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
@@ -104,12 +104,13 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
+import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Transactions;
-import com.eucalyptus.util.Tx;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -139,6 +140,7 @@ public class SystemState {
     EXPIRED( "Instance expired after not being reported for %s ms.", SystemState.SHUT_DOWN_TIME ),
     FAILED( "The instance failed to start on the NC." ),
     USER_TERMINATED( "User initiated terminate." ),
+    USER_STOPPED( "User initiated stop." ),
     BURIED( "Instance buried after timeout of %s ms.", SystemState.BURY_TIME ),
     APPEND( "" );
     private String   message;
@@ -174,7 +176,7 @@ public class SystemState {
     for ( String vmId : unreportedVms ) {
       try {
         VmInstance vm = VmInstances.getInstance( ).lookup( vmId );
-        if ( vm.getSplitTime( ) > SHUT_DOWN_TIME ) {
+        if ( vm.getSplitTime( ) > SHUT_DOWN_TIME && !VmState.STOPPED.equals( vm.getState( ) ) && !VmState.STOPPING.equals( vm.getState( ) ) ) {
           vm.setState( VmState.TERMINATED, Reason.EXPIRED );
         }
       } catch ( NoSuchElementException e ) {}
@@ -208,6 +210,10 @@ public class SystemState {
     
     if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && splitTime > SHUT_DOWN_TIME ) {
       vm.setState( VmState.TERMINATED, Reason.EXPIRED );
+    } else if ( VmState.STOPPING.equals( vm.getState( ) ) && splitTime > SHUT_DOWN_TIME ) {
+        vm.setState( VmState.STOPPED, Reason.EXPIRED );
+    } else if ( VmState.STOPPING.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
+      vm.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
     } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
       vm.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
     } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
@@ -260,7 +266,7 @@ public class SystemState {
       } catch ( XPathExpressionException e ) {
         LOG.error( e, e );
       }
-    } catch ( EucalyptusCloudException e ) { 
+    } catch ( EucalyptusCloudException e ) {
       LOG.error( e, e );
     } catch ( DOMException e ) {
       LOG.error( e, e );
@@ -284,8 +290,11 @@ public class SystemState {
         launchIndex = Integer.parseInt( runVm.getLaunchIndex( ) );
       } catch ( NumberFormatException e ) {}
       //ASAP: FIXME: GRZE: HANDLING OF PRODUCT CODES AND ANCESTOR IDs
-      ImageInfo img = Transactions.one( Images.exampleMachineWithImageId( runVm.getInstanceType( ).lookupRoot( ).getId( ) ), Tx.NOOP );
-      VmKeyInfo keyInfo = null;
+      ImageInfo img = Transactions.one( Images.exampleMachineWithImageId( runVm.getInstanceType( ).lookupRoot( ).getId( ) ), new Callback<ImageInfo>( ) {
+        
+        @Override
+        public void fire( ImageInfo t ) {}
+      } );
       SshKeyPair key = null;
       if ( runVm.getKeyValue( ) != null || !"".equals( runVm.getKeyValue( ) ) ) {
         try {
@@ -295,13 +304,12 @@ public class SystemState {
             }
           } );
         } catch ( Exception e ) {
-          key = SshKeyPair.NO_KEY;
+          key = KeyPairs.noKey( );
         }
       } else {
-        key = SshKeyPair.NO_KEY;
+        key = KeyPairs.noKey( );
       }
-      keyInfo = new VmKeyInfo( key.getDisplayName( ), key.getPublicKey( ), key.getFingerPrint( ) );
-      VmTypeInfo vmType = runVm.getInstanceType( );
+      VmType vmType = VmTypes.getVmType( runVm.getInstanceType( ).getName( ) );
       List<Network> networks = new ArrayList<Network>( );
       
       for ( String netName : runVm.getGroupNames( ) ) {
@@ -341,13 +349,12 @@ public class SystemState {
           }
         }
       }
-      VmInstance vm = new VmInstance( ownerId, instanceId, instanceUuid, reservationId, launchIndex, placement, userData, keyInfo, vmType, img.getPlatform( ).toString( ),
+      VmInstance vm = new VmInstance( ownerId, instanceId, instanceUuid, reservationId, launchIndex, placement, userData, runVm.getInstanceType( ), key, vmType,
+                                      img.getPlatform( ).toString( ),
                                       networks,
                                       Integer.toString( runVm.getNetParams( ).getNetworkIndex( ) ) );
       vm.clearPending( );
-      vm.setLaunchTime( runVm.getLaunchTime( ) );
       vm.updatePublicAddress( VmInstance.DEFAULT_IP );
-      vm.setKeyInfo( keyInfo );
       VmInstances.getInstance( ).register( vm );
     } catch ( NoSuchElementException e ) {
       ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );

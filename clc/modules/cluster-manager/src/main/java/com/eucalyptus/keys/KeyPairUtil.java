@@ -18,16 +18,11 @@ import com.google.common.collect.Lists;
 public class KeyPairUtil {
   private static Logger LOG = Logger.getLogger( KeyPairUtil.class );
 
-  public static EntityWrapper<SshKeyPair> getEntityWrapper( ) {
-    EntityWrapper<SshKeyPair> db = EntityWrapper.get( SshKeyPair.class );
-    return db;
-  }
-
-  public static List<SshKeyPair> getUserKeyPairs( AccountFullName accountName ) {
-    EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
+  public static List<SshKeyPair> getUserKeyPairs( UserFullName userFullName ) {
+    EntityWrapper<SshKeyPair> db = EntityWrapper.get( SshKeyPair.class );;
     List<SshKeyPair> keys = Lists.newArrayList( );
     try {
-      keys = db.query( new SshKeyPair( accountName.getAccountNumber( ) ) );
+      keys = db.query( new SshKeyPair( userFullName ) );
       db.commit( );
     } catch ( Throwable e ) {
       db.rollback( );
@@ -35,39 +30,11 @@ public class KeyPairUtil {
     return keys;
   }
 
-  public static SshKeyPair getUserKeyPair( AccountFullName accountName, String keyName ) throws EucalyptusCloudException {
-    EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
+  public static SshKeyPair deleteUserKeyPair( UserFullName userFullName, String keyName ) throws EucalyptusCloudException {
+    EntityWrapper<SshKeyPair> db = EntityWrapper.get( SshKeyPair.class );;
     SshKeyPair key = null;
     try {
-      key = db.getUnique( new SshKeyPair( accountName.getAccountNumber( ), keyName ) );
-      db.commit( );
-    } catch ( Throwable e ) {
-      db.rollback( );
-      throw new EucalyptusCloudException( "Failed to find key pair: " + keyName + " for account " + accountName, e );
-    }
-    return key;
-  }
-
-  public static SshKeyPair getUserKeyPairByValue( AccountFullName accountName, String keyValue ) throws EucalyptusCloudException {
-    EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
-    SshKeyPair key = null;
-    try {
-      SshKeyPair searchKey = new SshKeyPair( accountName.getAccountNumber( ) );
-      searchKey.setPublicKey( keyValue );
-      key = db.getUnique( searchKey );
-      db.commit( );
-    } catch ( Throwable e ) {
-      db.rollback( );
-      throw new EucalyptusCloudException( "Failed to find key pair associated with public key " + keyValue, e );
-    }
-    return key;
-  }
-
-  public static SshKeyPair deleteUserKeyPair( AccountFullName accountName, String keyName ) throws EucalyptusCloudException {
-    EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
-    SshKeyPair key = null;
-    try {
-      key = db.getUnique( new SshKeyPair( accountName.getAccountNumber( ), keyName ) );
+      key = db.getUnique( new SshKeyPair( userFullName, keyName ) );
       db.delete( key );
       db.commit( );
     } catch ( Throwable e ) {
@@ -87,7 +54,7 @@ public class KeyPairUtil {
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( "KeyPair generation error: Key pair creation failed.", e );
     }
-    EntityWrapper<SshKeyPair> db = KeyPairUtil.getEntityWrapper( );
+    EntityWrapper<SshKeyPair> db = EntityWrapper.get( SshKeyPair.class );;
     try {
       db.add( newKey );
       db.commit( );

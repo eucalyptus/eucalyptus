@@ -63,11 +63,14 @@
  */
 package com.eucalyptus.config;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Collection;
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
+import javax.persistence.Transient;
+import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
@@ -76,11 +79,12 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentPart;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.LifecycleEvents;
+import com.eucalyptus.component.NoSuchServiceException;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceBuilder;
-import com.eucalyptus.component.ServiceBuilderRegistry;
+import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceCheckRecord;
 import com.eucalyptus.component.ServiceChecks;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -90,9 +94,12 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.fsm.StateMachine;
+import com.google.common.collect.Lists;
 
 @MappedSuperclass
 public class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration {
+  @Transient
+  private static Logger LOG = Logger.getLogger( ComponentConfiguration.class );
   @Column( name = "config_component_partition", nullable = false )
   private String  partition;
   @Column( name = "config_component_name", unique = true, nullable = false )
@@ -130,6 +137,11 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   }
   
   @Override
+  public InetAddress getInetAddress( ) {
+    return this.getSocketAddress( ).getAddress( );
+  }
+  
+  @Override
   public URI getUri( ) {
     return this.getComponentId( ).makeExternalRemoteUri( this.getHostName( ), this.getPort( ) );
   }
@@ -163,7 +175,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   }
   
   @Override
-  public final Service lookupService( ) {
+  public final Service lookupService( ) throws NoSuchServiceException {
     return Components.lookup( this.lookupComponentId( ) ).lookupService( this );
   }
   
@@ -177,7 +189,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
       return false;
     }
   }
-
+  
   @Override
   public Boolean isVmLocal( ) {
     try {
@@ -202,8 +214,32 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   
   @Override
   public String toString( ) {
-    return String.format( "ComponentConfiguration component=%s local=%s partition=%s name=%s hostName=%s port=%s servicePath=%s",
-                          this.getComponentId( ), this.isVmLocal( ), this.partition, this.name, this.hostName, this.port, this.servicePath );
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "ServiceConfiguration " ).append( this.lookupComponentId( ).name( ) ).append( " " );
+    try {
+      builder.append( this.getFullName( ).toString( ) ).append( " " ).append( this.hostName ).append( ":" ).append( this.port ).append( ":" ).append( this.servicePath ).append( ":" );
+    } catch ( Exception ex ) {
+      builder.append( this.partition ).append( ":" ).append( this.name ).append( ":" ).append( this.hostName ).append( ":" ).append( this.port ).append( ":" ).append( this.servicePath ).append( ":" );
+    }
+    if ( this.isVmLocal( ) ) {
+      builder.append( "vm-local:" );
+    }
+    if ( this.isHostLocal( ) ) {
+      builder.append( "host-local:" );
+    }
+    builder.append( this.lookupState( ) );
+    return builder.toString( );
+  }
+  
+  public String toStrings( ) {
+    return String.format( "ServiceConfiguration %s:%s:%s:%s:%s:%s:%s%s",
+                          this.getComponentId( ).name( ), this.partition, this.name, this.hostName, this.port, this.servicePath,
+                          ( this.isVmLocal( )
+                            ? "vm-local:"
+                            : "" ),
+                          ( this.isHostLocal( )
+                            ? "host-local:"
+                            : "" ) );
   }
   
   @Override
@@ -275,7 +311,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   
   @Override
   public ServiceBuilder<? extends ServiceConfiguration> lookupBuilder( ) {
-    return ServiceBuilderRegistry.lookup( this.getComponentId( ) );
+    return ServiceBuilders.lookup( this.getComponentId( ) );
   }
   
   @Override
@@ -283,13 +319,18 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     try {
       return Partitions.lookup( this );
     } catch ( ServiceRegistrationException ex ) {
-      return Partition.fakePartition( this.getComponentId( ) );
+      return Partitions.lookupInternal( this );
     }
   }
   
   @Override
   public Collection<ServiceCheckRecord> lookupDetails( ) {
-    return this.lookupService( ).getDetails( );
+    try {
+      return this.lookupService( ).getDetails( );
+    } catch ( NoSuchServiceException ex ) {
+      LOG.error( ex , ex );
+      return Lists.newArrayList( );
+    }
   }
   
   @Override
@@ -324,7 +365,12 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   
   @Override
   public StateMachine<ServiceConfiguration, Component.State, Component.Transition> getStateMachine( ) {
-    return this.lookupService( ).getStateMachine( );
+    try {
+      return this.lookupService( ).getStateMachine( );
+    } catch ( NoSuchServiceException ex ) {
+      LOG.error( ex , ex );
+      throw new IllegalStateException( "Failed to lookup state machine for: " + this.getName( ), ex );
+    }
   }
   
   @Override
@@ -334,6 +380,14 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   
   @Override
   public Component.State lookupState( ) {
-    return this.getStateMachine( ).getState( );
+    if( !this.lookupComponent( ).hasService( this ) ) {
+      return Component.State.NONE;
+    } else {
+      try {
+        return this.lookupService( ).getStateMachine( ).getState( );
+      } catch ( NoSuchServiceException ex ) {
+        return Component.State.NONE;
+      }
+    }
   }
 }

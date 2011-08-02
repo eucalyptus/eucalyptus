@@ -63,15 +63,11 @@
 
 package com.eucalyptus.component;
 
-import java.util.Arrays;
-import java.util.List;
-import com.eucalyptus.component.id.Any;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.FullName;
 import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
 
 public class ComponentFullName implements FullName {
   public final static String  VENDOR = "euca";
@@ -96,9 +92,9 @@ public class ComponentFullName implements FullName {
     ComponentId tempComponentId = Empyrean.INSTANCE;
     String tempPartition = "";
     if ( hasParentComponent || this.realComponentId.isPartitioned( ) ) {
-      if( this.realComponentId.serviceDependencies( ).contains( Eucalyptus.class ) ) {
+      if( this.realComponentId.isCloudLocal( ) ) {
         tempComponentId = Eucalyptus.INSTANCE;
-      } else if ( this.realComponentId.serviceDependencies( ).contains( Any.class ) || this.realComponentId.serviceDependencies( ).contains( Empyrean.class ) ) {
+      } else if ( this.realComponentId.isAlwaysLocal( ) ) {
         tempComponentId = Empyrean.INSTANCE;
       }
       tempPartition = partition;

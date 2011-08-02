@@ -15,6 +15,7 @@ import org.mule.module.client.MuleClient;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.component.NoSuchServiceException;
 import com.eucalyptus.component.Service;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
@@ -45,14 +46,19 @@ public abstract class ServiceDispatcher implements Dispatcher {
       } else {
         return first.lookupService( ).getDispatcher( );
       }
-    } catch ( NoSuchElementException ex ) {
+    } catch ( NoSuchServiceException ex ) {
       LOG.error( "Failed to find service dispatcher for component=" + c, ex );
       throw new NoSuchElementException( "Failed to find service for component=" + c );
     }
   }
   
   public static Dispatcher lookup( ServiceConfiguration config ) {
-    return config.lookupService( ).getDispatcher( );
+    try {
+      return config.lookupService( ).getDispatcher( );
+    } catch ( NoSuchServiceException ex ) {
+      LOG.error( ex , ex );
+      throw new NoSuchElementException( "Failed to lookup dispatcher for: " + config.toString( ) );
+    }
   }
   
   public static Collection<Dispatcher> values( ) {

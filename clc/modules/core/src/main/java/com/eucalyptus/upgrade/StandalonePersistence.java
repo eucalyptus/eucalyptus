@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
+import org.apache.log4j.Level;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.jboss.netty.util.internal.ConcurrentHashMap;
 import com.eucalyptus.auth.Accounts;
@@ -16,17 +17,17 @@ import com.eucalyptus.auth.DatabaseAuthProvider;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentDiscovery;
 import com.eucalyptus.component.auth.EucaKeyStore;
-import com.eucalyptus.component.auth.SystemCredentialProvider;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.entities.PersistenceContextDiscovery;
 import com.eucalyptus.entities.PersistenceContexts;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.SubDirectory;
 import com.google.common.collect.Lists;
 
 public class StandalonePersistence {
-  private static Logger                     LOG = Logger.getLogger( StandalonePersistence.class );
+  private static Logger                     LOG;
   private static ConcurrentMap<String, Sql> sqlConnections = new ConcurrentHashMap<String, Sql>( );
   private static List<UpgradeScript> upgradeScripts = Lists.newArrayList( );
   static {
@@ -67,20 +68,17 @@ public class StandalonePersistence {
       StandalonePersistence.runUpgrade( );
       System.exit(0);
     } catch ( Throwable e ) {
+      LOG.error( e, e );
       e.printStackTrace( );
       System.exit( -1 );
     }
   }
   
   public static void runUpgrade( ) {
-	Collections.sort(upgradeScripts);
+    Collections.sort(upgradeScripts);
     LOG.info( upgradeScripts );
     for( UpgradeScript up : upgradeScripts ) {
-      try {
-        up.upgrade( oldLibDir, newLibDir );
-      } catch ( Throwable e ) {
-        LOG.error( e, e );
-      }
+      up.upgrade( oldLibDir, newLibDir );
     }
     LOG.info( "=============================" );
     LOG.info( "= DATABASE UPGRADE COMPLETE =" );
@@ -92,6 +90,7 @@ public class StandalonePersistence {
   }
   public static Sql getConnection( String persistenceContext ) throws SQLException {
     Sql newSql = source.getSqlSession( persistenceContext );
+    if ( newSql == null ) { return null; }
     Sql conn = sqlConnections.putIfAbsent( persistenceContext, newSql );
     if ( conn != null ) {
       newSql.close( );
@@ -144,7 +143,7 @@ public class StandalonePersistence {
     if ( !new File( EucaKeyStore.getInstance( ).getFileName( ) ).exists( ) ) {
       throw new RuntimeException( "Database upgrade must be preceded by a key upgrade." );
     }
-    SystemCredentialProvider.initializeCredentials( );
+    SystemCredentials.initialize( );
     LOG.debug( "Initializing SSL just in case: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.crypto.util.SslSetup" ) );
     LOG.debug( "Initializing db password: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.auth.util.Hashes" ) );
   }
@@ -152,7 +151,6 @@ public class StandalonePersistence {
   static void setupSystemProperties( ) {
     /** Pre-flight configuration for system **/
     System.setProperty( "euca.home", eucaHome );
-    System.setProperty( "euca.log.level", "TRACE" );
     System.setProperty( "euca.log.appender", "console" );
     System.setProperty( "euca.log.exhaustive.cc", "FATAL" );
     System.setProperty( "euca.log.exhaustive.db", "FATAL" );
@@ -162,10 +160,9 @@ public class StandalonePersistence {
     System.setProperty( "euca.conf.dir", eucaHome + "/etc/eucalyptus/cloud.d/" );
     System.setProperty( "euca.log.dir", eucaHome + "/var/log/eucalyptus/" );
     System.setProperty( "euca.lib.dir", eucaHome + "/usr/share/eucalyptus/" );
-    boolean doTrace = "TRACE".equals( System.getProperty( "euca.log.level" ) );
-    boolean doDebug = "DEBUG".equals( System.getProperty( "euca.log.level" ) ) || doTrace;
-//    Logs.DEBUG = doDebug;
-//    Logs.TRACE = doDebug;
+    String logLevel = System.getProperty( "euca.log.level", "INFO" ).toUpperCase();
+    LOG = Logger.getLogger( StandalonePersistence.class );
+    LOG.setLevel(Level.toLevel(logLevel, Level.toLevel("INFO")));
 
     LOG.info( String.format( "%-20.20s %s", "New install directory:", eucaHome ) );
     LOG.info( String.format( "%-20.20s %s", "Old install directory:", eucaOld ) );
@@ -204,7 +201,7 @@ public class StandalonePersistence {
     for( File script : SubDirectory.UPGRADE.getFile( ).listFiles( ) ) {
       LOG.debug( "Trying to load what looks like an upgrade script: " + script.getAbsolutePath( ) );
       try {
-        UpgradeScript u = GroovyUtil.newInstance( script.getAbsolutePath( ) );
+        UpgradeScript u = Groovyness.newInstance( script.getAbsolutePath( ) );
         registerUpgradeScript( u );
       } catch ( ScriptExecutionFailedException e ) {
         LOG.debug( e, e );

@@ -31,7 +31,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   private static final long serialVersionUID = 1L;
 
   @Override
-  public Session login( String fullname, String password ) throws EucalyptusServiceException {
+  public Session login( String accountName, String userName, String password ) throws EucalyptusServiceException {
     return new Session( "FAKESESSIONID" );
   }
 
@@ -69,7 +69,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
                                                                            new SearchResultFieldDesc( "Id", true, "60%", TableDisplay.MANDATORY, Type.TEXT, false, true ),
                                                                            new SearchResultFieldDesc( "Action", false, "0px", TableDisplay.NONE, Type.ACTION, false, false ),
                                                                            new SearchResultFieldDesc( "Link", false, "0px", TableDisplay.NONE, Type.LINK, false, false ),
-                                                                           new SearchResultFieldDesc( "Access key", false, "0px", TableDisplay.NONE, Type.TEXT, true, false ),
+                                                                           new SearchResultFieldDesc( "Access key", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ),
                                                                            new SearchResultFieldDesc( "Certificate", false, "0px", TableDisplay.NONE, Type.KEYVAL, true, false ),
                                                                            new SearchResultFieldDesc( "Another fancy key", false, "0px", TableDisplay.NONE, Type.KEYVAL, true, false ),
                                                                            new SearchResultFieldDesc( "", false, "0px", TableDisplay.NONE, Type.NEWKEYVAL, true, false )

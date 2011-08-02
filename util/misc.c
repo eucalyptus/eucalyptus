@@ -64,72 +64,97 @@ permission notice:
 #include <stdio.h>
 #include <stdlib.h>
 #define _GNU_SOURCE
-#include <string.h> /* strlen, strcpy */
-#include <ctype.h> /* isspace */
-#include "misc.h"
+#include <string.h> // strlen, strcpy
+#include <ctype.h> // isspace
+#include <assert.h>
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <time.h>
-#include <math.h> /* powf */
-#include <vnetwork.h>
-#include <fcntl.h> /* open */
-#include <utime.h> /* utime */
+#include <math.h> // powf 
+#include <fcntl.h> // open
+#include <utime.h> // utime 
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <dirent.h> // opendir, etc
 #include <errno.h> // errno
 #include <sys/time.h> // gettimeofday
 #include <limits.h>
-#include <euca_auth.h>
 #include <openssl/md5.h>
 #include <sys/mman.h> // mmap
 #include <pthread.h>
 
-int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER) {
-  int i, done, rc, j;
-  char *tok, *toka, *path, *helper, file[MAX_PATH], *save, *savea;
-  struct stat statbuf;
+#include "misc.h"
+#include "euca_auth.h"
+#include "diskutil.h"
+#include "vnetwork.h"
 
-  for (i=0; i<LASTHELPER; i++) {
-    tok = getenv("PATH");
-    if (!tok) return (1);
-    path = strdup(tok);
-    if (!path) {
-      return(1);
-    }
+// Given an array of pointers to command names (e.g., "ls", "dd", etc.),
+// as well as either an array of NULL pointers or pointers to full paths,
+// either the full paths are verified or system $PATH is searched for 
+// the names and full paths are pointed to by helpers_path[] entries. 
+// Number of missing entries is returned or -1 for error.
+int verify_helpers (char **helpers, char **helpers_path, int num_helpers) 
+{
+    int missing_helpers = 0;
+    
+    for (int i=0; i<num_helpers; i++) {
+        struct stat statbuf;
+        int done = 0;
 
-    tok = strtok_r(path, ":", &save);
-    done=0;
-    while(tok && !done) {
-      helper = strdup(helpers[i]);
-      toka = strtok_r(helper, ",", &savea);
-      while(toka && !done) {
-        snprintf(file, MAX_PATH, "%s/%s", tok, toka);
-        rc = stat(file, &statbuf);
-        if (rc) {
-        } else {
-          if (S_ISREG(statbuf.st_mode)) {
-            done++;
-          }
+        // full path was given, so it just needs to be verified
+        if (helpers_path != NULL && helpers_path[i]!=NULL) {
+            int rc = stat (helpers_path[i], &statbuf);
+            if (!rc && S_ISREG(statbuf.st_mode)) {
+                done++;
+            }
+
+        } else { // no full path was given, so search $PATH
+            char *tok, *toka, *path, *helper, *save, *savea;
+            if(helpers_path==NULL)
+		 helpers_path = (char**) calloc (num_helpers, sizeof(char*));
+
+            tok = getenv("PATH");
+            if (!tok) return -1;
+            path = strdup(tok);
+            if (!path) {
+                return -1;
+            }
+            
+            tok = strtok_r(path, ":", &save);
+            done=0;
+            while (tok && !done) {
+                helper = strdup(helpers[i]);
+                toka = strtok_r(helper, ",", &savea);
+                while (toka && !done) {
+                    char file[MAX_PATH];
+
+                    snprintf(file, MAX_PATH, "%s/%s", tok, toka);
+                    int rc = stat(file, &statbuf);
+                    if (!rc) {
+                        if (S_ISREG(statbuf.st_mode)) {
+                            helpers_path[i] = strdup(file);
+                            done++;
+                        }
+                    }
+                    toka = strtok_r(NULL, ":", &savea);
+                }
+                tok = strtok_r(NULL, ":", &save);
+                if (helper) free(helper);
+            }
+            free(path);
         }
-        toka = strtok_r(NULL, ":", &savea);
-      }
-      tok = strtok_r(NULL, ":", &save);
-      if (helper) free(helper);
-    }
-    if (!done) {
-      logprintfl(EUCAERROR, "cannot find helper '%s' in your path\n", helpers[i]);
-      if (path) free(path);
-      return(1);
-    }
-    helpers_path[i] = strdup(file);
-    free(path);
-    logprintfl (EUCAINFO, "found helper '%s' at '%s'\n", helpers[i], helpers_path[i]);
-  }
 
-  return(0);
+        if (!done) {
+            missing_helpers++;
+            logprintfl (EUCAINFO, "did not find '%s' in path\n", helpers[i]);
+        } else {
+            logprintfl (EUCAINFO, "found '%s' at '%s'\n", helpers[i], helpers_path[i]);
+        }
+    }
+    
+    return missing_helpers;
 }
 
 int timeread(int fd, void *buf, size_t bytes, int timeout) {
@@ -355,7 +380,11 @@ int check_directory(char *dir) {
     if (S_ISLNK(mystat.st_mode)) { // links to dirs are OK
       char tmp [4096];
       snprintf (tmp, 4096, "%s/", dir);
-      lstat (tmp, &mystat);
+
+      rc = lstat (tmp, &mystat);
+      if (rc < 0)
+          return 1;
+
       if (S_ISDIR(mystat.st_mode)) {
         return 0;
       }
@@ -384,6 +413,22 @@ int check_file_newer_than(char *file, time_t mtime) {
     return(0);
   }
   return(1);
+}
+
+int check_block (const char *file)
+{
+  int rc;
+  struct stat mystat;
+
+  if (!file) {
+    return(1);
+  }
+
+  rc = lstat(file, &mystat);
+  if (rc < 0 || !S_ISBLK(mystat.st_mode)) {
+    return(1);
+  }
+  return(0);
 }
 
 // returns 0 if file is a readable regular file, 1 otherwise
@@ -497,40 +542,42 @@ int sscanf_lines (char * lines, char * format, void * varp)
 char * fp2str (FILE * fp)
 {
 #   define INCREMENT 512
-  int buf_max = INCREMENT;
-  int buf_current = 0;
-  char * last_read;
-  char * buf = NULL;
-
-  if (fp==NULL) return NULL;
-  do {
-    // create/enlarge the buffer
-    void * new_buf;
-    if ((new_buf = realloc (buf, buf_max)) == NULL) {
-      if ( buf != NULL ) { // previous realloc()s worked
-	free (buf); // free partial buffer
-      }
-      return NULL;
-    }
-    buf = new_buf;
-    logprintfl (EUCADEBUG2, "fp2str: enlarged buf to %d\n", buf_max);
-
-    do { // read in until EOF or buffer is full
-      last_read = fgets (buf+buf_current, buf_max-buf_current, fp);
-      if ( last_read != NULL )
-	buf_current = strlen(buf);
-      logprintfl (EUCADEBUG2, "fp2str: read %d characters so far (max=%d, last=%s)\n", buf_current, buf_max, last_read?"no":"yes");
-    } while ( last_read && buf_max > buf_current+1 ); /* +1 is needed for fgets() to put \0 */
+    int buf_max = INCREMENT;
+    int buf_current = 0;
+    char * last_read;
+    char * buf = NULL;
+    
+    if (fp==NULL) return NULL;
+    do {
+        // create/enlarge the buffer
+        void * new_buf;
+        if ((new_buf = realloc (buf, buf_max)) == NULL) {
+            if ( buf != NULL ) { // previous realloc()s worked
+                free (buf); // free partial buffer
+            }
+            return NULL;
+        }
+        buf = new_buf;
+        logprintfl (EUCADEBUG2, "fp2str: enlarged buf to %d\n", buf_max);
         
-    buf_max += INCREMENT; /* in case it is full */
-  } while (last_read);
-
-  if ( buf_current < 1 ) {
-    free (buf);
-    buf = NULL;
-  }
-
-  return buf;
+        do { // read in until EOF or buffer is full
+            last_read = fgets (buf+buf_current, buf_max-buf_current, fp);
+            if ( last_read != NULL ) {
+                buf_current = strlen(buf);
+            } else {
+                if (! feof(fp)) {
+                    logprintfl (EUCAERROR, "fp2str: failed while reading from file handle\n");
+                    free (buf);
+                    return NULL;
+                }
+            }
+            logprintfl (EUCADEBUG2, "fp2str: read %d characters so far (max=%d, last=%s)\n", buf_current, buf_max, last_read?"no":"yes");
+        } while ( last_read && buf_max > buf_current+1 ); // +1 is needed for fgets() to put \0
+        
+        buf_max += INCREMENT; // in case it is full
+    } while (last_read);
+    
+    return buf;
 }
 
 /* execute system(shell_command) and return stdout in new string
@@ -1927,7 +1974,7 @@ int hexjenkins (char * buf, unsigned int buf_size, const char * str)
 // given path=A/B/C and only A existing, create A/B and, unless
 // is_file_path==1, also create A/B/C directory
 // returns: 0 = path already existed, 1 = created OK, -1 = error
-int ensure_directories_exist (const char * path, int is_file_path, mode_t mode)
+int ensure_directories_exist (const char * path, int is_file_path, const char * user, const char * group, mode_t mode)
 {
     int len = strlen (path);
     char * path_copy = NULL;
@@ -1964,7 +2011,13 @@ int ensure_directories_exist (const char * path, int is_file_path, mode_t mode)
                     return -1;
                 }
                 ret = 1; // we created a directory
-                chmod (path_copy, mode); // ensure perms are right despite mask
+
+                if(diskutil_ch(path_copy, user, group, mode) != OK) {
+                    logprintfl (EUCAERROR, "error: failed to change perms on path %s\n", path_copy);
+                    free (path_copy);
+                    return -1;
+                }
+                //                chmod (path_copy, mode); // ensure perms are right despite mask
             }
             path_copy[i] = '/'; // restore the slash
         }
@@ -1981,3 +2034,60 @@ long long time_usec (void)
     gettimeofday (&tv, NULL);
     return (long long)tv.tv_sec * 1000000 + tv.tv_usec;
 }
+
+char *safe_mkdtemp(char *template){
+    mode_t u;
+    char *ret=NULL;
+    u=umask(0077);
+    ret = mkdtemp(template);
+    umask(u);
+    return(ret);
+}
+int safe_mkstemp(char *template){
+    mode_t u;
+    int ret;
+    u=umask(0077);
+    ret = mkstemp(template);
+    umask(u);
+    return(ret);
+}
+
+char* safe_strncpy(char *s1, const char *s2, size_t len) {
+    char* ret = strncpy(s1, s2, len);
+    s1[len-1] = '\0';
+    return ret;
+}
+
+/////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////
+
+#ifdef _UNIT_TEST
+
+#define _STR "a lovely string"
+
+int main (int argc, char ** argv)
+{
+    int errors = 0;
+    char cwd [1024];
+    getcwd (cwd, sizeof (cwd));
+    srandom (time(NULL));
+
+    printf ("testing fp2str in misc.c\n");
+    FILE * fp = tmpfile ();
+    assert (fp);
+    char * s = fp2str (fp);
+    assert (s);
+    assert (strlen (s) == 0);
+    free (s);
+    rewind (fp);
+    fputs (_STR, fp);
+    rewind (fp);
+    s = fp2str (fp);
+    assert (s);
+    assert (strlen (s) == strlen (_STR));
+    free (s);
+    fclose (fp);
+
+    return 0;
+}
+
+#endif // _UNIT_TEST

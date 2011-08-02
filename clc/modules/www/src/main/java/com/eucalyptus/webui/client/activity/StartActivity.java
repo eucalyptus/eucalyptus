@@ -18,7 +18,7 @@ import com.google.gwt.user.client.ui.AcceptsOneWidget;
  */
 public class StartActivity extends AbstractActivity {
   
-  public static final String TITLE = "WELCOME";
+  public static final String TITLE = "START GUIDE";
   
   public static final String SERVICE_SNIPPET = "service";
   public static final String IAM_SNIPPET = "iam";

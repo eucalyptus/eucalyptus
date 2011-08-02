@@ -63,7 +63,10 @@
 
 package com.eucalyptus.bootstrap;
 
+import java.net.UnknownHostException;
 import java.util.List;
+import org.apache.log4j.Logger;
+import org.jgroups.Header;
 import org.jgroups.conf.ClassConfigurator;
 import org.jgroups.protocols.BARRIER;
 import org.jgroups.protocols.FC;
@@ -82,13 +85,31 @@ import org.jgroups.protocols.pbcast.NAKACK;
 import org.jgroups.protocols.pbcast.STABLE;
 import org.jgroups.protocols.pbcast.STATE_TRANSFER;
 import org.jgroups.stack.Protocol;
+import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.util.Internets;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 public class Protocols {
-  public static short PROTOCOL_ID = 512;
   
-  private static String registerProtocol( Protocol p ) {
+  private static Logger LOG         = Logger.getLogger( Protocols.class );
+  public static short   PROTOCOL_ID = 513;
+  public static short   HEADER_ID   = 1025;
+  
+  public static short lookupRegisteredId( Class c ) {
+    return ClassConfigurator.getMagicNumber( c );
+  }
+  
+  public static synchronized <T extends Header> String registerHeader( Class<T> h ) {
+    if ( ClassConfigurator.getMagicNumber( h ) == -1 ) {
+      ClassConfigurator.add( ++HEADER_ID, h );
+    }
+    return "euca-" + ( h.isAnonymousClass( )
+      ? h.getSuperclass( ).getSimpleName( ).toLowerCase( )
+      : h.getSimpleName( ).toLowerCase( ) ) + "-header";
+  }
+  
+  public static synchronized String registerProtocol( Protocol p ) {
     if ( ClassConfigurator.getProtocolId( p.getClass( ) ) == 0 ) {
       ClassConfigurator.addProtocol( ++PROTOCOL_ID, p.getClass( ) );
     }
@@ -98,171 +119,8 @@ public class Protocols {
   }
   
   public static List<Protocol> getMembershipProtocolStack( ) {
-    return Lists.newArrayList( udp.get( ), ping.get( ), merge2.get( ), fdSocket.get( ), fd.get( ), verifySuspect.get( ), nakack.get( ), unicast.get( ),
-                               stable.get( ), groupMemberShip.get( ), flowControl.get( ), fragmentation.get( ), stateTransfer.get( ) );
+    return Groovyness.run( "setup_membership.groovy" );
   }
   
-  private static final Supplier<Protocol> udp                  = new Supplier<Protocol>( ) {
-                                                                 
-                                                                 @Override
-                                                                 public Protocol get( ) {
-                                                                   UDP protocol = new UDP( );
-                                                                   protocol.setMulticastAddress( MembershipConfiguration.getMulticastInetAddress( ) );
-                                                                   protocol.setMulticastPort( MembershipConfiguration.getMulticastPort( ) );
-                                                                   protocol.setBindToAllInterfaces( true );
-                                                                   protocol.setDiscardIncompatiblePackets( true );
-                                                                   protocol.setMaxBundleSize( 60000 );
-                                                                   protocol.setMaxBundleTimeout( 30 );
-                                                                   
-                                                                   protocol.setDefaultThreadPool( MembershipConfiguration.getThreadPool( ) );
-                                                                   protocol.setDefaultThreadPoolThreadFactory( MembershipConfiguration.getThreadPool( ) );
-                                                                   
-                                                                   protocol.setThreadFactory( MembershipConfiguration.getNormalThreadPool( ) );
-                                                                   protocol.setThreadPoolMaxThreads( MembershipConfiguration.getThreadPoolMaxThreads( ) );
-                                                                   protocol.setThreadPoolKeepAliveTime( MembershipConfiguration.getThreadPoolKeepAliveTime( ) );
-                                                                   protocol.setThreadPoolMinThreads( MembershipConfiguration.getThreadPoolMinThreads( ) );
-                                                                   protocol.setThreadPoolQueueEnabled( MembershipConfiguration.getThreadPoolQueueEnabled( ) );
-                                                                   protocol.setRegularRejectionPolicy( MembershipConfiguration.getRegularRejectionPolicy( ) );
-                                                                   
-                                                                   protocol.setOOBThreadPoolThreadFactory( MembershipConfiguration.getOOBThreadPool( ) );
-                                                                   protocol.setOOBThreadPool( MembershipConfiguration.getOOBThreadPool( ) );
-                                                                   protocol.setOOBThreadPoolMaxThreads( MembershipConfiguration.getOobThreadPoolMaxThreads( ) );
-                                                                   protocol.setOOBThreadPoolKeepAliveTime( MembershipConfiguration.getOobThreadPoolKeepAliveTime( ) );
-                                                                   protocol.setOOBThreadPoolMinThreads( MembershipConfiguration.getOobThreadPoolMinThreads( ) );
-                                                                   protocol.setOOBRejectionPolicy( MembershipConfiguration.getOobRejectionPolicy( ) );
-                                                                   return protocol;
-                                                                 }
-                                                               };
-  private static final Supplier<Protocol> ping                 = new Supplier<Protocol>( ) {
-                                                                 
-                                                                 @Override
-                                                                 public Protocol get( ) {
-                                                                   PING protocol = new PING( );
-                                                                   protocol.setTimeout( 2000 );
-                                                                   protocol.setNumInitialMembers( 2 );
-                                                                   return protocol;
-                                                                 }
-                                                               };
-  private static final Supplier<Protocol> merge2               = new Supplier<Protocol>( ) {
-                                                                 
-                                                                 @Override
-                                                                 public Protocol get( ) {
-                                                                   return new MERGE2( );
-                                                                 }
-                                                               };
-  
-  private static final Supplier<Protocol> fdSocket             = new Supplier<Protocol>( ) {
-                                                                 
-                                                                 @Override
-                                                                 public Protocol get( ) {
-                                                                   return new FD_SOCK( );
-                                                                 }
-                                                               };
-  private static final Supplier<Protocol> fd                   = new Supplier<Protocol>( ) {
-                                                                 
-                                                                 @Override
-                                                                 public Protocol get( ) {
-                                                                   FD protocol = new FD( );
-                                                                   protocol.setTimeout( 10000 );
-                                                                   protocol.setMaxTries( 5 );
-                                                                   protocol.setShun( true );
-                                                                   return protocol;
-                                                                 }
-                                                               };
-  private static final Supplier<Protocol> verifySuspect        = new Supplier<Protocol>( ) {
-                                                                 
-                                                                 @Override
-                                                                 public Protocol get( ) {
-                                                                   return new VERIFY_SUSPECT( );
-                                                                 }
-                                                               };
-  private static final Supplier<Protocol> barrier              = new Supplier<Protocol>( ) {
-                                                                 
-                                                                 @Override
-                                                                 public Protocol get( ) {
-                                                                   return new BARRIER( );
-                                                                 }
-                                                               };
-  private static final Supplier<Protocol> nakack               = new Supplier<Protocol>( ) {
-                                                                 
-                                                                 @Override
-                                                                 public Protocol get( ) {
-                                                                   NAKACK protocol = new NAKACK( );
-                                                                   protocol.setUseMcastXmit( false );
-                                                                   protocol.setDiscardDeliveredMsgs( true );
-                                                                   protocol.setGcLag( 0 );
-//                                                                   protocol.setProperty( "retransmit_timeout", "300,600,1200,2400,4800" );
-                                                                   return protocol;
-                                                                 }
-                                                               };
-  
-  private static final Supplier<Protocol> unicast              = new Supplier<Protocol>( ) {
-                                                                 
-                                                                 @Override
-                                                                 public Protocol get( ) {
-                                                                   return new UNICAST( );
-                                                                 }
-                                                               };
-  private static final Supplier<Protocol> stable               = new Supplier<Protocol>( ) {
-                                                                 
-                                                                 @Override
-                                                                 public Protocol get( ) {
-                                                                   STABLE protocol = new STABLE( );
-                                                                   protocol.setDesiredAverageGossip( 50000 );
-                                                                   protocol.setMaxBytes( 400000 );
-//                                                                   protocol.setStabilityDelay( 1000 );
-                                                                   return protocol;
-                                                                 }
-                                                               };
-  private static final Supplier<Protocol> groupMemberShip      = new Supplier<Protocol>( ) {
-                                                                 
-                                                                 @Override
-                                                                 public Protocol get( ) {
-                                                                   GMS protocol = new GMS( );
-                                                                   protocol.setPrintLocalAddress( true );
-                                                                   protocol.setJoinTimeout( 3000 );
-                                                                   protocol.setShun( false );
-                                                                   protocol.setViewBundling( true );
-                                                                   return protocol;
-                                                                 }
-                                                               };
-  private static final Supplier<Protocol> flowControl          = new Supplier<Protocol>( ) {
-                                                                 
-                                                                 @Override
-                                                                 public Protocol get( ) {
-                                                                   FC protocol = new FC( );
-                                                                   protocol.setMaxCredits( 20000000 );
-                                                                   protocol.setMinThreshold( 0.1 );
-                                                                   return protocol;
-                                                                 }
-                                                               };
-  private static final Supplier<Protocol> unicastFlowControl   = new Supplier<Protocol>( ) {
-                                                                 
-                                                                 @Override
-                                                                 public Protocol get( ) {
-                                                                   return new UFC( );
-                                                                 }
-                                                               };
-  private static final Supplier<Protocol> multicastFlowControl = new Supplier<Protocol>( ) {
-                                                                 
-                                                                 @Override
-                                                                 public Protocol get( ) {
-                                                                   return new MFC( );
-                                                                 }
-                                                               };
-  private static final Supplier<Protocol> fragmentation        = new Supplier<Protocol>( ) {
-                                                                 
-                                                                 @Override
-                                                                 public Protocol get( ) {
-                                                                   return new FRAG2( );
-                                                                 }
-                                                               };
-  private static final Supplier<Protocol> stateTransfer        = new Supplier<Protocol>( ) {
-                                                                 
-                                                                 @Override
-                                                                 public Protocol get( ) {
-                                                                   return new STATE_TRANSFER( );
-                                                                 }
-                                                               };
   
 }

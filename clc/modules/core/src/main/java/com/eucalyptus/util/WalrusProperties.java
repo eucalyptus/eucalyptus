@@ -72,7 +72,7 @@ import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.config.Configuration;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.BaseDirectory;
 
 import java.net.*;
@@ -143,14 +143,15 @@ public class WalrusProperties {
 	public static String TRACKER_DIR = BaseDirectory.VAR.toString() + "/bt";
 	public static String TRACKER_URL = "http://localhost:6969/announce";
 	public static String TRACKER_PORT = "6969";
-	public static String eucaHome = System.getProperty("euca.home");
+	public static final String eucaHome = System.getProperty("euca.home");
 	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
 	public static final String EUCA_MOUNT_WRAPPER = "/usr/lib/eucalyptus/euca_mountwrap";
+	public static final String EUCA_USER = System.getProperty("euca.user");
 
 	//15 minutes
 	public final static long EXPIRATION_LIMIT = 900000;
 
-	static { GroovyUtil.loadConfig("walrusprops.groovy"); }
+	static { Groovyness.loadConfig("walrusprops.groovy"); }
 
 	public enum VersioningStatus {
 		Enabled, Disabled, Suspended

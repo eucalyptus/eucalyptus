@@ -2,10 +2,10 @@ package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.VmTypes;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.VmType;
+import com.eucalyptus.vm.VmTypes;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmDescribeType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;

@@ -63,12 +63,10 @@
 
 package com.eucalyptus.network;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
@@ -78,16 +76,17 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.NetworkSecurityGroup;
+import com.eucalyptus.cluster.Networks;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.entities.AccountMetadata;
+import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasOwningAccount;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.Network;
@@ -97,7 +96,7 @@ import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class NetworkRulesGroup extends AccountMetadata<NetworkRulesGroup.State> implements NetworkSecurityGroup {
+public class NetworkRulesGroup extends UserMetadata<NetworkRulesGroup.State> implements NetworkSecurityGroup {
   enum State { available, removing }
   @Column( name = "metadata_network_group_user_network_group_name", unique = true )
   private String            uniqueName;                                          //bogus field to enforce uniqueness
@@ -111,18 +110,18 @@ public class NetworkRulesGroup extends AccountMetadata<NetworkRulesGroup.State> 
   private FullName          fullName;
   public static String      NETWORK_DEFAULT_NAME = "default";
   
-  public static NetworkRulesGroup named( AccountFullName account, String groupName ) {
-    return new NetworkRulesGroup( account, groupName );
+  public static NetworkRulesGroup named( UserFullName userFullName, String groupName ) {
+    return new NetworkRulesGroup( userFullName, groupName );
   }
   
   public NetworkRulesGroup( ) {}
   
-  public NetworkRulesGroup( final AccountFullName account ) {
-    super( account );
+  public NetworkRulesGroup( final UserFullName userFullName ) {
+    super( userFullName );
   }
   
-  public NetworkRulesGroup( final AccountFullName account, final String groupName ) {
-    super( account, groupName );
+  public NetworkRulesGroup( final UserFullName userFullName, final String groupName ) {
+    super( userFullName, groupName );
     this.fullName = FullName.create.vendor( "euca" )
                                    .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
                                    .namespace( this.getOwnerAccountId( ) )
@@ -131,14 +130,14 @@ public class NetworkRulesGroup extends AccountMetadata<NetworkRulesGroup.State> 
     this.setState( State.available );
   }
   
-  public NetworkRulesGroup( final AccountFullName account, final String groupName, final String groupDescription ) {
-    this( account, groupName );
+  public NetworkRulesGroup( final UserFullName userFullName, final String groupName, final String groupDescription ) {
+    this( userFullName, groupName );
     Assertions.assertNotNull( groupDescription );
     this.description = groupDescription;
   }
   
-  public NetworkRulesGroup( final AccountFullName account, final String groupName, final String description, final List<NetworkRule> networkRules ) {
-    this( account, groupName, description );
+  public NetworkRulesGroup( final UserFullName userFullName, final String groupName, final String description, final List<NetworkRule> networkRules ) {
+    this( userFullName, groupName, description );
     Assertions.assertNotNull( networkRules );
     this.networkRules = networkRules;
   }
@@ -168,14 +167,21 @@ public class NetworkRulesGroup extends AccountMetadata<NetworkRulesGroup.State> 
     this.networkRules = networkRules;
   }
   
-  public static NetworkRulesGroup getDefaultGroup( AccountFullName account ) {
-    return new NetworkRulesGroup( account, NETWORK_DEFAULT_NAME, "default group", new ArrayList<NetworkRule>( ) );
+  public static NetworkRulesGroup getDefaultGroup( UserFullName userFullName ) {
+    return new NetworkRulesGroup( userFullName, NETWORK_DEFAULT_NAME, "default group", new ArrayList<NetworkRule>( ) );
   }
   
   public Network getVmNetwork( ) {
-    List<PacketFilterRule> pfRules = Lists.transform( this.getNetworkRules( ), this.ruleTransform );
-    Network vmNetwork = new Network( Accounts.lookupAccountFullNameById( this.getOwnerAccountId( ) ), this.getDisplayName( ), this.getId( ), pfRules );
-    return vmNetwork;
+    Network asNet;
+    try {
+      asNet = Networks.getInstance( ).lookup( this.getClusterNetworkName( ) );
+    } catch ( Exception ex ) {
+      List<PacketFilterRule> pfRules = Lists.transform( this.getNetworkRules( ), this.ruleTransform );
+      Network vmNetwork = new Network( UserFullName.getInstance( this.getOwnerUserId( ) ), this.getDisplayName( ), this.getId( )/**TODO:GRZE:this is surely wrong**/, pfRules );
+      Networks.getInstance( ).registerIfAbsent( vmNetwork, Networks.State.ACTIVE );
+      asNet = Networks.getInstance( ).lookup(  this.getClusterNetworkName( ) );
+    }
+    return asNet;
   }
   
   @Override
@@ -237,6 +243,10 @@ public class NetworkRulesGroup extends AccountMetadata<NetworkRulesGroup.State> 
   @Override
   public int compareTo( NetworkSecurityGroup that ) {
     return this.getFullName( ).toString( ).compareTo( that.getFullName( ).toString( ) );
+  }
+
+  public String getClusterNetworkName( ) {
+    return this.getOwnerUserId( ) + "-" + this.getDisplayName( );
   }
   
 }

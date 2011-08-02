@@ -40,8 +40,17 @@ public class ValueCheckerFactory {
         if ( Strings.isNullOrEmpty( value ) ) {
           throw new InvalidValueException( "Account name can not be empty" );
         }
-        if ( value.split( "\\s+" ).length > 1 ) {
-          throw new InvalidValueException( "Account name can not have spaces" );
+        if ( value.startsWith( "-" ) ) {
+          throw new InvalidValueException( "Account name can not start with hyphen" );
+        }
+        if ( value.contains( "--" ) ) {
+          throw new InvalidValueException( "Account name can not have two consecutive hyphens" );
+        }
+        for ( int i = 0; i < value.length( ); i++ ) {
+          char c = value.charAt( i );
+          if ( !( Character.isLetterOrDigit( c ) || c == '-' ) || Character.isUpperCase( c ) ) {
+            throw new InvalidValueException( "Containing invalid character for account name: " + c );
+          }
         }
         return value;
       }
@@ -96,6 +105,12 @@ public class ValueCheckerFactory {
       public String check( String value ) throws InvalidValueException {
         if ( value != null && !value.startsWith( "/" ) ) {
           throw new InvalidValueException( "Path must start with /" );
+        }
+        for ( int i = 0; i < value.length( ); i++ ) {
+          char c = value.charAt( i );
+          if ( c < 0x21 || c > 0x7E ) {
+            throw new InvalidValueException( "Invalid path character: " + c );
+          }
         }
         return value;
       }

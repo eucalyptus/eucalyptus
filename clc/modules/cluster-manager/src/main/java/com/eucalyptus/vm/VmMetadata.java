@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.vm;
 
+import java.util.Collections;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import org.apache.log4j.Logger;
@@ -71,6 +72,8 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Logs;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Bytes;
 
 public class VmMetadata {
   private static Logger                                                      LOG                       = Logger.getLogger( VmMetadata.class );

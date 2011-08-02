@@ -45,8 +45,8 @@ public class LoginActivity extends AbstractActivity implements LoginView.Present
    * This is called when the user click on the submit button of the login screen.
    */
   @Override
-  public void login( String username, String password, final boolean staySignedIn ) {
-    this.clientFactory.getBackendService( ).login( username, password, new AsyncCallback<Session>( ) {
+  public void login( String accountName, String userName, String password, final boolean staySignedIn ) {
+    this.clientFactory.getBackendService( ).login( accountName, userName, password, new AsyncCallback<Session>( ) {
 
       @Override
       public void onFailure( Throwable caught ) {

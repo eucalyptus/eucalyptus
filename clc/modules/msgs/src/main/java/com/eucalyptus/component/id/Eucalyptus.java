@@ -63,22 +63,29 @@
 
 package com.eucalyptus.component.id;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.net.InetAddress;
+import java.util.concurrent.ExecutionException;
+import net.sf.jasperreports.engine.xml.JRPenFactory.Top;
+import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.HostManager;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
-import com.google.common.collect.Lists;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.util.Internets;
 
 public class Eucalyptus extends ComponentId.Unpartioned {
-  public static final Eucalyptus INSTANCE = new Eucalyptus( ); //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
-                                                                
+  public static final Eucalyptus INSTANCE = new Eucalyptus( );                   //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
+  private static Logger          LOG      = Logger.getLogger( Eucalyptus.class );
+  
   @Override
   public String getLocalEndpointName( ) {
     return "vm://EucalyptusRequestQueue";
-  }
-  
-  @Override
-  public Boolean hasDispatcher( ) {
-    return true;
   }
   
   @Override
@@ -87,12 +94,58 @@ public class Eucalyptus extends ComponentId.Unpartioned {
   }
   
   @Override
-  public List<Class<? extends ComponentId>> serviceDependencies( ) {
-    return new ArrayList( ) {
-      {
-        this.add( Eucalyptus.class );
+  public boolean isUserService( ) {
+    return true;
+  }
+  
+  public static boolean setupServiceDependencies( InetAddress addr ) {
+    if ( !Internets.testLocal( addr ) && !Internets.testReachability( addr ) ) {
+      LOG.warn( "Failed to reach host for cloud controller: " + addr );
+      return false;
+    } else {
+      try {
+        setupServiceState( addr, Eucalyptus.INSTANCE );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        return false;
       }
-    };
+      for ( ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
+        try {
+          if ( compId.isCloudLocal( ) && !compId.isRegisterable( ) ) {
+            setupServiceState( addr, compId );
+          }
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+      return true;
+    }
+    
+  }
+  
+  public static boolean teardownServiceDependencies( InetAddress addr ) {
+    if ( !Internets.testLocal( addr ) ) {
+      LOG.warn( "Failed to reach host for cloud controller: " + addr );
+      return false;
+    } else {
+      try {
+        for ( ComponentId compId : ComponentIds.list( ) ) {//TODO:GRZE:URGENT THIS LIES
+          try {
+            if ( compId.isCloudLocal( ) && !compId.isRegisterable( ) ) {
+              ServiceConfiguration dependsConfig = ServiceConfigurations.lookupByName( compId.getClass( ), addr.getHostAddress( ) );
+              Topology.stop( dependsConfig );
+            }
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+        }
+        return true;
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        return false;
+      }
+    }
+    
   }
   
 }

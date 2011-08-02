@@ -129,7 +129,7 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t *detachVolume
   adb_detachVolumeType_t *dvt=NULL;
   
   int rc;
-  axis2_bool_t status=AXIS2_TRUE;
+  axis2_bool_t status=AXIS2_TRUE, forceBool=AXIS2_FALSE;
   char statusMessage[256];
   char *volumeId=NULL, *instanceId=NULL, *remoteDev=NULL, *localDev=NULL;
   int force;
@@ -143,7 +143,12 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t *detachVolume
   instanceId = adb_detachVolumeType_get_instanceId(dvt, env);
   remoteDev = adb_detachVolumeType_get_remoteDev(dvt, env);
   localDev = adb_detachVolumeType_get_localDev(dvt, env);
-  force = adb_detachVolumeType_get_force(dvt, env);
+  forceBool = adb_detachVolumeType_get_force(dvt, env);
+  if (forceBool == AXIS2_TRUE) {
+    force = 1;
+  } else {
+    force = 0;
+  }
 
   status = AXIS2_TRUE;
   if (!DONOTHING) {
@@ -185,9 +190,6 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t *bundle
   bit = adb_BundleInstance_get_BundleInstance(bundleInstance, env);
 
   EUCA_MESSAGE_UNMARSHAL(bundleInstanceType, bit, (&ccMeta));
-  
-  ccMeta.correlationId = adb_bundleInstanceType_get_correlationId(bit, env);
-  ccMeta.userId = adb_bundleInstanceType_get_userId(bit, env);
   
   instanceId = adb_bundleInstanceType_get_instanceId(bit, env);
   bucketName = adb_bundleInstanceType_get_bucketName(bit, env);
@@ -237,9 +239,6 @@ adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *
   bit = adb_CancelBundleTask_get_CancelBundleTask(cancelBundleTask, env);
 
   EUCA_MESSAGE_UNMARSHAL(cancelBundleTaskType, bit, (&ccMeta));
-  
-  ccMeta.correlationId = adb_cancelBundleTaskType_get_correlationId(bit, env);
-  ccMeta.userId = adb_cancelBundleTaskType_get_userId(bit, env);
   
   instanceId = adb_cancelBundleTaskType_get_instanceId(bit, env);
   
@@ -365,6 +364,8 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
       }
       adb_describeNetworksResponseType_set_mode(snrt, env, outvnetConfig->mode);	
       adb_describeNetworksResponseType_set_addrsPerNet(snrt, env, outvnetConfig->numaddrs);
+      adb_describeNetworksResponseType_set_addrIndexMin(snrt, env, outvnetConfig->addrIndexMin);
+      adb_describeNetworksResponseType_set_addrIndexMax(snrt, env, outvnetConfig->addrIndexMax);
       
       vnetSubnet = hex2dot(outvnetConfig->nw);
       if (vnetSubnet) {
@@ -447,6 +448,7 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
     outAddressesLen = 0;
   } else if (rc) {
     logprintf("ERROR: doDescribePublicAddresses() returned FAIL\n");
+    snprintf(statusMessage, 256, "ERROR");
     status = AXIS2_FALSE;
     outAddressesLen = 0;
   } else {

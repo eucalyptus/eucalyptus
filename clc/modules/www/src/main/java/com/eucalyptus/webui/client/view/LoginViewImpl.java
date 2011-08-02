@@ -24,18 +24,18 @@ public class LoginViewImpl extends Composite implements LoginView {
     String loginLabel( );
     String loginInput( );
     String checkLabel( );
-    String hint( );
     String eucaLabel( );
   }
   
   private static final String LOGINFORM_ID = "loginForm";
+  private static final String LOGINFORM_ACCOUNTNAME_ID = "accountName";
   private static final String LOGINFORM_USERNAME_ID = "userName";
   private static final String LOGINFORM_PASSWORD_ID = "password";
   private static final String LOGINFORM_STAYSIGNEDIN_ID = "checkStaySignedIn";
   private static final String LOGINFORM_SIGNINLABEL_ID = "signInLabel";
   private static final String LOGINFORM_EUCALABEL_ID = "eucaLabel";
+  private static final String LOGINFORM_ACCOUNTNAMELABEL_ID = "accountnameLabel";
   private static final String LOGINFORM_USERNAMELABEL_ID = "usernameLabel";
-  private static final String LOGINFORM_FORMATLABEL_ID = "formatLabel";
   private static final String LOGINFORM_PASSWORDLABEL_ID = "passwordLabel";
   private static final String LOGINFORM_STAYSIGNEDINLABEL_ID = "staySignedInLabel";
   
@@ -83,10 +83,11 @@ public class LoginViewImpl extends Composite implements LoginView {
     Document.get( ).getElementById( LOGINFORM_ID ).addClassName( formStyle.loginBox( ) );
     Document.get( ).getElementById( LOGINFORM_USERNAMELABEL_ID ).addClassName( formStyle.loginLabel( ) );
     Document.get( ).getElementById( LOGINFORM_USERNAME_ID ).addClassName( formStyle.loginInput( ) );
+    Document.get( ).getElementById( LOGINFORM_ACCOUNTNAMELABEL_ID ).addClassName( formStyle.loginLabel( ) );
+    Document.get( ).getElementById( LOGINFORM_ACCOUNTNAME_ID ).addClassName( formStyle.loginInput( ) );
     Document.get( ).getElementById( LOGINFORM_PASSWORDLABEL_ID ).addClassName( formStyle.loginLabel( ) );
     Document.get( ).getElementById( LOGINFORM_PASSWORD_ID ).addClassName( formStyle.loginInput( ) );
     Document.get( ).getElementById( LOGINFORM_STAYSIGNEDINLABEL_ID ).addClassName( formStyle.checkLabel( ) );
-    Document.get( ).getElementById( LOGINFORM_FORMATLABEL_ID ).addClassName( formStyle.hint( ) );
     Document.get( ).getElementById( LOGINFORM_SIGNINLABEL_ID ).addClassName( formStyle.loginLabel( ) );
     Document.get( ).getElementById( LOGINFORM_EUCALABEL_ID ).addClassName( formStyle.eucaLabel( ) );
   }
@@ -98,10 +99,11 @@ public class LoginViewImpl extends Composite implements LoginView {
   }-*/;
   
   private void login( ) {
-    String username = ( ( InputElement ) Document.get( ).getElementById( LOGINFORM_USERNAME_ID ) ).getValue( );
+    String accountName = ( ( InputElement ) Document.get( ).getElementById( LOGINFORM_ACCOUNTNAME_ID ) ).getValue( );
+    String userName = ( ( InputElement ) Document.get( ).getElementById( LOGINFORM_USERNAME_ID ) ).getValue( );
     String password = ( ( InputElement ) Document.get( ).getElementById( LOGINFORM_PASSWORD_ID ) ).getValue( );
     boolean staySignedIn = ( ( InputElement ) Document.get( ).getElementById( LOGINFORM_STAYSIGNEDIN_ID ) ).isChecked( );
-    this.presenter.login( username, password, staySignedIn );
+    this.presenter.login( accountName, userName, password, staySignedIn );
   }
   
   @Override
@@ -116,7 +118,7 @@ public class LoginViewImpl extends Composite implements LoginView {
 
   @Override
   public void setFocus( ) {
-    Document.get( ).getElementById( LOGINFORM_USERNAME_ID ).focus( );
+    Document.get( ).getElementById( LOGINFORM_ACCOUNTNAME_ID ).focus( );
   }
 
   @Override

@@ -17,9 +17,10 @@ public class Transactions {
   private static Logger                        LOG  = Logger.getLogger( Transactions.class );
   private static ThreadLocal<EntityWrapper<?>> dbtl = new ThreadLocal<EntityWrapper<?>>( );
   
-  public static <T> EntityWrapper<T> join( ) {
-    return ( EntityWrapper<T> ) dbtl.get( );
-  }
+//  
+//  public static <T> EntityWrapper<T> join( ) {
+//    return ( EntityWrapper<T> ) dbtl.get( );
+//  }
   
   /**
    * TODO:GRZE: make this friendly wrt multiple types
@@ -37,8 +38,8 @@ public class Transactions {
 //        db = dbtl.get( ).recast( ( Class<T> ) search.getClass( ) );
 //      }
 //    } else {
-      db = EntityWrapper.get( search );
-      dbtl.set( db );
+    db = EntityWrapper.get( search );
+    dbtl.set( db );
 //    }
     return db;
   }
@@ -65,6 +66,7 @@ public class Transactions {
     return Lists.newArrayList( );
   }
   
+  @Deprecated
   public static <T> T one( T search, final Tx<T> c ) throws ExecutionException {
     return one( search, new Callback<T>( ) {
       
@@ -87,7 +89,51 @@ public class Transactions {
     } );
   }
   
-  public static <T> T one( T search, Callback<T> c ) throws ExecutionException {//TODO:GRZE:adjust these to use callbacks
+  public static <T> List<T> findAll( T search ) throws ExecutionException {
+    return each( search, new Callback<T>( ) {
+      
+      @Override
+      public void fire( T t ) {}
+    } );
+  }
+  
+  public static <T> boolean delete( T search ) throws ExecutionException {
+    return delete( search, new Predicate<T>( ) {
+      
+      @Override
+      public boolean apply( T input ) {
+        return false;
+      }
+    } );
+  }
+  
+  public static <T> boolean delete( T search, Predicate<T> c ) throws ExecutionException {
+    assertThat( search, notNullValue( ) );
+    EntityWrapper<T> db = Transactions.joinOrCreate( search );
+    try {
+      T entity = db.getUnique( search );
+      boolean r = false;
+      if ( r = c.apply( entity ) ) {
+        db.delete( entity );
+        db.commit( );
+        return true;
+      } else {
+        db.commit( );
+        return false;
+      }
+    } catch ( UndeclaredThrowableException e ) {
+      db.rollback( );
+      throw new TransactionException( e.getCause( ).getMessage( ), e.getCause( ) );
+    } catch ( Throwable e ) {
+      db.rollback( );
+      LOG.error( e, e );
+      throw new TransactionFireException( e.getMessage( ), e );
+    } finally {
+      dbtl.remove( );
+    }
+  }
+  
+  public static <T> T one( T search, Callback<T> c ) throws ExecutionException {
     assertThat( search, notNullValue( ) );
     EntityWrapper<T> db = Transactions.joinOrCreate( search );
     try {
@@ -107,7 +153,7 @@ public class Transactions {
     }
   }
   
-  public static <S, T> S oneTransform( T search, Function<T, S> c ) throws ExecutionException {//TODO:GRZE:adjust these to use callbacks
+  public static <S, T> S oneTransform( T search, Function<T, S> c ) throws ExecutionException {
     assertThat( search, notNullValue( ) );
     EntityWrapper<T> db = Transactions.joinOrCreate( search );
     try {
@@ -173,7 +219,7 @@ public class Transactions {
   }
   
   public static <T> List<T> filter( T search, Predicate<T> condition ) {
-    return filteredTransform( search, condition, (Function<T,T>) Functions.identity( ) );
+    return filteredTransform( search, condition, ( Function<T, T> ) Functions.identity( ) );
   }
   
   public static <T, O> List<O> filteredTransform( T search, Predicate<T> condition, Function<T, O> transform ) {
@@ -198,4 +244,5 @@ public class Transactions {
     }
     return res;
   }
+  
 }

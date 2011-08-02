@@ -90,7 +90,7 @@ import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 public class ElasticFoxMangleHandler extends MessageStackHandler {
 
   @Override
-  public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
+  public void incomingMessage( MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpRequest ) {
       MappingHttpRequest message = ( MappingHttpRequest ) event.getMessage( );
       if ( message.getMessage( ) instanceof ModifyImageAttributeType ) {

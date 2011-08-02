@@ -67,15 +67,14 @@ import java.io.File;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
 
 
 public enum SubDirectory {
   DB( BaseDirectory.VAR, "db" ),
-  LDAP( BaseDirectory.VAR, "ldap" ),
-  MODULES( BaseDirectory.VAR, "modules" ),
-/* TODO: wtf is this? SERVICES( BaseDirectory.VAR, "services" ),*/  
+  TX( BaseDirectory.HOME, "/var/run/eucalyptus/tx" ),
+  CLASSCACHE( BaseDirectory.HOME, "/var/run/eucalyptus/classcache" ),
   WWW( BaseDirectory.CONF, "www" ),
   WEBAPPS( BaseDirectory.VAR, "webapps" ),
   KEYS( BaseDirectory.VAR, "keys" ),
@@ -116,12 +115,17 @@ public enum SubDirectory {
     }
   }
   
-  public File getChildFile( String... args ) {
-    return new File( getChildPath( args ) );
+  public File getChildFile( String... path ) {
+    return new File( getChildPath( path ) );
   }
-  public String getChildPath( String... args ) {
+  
+  public boolean hasChild( String... path ) {
+    return getChildFile( path ).exists( );
+  }
+  
+  public String getChildPath( String... path ) {
     String ret = this.toString( );
-    for( String s : args ) {
+    for( String s : path ) {
       ret += File.separator + s;
     }
     return ret;
@@ -129,12 +133,12 @@ public enum SubDirectory {
   
   private void assertPermissions( ) {
     try {
-      GroovyUtil.exec( "chown -R " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+      Groovyness.exec( "chown -R " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOG.error( ex , ex );
     }
     try {
-      GroovyUtil.exec( "chmod -R +rwX " + this.toString( ) );
+      Groovyness.exec( "chmod -R +rwX " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOG.error( ex , ex );
     }

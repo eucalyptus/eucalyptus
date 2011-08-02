@@ -2,20 +2,22 @@ package com.eucalyptus.component;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.io.StringWriter;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.MissingFormatArgumentException;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import com.eucalyptus.bootstrap.BootstrapException;
-import com.eucalyptus.component.id.Any;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.AnonymousMessage;
 import com.eucalyptus.empyrean.Empyrean;
@@ -24,11 +26,12 @@ import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Logs;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-public abstract class ComponentId implements HasName<ComponentId>, HasFullName<ComponentId> {
+public abstract class ComponentId implements HasName<ComponentId>, HasFullName<ComponentId>, Serializable {
   private static Logger       LOG         = Logger.getLogger( ComponentId.class );
   private static final String EMPTY_MODEL = "  <mule xmlns=\"http://www.mulesource.org/schema/mule/core/2.0\"\n"
                                             +
@@ -90,10 +93,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
         in.close( );
         out.flush( );
         String outString = out.toString( );
-        if ( Logs.EXTREME ) {
-          LOG.trace( "Loaded model for: " + this );
-          LOG.trace( outString );
-        }
+        Logs.extreme( ).trace( "Loaded model for: " + this.name );
+        Logs.extreme( ).trace( outString );
         return outString;
       }
     } catch ( IOException ex ) {
@@ -127,6 +128,10 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       : ( ( Unpartioned ) this ).getPartition( );
   }
   
+  public final boolean isRootService( ) {
+    return this.serviceDependencies( ).isEmpty( );
+  }
+  
   public final boolean isPartitioned( ) {
     return !Unpartioned.class.isAssignableFrom( this.getClass( ) );
   }
@@ -150,13 +155,11 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   }
   
   public final Boolean isCloudLocal( ) {
-    return this.serviceDependencies( ).contains( Eucalyptus.class );
+    return this.serviceDependencies( ).contains( Eucalyptus.class ) || Eucalyptus.class.equals( this.getClass( ) );
   }
   
-  public abstract Boolean hasDispatcher( );
-  
   public final Boolean isAlwaysLocal( ) {
-    return this.serviceDependencies( ).contains( Any.class );
+    return this.serviceDependencies( ).contains( Empyrean.class ) || Empyrean.class.equals( this.getClass( ) );
   }
   
   public Boolean hasCredentials( ) {
@@ -261,7 +264,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     try {
       uri = String.format( this.getUriPattern( ), hostName, port );
     } catch ( MissingFormatArgumentException e ) {
-      uri = String.format( this.getUriPattern( ), hostName, port, this.getCapitalizedName( ) );
+      uri = String.format( this.getUriPattern( ) + "Internal", hostName, port, this.getCapitalizedName( ) );
     }
     try {
       URI u = new URI( uri );
@@ -275,8 +278,12 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public final URI makeExternalRemoteUri( String hostName, Integer port ) {
     String uri;
     URI u = null;
-    port = ( port == -1 ) ? this.getPort( ) : port;
-    hostName = ( port == -1 ) ? Internets.localHostAddress( ) : hostName;
+    port = ( port == -1 )
+      ? this.getPort( )
+      : port;
+    hostName = ( port == -1 )
+      ? Internets.localHostAddress( )
+      : hostName;
     try {
       uri = String.format( this.getExternalUriPattern( ), hostName, port );
       u = new URI( uri );
@@ -295,7 +302,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
         u = new URI( uri );
         u.parseServerAuthority( );
       } catch ( URISyntaxException ex ) {
-        u = URI.create( uri );        
+        u = URI.create( uri );
       }
     }
     return u;
@@ -332,12 +339,12 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return this.externalUriPattern;
   }
   
-  @Override
-  public String toString( ) {
-    return String.format( "ComponentId:%s:partitioned=%s:msg=%s:disp=%s:alwaysLocal=%s:cloudLocal=%s:creds=%s",
-                          this.name( ), this.lookupBaseMessageType( ).getSimpleName( ), this.hasDispatcher( ), this.isAlwaysLocal( ), this.isCloudLocal( ),
-                          this.isPartitioned( ), this.hasCredentials( ) );
-  }
+//  @Override
+//  public String toString( ) {
+//    return String.format( "ComponentId:%s:parent=%s:%spartitioned:disp=%s:alwaysLocal=%s:cloudLocal=%s:creds=%s",
+//                          this.name( ), this.serviceDependencies( ), this.isPartitioned( ) ? "" : "un", this.lookupBaseMessageType( ).getSimpleName( ), this.hasDispatcher( ), this.isAlwaysLocal( ), this.isCloudLocal( ),
+//                          this.isPartitioned( ), this.hasCredentials( ) );
+//  }
   
   public static abstract class Unpartioned extends ComponentId {
     
@@ -363,4 +370,68 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public boolean runLimitedServices( ) {
     return false;
   }
+  
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( this.getFullName( ) ).append( " " );
+    builder.append( this.name( ) ).append( ":" );
+    if ( this.isPartitioned( ) ) {
+      builder.append( "partitioned:" );
+    } else {
+      builder.append( "unpartitioned:" );
+    }
+    if ( !this.serviceDependencies( ).isEmpty( ) ) {
+      builder.append( "deps=" ).append( Lists.transform( this.serviceDependencies( ), new Function<Class, String>( ) {
+        
+        @Override
+        public String apply( Class arg0 ) {
+          return arg0.getSimpleName( );
+        }
+      } ) ).append( ":" );
+    }
+    if ( this.isCloudLocal( ) ) {
+      builder.append( "cloudLocal:" );
+    } else if ( this.isAlwaysLocal( ) ) {
+      builder.append( "alwaysLocal:" );
+    }
+    if ( this.runLimitedServices( ) ) {
+      builder.append( "runs-limited-services:" );
+    }
+    return builder.toString( );
+  }
+  
+  public final boolean isInternal( ) {
+    return !this.isAdminService( ) && !this.isUserService( );
+  }
+  
+  public boolean isUserService( ) {
+    return false;
+  }
+  
+  public boolean isAdminService( ) {
+    return false;
+  }
+  
+  public boolean isRegisterable( ) {
+    return !( ServiceBuilders.lookup( this ) instanceof DummyServiceBuilder );
+  }
+
+  protected static ServiceConfiguration setupServiceState( InetAddress addr, ComponentId compId ) throws ServiceRegistrationException, ExecutionException {
+    try {
+      Component comp = Components.lookup( compId );
+      ServiceConfiguration config = ( Internets.testLocal( addr ) )
+        ? comp.initRemoteService( addr )
+        : comp.initRemoteService( addr );//TODO:GRZE:REVIEW: use of initRemote
+      if ( Component.State.INITIALIZED.ordinal( ) >= config.lookupState( ).ordinal( ) ) {
+        comp.loadService( config ).get( );
+      }
+      Topology.enable( config );
+      return config;
+    } catch ( InterruptedException ex ) {
+      Thread.currentThread( ).interrupt( );
+      return null;
+    }
+  }
+  
 }

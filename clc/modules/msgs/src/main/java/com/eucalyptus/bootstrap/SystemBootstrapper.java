@@ -76,7 +76,6 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.scripting.groovy.GroovyUtil;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Logs;
@@ -90,7 +89,7 @@ import com.google.common.collect.Lists;
 public class SystemBootstrapper {
   private static final String       SEP = " -- ";
   
-  private static Logger             LOG = Logger.getLogger( SystemBootstrapper.class );
+  static Logger                     LOG = Logger.getLogger( SystemBootstrapper.class );
   
   private static SystemBootstrapper singleton;
   private static ThreadGroup        singletonGroup;
@@ -113,10 +112,11 @@ public class SystemBootstrapper {
   
   public boolean init( ) throws Exception {
     Logs.init( );
+    BootstrapArgs.init( );
     Security.addProvider( new BouncyCastleProvider( ) );
     try {
-      Bootstrap.init( );
-      if( !Bootstrap.isInitializeSystem( ) ) {
+      if ( !BootstrapArgs.isInitializeSystem( ) ) {
+        Bootstrap.init( );
         Bootstrap.Stage stage = Bootstrap.transition( );
         stage.load( );
       }
@@ -127,25 +127,20 @@ public class SystemBootstrapper {
     } catch ( Throwable t ) {
       t.printStackTrace( );
       LOG.fatal( t, t );
-      System.exit( 1 );
+      System.exit( 123 );
       return false;
-    }
-  }
-
-  private static void initializeSystem( ) {
-    try {
-      GroovyUtil.exec( "com.eucalyptus.component.auth.SystemCredentialProvider.initializeCredentials( );" );
-      GroovyUtil.exec( "com.eucalyptus.bootstrap.MysqlDatabaseBootstrapper.initializeDatabase( );" );
-      System.exit( 0 );
-    } catch ( Throwable ex ) {
-      LOG.error( ex , ex );
-      System.exit( 1 );
     }
   }
   
   public boolean load( ) throws Throwable {
-    if( Bootstrap.isInitializeSystem( ) ) {
-      SystemBootstrapper.initializeSystem( );
+    if ( BootstrapArgs.isInitializeSystem( ) ) {
+      try {
+        Bootstrap.initializeSystem( );
+        System.exit( 0 );
+      } catch ( Throwable ex ) {
+        LOG.error( ex, ex );
+        System.exit( 1 );
+      }
     } else {
       try {
         // TODO: validation-api
@@ -160,7 +155,7 @@ public class SystemBootstrapper {
       } catch ( Throwable t ) {
         t.printStackTrace( );
         LOG.fatal( t, t );
-        System.exit( 1 );
+        System.exit( 123 );
         throw t;
       }
       for ( Component c : Components.whichCanLoad( ) ) {
@@ -183,7 +178,7 @@ public class SystemBootstrapper {
       throw t;
     } catch ( Throwable t ) {
       LOG.fatal( t, t );
-      System.exit( 1 );
+      System.exit( 123 );
       throw t;
     }
     for ( final Component c : Components.whichCanLoad( ) ) {
@@ -334,7 +329,7 @@ public class SystemBootstrapper {
         banner += prefix + c.getName( ) + SEP + localConfig.toString( );
         banner += prefix + c.getName( ) + SEP + localConfig.lookupBuilder( ).toString( );
         banner += prefix + c.getName( ) + SEP + localConfig.getComponentId( ).toString( );
-        banner += prefix + c.getName( ) + SEP + localConfig.lookupStateMachine( ).getState( ).toString( );
+        banner += prefix + c.getName( ) + SEP + localConfig.lookupState( ).toString( );
       }
     }
     banner += headerHeader + String.format( headerFormat, "Detected Interfaces" ) + headerFooter;

@@ -73,38 +73,30 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.Service;
-import com.eucalyptus.component.ServiceCheckRecord;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.Services;
-import com.eucalyptus.component.id.Any;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.DisableServiceResponseType;
 import com.eucalyptus.empyrean.DisableServiceType;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.EnableServiceResponseType;
 import com.eucalyptus.empyrean.EnableServiceType;
 import com.eucalyptus.empyrean.ModifyServiceResponseType;
 import com.eucalyptus.empyrean.ModifyServiceType;
 import com.eucalyptus.empyrean.ServiceId;
-import com.eucalyptus.empyrean.ServiceInfoType;
-import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.empyrean.StartServiceResponseType;
 import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.empyrean.StopServiceResponseType;
 import com.eucalyptus.empyrean.StopServiceType;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
-import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 
 public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
@@ -113,7 +105,7 @@ public class EmpyreanService {
     START, STOP, ENABLE, DISABLE, RESTART
   }
   
-  public ModifyServiceResponseType modifyService( ModifyServiceType request ) {
+  public ModifyServiceResponseType modifyService( ModifyServiceType request ) throws Exception {
     ModifyServiceResponseType reply = request.getReply( );
     TransitionName transition = TransitionName.valueOf( request.getState( ).toUpperCase( ) );
     for ( Component comp : Components.list( ) ) {
@@ -128,145 +120,209 @@ public class EmpyreanService {
       try {
         switch ( transition ) {
           case DISABLE:
-            if ( !Component.State.DISABLED.equals( a.lookupState( ) ) && !Component.State.NOTREADY.equals( a.lookupState( ) ) ) {
-              return reply;
-            } else {
-              comp.disableTransition( a ).get( );
+            switch ( a.lookupState( ) ) {
+              case ENABLED:
+                Topology.getInstance( ).disable( a ).get();
+                break;
+              default:
+                return reply;
             }
             break;
           case ENABLE:
-            if ( Component.State.ENABLED.equals( a.lookupState( ) ) ) {
-              return reply;
-            } else {
-              comp.enableTransition( a ).get( );
+            switch ( a.lookupState( ) ) {
+              case INITIALIZED:
+              case PRIMORDIAL:
+              case BROKEN:
+              case LOADED:
+              case STOPPED:
+              case DISABLED:
+              case NOTREADY:
+                Topology.getInstance( ).enable( a ).get();
+                break;
+              case ENABLED:
+              default:
+                return reply;
             }
             break;
           case STOP:
-            if ( Component.State.STOPPED.equals( a.lookupState( ) ) ) {
-              return reply;
-            } else {
-              comp.stopTransition( a ).get( );
+            switch ( a.lookupState( ) ) {
+              case ENABLED:
+                Topology.getInstance( ).disable( a ).get();
+              case INITIALIZED:
+              case PRIMORDIAL:
+              case BROKEN:
+              case STOPPED:
+              case LOADED:
+              case DISABLED:
+              case NOTREADY:
+                Topology.getInstance( ).stop( a ).get();
+                break;
+              default:
+                return reply;
             }
             break;
           case START:
-            if ( Component.State.NOTREADY.ordinal( ) <= a.lookupState( ).ordinal( ) ) {
-              return reply;
-            } else {
-              comp.startTransition( a ).get( );
+            switch ( a.lookupState( ) ) {
+              case INITIALIZED:
+              case PRIMORDIAL:
+              case BROKEN:
+              case STOPPED:
+              case LOADED:
+              case DISABLED:
+              case NOTREADY:
+                Topology.getInstance( ).start( a ).get();
+                break;
+              case ENABLED:
+              default:
+                return reply;
             }
             break;
           case RESTART:
-            comp.stopTransition( a ).get( );
-            comp.enableTransition( a ).get( );
+            switch ( a.lookupState( ) ) {
+              case ENABLED:
+                Topology.getInstance( ).disable( a ).get();
+              case DISABLED:
+              case NOTREADY:
+                Topology.getInstance( ).stop( a ).get();
+              case INITIALIZED:
+              case PRIMORDIAL:
+              case BROKEN:
+              case LOADED:
+              default:
+                Topology.getInstance( ).start( a ).get();
+                break;
+            }
             break;
+        }
+      } catch ( InterruptedException ex ) {
+        Thread.currentThread( ).interrupt( );
+        throw ex;
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        throw ex;
+      }
+    }
+    return reply;
+  }
+  
+  public StartServiceResponseType startService( StartServiceType request ) throws Throwable {
+    StartServiceResponseType reply = request.getReply( );
+    for ( ServiceId serviceInfo : request.getServices( ) ) {
+      try {
+        Component comp = Components.lookup( serviceInfo.getType( ) );
+        ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
+        if ( service.isVmLocal( ) ) {
+          try {
+            Topology.start( service ).get( );
+            reply.getServices( ).add( serviceInfo );
+          } catch ( IllegalStateException ex ) {
+            LOG.error( ex, ex );
+            throw ex;
+          } catch ( ExecutionException ex ) {
+            LOG.error( ex, ex );
+            throw ex.getCause( );
+          } catch ( InterruptedException ex ) {
+            LOG.error( ex, ex );
+            Thread.currentThread( ).interrupt( );
+            throw ex;
+          }
         }
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
-        return reply.markFailed( );
+        throw ex;
       }
     }
     return reply;
   }
   
-  public StartServiceResponseType startService( StartServiceType request ) {
-    StartServiceResponseType reply = request.getReply( );
-    for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
-      try {
-        Component comp = Components.lookup( serviceInfo.getType( ) );
-        ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
-        if ( service.isVmLocal( ) ) {
-          try {
-            comp.startTransition( service );
-          } catch ( IllegalStateException ex ) {
-            LOG.error( ex, ex );
-          }
-        }
-      } catch ( NoSuchElementException ex ) {
-        LOG.error( ex, ex );
-      }
-    }
-    return reply;
-  }
-  
-  public StopServiceResponseType stopService( StopServiceType request ) {
+  public StopServiceResponseType stopService( StopServiceType request ) throws Throwable {
     StopServiceResponseType reply = request.getReply( );
-    for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
+    for ( ServiceId serviceInfo : request.getServices( ) ) {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
-        ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
+        ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
         if ( service.isVmLocal( ) ) {
           try {
-            comp.stopTransition( service ).get( );
+            Topology.stop( service ).get( );
+            reply.getServices( ).add( serviceInfo );
           } catch ( IllegalStateException ex ) {
             LOG.error( ex, ex );
-            return reply.markFailed( );
+            throw ex;
           } catch ( ExecutionException ex ) {
             LOG.error( ex, ex );
-            return reply.markFailed( );
+            throw ex.getCause( );
           } catch ( InterruptedException ex ) {
             LOG.error( ex, ex );
-            return reply.markFailed( );
+            Thread.currentThread( ).interrupt( );
+            throw ex;
           }
         }
-      } catch ( NoSuchElementException ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
-        return reply.markFailed( );
+        throw ex;
       }
     }
     return reply;
   }
   
-  public EnableServiceResponseType enableService( EnableServiceType request ) {
+  public EnableServiceResponseType enableService( EnableServiceType request ) throws Throwable {
     EnableServiceResponseType reply = request.getReply( );
-    for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
+    for ( ServiceId serviceInfo : request.getServices( ) ) {
       try {
         Component comp = Components.lookup( serviceInfo.getType( ) );
-        ServiceConfiguration service = comp.lookupServiceConfiguration( serviceInfo.getName( ) );
+        ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
         if ( service.isVmLocal( ) ) {
           try {
-            comp.enableTransition( service );
+            Topology.getInstance( ).enable( service ).get( );
+            reply.getServices( ).add( serviceInfo );
+          } catch ( ServiceRegistrationException ex ) {
+            LOG.error( ex, ex );
+            throw ex;
           } catch ( IllegalStateException ex ) {
             LOG.error( ex, ex );
-            return reply.markFailed( );
+            throw ex;
+          } catch ( ExecutionException ex ) {
+            LOG.error( ex, ex );
+            throw ex.getCause( );
+          } catch ( InterruptedException ex ) {
+            LOG.error( ex, ex );
+            Thread.currentThread( ).interrupt( );
+            throw ex;
           }
         }
-      } catch ( NoSuchElementException ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
-        return reply.markFailed( );
+        throw ex;
       }
     }
     return reply;
   }
   
-  public DisableServiceResponseType disableService( DisableServiceType request ) {
+  public DisableServiceResponseType disableService( DisableServiceType request ) throws Throwable {
     DisableServiceResponseType reply = request.getReply( );
-    for ( ServiceInfoType serviceInfo : request.getServices( ) ) {
+    for ( ServiceId serviceInfo : request.getServices( ) ) {
       try {
-        Component c = Components.lookup( serviceInfo.getType( ) );
-        for ( ServiceConfiguration config : c.lookupServiceConfigurations( ) ) {
-          String partition = config.getPartition( );
-          String name = config.getName( );
-          if ( partition.equals( serviceInfo.getPartition( ) ) && name.equals( serviceInfo.getName( ) ) ) {
-            if ( Component.State.ENABLED.equals( config.lookupState( ) ) ) {
-              try {
-                c.disableTransition( config ).get( );
-                reply.getServices( ).add( serviceInfo );
-              } catch ( ExecutionException ex ) {
-                LOG.error( ex, ex );
-                return reply.markFailed( );
-              } catch ( InterruptedException ex ) {
-                LOG.error( ex, ex );
-                return reply.markFailed( );
-              }
-            } else {
-              LOG.error( "Attempt to DISABLE a service which is not currently ENABLED: " + config.toString( ) );
-              return reply.markFailed( );
-            }
+        Component comp = Components.lookup( serviceInfo.getType( ) );
+        ServiceConfiguration service = TypeMappers.transform( serviceInfo, ServiceConfiguration.class );
+        if ( service.isVmLocal( ) ) {
+          try {
+            Topology.getInstance( ).disable( service ).get( );
+            reply.getServices( ).add( serviceInfo );
+          } catch ( IllegalStateException ex ) {
+            LOG.error( ex, ex );
+            throw ex;
+          } catch ( ExecutionException ex ) {
+            LOG.error( ex, ex );
+            throw ex.getCause( );
+          } catch ( InterruptedException ex ) {
+            LOG.error( ex, ex );
+            Thread.currentThread( ).interrupt( );
+            throw ex;
           }
         }
       } catch ( NoSuchElementException ex ) {
-        Exceptions.trace( "Failed to lookup component of type: " + serviceInfo.getType( ), ex );
-        return reply.markFailed( );
+        LOG.error( ex, ex );
+        throw ex;
       }
     }
     return reply;
@@ -277,7 +333,7 @@ public class EmpyreanService {
       return new Predicate<ServiceConfiguration>( ) {
         @Override
         public boolean apply( ServiceConfiguration input ) {
-          return input.getPartition( ).equals( partition );
+          return partition == null || partition.equals( input.getPartition( ) );
         }
       };
     }
@@ -286,7 +342,7 @@ public class EmpyreanService {
       return new Predicate<ServiceConfiguration>( ) {
         @Override
         public boolean apply( ServiceConfiguration input ) {
-          return host == null || input.getHostName( ).equals( host );
+          return host == null || host.equals( input.getHostName( ) );
         }
       };
     }
@@ -295,7 +351,11 @@ public class EmpyreanService {
       return new Predicate<ServiceConfiguration>( ) {
         @Override
         public boolean apply( ServiceConfiguration input ) {
-          return input.lookupState( ).equals( state );
+          try {
+            return input.lookupState( ).equals( state );
+          } catch ( Exception ex ) {
+            return false;
+          }
         }
       };
     }
@@ -304,7 +364,7 @@ public class EmpyreanService {
       return new Predicate<Component>( ) {
         @Override
         public boolean apply( Component input ) {
-          return Any.class.equals( compId.getClass( ) ) || input.getComponentId( ).equals( compId );
+          return Empyrean.class.equals( compId.getClass( ) ) || input.getComponentId( ).equals( compId );
         }
       };
     }
@@ -317,9 +377,15 @@ public class EmpyreanService {
         public boolean apply( ServiceConfiguration input ) {
           if ( listAll ) {
             return true;
-          } else if ( !input.getComponentId( ).hasDispatcher( ) && listInternal && input.isHostLocal( ) ) {
+          } else if ( input.getComponentId( ).isInternal( ) && listInternal && input.getPort( ) == -1
+              ? true
+                : Internets.testLocal( input.getHostName( ) ) ) {
             return true;
-          } else if ( input.getComponentId( ).hasDispatcher( ) ) {
+          } else if ( input.getComponentId( ).isUserService( ) ) {
+            return true;
+          } else if ( input.getComponentId( ).isAdminService( ) ) {
+            return true;
+          } else if ( input.getComponentId( ).isRegisterable( ) ) {
             return true;
           } else {
             return false;
@@ -334,37 +400,11 @@ public class EmpyreanService {
     
     ComponentId compId = ( request.getByServiceType( ) != null )
       ? ComponentIds.lookup( request.getByServiceType( ).toLowerCase( ) )
-      : Any.INSTANCE;
+      : Empyrean.INSTANCE;
     final boolean showEventStacks = Boolean.TRUE.equals( request.getShowEventStacks( ) );
     final boolean showEvents = Boolean.TRUE.equals( request.getShowEvents( ) ) || showEventStacks;
     
-    Function<ServiceConfiguration, ServiceStatusType> transformToStatus = new Function<ServiceConfiguration, ServiceStatusType>( ) {
-      
-      @Override
-      public ServiceStatusType apply( final ServiceConfiguration config ) {
-        return new ServiceStatusType( ) {
-          {
-            this.setServiceId( TypeMappers.transform( config, ServiceId.class ) );
-            this.setLocalEpoch( reply.getBaseEpoch( ) );
-            try {
-              this.setLocalState( config.lookupStateMachine( ).getState( ).toString( ) );
-            } catch ( Exception ex ) {
-              this.setLocalState( "n/a: " + ex.getMessage( ) );
-            }
-            if ( showEvents ) {
-              this.getStatusDetails( ).addAll( Collections2.transform( config.lookupDetails( ),
-                                                                       TypeMappers.lookup( ServiceCheckRecord.class, ServiceStatusDetail.class ) ) );
-              if ( !showEventStacks ) {
-                for ( ServiceStatusDetail a : this.getStatusDetails( ) ) {
-                  a.setStackTrace( "" );
-                }
-              }
-            }
-          }
-        };
-      }
-    };
-    
+    Function<ServiceConfiguration, ServiceStatusType> transformToStatus = ServiceConfigurations.asServiceStatus( showEvents, showEventStacks );
     List<Predicate<ServiceConfiguration>> filters = new ArrayList<Predicate<ServiceConfiguration>>( ) {
       {
         if ( request.getByPartition( ) != null ) {
@@ -378,14 +418,14 @@ public class EmpyreanService {
         this.add( Filters.host( request.getByHost( ) ) );
         this.add( Filters.listAllOrInternal( request.getListAll( ), request.getListInternal( ) ) );
       }
-    };    
+    };
     Predicate<Component> componentFilter = Filters.componentType( compId );
     Predicate<ServiceConfiguration> configPredicate = Predicates.and( filters );
     
     for ( Component comp : Components.list( ) ) {
       if ( componentFilter.apply( comp ) ) {
         for ( final ServiceConfiguration config : comp.lookupServiceConfigurations( ) ) {
-          if( configPredicate.apply( config ) ) {
+          if ( configPredicate.apply( config ) ) {
             reply.getServiceStatuses( ).add( transformToStatus.apply( config ) );
           }
         }
