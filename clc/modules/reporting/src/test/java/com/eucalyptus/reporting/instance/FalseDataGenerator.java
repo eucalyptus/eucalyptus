@@ -111,7 +111,7 @@ public class FalseDataGenerator
 
 		try {
 			OutputStream os = new FileOutputStream("/tmp/testReport.csv");
-			ReportGenerator.generateReport(ReportType.INSTANCE, ReportFormat.CSV, new Period(1104566480000l, 1104571200000l),
+			ReportGenerator.getInstance().generateReport(ReportType.INSTANCE, ReportFormat.CSV, new Period(1104566480000l, 1104571200000l),
 					ReportingCriterion.USER, null, null, os);
 			os.close();
 		} catch (Exception e) {
