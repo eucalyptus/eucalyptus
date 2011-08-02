@@ -61,15 +61,13 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package edu.ucsb.eucalyptus.cloud;
+package com.eucalyptus.network;
 
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.component.Partition;
-import com.eucalyptus.network.NetworkGroups;
-import com.eucalyptus.network.NetworkRulesGroup;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.Transactions;
 

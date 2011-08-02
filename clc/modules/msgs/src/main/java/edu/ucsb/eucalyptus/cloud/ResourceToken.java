@@ -69,6 +69,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.network.NetworkToken;
 
 public class ResourceToken implements Comparable {
   private final String       cluster;

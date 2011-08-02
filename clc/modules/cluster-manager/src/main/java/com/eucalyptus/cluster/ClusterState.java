@@ -80,6 +80,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.network.Network;
+import com.eucalyptus.network.NetworkToken;
 import com.eucalyptus.network.Networks;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -87,7 +88,6 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 

@@ -68,6 +68,7 @@ import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.network.Network;
+import com.eucalyptus.network.NetworkToken;
 import com.eucalyptus.network.Networks;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -75,7 +76,6 @@ import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.BroadcastCallback;
-import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.msgs.StopNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StopNetworkType;
 

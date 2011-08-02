@@ -66,11 +66,11 @@ package com.eucalyptus.cluster.callback;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.network.NetworkToken;
 import com.eucalyptus.network.Networks;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.BroadcastCallback;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.msgs.StartNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
 
