@@ -1792,7 +1792,6 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   }
 
   memcpy(dst->volumes, src->volumes, sizeof(ncVolume) * EUCA_MAX_VOLUMES);
-  dst->volumesSize = src->volumesSize;
 
   memcpy(&(dst->ccvm), &(src->params), sizeof(virtualMachine));
 

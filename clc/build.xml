@@ -128,6 +128,7 @@
 	</target>
 	<target name="build-test-nogwt">
 		<ant dir="modules/msgs" inheritall="false" target="builder-test" />
+		<ant dir="modules/euare-common" inheritall="false" target="builder" />
 		<ant dir="modules/mysql" inheritall="false" target="builder-test" />
 		<ant dir="modules/authentication" inheritall="false" target="builder-test" />
 		<ant dir="modules/configuration" inheritall="false" target="builder-test" />

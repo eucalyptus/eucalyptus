@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*
 Copyright (c) 2009  Eucalyptus Systems, Inc.	
 
@@ -322,13 +325,15 @@ static void copy_instance_to_adb (adb_instanceType_t * instance, const axutil_en
     adb_instanceType_set_userData(instance, env, outInst->userData);
     adb_instanceType_set_launchIndex(instance, env, outInst->launchIndex);
     adb_instanceType_set_platform(instance, env, outInst->platform);
-    int i;
-    for (i=0; i<outInst->groupNamesSize; i++) {
+
+    for (int i=0; i<outInst->groupNamesSize; i++) {
         adb_instanceType_add_groupNames(instance, env, outInst->groupNames[i]);
     }
     
     // updated by NC upon Attach/DetachVolume 
-    for (i=0; i<outInst->volumesSize; i++) {
+    for (int i=0; i<EUCA_MAX_VOLUMES; i++) {
+        if (! is_volume_used (&(outInst->volumes[i])))
+            continue;
         adb_volumeType_t * volume = adb_volumeType_create(env);
         adb_volumeType_set_volumeId(volume, env, outInst->volumes[i].volumeId);
         adb_volumeType_set_remoteDev(volume, env, outInst->volumes[i].remoteDev);
