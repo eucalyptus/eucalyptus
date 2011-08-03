@@ -258,10 +258,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     return this.uniqueName;
   }
   
-  public String getPermanentUuid( ) {
-    return this.permanentUuid;
-  }
-  
   /**
    * GRZE:TODO: eliminate these symbols
    */
