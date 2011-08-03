@@ -72,9 +72,7 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NoSuchTokenException;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
-import com.eucalyptus.network.Network;
 import com.eucalyptus.network.NetworkToken;
-import com.eucalyptus.network.Networks;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
@@ -147,10 +145,10 @@ public class VmRunCallback extends MessageCallback<VmRunType,VmRunResponseType> 
     if( this.token.getPrimaryNetwork( ) != null ) {
       try {
         NetworkToken net = this.token.getPrimaryNetwork( );
-        Network network = Networks.getInstance( ).lookup( net.getName( ) );
-        for( Integer index : this.token.getPrimaryNetwork( ).getIndexes( ) ) {
-          network.returnNetworkIndex( index );
-        }
+      //GRZE:NET //        Network network = Networks.getInstance( ).lookup( net.getName( ) );
+//        for( Integer index : this.token.getPrimaryNetwork( ).getIndexes( ) ) {
+//          network.returnNetworkIndex( index );
+//        }
       } catch ( Throwable e2 ) {
         LOG.debug( e2, e2 );
       }

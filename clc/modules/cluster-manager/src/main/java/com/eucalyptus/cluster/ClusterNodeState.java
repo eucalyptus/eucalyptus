@@ -160,9 +160,10 @@ public class ClusterNodeState {
         childToken.getInstanceUuids( ).add( token.getInstanceUuids( ).get( index ) );
       }
       if( primaryNet != null ) {
-        NetworkToken childNet = new NetworkToken( primaryNet.getCluster( ), primaryNet.getOwnerFullName( ), primaryNet.getNetworkName( ), primaryNet.getNetworkUuid( ), primaryNet.getVlan( ) );
-        childNet.getIndexes( ).add( primaryNet.getIndexes( ).pollFirst( ) );
-        childToken.getNetworkTokens( ).add( childNet );
+      //GRZE:NET
+//        NetworkToken childNet = new NetworkToken( primaryNet.getCluster( ), primaryNet.getOwnerFullName( ), primaryNet.getNetworkName( ), primaryNet.getNetworkUuid( ), primaryNet.getVlan( ) );
+//        childNet.getIndexes( ).add( primaryNet.getIndexes( ).pollFirst( ) );
+//        childToken.getNetworkTokens( ).add( childNet );
       }
       EventRecord.caller( ResourceToken.class, EventType.TOKEN_CHILD, childToken.toString( ) ).info( );
       childTokens.add( childToken );

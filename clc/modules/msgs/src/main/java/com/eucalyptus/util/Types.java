@@ -83,8 +83,8 @@ import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.system.Ats;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-public class TypeClerk {
-  static Logger LOG = Logger.getLogger( TypeClerk.class );
+public class Types {
+  static Logger LOG = Logger.getLogger( Types.class );
   
   /**
    * Uses the provided {@code lookupFunction} to resolve the {@code identifier} to the underlying

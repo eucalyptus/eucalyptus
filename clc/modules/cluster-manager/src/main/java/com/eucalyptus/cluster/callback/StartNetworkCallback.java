@@ -82,16 +82,19 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
   
   public StartNetworkCallback( final NetworkToken networkToken ) {
     this.networkToken = networkToken;
-    StartNetworkType msg = new StartNetworkType( networkToken.getUserFullName( ).getUserId( ), networkToken.getVlan( ), networkToken.getNetworkName( ),
-                                                 networkToken.getNetworkUuid( ) ).regarding( );
-    msg.setUserId( networkToken.getUserFullName( ).getUserId( ) );
-    this.setRequest( msg );
+  //GRZE:NET
+    //    StartNetworkType msg = new StartNetworkType( networkToken.getUserFullName( ).getUserId( ), networkToken.getVlan( ), networkToken.getNetworkName( ),
+//                                                 networkToken.getNetworkUuid( ) ).regarding( );
+//    msg.setUserId( networkToken.getUserFullName( ).getUserId( ) );
+//    this.setRequest( msg );
+  //GRZE:NET
   }
   
   @Override
   public void fire( StartNetworkResponseType msg ) {
     try {
-      Networks.getInstance( ).setState( networkToken.getName( ), Networks.State.ACTIVE );
+//GRZE:NET
+//      Networks.getInstance( ).setState( networkToken.getName( ), Networks.State.ACTIVE );
     } catch ( Throwable e ) {
       LOG.debug( e, e );
     }

@@ -77,6 +77,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.CloudMetadata.AddressMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
@@ -84,7 +85,6 @@ import com.eucalyptus.cluster.callback.AssignAddressCallback;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.entities.AddressMetadata;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
@@ -101,7 +101,7 @@ import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_addresses" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class Address extends UserMetadata<Address.State> implements AddressMetadata {
+public class Address extends UserMetadata<Address.State> implements AddressMetadata<Address> {
   public enum State {
     broken, unallocated, allocated, assigned, impending;
   }
@@ -522,7 +522,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   @Override
-  public int compareTo( final AddressMetadata that ) {
+  public int compareTo( final Address that ) {
     return this.getName( ).compareTo( that.getName( ) );
   }
   

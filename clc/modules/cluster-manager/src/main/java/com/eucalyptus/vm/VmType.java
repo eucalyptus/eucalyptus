@@ -83,7 +83,7 @@ import com.eucalyptus.util.OwnerFullName;
 @Table( name = "cloud_vm_types" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 //@ConfigurableClass(root="eucalyptus",alias="vmtypes",deferred=true,singleton=false,description="Virtual Machine type definitions")
-public class VmType extends AbstractPersistent implements VirtualMachineType {
+public class VmType extends AbstractPersistent implements VirtualMachineType<VmType> {
 //  @ConfigurableIdentifier
   @Column( name = "metadata_vm_type_name" )
   private String  name;
@@ -167,7 +167,7 @@ public class VmType extends AbstractPersistent implements VirtualMachineType {
   }
   
   @Override
-  public int compareTo( VirtualMachineType that ) {
+  public int compareTo( VmType that ) {
     if ( this.equals( that ) ) return 0;
     if ( ( this.getCpu( ) <= that.getCpu( ) ) && ( this.getDisk( ) <= that.getDisk( ) ) && ( this.getMemory( ) <= that.getMemory( ) ) ) return -1;
     if ( ( this.getCpu( ) >= that.getCpu( ) ) && ( this.getDisk( ) >= that.getDisk( ) ) && ( this.getMemory( ) >= that.getMemory( ) ) ) return 1;
@@ -190,6 +190,16 @@ public class VmType extends AbstractPersistent implements VirtualMachineType {
                           .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
                           .namespace( FakePrincipals.SYSTEM_USER_ERN.getAccountNumber( ) )
                           .relativeId( "vm-type", this.getName( ) );
+  }
+  
+  @Override
+  public String getOwnerAccountNumber( ) {
+    return FakePrincipals.SYSTEM_ACCOUNT.getAccountNumber( );
+  }
+  
+  @Override
+  public OwnerFullName getOwner( ) {
+    return FakePrincipals.SYSTEM_USER_ERN;
   }
   
 }

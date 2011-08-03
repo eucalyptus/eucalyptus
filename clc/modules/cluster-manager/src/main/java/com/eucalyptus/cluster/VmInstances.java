@@ -76,27 +76,18 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.blockstorage.StorageUtil;
-import com.eucalyptus.cluster.callback.StopNetworkCallback;
 import com.eucalyptus.cluster.callback.TerminateCallback;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.config.Configuration;
-import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.event.AbstractNamedRegistry;
-import com.eucalyptus.network.Network;
-import com.eucalyptus.network.NetworkToken;
-import com.eucalyptus.network.Networks;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
@@ -209,18 +200,19 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
         vm.updateNetworkIndex( -1 );
         try {
           if ( networkFqName != null ) {
-            Network net = Networks.getInstance( ).lookup( networkFqName );
+            //GRZE:NET
+//            Network net = Networks.getInstance( ).lookup( networkFqName );
 //            if ( networkIndex > 0 && vm.getNetworkNames( ).size( ) > 0 ) {
 //              net.returnNetworkIndex( networkIndex );
 //              EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ).debug( );
 //            }
-            if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
-              StopNetworkCallback stopNet = Networks.stop(  new StopNetworkCallback( new NetworkToken( cluster.getPartition( ), net.getOwner( ), net.getNetworkName( ), net.getUuid( ),
-                                                                                       net.getVlan( ) ) );
-              for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-                AsyncRequests.newRequest( stopNet.newInstance( ) ).dispatch( c.getConfiguration( ) );
-              }
-            }
+//            if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
+//              StopNetworkCallback stopNet = Networks.stop(  new StopNetworkCallback( new NetworkToken( cluster.getPartition( ), net.getOwner( ), net.getNetworkName( ), net.getUuid( ),
+//                                                                                       net.getVlan( ) ) );
+//              for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
+//                AsyncRequests.newRequest( stopNet.newInstance( ) ).dispatch( c.getConfiguration( ) );
+//              }
+//            }
           }
         } catch ( NoSuchElementException e1 ) {} catch ( Throwable e1 ) {
           LOG.debug( e1, e1 );

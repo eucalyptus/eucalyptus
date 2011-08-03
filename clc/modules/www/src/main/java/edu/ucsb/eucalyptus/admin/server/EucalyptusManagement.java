@@ -99,7 +99,7 @@ import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.images.NoSuchImageException;
 import com.eucalyptus.network.NetworkGroupUtil;
-import com.eucalyptus.network.NetworkRulesGroup;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.util.Composites;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;

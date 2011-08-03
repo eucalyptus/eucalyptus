@@ -63,31 +63,27 @@
 
 package com.eucalyptus.keys;
 
-import java.io.Serializable;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata;
-import com.eucalyptus.cloud.KeyPair;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasOwningAccount;
 
 @Entity
 @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_keypairs" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudMetadata.KeyPair {
+public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudMetadata.KeyPair<SshKeyPair> {
   enum State {
     available, removing
   }
@@ -194,7 +190,7 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudM
   }
   
   @Override
-  public int compareTo( KeyPair that ) {
+  public int compareTo( SshKeyPair that ) {
     return this.getFullName( ).toString( ).compareTo( that.getFullName( ).toString( ) );
   }
   

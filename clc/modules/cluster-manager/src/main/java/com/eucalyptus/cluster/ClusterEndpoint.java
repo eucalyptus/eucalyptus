@@ -77,17 +77,14 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cloud.ResourceToken;
-import com.eucalyptus.cloud.run.ClusterAllocator;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.cloud.run.ClusterAllocator;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.network.Network;
-import com.eucalyptus.network.Networks;
-import com.eucalyptus.util.Internets;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
@@ -96,7 +93,6 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
@@ -247,12 +243,13 @@ public class ClusterEndpoint implements Startable {
                                                                                    retList.add( new ClusterInfoType( val, "" ) );
                                                                                    LOG.info( val );
                                                                                  }
-                                                                                 retList.add( new ClusterInfoType( "================== Networks", "" ) );
-                                                                                 for ( Network network : Networks.getInstance( ).listValues( ) ) {
-                                                                                   String val = network.toString( );
-                                                                                   retList.add( new ClusterInfoType( val, "" ) );
-                                                                                   LOG.info( val );
-                                                                                 }
+                                                                                 //GRZE:NET
+//                                                                                 retList.add( new ClusterInfoType( "================== Networks", "" ) );
+//                                                                                 for ( Network network : Networks.getInstance( ).listValues( ) ) {
+//                                                                                   String val = network.toString( );
+//                                                                                   retList.add( new ClusterInfoType( val, "" ) );
+//                                                                                   LOG.info( val );
+//                                                                                 }
                                                                                  retList.add( new ClusterInfoType( "================== Level-0 Bootstrappers",
                                                                                                                    "" ) );
                                                                                  for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {

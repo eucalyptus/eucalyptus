@@ -63,8 +63,11 @@
 
 package com.eucalyptus.cloud;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
+import javax.persistence.PrePersist;
 import javax.persistence.Transient;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -83,14 +86,23 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   @Transient
   private OwnerFullName tempOwnerFullName;
   
-  public UserMetadata( ) {}
+  /**
+   * GRZE:NOTE: Should only /ever/ be used by sub classes.
+   */
+  protected UserMetadata( ) {}
   
-  public UserMetadata( OwnerFullName owner ) {
+  /**
+   * GRZE:NOTE: Should only /ever/ be used by sub classes.
+   */
+  protected UserMetadata( OwnerFullName owner ) {
     super( owner );
     this.setOwner( owner );
   }
   
-  public UserMetadata( OwnerFullName owner, String displayName ) {
+  /**
+   * GRZE:NOTE: Should only /ever/ be used by sub classes.
+   */
+  protected UserMetadata( OwnerFullName owner, String displayName ) {
     super( owner, displayName );
     this.setOwner( owner );
   }
@@ -154,5 +166,10 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   public void setOwnerUserName( String ownerUserName ) {
     this.ownerUserName = ownerUserName;
   }
-  
+
+  @PrePersist
+  public void verifyComplete( ) {
+    assertThat( this.ownerUserId, notNullValue( ) );
+    assertThat( this.ownerUserName, notNullValue( ) );
+  }
 }

@@ -85,7 +85,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.network.NetworkRulesGroup;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkToken;
 import com.eucalyptus.network.Networks;
 import com.eucalyptus.util.Counters;
@@ -117,7 +117,7 @@ public class Allocations {
     private SshKeyPair                     sshKeyPair;
     private BootableSet                    bootSet;
     private VmType                         vmType;
-    private Map<String, NetworkRulesGroup> networkRulesGroups;
+    private Map<String, NetworkGroup> networkRulesGroups;
     private final int minCount;
     private final int maxCount;
     
@@ -150,11 +150,11 @@ public class Allocations {
       return this.request;
     }
     
-    public NetworkRulesGroup getPrimaryNetwork( ) {
+    public NetworkGroup getPrimaryNetwork( ) {
       if ( this.networkRulesGroups.size( ) < 1 ) {
         throw new IllegalArgumentException( "At least one network group must be specified." );
       } else {
-        NetworkRulesGroup firstRules = this.networkRulesGroups.values( ).iterator( ).next( );
+        NetworkGroup firstRules = this.networkRulesGroups.values( ).iterator( ).next( );
         return firstRules;
       }
     }
@@ -186,7 +186,7 @@ public class Allocations {
       }
     }
     
-    public List<NetworkRulesGroup> getNetworkRulesGroups( ) {
+    public List<NetworkGroup> getNetworkRulesGroups( ) {
       return Lists.newArrayList( this.networkRulesGroups.values( ) );
     }
 
@@ -197,7 +197,7 @@ public class Allocations {
     }
     
     public void requestNetworkTokens( ) throws NotEnoughResourcesAvailable {
-      NetworkRulesGroup net = this.getPrimaryNetwork( );
+      NetworkGroup net = this.getPrimaryNetwork( );
       for ( ResourceToken rscToken : this.allocationTokens ) {
         ClusterState clusterState = Clusters.getInstance( ).lookup( rscToken.getCluster( ) ).getState( );
         NetworkToken networkToken = clusterState.getNetworkAllocation( this.ownerFullName, rscToken, net.getName( ) );
@@ -206,7 +206,7 @@ public class Allocations {
     }
     
     public void requestNetworkIndexes( ) throws NotEnoughResourcesAvailable {
-      NetworkRulesGroup net = this.getPrimaryNetwork( );
+      NetworkGroup net = this.getPrimaryNetwork( );
       for ( ResourceToken rscToken : this.allocationTokens ) {
         for ( int i = 0; i < rscToken.getAmount( ); i++ ) {
           Integer addrIndex = net.allocateNetworkIndex( rscToken.getCluster( ) );
@@ -309,7 +309,7 @@ public class Allocations {
       this.sshKeyPair = sshKeyPair;
     }
     
-    public void setNetworkRules( Map<String, NetworkRulesGroup> networkRuleGroups ) {
+    public void setNetworkRules( Map<String, NetworkGroup> networkRuleGroups ) {
       this.networkRulesGroups = networkRuleGroups;
     }
     

@@ -210,5 +210,10 @@ public class UserFullName implements OwnerFullName {
     }
     return true;
   }
+
+  @Override
+  public String getNamespace( ) {
+    return this.accountNumber;
+  }
   
 }

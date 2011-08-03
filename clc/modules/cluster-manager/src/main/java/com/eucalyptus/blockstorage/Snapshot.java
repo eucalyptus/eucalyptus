@@ -70,12 +70,12 @@ import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.CloudMetadata;
+import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.StorageProperties;
 
 @Entity
@@ -83,7 +83,7 @@ import com.eucalyptus.util.StorageProperties;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_snapshots" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class Snapshot extends UserMetadata<State> implements CloudMetadata.SnapshotMetadata {
+public class Snapshot extends UserMetadata<State> implements SnapshotMetadata<Snapshot> {
   @Column( name = "metadata_snapshot_vol_size" )
   private Integer  volumeSize;
   @Column( name = "metadata_snapshot_parentvolume", updatable = false )
@@ -92,19 +92,17 @@ public class Snapshot extends UserMetadata<State> implements CloudMetadata.Snaps
   private String   volumeSc;
   @Column( name = "metadata_snapshot_vol_partition", updatable = false )
   private String   volumePartition;
-  @Transient
-  private FullName fullName;
   
   public Snapshot( ) {
     super( );
   }
   
-  Snapshot( final UserFullName userFullName, final String displayName ) {
-    super( userFullName, displayName );
+  Snapshot( final OwnerFullName ownerFullName, final String displayName ) {
+    super( ownerFullName, displayName );
   }
   
-  Snapshot( final UserFullName userFullName, final String displayName, final String parentVolume, final String volumeScName, final String volumePartition ) {
-    this( userFullName, displayName );
+  Snapshot( final OwnerFullName ownerFullName, final String displayName, final String parentVolume, final String volumeScName, final String volumePartition ) {
+    this( ownerFullName, displayName );
     this.parentVolume = parentVolume;
     this.volumeSc = volumeScName;
     this.volumePartition = volumePartition;
@@ -159,7 +157,7 @@ public class Snapshot extends UserMetadata<State> implements CloudMetadata.Snaps
   }
   
   @Override
-  public int compareTo( SnapshotMetadata o ) {
+  public int compareTo( Snapshot o ) {
     return this.getDisplayName( ).compareTo( o.getName( ) );
   }
   

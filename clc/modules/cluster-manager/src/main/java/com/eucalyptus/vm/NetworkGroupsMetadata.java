@@ -70,18 +70,13 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.network.IpRange;
-import com.eucalyptus.network.Network;
-import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.network.NetworkPeer;
 import com.eucalyptus.network.NetworkRule;
-import com.eucalyptus.network.NetworkRulesGroup;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.util.ByteArray;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
-import edu.ucsb.eucalyptus.msgs.VmNetworkPeer;
 
 public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArray> {
   private static Logger LOG = Logger.getLogger( NetworkGroupsMetadata.class );
@@ -104,7 +99,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
           Multimap<String, String> rules = ArrayListMultimap.create( );
           for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
             if( VmState.RUNNING.ordinal( ) < vm.getState( ).ordinal( ) ) continue;
-            for ( NetworkRulesGroup ruleGroup : vm.getNetworkRulesGroups( ) ) {
+            for ( NetworkGroup ruleGroup : vm.getNetworkRulesGroups( ) ) {
               networks.put( ruleGroup.getPermanentUuid( ), vm.getPrivateAddress( ) );
               if ( !rules.containsKey( ruleGroup.getPermanentUuid( ) ) ) {
                 for ( NetworkRule netRule : ruleGroup.getNetworkRules( ) ) {

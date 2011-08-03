@@ -79,9 +79,15 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   @Column( name = "metadata_account_id" )
   private String ownerAccountNumber;
   
-  public AccountMetadata( ) {}
+  /**
+   * GRZE:NOTE: Should only /ever/ be used by sub classes.
+   */
+  protected AccountMetadata( ) {}
   
-  public AccountMetadata( OwnerFullName owner ) {
+  /**
+   * GRZE:NOTE: Should only /ever/ be used by sub classes.
+   */
+  protected AccountMetadata( OwnerFullName owner ) {
     this.ownerAccountNumber = owner != null
       ? owner.getAccountNumber( )
       : null;

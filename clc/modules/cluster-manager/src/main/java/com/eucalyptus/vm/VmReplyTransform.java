@@ -69,7 +69,7 @@ import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.network.NetworkRulesGroup;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -82,10 +82,10 @@ public class VmReplyTransform {
     RunInstancesResponseType reply = allocInfo.getRequest( ).getReply( );
     Context ctx = Contexts.lookup( );
     
-    List<String> networkNames = Lists.transform( allocInfo.getNetworkRulesGroups( ), new Function<NetworkRulesGroup, String>( ) {
+    List<String> networkNames = Lists.transform( allocInfo.getNetworkRulesGroups( ), new Function<NetworkGroup, String>( ) {
       
       @Override
-      public String apply( NetworkRulesGroup arg0 ) {
+      public String apply( NetworkGroup arg0 ) {
         return arg0.getDisplayName( );
       }
     } );

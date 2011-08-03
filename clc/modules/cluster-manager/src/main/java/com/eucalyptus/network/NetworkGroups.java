@@ -75,9 +75,9 @@ public class NetworkGroups {
   private static final String DEFAULT_NETWORK_NAME = "default";
   private static Logger       LOG                  = Logger.getLogger( NetworkGroups.class );
   
-  public static NetworkRulesGroup lookup( final String uuid ) throws NoSuchMetadataException {
+  public static NetworkGroup lookup( final String uuid ) throws NoSuchMetadataException {
     try {
-      return Transactions.find( new NetworkRulesGroup( ) {
+      return Transactions.find( new NetworkGroup( ) {
         {
           this.setUniqueName( uuid );
         }
@@ -87,24 +87,24 @@ public class NetworkGroups {
     }
   }
   
-  public static NetworkRulesGroup lookup( OwnerFullName ownerFullName, String groupName ) throws NoSuchMetadataException {
+  public static NetworkGroup lookup( OwnerFullName ownerFullName, String groupName ) throws NoSuchMetadataException {
     if ( defaultNetworkName( ).equals( groupName ) ) {
       return createDefault( ownerFullName );
     } else {
       try {
-        return Transactions.find( new NetworkRulesGroup( ownerFullName, groupName ) );
+        return Transactions.find( new NetworkGroup( ownerFullName, groupName ) );
       } catch ( Exception ex ) {
         throw new NoSuchMetadataException( "Failed to find security group: " + groupName + " for " + ownerFullName, ex );
       }
     }
   }
   
-  static NetworkRulesGroup createDefault( OwnerFullName ownerFullName ) {
+  static NetworkGroup createDefault( OwnerFullName ownerFullName ) {
     try {
-      return lookup( ownerFullName, NetworkRulesGroup.NETWORK_DEFAULT_NAME );
+      return lookup( ownerFullName, NetworkGroup.NETWORK_DEFAULT_NAME );
     } catch ( Exception e ) {
       try {
-        return create( ownerFullName, NetworkRulesGroup.NETWORK_DEFAULT_NAME, "default group" );
+        return create( ownerFullName, NetworkGroup.NETWORK_DEFAULT_NAME, "default group" );
       } catch ( Exception e1 ) {
         throw new RuntimeException( "Failed to create default group: " + ownerFullName.toString( ) );
       }
@@ -115,9 +115,9 @@ public class NetworkGroups {
     return DEFAULT_NETWORK_NAME;
   }
   
-  public static NetworkRulesGroup create( OwnerFullName ownerFullName, String groupName, String groupDescription ) {
+  public static NetworkGroup create( OwnerFullName ownerFullName, String groupName, String groupDescription ) {
     try {
-      return Transactions.save( new NetworkRulesGroup( ownerFullName, groupName, groupDescription ) );
+      return Transactions.save( new NetworkGroup( ownerFullName, groupName, groupDescription ) );
     } catch ( ExecutionException ex ) {
       LOG.error( ex, ex );
       throw new RuntimeException( "Failed to create group: " + groupName + " for user: " + ownerFullName );

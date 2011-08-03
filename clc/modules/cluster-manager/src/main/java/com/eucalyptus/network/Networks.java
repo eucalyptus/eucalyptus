@@ -1,11 +1,10 @@
 package com.eucalyptus.network;
 
+import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.event.StatefulNamedRegistry;
-import com.eucalyptus.util.TypeMapper;
-import com.google.common.base.Function;
 
 
-public class Networks extends StatefulNamedRegistry<Network, Networks.State>{
+public class Networks extends StatefulNamedRegistry<NetworkGroup, Networks.State>{
 
   public enum State {
     DISABLED,
@@ -29,18 +28,4 @@ public class Networks extends StatefulNamedRegistry<Network, Networks.State>{
     return singleton;
   }
 
-  @TypeMapper
-  enum NetworkRulesGroupToNetwork implements Function<NetworkRulesGroup,Network> {
-    INSTANCE;
-
-    @Override
-    public Network apply( NetworkRulesGroup arg0 ) {
-      return arg0.getVmNetwork( );
-    }
-    
-  }
-
-  public static Network lookup( NetworkRulesGroup ruleGroup ) {
-    return null;
-  }
 }

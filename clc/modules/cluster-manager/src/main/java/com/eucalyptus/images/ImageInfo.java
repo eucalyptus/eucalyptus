@@ -95,6 +95,7 @@ import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.eucalyptus.util.async.Callback;
@@ -173,10 +174,10 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     this.imageType = imageType;
   }
   
-  protected ImageInfo( final UserFullName userFullName, final String imageId,
+  protected ImageInfo( final OwnerFullName ownerFullName, final String imageId,
                        final Image.Type imageType, final String imageName, final String imageDescription, final Long imageSizeBytes,
                        final Image.Architecture arch, final Image.Platform platform ) {
-    super( userFullName, imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
+    super( ownerFullName, imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
     assertThat( imageName, notNullValue( ) );
     assertThat( imageType, notNullValue( ) );
     assertThat( imageSizeBytes, notNullValue( ) );
@@ -200,7 +201,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     return this.platform;
   }
   
-  public void setPlatform( final Image.Platform platform ) {
+  protected void setPlatform( final Image.Platform platform ) {
     this.platform = platform;
   }
   
@@ -208,7 +209,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     return this.architecture;
   }
   
-  public void setArchitecture( final Architecture architecture ) {
+  protected void setArchitecture( final Architecture architecture ) {
     this.architecture = architecture;
   }
   
@@ -415,7 +416,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
                           .relativeId( "image", this.getDisplayName( ) );
   }
   
-  public void setImageType( final Type imageType ) {
+  protected void setImageType( final Type imageType ) {
     this.imageType = imageType;
   }
   
@@ -423,7 +424,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     return this.imageSizeBytes;
   }
   
-  public void setImageSizeBytes( final Long imageSizeBytes ) {
+  protected void setImageSizeBytes( final Long imageSizeBytes ) {
     this.imageSizeBytes = imageSizeBytes;
   }
   
@@ -447,7 +448,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     return this.description;
   }
   
-  public void setDescription( final String description ) {
+  protected void setDescription( final String description ) {
     this.description = description;
   }
   

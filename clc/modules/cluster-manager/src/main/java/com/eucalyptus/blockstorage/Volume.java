@@ -85,7 +85,7 @@ import com.eucalyptus.util.StorageProperties;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_volumes" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class Volume extends UserMetadata<State> implements VolumeMetadata {
+public class Volume extends UserMetadata<State> implements VolumeMetadata<Volume> {
   @Column( name = "metadata_volume_size" )
   private Integer  size;
   @Column( name = "metadata_volume_sc_name" )
@@ -255,7 +255,7 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   }
   
   @Override
-  public int compareTo( VolumeMetadata o ) {
+  public int compareTo( Volume o ) {
     return this.getDisplayName( ).compareTo( o.getName( ) );
   }
 }

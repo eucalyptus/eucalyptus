@@ -2,8 +2,7 @@ package com.eucalyptus.cloud;
 
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.bootstrap.SystemIds;
-import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasOwningAccount;
+import com.eucalyptus.util.OwnerFullName;
 
 /** GRZE:WARN: values are intentionally opaque strings and /not/ a symbolic reference. **/
 @PolicyResourceType( "image" )

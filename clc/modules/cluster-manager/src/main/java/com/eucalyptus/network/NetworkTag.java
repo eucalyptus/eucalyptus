@@ -65,7 +65,7 @@ package com.eucalyptus.network;
 
 public class NetworkTag {
   private Integer           tag;
-  private NetworkRulesGroup network;
+  private NetworkGroup network;
   private Boolean           valid;
   
 }

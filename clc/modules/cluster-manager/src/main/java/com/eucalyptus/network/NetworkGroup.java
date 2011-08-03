@@ -99,7 +99,7 @@ import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class NetworkRulesGroup extends UserMetadata<NetworkRulesGroup.State> implements CloudMetadata.NetworkSecurityGroup {
+public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements CloudMetadata.NetworkSecurityGroup<NetworkGroup> {
   enum State {
     DISABLED,
     AWAITING_PEER,
@@ -121,17 +121,17 @@ public class NetworkRulesGroup extends UserMetadata<NetworkRulesGroup.State> imp
   @Transient
   public static String     NETWORK_DEFAULT_NAME = "default";
   
-  NetworkRulesGroup( ) {}
+  NetworkGroup( ) {}
   
-  NetworkRulesGroup( final OwnerFullName ownerFullName ) {
+  NetworkGroup( final OwnerFullName ownerFullName ) {
     super( ownerFullName );
   }
   
-  NetworkRulesGroup( final OwnerFullName ownerFullName, final String groupName ) {
+  NetworkGroup( final OwnerFullName ownerFullName, final String groupName ) {
     super( ownerFullName, groupName );
   }
   
-  NetworkRulesGroup( final OwnerFullName ownerFullName, final String groupName, final String groupDescription ) {
+  NetworkGroup( final OwnerFullName ownerFullName, final String groupName, final String groupDescription ) {
     this( ownerFullName, groupName );
     assertThat( groupDescription, notNullValue( ) );
     this.description = groupDescription;
@@ -164,16 +164,17 @@ public class NetworkRulesGroup extends UserMetadata<NetworkRulesGroup.State> imp
     this.networkRules = networkRules;
   }
   
-  public Network getVmNetwork( ) {
-    Network asNet;
-    try {
-      asNet = Networks.getInstance( ).lookup( this );
-    } catch ( Exception ex ) {
-      Network vmNetwork = new Network( this );
-      asNet = Networks.getInstance( ).register( vmNetwork, Networks.State.ACTIVE );
-    }
-    return asNet;
-  }
+  //GRZE:NET
+//  public Network getVmNetwork( ) {
+//    Network asNet;
+//    try {
+//      asNet = Networks.getInstance( ).lookup( this );
+//    } catch ( Exception ex ) {
+//      Network vmNetwork = new Network( this );
+//      asNet = Networks.getInstance( ).register( vmNetwork, Networks.State.ACTIVE );
+//    }
+//    return asNet;
+//  }
 
   public Collection<PacketFilterRule> lookupPacketFilterRules( ) {
     Collection<PacketFilterRule> pfRules = Collections2.transform( this.getNetworkRules( ), this.ruleTransform );
@@ -208,7 +209,7 @@ public class NetworkRulesGroup extends UserMetadata<NetworkRulesGroup.State> imp
     if ( this == obj ) return true;
     if ( !super.equals( obj ) ) return false;
     if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
-    NetworkRulesGroup other = ( NetworkRulesGroup ) obj;
+    NetworkGroup other = ( NetworkGroup ) obj;
     if ( uniqueName == null ) {
       if ( other.uniqueName != null ) return false;
     } else if ( !uniqueName.equals( other.uniqueName ) ) return false;
@@ -226,8 +227,8 @@ public class NetworkRulesGroup extends UserMetadata<NetworkRulesGroup.State> imp
                                                                         @Override
                                                                         public PacketFilterRule apply( NetworkRule from ) {
                                                                           PacketFilterRule pfrule = new PacketFilterRule(
-                                                                                                                          NetworkRulesGroup.this.getOwnerAccountNumber( ),
-                                                                                                                          NetworkRulesGroup.this.getDisplayName( ),
+                                                                                                                          NetworkGroup.this.getOwnerAccountNumber( ),
+                                                                                                                          NetworkGroup.this.getDisplayName( ),
                                                                                                                           from.getProtocol( ),
                                                                                                                           from.getLowPort( ),
                                                                                                                           from.getHighPort( ) );
@@ -240,7 +241,7 @@ public class NetworkRulesGroup extends UserMetadata<NetworkRulesGroup.State> imp
                                                                       };
   
   @Override
-  public int compareTo( NetworkSecurityGroup that ) {
+  public int compareTo( NetworkGroup that ) {
     return this.getUniqueName( ).compareTo( that.getUniqueName( ) );
   }
   
@@ -268,5 +269,5 @@ public class NetworkRulesGroup extends UserMetadata<NetworkRulesGroup.State> imp
   public Integer allocateNetworkIndex( String cluster ) {
     return null;
   }
-  
+
 }

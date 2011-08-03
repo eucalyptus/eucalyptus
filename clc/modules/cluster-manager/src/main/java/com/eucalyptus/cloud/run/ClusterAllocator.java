@@ -89,7 +89,6 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.network.Network;
 import com.eucalyptus.network.NetworkToken;
 import com.eucalyptus.network.Networks;
 import com.eucalyptus.records.EventRecord;
@@ -105,6 +104,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.vmware.vim25.mo.Network;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
@@ -116,7 +116,6 @@ import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
@@ -183,10 +182,10 @@ public class ClusterAllocator extends Thread {
         }
         try {
           if ( vmToken.getPrimaryNetwork( ) != null ) {
-            Network net = Networks.getInstance( ).lookup( vmToken.getPrimaryNetwork( ).getName( ) );
-            for ( Integer i : vmToken.getPrimaryNetwork( ).getIndexes( ) ) {
-              net.returnNetworkIndex( i );
-            }
+          //GRZE:NET//            Network net = Networks.getInstance( ).lookup( vmToken.getPrimaryNetwork( ).getName( ) );
+//            for ( Integer i : vmToken.getPrimaryNetwork( ).getIndexes( ) ) {
+//              net.returnNetworkIndex( i );
+//            }
           }
         } catch ( Throwable e1 ) {
           LOG.debug( e1 );
@@ -221,7 +220,7 @@ public class ClusterAllocator extends Thread {
     if ( token.getPrimaryNetwork( ) != null ) {
       vlan = token.getPrimaryNetwork( ).getVlan( );
       if ( vlan < 0 ) vlan = 9;//FIXME: general vlan, should be min-1?
-      networkNames = Lists.newArrayList( token.getPrimaryNetwork( ).getNetworkName( ) );
+      networkNames = Lists.newArrayList( token.getPrimaryNetwork( ).getRuleGroup( ).getPermanentUuid( ) );
       for ( Integer index : token.getPrimaryNetwork( ).getIndexes( ) ) {
         networkIndexes.add( index.toString( ) );
       }

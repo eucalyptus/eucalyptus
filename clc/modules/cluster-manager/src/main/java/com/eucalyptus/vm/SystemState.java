@@ -92,7 +92,6 @@ import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.NetworkAlreadyExistsException;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.TerminateCallback;
@@ -106,11 +105,8 @@ import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.network.Network;
-import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.network.NetworkGroups;
-import com.eucalyptus.network.NetworkRulesGroup;
-import com.eucalyptus.network.NetworkToken;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.Networks;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Logs;
@@ -122,13 +118,11 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
-import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.GetObjectType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 @ConfigurableClass( root = "vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
 public class SystemState {
@@ -229,8 +223,8 @@ public class SystemState {
       vm.updateNetworkIndex( runVm.getNetParams( ).getNetworkIndex( ) );
       vm.updateVolumeAttachments( runVm.getVolumes( ) );
       try {
-        Network network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );
-        network.extantNetworkIndex( vm.getClusterName( ), vm.getNetworkIndex( ) );
+        NetworkGroup network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );
+      //GRZE:NET//        network.extantNetworkIndex( vm.getClusterName( ), vm.getNetworkIndex( ) );
       } catch ( Exception e ) {}
     }
   }
@@ -314,10 +308,10 @@ public class SystemState {
         key = KeyPairs.noKey( );
       }
       VmType vmType = VmTypes.getVmType( runVm.getInstanceType( ).getName( ) );
-      List<NetworkRulesGroup> networks = Lists.transform( runVm.getGroupNames( ), new Function<String, NetworkRulesGroup>( ) {
+      List<NetworkGroup> networks = Lists.transform( runVm.getGroupNames( ), new Function<String, NetworkGroup>( ) {
 
         @Override
-        public NetworkRulesGroup apply( String arg0 ) {
+        public NetworkGroup apply( String arg0 ) {
           try {
             return NetworkGroups.lookup( ownerId, arg0 );
           } catch ( NoSuchMetadataException ex ) {

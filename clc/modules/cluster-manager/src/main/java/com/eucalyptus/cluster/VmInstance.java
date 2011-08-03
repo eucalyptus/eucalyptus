@@ -65,7 +65,6 @@
 package com.eucalyptus.cluster;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -95,25 +94,23 @@ import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata;
+import com.eucalyptus.cloud.CloudMetadata.VirtualMachineInstance;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Dns;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.network.Network;
-import com.eucalyptus.network.NetworkRulesGroup;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.vm.BundleTask;
@@ -138,7 +135,7 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_instances" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class VmInstance extends UserMetadata<VmState> implements CloudMetadata.VirtualMachineInstance {
+public class VmInstance extends UserMetadata<VmState> implements VirtualMachineInstance<VmInstance> {
   @Transient
   private static Logger                               LOG                 = Logger.getLogger( VmInstance.class );
   @Transient
@@ -207,7 +204,7 @@ public class VmInstance extends UserMetadata<VmState> implements CloudMetadata.V
   @OneToMany( cascade = { CascadeType.ALL }, fetch = FetchType.EAGER )
   @JoinTable( name = "metadata_vm_has_network_groups", joinColumns = { @JoinColumn( name = "id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_group_id" ) } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final Set<NetworkRulesGroup>                networkRulesGroups  = Sets.newHashSet( );
+  private final Set<NetworkGroup>                networkRulesGroups  = Sets.newHashSet( );
   @Transient
   private final NetworkConfigType                     networkConfig       = new NetworkConfigType( );
   @Transient
@@ -220,7 +217,7 @@ public class VmInstance extends UserMetadata<VmState> implements CloudMetadata.V
                      final byte[] userData,
                      final VmTypeInfo vbr, final SshKeyPair sshKeyPair, final VmType vmType,
                      final String platform,
-                     final List<NetworkRulesGroup> networkRulesGroups, final String networkIndex ) {
+                     final List<NetworkGroup> networkRulesGroups, final String networkIndex ) {
     super( owner, instanceId );
     this.launchTime = new Date( );
     this.blockBytes = 0l;
@@ -806,25 +803,19 @@ public class VmInstance extends UserMetadata<VmState> implements CloudMetadata.V
     return this.vmType;
   }
   
-  public Set<NetworkRulesGroup> getNetworkRulesGroups( ) {
+  public Set<NetworkGroup> getNetworkRulesGroups( ) {
     return this.networkRulesGroups;
   }
   
-  public List<Network> getNetworks( ) {
-    return Lists.newArrayList( Iterables.transform( this.networkRulesGroups, new Function<NetworkRulesGroup, Network>( ) {
-      
-      @Override
-      public Network apply( NetworkRulesGroup input ) {
-        return input.getVmNetwork( );
-      }
-    } ) );
+  public List<NetworkGroup> getNetworks( ) {
+    return Lists.newArrayList( this.networkRulesGroups );
   }
   
   public NavigableSet<String> getNetworkNames( ) {
-    return new TreeSet<String>( Collections2.transform( this.networkRulesGroups, new Function<NetworkRulesGroup, String>( ) {
+    return new TreeSet<String>( Collections2.transform( this.networkRulesGroups, new Function<NetworkGroup, String>( ) {
       
       @Override
-      public String apply( NetworkRulesGroup arg0 ) {
+      public String apply( NetworkGroup arg0 ) {
         return arg0.getDisplayName( );
       }
     } ) );
@@ -1041,26 +1032,12 @@ public class VmInstance extends UserMetadata<VmState> implements CloudMetadata.V
   public static VmInstance named( UserFullName userFullName, String instanceId2 ) {
     return new VmInstance( userFullName, instanceId2 );
   }
-
-  /**
-   * TODO: DOCUMENT
-   * @see com.eucalyptus.util.HasFullName#getFullName()
-   * @return
-   */
+  
   @Override
   public FullName getFullName( ) {
-    return null;
+    return FullName.create.vendor( "euca" )
+                          .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
+                          .namespace( this.getOwnerAccountNumber( ) )
+                          .relativeId( "instance", this.getDisplayName( ) );
   }
-
-  /**
-   * TODO: DOCUMENT
-   * @see java.lang.Comparable#compareTo(java.lang.Object)
-   * @param o
-   * @return
-   */
-  @Override
-  public int compareTo( com.eucalyptus.cloud.CloudMetadata.VirtualMachineInstance o ) {
-    return 0;
-  }
-  
 }

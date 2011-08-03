@@ -72,15 +72,13 @@ import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.network.Network;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkToken;
 import com.eucalyptus.network.Networks;
 import com.eucalyptus.records.EventRecord;
@@ -94,7 +92,7 @@ import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 public class ClusterState {
   private static Logger                                       LOG                   = Logger.getLogger( ClusterState.class );
   private String                                              clusterName;
-  private static NavigableSet<Integer>                        availableVlans        = populate( );                                               //GRZE:GROAN:this is wrong.  partition it.
+  private static NavigableSet<Integer>                        availableVlans        = populate( );                                              //GRZE:GROAN:this is wrong.  partition it.
   private Integer                                             mode                  = 1;
   private Integer                                             addressCapacity;
   private Boolean                                             publicAddressing      = false;
@@ -200,7 +198,8 @@ public class ClusterState {
   
   public NetworkToken extantAllocation( String userId, String networkName, String networkUuid, int vlan ) throws NetworkAlreadyExistsException {
     UserFullName userFn = UserFullName.getInstance( userId );
-    NetworkToken netToken = new NetworkToken( this.clusterName, userFn, networkName, networkUuid, vlan );
+  //GRZE:NET
+    NetworkToken netToken = null;//new NetworkToken( this.clusterName, userFn, networkName, networkUuid, vlan );
     if ( !ClusterState.availableVlans.remove( vlan ) ) {
       throw new NetworkAlreadyExistsException( );
     }
@@ -210,41 +209,45 @@ public class ClusterState {
   public static NetworkToken getNetworkAllocation( UserFullName userFullName, ResourceToken rscToken, String networkName ) throws NotEnoughResourcesAvailable {
     ClusterState.trim( );
     try {
-      Network network = getVlanAssignedNetwork( networkName );
-      NetworkToken token = network.createNetworkToken( rscToken.getCluster( ) );
-      EventRecord.caller( NetworkToken.class, EventType.TOKEN_RESERVED, token.toString( ) ).info( );
-      return token;
+      //GRZE:NET
+//      NetworkRulesGroup network = getVlanAssignedNetwork( networkName );
+//      NetworkToken token = network.createNetworkToken( rscToken.getCluster( ) );
+//      EventRecord.caller( NetworkToken.class, EventType.TOKEN_RESERVED, token.toString( ) ).info( );
+//      return token;
+      return null;
     } catch ( NoSuchElementException e ) {
       LOG.debug( e, e );
       throw new NotEnoughResourcesAvailable( "Failed to create registry entry for network named: " + networkName );
     }
   }
   
-  private static Network getVlanAssignedNetwork( String networkName ) throws NotEnoughResourcesAvailable {
-    Network network = Networks.getInstance( ).lookup( networkName );
-    Integer vlan = network.getVlan( );
-    if ( vlan == null || Integer.valueOf( 0 ).equals( vlan ) ) {
-      vlan = ClusterState.availableVlans.pollFirst( );
-      if ( vlan == null ) {
-        throw new NotEnoughResourcesAvailable( "Not enough resources available: vlan tags" );
-      } else if ( !network.initVlan( vlan ) ) {
-        ClusterState.availableVlans.add( vlan );
-        throw new NotEnoughResourcesAvailable( "Not enough resources available: an error occured obtaining a usable vlan tag" );
-      } else {
-        EventRecord.caller( NetworkToken.class, EventType.TOKEN_RESERVED, network.toString( ) ).info( );
-      }
-    }
+  private static NetworkGroup getVlanAssignedNetwork( String networkName ) throws NotEnoughResourcesAvailable {
+    NetworkGroup network = Networks.getInstance( ).lookup( networkName );
+    //GRZE:NET
+    //    Integer vlan = network.getVlan( );
+//    if ( vlan == null || Integer.valueOf( 0 ).equals( vlan ) ) {
+//      vlan = ClusterState.availableVlans.pollFirst( );
+//      if ( vlan == null ) {
+//        throw new NotEnoughResourcesAvailable( "Not enough resources available: vlan tags" );
+//      } else if ( !network.initVlan( vlan ) ) {
+//        ClusterState.availableVlans.add( vlan );
+//        throw new NotEnoughResourcesAvailable( "Not enough resources available: an error occured obtaining a usable vlan tag" );
+//      } else {
+//        EventRecord.caller( NetworkToken.class, EventType.TOKEN_RESERVED, network.toString( ) ).info( );
+//      }
+//    }
     return network;
   }
   
   public void releaseNetworkAllocation( NetworkToken token ) {
     EventRecord.caller( NetworkToken.class, EventType.TOKEN_RETURNED, token.toString( ) ).info( );
-    try {
-      Network existingNet = Networks.getInstance( ).lookup( token.getName( ) );
-      if ( !existingNet.hasTokens( ) ) {
-        ClusterState.availableVlans.add( existingNet.getVlan( ) );
-      }
-    } catch ( NoSuchElementException e ) {}
+  //GRZE:NET
+//    try {
+//      Network existingNet = Networks.getInstance( ).lookup( token.getName( ) );
+//      if ( !existingNet.hasTokens( ) ) {
+//        ClusterState.availableVlans.add( existingNet.getVlan( ) );
+//      }
+//    } catch ( NoSuchElementException e ) {}
   }
   
   @Override

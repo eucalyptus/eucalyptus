@@ -77,6 +77,7 @@ import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.ws.client.ServiceDispatcher;
@@ -151,15 +152,11 @@ public class Snapshots {
     return new Snapshot( ( UserFullName ) null, snapshotId );
   }
   
-  public static Snapshot lookup( UserFullName userFullName, String snapshotId ) throws ExecutionException {
-    return Transactions.find( Snapshots.named( userFullName, snapshotId ) );
-  }
-  
-  public static Snapshot lookup( AccountFullName accountFullName, String snapshotId ) throws ExecutionException {
+  public static Snapshot lookup( OwnerFullName accountFullName, String snapshotId ) throws ExecutionException {
     return Transactions.find( Snapshots.named( accountFullName, snapshotId ) );
   }
 
-  public static Snapshot named( final UserFullName userFullName, String snapshotId ) {
-    return new Snapshot( userFullName, snapshotId );
+  public static Snapshot named( final OwnerFullName ownerFullName, String snapshotId ) {
+    return new Snapshot( ownerFullName, snapshotId );
   }
 }
