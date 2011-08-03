@@ -122,18 +122,22 @@ public class Classes {
     @Override
     public List<Class> apply( Class... types ) {
       List<Class> ret = Lists.newArrayList( );
-      for ( Class t : types ) {
-        if ( t.getInterfaces( ).length == 0 ) {
-          continue;
-        } else if ( !t.isInterface( ) ) {
-          ret.addAll( Arrays.asList( t.getInterfaces( ) ) );
-        } else {
-          ret.add( t );
+      if ( types.length == 0 ) {
+        return ret;
+      } else {
+        for ( Class t : types ) {
+          if ( t.getInterfaces( ).length == 0 ) {
+            continue;
+          } else if ( !t.isInterface( ) ) {
+            ret.addAll( Arrays.asList( t.getInterfaces( ) ) );
+          } else {
+            ret.add( t );
+          }
         }
+        List<Class> next = TransitiveClosureImplementedInterfaces.INSTANCE.apply( ret.toArray( new Class[] {} ) );
+        ret.addAll( next );
+        return ret;
       }
-      List<Class> next = TransitiveClosureImplementedInterfaces.INSTANCE.apply( ret.toArray( new Class[] {} ) );
-      ret.addAll( next );
-      return ret;
     }
   }
   
