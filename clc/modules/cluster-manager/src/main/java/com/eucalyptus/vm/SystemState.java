@@ -296,11 +296,7 @@ public class SystemState {
       SshKeyPair key = null;
       if ( runVm.getKeyValue( ) != null || !"".equals( runVm.getKeyValue( ) ) ) {
         try {
-          SshKeyPair searchKey = EntityWrapper.get( SshKeyPair.class ).lookupAndClose( new SshKeyPair( ownerId ) {
-            {
-              setPublicKey( runVm.getKeyValue( ) );
-            }
-          } );
+          SshKeyPair searchKey = KeyPairs.fromPublicKey( ownerId, runVm.getKeyValue( ) );
         } catch ( Exception e ) {
           key = KeyPairs.noKey( );
         }

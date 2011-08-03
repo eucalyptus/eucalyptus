@@ -67,16 +67,15 @@ import javax.persistence.Column;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.OwnerFullName;
 
 @Entity
 @javax.persistence.Entity
@@ -95,21 +94,19 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudM
   String           publicKey;
   @Column( name = "metadata_keypair_finger_print" )
   String           fingerPrint;
-  @Transient
-  private FullName fullName;
+
+  SshKeyPair( ) {}
   
-  public SshKeyPair( ) {}
-  
-  public SshKeyPair( UserFullName userFullName, String keyName ) {
+  SshKeyPair( OwnerFullName userFullName, String keyName ) {
     super( userFullName, keyName );
     this.uniqueName = this.getFullName( ).toString( );
   }
   
-  public SshKeyPair( UserFullName user ) {
+  SshKeyPair( OwnerFullName user ) {
     super( user );
   }
   
-  public SshKeyPair( UserFullName user, String keyName, String publicKey, String fingerPrint ) {
+  SshKeyPair( OwnerFullName user, String keyName, String publicKey, String fingerPrint ) {
     this( user, keyName );
     this.publicKey = publicKey;
     this.fingerPrint = fingerPrint;

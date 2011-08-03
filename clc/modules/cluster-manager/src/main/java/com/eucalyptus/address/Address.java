@@ -91,6 +91,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapping;
 import com.eucalyptus.util.async.NOOP;
 import com.eucalyptus.util.async.RemoteCallback;
@@ -190,10 +191,10 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     this.init( );
   }
   
-  public Address( UserFullName userFullName, String address, String partition, String instanceId, String instanceAddress ) {
+  public Address( OwnerFullName ownerFullName, String address, String partition, String instanceId, String instanceAddress ) {
     this( address );
     this.partition = partition;
-    this.setOwner( userFullName );
+    this.setOwner( ownerFullName );
     this.instanceId = instanceId;
     this.instanceAddress = instanceAddress;
     this.transition = this.QUIESCENT;
@@ -250,12 +251,12 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return true;
   }
   
-  public Address allocate( final UserFullName userFullName ) {
+  public Address allocate( final OwnerFullName ownerFullName ) {
     this.transition( State.unallocated, State.allocated, false, true, new SplitTransition( Transition.allocating ) {
       public void top( ) {
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
-        Address.this.setOwner( userFullName );
+        Address.this.setOwner( ownerFullName );
         Address.addAddress( Address.this );
         try {
           Addresses.getInstance( ).register( Address.this );

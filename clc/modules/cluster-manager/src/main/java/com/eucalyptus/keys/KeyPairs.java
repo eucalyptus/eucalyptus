@@ -66,21 +66,30 @@ package com.eucalyptus.keys;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.Transactions;
 
 public class KeyPairs {
-  private static SshKeyPair NO_KEY      = new SshKeyPair( FakePrincipals.nobodyFullName(), "", "", "" );
+  private static SshKeyPair NO_KEY      = new SshKeyPair( FakePrincipals.nobodyFullName( ), "", "", "" );
   public static String      NO_KEY_NAME = "";
   
   public static SshKeyPair noKey( ) {
     return NO_KEY;
   }
   
-  public static SshKeyPair lookup( UserFullName userFullName, String keyName ) throws NoSuchMetadataException {
+  public static SshKeyPair lookup( OwnerFullName ownerFullName, String keyName ) throws NoSuchMetadataException {
     try {
-      return Transactions.find( new SshKeyPair( userFullName, keyName ) );
+      return Transactions.find( new SshKeyPair( ownerFullName, keyName ) );
     } catch ( Throwable e ) {
-      throw new NoSuchMetadataException( "Failed to find key pair: " + keyName + " for " + userFullName, e );
+      throw new NoSuchMetadataException( "Failed to find key pair: " + keyName + " for " + ownerFullName, e );
     }
+  }
+  public static SshKeyPair fromPublicKey( OwnerFullName ownerFullName, String keyValue ) throws NoSuchMetadataException {
+    try {
+      return Transactions.find( new SshKeyPair( ownerFullName, keyValue ) );
+    } catch ( Throwable e ) {
+      throw new NoSuchMetadataException( "Failed to find key pair with public key: " + keyValue + " for " + ownerFullName, e );
+    }
+    
   }
 }

@@ -7,13 +7,13 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.FakePrincipals;
-import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.vm.VmState;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
@@ -22,7 +22,7 @@ import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 public abstract class AbstractSystemAddressManager {
   static Logger LOG = Logger.getLogger( AbstractSystemAddressManager.class );
   
-  public Address allocateNext( UserFullName userId ) throws NotEnoughResourcesAvailable {
+  public Address allocateNext( OwnerFullName userId ) throws NotEnoughResourcesAvailable {
     Address addr = Addresses.getInstance( ).enableFirst( ).allocate( userId );
     LOG.debug( "Allocated address for public addressing: " + addr.toString( ) );
     if ( addr == null ) {
