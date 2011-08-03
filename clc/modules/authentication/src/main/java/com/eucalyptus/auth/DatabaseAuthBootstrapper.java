@@ -76,7 +76,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
     try {
       Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
       account.lookupUserByName( User.ACCOUNT_ADMIN );
-    } catch ( AuthException e ) {
+    } catch ( Exception e ) {
       LOG.debug( "System admin does not exist. Adding it now." );
       // Order matters.
       Account system = Accounts.addSystemAccount( );

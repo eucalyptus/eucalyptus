@@ -276,9 +276,8 @@ public class ISCSIManager implements StorageExportManager {
 			//check if tid is in use
 			int i = tid;
 			do {
-				try {
-					String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(i)});
-				} catch (EucalyptusCloudException e) {
+				String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(i)});
+				if(returnValue.length() == 0) {
 					tid = i;
 					break;
 				}

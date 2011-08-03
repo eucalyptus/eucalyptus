@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,19 +61,35 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cloud.run;
+package com.eucalyptus.network;
 
-import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.util.Transactions;
 
-/**
- * NOTE:GRZE: don't get attached to this, it will be removed as the verify pipeline is simplified in the future.
- */
-public class StartVerify {
-  public Allocation verify( RunInstancesType request ) throws EucalyptusCloudException {
-    return Allocations.begin( );
+public class NetworkGroups {
+  private static final String DEFAULT_NETWORK_NAME = "default";
+
+  public static NetworkRulesGroup lookup( UserFullName userFullName, String groupName ) throws NoSuchMetadataException {
+    try {
+      return Transactions.find( new NetworkRulesGroup( userFullName, groupName ) );
+    } catch ( Exception ex ) {
+      throw new NoSuchMetadataException( "Failed to find security group: " + groupName + " for " + userFullName, ex );
+    }
   }
-  
+
+  public static void makeDefault( UserFullName userFullName ) {
+    try {
+      NetworkGroupUtil.getUserNetworkRulesGroup( userFullName, NetworkRulesGroup.NETWORK_DEFAULT_NAME );
+    } catch ( Exception e ) {
+      try {
+        NetworkGroupUtil.createUserNetworkRulesGroup( userFullName, NetworkRulesGroup.NETWORK_DEFAULT_NAME, "default group" );
+      } catch ( Exception e1 ) {}
+    }
+  }
+
+  public static String defaultNetworkName( ) {
+    return DEFAULT_NETWORK_NAME;
+  }
 
 }

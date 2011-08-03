@@ -66,6 +66,7 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   // The owning account
   @ManyToOne
   @JoinColumn( name = "auth_group_owning_account" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   AccountEntity account;
   
   public GroupEntity( ) {

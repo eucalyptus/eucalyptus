@@ -1489,7 +1489,7 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
 {
     int ret = ERROR;
     assert (a);
-
+ 
     // determine blob IDs for cache and work
     const char * id_cache = a->id;
     char id_work  [BLOBSTORE_MAX_PATH];
@@ -1497,7 +1497,7 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
         snprintf (id_work, sizeof (id_work), "%s/%s", work_prefix, a->id);
     else 
         safe_strncpy (id_work, a->id, sizeof (id_work));
-    
+
     // see if a file and if it exists
     if (a->id_is_path) {
         if (check_path (a->id)) {
