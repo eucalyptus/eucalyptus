@@ -72,9 +72,9 @@ import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.Transactions;
 
 public class NetworkToken implements Comparable {
-  private final Integer           vlan;
-  private NavigableSet<Integer>   indexes = new ConcurrentSkipListSet<Integer>( );
-  private final NetworkGroup ruleGroup;
+  private final Integer         vlan;
+  private NavigableSet<Integer> indexes = new ConcurrentSkipListSet<Integer>( );
+  private final NetworkGroup    ruleGroup;
   
   public NetworkToken( final Partition partition, final NetworkGroup ruleGroup, final int vlan ) {
     this.ruleGroup = ruleGroup;
