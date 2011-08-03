@@ -120,9 +120,9 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkRule>         networkRules         = new HashSet<NetworkRule>( );
 
-  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "user" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<PrivateNetworkIndex> indexes              = new HashSet<PrivateNetworkIndex>( );
+//  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "user" )
+//  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+//  private Set<PrivateNetworkIndex> indexes              = new HashSet<PrivateNetworkIndex>( );
   
   
   NetworkGroup( ) {}
