@@ -151,15 +151,19 @@ public class Classes {
     @Override
     public List<Class> apply( Object input ) {
       List<Class> ret = Lists.newArrayList( );
-      if ( input != Object.class ) {
-        Class type = WhateverAsClass.INSTANCE.apply( ret );
+      Class type = WhateverAsClass.INSTANCE.apply( ret );
+      if ( type == Object.class ) {
+        return ret;
+      } else if ( type.isInterface( ) ) {
+        return ret;
+      } else {
         ret.add( type );
         List<Class> superInterfaces = TransitiveClosureImplementedInterfaces.INSTANCE.apply( type );
         ret.addAll( superInterfaces );
         List<Class> next = BreadthFirstTransitiveClosure.INSTANCE.apply( type.getSuperclass( ) );
         ret.addAll( next );
+        return ret;
       }
-      return ret;
     }
     
   }
