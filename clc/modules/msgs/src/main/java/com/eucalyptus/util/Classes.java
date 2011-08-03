@@ -128,10 +128,10 @@ public class Classes {
         for ( Class t : types ) {
           if ( t.getInterfaces( ).length == 0 ) {
             continue;
-          } else if ( !t.isInterface( ) ) {
-            ret.addAll( Arrays.asList( t.getInterfaces( ) ) );
+//          } else if ( !t.isInterface( ) ) {
+//            ret.addAll( Arrays.asList( t.getInterfaces( ) ) );
           } else {
-            ret.add( t );
+            ret.addAll( Arrays.asList( t.getInterfaces( ) ) );
           }
         }
         List<Class> next = TransitiveClosureImplementedInterfaces.INSTANCE.apply( ret.toArray( new Class[] {} ) );
