@@ -3,13 +3,10 @@ openssl pkcs12 -in ${EUCALYPTUS}/var/lib/eucalyptus/keys/euca.p12 \
 -password pass:eucalyptus  -passin pass:eucalyptus -passout pass:eucalyptus \
 -nodes | \
 grep -A30 "friendlyName: eucalyptus" | \
-grep -A26 "BEGIN RSA" >  ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem
+egrep -A27 "BEGIN (RSA|PRIVATE)" | grep -v 'Bag Attributes' > ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem
 
 
-PASS=$(echo -n eucalyptus | \
-openssl dgst -sha256 \
--sign ${EUCALYPTUS}/var/lib/eucalyptus/keys/cloud-pk.pem \
--hex)
+PASS=$($(dirname $(readlink -f $0))/dbPass.sh)
 
 echo export PASS="${PASS}"
 echo
