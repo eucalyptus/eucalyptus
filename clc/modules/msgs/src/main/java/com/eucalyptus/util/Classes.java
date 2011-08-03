@@ -151,7 +151,7 @@ public class Classes {
     @Override
     public List<Class> apply( Object input ) {
       List<Class> ret = Lists.newArrayList( );
-      Class type = WhateverAsClass.INSTANCE.apply( ret );
+      Class type = WhateverAsClass.INSTANCE.apply( input );
       if ( type == Object.class ) {
         return ret;
       } else if ( type.isInterface( ) ) {
