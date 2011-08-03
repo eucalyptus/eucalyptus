@@ -21,6 +21,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.OwnerFullName;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -98,7 +99,7 @@ public class Context {
     return UserFullName.getInstance( this.getUser( ) );
   }
   
-  public UserFullName getEffectiveUserFullName( ) {
+  public OwnerFullName getEffectiveUserFullName( ) {
     String effectiveUserId = this.getRequest( ).getEffectiveUserId( );
     if ( this.getRequest( ) != null && FakePrincipals.systemFullName().getUserName( ).equals( effectiveUserId ) ) {
       return FakePrincipals.systemFullName();
