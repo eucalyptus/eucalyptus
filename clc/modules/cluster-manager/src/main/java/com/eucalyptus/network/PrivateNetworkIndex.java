@@ -63,22 +63,26 @@
 
 package com.eucalyptus.network;
 
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
 @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_index" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class PrivateNetworkIndex {
+public class PrivateNetworkIndex extends AbstractPersistent {
   enum State {
     ILLEGAL, FREE, PENDING, USED, OUTLAW,
   };
-
+  
   private Long index;
+  @Enumerated( EnumType.STRING )
   private State state;
 }

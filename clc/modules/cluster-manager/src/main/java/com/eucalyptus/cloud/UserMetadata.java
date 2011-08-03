@@ -64,25 +64,27 @@
 package com.eucalyptus.cloud;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.notNullValue;
+import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 import javax.persistence.Transient;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasOwningUser;
 import com.eucalyptus.util.OwnerFullName;
 
 @MappedSuperclass
 public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMetadata<STATE> implements HasOwningUser {
   @Column( name = "metadata_user_id" )
-  protected String ownerUserId;
+  protected String      ownerUserId;
   @Column( name = "metadata_user_name" )
-  protected String ownerUserName;
+  protected String      ownerUserName;
+  @Column( name = "metadata_perm_uuid", unique = true, updatable = false, nullable = false )
+  private String        permanentUuid;
   @Transient
   private OwnerFullName tempOwnerFullName;
   
@@ -166,10 +168,19 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   public void setOwnerUserName( String ownerUserName ) {
     this.ownerUserName = ownerUserName;
   }
-
+  
   @PrePersist
+  @PreUpdate
   public void verifyComplete( ) {
     assertThat( this.ownerUserId, notNullValue( ) );
     assertThat( this.ownerUserName, notNullValue( ) );
+    if ( this.permanentUuid == null ) {
+      this.permanentUuid = UUID.randomUUID( ).toString( );
+    }
   }
+  
+  public String getPermanentUuid( ) {
+    return this.permanentUuid;
+  }
+  
 }

@@ -85,6 +85,7 @@ import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import com.eucalyptus.cloud.CloudMetadata;
+import com.eucalyptus.cloud.CloudMetadata.NetworkSecurityGroup;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -99,7 +100,7 @@ import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements CloudMetadata.NetworkSecurityGroup<NetworkGroup> {
+public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements NetworkSecurityGroup<NetworkGroup> {
   enum State {
     DISABLED,
     AWAITING_PEER,
@@ -108,18 +109,22 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Cl
   }
   
   @Column( name = "metadata_network_group_unique_name", unique = true )
-  private String           uniqueName;//bogus field to enforce uniqueness
-  @Column( name = "metadata_network_group_perm_uuid", unique = true )
-  private String           permanentUuid;
+  private String                   uniqueName;                                                 //bogus field to enforce uniqueness
+  
   @Column( name = "metadata_network_group_description" )
-  private String           description;
+  private String                   description;
+  
   @OneToMany( cascade = { CascadeType.ALL } )
-  @Fetch(FetchMode.JOIN)
+  @Fetch( FetchMode.JOIN )
   @JoinTable( name = "metadata_network_group_has_rules", joinColumns = { @JoinColumn( name = "id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_rule_id" ) } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<NetworkRule> networkRules         = new HashSet<NetworkRule>( );
+  private Set<NetworkRule>         networkRules         = new HashSet<NetworkRule>( );
+
+  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "user" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Set<PrivateNetworkIndex> indexes              = new HashSet<PrivateNetworkIndex>( );
   @Transient
-  public static String     NETWORK_DEFAULT_NAME = "default";
+  public static String             NETWORK_DEFAULT_NAME = "default";
   
   NetworkGroup( ) {}
   
@@ -139,10 +144,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Cl
   
   @PrePersist
   @PreUpdate
-  private void generateOnCommit( ) {
-    if ( this.permanentUuid == null ) {
-      this.permanentUuid = UUID.randomUUID( ).toString( );
-    }
+  private void prePersist( ) {
     if ( this.getState( ) == null ) {
       this.setState( State.PENDING );
     }
@@ -152,7 +154,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Cl
     return this.description;
   }
   
-  public void setDescription( String description ) {
+  protected void setDescription( String description ) {
     this.description = description;
   }
   
@@ -175,7 +177,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Cl
 //    }
 //    return asNet;
 //  }
-
+  
   public Collection<PacketFilterRule> lookupPacketFilterRules( ) {
     Collection<PacketFilterRule> pfRules = Collections2.transform( this.getNetworkRules( ), this.ruleTransform );
     return pfRules;
@@ -256,18 +258,18 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Cl
   public String getUniqueName( ) {
     return this.uniqueName;
   }
-
+  
   public String getPermanentUuid( ) {
     return this.permanentUuid;
   }
-
+  
   /**
    * GRZE:TODO: eliminate these symbols
    */
   public void returnNetworkIndex( Integer net ) {}
-
+  
   public Integer allocateNetworkIndex( String cluster ) {
     return null;
   }
-
+  
 }
