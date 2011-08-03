@@ -65,6 +65,7 @@ package com.eucalyptus.network;
 
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
+import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.util.OwnerFullName;
@@ -74,6 +75,7 @@ import edu.ucsb.eucalyptus.msgs.NetworkInfoType;
 public class NetworkGroups {
   private static final String DEFAULT_NETWORK_NAME = "default";
   private static Logger       LOG                  = Logger.getLogger( NetworkGroups.class );
+  private static String        NETWORK_DEFAULT_NAME = "default";
   
   public static NetworkGroup lookup( final String uuid ) throws NoSuchMetadataException {
     try {
@@ -101,10 +103,10 @@ public class NetworkGroups {
   
   static NetworkGroup createDefault( OwnerFullName ownerFullName ) {
     try {
-      return lookup( ownerFullName, NetworkGroup.NETWORK_DEFAULT_NAME );
+      return lookup( ownerFullName, NETWORK_DEFAULT_NAME );
     } catch ( Exception e ) {
       try {
-        return create( ownerFullName, NetworkGroup.NETWORK_DEFAULT_NAME, "default group" );
+        return create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
       } catch ( Exception e1 ) {
         throw new RuntimeException( "Failed to create default group: " + ownerFullName.toString( ) );
       }
@@ -123,7 +125,7 @@ public class NetworkGroups {
       throw new RuntimeException( "Failed to create group: " + groupName + " for user: " + ownerFullName );
     }
   }
-
+  
   public static void update( Integer useVlans, Integer addrsPerNet, Integer addrIndexMax, Integer addrIndexMax2, ArrayList<NetworkInfoType> activeNetworks ) {}
   
 }

@@ -123,8 +123,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "user" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<PrivateNetworkIndex> indexes              = new HashSet<PrivateNetworkIndex>( );
-  @Transient
-  public static String             NETWORK_DEFAULT_NAME = "default";
+  
   
   NetworkGroup( ) {}
   
