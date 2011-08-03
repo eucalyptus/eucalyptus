@@ -10,12 +10,12 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
+import com.eucalyptus.ws.StackConfiguration;
 
 public class TimedEvictionSet<E extends Comparable> implements Set<E> {
   private static Logger LOG = Logger.getLogger( TimedEvictionSet.class );
   private NavigableSet<E> entries = new ConcurrentSkipListSet<E>();
   private NavigableSet<TimestampedElement> timestamps = new ConcurrentSkipListSet<TimestampedElement>();
-  //private Long evictionMillis = 15*1000*60l;
   private Long evictionNanos = 15*1000*60*1000*1000l;
   private AtomicBoolean busy = new AtomicBoolean( false );
   
@@ -79,7 +79,7 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
       return true;
     } else {
       TimestampedElement elem = new TimestampedElement( e );
-      if( this.timestamps.contains( elem ) && TimeUnit.SECONDS.convert( System.nanoTime( ) - elem.getTimestamp( ), TimeUnit.NANOSECONDS ) < 2 ) {
+      if( this.timestamps.contains( elem ) && TimeUnit.SECONDS.convert( System.nanoTime( ) - elem.getTimestamp( ), TimeUnit.NANOSECONDS ) < StackConfiguration.REPLAY_SKEW_WINDOW_SEC ) {
         return true;
       } else {
         return false;
