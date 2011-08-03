@@ -87,10 +87,12 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
       this.timestamps.add( elem );
       return true;
     } else {
+	LOG.debug("Potential replay attack is detected [" + e + "]");
     	// create a fake element with the time in the past
     	// TODO:Vika: replace '3' with a configurable variable
     	Long now = System.nanoTime( );
-    	Long timeNanos = now - TimeUnit.NANOSECONDS.convert(3, TimeUnit.SECONDS);
+	Long adjust = TimeUnit.NANOSECONDS.convert(3, TimeUnit.SECONDS);
+    	Long timeNanos = now - adjust;
     	TimestampedElement fakeElem = new TimestampedElement( e, timeNanos );
     	NavigableSet<TimestampedElement> elems = this.timestamps.tailSet(fakeElem, true);
     	for(Iterator<TimestampedElement> iter = elems.iterator(); iter.hasNext();) {
@@ -98,7 +100,7 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
     		E sig = elem.get();
     		if(e.equals(sig)) {
     			LOG.debug("Found elem with signature " + sig + " with time " + elem.timeNanos
-    					+ " <= (" + now + " - " + 3 + ")");
+    					+ " <= " + timeNanos);
     			return true;
     		}
     	}

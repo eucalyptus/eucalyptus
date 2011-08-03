@@ -101,6 +101,12 @@ public class QueryTimestampHandler extends MessageStackHandler {
           } catch ( Exception e ) {
             expires = Timestamps.parseTimestamp( URLDecoder.decode( timestamp ) );
           }
+
+	  // make sure that the message wasn't generated in the future
+          if( now.before( expires )) {
+              throw new AuthenticationException( "Message was generated in the future (times in UTC): Timestamp=" + timestamp);
+          }
+
           expires.add( Calendar.MINUTE, 15 );
         } else {
           exp = parameters.remove( SecurityParameter.Expires.toString( ) );
@@ -109,11 +115,17 @@ public class QueryTimestampHandler extends MessageStackHandler {
           } catch ( Exception e ) {
             expires = Timestamps.parseTimestamp( URLDecoder.decode( exp ) );
           }
+	  // in case of Expires, for now, we accept arbitrary time in the future
+	  Calendar cacheExpire = ( Calendar )now.clone();
+          cacheExpire.add( Calendar.MINUTE, 15 );
+          if( expires.after(cacheExpire) )
+	      LOG.warn("[security] Message expiration date " + expires + " is further in the future that replay cache expiration");
         }
       } catch ( Throwable t ) {
         LOG.debug( t, t );
         throw new AuthenticationException( "Failure to parse timestamp: Timestamp=" + timestamp + " Expires=" + exp );
       }
+      
       if ( now.after( expires ) ) {
         expires.setTimeZone( TimeZone.getTimeZone( "GMT" ) );
         String expiryTime = String.format( "%4d-%02d-%02d'T'%02d:%02d:%02d", expires.get( Calendar.YEAR ), expires.get( Calendar.MONTH ) + 1, expires.get( Calendar.DAY_OF_MONTH ) + 1, expires.get( Calendar.HOUR_OF_DAY ), expires.get( Calendar.MINUTE ), expires.get( Calendar.SECOND ) );

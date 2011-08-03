@@ -253,10 +253,10 @@ public class WSSecurity {
 	 
 	  Date expires = ts.getExpires().getTime();
 	 
-	  // TODO: GRZE throw an exception that will result in 
-	  // an error response sent back to the user
-	  if(!SecurityContext.validateTimestampPeriod(expires))
-		  throw new WSSecurityException("Timestamp expiration is too far in the future");
+	  if(!SecurityContext.validateTimestampPeriod(expires)) {
+	      LOG.warn("[security] ]Timestamp expiration is further in the future than replay cache expiration");
+	      //throw new WSSecurityException("Timestamp expiration is too far in the future");
+	  }
 	  
   }
   
