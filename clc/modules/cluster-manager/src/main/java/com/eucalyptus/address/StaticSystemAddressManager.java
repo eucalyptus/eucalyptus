@@ -79,14 +79,14 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
     if ( allocCount > 0 ) {
       for ( int i = 0; i < allocCount; i++ ) {
         try {
-          this.allocateNext( FakePrincipals.SYSTEM_USER_ERN );
+          this.allocateNext( FakePrincipals.systemFullName() );
         } catch ( NotEnoughResourcesAvailable e ) {
           break;
         }
       }
     } else {
       for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
-        if ( addr.getOwner( ).equals( FakePrincipals.SYSTEM_USER_ERN ) && !addr.isAssigned( ) && !addr.isPending( ) ) {
+        if ( addr.getOwner( ).equals( FakePrincipals.systemFullName() ) && !addr.isAssigned( ) && !addr.isPending( ) ) {
           addr.release( );
           if ( allocCount++ >= 0 ) break;
         }

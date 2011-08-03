@@ -69,6 +69,7 @@ import javax.persistence.Transient;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.entities.AbstractStatefulPersistent;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasOwningAccount;
@@ -102,10 +103,18 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   
   @Override
   public OwnerFullName getOwner( ) {
-    try {
-      return AccountFullName.getInstance( Accounts.lookupAccountById( this.ownerAccountNumber ) );
-    } catch ( AuthException ex ) {
-      throw new RuntimeException( "Failed to identify user with id " + this.ownerAccountNumber + " something has gone seriously wrong.", ex );
+    if ( this.getOwnerAccountNumber( ) != null ) {
+      OwnerFullName tempOwner;
+      if( FakePrincipals.nobodyFullName( ).getAccountNumber( ).equals( this.getOwnerAccountNumber( ) ) ) {
+        tempOwner = FakePrincipals.nobodyFullName( );
+      } else if( FakePrincipals.systemFullName( ).getAccountNumber( ).equals( this.getOwnerAccountNumber( ) ) ) {
+        tempOwner = FakePrincipals.systemFullName( );
+      } else {
+        tempOwner = AccountFullName.getInstance( this.getOwnerAccountNumber( ) );
+      }
+      return tempOwner;
+    } else {
+      throw new RuntimeException( "Failed to identify user with id " + this.ownerAccountNumber + " something has gone seriously wrong." );
     }
   }
   

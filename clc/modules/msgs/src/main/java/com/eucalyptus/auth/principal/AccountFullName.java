@@ -179,9 +179,9 @@ public class AccountFullName implements OwnerFullName {
   
   public static AccountFullName getInstance( Account account, String... relativePath ) {
     if ( account == null ) {
-      return new AccountFullName( FakePrincipals.NOBODY_ACCOUNT, relativePath );
-    } else if ( account == FakePrincipals.SYSTEM_USER ) {
-      return new AccountFullName( FakePrincipals.NOBODY_ACCOUNT, relativePath );
+      return new AccountFullName( FakePrincipals.nobodyAccount(), relativePath );
+    } else if ( account == FakePrincipals.systemUser() ) {
+      return new AccountFullName( FakePrincipals.nobodyAccount(), relativePath );
     } else {
       return new AccountFullName( account, relativePath );
     }

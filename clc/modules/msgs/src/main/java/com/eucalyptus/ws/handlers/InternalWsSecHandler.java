@@ -128,7 +128,7 @@ public class InternalWsSecHandler extends WsSecHandler {
         Logs.exhaust( ).error( ex , ex );
         throw new WebServicesException( "Authentication failed: " + ex.getMessage( ), ex );
       }
-      Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( FakePrincipals.SYSTEM_USER );
+      Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( FakePrincipals.systemUser() );
     }
   }
 }

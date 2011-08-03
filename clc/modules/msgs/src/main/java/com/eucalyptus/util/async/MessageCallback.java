@@ -17,7 +17,7 @@ public abstract class MessageCallback<Q extends BaseMessage, R extends BaseMessa
   protected MessageCallback( Q request ) {
     super( );
     if( request.getUserId( ) == null ) {
-      request.setUser( FakePrincipals.SYSTEM_USER );
+      request.setUser( FakePrincipals.systemUser() );
     }
     this.request.set( request );
   }

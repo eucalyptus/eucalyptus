@@ -135,11 +135,11 @@ public class UserFullName implements OwnerFullName {
   public static UserFullName getInstance( User user, String... relativePath ) {
     try {
       if ( user == null ) {
-        return new UserFullName( FakePrincipals.NOBODY_ACCOUNT, FakePrincipals.NOBODY_USER );
-      } else if ( FakePrincipals.SYSTEM_USER.equals( user ) ) {
-        return new UserFullName( FakePrincipals.SYSTEM_ACCOUNT, FakePrincipals.SYSTEM_USER );
-      } else if ( FakePrincipals.NOBODY_USER.equals( user ) ) {
-        return new UserFullName( FakePrincipals.NOBODY_ACCOUNT, FakePrincipals.NOBODY_USER );
+        return new UserFullName( FakePrincipals.nobodyAccount(), FakePrincipals.nobodyUser() );
+      } else if ( FakePrincipals.systemUser().equals( user ) ) {
+        return new UserFullName( FakePrincipals.systemAccount(), FakePrincipals.systemUser() );
+      } else if ( FakePrincipals.nobodyUser().equals( user ) ) {
+        return new UserFullName( FakePrincipals.nobodyAccount(), FakePrincipals.nobodyUser() );
       } else {
         Account account = user.getAccount( );
         return new UserFullName( account, user );
@@ -147,7 +147,7 @@ public class UserFullName implements OwnerFullName {
     } catch ( AuthException ex ) {
       LOG.error( ex.getMessage( ) );
       try {
-        return new UserFullName( FakePrincipals.NOBODY_ACCOUNT, FakePrincipals.NOBODY_USER );
+        return new UserFullName( FakePrincipals.nobodyAccount(), FakePrincipals.nobodyUser() );
       } catch ( AuthException ex1 ) {
         LOG.error( ex1, ex1 );
         throw new UndeclaredThrowableException( ex );

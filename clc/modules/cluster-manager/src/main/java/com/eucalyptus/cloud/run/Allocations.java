@@ -127,7 +127,7 @@ public class Allocations {
       this.request = request;
       this.minCount = request.getMinCount( );
       this.maxCount = request.getMaxCount( );
-      UserFullName temp = FakePrincipals.NOBODY_USER_ERN;
+      UserFullName temp = FakePrincipals.nobodyFullName();
       try {
         temp = Contexts.lookup( request.getCorrelationId( ) ).getUserFullName( );
       } catch ( NoSuchContextException ex ) {}

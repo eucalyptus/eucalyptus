@@ -131,7 +131,7 @@ public class AddressManager {
     for ( Address address : Addresses.getInstance( ).listValues( ) ) {
       //TODO:GRZE:FIXME this is not going to last this way.
       Account addrAccount = null;
-      if ( !FakePrincipals.NOBODY_ACCOUNT.getAccountNumber( ).equals( address.getOwnerAccountNumber( ) ) ) {
+      if ( !FakePrincipals.nobodyAccount().getAccountNumber( ).equals( address.getOwnerAccountNumber( ) ) ) {
         try {
         addrAccount = Accounts.lookupAccountById( address.getOwnerAccountNumber( ) );
         } catch ( AuthException e ) {}
@@ -149,7 +149,7 @@ public class AddressManager {
     }
     if ( isAdmin ) {
       for ( Address address : Addresses.getInstance( ).listDisabledValues( ) ) {
-        reply.getAddressesSet( ).add( new AddressInfoType( address.getName( ), FakePrincipals.NOBODY_USER_ERN.getUserName( ) ) );
+        reply.getAddressesSet( ).add( new AddressInfoType( address.getName( ), FakePrincipals.nobodyFullName().getUserName( ) ) );
       }
     }
     return reply;

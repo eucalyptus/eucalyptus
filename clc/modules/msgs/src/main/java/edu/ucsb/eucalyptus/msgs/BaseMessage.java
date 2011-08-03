@@ -100,7 +100,7 @@ public class BaseMessage {
   }
   
   public <TYPE extends BaseMessage> TYPE markPrivileged( ) {
-    this.effectiveUserId = FakePrincipals.SYSTEM_USER.getName( );
+    this.effectiveUserId = FakePrincipals.systemUser().getName( );
     return ( TYPE ) this;
   }
   
@@ -159,8 +159,8 @@ public class BaseMessage {
     if ( subCorrelationId == null ) {
       subCorrelationId = String.format( "%f", Math.random( ) ).substring( 2 );
     }
-    this.userId = FakePrincipals.SYSTEM_USER_ERN.getUserName( );
-    this.effectiveUserId = FakePrincipals.SYSTEM_USER_ERN.getUserName( );
+    this.userId = FakePrincipals.systemFullName().getUserName( );
+    this.effectiveUserId = FakePrincipals.systemFullName().getUserName( );
     this.correlationId = corrId + "-" + subCorrelationId;
     return ( TYPE ) this;
   }
@@ -310,11 +310,11 @@ public class BaseMessage {
   
   public BaseMessage setUser( User user ) {
     if ( user == null ) {
-      this.setUser( FakePrincipals.NOBODY_USER );
+      this.setUser( FakePrincipals.nobodyUser() );
     } else {
       this.userId = user.getName( );
       this.effectiveUserId = ( user.isSystemAdmin( ) || user.isSystemInternal( ) )
-        ? FakePrincipals.SYSTEM_USER.getName( )
+        ? FakePrincipals.systemUser().getName( )
         : user.getName( );
     }
     return this;

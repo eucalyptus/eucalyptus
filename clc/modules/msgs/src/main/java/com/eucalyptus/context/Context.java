@@ -44,7 +44,7 @@ public class Context {
       this.message = msg;
     }};
     this.channel = new DefaultLocalClientChannelFactory( ).newChannel( Channels.pipeline( ) );
-    this.user = FakePrincipals.SYSTEM_USER;
+    this.user = FakePrincipals.systemUser();
     EventRecord.caller( Context.class, EventType.CONTEXT_CREATE, this.correlationId, this.channel.toString( ) ).debug( );
   }
   
@@ -100,11 +100,11 @@ public class Context {
   
   public UserFullName getEffectiveUserFullName( ) {
     String effectiveUserId = this.getRequest( ).getEffectiveUserId( );
-    if ( this.getRequest( ) != null && FakePrincipals.SYSTEM_USER_ERN.getUserName( ).equals( effectiveUserId ) ) {
-      return FakePrincipals.SYSTEM_USER_ERN;
+    if ( this.getRequest( ) != null && FakePrincipals.systemFullName().getUserName( ).equals( effectiveUserId ) ) {
+      return FakePrincipals.systemFullName();
       /** system **/
     } else if ( this.getRequest( ) == null || effectiveUserId == null ) {
-      return FakePrincipals.NOBODY_USER_ERN;
+      return FakePrincipals.nobodyFullName();
       /** unset **/
     } else if ( !effectiveUserId.equals( this.getUserFullName( ).getUserName( ) ) ) {
       try {
@@ -122,7 +122,7 @@ public class Context {
   }
   
   public boolean hasAdministrativePrivileges( ) {
-    return this.getUser( ).isSystemInternal( ) || FakePrincipals.SYSTEM_USER_ERN.equals( this.getEffectiveUserFullName( ) ) || this.getUser( ).isSystemAdmin( );
+    return this.getUser( ).isSystemInternal( ) || FakePrincipals.systemFullName().equals( this.getEffectiveUserFullName( ) ) || this.getUser( ).isSystemAdmin( );
   }
   
   public User getUser( ) {

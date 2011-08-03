@@ -85,8 +85,6 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   protected String      ownerUserName;
   @Column( name = "metadata_perm_uuid", unique = true, updatable = false, nullable = false )
   private String        permanentUuid;
-  @Transient
-  private OwnerFullName tempOwnerFullName;
   
   /**
    * GRZE:NOTE: Should only /ever/ be used by sub classes.
@@ -118,24 +116,20 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
       ? owner.getUserName( )
       : null;
     super.setOwner( owner );
-    this.tempOwnerFullName = owner;
   }
   
   @Override
   public OwnerFullName getOwner( ) {
-    if ( this.tempOwnerFullName == null ) {
-      OwnerFullName tempOwner = super.getOwner( );
-      if ( super.getOwnerAccountNumber( ) == null && this.getOwnerUserId( ) == null ) {
-        tempOwner = FakePrincipals.NOBODY_USER_ERN;
-      } else if ( this.getOwnerAccountNumber( ) == null && FakePrincipals.NOBODY_USER_ERN.getUserId( ).equals( this.getOwnerUserId( ) ) ) {
-        tempOwner = FakePrincipals.NOBODY_USER_ERN;
-      } else if ( this.getOwnerAccountNumber( ) != null && this.getOwnerUserId( ) == null ) {
-        tempOwner = AccountFullName.getInstance( this.getOwnerAccountNumber( ) );
-      } else if ( this.getOwnerAccountNumber( ) == null && this.getOwnerUserId( ) != null ) {
+    OwnerFullName tempOwner = null;
+    if ( this.getOwnerUserId( ) != null ) {
+      if( FakePrincipals.nobodyFullName( ).getUserId( ).equals( this.getOwnerUserId( ) ) ) {
+        tempOwner = FakePrincipals.nobodyFullName( );
+      } else if( FakePrincipals.systemFullName( ).getUserId( ).equals( this.getOwnerUserId( ) ) ) {
+        tempOwner = FakePrincipals.systemFullName( );
+      } else {
         tempOwner = UserFullName.getInstance( this.getOwnerUserId( ) );
       }
-      this.tempOwnerFullName = tempOwner;
-      return this.tempOwnerFullName;
+      return tempOwner;
     } else {
       return super.getOwner( );
     }

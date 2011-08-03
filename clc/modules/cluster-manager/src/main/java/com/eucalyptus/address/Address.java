@@ -177,7 +177,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   public Address( ) {}
   
   public Address( final String ipAddress ) {
-    super( FakePrincipals.NOBODY_USER_ERN, ipAddress );
+    super( FakePrincipals.nobodyFullName(), ipAddress );
   }
   
   public Address( String ipAddress, String partition ) {
@@ -209,7 +209,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
       this.instanceId = UNASSIGNED_INSTANCEID;
     }
-    if ( FakePrincipals.NOBODY_USER_ERN.equals( super.getOwner( ) ) ) {
+    if ( FakePrincipals.nobodyFullName().equals( super.getOwner( ) ) ) {
       this.atomicState.set( State.unallocated, true );
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
       this.instanceId = UNASSIGNED_INSTANCEID;
@@ -223,7 +223,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       this.atomicState.set( State.allocated, true );
       if ( this.isSystemOwned( ) ) {
         Addresses.getInstance( ).registerDisabled( this );
-        this.setOwner( FakePrincipals.NOBODY_USER_ERN );
+        this.setOwner( FakePrincipals.nobodyFullName() );
         this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         this.instanceId = UNASSIGNED_INSTANCEID;
         Address.removeAddress( this.getDisplayName( ) );
@@ -286,7 +286,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
                                                                                                         : "USER" ).info( );
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
-        Address.this.setOwner( FakePrincipals.NOBODY_USER_ERN );
+        Address.this.setOwner( FakePrincipals.nobodyFullName() );
         Address.removeAddress( Address.this.getDisplayName( ) );
         Address.this.stateUuid = UUID.randomUUID( ).toString( );
         Address.this.atomicState.attemptMark( State.unallocated, false );
@@ -357,7 +357,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
                        public void top( ) {
                          Address.this.instanceId = PENDING_ASSIGNMENT;
                          Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
-                         Address.this.setOwner( FakePrincipals.SYSTEM_USER_ERN );
+                         Address.this.setOwner( FakePrincipals.systemFullName() );
                          Address.this.stateUuid = UUID.randomUUID( ).toString( );
                          try {
                            Addresses.getInstance( ).register( Address.this );
@@ -445,7 +445,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   public boolean isSystemOwned( ) {
-    return FakePrincipals.SYSTEM_USER_ERN.equals( ( UserFullName ) this.getOwner( ) );
+    return FakePrincipals.systemFullName().equals( ( UserFullName ) this.getOwner( ) );
   }
   
   public boolean isAssigned( ) {

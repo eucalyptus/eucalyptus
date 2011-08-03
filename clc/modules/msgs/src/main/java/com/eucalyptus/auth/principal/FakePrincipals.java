@@ -63,7 +63,6 @@
 
 package com.eucalyptus.auth.principal;
 
-import java.math.BigInteger;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Date;
@@ -72,620 +71,643 @@ import java.util.Map;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
-import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
-import com.eucalyptus.crypto.util.B64.url;
-import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.OwnerFullName;
 import com.google.common.collect.Lists;
 
 public class FakePrincipals {
-  public static final String   SYSTEM_ID       = Account.SYSTEM_ACCOUNT;
-  public static final String   NOBODY_ID       = Account.NOBODY_ACCOUNT;
   public static boolean isFakeIdentify( String userId ) {
     return Account.NOBODY_ACCOUNT.equals( userId ) || Account.SYSTEM_ACCOUNT.equals( userId );
   }
-  public static final Account  NOBODY_ACCOUNT  = new Account( ) {
-                                                 @Override
-                                                 public String getAccountNumber( ) {
-                                                   return String.format( "%012d", NOBODY_ACCOUNT_ID );
-                                                 }
-
-                                                 @Override
-                                                 public String getName( ) {
-                                                   return NOBODY_ACCOUNT;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public void setName( String name ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public List<User> getUsers( ) throws AuthException {
-                                                   return Lists.newArrayList( FakePrincipals.NOBODY_USER );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public List<Group> getGroups( ) throws AuthException {
-                                                   return Lists.newArrayList( );
-                                                 };
-                                                 
-                                                 @Override
-                                                 public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info ) throws AuthException {
-                                                   throw new AuthException( AuthException.SYSTEM_MODIFICATION );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public Group addGroup( String groupName, String path ) throws AuthException {
-                                                   throw new AuthException( AuthException.SYSTEM_MODIFICATION );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public void deleteGroup( String groupName, boolean recursive ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public Group lookupGroupByName( String groupName ) throws AuthException {
-                                                   throw new AuthException( AuthException.SYSTEM_MODIFICATION );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public User lookupUserByName( String userName ) throws AuthException {
-                                                   if ( FakePrincipals.NOBODY_USER.getName( ).equals( userName ) ) {
-                                                     return FakePrincipals.NOBODY_USER;
-                                                   } else {
-                                                     throw new AuthException( AuthException.SYSTEM_MODIFICATION );
-                                                   }
-                                                 }
-                                                 
-                                                 @Override
-                                                 public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException {
-                                                   return Lists.newArrayList( );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public List<Authorization> lookupAccountGlobalQuotas( String resourceType ) throws AuthException {
-                                                   return Lists.newArrayList( );
-                                                 }
-                                               };
   
-  public static final Account  SYSTEM_ACCOUNT  = new Account( ) {
-                                                 @Override
-                                                 public String getAccountNumber( ) {
-                                                   return String.format( "%012d", SYSTEM_ACCOUNT_ID );
-                                                 }
-
-                                                 @Override
-                                                 public String getName( ) {
-                                                   return Account.SYSTEM_ACCOUNT;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public void setName( String name ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public List<User> getUsers( ) throws AuthException {
-                                                   return Lists.newArrayList( FakePrincipals.SYSTEM_USER );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public List<Group> getGroups( ) throws AuthException {
-                                                   return Lists.newArrayList( );
-                                                 };
-                                                 
-                                                 @Override
-                                                 public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info ) throws AuthException {
-                                                   throw new AuthException( AuthException.SYSTEM_MODIFICATION );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public Group addGroup( String groupName, String path ) throws AuthException {
-                                                   throw new AuthException( AuthException.SYSTEM_MODIFICATION );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public void deleteGroup( String groupName, boolean recursive ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public Group lookupGroupByName( String groupName ) throws AuthException {
-                                                   throw new AuthException( AuthException.SYSTEM_MODIFICATION );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public User lookupUserByName( String userName ) throws AuthException {
-                                                   if ( FakePrincipals.SYSTEM_USER.getName( ).equals( userName ) ) {
-                                                     return FakePrincipals.SYSTEM_USER;
-                                                   } else {
-                                                     throw new AuthException( AuthException.SYSTEM_MODIFICATION );
-                                                   }
-                                                 }
-                                                 
-                                                 @Override
-                                                 public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException {
-                                                   return Lists.newArrayList( );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public List<Authorization> lookupAccountGlobalQuotas( String resourceType ) throws AuthException {
-                                                   return Lists.newArrayList( );
-                                                 }
-                                               };
+  public static OwnerFullName nobodyFullName( ) {
+    return NOBODY_USER_ERN;
+  }
   
-  public static final User     SYSTEM_USER     = new User( ) {
-                                                 private final Certificate       cert  = new Certificate( ) {
-                                                                                         @Override
-                                                                                         public Boolean isActive( ) {
-                                                                                           return true;
-                                                                                         }
-                                                                                         
-                                                                                         @Override
-                                                                                         public void setActive( Boolean active ) throws AuthException {}
-                                                                                         
-                                                                                         @Override
-                                                                                         public Boolean isRevoked( ) {
-                                                                                           return false;
-                                                                                         }
-                                                                                         
-                                                                                         @Override
-                                                                                         public void setRevoked( Boolean revoked ) throws AuthException {}
-                                                                                         
-                                                                                         @Override
-                                                                                         public String getPem( ) {
-                                                                                           return B64.url.encString( PEMFiles.getBytes( getX509Certificate( ) ) );
-                                                                                         }
-                                                                                         
-                                                                                         @Override
-                                                                                         public X509Certificate getX509Certificate( ) {
-                                                                                           return SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( );
-                                                                                         }
-                                                                                         
-                                                                                         @Override
-                                                                                         public void setX509Certificate( X509Certificate x509 ) throws AuthException {}
-                                                                                         
-                                                                                         @Override
-                                                                                         public Date getCreateDate( ) {
-                                                                                           return SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( ).getNotBefore( );
-                                                                                         }
-                                                                                         
-                                                                                         @Override
-                                                                                         public void setCreateDate( Date createDate ) throws AuthException {}
-                                                                                         
-                                                                                         @Override
-                                                                                         public User getUser( ) throws AuthException {
-                                                                                           return FakePrincipals.SYSTEM_USER;
-                                                                                         }
-
-                                                                                        @Override
-                                                                                        public String getCertificateId( ) {
-                                                                                          return SYSTEM_ID;
-                                                                                        }
-                                                                                       };
-                                                 private final List<Certificate> certs = new ArrayList<Certificate>( ) {
-                                                                                         {
-                                                                                           add( cert );
-                                                                                         }
-                                                                                       };
-                                                 
-                                                 @Override
-                                                 public String getUserId( ) {
-                                                   return Account.SYSTEM_ACCOUNT;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public String getName( ) {
-                                                   return Account.SYSTEM_ACCOUNT;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public String getPath( ) {
-                                                   return "/";
-                                                 }
-                                                 
-                                                 @Override
-                                                 public User.RegistrationStatus getRegistrationStatus( ) {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public Boolean isEnabled( ) {
-                                                   return true;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public String getToken( ) {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public String getConfirmationCode( ) {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public String getPassword( ) {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public Long getPasswordExpires( ) {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public String getInfo( String key ) throws AuthException {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public Map<String, String> getInfo( ) throws AuthException {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public List<AccessKey> getKeys( ) throws AuthException {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public AccessKey getKey( String keyId ) throws AuthException {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public AccessKey createKey( ) throws AuthException {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public List<Certificate> getCertificates( ) throws AuthException {
-                                                   return certs;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public Certificate getCertificate( String certificateId ) throws AuthException {
-                                                   return cert;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public Certificate addCertificate( X509Certificate certificate ) throws AuthException {
-                                                   return cert;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public List<Group> getGroups( ) throws AuthException {
-                                                   return Lists.newArrayList( );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public Account getAccount( ) throws AuthException {
-                                                   return SYSTEM_ACCOUNT;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public boolean isSystemAdmin( ) {
-                                                   return true;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public boolean isSystemInternal( ) {
-                                                   return true;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public boolean isAccountAdmin( ) {
-                                                   return true;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public List<Policy> getPolicies( ) throws AuthException {
-                                                   return Lists.newArrayList( );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException {
-                                                   return Lists.newArrayList( );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public List<Authorization> lookupQuotas( String resourceType ) throws AuthException {
-                                                   return Lists.newArrayList( );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public void setName( String name ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void setPath( String path ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void setRegistrationStatus( User.RegistrationStatus stat ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void setEnabled( Boolean enabled ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void setToken( String token ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void createToken( ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void setConfirmationCode( String code ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void createConfirmationCode( ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void setPassword( String password ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void createPassword( ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void setPasswordExpires( Long time ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void setInfo( String key, String value ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void setInfo( Map<String, String> newInfo ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void removeKey( String keyId ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void removeCertificate( String certficateId ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void removePolicy( String name ) throws AuthException {};
-                                               };
+  public static OwnerFullName systemFullName( ) {
+    return SYSTEM_USER_ERN;
+  }
   
-  public static final User     NOBODY_USER     = new User( ) {
-                                                 private final Certificate       cert  = new Certificate( ) {
-                                                                                         
-                                                                                         @Override
-                                                                                         public Boolean isActive( ) {
-                                                                                           return true;
-                                                                                         }
-                                                                                         
-                                                                                         @Override
-                                                                                         public void setActive( Boolean active ) throws AuthException {}
-                                                                                         
-                                                                                         @Override
-                                                                                         public Boolean isRevoked( ) {
-                                                                                           return null;
-                                                                                         }
-                                                                                         
-                                                                                         @Override
-                                                                                         public void setRevoked( Boolean revoked ) throws AuthException {}
-                                                                                         
-                                                                                         @Override
-                                                                                         public String getPem( ) {
-                                                                                           return B64.url.encString( PEMFiles.getBytes( getX509Certificate( ) ) );
-                                                                                         }
-                                                                                         
-                                                                                         @Override
-                                                                                         public X509Certificate getX509Certificate( ) {
-                                                                                           return SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( );
-                                                                                         }
-                                                                                         
-                                                                                         @Override
-                                                                                         public void setX509Certificate( X509Certificate x509 ) throws AuthException {}
-                                                                                         
-                                                                                         @Override
-                                                                                         public Date getCreateDate( ) {
-                                                                                           return null;
-                                                                                         }
-                                                                                         
-                                                                                         @Override
-                                                                                         public void setCreateDate( Date createDate ) throws AuthException {}
-                                                                                         
-                                                                                         @Override
-                                                                                         public User getUser( ) throws AuthException {
-                                                                                           return FakePrincipals.NOBODY_USER;
-                                                                                         }
-
-                                                                                        @Override
-                                                                                        public String getCertificateId( ) {
-                                                                                          return FakePrincipals.NOBODY_ID;
-                                                                                        }
-                                                                                       };
-                                                 private final List<Certificate> certs = new ArrayList<Certificate>( ) {
-                                                                                         {
-                                                                                           add( cert );
-                                                                                         }
-                                                                                       };
-                                                 
-                                                 @Override
-                                                 public String getUserId( ) {
-                                                   return Account.NOBODY_ACCOUNT;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public String getName( ) {
-                                                   return Account.NOBODY_ACCOUNT;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public String getPath( ) {
-                                                   return "/";
-                                                 }
-                                                 
-                                                 @Override
-                                                 public User.RegistrationStatus getRegistrationStatus( ) {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public Boolean isEnabled( ) {
-                                                   return true;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public String getToken( ) {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public String getConfirmationCode( ) {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public String getPassword( ) {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public Long getPasswordExpires( ) {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public String getInfo( String key ) throws AuthException {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public Map<String, String> getInfo( ) throws AuthException {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public List<AccessKey> getKeys( ) throws AuthException {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public AccessKey getKey( String keyId ) throws AuthException {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public AccessKey createKey( ) throws AuthException {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public List<Certificate> getCertificates( ) throws AuthException {
-                                                   return certs;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public Certificate getCertificate( String certificateId ) throws AuthException {
-                                                   return cert;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public Certificate addCertificate( X509Certificate certificate ) throws AuthException {
-                                                   return cert;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public List<Group> getGroups( ) throws AuthException {
-                                                   return Lists.newArrayList( );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public Account getAccount( ) throws AuthException {
-                                                   return Accounts.lookupAccountByName( Account.NOBODY_ACCOUNT );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public boolean isSystemAdmin( ) {
-                                                   return true;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public boolean isSystemInternal( ) {
-                                                   return true;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public boolean isAccountAdmin( ) {
-                                                   return true;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public List<Policy> getPolicies( ) throws AuthException {
-                                                   return Lists.newArrayList( );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException {
-                                                   return null;
-                                                 }
-                                                 
-                                                 @Override
-                                                 public List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException {
-                                                   return Lists.newArrayList( );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public List<Authorization> lookupQuotas( String resourceType ) throws AuthException {
-                                                   return Lists.newArrayList( );
-                                                 }
-                                                 
-                                                 @Override
-                                                 public void setName( String name ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void setPath( String path ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void setRegistrationStatus( User.RegistrationStatus stat ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void setEnabled( Boolean enabled ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void setToken( String token ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void createToken( ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void setConfirmationCode( String code ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void createConfirmationCode( ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void setPassword( String password ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void createPassword( ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void setPasswordExpires( Long time ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void setInfo( String key, String value ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void setInfo( Map<String, String> newInfo ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void removeKey( String keyId ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void removeCertificate( String certficateId ) throws AuthException {}
-                                                 
-                                                 @Override
-                                                 public void removePolicy( String name ) throws AuthException {};
-                                               };
+  public static Account nobodyAccount( ) {
+    return NOBODY_ACCOUNT;
+  }
   
-  public static final UserFullName SYSTEM_USER_ERN = UserFullName.getInstance( SYSTEM_USER );
-  public static final UserFullName NOBODY_USER_ERN = UserFullName.getInstance( NOBODY_USER );
+  public static Account systemAccount( ) {
+    return SYSTEM_ACCOUNT;
+  }
+  
+  public static User systemUser( ) {
+    return SYSTEM_USER;
+  }
+  
+  public static User nobodyUser( ) {
+    return NOBODY_USER;
+  }
+  
+  private static final String       SYSTEM_ID       = Account.SYSTEM_ACCOUNT;
+  private static final String       NOBODY_ID       = Account.NOBODY_ACCOUNT;
+  private static final Account      NOBODY_ACCOUNT  = new Account( ) {
+                                                      @Override
+                                                      public String getAccountNumber( ) {
+                                                        return String.format( "%012d", NOBODY_ACCOUNT_ID );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public String getName( ) {
+                                                        return NOBODY_ACCOUNT;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public void setName( String name ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public List<User> getUsers( ) throws AuthException {
+                                                        return Lists.newArrayList( FakePrincipals.nobodyUser( ) );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public List<Group> getGroups( ) throws AuthException {
+                                                        return Lists.newArrayList( );
+                                                      };
+                                                      
+                                                      @Override
+                                                      public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info ) throws AuthException {
+                                                        throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public Group addGroup( String groupName, String path ) throws AuthException {
+                                                        throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public void deleteGroup( String groupName, boolean recursive ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public Group lookupGroupByName( String groupName ) throws AuthException {
+                                                        throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public User lookupUserByName( String userName ) throws AuthException {
+                                                        if ( FakePrincipals.nobodyUser( ).getName( ).equals( userName ) ) {
+                                                          return FakePrincipals.nobodyUser( );
+                                                        } else {
+                                                          throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+                                                        }
+                                                      }
+                                                      
+                                                      @Override
+                                                      public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException {
+                                                        return Lists.newArrayList( );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public List<Authorization> lookupAccountGlobalQuotas( String resourceType ) throws AuthException {
+                                                        return Lists.newArrayList( );
+                                                      }
+                                                    };
+  
+  private static final Account      SYSTEM_ACCOUNT  = new Account( ) {
+                                                      @Override
+                                                      public String getAccountNumber( ) {
+                                                        return String.format( "%012d", SYSTEM_ACCOUNT_ID );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public String getName( ) {
+                                                        return Account.SYSTEM_ACCOUNT;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public void setName( String name ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public List<User> getUsers( ) throws AuthException {
+                                                        return Lists.newArrayList( FakePrincipals.systemUser( ) );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public List<Group> getGroups( ) throws AuthException {
+                                                        return Lists.newArrayList( );
+                                                      };
+                                                      
+                                                      @Override
+                                                      public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info ) throws AuthException {
+                                                        throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public Group addGroup( String groupName, String path ) throws AuthException {
+                                                        throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public void deleteGroup( String groupName, boolean recursive ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public Group lookupGroupByName( String groupName ) throws AuthException {
+                                                        throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public User lookupUserByName( String userName ) throws AuthException {
+                                                        if ( FakePrincipals.systemUser( ).getName( ).equals( userName ) ) {
+                                                          return FakePrincipals.systemUser( );
+                                                        } else {
+                                                          throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+                                                        }
+                                                      }
+                                                      
+                                                      @Override
+                                                      public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException {
+                                                        return Lists.newArrayList( );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public List<Authorization> lookupAccountGlobalQuotas( String resourceType ) throws AuthException {
+                                                        return Lists.newArrayList( );
+                                                      }
+                                                    };
+  
+  private static final User         SYSTEM_USER     = new User( ) {
+                                                      private final Certificate       cert  = new Certificate( ) {
+                                                                                              @Override
+                                                                                              public Boolean isActive( ) {
+                                                                                                return true;
+                                                                                              }
+                                                                                              
+                                                                                              @Override
+                                                                                              public void setActive( Boolean active ) throws AuthException {}
+                                                                                              
+                                                                                              @Override
+                                                                                              public Boolean isRevoked( ) {
+                                                                                                return false;
+                                                                                              }
+                                                                                              
+                                                                                              @Override
+                                                                                              public void setRevoked( Boolean revoked ) throws AuthException {}
+                                                                                              
+                                                                                              @Override
+                                                                                              public String getPem( ) {
+                                                                                                return B64.url.encString( PEMFiles.getBytes( getX509Certificate( ) ) );
+                                                                                              }
+                                                                                              
+                                                                                              @Override
+                                                                                              public X509Certificate getX509Certificate( ) {
+                                                                                                return SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( );
+                                                                                              }
+                                                                                              
+                                                                                              @Override
+                                                                                              public void setX509Certificate( X509Certificate x509 ) throws AuthException {}
+                                                                                              
+                                                                                              @Override
+                                                                                              public Date getCreateDate( ) {
+                                                                                                return SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( ).getNotBefore( );
+                                                                                              }
+                                                                                              
+                                                                                              @Override
+                                                                                              public void setCreateDate( Date createDate ) throws AuthException {}
+                                                                                              
+                                                                                              @Override
+                                                                                              public User getUser( ) throws AuthException {
+                                                                                                return FakePrincipals.systemUser( );
+                                                                                              }
+                                                                                              
+                                                                                              @Override
+                                                                                              public String getCertificateId( ) {
+                                                                                                return SYSTEM_ID;
+                                                                                              }
+                                                                                            };
+                                                      private final List<Certificate> certs = new ArrayList<Certificate>( ) {
+                                                                                              {
+                                                                                                add( cert );
+                                                                                              }
+                                                                                            };
+                                                      
+                                                      @Override
+                                                      public String getUserId( ) {
+                                                        return Account.SYSTEM_ACCOUNT;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public String getName( ) {
+                                                        return Account.SYSTEM_ACCOUNT;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public String getPath( ) {
+                                                        return "/";
+                                                      }
+                                                      
+                                                      @Override
+                                                      public User.RegistrationStatus getRegistrationStatus( ) {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public Boolean isEnabled( ) {
+                                                        return true;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public String getToken( ) {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public String getConfirmationCode( ) {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public String getPassword( ) {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public Long getPasswordExpires( ) {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public String getInfo( String key ) throws AuthException {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public Map<String, String> getInfo( ) throws AuthException {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public List<AccessKey> getKeys( ) throws AuthException {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public AccessKey getKey( String keyId ) throws AuthException {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public AccessKey createKey( ) throws AuthException {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public List<Certificate> getCertificates( ) throws AuthException {
+                                                        return certs;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public Certificate getCertificate( String certificateId ) throws AuthException {
+                                                        return cert;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public Certificate addCertificate( X509Certificate certificate ) throws AuthException {
+                                                        return cert;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public List<Group> getGroups( ) throws AuthException {
+                                                        return Lists.newArrayList( );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public Account getAccount( ) throws AuthException {
+                                                        return systemAccount( );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public boolean isSystemAdmin( ) {
+                                                        return true;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public boolean isSystemInternal( ) {
+                                                        return true;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public boolean isAccountAdmin( ) {
+                                                        return true;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public List<Policy> getPolicies( ) throws AuthException {
+                                                        return Lists.newArrayList( );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException {
+                                                        return Lists.newArrayList( );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public List<Authorization> lookupQuotas( String resourceType ) throws AuthException {
+                                                        return Lists.newArrayList( );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public void setName( String name ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void setPath( String path ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void setRegistrationStatus( User.RegistrationStatus stat ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void setEnabled( Boolean enabled ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void setToken( String token ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void createToken( ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void setConfirmationCode( String code ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void createConfirmationCode( ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void setPassword( String password ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void createPassword( ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void setPasswordExpires( Long time ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void setInfo( String key, String value ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void setInfo( Map<String, String> newInfo ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void removeKey( String keyId ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void removeCertificate( String certficateId ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void removePolicy( String name ) throws AuthException {};
+                                                    };
+  
+  private static final User         NOBODY_USER     = new User( ) {
+                                                      private final Certificate       cert  = new Certificate( ) {
+                                                                                              
+                                                                                              @Override
+                                                                                              public Boolean isActive( ) {
+                                                                                                return true;
+                                                                                              }
+                                                                                              
+                                                                                              @Override
+                                                                                              public void setActive( Boolean active ) throws AuthException {}
+                                                                                              
+                                                                                              @Override
+                                                                                              public Boolean isRevoked( ) {
+                                                                                                return null;
+                                                                                              }
+                                                                                              
+                                                                                              @Override
+                                                                                              public void setRevoked( Boolean revoked ) throws AuthException {}
+                                                                                              
+                                                                                              @Override
+                                                                                              public String getPem( ) {
+                                                                                                return B64.url.encString( PEMFiles.getBytes( getX509Certificate( ) ) );
+                                                                                              }
+                                                                                              
+                                                                                              @Override
+                                                                                              public X509Certificate getX509Certificate( ) {
+                                                                                                return SystemCredentials.getCredentialProvider( Eucalyptus.class ).getCertificate( );
+                                                                                              }
+                                                                                              
+                                                                                              @Override
+                                                                                              public void setX509Certificate( X509Certificate x509 ) throws AuthException {}
+                                                                                              
+                                                                                              @Override
+                                                                                              public Date getCreateDate( ) {
+                                                                                                return null;
+                                                                                              }
+                                                                                              
+                                                                                              @Override
+                                                                                              public void setCreateDate( Date createDate ) throws AuthException {}
+                                                                                              
+                                                                                              @Override
+                                                                                              public User getUser( ) throws AuthException {
+                                                                                                return FakePrincipals.nobodyUser( );
+                                                                                              }
+                                                                                              
+                                                                                              @Override
+                                                                                              public String getCertificateId( ) {
+                                                                                                return FakePrincipals.NOBODY_ID;
+                                                                                              }
+                                                                                            };
+                                                      private final List<Certificate> certs = new ArrayList<Certificate>( ) {
+                                                                                              {
+                                                                                                add( cert );
+                                                                                              }
+                                                                                            };
+                                                      
+                                                      @Override
+                                                      public String getUserId( ) {
+                                                        return Account.NOBODY_ACCOUNT;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public String getName( ) {
+                                                        return Account.NOBODY_ACCOUNT;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public String getPath( ) {
+                                                        return "/";
+                                                      }
+                                                      
+                                                      @Override
+                                                      public User.RegistrationStatus getRegistrationStatus( ) {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public Boolean isEnabled( ) {
+                                                        return true;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public String getToken( ) {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public String getConfirmationCode( ) {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public String getPassword( ) {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public Long getPasswordExpires( ) {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public String getInfo( String key ) throws AuthException {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public Map<String, String> getInfo( ) throws AuthException {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public List<AccessKey> getKeys( ) throws AuthException {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public AccessKey getKey( String keyId ) throws AuthException {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public AccessKey createKey( ) throws AuthException {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public List<Certificate> getCertificates( ) throws AuthException {
+                                                        return certs;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public Certificate getCertificate( String certificateId ) throws AuthException {
+                                                        return cert;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public Certificate addCertificate( X509Certificate certificate ) throws AuthException {
+                                                        return cert;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public List<Group> getGroups( ) throws AuthException {
+                                                        return Lists.newArrayList( );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public Account getAccount( ) throws AuthException {
+                                                        return Accounts.lookupAccountByName( Account.NOBODY_ACCOUNT );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public boolean isSystemAdmin( ) {
+                                                        return true;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public boolean isSystemInternal( ) {
+                                                        return true;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public boolean isAccountAdmin( ) {
+                                                        return true;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public List<Policy> getPolicies( ) throws AuthException {
+                                                        return Lists.newArrayList( );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException {
+                                                        return null;
+                                                      }
+                                                      
+                                                      @Override
+                                                      public List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException {
+                                                        return Lists.newArrayList( );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public List<Authorization> lookupQuotas( String resourceType ) throws AuthException {
+                                                        return Lists.newArrayList( );
+                                                      }
+                                                      
+                                                      @Override
+                                                      public void setName( String name ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void setPath( String path ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void setRegistrationStatus( User.RegistrationStatus stat ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void setEnabled( Boolean enabled ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void setToken( String token ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void createToken( ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void setConfirmationCode( String code ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void createConfirmationCode( ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void setPassword( String password ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void createPassword( ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void setPasswordExpires( Long time ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void setInfo( String key, String value ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void setInfo( Map<String, String> newInfo ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void removeKey( String keyId ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void removeCertificate( String certficateId ) throws AuthException {}
+                                                      
+                                                      @Override
+                                                      public void removePolicy( String name ) throws AuthException {};
+                                                    };
+  
+  private static final UserFullName SYSTEM_USER_ERN = UserFullName.getInstance( systemUser( ) );
+  private static final UserFullName NOBODY_USER_ERN = UserFullName.getInstance( nobodyUser( ) );
 }

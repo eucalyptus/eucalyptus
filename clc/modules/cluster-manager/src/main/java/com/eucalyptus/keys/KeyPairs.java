@@ -69,7 +69,7 @@ import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.util.Transactions;
 
 public class KeyPairs {
-  private static SshKeyPair NO_KEY      = new SshKeyPair( FakePrincipals.NOBODY_USER_ERN, "", "", "" );
+  private static SshKeyPair NO_KEY      = new SshKeyPair( FakePrincipals.nobodyFullName(), "", "", "" );
   public static String      NO_KEY_NAME = "";
   
   public static SshKeyPair noKey( ) {
