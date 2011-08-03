@@ -82,6 +82,7 @@ import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.SshKeyPair;
@@ -127,11 +128,11 @@ public class Allocations {
       this.request = request;
       this.minCount = request.getMinCount( );
       this.maxCount = request.getMaxCount( );
-      UserFullName temp = FakePrincipals.nobodyFullName();
       try {
-        temp = Contexts.lookup( request.getCorrelationId( ) ).getUserFullName( );
-      } catch ( NoSuchContextException ex ) {}
-      this.ownerFullName = temp;
+        this.ownerFullName = Contexts.lookup( request.getCorrelationId( ) ).getUserFullName( );
+      } catch ( NoSuchContextException ex ) {
+        throw new IllegalContextAccessException( ex );
+      }
       if ( this.request.getInstanceType( ) == null || "".equals( this.request.getInstanceType( ) ) ) {
         this.request.setInstanceType( VmTypes.defaultTypeName( ) );
       }
