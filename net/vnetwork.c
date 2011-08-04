@@ -1023,7 +1023,7 @@ int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *uuid, char *user, char *
   if (param_check("vnetSetVlan", vnetconfig, vlan, user, network)) return(1);
 
   safe_strncpy(vnetconfig->users[vlan].userName, user, 48);
-  safe_strncpy(vnetconfig->users[vlan].netName, network, 32);
+  safe_strncpy(vnetconfig->users[vlan].netName, network, 48);
   if (uuid) safe_strncpy(vnetconfig->users[vlan].uuid, uuid, 48);
   
   return(0);
