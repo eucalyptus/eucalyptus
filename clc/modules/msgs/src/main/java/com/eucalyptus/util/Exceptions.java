@@ -3,11 +3,14 @@ package com.eucalyptus.util;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.gwt.thirdparty.guava.common.base.Joiner;
 
 public class Exceptions {
   private static Logger                    LOG                      = Logger.getLogger( Exceptions.class );
@@ -15,6 +18,26 @@ public class Exceptions {
   private static final List<String>        DEFAULT_FILTER_MATCHES   = Lists.newArrayList( );
   private static final Integer             DEFAULT_FILTER_MAX_DEPTH = 10;
   private static final StackTraceElement[] steArrayType             = new StackTraceElement[1];
+  
+  enum ExceptionCauses implements Function<Throwable,List<Throwable>> {
+    INSTANCE;
+
+    @Override
+    public List<Throwable> apply( Throwable input ) {
+      if( input == null || input.getClass( ).equals( Exception.class ) || input.getClass( ).equals( Exception.class ) || input.getClass( ).equals( Exception.class ) ) {
+        return Lists.newArrayList( );
+      } else {
+        List<Throwable> ret = Lists.newArrayList( input );
+        ret.addAll( this.apply( input.getCause( ) ) );
+        return ret;
+      }
+    }
+    
+  }
+  
+  public static List<Throwable> causes( Throwable ex ) {
+    return ExceptionCauses.INSTANCE.apply( ex );
+  }
   
   public static <T extends Throwable> String string( String message, T ex ) {
     return message + "\n" + string( ex );
@@ -25,8 +48,10 @@ public class Exceptions {
   }
   public static <T extends Throwable> String string( T ex ) {
     Throwable t = ( ex == null ? new RuntimeException() : ex );
+    String allMessages = Joiner.on( '\n' ).join( Exceptions.causes( ex ) );
     ByteArrayOutputStream os = new ByteArrayOutputStream( );
     PrintWriter p = new PrintWriter( os );
+    p.println( allMessages );
     t.printStackTrace( p );
     p.flush( );
     for( Throwable cause = t.getCause( ); cause != null; cause = cause.getCause( ) ) {

@@ -63,6 +63,9 @@
 
 package com.eucalyptus.entities;
 
+import java.util.List;
+import java.util.Map;
+import java.util.SortedSet;
 import javax.persistence.EntityExistsException;
 import javax.persistence.EntityNotFoundException;
 import javax.persistence.LockTimeoutException;
@@ -73,6 +76,7 @@ import javax.persistence.PessimisticLockException;
 import javax.persistence.RollbackException;
 import javax.persistence.TransactionRequiredException;
 import org.apache.log4j.Logger;
+import org.hibernate.HibernateException;
 import org.hibernate.InstantiationException;
 import org.hibernate.LazyInitializationException;
 import org.hibernate.MappingException;
@@ -95,77 +99,109 @@ import org.hibernate.exception.SQLGrammarException;
 import org.hibernate.jdbc.TooManyRowsAffectedException;
 import org.hibernate.loader.MultipleBagFetchException;
 import org.hibernate.type.SerializationException;
+import com.eucalyptus.entities.PersistenceErrorFilter.ErrorCategory;
 import com.eucalyptus.util.Classes;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Logs;
+import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.google.gwt.thirdparty.guava.common.collect.Iterables;
+import com.google.gwt.thirdparty.guava.common.collect.Maps;
+import com.google.gwt.thirdparty.guava.common.collect.Sets;
 
 public class PersistenceErrorFilter {
   private static Logger LOG = Logger.getLogger( PersistenceErrorFilter.class );
   
   public enum ErrorCategory {
-    APPLICATION {
-      @Override
-      public RuntimeException handleException( RuntimeException e ) {
-        this.getMessage( e );
-        throw e;
-      }
-    },
-    CONSTRAINT {
-      @Override
-      public RuntimeException handleException( RuntimeException e ) {
-        this.getMessage( e );
-        throw e;
-      }
-    },
-    RUNTIME {
-      @Override
-      public RuntimeException handleException( RuntimeException e ) {
-        this.getMessage( e );
-        throw e;
-      }
-    },
-    CONNECTION {
-      @Override
-      public RuntimeException handleException( RuntimeException e ) {
-        this.getMessage( e );
-        PersistenceContexts.handleConnectionError( e );
-        throw e;
-      }
-    },
     BUG {
       @Override
-      public RuntimeException handleException( RuntimeException e ) {
-        String msg = this.getMessage( e );
-        Logs.exhaust( ).error( msg, e );
-        return e;
+      public RuntimeException handleException( final RuntimeException e ) {
+        LOG.fatal( e, e );
+        throw super.handleException( e );
+      }
+    },
+    APPLICATION, CONSTRAINT, RUNTIME,
+    CONNECTION {
+      @Override
+      public RuntimeException handleException( final RuntimeException e ) {
+        PersistenceContexts.handleConnectionError( e );
+        return super.handleException( e );
+      }
+      
+      @Override
+      public boolean isRecoverable( ) {
+        return true;
       }
     };
-    protected String getMessage( RuntimeException e ) {
-      String msg = new StringBuilder( ).append( "[" ).append( this.name( ) ).append( "] Persistence error occurred because of: " + e.getMessage( ) ).toString( );
-      Logs.exhaust( ).error( msg, e );
-      return msg;
+    
+    public boolean isRecoverable( ) {
+      return false;
     }
     
-    public abstract <T extends RuntimeException> T handleException( RuntimeException e );
+    public RuntimeException handleException( final RuntimeException e ) {
+      final String msg = new StringBuilder( ).append( "[" ).append( this.name( ) ).append( "] Persistence error occurred because of: " + e.getMessage( ) ).toString( );
+      Logs.exhaust( ).error( msg, e );
+      return e;
+    }
   };
   
   private static final Multimap<ErrorCategory, Class<? extends Exception>> errorCategorization = buildErrorMap( );
   
   @SuppressWarnings( "unchecked" )
   private static Multimap<ErrorCategory, Class<? extends Exception>> buildErrorMap( ) {
-    Multimap<ErrorCategory, Class<? extends Exception>> map = ArrayListMultimap.create();
-    map.get( ErrorCategory.CONSTRAINT ).addAll( Lists.newArrayList( ConstraintViolationException.class, NonUniqueResultException.class, QueryTimeoutException.class, NoResultException.class, NonUniqueResultException.class, LockTimeoutException.class ) );
-    map.get( ErrorCategory.RUNTIME ).addAll( Lists.newArrayList( TransactionException.class, IllegalStateException.class, RollbackException.class, PessimisticLockException.class, OptimisticLockException.class, EntityNotFoundException.class, EntityExistsException.class ) );
-    map.get( ErrorCategory.CONNECTION ).addAll( Lists.newArrayList( JDBCConnectionException.class, QueryTimeoutException.class ) );
+    final Multimap<ErrorCategory, Class<? extends Exception>> map = ArrayListMultimap.create( );
     map.get( ErrorCategory.BUG ).addAll( Lists.newArrayList( LazyInitializationException.class, InstantiationException.class, MappingException.class,
                                                              MultipleBagFetchException.class, NonUniqueObjectException.class, QueryException.class,
                                                              PersistentObjectException.class, PropertyAccessException.class, SerializationException.class,
                                                              SessionException.class, TooManyRowsAffectedException.class, TransientObjectException.class,
                                                              StaleStateException.class, TypeMismatchException.class, UnresolvableObjectException.class,
-                                                             WrongClassException.class, SQLGrammarException.class, TransactionRequiredException.class ) );
+                                                             WrongClassException.class, SQLGrammarException.class, TransactionRequiredException.class,
+                                                             HibernateException.class ) );
+    map.get( ErrorCategory.CONSTRAINT ).addAll( Lists.newArrayList( ConstraintViolationException.class, NonUniqueResultException.class,
+                                                                    NoResultException.class, NonUniqueResultException.class ) );
+    map.get( ErrorCategory.RUNTIME ).addAll( Lists.newArrayList( TransactionException.class, IllegalStateException.class, RollbackException.class,
+                                                                 PessimisticLockException.class, OptimisticLockException.class, EntityNotFoundException.class,
+                                                                 EntityExistsException.class ) );
+    map.get( ErrorCategory.CONNECTION ).addAll( Lists.newArrayList( JDBCConnectionException.class, QueryTimeoutException.class, LockTimeoutException.class ) );
     return map;
+  }
+  
+  enum ClassifySingleException implements Function<Throwable, ErrorCategory> {
+    INSTANCE;
+    @Override
+    public ErrorCategory apply( final Throwable input ) {
+      final SortedSet<ErrorCategory> results = Sets.newTreeSet( );
+      for ( final Class<?> p : Classes.classAncestors( input ) ) {
+        for ( final ErrorCategory category : ErrorCategory.values( ) ) {
+          if ( errorCategorization.get( category ).contains( p ) ) {
+            if ( category.isRecoverable( ) ) {
+              return category;
+            } else {
+              results.add( category );
+            }
+          }
+        }
+      }
+      if ( results.isEmpty( ) ) {
+        return ErrorCategory.APPLICATION;
+      } else {
+        return results.first( );
+      }
+    }
+    
+  }
+  
+  public static ErrorCategory classify( final Throwable e ) {
+    final List<ErrorCategory> res = Lists.transform( Exceptions.causes( e ), ClassifySingleException.INSTANCE );
+    if ( res.isEmpty( ) ) {
+      return ErrorCategory.APPLICATION;
+    } else {
+      return Sets.newTreeSet( res ).last( );
+    }
   }
   
   /**
@@ -173,24 +209,18 @@ public class PersistenceErrorFilter {
    * @see {@link http://docs.jboss.org/hibernate/core/3.5/api/org/hibernate/HibernateException.html}
    */
   @SuppressWarnings( "unchecked" )
-  static RecoverablePersistenceException exceptionCaught( Throwable e ) {
+  static RecoverablePersistenceException exceptionCaught( final Throwable e ) {
     Logs.extreme( ).error( e, e );
-    if( e instanceof RuntimeException ) {
-      for ( Class<?> p : Classes.classAncestors( e ) ) {
-        
+    if ( e instanceof RuntimeException ) {
+      final ErrorCategory category = PersistenceErrorFilter.classify( e );
+      final RuntimeException up = category.handleException( ( RuntimeException ) e );
+      if ( !category.isRecoverable( ) ) {
+        throw up;
+      } else {
+        return new RecoverablePersistenceException( "Error during transaction: " + Joiner.on( '\n' ).join( Exceptions.causes( e ) ), e );
       }
-      Class<? extends Throwable> type = e.getClass( );
-      for ( Class<? extends Throwable> t = type; t.getSuperclass( ) != null && t.getSuperclass( ) != Exception.class; t = ( Class<? extends Throwable> ) t.getSuperclass( ) ) {
-        if( errorCategorization.containsValue( t ) ) {
-          for( ErrorCategory category : ErrorCategory.values( ) ) {
-            errorCategorization.get( category ).contains( type );
-            throw category.handleException( ( RuntimeException ) e );
-          }
-        }
-      }
-      return new RecoverablePersistenceException( ErrorCategory.RUNTIME.handleException( new PersistenceException( "Unclassified error occurred: " + e.getMessage( ), e ) ) );
     } else {
-      return new RecoverablePersistenceException( ErrorCategory.APPLICATION.handleException( new PersistenceException( "Unclassified error occurred: " + e.getMessage( ), e ) ) );
+      throw ErrorCategory.APPLICATION.handleException( new PersistenceException( "Error during transaction: " + e.getMessage( ), e ) );
     }
   }
 }
