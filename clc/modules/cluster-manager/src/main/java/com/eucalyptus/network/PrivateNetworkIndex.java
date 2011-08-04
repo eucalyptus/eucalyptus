@@ -63,26 +63,47 @@
 
 package com.eucalyptus.network;
 
+import javax.persistence.Column;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.cloud.util.ResourceAllocation;
+import com.eucalyptus.entities.AbstractStatefulPersistent;
 
 @Entity
 @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_network_index" )
+@Table( name = "metadata_network_indices" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class PrivateNetworkIndex extends AbstractPersistent {
-  enum State {
-    ILLEGAL, FREE, PENDING, USED, OUTLAW,
-  };
-  
-  private Long index;
+public class PrivateNetworkIndex extends AbstractStatefulPersistent<ResourceAllocation.State> {
+  @ManyToOne
+  @JoinColumn( name = "metadata_network_group_fk" )
+  private final NetworkGroup       parent;
+  @Column( name = "metadata_network_index" )
+  private Long                     index;
   @Enumerated( EnumType.STRING )
-  private State state;
+  private ResourceAllocation.State state;
+  @Column( name = "metadata_network_index_vm_perm_uuid" )
+  private String                   instanceNaturalId;
+  
+  private PrivateNetworkIndex( NetworkGroup parent, Long index ) {
+    super( );
+    this.parent = parent;
+    this.index = index;
+  }
+  
+  @PrePersist
+  @PreUpdate
+  private void verifyState( ) {
+    
+  }
+  
 }

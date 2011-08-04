@@ -78,11 +78,11 @@ import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TransactionException;
-import com.eucalyptus.util.Transactions;
 
 public class KeyPairs {
   private static Logger     LOG         = Logger.getLogger( KeyPairs.class );

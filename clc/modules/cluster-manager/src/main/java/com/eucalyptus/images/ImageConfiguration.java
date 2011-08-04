@@ -79,7 +79,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.RecoverablePersistenceException;
-import com.eucalyptus.util.Transactions;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.async.Callback;
 
 @Entity

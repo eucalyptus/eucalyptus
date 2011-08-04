@@ -63,31 +63,39 @@
 
 package com.eucalyptus.cloud.util;
 
-public interface ResourceAllocation<T> {
+import com.eucalyptus.util.HasNaturalId;
+
+public interface ResourceAllocation<T extends HasNaturalId, R extends HasNaturalId> {
+  public interface Reference<T, R> {
+    public T set( R referer );
+    
+    public T abort( );
+  }
+  
   enum State {
-    BANNED, FREE, PENDING, SUBMITTED, EXTANT, RELEASING
+    UNKNOWN, FREE, PENDING, SUBMITTED, EXTANT, RELEASING
   }
   
   public State currentState( );
   
   /**
    * Request is in-flight on the network (not just in memory) and state updates should be
-   * disregarded until the in-flight request completes (i.e., either with a {@link #allocate()} or
-   * {@link #abort()}).
+   * disregarded until the in-flight request completes.
+   * 
+   * Calling {@link Reference#set(Object)} completes the allocation, while calling
+   * {@link Reference#abort()} resets the state to that before the reference change.
    */
-  public void submit( );
-  
-  /**
-   * Resource allocation completed successfully.
-   */
-  public T allocate( );
+  public Reference<R, T> allocate( );
   
   /**
    * The procedure for gracefully releasing the resource is pending a submitted in-flight request.
    * Potential references to stale state may exist and should be disregarded until in-flight
    * requests complete.
+   * 
+   * Calling {@link Reference#set(Object)} completes releasing the allocation, while calling
+   * {@link Reference#abort()} resets the state to that before the reference change.
    */
-  public void release( );
+  public Reference<R, T> release( );
   
   /**
    * Dependent external resource state has been cleared and the resource is ready for re-use.
@@ -95,14 +103,9 @@ public interface ResourceAllocation<T> {
   public void teardown( );
   
   /**
-   * An intermediate allocation step failed and the allocation should be reset.
-   */
-  public void abort( );
-  
-  /**
    * Attempt to recover a resource allocation -- e.g., after a system restart. Constraints must be
    * enforced on valid initial state.
    */
-  public T reclaim( );
+  public T reclaim( R referer );
   
 }

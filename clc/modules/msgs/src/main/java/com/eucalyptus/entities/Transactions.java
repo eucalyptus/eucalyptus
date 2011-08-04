@@ -1,4 +1,4 @@
-package com.eucalyptus.util;
+package com.eucalyptus.entities;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
@@ -6,7 +6,13 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Logs;
+import com.eucalyptus.util.TransactionCallbackException;
+import com.eucalyptus.util.TransactionException;
+import com.eucalyptus.util.TransactionExecutionException;
+import com.eucalyptus.util.TransactionInternalException;
+import com.eucalyptus.util.Tx;
 import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;

@@ -6,8 +6,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.entities.AccessKeyEntity;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.entities.Transactions;
 import java.util.concurrent.ExecutionException;
-import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 

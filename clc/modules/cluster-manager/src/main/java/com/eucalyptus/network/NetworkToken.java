@@ -68,8 +68,8 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.component.Partition;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.Transactions;
 
 public class NetworkToken implements Comparable {
   private final Integer         vlan;

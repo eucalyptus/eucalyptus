@@ -68,8 +68,8 @@ import java.util.concurrent.ExecutionException;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.Transactions;
 import edu.ucsb.eucalyptus.msgs.NetworkInfoType;
 
 public class NetworkGroups {

@@ -13,11 +13,12 @@ import javax.persistence.TemporalType
 import javax.persistence.Transient
 import javax.persistence.Version
 import org.hibernate.annotations.GenericGenerator
-import org.hibernate.annotations.NaturalId;
+import org.hibernate.annotations.NaturalId
+import com.eucalyptus.util.HasNaturalId
 
 
 @MappedSuperclass
-public class AbstractPersistent implements Serializable {
+public class AbstractPersistent implements Serializable, HasNaturalId {
   @Transient
   private static final long serialVersionUID = 1;
   @Id
@@ -77,6 +78,7 @@ public class AbstractPersistent implements Serializable {
     }
   }
   
+  @Override
   public String getNaturalId( ) {
     return this.permanentUuid;
   }

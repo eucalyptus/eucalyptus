@@ -53,15 +53,76 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
- * @author Ye Wen <wenye@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.component;
 
-public interface ResourceOwnerLookup<T> {
-  public String getOwningAccountId( T resource );
+package com.eucalyptus.cloud.util;
+
+import javax.persistence.MappedSuperclass;
+import com.eucalyptus.cloud.UserMetadata;
+import com.eucalyptus.entities.AbstractStatefulPersistent;
+import com.eucalyptus.util.HasNaturalId;
+
+@MappedSuperclass
+public class PersistentResource<T extends PersistentResource<T,R>,R extends HasNaturalId> extends UserMetadata<ResourceAllocation.State> implements ResourceAllocation<T,R> {
+
+  /**
+   * {@inheritDoc ResourceAllocation#currentState()}
+   * 
+   * @see ResourceAllocation#currentState()
+   * @return
+   */
+  @Override
+  public final ResourceAllocation.State currentState( ) {
+    return this.getState( );
+  }
+
+  /**
+   * {@inheritDoc ResourceAlllocation#allocate()}
+   * 
+   * @see ResourceAllocation#allocate()
+   * @return
+   */
+  @Override
+  public final ResourceAllocation.Reference<R, T> allocate( ) {
+    
+    return null;
+  }
+
+  /**
+   * {@inheritDoc ResourceAlllocation#release()}
+   * 
+   * @see ResourceAllocation#release()
+   * @return
+   */
+  @Override
+  public ResourceAllocation.Reference<R, T> release( ) {
+    return null;
+  }
+
+  /**
+   * {@inheritDoc ResourceAlllocation#teardown()}
+   * 
+   * @see ResourceAllocation#teardown()
+   */
+  @Override
+  public final void teardown( ) {}
+
+  /**
+   * {@inheritDoc ResourceAlllocation#reclaim()}
+   * 
+   * @see ResourceAllocation#reclaim(com.eucalyptus.util.HasNaturalId)
+   * @param referer
+   * @return
+   */
+  @Override
+  public final T reclaim( R referer ) {
+    return null;
+  }
+  
 }

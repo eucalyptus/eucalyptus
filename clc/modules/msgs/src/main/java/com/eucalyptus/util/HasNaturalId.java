@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,11 +61,17 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component;
+package com.eucalyptus.util;
 
 /**
- * Perform the allocation of 'quantity' number of resources of type T
+ * Object has a permanent globally unique identifier unrelated to its user visible name or primary
+ * key.
  */
-public abstract interface ResourceAllocate<T> {
-  public abstract void allocate( ) throws ResourceAllocationException;
+public interface HasNaturalId {
+  /**
+   * Get the natural id.
+   * 
+   * @return
+   */
+  public abstract String getNaturalId( );
 }

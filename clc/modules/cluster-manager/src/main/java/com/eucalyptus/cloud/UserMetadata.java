@@ -80,10 +80,14 @@ import com.eucalyptus.util.OwnerFullName;
 
 @MappedSuperclass
 public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMetadata<STATE> implements HasOwningUser {
+  /**
+   * 
+   */
+  private static final long serialVersionUID = 1L;
   @Column( name = "metadata_user_id" )
-  protected String      ownerUserId;
+  protected String ownerUserId;
   @Column( name = "metadata_user_name" )
-  protected String      ownerUserName;
+  protected String ownerUserName;
   
   /**
    * GRZE:NOTE: Should only /ever/ be used by sub classes.
@@ -93,7 +97,7 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   /**
    * GRZE:NOTE: Should only /ever/ be used by sub classes.
    */
-  protected UserMetadata( OwnerFullName owner ) {
+  protected UserMetadata( final OwnerFullName owner ) {
     super( owner );
     this.setOwner( owner );
   }
@@ -101,13 +105,13 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   /**
    * GRZE:NOTE: Should only /ever/ be used by sub classes.
    */
-  protected UserMetadata( OwnerFullName owner, String displayName ) {
+  protected UserMetadata( final OwnerFullName owner, final String displayName ) {
     super( owner, displayName );
     this.setOwner( owner );
   }
   
   @Override
-  public void setOwner( OwnerFullName owner ) {
+  public void setOwner( final OwnerFullName owner ) {
     this.ownerUserId = owner != null
       ? owner.getUniqueId( )
       : null;
@@ -121,9 +125,9 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   public OwnerFullName getOwner( ) {
     OwnerFullName tempOwner = null;
     if ( this.getOwnerUserId( ) != null ) {
-      if( FakePrincipals.nobodyFullName( ).getUserId( ).equals( this.getOwnerUserId( ) ) ) {
+      if ( FakePrincipals.nobodyFullName( ).getUserId( ).equals( this.getOwnerUserId( ) ) ) {
         tempOwner = FakePrincipals.nobodyFullName( );
-      } else if( FakePrincipals.systemFullName( ).getUserId( ).equals( this.getOwnerUserId( ) ) ) {
+      } else if ( FakePrincipals.systemFullName( ).getUserId( ).equals( this.getOwnerUserId( ) ) ) {
         tempOwner = FakePrincipals.systemFullName( );
       } else {
         tempOwner = UserFullName.getInstance( this.getOwnerUserId( ) );
@@ -138,9 +142,9 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   public int hashCode( ) {
     final int prime = 31;
     int result = super.hashCode( );
-    result = prime * result + ( ( ownerUserId == null )
+    result = ( prime * result ) + ( ( this.ownerUserId == null )
       ? 0
-      : ownerUserId.hashCode( ) );
+      : this.ownerUserId.hashCode( ) );
     return result;
   }
   
@@ -149,7 +153,7 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
     return this.ownerUserId;
   }
   
-  public void setOwnerUserId( String ownerUserId ) {
+  public void setOwnerUserId( final String ownerUserId ) {
     this.ownerUserId = ownerUserId;
   }
   
@@ -158,7 +162,7 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
     return this.ownerUserName;
   }
   
-  public void setOwnerUserName( String ownerUserName ) {
+  public void setOwnerUserName( final String ownerUserName ) {
     this.ownerUserName = ownerUserName;
   }
   
@@ -167,5 +171,5 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   public void verifyComplete( ) {
     assertThat( this.ownerUserId, notNullValue( ) );
     assertThat( this.ownerUserName, notNullValue( ) );
-  }  
+  }
 }

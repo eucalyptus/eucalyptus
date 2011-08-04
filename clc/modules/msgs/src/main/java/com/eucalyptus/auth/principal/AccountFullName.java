@@ -87,6 +87,7 @@ public class AccountFullName implements OwnerFullName {
   
   protected AccountFullName( Account account, String... relativePath ) {
     Assertions.assertNotNull( account );
+    this.accountName = account.getName( );
     this.accountNumber = account.getAccountNumber( );
     this.authority = new StringBuilder( ).append( FullName.PREFIX ).append( FullName.SEP ).append( VENDOR ).append( FullName.SEP ).append( FullName.SEP ).append( this.accountNumber ).append( FullName.SEP ).toString( );
     this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( relativePath );

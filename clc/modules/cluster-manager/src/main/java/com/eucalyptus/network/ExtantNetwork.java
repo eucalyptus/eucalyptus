@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,16 +61,29 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component;
+package com.eucalyptus.network;
 
-import com.eucalyptus.BaseException;
+import java.util.HashSet;
+import java.util.Set;
+import javax.persistence.Column;
+import javax.persistence.OneToMany;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
+import com.eucalyptus.cloud.util.ResourceAllocation;
+import com.eucalyptus.entities.AbstractStatefulPersistent;
 
-public class ResourceLookupException extends BaseException {
-  public ResourceLookupException( String message, Throwable cause ) {
-    super( message, cause );
-  }
-  
-  public ResourceLookupException( String message ) {
-    super( message );
-  }
+@Entity
+@javax.persistence.Entity
+@PersistenceContext( name = "eucalyptus_cloud" )
+@Table( name = "metadata_extant_network" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation.State> {
+  @Column( name = "metadata_extant_network_tag" )
+  private Long                     tag;
+  @OneToMany( mappedBy = "parent" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Set<PrivateNetworkIndex> indexes = new HashSet<PrivateNetworkIndex>( );
 }

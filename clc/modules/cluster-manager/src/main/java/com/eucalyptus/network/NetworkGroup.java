@@ -68,11 +68,11 @@ import static org.hamcrest.Matchers.notNullValue;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
@@ -84,9 +84,9 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
-import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.cloud.CloudMetadata.NetworkSecurityGroup;
 import com.eucalyptus.cloud.UserMetadata;
+import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.FullName;
@@ -103,27 +103,25 @@ import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements NetworkSecurityGroup<NetworkGroup> {
   enum State {
     DISABLED,
-    AWAITING_PEER,
     PENDING,
+    AWAITING_PEER,
     ACTIVE
   }
   
   @Column( name = "metadata_network_group_unique_name", unique = true )
-  private String                   uniqueName;                                                 //bogus field to enforce uniqueness
-  
+  private String           uniqueName;                                    //bogus field to enforce uniqueness
+                                                                           
   @Column( name = "metadata_network_group_description" )
-  private String                   description;
+  private String           description;
   
   @OneToMany( cascade = { CascadeType.ALL } )
   @Fetch( FetchMode.JOIN )
   @JoinTable( name = "metadata_network_group_has_rules", joinColumns = { @JoinColumn( name = "id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_rule_id" ) } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<NetworkRule>         networkRules         = new HashSet<NetworkRule>( );
-
-//  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "user" )
-//  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-//  private Set<PrivateNetworkIndex> indexes              = new HashSet<PrivateNetworkIndex>( );
+  private Set<NetworkRule> networkRules     = new HashSet<NetworkRule>( );
   
+  @ManyToMany( cascade = { CascadeType.PERSIST, CascadeType.MERGE }, mappedBy = "networkGroups" )
+  private Set<VmInstance>  runningInstances = new HashSet<VmInstance>( );
   
   NetworkGroup( ) {}
   

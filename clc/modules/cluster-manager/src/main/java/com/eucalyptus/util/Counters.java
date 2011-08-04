@@ -78,8 +78,8 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 
 @Entity @javax.persistence.Entity
