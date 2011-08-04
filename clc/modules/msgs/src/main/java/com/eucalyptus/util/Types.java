@@ -104,7 +104,7 @@ public class Types {
     Context ctx = Contexts.lookup( );
     Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
     LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + lookupFunction + " typed as " + Classes.genericsToClasses( lookupFunction ) );
-    List<Class> lookupTypes = Classes.genericsToClasses( lookupFunction );
+    List<Class<?>> lookupTypes = Classes.genericsToClasses( lookupFunction );
     if ( lookupTypes.isEmpty( ) ) {
       throw new IllegalArgumentException( "Failed to find required generic type for lookup " + lookupFunction.getClass( )
                                           + " so the policy type for looking up " + identifier + " cannot be determined." );
