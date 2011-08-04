@@ -71,6 +71,7 @@ import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
+import org.hibernate.annotations.NaturalId;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
@@ -102,7 +103,8 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   private static Logger LOG = Logger.getLogger( ComponentConfiguration.class );
   @Column( name = "config_component_partition", nullable = false )
   private String  partition;
-  @Column( name = "config_component_name", unique = true, nullable = false )
+  @NaturalId
+  @Column( name = "config_component_name", nullable = false )
   private String  name;
   @Column( name = "config_component_hostname", nullable = false )
   private String  hostName;
@@ -111,11 +113,11 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   @Column( name = "config_component_service_path" )
   private String  servicePath;
   
-  public ComponentConfiguration( ) {
+  protected ComponentConfiguration( ) {
 
   }
   
-  public ComponentConfiguration( String partition, String name, String hostName, String servicePath ) {
+  protected ComponentConfiguration( String partition, String name, String hostName, String servicePath ) {
     super( );
     this.partition = partition;
     this.name = name;
@@ -123,7 +125,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     this.servicePath = servicePath;
   }
   
-  public ComponentConfiguration( String partition, String name, String hostName, Integer port, String servicePath ) {
+  protected ComponentConfiguration( String partition, String name, String hostName, Integer port, String servicePath ) {
     this.partition = partition;
     this.name = name;
     this.hostName = hostName;
