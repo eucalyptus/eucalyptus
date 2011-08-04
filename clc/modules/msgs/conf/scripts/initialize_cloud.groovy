@@ -5,10 +5,10 @@ import com.eucalyptus.bootstrap.Bootstrap
 import com.eucalyptus.bootstrap.BootstrapArgs
 import com.eucalyptus.bootstrap.Databases
 import com.eucalyptus.bootstrap.ServiceJarDiscovery
-import com.eucalyptus.bootstrap.SystemIds
 import com.eucalyptus.component.Component
 import com.eucalyptus.component.ComponentDiscovery
 import com.eucalyptus.component.Components
+import com.eucalyptus.component.ServiceBuilder
 import com.eucalyptus.component.ServiceBuilders
 import com.eucalyptus.component.ServiceConfiguration
 import com.eucalyptus.component.ServiceBuilders.ServiceBuilderDiscovery
@@ -71,7 +71,8 @@ try {
       PersistenceContexts.registerPersistenceContext( ctx, config );
     }
     if( BootstrapArgs.isInitializeSystem( ) ) {
-      final ServiceConfiguration newComponent = ServiceBuilders.lookup( Eucalyptus.class ).add( Eucalyptus.INSTANCE.name( ), Internets.localHostAddress( ), Internets.localHostAddress( ), 8773 );
+      ServiceBuilder sb = ServiceBuilders.lookup( Eucalyptus.class );
+      final ServiceConfiguration newComponent = sb.add( Eucalyptus.INSTANCE.name( ), Internets.localHostAddress( ), Internets.localHostAddress( ), 8773 );
       LOG.info( "Added registration for this cloud controller: " + newComponent.toString() );
     }
     Databases.getBootstrapper( ).destroy( );
