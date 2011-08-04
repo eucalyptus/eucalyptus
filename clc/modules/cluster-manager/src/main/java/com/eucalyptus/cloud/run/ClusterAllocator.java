@@ -220,7 +220,7 @@ public class ClusterAllocator extends Thread {
     if ( token.getPrimaryNetwork( ) != null ) {
       vlan = token.getPrimaryNetwork( ).getVlan( );
       if ( vlan < 0 ) vlan = 9;//FIXME: general vlan, should be min-1?
-      networkNames = Lists.newArrayList( token.getPrimaryNetwork( ).getRuleGroup( ).getPermanentUuid( ) );
+      networkNames = Lists.newArrayList( token.getPrimaryNetwork( ).getRuleGroup( ).getNaturalId( ) );
       for ( Integer index : token.getPrimaryNetwork( ).getIndexes( ) ) {
         networkIndexes.add( index.toString( ) );
       }

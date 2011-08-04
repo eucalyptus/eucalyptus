@@ -100,8 +100,8 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
           for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
             if( VmState.RUNNING.ordinal( ) < vm.getState( ).ordinal( ) ) continue;
             for ( NetworkGroup ruleGroup : vm.getNetworkRulesGroups( ) ) {
-              networks.put( ruleGroup.getPermanentUuid( ), vm.getPrivateAddress( ) );
-              if ( !rules.containsKey( ruleGroup.getPermanentUuid( ) ) ) {
+              networks.put( ruleGroup.getNaturalId( ), vm.getPrivateAddress( ) );
+              if ( !rules.containsKey( ruleGroup.getNaturalId( ) ) ) {
                 for ( NetworkRule netRule : ruleGroup.getNetworkRules( ) ) {
                   String rule = String.format( "-P %s -%s %d%s%d ", netRule.getProtocol( ), ( "icmp".equals( netRule.getProtocol( ) )
                     ? "t"

@@ -80,7 +80,7 @@ public class StopNetworkCallback extends BroadcastCallback<StopNetworkType, Stop
   
   public StopNetworkCallback( final NetworkToken networkToken ) {
     this.token = networkToken;
-    StopNetworkType msg = new StopNetworkType( this.token.getRuleGroup( ).getOwnerUserId( ), this.token.getRuleGroup( ).getPermanentUuid( ),
+    StopNetworkType msg = new StopNetworkType( this.token.getRuleGroup( ).getOwnerUserId( ), this.token.getRuleGroup( ).getNaturalId( ),
                                                this.token.getVlan( ) ).regarding( );
     msg.setUserId( this.token.getRuleGroup( ).getOwnerUserId( ) );
     this.setRequest( msg );

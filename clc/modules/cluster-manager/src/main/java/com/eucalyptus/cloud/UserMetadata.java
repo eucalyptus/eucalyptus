@@ -71,6 +71,7 @@ import javax.persistence.MappedSuperclass;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Transient;
+import org.hibernate.annotations.NaturalId;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.UserFullName;
@@ -83,8 +84,6 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   protected String      ownerUserId;
   @Column( name = "metadata_user_name" )
   protected String      ownerUserName;
-  @Column( name = "metadata_perm_uuid", unique = true, updatable = false, nullable = false )
-  private String        permanentUuid;
   
   /**
    * GRZE:NOTE: Should only /ever/ be used by sub classes.
@@ -168,13 +167,5 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   public void verifyComplete( ) {
     assertThat( this.ownerUserId, notNullValue( ) );
     assertThat( this.ownerUserName, notNullValue( ) );
-    if ( this.permanentUuid == null ) {
-      this.permanentUuid = UUID.randomUUID( ).toString( );
-    }
-  }
-  
-  public String getPermanentUuid( ) {
-    return this.permanentUuid;
-  }
-  
+  }  
 }

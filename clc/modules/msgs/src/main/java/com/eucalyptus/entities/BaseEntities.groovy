@@ -13,6 +13,7 @@ import javax.persistence.TemporalType
 import javax.persistence.Transient
 import javax.persistence.Version
 import org.hibernate.annotations.GenericGenerator
+import org.hibernate.annotations.NaturalId;
 
 
 @MappedSuperclass
@@ -33,6 +34,9 @@ public class AbstractPersistent implements Serializable {
   @Temporal(TemporalType.TIMESTAMP)
   @Column(name = "last_update_timestamp")
   Date lastUpdateTimestamp;
+  @NaturalId
+  @Column( name = "metadata_perm_uuid", unique = true, updatable = false, nullable = false )
+  private String   permanentUuid;
   
   public AbstractPersistent( ) {
     super( );
@@ -52,10 +56,13 @@ public class AbstractPersistent implements Serializable {
     if ( obj == null ) return false;
     if ( !getClass( ).is( obj.getClass( ) ) ) return false;
     AbstractPersistent other = ( AbstractPersistent ) obj;
-    if ( id == null ) {
-      if ( other.id != null ) return false;
-    } else if ( !id.equals( other.id ) ) return false;
-    return true;
+    if ( this.permanentUuid == null ) {
+      return other.permanentUuid != null;
+    } else if ( !permanentUuid.equals( other.permanentUuid ) ) {
+      return false;
+    } else {
+      return true;
+    }
   }
   
   @PreUpdate
@@ -65,6 +72,13 @@ public class AbstractPersistent implements Serializable {
     if ( creationTimestamp == null ) {
       this.creationTimestamp = new Date();
     }
+    if ( this.permanentUuid == null ) {
+      this.permanentUuid = UUID.randomUUID( ).toString( );
+    }
+  }
+  
+  public String getNaturalId( ) {
+    return this.permanentUuid;
   }
   
   /**
