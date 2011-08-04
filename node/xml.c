@@ -344,6 +344,36 @@ static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * 
         return err;
 }
 
+int gen_libvirt_attach_xml (const ncInstance *instance, const char * localDevReal, const char * remoteDev, int use_virtio_disk, char * xml, unsigned int xml_size)
+{
+    int virtio_dev = 0;
+    
+	if (strncmp (instance->hypervisorType, "kvm", 3) == 0) { 
+	    if (strncmp(instance->platform, "windows", 7) == 0) {
+            // always use virtio for windows instances
+	        virtio_dev = 1; 
+
+        } else if (localDevReal[5] == 'v' && localDevReal[6] == 'd' && use_virtio_disk) {
+            // only attach using virtio when the device is /dev/vdXX
+            virtio_dev = 1;
+        }
+	}
+    
+    snprintf (xml, xml_size, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'%s/></disk>", 
+              remoteDev, 
+              localDevReal,
+              virtio_dev ? " bus='virtio'" : "");
+    
+    struct stat statbuf;
+    int rc = 0;
+    rc = stat (remoteDev, &statbuf);
+    if (rc) {
+        logprintfl(EUCAERROR, "AttachVolume(): cannot locate local block device file '%s'\n", remoteDev);
+        rc = 1;
+    }
+    return rc;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 // code for unit-testing below, to be compiled into a stand-alone binary
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
