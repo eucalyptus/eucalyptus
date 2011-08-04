@@ -785,7 +785,6 @@ doDetachVolume (	struct nc_state_t *nc,
             logprintfl(EUCAERROR, "DetachVolume(): failed to get local name of host iscsi device\n");
             remoteDevReal[0] = '\0';
         } else { 
-            logprintfl(EUCADEBUG, "DetachVolume(): success in getting local name of host device '%s'\n", remoteDevStr);
             snprintf(remoteDevReal, 32, "%s", remoteDevStr);
             have_remote_device = 1;
         }

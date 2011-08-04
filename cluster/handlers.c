@@ -1792,6 +1792,7 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   }
 
   memcpy(dst->volumes, src->volumes, sizeof(ncVolume) * EUCA_MAX_VOLUMES);
+  dst->volumesSize = 0;
   for (i=0; i < EUCA_MAX_VOLUMES; i++) {
           if (strlen (dst->volumes[i].volumeId) == 0)
                   break;
