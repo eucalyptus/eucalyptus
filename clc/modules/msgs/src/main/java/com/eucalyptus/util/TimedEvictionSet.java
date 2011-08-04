@@ -115,14 +115,6 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
     	}
     	// a replay attack
     	return false;
-      // NOTES: contains() will only be true if they arrive at exactly the same time
-
-	    /*    TimestampedElement elem = new TimestampedElement( e );
-      if( this.timestamps.contains( elem ) && TimeUnit.SECONDS.convert( System.nanoTime( ) - elem.getTimestamp( ), TimeUnit.NANOSECONDS ) < StackConfiguration.REPLAY_SKEW_WINDOW_SEC ) {
-        return true;
-      } else {
-        return false;
-      }*/
     }
   }
   
