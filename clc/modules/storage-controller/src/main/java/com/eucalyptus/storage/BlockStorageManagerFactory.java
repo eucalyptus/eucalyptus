@@ -69,7 +69,7 @@ import org.apache.log4j.Logger;
 
 public class BlockStorageManagerFactory {
 	private static Logger LOG = Logger.getLogger(BlockStorageManagerFactory.class);
-	public static LogicalStorageManager getBlockStorageManager() {
+	public static LogicalStorageManager getBlockStorageManager() throws Exception {
 		String ebsManager = "OverlayManager";
 		if(System.getProperty("euca.disable.san") == null) {
 			if(System.getProperty("ebs.storage.manager") != null) {
@@ -79,13 +79,9 @@ public class BlockStorageManagerFactory {
 		try {
 			ebsManager = "com.eucalyptus.storage." + ebsManager;
 			return (LogicalStorageManager) ClassLoader.getSystemClassLoader().loadClass(ebsManager).newInstance();
-		} catch (InstantiationException e) {
-			LOG.error(e, e); 
-		} catch (IllegalAccessException e) {
-			LOG.error(e, e); 
 		} catch (ClassNotFoundException e) {
-			LOG.error(e, e); 
+			LOG.error("No such backend. Did you spell it correctly? " + e);
+			throw e;
 		}
-		return null;
 	}
 }

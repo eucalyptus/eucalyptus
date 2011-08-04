@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import javax.security.auth.Subject;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
@@ -22,16 +23,15 @@ public class SecurityContext extends Configuration {
   private static Logger LOG = Logger.getLogger( SecurityContext.class );
   // Note: According WS-Security spec, WS-Security requests need 
   // to be cached for at least 5 min for timestamps to expire
-  // Since a typical timestamp duration is 5 mins, caching for
-  // 6 mins (or more?) gives some buffer for clock drifts 
-  private static TimedEvictionSet<String> replayQueue = new TimedEvictionSet<String>(6 * 60 * 1000l);
+  // For AWS query interface, default expiration time is 15 mins
+  private static TimedEvictionSet<String> replayQueue = new TimedEvictionSet<String>(TimeUnit.MILLISECONDS.convert(15, TimeUnit.MINUTES));
   private List<String> loginModules = Lists.newArrayList( );
   private SecurityContext( ) {}
   
   public static void enqueueSignature( String signature ) throws AuthenticationException {
     if( !SecurityContext.replayQueue.add( signature ) ) {
     	LOG.info("Replay detected for " + signature);
-    	throw new AuthenticationException( "Message replay detected.  Same signature was used within the last 5 minutes");
+    	throw new AuthenticationException( "Message replay detected.  Same signature was used within the last 15 minutes");
     }
   }
   

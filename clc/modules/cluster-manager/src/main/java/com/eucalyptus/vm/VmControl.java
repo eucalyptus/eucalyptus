@@ -316,7 +316,7 @@ public class VmControl {
       } catch ( NoSuchElementException ex ) {
         try {
           vm = Transactions.find( VmInstance.named( ctx.getUserFullName( ), instanceId ) );
-        } catch ( ExecutionException ex1 ) {
+        } catch ( Throwable ex1 ) {
           throw new EucalyptusCloudException( "Failed to locate instance information for instance id: " + instanceId );
         }
         final VmInstance v = vm;

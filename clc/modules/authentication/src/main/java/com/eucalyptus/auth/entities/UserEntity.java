@@ -85,6 +85,7 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   
   // List of certificates
   @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "user" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   List<CertificateEntity> certificates;
   
   // Customizable user info in key-value pairs
@@ -92,6 +93,7 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   @CollectionTable( name = "auth_user_info_map" )
   @MapKeyColumn( name = "auth_user_info_key" )
   @Column( name = "auth_user_info_value" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   Map<String, String> info;
   
   // User's groups
