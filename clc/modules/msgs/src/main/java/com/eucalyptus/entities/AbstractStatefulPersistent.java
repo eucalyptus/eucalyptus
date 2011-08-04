@@ -67,14 +67,12 @@ import javax.persistence.Column;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.MappedSuperclass;
-import org.hibernate.annotations.NaturalId;
 
 @MappedSuperclass
 public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> extends AbstractPersistent {
   @Column( name = "metadata_state" )
   @Enumerated( EnumType.STRING )
   STATE            state;
-  @NaturalId
   @Column( name = "metadata_display_name" )
   protected String displayName;
   
