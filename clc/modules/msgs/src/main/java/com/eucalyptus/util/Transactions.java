@@ -11,11 +11,27 @@ import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
 
 public class Transactions {
   private static Logger                        LOG  = Logger.getLogger( Transactions.class );
   private static ThreadLocal<EntityWrapper<?>> dbtl = new ThreadLocal<EntityWrapper<?>>( );
+  
+  private static TransactionException transformException( Throwable t ) {
+    Logs.extreme( ).error( t, t );
+    if ( t instanceof InterruptedException ) {
+      Thread.currentThread( ).interrupt( );
+      return new TransactionExecutionException( t.getCause( ).getMessage( ), t.getCause( ) );
+    } else if ( t instanceof EucalyptusCloudException ) {
+      return new TransactionExecutionException( t.getCause( ).getMessage( ), t.getCause( ) );
+    } else if ( t instanceof UndeclaredThrowableException ) {
+      return new TransactionCallbackException( t.getCause( ).getMessage( ), t.getCause( ) );
+    } else {
+      return new TransactionInternalException( t.getMessage( ), t );
+    }
+    
+  }
   
 //  
 //  public static <T> EntityWrapper<T> join( ) {
@@ -44,8 +60,68 @@ public class Transactions {
     return db;
   }
   
+  @Deprecated
+  public static <T> T one( T search, final Tx<T> c ) throws TransactionException {
+    return one( search, new Callback<T>( ) {
+      
+      @Override
+      public void fire( T t ) {
+        try {
+          c.fire( t );
+        } catch ( Throwable ex ) {
+          throw new UndeclaredThrowableException( ex );
+        }
+      }
+    } );
+  }
+  
+  public static <T> T find( T search ) throws TransactionException {
+    return one( search, new Callback<T>( ) {
+      
+      @Override
+      public void fire( T t ) {}
+    } );
+  }
+  
+  public static <T> List<T> findAll( T search ) throws TransactionException {
+    return each( search, new Callback<T>( ) {
+      
+      @Override
+      public void fire( T t ) {}
+    } );
+  }
+  
+  public static <T> boolean delete( T search ) throws TransactionException {
+    return delete( search, new Predicate<T>( ) {
+      
+      @Override
+      public boolean apply( T input ) {
+        return false;
+      }
+    } );
+  }
+  
+  public static <T> T save( T saveMe ) throws TransactionException {
+    return save( saveMe, new Callback<T>( ) {
+      
+      @Override
+      public void fire( T t ) {}
+    } );
+  }
+  
+  public static <T> List<T> filter( T search, Predicate<T> condition ) throws TransactionException {
+    Function<T, T> f = Functions.identity( );
+    return filteredTransform( search, condition, f );
+  }
+  
+  public static <S, T> List<S> transform( T search, Function<T, S> f ) throws TransactionException {
+    Predicate<T> p = Predicates.alwaysTrue( );
+    return filteredTransform( search, p, f );
+  }
+  
   public static <T> List<T> each( T search, Callback<T> c ) {
     assertThat( search, notNullValue( ) );
+    assertThat( c, notNullValue( ) );
     EntityWrapper<T> db = Transactions.joinOrCreate( search );
     try {
       List<T> res = db.query( search );
@@ -66,54 +142,13 @@ public class Transactions {
     return Lists.newArrayList( );
   }
   
-  @Deprecated
-  public static <T> T one( T search, final Tx<T> c ) throws ExecutionException {
-    return one( search, new Callback<T>( ) {
-      
-      @Override
-      public void fire( T t ) {
-        try {
-          c.fire( t );
-        } catch ( Throwable ex ) {
-          throw new UndeclaredThrowableException( ex );
-        }
-      }
-    } );
-  }
-  
-  public static <T> T find( T search ) throws ExecutionException {
-    return one( search, new Callback<T>( ) {
-      
-      @Override
-      public void fire( T t ) {}
-    } );
-  }
-  
-  public static <T> List<T> findAll( T search ) throws ExecutionException {
-    return each( search, new Callback<T>( ) {
-      
-      @Override
-      public void fire( T t ) {}
-    } );
-  }
-  
-  public static <T> boolean delete( T search ) throws ExecutionException {
-    return delete( search, new Predicate<T>( ) {
-      
-      @Override
-      public boolean apply( T input ) {
-        return false;
-      }
-    } );
-  }
-  
-  public static <T> boolean delete( T search, Predicate<T> c ) throws ExecutionException {
+  public static <T> boolean delete( T search, Predicate<T> precondition ) throws TransactionException {
     assertThat( search, notNullValue( ) );
+    assertThat( precondition, notNullValue( ) );
     EntityWrapper<T> db = Transactions.joinOrCreate( search );
     try {
       T entity = db.getUnique( search );
-      boolean r = false;
-      if ( r = c.apply( entity ) ) {
+      if ( precondition.apply( entity ) ) {
         db.delete( entity );
         db.commit( );
         return true;
@@ -121,108 +156,66 @@ public class Transactions {
         db.commit( );
         return false;
       }
-    } catch ( UndeclaredThrowableException e ) {
+    } catch ( Throwable t ) {
       db.rollback( );
-      throw new TransactionException( e.getCause( ).getMessage( ), e.getCause( ) );
-    } catch ( Throwable e ) {
-      db.rollback( );
-      LOG.error( e, e );
-      throw new TransactionFireException( e.getMessage( ), e );
+      throw Transactions.transformException( t );
     } finally {
       dbtl.remove( );
     }
   }
   
-  public static <T> T one( T search, Callback<T> c ) throws ExecutionException {
+  public static <T> T one( T search, Callback<T> c ) throws TransactionException {
     assertThat( search, notNullValue( ) );
+    assertThat( c, notNullValue( ) );
     EntityWrapper<T> db = Transactions.joinOrCreate( search );
     try {
       T entity = db.getUnique( search );
       c.fire( entity );
       db.commit( );
       return entity;
-    } catch ( UndeclaredThrowableException e ) {
+    } catch ( Throwable t ) {
       db.rollback( );
-      throw new TransactionException( e.getCause( ).getMessage( ), e.getCause( ) );
-    } catch ( Throwable e ) {
-      db.rollback( );
-      LOG.error( e, e );
-      throw new TransactionFireException( e.getMessage( ), e );
+      throw Transactions.transformException( t );
     } finally {
       dbtl.remove( );
     }
   }
   
-  public static <S, T> S oneTransform( T search, Function<T, S> c ) throws ExecutionException {
+  public static <S, T> S transformOne( T search, Function<T, S> f ) throws TransactionException {
     assertThat( search, notNullValue( ) );
+    assertThat( f, notNullValue( ) );
     EntityWrapper<T> db = Transactions.joinOrCreate( search );
     try {
       T entity = db.getUnique( search );
-      S res = c.apply( entity );
+      S res = f.apply( entity );
       db.commit( );
       return res;
-    } catch ( UndeclaredThrowableException e ) {
+    } catch ( Throwable t ) {
       db.rollback( );
-      throw new TransactionException( e.getCause( ).getMessage( ), e.getCause( ) );
-    } catch ( Throwable e ) {
-      db.rollback( );
-      LOG.error( e, e );
-      throw new TransactionFireException( e.getMessage( ), e );
+      throw Transactions.transformException( t );
     } finally {
       dbtl.remove( );
     }
   }
   
-  public static <S, T> S transform( T search, Function<T, S> c ) throws ExecutionException {//TODO:GRZE:adjust these to use callbacks
-    assertThat( search, notNullValue( ) );
-    EntityWrapper<T> db = Transactions.joinOrCreate( search );
-    try {
-      T entity = db.getUnique( search );
-      S res = c.apply( entity );
-      db.commit( );
-      return res;
-    } catch ( UndeclaredThrowableException e ) {
-      db.rollback( );
-      throw new TransactionException( e.getCause( ).getMessage( ), e.getCause( ) );
-    } catch ( Throwable e ) {
-      db.rollback( );
-      LOG.error( e, e );
-      throw new TransactionFireException( e.getMessage( ), e );
-    } finally {
-      dbtl.remove( );
-    }
-  }
-  
-  public static <T> T save( T saveMe ) throws ExecutionException {
-    return save( saveMe, null );
-  }
-  
-  public static <T> T save( T saveMe, Callback<T> c ) throws ExecutionException {
+  public static <T> T save( T saveMe, Callback<T> c ) throws TransactionException {
+    assertThat( saveMe, notNullValue( ) );
+    assertThat( c, notNullValue( ) );
     EntityWrapper<T> db = Transactions.joinOrCreate( saveMe );
     try {
       T entity = db.merge( saveMe );
-      if ( c != null ) {
-        c.fire( entity );
-      }
+      c.fire( entity );
       db.commit( );
       return entity;
-    } catch ( UndeclaredThrowableException e ) {
+    } catch ( Throwable t ) {
       db.rollback( );
-      throw new TransactionException( e.getCause( ).getMessage( ), e.getCause( ) );
-    } catch ( Throwable e ) {
-      db.rollback( );
-      LOG.error( e, e );
-      throw new TransactionFireException( e.getMessage( ), e );
+      throw Transactions.transformException( t );
     } finally {
       dbtl.remove( );
     }
   }
   
-  public static <T> List<T> filter( T search, Predicate<T> condition ) {
-    return filteredTransform( search, condition, ( Function<T, T> ) Functions.identity( ) );
-  }
-  
-  public static <T, O> List<O> filteredTransform( T search, Predicate<T> condition, Function<T, O> transform ) {
+  private static <T, O> List<O> filteredTransform( T search, Predicate<T> condition, Function<T, O> transform ) throws TransactionException {
     assertThat( search, notNullValue( ) );
     assertThat( condition, notNullValue( ) );
     assertThat( transform, notNullValue( ) );
@@ -238,7 +231,7 @@ public class Transactions {
       db.commit( );
     } catch ( Throwable e ) {
       db.rollback( );
-      LOG.error( e, e );
+      throw Transactions.transformException( e );
     } finally {
       dbtl.remove( );
     }

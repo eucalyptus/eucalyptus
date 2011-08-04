@@ -12,11 +12,14 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.TransactionException;
 import edu.ucsb.eucalyptus.msgs.CreateKeyPairResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateKeyPairType;
 import edu.ucsb.eucalyptus.msgs.DeleteKeyPairResponseType;
@@ -66,7 +69,7 @@ public class KeyPairManager {
     return reply;
   }
   
-  public CreateKeyPairResponseType create( CreateKeyPairType request ) throws EucalyptusCloudException {
+  public CreateKeyPairResponseType create( CreateKeyPairType request ) throws EucalyptusCloudException, TransactionException, MetadataException {
     CreateKeyPairResponseType reply = request.getReply( );
     Context ctx = Contexts.lookup( );
     String action = PolicySpec.requestToAction( request );
@@ -78,25 +81,20 @@ public class KeyPairManager {
         throw new EucalyptusCloudException( "Quota exceeded while trying to create keypair by " + ctx.getUser( ) );
       }
     }
+    PrivateKey pk = KeyPairs.create( ctx.getUserFullName( ), request.getKeyName( ) );
+    reply.setKeyFingerprint( Certs.getFingerPrint( pk ) );
+    ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
+    PEMWriter privOut = new PEMWriter( new OutputStreamWriter( byteOut ) );
     try {
-      KeyPairs.lookup( ctx.getUserFullName( ), request.getKeyName( ) );
-    } catch ( Exception e1 ) {
-      PrivateKey pk = KeyPairUtil.createUserKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
-      reply.setKeyFingerprint( Certs.getFingerPrint( pk ) );
-      ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
-      PEMWriter privOut = new PEMWriter( new OutputStreamWriter( byteOut ) );
-      try {
-        privOut.writeObject( pk );
-        privOut.close( );
-      } catch ( IOException e ) {
-        LOG.error( e );
-        throw new EucalyptusCloudException( e );
-      }
-      reply.setKeyName( request.getKeyName( ) );
-      reply.setKeyMaterial( byteOut.toString( ) );
-      return reply;
+      privOut.writeObject( pk );
+      privOut.close( );
+    } catch ( IOException e ) {
+      LOG.error( e );
+      throw new EucalyptusCloudException( e );
     }
-    throw new EucalyptusCloudException( "Creation failed.  Keypair already exists: " + request.getKeyName( ) );
+    reply.setKeyName( request.getKeyName( ) );
+    reply.setKeyMaterial( byteOut.toString( ) );
+    return reply;
   }
   
   public ImportKeyPairResponseType importKeyPair( ImportKeyPairType request ) throws AuthException {

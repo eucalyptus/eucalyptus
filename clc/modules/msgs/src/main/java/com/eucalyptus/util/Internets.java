@@ -130,9 +130,11 @@ public class Internets {
         laddr = InetAddresses.forString( parts[0] );
       }
     } catch ( ScriptExecutionFailedException ex ) {
-      LOG.error( ex, ex );
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
     } catch ( Exception ex ) {
-      LOG.error( ex, ex );
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
     }
     return laddr;
   }

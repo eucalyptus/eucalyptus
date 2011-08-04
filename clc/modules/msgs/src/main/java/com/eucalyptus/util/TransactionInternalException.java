@@ -61,24 +61,24 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cloud.util;
+package com.eucalyptus.util;
 
-public abstract class MetadataException extends Exception {
+public class TransactionInternalException extends TransactionException {
 
-  public MetadataException( ) {
+  public TransactionInternalException( ) {
     super( );
   }
 
-  public MetadataException( String message, Throwable cause ) {
-    super( message, cause );
+  public TransactionInternalException( String message, Throwable ex ) {
+    super( message, ex );
   }
 
-  public MetadataException( String message ) {
+  public TransactionInternalException( String message ) {
     super( message );
   }
 
-  public MetadataException( Throwable cause ) {
-    super( cause );
+  public TransactionInternalException( Throwable ex ) {
+    super( ex );
   }
 
 }

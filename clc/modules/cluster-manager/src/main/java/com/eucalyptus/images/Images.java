@@ -18,7 +18,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.TransactionFireException;
+import com.eucalyptus.util.TransactionExecutionException;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.TypeMapping;
@@ -400,7 +400,7 @@ public class Images {
       }
       
       return ret;
-    } catch ( TransactionFireException ex ) {
+    } catch ( TransactionExecutionException ex ) {
       throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice + " because of: " + ex.getMessage( ) );
     } catch ( ExecutionException ex ) {
       LOG.error( ex, ex );

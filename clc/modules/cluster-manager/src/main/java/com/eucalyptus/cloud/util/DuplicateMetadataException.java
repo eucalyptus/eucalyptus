@@ -63,21 +63,21 @@
 
 package com.eucalyptus.cloud.util;
 
-public abstract class MetadataException extends Exception {
+public class DuplicateMetadataException extends MetadataException {
 
-  public MetadataException( ) {
+  public DuplicateMetadataException( ) {
     super( );
   }
 
-  public MetadataException( String message, Throwable cause ) {
+  public DuplicateMetadataException( String message, Throwable cause ) {
     super( message, cause );
   }
 
-  public MetadataException( String message ) {
+  public DuplicateMetadataException( String message ) {
     super( message );
   }
 
-  public MetadataException( Throwable cause ) {
+  public DuplicateMetadataException( Throwable cause ) {
     super( cause );
   }
 

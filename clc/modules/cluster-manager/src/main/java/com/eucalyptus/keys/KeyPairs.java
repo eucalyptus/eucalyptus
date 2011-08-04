@@ -63,13 +63,29 @@
 
 package com.eucalyptus.keys;
 
+import java.math.BigInteger;
+import java.security.KeyPair;
+import java.security.PrivateKey;
+import java.security.interfaces.RSAPublicKey;
+import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
+import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.util.DuplicateMetadataException;
+import com.eucalyptus.cloud.util.MetadataCreationException;
+import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.crypto.Certs;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Transactions;
 
 public class KeyPairs {
+  private static Logger     LOG         = Logger.getLogger( KeyPairs.class );
   private static SshKeyPair NO_KEY      = new SshKeyPair( FakePrincipals.nobodyFullName( ), "", "", "" );
   public static String      NO_KEY_NAME = "";
   
@@ -84,6 +100,7 @@ public class KeyPairs {
       throw new NoSuchMetadataException( "Failed to find key pair: " + keyName + " for " + ownerFullName, e );
     }
   }
+  
   public static SshKeyPair fromPublicKey( OwnerFullName ownerFullName, String keyValue ) throws NoSuchMetadataException {
     try {
       return Transactions.find( new SshKeyPair( ownerFullName, keyValue ) );
@@ -91,5 +108,48 @@ public class KeyPairs {
       throw new NoSuchMetadataException( "Failed to find key pair with public key: " + keyValue + " for " + ownerFullName, e );
     }
     
+  }
+  
+  public static PrivateKey create( UserFullName userName, String keyName ) throws MetadataException, TransactionException {
+    SshKeyPair newKey = new SshKeyPair( userName, keyName );
+    KeyPair newKeys = null;
+    try {
+      newKeys = Certs.generateKeyPair( );
+      String authKeyString = KeyPairs.getAuthKeyString( userName, newKeys );
+      newKey.setPublicKey( authKeyString );
+      newKey.setFingerPrint( Certs.getFingerPrint( newKeys.getPrivate( ) ) );
+    } catch ( Exception e ) {
+      throw new MetadataCreationException( "KeyPair generation error: Key pair creation failed.", e );
+    }
+    try {
+      Transactions.save( newKey );
+    } catch ( ConstraintViolationException ex ) {
+      throw new DuplicateMetadataException( "Keypair already exists: " + keyName + ": " + ex.getMessage( ), ex );
+    }
+    return newKeys.getPrivate( );
+  }
+  
+  private static String getAuthKeyString( UserFullName userName, KeyPair newKeys ) {
+    RSAPublicKey publicKey = ( RSAPublicKey ) newKeys.getPublic( );
+    byte[] keyType = "ssh-rsa".getBytes( );
+    byte[] expBlob = publicKey.getPublicExponent( ).toByteArray( );
+    byte[] modBlob = publicKey.getModulus( ).toByteArray( );
+    byte[] authKeyBlob = new byte[3 * 4 + keyType.length + expBlob.length + modBlob.length];
+    
+    byte[] lenArray = null;
+    lenArray = BigInteger.valueOf( keyType.length ).toByteArray( );
+    System.arraycopy( lenArray, 0, authKeyBlob, 4 - lenArray.length, lenArray.length );
+    System.arraycopy( keyType, 0, authKeyBlob, 4, keyType.length );
+    
+    lenArray = BigInteger.valueOf( expBlob.length ).toByteArray( );
+    System.arraycopy( lenArray, 0, authKeyBlob, 4 + keyType.length + 4 - lenArray.length, lenArray.length );
+    System.arraycopy( expBlob, 0, authKeyBlob, 4 + ( 4 + keyType.length ), expBlob.length );
+    
+    lenArray = BigInteger.valueOf( modBlob.length ).toByteArray( );
+    System.arraycopy( lenArray, 0, authKeyBlob, 4 + expBlob.length + 4 + keyType.length + 4 - lenArray.length, lenArray.length );
+    System.arraycopy( modBlob, 0, authKeyBlob, 4 + ( 4 + expBlob.length + ( 4 + keyType.length ) ), modBlob.length );
+    
+    String authKeyString = String.format( "%s %s %s@eucalyptus", new String( keyType ), new String( Base64.encode( authKeyBlob ) ), userName.toString( ) );
+    return authKeyString;
   }
 }

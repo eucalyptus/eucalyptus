@@ -2,21 +2,21 @@ package com.eucalyptus.util;
 
 import java.util.concurrent.ExecutionException;
 
-public class TransactionException extends ExecutionException {
+public abstract class TransactionException extends ExecutionException {
 
-  public TransactionException( ) {
+  protected TransactionException( ) {
     super( );
   }
 
-  public TransactionException( String message, Throwable ex ) {
+  protected TransactionException( String message, Throwable ex ) {
     super( message, ex );
   }
 
-  public TransactionException( String message ) {
+  protected TransactionException( String message ) {
     super( message );
   }
 
-  public TransactionException( Throwable ex ) {
+  protected TransactionException( Throwable ex ) {
     super( ex );
   }
 

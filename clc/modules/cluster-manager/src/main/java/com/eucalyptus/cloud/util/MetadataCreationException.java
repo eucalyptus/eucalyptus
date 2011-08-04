@@ -63,21 +63,21 @@
 
 package com.eucalyptus.cloud.util;
 
-public abstract class MetadataException extends Exception {
+public class MetadataCreationException extends MetadataException {
 
-  public MetadataException( ) {
+  public MetadataCreationException( ) {
     super( );
   }
 
-  public MetadataException( String message, Throwable cause ) {
+  public MetadataCreationException( String message, Throwable cause ) {
     super( message, cause );
   }
 
-  public MetadataException( String message ) {
+  public MetadataCreationException( String message ) {
     super( message );
   }
 
-  public MetadataException( Throwable cause ) {
+  public MetadataCreationException( Throwable cause ) {
     super( cause );
   }
 
