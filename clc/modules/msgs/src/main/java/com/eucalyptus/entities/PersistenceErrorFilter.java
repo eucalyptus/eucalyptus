@@ -64,7 +64,6 @@
 package com.eucalyptus.entities;
 
 import java.util.List;
-import java.util.Map;
 import java.util.SortedSet;
 import javax.persistence.EntityExistsException;
 import javax.persistence.EntityNotFoundException;
@@ -99,19 +98,15 @@ import org.hibernate.exception.SQLGrammarException;
 import org.hibernate.jdbc.TooManyRowsAffectedException;
 import org.hibernate.loader.MultipleBagFetchException;
 import org.hibernate.type.SerializationException;
-import com.eucalyptus.entities.PersistenceErrorFilter.ErrorCategory;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Logs;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.google.gwt.thirdparty.guava.common.collect.Iterables;
-import com.google.gwt.thirdparty.guava.common.collect.Maps;
-import com.google.gwt.thirdparty.guava.common.collect.Sets;
+import com.google.common.collect.Sets;
 
 public class PersistenceErrorFilter {
   private static Logger LOG = Logger.getLogger( PersistenceErrorFilter.class );

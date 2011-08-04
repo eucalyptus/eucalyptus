@@ -3,14 +3,13 @@ package com.eucalyptus.util;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.gwt.thirdparty.guava.common.base.Joiner;
 
 public class Exceptions {
   private static Logger                    LOG                      = Logger.getLogger( Exceptions.class );
