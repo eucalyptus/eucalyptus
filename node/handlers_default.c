@@ -574,7 +574,8 @@ doAttachVolume (	struct nc_state_t *nc,
          return ERROR;
      }
      
-     // get the file name from the device path and, for KVM, the "unknown" string
+     // sets localDevReal to the file name from the device path 
+     // and, for KVM, sets localDevTag to the "unknown" string
      ret = convert_dev_names (localDev, localDevReal, tagBuf);
      if (ret)
          return ret;
@@ -605,7 +606,7 @@ doAttachVolume (	struct nc_state_t *nc,
      // mark volume as 'attaching'
      ncVolume * volume;
      sem_p (inst_sem);
-     volume = save_volume (instance, volumeId, remoteDevReal, localDevName, localDevReal, VOL_STATE_ATTACHING);
+     volume = save_volume (instance, volumeId, NULL, localDevName, localDevReal, VOL_STATE_ATTACHING); // we do not have RemoteDevReal yet
      save_instance_struct (instance);
      sem_v (inst_sem);
      if (!volume) {
@@ -678,7 +679,7 @@ doAttachVolume (	struct nc_state_t *nc,
          next_vol_state = VOL_STATE_ATTACHING_FAILED;
      }
      sem_p (inst_sem);
-     volume = save_volume (instance, volumeId, NULL, NULL, NULL, next_vol_state);
+     volume = save_volume (instance, volumeId, remoteDevReal, NULL, NULL, next_vol_state); // now we can record remoteDevReal
      save_instance_struct (instance);
      sem_v (inst_sem);
      if (volume==NULL) {
@@ -765,7 +766,7 @@ doDetachVolume (	struct nc_state_t *nc,
     // mark volume as 'detaching'
     ncVolume * volume;
     if (grab_inst_sem) sem_p (inst_sem);
-    volume = save_volume (instance, volumeId, remoteDevReal, localDevName, localDevReal, VOL_STATE_DETACHING);
+    volume = save_volume (instance, volumeId, NULL, localDevName, localDevReal, VOL_STATE_DETACHING); // we do not have RemoteDevReal yet
     save_instance_struct (instance);
     if (grab_inst_sem) sem_v (inst_sem);
     if (!volume) {
@@ -844,7 +845,7 @@ doDetachVolume (	struct nc_state_t *nc,
         next_vol_state = VOL_STATE_DETACHING_FAILED;
     }
     if (grab_inst_sem) sem_p (inst_sem);
-    volume = save_volume (instance, volumeId, NULL, NULL, NULL, next_vol_state);
+    volume = save_volume (instance, volumeId, remoteDevReal, NULL, NULL, next_vol_state);
     save_instance_struct (instance);
     if (grab_inst_sem) sem_v (inst_sem);
     if (volume==NULL) {
