@@ -91,6 +91,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.Types;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.vm.VmState;
@@ -125,7 +126,7 @@ public class ImageManager {
   
   private static final String ADD = "add";
 
-  public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException {
+  public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException, TransactionException {
     DescribeImagesResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );

@@ -215,7 +215,7 @@ public class Transactions {
     }
   }
   
-  private static <T, O> List<O> filteredTransform( T search, Predicate<T> condition, Function<T, O> transform ) throws TransactionException {
+  public static <T, O> List<O> filteredTransform( T search, Predicate<T> condition, Function<T, O> transform ) throws TransactionException {
     assertThat( search, notNullValue( ) );
     assertThat( condition, notNullValue( ) );
     assertThat( transform, notNullValue( ) );
