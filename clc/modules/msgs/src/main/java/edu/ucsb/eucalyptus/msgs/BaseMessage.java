@@ -11,42 +11,30 @@ import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IBindingFactory;
 import org.jibx.runtime.IMarshallingContext;
 import org.jibx.runtime.JiBXException;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.binding.BindingManager;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.ComponentMessage;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.http.MappingHttpMessage;
-import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.HasFullName;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class BaseMessage {
   @Transient
-  private static Logger        LOG      = Logger.getLogger( BaseMessage.class );
+  private static Logger        LOG       = Logger.getLogger( BaseMessage.class );
   private String               correlationId;
   private String               userId;
   private String               effectiveUserId;
-  private Boolean              _return  = true;
+  private Boolean              _return   = true;
   private String               statusMessage;
-  private Integer              _epoch;//NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
-  private ArrayList<ServiceId> _services = Lists.newArrayList( );//NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
-  
+  private Integer              _epoch;                                           //NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
+  private ArrayList<ServiceId> _services = Lists.newArrayList( );                //NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
+                                                                                  
   public BaseMessage( ) {
     super( );
     this.correlationId = UUID.randomUUID( ).toString( );
@@ -100,7 +88,7 @@ public class BaseMessage {
   }
   
   public <TYPE extends BaseMessage> TYPE markPrivileged( ) {
-    this.effectiveUserId = FakePrincipals.systemUser().getName( );
+    this.effectiveUserId = FakePrincipals.systemUser( ).getName( );
     return ( TYPE ) this;
   }
   
@@ -159,8 +147,8 @@ public class BaseMessage {
     if ( subCorrelationId == null ) {
       subCorrelationId = String.format( "%f", Math.random( ) ).substring( 2 );
     }
-    this.userId = FakePrincipals.systemFullName().getUserName( );
-    this.effectiveUserId = FakePrincipals.systemFullName().getUserName( );
+    this.userId = FakePrincipals.systemFullName( ).getUserName( );
+    this.effectiveUserId = FakePrincipals.systemFullName( ).getUserName( );
     this.correlationId = corrId + "-" + subCorrelationId;
     return ( TYPE ) this;
   }
@@ -199,9 +187,9 @@ public class BaseMessage {
    */
   public String toString( String namespace ) {
     ByteArrayOutputStream temp = new ByteArrayOutputStream( );
-    Class targetClass = Classes.findAncestor( this, new Predicate<Class>( ) {
+    Class<?> targetClass = Iterables.find( Classes.classAncestors( this ), new Predicate<Class<?>>( ) {
       @Override
-      public boolean apply( Class arg0 ) {
+      public boolean apply( Class<?> arg0 ) {
         return !arg0.isAnonymousClass( );
       }
     } );
@@ -267,7 +255,7 @@ public class BaseMessage {
   public ArrayList<ServiceId> get_services( ) {
     return this._services;
   }
-
+  
   /**
    * @deprecated use get_services( ) as needed, this old name presents a potential naming conflict
    * @see #get_services()
@@ -310,11 +298,11 @@ public class BaseMessage {
   
   public BaseMessage setUser( User user ) {
     if ( user == null ) {
-      this.setUser( FakePrincipals.nobodyUser() );
+      this.setUser( FakePrincipals.nobodyUser( ) );
     } else {
       this.userId = user.getName( );
       this.effectiveUserId = ( user.isSystemAdmin( ) || user.isSystemInternal( ) )
-        ? FakePrincipals.systemUser().getName( )
+        ? FakePrincipals.systemUser( ).getName( )
         : user.getName( );
     }
     return this;
