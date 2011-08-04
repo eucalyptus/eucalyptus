@@ -29,7 +29,7 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
       this.timeNanos = System.nanoTime( );
     }
     
-    public TimestampedElement( E element, Long nanos) {
+    protected TimestampedElement( E element, Long nanos) {
     	super();
     	this.element = element;
     	this.timeNanos = nanos;
