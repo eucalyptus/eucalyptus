@@ -138,9 +138,9 @@ public class Ats {
   
   public static Ats inClassHierarchy( Object o ) {
     if ( o instanceof AnnotatedElement ) {
-      return new Ats( Classes.ancestry( o ).toArray( new Class[] {} ) );
+      return new Ats( Classes.ancestors( o ).toArray( new Class[] {} ) );
     } else {
-      return new Ats( Classes.ancestry( o ).toArray( new Class[] {} ) );
+      return new Ats( Classes.ancestors( o ).toArray( new Class[] {} ) );
     }
   }
   

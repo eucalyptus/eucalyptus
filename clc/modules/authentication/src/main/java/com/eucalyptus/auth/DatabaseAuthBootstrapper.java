@@ -79,10 +79,14 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
     } catch ( Exception e ) {
       LOG.debug( "System admin does not exist. Adding it now." );
       // Order matters.
-      Account system = Accounts.addSystemAccount( );
-      User admin = system.addUser( User.ACCOUNT_ADMIN, "/", true, true, null );
-      admin.createKey( );
-      admin.createPassword( );
+      try {
+        Account system = Accounts.addSystemAccount( );
+        User admin = system.addUser( User.ACCOUNT_ADMIN, "/", true, true, null );
+        admin.createKey( );
+        admin.createPassword( );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
     }
   }
 }

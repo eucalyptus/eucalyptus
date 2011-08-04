@@ -24,7 +24,7 @@ public class TypeMappers {
   
   public static <A,B> B transform( A from, Class<B> to ) {
     Class target = from.getClass( );
-    for( Class p : Classes.ancestry( from ) ) {
+    for( Class p : Classes.ancestors( from ) ) {
       if( !knownMappers.get( p ).isEmpty( ) ) {
         target = p;
         break;

@@ -95,6 +95,7 @@ import org.hibernate.exception.SQLGrammarException;
 import org.hibernate.jdbc.TooManyRowsAffectedException;
 import org.hibernate.loader.MultipleBagFetchException;
 import org.hibernate.type.SerializationException;
+import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Logs;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
@@ -152,6 +153,7 @@ public class PersistenceErrorFilter {
   
   private static final Multimap<ErrorCategory, Class<? extends Exception>> errorCategorization = buildErrorMap( );
   
+  @SuppressWarnings( "unchecked" )
   private static Multimap<ErrorCategory, Class<? extends Exception>> buildErrorMap( ) {
     Multimap<ErrorCategory, Class<? extends Exception>> map = ArrayListMultimap.create();
     map.get( ErrorCategory.CONSTRAINT ).addAll( Lists.newArrayList( ConstraintViolationException.class, NonUniqueResultException.class, QueryTimeoutException.class, NoResultException.class, NonUniqueResultException.class, LockTimeoutException.class ) );
@@ -172,11 +174,16 @@ public class PersistenceErrorFilter {
    */
   @SuppressWarnings( "unchecked" )
   static RecoverablePersistenceException exceptionCaught( Throwable e ) {
+    Logs.extreme( ).error( e, e );
     if( e instanceof RuntimeException ) {
+      for ( Class<?> p : Classes.classAncestors( e ) ) {
+        
+      }
       Class<? extends Throwable> type = e.getClass( );
       for ( Class<? extends Throwable> t = type; t.getSuperclass( ) != null && t.getSuperclass( ) != Exception.class; t = ( Class<? extends Throwable> ) t.getSuperclass( ) ) {
-        for( ErrorCategory category : ErrorCategory.values( ) ) {
-          if( errorCategorization.containsEntry( category, t ) ) {
+        if( errorCategorization.containsValue( t ) ) {
+          for( ErrorCategory category : ErrorCategory.values( ) ) {
+            errorCategorization.get( category ).contains( type );
             throw category.handleException( ( RuntimeException ) e );
           }
         }

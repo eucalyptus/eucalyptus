@@ -67,100 +67,96 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
-import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.google.common.base.Function;
-import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class Classes {
-  private static Logger LOG = Logger.getLogger( Classes.class );
   
-  public static Class findAncestor( Object o, Predicate<Class> condition ) {
-    return Iterables.find( ancestry( o ), condition );
+  public static Class<?> findAncestor( final Object o, final Predicate<Class<?>> condition ) {
+    return Iterables.find( ancestors( o ), condition );
   }
   
-  public static <T> List<T> newInstance( Class<T> type ) {
+  @SuppressWarnings( "unchecked" )
+  public static <T> List<T> newInstance( final Class<T> type ) {
     if ( !Modifier.isPublic( type.getModifiers( ) ) ) {
       throw new InstantiationError( "Attempt to instantiate a class which is not public: " + type.getCanonicalName( ) );
     } else if ( type.isEnum( ) ) {
       return Lists.newArrayList( type.getEnumConstants( ) );
     } else {
       try {
-        return Lists.newArrayList( type.newInstance( ) );
-      } catch ( InstantiationException ex ) {
+        T t = type.newInstance( );
+        return Lists.newArrayList( t );
+      } catch ( final InstantiationException ex ) {
         throw new InstantiationError( "Attempt to instantiate a class which is not public: " + type.getCanonicalName( ) + " because of: " + ex.getMessage( ) );
-      } catch ( IllegalAccessException ex ) {
+      } catch ( final IllegalAccessException ex ) {
         throw new InstantiationError( "Attempt to instantiate a class which is not public: " + type.getCanonicalName( ) + " because of: " + ex.getMessage( ) );
       }
     }
   }
   
-  enum WhateverAsClass implements Function<Object, Class> {
+  enum WhateverAsClass implements Function<Object, Class<?>> {
     INSTANCE;
     @Override
-    public Class apply( Object o ) {
+    public Class<?> apply( final Object o ) {
       return ( o instanceof Class
-          ? ( Class ) o
+          ? ( Class<?> ) o
           : o.getClass( ) );
     }
   }
   
-  enum ParentClass implements Function<Class, Class> {
+  enum ParentClass implements Function<Class<?>, Class<?>> {
     INSTANCE;
     @Override
-    public Class apply( Class type ) {
+    public Class<?> apply( final Class<?> type ) {
       return type.getSuperclass( );
     }
   }
   
-  enum TransitiveClosureImplementedInterfaces implements Function<Class[], List<Class>> {
+  enum TransitiveClosureImplementedInterfaces implements Function<Class<?>[], List<Class<?>>> {
     INSTANCE;
     @Override
-    public List<Class> apply( Class... types ) {
-      List<Class> ret = Lists.newArrayList( );
+    public List<Class<?>> apply( final Class<?>[] types ) {
+      final List<Class<?>> ret = Lists.newArrayList( );
       if ( types.length == 0 ) {
         return ret;
       } else {
-        for ( Class t : types ) {
+        for ( final Class<?> t : types ) {
+          if ( t.isInterface( ) ) {
+            ret.add( t );
+          }
           if ( t.getInterfaces( ).length == 0 ) {
             continue;
 //          } else if ( !t.isInterface( ) ) {
 //            ret.addAll( Arrays.asList( t.getInterfaces( ) ) );
           } else {
-            ret.addAll( Arrays.asList( t.getInterfaces( ) ) );
+            final List<Class<?>> next = TransitiveClosureImplementedInterfaces.INSTANCE.apply( t.getInterfaces( ) );
+            ret.addAll( next );
           }
         }
-        List<Class> next = TransitiveClosureImplementedInterfaces.INSTANCE.apply( ret.toArray( new Class[] {} ) );
-        ret.addAll( next );
         return ret;
       }
     }
   }
   
-  private static final Function<Object, Class> toParentClass( ) {
-    return Functions.compose( ParentClass.INSTANCE, WhateverAsClass.INSTANCE );
-  }
-  
-  enum BreadthFirstTransitiveClosure implements Function<Object, List<Class>> {
+  enum BreadthFirstTransitiveClosure implements Function<Object, List<Class<?>>> {
     INSTANCE;
     
     @Override
-    public List<Class> apply( Object input ) {
-      List<Class> ret = Lists.newArrayList( );
-      Class type = WhateverAsClass.INSTANCE.apply( input );
+    public List<Class<?>> apply( final Object input ) {
+      final List<Class<?>> ret = Lists.newArrayList( );
+      final Class<?> type = WhateverAsClass.INSTANCE.apply( input );
       if ( type == Object.class ) {
         return ret;
       } else if ( type.isInterface( ) ) {
         return ret;
       } else {
         ret.add( type );
-        List<Class> superInterfaces = TransitiveClosureImplementedInterfaces.INSTANCE.apply( type );
+        final List<Class<?>> superInterfaces = TransitiveClosureImplementedInterfaces.INSTANCE.apply( new Class[] { type } );
         ret.addAll( superInterfaces );
-        List<Class> next = BreadthFirstTransitiveClosure.INSTANCE.apply( type.getSuperclass( ) );
+        final List<Class<?>> next = this.apply( type.getSuperclass( ) );
         ret.addAll( next );
         return ret;
       }
@@ -168,35 +164,169 @@ public class Classes {
     
   }
   
-  public static List<Class> ancestry( Object o ) {
-    return BreadthFirstTransitiveClosure.INSTANCE.apply( o );
+  /**
+   * Function for geting a linearized breadth-first list of classes which belong to the
+   * transitive-closure of classes and interfaces implemented by {@code Object o}.
+   * 
+   * @param o
+   * @return
+   */
+  public static Function<Object, List<Class<?>>> ancestors( ) {
+    return BreadthFirstTransitiveClosure.INSTANCE;
   }
   
-  public static List<Class> genericsToClasses( Object o ) {
-    List<Class> ret = Lists.newArrayList( );
-    if ( !o.getClass( ).isEnum( ) ) {
-      ret.addAll( processTypeForGenerics( o.getClass( ).getGenericSuperclass( ) ) );
+  /**
+   * Get a linearized breadth-first list of classes which belong to the transitive-closure of
+   * classes and interfaces implemented by {@code Object o}.
+   * 
+   * @param o
+   * @return
+   */
+  public static List<Class<?>> ancestors( final Object o ) {
+    return ancestors( ).apply( o );
+  }
+  
+  enum ClassBreadthFirstTransitiveClosure implements Function<Object, List<Class<?>>> {
+    INSTANCE;
+    
+    @Override
+    public List<Class<?>> apply( final Object input ) {
+      final List<Class<?>> ret = Lists.newArrayList( );
+      final Class<?> type = WhateverAsClass.INSTANCE.apply( input );
+      if ( type == Object.class ) {
+        return ret;
+      } else if ( type.isInterface( ) ) {
+        return ret;
+      } else {
+        ret.add( type );
+        final List<Class<?>> next = this.apply( type.getSuperclass( ) );
+        ret.addAll( next );
+        return ret;
+      }
     }
-    ret.addAll( processTypeForGenerics( o.getClass( ).getGenericInterfaces( ) ) );
-    return ret;
+    
   }
   
-  private static List<Class> processTypeForGenerics( Type... types ) {
-    List<Class> ret = Lists.newArrayList( );
-    for ( Type t : types ) {
-      if ( t instanceof ParameterizedType ) {
-        ParameterizedType pt = ( ParameterizedType ) t;
-        for ( Type ptType : pt.getActualTypeArguments( ) ) {
-          if ( ptType instanceof Class ) {
-            ret.add( ( Class ) ptType );
+  /**
+   * Function for geting a linearized breadth-first list of classes which belong to the
+   * transitive-closure of
+   * classes implemented by {@code Object o}.
+   * 
+   * @param o
+   * @return
+   */
+  public static Function<Object, List<Class<?>>> classAncestors( ) {
+    return ClassBreadthFirstTransitiveClosure.INSTANCE;
+  }
+  
+  /**
+   * Get a linearized breadth-first list of classes which belong to the transitive-closure of
+   * classes implemented by {@code Object o}.
+   * 
+   * @param o
+   * @return
+   */
+  public static List<Class<?>> classAncestors( final Object o ) {
+    return ClassBreadthFirstTransitiveClosure.INSTANCE.apply( o );
+  }
+  
+  enum InterfaceBreadthFirstTransitiveClosure implements Function<Object, List<Class<?>>> {
+    INSTANCE;
+    
+    @Override
+    public List<Class<?>> apply( final Object input ) {
+      final List<Class<?>> ret = Lists.newArrayList( );
+      final Class<?> type = WhateverAsClass.INSTANCE.apply( input );
+      if ( type == Object.class ) {
+        return ret;
+      } else {
+        final List<Class<?>> superInterfaces = TransitiveClosureImplementedInterfaces.INSTANCE.apply( new Class[] { type } );
+        ret.addAll( superInterfaces );
+        final List<Class<?>> next = this.apply( type.getSuperclass( ) );
+        ret.addAll( next );
+        return ret;
+      }
+    }
+    
+  }
+  
+  /**
+   * Function for getting a linearized breadth-first list of classes which belong to the
+   * transitive-closure of
+   * interfaces implemented by {@code Object o}.
+   * 
+   * @param o
+   * @return
+   */
+  public static Function<Object, List<Class<?>>> interfaceAncestors( ) {
+    return InterfaceBreadthFirstTransitiveClosure.INSTANCE;
+  }
+  
+  /**
+   * Get a linearized breadth-first list of classes which belong to the transitive-closure of
+   * interfaces implemented by {@code Object o}.
+   * 
+   * @param o
+   * @return
+   */
+  public static List<Class<?>> interfaceAncestors( final Object o ) {
+    return interfaceAncestors( ).apply( o );
+  }
+  
+  enum GenericsBreadthFirstTransitiveClosure implements Function<Object, List<Class<?>>> {
+    INSTANCE;
+    
+    @Override
+    public List<Class<?>> apply( final Object input ) {
+      final List<Class<?>> ret = Lists.newArrayList( );
+      if ( !input.getClass( ).isEnum( ) ) {
+        ret.addAll( processTypeForGenerics( input.getClass( ).getGenericSuperclass( ) ) );
+      }
+      ret.addAll( processTypeForGenerics( input.getClass( ).getGenericInterfaces( ) ) );
+      return ret;
+    }
+    
+    private static List<Class<?>> processTypeForGenerics( final Type... types ) {
+      final List<Class<?>> ret = Lists.newArrayList( );
+      for ( final Type t : types ) {
+        if ( t instanceof ParameterizedType ) {
+          final ParameterizedType pt = ( ParameterizedType ) t;
+          for ( final Type ptType : pt.getActualTypeArguments( ) ) {
+            if ( ptType instanceof Class ) {
+              ret.add( ( Class<?> ) ptType );
+            }
           }
         }
+        if ( t instanceof Class ) {
+          ret.addAll( processTypeForGenerics( ( ( Class<?> ) t ).getGenericSuperclass( ) ) );
+          ret.addAll( processTypeForGenerics( ( ( Class<?> ) t ).getGenericInterfaces( ) ) );
+        }
       }
-      if ( t instanceof Class ) {
-        ret.addAll( processTypeForGenerics( ( ( Class ) t ).getGenericSuperclass( ) ) );
-        ret.addAll( processTypeForGenerics( ( ( Class ) t ).getGenericInterfaces( ) ) );
-      }
+      return ret;
     }
-    return ret;
+    
   }
+  
+  /**
+   * Get a list of the classes corresponding to the actual generic parameters for the given
+   * {@code Object o}.
+   * 
+   * @param o
+   * @return
+   */
+  public static List<Class<?>> genericsToClasses( final Object o ) {
+    return genericsToClasses( ).apply( o );
+  }
+  
+  /**
+   * Function for getting a list of the classes corresponding to the actual generic parameters for the given
+   * {@code Object o}.
+   * 
+   * @param o
+   * @return
+   */
+  private static Function<Object,List<Class<?>>> genericsToClasses( ) {
+    return GenericsBreadthFirstTransitiveClosure.INSTANCE;
+  }
+  
 }

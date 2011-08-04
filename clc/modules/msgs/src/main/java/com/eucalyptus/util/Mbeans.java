@@ -174,7 +174,7 @@ public class Mbeans {
     " name: obj.class.package.name+\":type=${obj.class.simpleName}\"," +
     " desc: \"${obj.toString()}\"" +
     " ) }";
-    for( Class c : Classes.ancestry( targetType ) ) {
+    for( Class c : Classes.ancestors( targetType ) ) {
       File jmxConfig = SubDirectory.MANAGEMENT.getChildFile( c.getCanonicalName( ) );
       if(  jmxConfig.exists( ) ) {
         LOG.trace( "Trying to read jmx config file: " + jmxConfig.getAbsolutePath( ) );
