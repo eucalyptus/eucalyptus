@@ -332,7 +332,7 @@ static void copy_instance_to_adb (adb_instanceType_t * instance, const axutil_en
     
     // updated by NC upon Attach/DetachVolume 
     for (int i=0; i<EUCA_MAX_VOLUMES; i++) {
-        if (! is_volume_used (&(outInst->volumes[i])))
+        if (strlen(outInst->volumes[i].volumeId)==0)
             continue;
         adb_volumeType_t * volume = adb_volumeType_create(env);
         adb_volumeType_set_volumeId(volume, env, outInst->volumes[i].volumeId);
