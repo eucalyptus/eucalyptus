@@ -6,6 +6,7 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
+import org.hibernate.Criteria;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.TransactionCallbackException;
@@ -79,6 +80,23 @@ public class Transactions {
         }
       }
     } );
+  }
+  
+  public static <T> T criteria( T search, final Function<Criteria, T> c ) throws TransactionException {
+    assertThat( search, notNullValue( ) );
+    assertThat( c, notNullValue( ) );
+    EntityWrapper<T> db = Transactions.joinOrCreate( search );
+    try {
+      Criteria crit = db.createCriteria( search.getClass( ) );
+      T entity = c.apply( crit );
+      db.commit( );
+      return entity;
+    } catch ( Throwable t ) {
+      db.rollback( );
+      throw Transactions.transformException( t );
+    } finally {
+      dbtl.remove( );
+    }
   }
   
   public static <T> T find( T search ) throws TransactionException {

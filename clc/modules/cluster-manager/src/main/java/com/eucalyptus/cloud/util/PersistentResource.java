@@ -66,6 +66,7 @@ package com.eucalyptus.cloud.util;
 import javax.persistence.MappedSuperclass;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.entities.AbstractStatefulPersistent;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.HasNaturalId;
 
 @MappedSuperclass
@@ -90,7 +91,7 @@ public class PersistentResource<T extends PersistentResource<T,R>,R extends HasN
    */
   @Override
   public final ResourceAllocation.Reference<R, T> allocate( ) {
-    
+    Transactions.criteria( this, new Callback<Criteria>() {} );
     return null;
   }
 
