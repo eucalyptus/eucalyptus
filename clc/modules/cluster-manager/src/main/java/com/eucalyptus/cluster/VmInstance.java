@@ -104,6 +104,7 @@ import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.AbstractStatefulPersistent;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
@@ -137,7 +138,7 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_instances" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class VmInstance extends PersistentResource<VmState> implements VirtualMachineInstance<VmInstance> {
+public class VmInstance extends UserMetadata<VmState> implements VirtualMachineInstance<VmInstance> {
   /**
    * 
    */

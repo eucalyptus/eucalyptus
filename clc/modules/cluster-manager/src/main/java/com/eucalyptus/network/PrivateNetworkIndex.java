@@ -75,7 +75,9 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import com.eucalyptus.cloud.util.PersistentResource;
 import com.eucalyptus.cloud.util.ResourceAllocation;
+import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.entities.AbstractStatefulPersistent;
 
 @Entity
@@ -83,7 +85,7 @@ import com.eucalyptus.entities.AbstractStatefulPersistent;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_indices" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class PrivateNetworkIndex extends AbstractStatefulPersistent<ResourceAllocation.State> {
+public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,VmInstance> {
   @ManyToOne
   @JoinColumn( name = "metadata_network_group_fk" )
   private final NetworkGroup       parent;
@@ -104,6 +106,34 @@ public class PrivateNetworkIndex extends AbstractStatefulPersistent<ResourceAllo
   @PreUpdate
   private void verifyState( ) {
     
+  }
+
+  public Long getIndex( ) {
+    return this.index;
+  }
+
+  public void setIndex( Long index ) {
+    this.index = index;
+  }
+
+  public ResourceAllocation.State getState( ) {
+    return this.state;
+  }
+
+  public void setState( ResourceAllocation.State state ) {
+    this.state = state;
+  }
+
+  public String getInstanceNaturalId( ) {
+    return this.instanceNaturalId;
+  }
+
+  public void setInstanceNaturalId( String instanceNaturalId ) {
+    this.instanceNaturalId = instanceNaturalId;
+  }
+
+  public NetworkGroup getParent( ) {
+    return this.parent;
   }
   
 }

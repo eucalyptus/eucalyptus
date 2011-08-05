@@ -7,7 +7,10 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
+import org.hibernate.criterion.Restrictions;
+import com.eucalyptus.cloud.util.PersistentResource;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.TransactionCallbackException;
 import com.eucalyptus.util.TransactionException;
@@ -187,6 +190,24 @@ public class Transactions {
       dbtl.remove( );
     }
   }
+  
+  public static <T extends HasNaturalId> T naturalId( T search, Callback<T> c ) throws TransactionException {
+    assertThat( search, notNullValue( ) );
+    assertThat( c, notNullValue( ) );
+    EntityWrapper<T> db = Transactions.joinOrCreate( search );
+    try {
+      T entity = ( T ) db.createCriteria( search.getClass( ) ).add( Restrictions.naturalId( ).set( "naturalId", search.getNaturalId( ) ) ).setCacheable( true ).uniqueResult( );
+      c.fire( entity );
+      db.commit( );
+      return entity;
+    } catch ( Throwable t ) {
+      db.rollback( );
+      throw Transactions.transformException( t );
+    } finally {
+      dbtl.remove( );
+    }
+  }
+
   
   public static <T> T one( T search, Callback<T> c ) throws TransactionException {
     assertThat( search, notNullValue( ) );

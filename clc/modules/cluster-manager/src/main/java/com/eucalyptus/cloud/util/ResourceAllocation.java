@@ -85,7 +85,7 @@ public interface ResourceAllocation<T extends HasNaturalId, R extends HasNatural
    * Calling {@link Reference#set(Object)} completes the allocation, while calling
    * {@link Reference#abort()} resets the state to that before the reference change.
    */
-  public Reference<R, T> allocate( );
+  public Reference<T, R> allocate( );
   
   /**
    * The procedure for gracefully releasing the resource is pending a submitted in-flight request.
@@ -95,7 +95,7 @@ public interface ResourceAllocation<T extends HasNaturalId, R extends HasNatural
    * Calling {@link Reference#set(Object)} completes releasing the allocation, while calling
    * {@link Reference#abort()} resets the state to that before the reference change.
    */
-  public Reference<R, T> release( );
+  public Reference<T, R> release( );
   
   /**
    * Dependent external resource state has been cleared and the resource is ready for re-use.

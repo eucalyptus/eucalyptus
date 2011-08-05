@@ -37,7 +37,7 @@ public class AbstractPersistent implements Serializable, HasNaturalId {
   Date lastUpdateTimestamp;
   @NaturalId
   @Column( name = "metadata_perm_uuid", unique = true, updatable = false, nullable = false )
-  private String   permanentUuid;
+  private String   naturalId;
   
   public AbstractPersistent( ) {
     super( );
@@ -57,9 +57,9 @@ public class AbstractPersistent implements Serializable, HasNaturalId {
     if ( obj == null ) return false;
     if ( !getClass( ).is( obj.getClass( ) ) ) return false;
     AbstractPersistent other = ( AbstractPersistent ) obj;
-    if ( this.permanentUuid == null ) {
-      return other.permanentUuid != null;
-    } else if ( !permanentUuid.equals( other.permanentUuid ) ) {
+    if ( this.naturalId == null ) {
+      return other.naturalId != null;
+    } else if ( !naturalId.equals( other.naturalId ) ) {
       return false;
     } else {
       return true;
@@ -73,14 +73,14 @@ public class AbstractPersistent implements Serializable, HasNaturalId {
     if ( creationTimestamp == null ) {
       this.creationTimestamp = new Date();
     }
-    if ( this.permanentUuid == null ) {
-      this.permanentUuid = UUID.randomUUID( ).toString( );
+    if ( this.naturalId == null ) {
+      this.naturalId = UUID.randomUUID( ).toString( );
     }
   }
   
   @Override
   public String getNaturalId( ) {
-    return this.permanentUuid;
+    return this.naturalId;
   }
   
   /**
