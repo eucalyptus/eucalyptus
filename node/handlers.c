@@ -538,7 +538,7 @@ void *startup_thread (void * arg)
     int error, i;
     
     if (! check_hypervisor_conn ()) {
-        logprintfl (EUCAFATAL, "[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
+        logprintfl (EUCAERROR, "[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         goto free;
     }
@@ -546,7 +546,7 @@ void *startup_thread (void * arg)
     // set up networking
     error = vnetStartNetwork (nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname);
     if (error) {
-        logprintfl (EUCAFATAL, "[%s] start network failed for instance, terminating it\n", instance->instanceId);
+        logprintfl (EUCAERROR, "[%s] start network failed for instance, terminating it\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         goto free;
     }
@@ -576,7 +576,7 @@ void *startup_thread (void * arg)
         || (error = gen_instance_xml (instance))
         || (error = gen_libvirt_xml (instance, xslt_path))) {
         
-        logprintfl (EUCAFATAL, "[%s] error: failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
+        logprintfl (EUCAERROR, "[%s] error: failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
         change_state (instance, SHUTOFF);
         goto free;
     }
@@ -586,7 +586,7 @@ void *startup_thread (void * arg)
         goto free;
     }
     if (instance->state==CANCELED) {
-        logprintfl (EUCAFATAL, "[%s] startup of instance was cancelled\n", instance->instanceId);
+        logprintfl (EUCAERROR, "[%s] startup of instance was cancelled\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         goto free;
     }
@@ -606,7 +606,7 @@ void *startup_thread (void * arg)
     }
 
     if (dom == NULL) {
-        logprintfl (EUCAFATAL, "[%s] hypervisor failed to start instance\n", instance->instanceId);
+        logprintfl (EUCAERROR, "[%s] hypervisor failed to start instance\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         goto free;
     }
@@ -621,7 +621,7 @@ void *startup_thread (void * arg)
     if (instance->state==TEARDOWN) { 
         // timed out in BOOTING
     } else if (instance->state==CANCELED || instance->state==SHUTOFF) {
-        logprintfl (EUCAFATAL, "[%s] startup of instance was cancelled\n", instance->instanceId);
+        logprintfl (EUCAERROR, "[%s] startup of instance was cancelled\n", instance->instanceId);
         change_state (instance, SHUTOFF);
     } else {
         logprintfl (EUCAINFO, "[%s] booting\n", instance->instanceId);
