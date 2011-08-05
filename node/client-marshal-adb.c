@@ -211,6 +211,7 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         axutil_date_time_free(dt, env);
     }
 
+    bzero (outInst->volumes, sizeof (ncVolume) * EUCA_MAX_VOLUMES);
     for (i=0; i<EUCA_MAX_VOLUMES && i<adb_instanceType_sizeof_volumes (instance, env); i++) {
         adb_volumeType_t * volume = adb_instanceType_get_volumes_at (instance, env, i);
         safe_strncpy (outInst->volumes[i].volumeId, adb_volumeType_get_volumeId (volume, env), CHAR_BUFFER_SIZE);
