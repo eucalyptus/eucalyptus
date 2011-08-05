@@ -132,7 +132,7 @@ doRunInstance(	struct nc_state_t *nc,
     instance = find_instance (&global_instances, instanceId);
     sem_v (inst_sem);
     if (instance) {
-        logprintfl (EUCAFATAL, "[%s] error: instance already running\n", instanceId);
+        logprintfl (EUCAERROR, "[%s] error: instance already running\n", instanceId);
         return 1; /* TODO: return meaningful error codes? */
     }
     if (!(instance = allocate_instance (uuid,
@@ -144,7 +144,7 @@ doRunInstance(	struct nc_state_t *nc,
                                         meta->userId, 
                                         &ncnet, keyName,
                                         userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize))) {
-        logprintfl (EUCAFATAL, "[%s] error: could not allocate instance struct\n", instanceId);
+        logprintfl (EUCAERROR, "[%s] error: could not allocate instance struct\n", instanceId);
         return ERROR;
     }
     instance->launchTime = time (NULL);
@@ -159,14 +159,14 @@ doRunInstance(	struct nc_state_t *nc,
     int error = add_instance (&global_instances, instance);
     sem_v (inst_sem);
     if ( error ) {
-        logprintfl (EUCAFATAL, "[%s] error: could not save instance struct\n", instanceId);
+        logprintfl (EUCAERROR, "[%s] error: could not save instance struct\n", instanceId);
         goto error;
     }
 
     // do the potentially long tasks in a thread
     pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
     if (!attr) { 
-        logprintfl (EUCAFATAL, "[%s] error: out of memory\n", instanceId);
+        logprintfl (EUCAERROR, "[%s] error: out of memory\n", instanceId);
         goto error;
     }
     pthread_attr_init(attr);
@@ -174,7 +174,7 @@ doRunInstance(	struct nc_state_t *nc,
     
     if ( pthread_create (&(instance->tcb), attr, startup_thread, (void *)instance) ) {
         pthread_attr_destroy(attr);
-        logprintfl (EUCAFATAL, "[%s] failed to spawn a VM startup thread\n", instanceId);
+        logprintfl (EUCAERROR, "[%s] failed to spawn a VM startup thread\n", instanceId);
         sem_p (inst_sem);
         remove_instance (&global_instances, instance);
         sem_v (inst_sem);
@@ -574,7 +574,8 @@ doAttachVolume (	struct nc_state_t *nc,
          return ERROR;
      }
      
-     // get the file name from the device path and, for KVM, the "unknown" string
+     // sets localDevReal to the file name from the device path 
+     // and, for KVM, sets localDevTag to the "unknown" string
      ret = convert_dev_names (localDev, localDevReal, tagBuf);
      if (ret)
          return ret;
@@ -605,7 +606,7 @@ doAttachVolume (	struct nc_state_t *nc,
      // mark volume as 'attaching'
      ncVolume * volume;
      sem_p (inst_sem);
-     volume = save_volume (instance, volumeId, remoteDevReal, localDevName, localDevReal, VOL_STATE_ATTACHING);
+     volume = save_volume (instance, volumeId, NULL, localDevName, localDevReal, VOL_STATE_ATTACHING); // we do not have RemoteDevReal yet
      save_instance_struct (instance);
      sem_v (inst_sem);
      if (!volume) {
@@ -678,7 +679,7 @@ doAttachVolume (	struct nc_state_t *nc,
          next_vol_state = VOL_STATE_ATTACHING_FAILED;
      }
      sem_p (inst_sem);
-     volume = save_volume (instance, volumeId, NULL, NULL, NULL, next_vol_state);
+     volume = save_volume (instance, volumeId, remoteDevReal, NULL, NULL, next_vol_state); // now we can record remoteDevReal
      save_instance_struct (instance);
      sem_v (inst_sem);
      if (volume==NULL) {
@@ -765,7 +766,7 @@ doDetachVolume (	struct nc_state_t *nc,
     // mark volume as 'detaching'
     ncVolume * volume;
     if (grab_inst_sem) sem_p (inst_sem);
-    volume = save_volume (instance, volumeId, remoteDevReal, localDevName, localDevReal, VOL_STATE_DETACHING);
+    volume = save_volume (instance, volumeId, NULL, localDevName, localDevReal, VOL_STATE_DETACHING); // we do not have RemoteDevReal yet
     save_instance_struct (instance);
     if (grab_inst_sem) sem_v (inst_sem);
     if (!volume) {
@@ -784,7 +785,6 @@ doDetachVolume (	struct nc_state_t *nc,
             logprintfl(EUCAERROR, "DetachVolume(): failed to get local name of host iscsi device\n");
             remoteDevReal[0] = '\0';
         } else { 
-            logprintfl(EUCADEBUG, "DetachVolume(): success in getting local name of host device '%s'\n", remoteDevStr);
             snprintf(remoteDevReal, 32, "%s", remoteDevStr);
             have_remote_device = 1;
         }
@@ -844,7 +844,7 @@ doDetachVolume (	struct nc_state_t *nc,
         next_vol_state = VOL_STATE_DETACHING_FAILED;
     }
     if (grab_inst_sem) sem_p (inst_sem);
-    volume = save_volume (instance, volumeId, NULL, NULL, NULL, next_vol_state);
+    volume = save_volume (instance, volumeId, remoteDevReal, NULL, NULL, next_vol_state);
     save_instance_struct (instance);
     if (grab_inst_sem) sem_v (inst_sem);
     if (volume==NULL) {
