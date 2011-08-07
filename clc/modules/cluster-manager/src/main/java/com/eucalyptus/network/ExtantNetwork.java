@@ -92,7 +92,7 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
   private NetworkGroup             networkGroup;
   @Column( name = "metadata_extant_network_tag", unique = true )
   private Long                     tag;
-  @OneToMany( mappedBy = "parent" )
+  @OneToMany( mappedBy = "network" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<PrivateNetworkIndex> indexes = new HashSet<PrivateNetworkIndex>( );
   
