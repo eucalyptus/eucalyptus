@@ -64,22 +64,15 @@
 package com.eucalyptus.cloud.util;
 
 import javax.persistence.MappedSuperclass;
-import org.apache.log4j.Logger;
-import org.hibernate.Criteria;
-import org.hibernate.criterion.Restrictions;
-import org.logicalcobwebs.cglib.proxy.UndeclaredThrowableException;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.Logs;
-import com.eucalyptus.util.TransactionCallbackException;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.async.Callback;
-import com.google.common.base.Function;
 
 @MappedSuperclass
 public abstract class PersistentResource<T extends PersistentResource<T, R>, R extends HasNaturalId> extends UserMetadata<ResourceAllocation.State> implements ResourceAllocation<T, R> {
-  private static Logger LOG = Logger.getLogger( PersistentResource.class );
   
   /**
    * {@inheritDoc ResourceAllocation#currentState()}
@@ -96,28 +89,6 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
   
   protected abstract R getReferer( );
   
-  private T doSetReferer( final R referer ) throws TransactionException {
-    try {
-      return Transactions.naturalId( ( T ) this, new Callback<T>( ) {
-        
-        @Override
-        public void fire( T input ) {
-          if ( !ResourceAllocation.State.PENDING.equals( input.getState( ) ) ) {
-            throw new RuntimeException( "Error allocating resource " + PersistentResource.this.getClass( ).getSimpleName( ) + " with id "
-                                        + PersistentResource.this.getDisplayName( ) + " as the state is not PENDING (currently "
-                                        + PersistentResource.this.getState( ) + ")." );
-          } else {
-            PersistentResource.this.setReferer( referer );
-            PersistentResource.this.setState( ResourceAllocation.State.EXTANT );
-          }
-        }
-      } );
-    } catch ( TransactionException ex ) {
-      LOG.error( ex, ex );
-      throw ex;
-    }
-  }
-  
   /**
    * {@inheritDoc ResourceAlllocation#allocate()}
    * 
@@ -125,82 +96,9 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
    * @return
    */
   @Override
-  public final Reference<T, R> allocate( ) throws ResourceAllocationException {
-    try {
-      Transactions.naturalId( ( T ) this, new Callback<T>( ) {
-        
-        @Override
-        public void fire( T input ) {
-          if ( !ResourceAllocation.State.FREE.equals( input.getState( ) ) ) {
-            throw new RuntimeException( "Error allocating resource " + PersistentResource.this.getClass( ).getSimpleName( ) + " with id "
-                                        + PersistentResource.this.getDisplayName( ) + " as the state is not FREE (currently "
-                                        + PersistentResource.this.getState( ) + ")." );
-          } else {
-            PersistentResource.this.setState( ResourceAllocation.State.PENDING );
-          }
-        }
-      } );
-    } catch ( Exception ex ) {
-      Logs.extreme( ).error( ex, ex );
-      throw new ResourceAllocationException( "Failed to allocate: " + this.toString( ), ex );
-    }
-    return new ResourceAllocation.Reference<T, R>( ) {
-      private volatile boolean finished = false;
-      
-      @Override
-      public T set( R referer ) {
-        this.checkFinished( );
-        try {
-          T ret = PersistentResource.this.doSetReferer( referer );
-          this.finished = true;
-          return ret;
-        } catch ( TransactionException ex ) {
-          throw new UndeclaredThrowableException( ex );
-        }
-      }
-      
-      private void checkFinished( ) throws ResourceAllocationException {
-        if ( this.finished ) {
-          throw new ResourceAllocationException( "Failed to set referer since this reference has already been set: " + PersistentResource.this.getDisplayName( )
-                                                 + " to "
-                                                 + PersistentResource.this.getReferer( ) + " and is currently in state " + PersistentResource.this.getState( ) );
-        }
-      }
-      
-      @Override
-      public T abort( ) throws ResourceAllocationException {
-        this.checkFinished( );
-        try {
-          T ret = PersistentResource.this.doClearReferer( );
-          this.finished = true;
-          return ret;
-        } catch ( TransactionException ex ) {
-          throw new UndeclaredThrowableException( ex );
-        }
-      }
-    };
-  }
-  
-  private final T doClearReferer( ) throws TransactionException {
-    try {
-      return Transactions.naturalId( ( T ) this, new Callback<T>( ) {
-        
-        @Override
-        public void fire( T input ) {
-          if ( !ResourceAllocation.State.PENDING.equals( input.getState( ) ) ) {
-            throw new RuntimeException( "Error allocating resource " + PersistentResource.this.getClass( ).getSimpleName( ) + " with id "
-                                        + PersistentResource.this.getDisplayName( ) + " as the state is not PENDING (currently "
-                                        + PersistentResource.this.getState( ) + ")." );
-          } else {
-            PersistentResource.this.setReferer( null );
-            PersistentResource.this.setState( ResourceAllocation.State.FREE );
-          }
-        }
-      } );
-    } catch ( TransactionException ex ) {
-      LOG.error( ex, ex );
-      throw ex;
-    }
+  public final SetReference<T, R> allocate( ) throws ResourceAllocationException {
+    this.doSetReferer( null, ResourceAllocation.State.FREE, ResourceAllocation.State.PENDING );
+    return this.doCreateSetReference( );
   }
   
   /**
@@ -208,10 +106,12 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
    * 
    * @see ResourceAllocation#release()
    * @return
+   * @throws ResourceAllocationException
    */
   @Override
-  public ResourceAllocation.Reference<T, R> release( ) {
-    return null;
+  public ClearReference<T> release( ) throws ResourceAllocationException {
+    this.doSetReferer( this.getReferer( ), ResourceAllocation.State.EXTANT, ResourceAllocation.State.RELEASING );
+    return this.doCreateClearReferer( );
   }
   
   /**
@@ -232,6 +132,94 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
   @Override
   public final T reclaim( R referer ) {
     return null;
+  }
+  
+  @SuppressWarnings( "unchecked" )
+  T doSetReferer( final R referer, final ResourceAllocation.State preconditionState, final ResourceAllocation.State finalState ) throws ResourceAllocationException {
+    try {
+      return Transactions.naturalId( ( T ) this, new Callback<T>( ) {
+        
+        @Override
+        public void fire( T input ) {
+          if ( !preconditionState.equals( input.getState( ) ) ) {
+            throw new RuntimeException( "Error allocating resource " + PersistentResource.this.getClass( ).getSimpleName( ) + " with id "
+                                        + PersistentResource.this.getDisplayName( ) + " as the state is not " + preconditionState.name( ) + " (currently "
+                                        + PersistentResource.this.getState( ) + ")." );
+          } else {
+            PersistentResource.this.setReferer( referer );
+            PersistentResource.this.setState( finalState );
+          }
+        }
+      } );
+    } catch ( TransactionException ex ) {
+      Logs.extreme( ).error( ex, ex );
+      throw new ResourceAllocationException( ex );
+    }
+  }
+  
+  private SetReference<T, R> doCreateSetReference( ) {
+    SetReference<T, R> ref = new SetReference<T, R>( ) {
+      private volatile boolean finished = false;
+      
+      @Override
+      public T set( R referer ) throws ResourceAllocationException {
+        this.checkFinished( );
+        T ret = PersistentResource.this.doSetReferer( referer, ResourceAllocation.State.PENDING, ResourceAllocation.State.EXTANT );
+        this.finished = true;
+        return ret;
+      }
+      
+      @Override
+      public T abort( ) throws ResourceAllocationException {
+        this.checkFinished( );
+        T ret = PersistentResource.this.doSetReferer( null, ResourceAllocation.State.PENDING, ResourceAllocation.State.FREE );
+        this.finished = true;
+        return ret;
+      }
+      
+      private void checkFinished( ) throws ResourceAllocationException {
+        if ( this.finished ) {
+          throw new ResourceAllocationException( "Failed to set referer since this reference has already been set: " + PersistentResource.this.getDisplayName( )
+                                                 + " to "
+                                                 + PersistentResource.this.getReferer( ) + " and is currently in state " + PersistentResource.this.getState( ) );
+        }
+      }
+      
+    };
+    return ref;
+  }
+  
+  private ClearReference<T> doCreateClearReferer( ) {
+    final R referer = this.getReferer( );
+    ClearReference<T> ref = new ClearReference<T>( ) {
+      private volatile boolean finished = false;
+      
+      @Override
+      public T clear( ) throws ResourceAllocationException {
+        this.checkFinished( );
+        T ret = PersistentResource.this.doSetReferer( null, ResourceAllocation.State.RELEASING, ResourceAllocation.State.FREE );
+        this.finished = true;
+        return ret;
+      }
+      
+      @Override
+      public T abort( ) throws ResourceAllocationException {
+        this.checkFinished( );
+        T ret = PersistentResource.this.doSetReferer( referer, ResourceAllocation.State.RELEASING, ResourceAllocation.State.EXTANT );
+        this.finished = true;
+        return ret;
+      }
+      
+      private void checkFinished( ) throws ResourceAllocationException {
+        if ( this.finished ) {
+          throw new ResourceAllocationException( "Failed to set referer since this reference has already been set: " + PersistentResource.this.getDisplayName( )
+                                                 + " to "
+                                                 + PersistentResource.this.getReferer( ) + " and is currently in state " + PersistentResource.this.getState( ) );
+        }
+      }
+      
+    };
+    return ref;
   }
   
 }

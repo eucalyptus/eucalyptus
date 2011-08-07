@@ -66,14 +66,19 @@ package com.eucalyptus.cloud.util;
 import com.eucalyptus.util.HasNaturalId;
 
 public interface ResourceAllocation<T extends HasNaturalId, R extends HasNaturalId> {
-  public interface Reference<T, R> {
+  public interface SetReference<T, R> {
     public T set( R referer ) throws ResourceAllocationException;
+    
+    public T abort( ) throws ResourceAllocationException;
+  }
+  public interface ClearReference<T> {
+    public T clear( ) throws ResourceAllocationException;
     
     public T abort( ) throws ResourceAllocationException;
   }
   
   enum State {
-    UNKNOWN, FREE, PENDING, SUBMITTED, EXTANT, RELEASING
+    UNKNOWN, FREE, PENDING, EXTANT, RELEASING
   }
   
   public State currentState( );
@@ -82,20 +87,20 @@ public interface ResourceAllocation<T extends HasNaturalId, R extends HasNatural
    * Request is in-flight on the network (not just in memory) and state updates should be
    * disregarded until the in-flight request completes.
    * 
-   * Calling {@link Reference#set(Object)} completes the allocation, while calling
-   * {@link Reference#abort()} resets the state to that before the reference change.
+   * Calling {@link SetReference#set(Object)} completes the allocation, while calling
+   * {@link SetReference#abort()} resets the state to that before the reference change.
    */
-  public Reference<T, R> allocate( ) throws ResourceAllocationException;
+  public SetReference<T, R> allocate( ) throws ResourceAllocationException;
   
   /**
    * The procedure for gracefully releasing the resource is pending a submitted in-flight request.
    * Potential references to stale state may exist and should be disregarded until in-flight
    * requests complete.
    * 
-   * Calling {@link Reference#set(Object)} completes releasing the allocation, while calling
-   * {@link Reference#abort()} resets the state to that before the reference change.
+   * Calling {@link SetReference#set(Object)} completes releasing the allocation, while calling
+   * {@link SetReference#abort()} resets the state to that before the reference change.
    */
-  public Reference<T, R> release( ) throws ResourceAllocationException;
+  public ClearReference<T> release( ) throws ResourceAllocationException;
   
   /**
    * Dependent external resource state has been cleared and the resource is ready for re-use.
