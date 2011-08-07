@@ -80,9 +80,9 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
   private static final long serialVersionUID = 1L;
   @Column( name = "metadata_state" )
   @Enumerated( EnumType.STRING )
-  STATE            state;
+  STATE                     state;
   @Column( name = "metadata_display_name" )
-  protected String displayName;
+  protected String          displayName;
   
   protected AbstractStatefulPersistent( ) {
     super( );

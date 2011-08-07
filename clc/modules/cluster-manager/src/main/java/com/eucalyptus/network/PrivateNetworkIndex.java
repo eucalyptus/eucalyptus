@@ -91,15 +91,21 @@ import com.eucalyptus.util.TransactionException;
 public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex, VmInstance> {
   @ManyToOne
   @JoinColumn( name = "metadata_network_group_fk" )
-  private final NetworkGroup parent;
+  private final NetworkGroup network;
   @Column( name = "metadata_network_index" )
-  private Long               index;
+  private final Long         index;
   @Column( name = "metadata_network_index_vm_perm_uuid" )
   private String             instanceNaturalId;
   
-  private PrivateNetworkIndex( NetworkGroup parent, Long index ) {
+  private PrivateNetworkIndex( ) {
     super( );
-    this.parent = parent;
+    this.index = null;
+    this.network = null;
+  }
+  
+  private PrivateNetworkIndex( NetworkGroup network, Long index ) {
+    super( );
+    this.network = network;
     this.index = index;
   }
   
@@ -113,10 +119,6 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
     return this.index;
   }
   
-  public void setIndex( Long index ) {
-    this.index = index;
-  }
-  
   public String getInstanceNaturalId( ) {
     return this.instanceNaturalId;
   }
@@ -126,7 +128,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   }
   
   public NetworkGroup getParent( ) {
-    return this.parent;
+    return this.network;
   }
   
   @Override

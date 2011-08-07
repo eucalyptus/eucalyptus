@@ -87,19 +87,16 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudM
     available, removing
   }
   
-  @Column( name = "metadata_keypair_user_keyname", unique = true )
-  String           uniqueName; //bogus field to enforce uniqueness
   @Lob
   @Column( name = "metadata_keypair_public_key" )
-  String           publicKey;
+  private String publicKey;
   @Column( name = "metadata_keypair_finger_print" )
-  String           fingerPrint;
-
+  private String fingerPrint;
+  
   SshKeyPair( ) {}
   
   SshKeyPair( OwnerFullName userFullName, String keyName ) {
     super( userFullName, keyName );
-    this.uniqueName = this.getFullName( ).toString( );
   }
   
   SshKeyPair( OwnerFullName user ) {
@@ -110,14 +107,6 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudM
     this( user, keyName );
     this.publicKey = publicKey;
     this.fingerPrint = fingerPrint;
-  }
-  
-  public String getUniqueName( ) {
-    return this.uniqueName;
-  }
-  
-  public void setUniqueName( String uniqueName ) {
-    this.uniqueName = uniqueName;
   }
   
   public String getPublicKey( ) {

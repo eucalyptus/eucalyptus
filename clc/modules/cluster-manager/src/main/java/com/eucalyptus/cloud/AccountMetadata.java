@@ -65,6 +65,8 @@ package com.eucalyptus.cloud;
 
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 import javax.persistence.Transient;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -79,6 +81,10 @@ import com.eucalyptus.util.OwnerFullName;
 public abstract class AccountMetadata<STATE extends Enum<STATE>> extends AbstractStatefulPersistent<STATE> implements HasOwningAccount {
   @Column( name = "metadata_account_id" )
   private String ownerAccountNumber;
+  @Column( name = "metadata_account_name" )
+  private String ownerAccountName;
+  @Column( name = "metadata_unique_name", unique = true )
+  private String uniqueName;
   
   /**
    * GRZE:NOTE: Should only /ever/ be used by sub classes.
@@ -92,6 +98,9 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
     this.ownerAccountNumber = owner != null
       ? owner.getAccountNumber( )
       : null;
+    this.ownerAccountName = owner != null
+      ? owner.getAccountName( )
+      : null;
   }
   
   public AccountMetadata( OwnerFullName owner, String displayName ) {
@@ -99,15 +108,18 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
     this.ownerAccountNumber = owner != null
       ? owner.getAccountNumber( )
       : null;
+    this.ownerAccountName = owner != null
+      ? owner.getAccountName( )
+      : null;
   }
   
   @Override
   public OwnerFullName getOwner( ) {
     if ( this.getOwnerAccountNumber( ) != null ) {
       OwnerFullName tempOwner;
-      if( FakePrincipals.nobodyFullName( ).getAccountNumber( ).equals( this.getOwnerAccountNumber( ) ) ) {
+      if ( FakePrincipals.nobodyFullName( ).getAccountNumber( ).equals( this.getOwnerAccountNumber( ) ) ) {
         tempOwner = FakePrincipals.nobodyFullName( );
-      } else if( FakePrincipals.systemFullName( ).getAccountNumber( ).equals( this.getOwnerAccountNumber( ) ) ) {
+      } else if ( FakePrincipals.systemFullName( ).getAccountNumber( ).equals( this.getOwnerAccountNumber( ) ) ) {
         tempOwner = FakePrincipals.systemFullName( );
       } else {
         tempOwner = AccountFullName.getInstance( this.getOwnerAccountNumber( ) );
@@ -163,5 +175,27 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   
   protected void setOwner( OwnerFullName owner ) {
     this.setOwnerAccountNumber( owner.getAccountNumber( ) );
+  }
+  
+  public String getOwnerAccountName( ) {
+    return this.ownerAccountName;
+  }
+  
+  public void setOwnerAccountName( String ownerAccountName ) {
+    this.ownerAccountName = ownerAccountName;
+  }
+
+  protected String getUniqueName( ) {
+    return this.uniqueName;
+  }
+
+  protected void setUniqueName( String uniqueName ) {
+    this.uniqueName = uniqueName;
+  }
+  
+  @PrePersist
+  @PreUpdate
+  private void generateOnCommit( ) {
+    this.uniqueName = this.ownerAccountName + ":" + this.getDisplayName( );
   }
 }

@@ -108,9 +108,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     ACTIVE
   }
   
-  @Column( name = "metadata_network_group_unique_name", unique = true )
-  private String           uniqueName;                                    //bogus field to enforce uniqueness
-                                                                           
   @Column( name = "metadata_network_group_description" )
   private String           description;
   
@@ -145,6 +142,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     if ( this.getState( ) == null ) {
       this.setState( State.PENDING );
     }
+    
   }
   
   public String getDescription( ) {
@@ -197,9 +195,9 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   public int hashCode( ) {
     final int prime = 31;
     int result = super.hashCode( );
-    result = prime * result + ( ( this.uniqueName == null )
+    result = prime * result + ( ( this.getUniqueName( ) == null )
       ? 0
-      : this.uniqueName.hashCode( ) );
+      : this.getUniqueName( ).hashCode( ) );
     return result;
   }
   
@@ -209,15 +207,15 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     if ( !super.equals( obj ) ) return false;
     if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
     NetworkGroup other = ( NetworkGroup ) obj;
-    if ( uniqueName == null ) {
-      if ( other.uniqueName != null ) return false;
-    } else if ( !uniqueName.equals( other.uniqueName ) ) return false;
+    if ( this.getUniqueName( ) == null ) {
+      if ( other.getUniqueName( ) != null ) return false;
+    } else if ( !this.getUniqueName( ).equals( other.getUniqueName( ) ) ) return false;
     return true;
   }
   
   @Override
   public String toString( ) {
-    return String.format( "NetworkRulesGroup:%s:description=%s:networkRules=%s", this.uniqueName, this.description, this.networkRules );
+    return String.format( "NetworkRulesGroup:%s:description=%s:networkRules=%s", this.getUniqueName( ), this.description, this.networkRules );
   }
   
   @Transient
@@ -246,14 +244,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   
   public String getClusterNetworkName( ) {
     return this.getOwnerUserId( ) + "-" + this.getDisplayName( );
-  }
-  
-  public void setUniqueName( String uniqueName ) {
-    this.uniqueName = uniqueName;
-  }
-  
-  public String getUniqueName( ) {
-    return this.uniqueName;
   }
   
   /**

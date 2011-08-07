@@ -63,9 +63,47 @@
 
 package com.eucalyptus.network;
 
-public class NetworkTag {
-  private Integer           tag;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
+import com.eucalyptus.cloud.util.PersistentResource;
+
+@Entity
+@javax.persistence.Entity
+@PersistenceContext( name = "eucalyptus_cloud" )
+@Table( name = "metadata_network_indices" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class NetworkTag extends PersistentResource<NetworkTag, NetworkGroup> {
+  private Integer      tag;
   private NetworkGroup network;
-  private Boolean           valid;
+  private Boolean      valid;
+  
+  @Override
+  protected void setReferer( NetworkGroup referer ) {
+    this.setNetwork( referer );
+  }
+  
+  @Override
+  protected NetworkGroup getReferer( ) {
+    return this.getNetwork( );
+  }
+  
+  public Integer getTag( ) {
+    return this.tag;
+  }
+  
+  public void setTag( Integer tag ) {
+    this.tag = tag;
+  }
+  
+  public NetworkGroup getNetwork( ) {
+    return this.network;
+  }
+  
+  public void setNetwork( NetworkGroup network ) {
+    this.network = network;
+  }
   
 }
