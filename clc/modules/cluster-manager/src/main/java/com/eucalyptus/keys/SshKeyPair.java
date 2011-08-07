@@ -127,16 +127,16 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudM
   
   @Override
   public String toString( ) {
-    return String.format( "SshKeyPair:%s:fingerPrint=%s", this.uniqueName, this.fingerPrint );
+    return String.format( "SshKeyPair:%s:fingerPrint=%s", this.getUniqueName( ), this.fingerPrint );
   }
   
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = super.hashCode( );
-    result = prime * result + ( ( this.uniqueName == null )
+    result = prime * result + ( ( this.getUniqueName( ) == null )
       ? 0
-      : this.uniqueName.hashCode( ) );
+      : this.getUniqueName( ).hashCode( ) );
     return result;
   }
   
@@ -152,11 +152,11 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudM
       return false;
     }
     SshKeyPair other = ( SshKeyPair ) obj;
-    if ( this.uniqueName == null ) {
-      if ( other.uniqueName != null ) {
+    if ( this.getUniqueName( ) == null ) {
+      if ( other.getUniqueName( ) != null ) {
         return false;
       }
-    } else if ( !this.uniqueName.equals( other.uniqueName ) ) {
+    } else if ( !this.getUniqueName( ).equals( other.getUniqueName( ) ) ) {
       return false;
     }
     return true;

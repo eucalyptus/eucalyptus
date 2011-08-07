@@ -184,11 +184,15 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   public void setOwnerAccountName( String ownerAccountName ) {
     this.ownerAccountName = ownerAccountName;
   }
-
+  
   protected String getUniqueName( ) {
-    return this.uniqueName;
+    if ( this.uniqueName == null ) {
+      return this.createUniqueName( );
+    } else {
+      return this.uniqueName;
+    }
   }
-
+  
   protected void setUniqueName( String uniqueName ) {
     this.uniqueName = uniqueName;
   }
@@ -196,6 +200,10 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   @PrePersist
   @PreUpdate
   private void generateOnCommit( ) {
-    this.uniqueName = this.ownerAccountName + ":" + this.getDisplayName( );
+    this.uniqueName = createUniqueName( );
+  }
+  
+  private String createUniqueName( ) {
+    return this.ownerAccountName + ":" + this.getDisplayName( );
   }
 }
