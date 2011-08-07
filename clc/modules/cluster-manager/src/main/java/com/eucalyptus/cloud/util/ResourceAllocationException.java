@@ -63,49 +63,22 @@
 
 package com.eucalyptus.cloud.util;
 
-import com.eucalyptus.util.HasNaturalId;
+public class ResourceAllocationException extends Exception {
 
-public interface ResourceAllocation<T extends HasNaturalId, R extends HasNaturalId> {
-  public interface Reference<T, R> {
-    public T set( R referer ) throws ResourceAllocationException;
-    
-    public T abort( ) throws ResourceAllocationException;
+  public ResourceAllocationException( ) {
+    super( );
   }
-  
-  enum State {
-    UNKNOWN, FREE, PENDING, SUBMITTED, EXTANT, RELEASING
+
+  public ResourceAllocationException( String message, Throwable cause ) {
+    super( message, cause );
   }
-  
-  public State currentState( );
-  
-  /**
-   * Request is in-flight on the network (not just in memory) and state updates should be
-   * disregarded until the in-flight request completes.
-   * 
-   * Calling {@link Reference#set(Object)} completes the allocation, while calling
-   * {@link Reference#abort()} resets the state to that before the reference change.
-   */
-  public Reference<T, R> allocate( ) throws ResourceAllocationException;
-  
-  /**
-   * The procedure for gracefully releasing the resource is pending a submitted in-flight request.
-   * Potential references to stale state may exist and should be disregarded until in-flight
-   * requests complete.
-   * 
-   * Calling {@link Reference#set(Object)} completes releasing the allocation, while calling
-   * {@link Reference#abort()} resets the state to that before the reference change.
-   */
-  public Reference<T, R> release( ) throws ResourceAllocationException;
-  
-  /**
-   * Dependent external resource state has been cleared and the resource is ready for re-use.
-   */
-  public void teardown( );
-  
-  /**
-   * Attempt to recover a resource allocation -- e.g., after a system restart. Constraints must be
-   * enforced on valid initial state.
-   */
-  public T reclaim( R referer );
-  
+
+  public ResourceAllocationException( String message ) {
+    super( message );
+  }
+
+  public ResourceAllocationException( Throwable cause ) {
+    super( cause );
+  }
+
 }

@@ -125,7 +125,7 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
    * @return
    */
   @Override
-  public final Reference<T, R> allocate( ) {
+  public final Reference<T, R> allocate( ) throws ResourceAllocationException {
     try {
       Transactions.naturalId( ( T ) this, new Callback<T>( ) {
         
@@ -140,8 +140,9 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
           }
         }
       } );
-    } catch ( TransactionException ex ) {
+    } catch ( Exception ex ) {
       Logs.extreme( ).error( ex, ex );
+      throw new ResourceAllocationException( "Failed to allocate: " + this.toString( ), ex );
     }
     return new ResourceAllocation.Reference<T, R>( ) {
       private volatile boolean finished = false;
@@ -158,15 +159,16 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
         }
       }
       
-      private void checkFinished( ) throws RuntimeException {
+      private void checkFinished( ) throws ResourceAllocationException {
         if ( this.finished ) {
-          throw new RuntimeException( "Failed to set referer since this reference has already been set: " + PersistentResource.this.getDisplayName( ) + " to "
-                                      + PersistentResource.this.getReferer( ) + " and is currently in state " + PersistentResource.this.getState( ) );
+          throw new ResourceAllocationException( "Failed to set referer since this reference has already been set: " + PersistentResource.this.getDisplayName( )
+                                                 + " to "
+                                                 + PersistentResource.this.getReferer( ) + " and is currently in state " + PersistentResource.this.getState( ) );
         }
       }
       
       @Override
-      public T abort( ) {
+      public T abort( ) throws ResourceAllocationException {
         this.checkFinished( );
         try {
           T ret = PersistentResource.this.doClearReferer( );
