@@ -91,7 +91,7 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
   @NotFound( action = NotFoundAction.IGNORE )
   @Column( name = "metadata_extant_network_group_ref" )
   private NetworkGroup             networkGroup;
-  @Column( name = "metadata_extant_network_tag" )
+  @Column( name = "metadata_extant_network_tag", unique = true )
   private Long                     tag;
   @OneToMany( mappedBy = "parent" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
