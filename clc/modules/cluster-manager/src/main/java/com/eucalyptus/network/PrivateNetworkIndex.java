@@ -93,9 +93,9 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   @JoinColumn( name = "metadata_network_group_fk" )
   private final ExtantNetwork network;
   @Column( name = "metadata_network_index" )
-  private final Long         index;
+  private final Long          index;
   @Column( name = "metadata_network_index_vm_perm_uuid" )
-  private String             instanceNaturalId;
+  private String              instanceNaturalId;
   
   private PrivateNetworkIndex( ) {
     super( );
@@ -127,7 +127,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
     this.instanceNaturalId = instanceNaturalId;
   }
   
-  public NetworkGroup getParent( ) {
+  public ExtantNetwork getParent( ) {
     return this.network;
   }
   
@@ -148,6 +148,48 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
       Logs.extreme( ).error( ex, ex );
       return null;
     }
+  }
+  
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( this.index == null )
+      ? 0
+      : this.index.hashCode( ) );
+    result = prime * result + ( ( this.network == null )
+      ? 0
+      : this.network.hashCode( ) );
+    return result;
+  }
+  
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( !super.equals( obj ) ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    PrivateNetworkIndex other = ( PrivateNetworkIndex ) obj;
+    if ( this.index == null ) {
+      if ( other.index != null ) {
+        return false;
+      }
+    } else if ( !this.index.equals( other.index ) ) {
+      return false;
+    }
+    if ( this.network == null ) {
+      if ( other.network != null ) {
+        return false;
+      }
+    } else if ( !this.network.equals( other.network ) ) {
+      return false;
+    }
+    return true;
   }
   
 }
