@@ -258,7 +258,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     this.store( );
   }
   
-  private VmInstance( final UserFullName userFullName, final String instanceId2 ) {
+  protected VmInstance( final UserFullName userFullName, final String instanceId2 ) {
     super( userFullName, instanceId2 );
     this.instanceId = instanceId2;
     this.launchTime = null;
@@ -273,9 +273,10 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     this.platform = null;
     this.sshKeyPair = null;
     this.vmType = null;
+    this.privateNetwork = null;
   }
   
-  private VmInstance( ) {
+  protected VmInstance( ) {
     this.instanceId = null;
     this.launchTime = null;
     this.launchIndex = null;
@@ -289,6 +290,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     this.platform = null;
     this.sshKeyPair = null;
     this.vmType = null;
+    this.privateNetwork = null;
   }
   
   public void updateBlockBytes( final long blkbytes ) {
@@ -435,7 +437,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
         LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
       }
       if ( !this.getState( ).equals( oldState ) ) {
-        EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.owner, this.state.getReference( ).name( ), this.launchTime );
+        EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.getOwner( ), this.state.getReference( ).name( ), this.launchTime );
       }
     }
   }
@@ -1030,7 +1032,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   }
   
   public String getInstanceUuid( ) {
-    return this.instanceUuid;
+    return this.getNaturalId( );
   }
   
   public SshKeyPair getSshKeyPair( ) {

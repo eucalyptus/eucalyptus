@@ -80,6 +80,11 @@ public class UserFullName implements OwnerFullName {
   }
   
   @Override
+  public String getAccountName( ) {
+    return this.accountName;
+  }
+  
+  @Override
   public String getAuthority( ) {
     return this.authority;
   }
@@ -103,19 +108,20 @@ public class UserFullName implements OwnerFullName {
   public final String getRegion( ) {
     return EMPTY;
   }
-
   
   private static Logger       LOG    = Logger.getLogger( UserFullName.class );
   private static final String VENDOR = "euare";
   private final String        userId;
   private final String        userName;
-  private String              accountNumber;
+  private final String        accountNumber;
+  private final String        accountName;
   private String              authority;
   private String              relativeId;
-  String              qName;
+  String                      qName;
   
   private UserFullName( Account account, User user, String... relativePath ) throws AuthException {
     this.accountNumber = account.getAccountNumber( );
+    this.accountName = account.getName( );
     this.authority = new StringBuilder( ).append( FullName.PREFIX ).append( FullName.SEP ).append( VENDOR ).append( FullName.SEP ).append( FullName.SEP ).append( this.accountNumber ).append( FullName.SEP ).toString( );
     this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( new String[] { "user", user.getName( ) } );
     this.qName = this.authority + this.relativeId;
@@ -135,11 +141,11 @@ public class UserFullName implements OwnerFullName {
   public static UserFullName getInstance( User user, String... relativePath ) {
     try {
       if ( user == null ) {
-        return new UserFullName( FakePrincipals.nobodyAccount(), FakePrincipals.nobodyUser() );
-      } else if ( FakePrincipals.systemUser().equals( user ) ) {
-        return new UserFullName( FakePrincipals.systemAccount(), FakePrincipals.systemUser() );
-      } else if ( FakePrincipals.nobodyUser().equals( user ) ) {
-        return new UserFullName( FakePrincipals.nobodyAccount(), FakePrincipals.nobodyUser() );
+        return new UserFullName( FakePrincipals.nobodyAccount( ), FakePrincipals.nobodyUser( ) );
+      } else if ( FakePrincipals.systemUser( ).equals( user ) ) {
+        return new UserFullName( FakePrincipals.systemAccount( ), FakePrincipals.systemUser( ) );
+      } else if ( FakePrincipals.nobodyUser( ).equals( user ) ) {
+        return new UserFullName( FakePrincipals.nobodyAccount( ), FakePrincipals.nobodyUser( ) );
       } else {
         Account account = user.getAccount( );
         return new UserFullName( account, user );
@@ -147,7 +153,7 @@ public class UserFullName implements OwnerFullName {
     } catch ( AuthException ex ) {
       LOG.error( ex.getMessage( ) );
       try {
-        return new UserFullName( FakePrincipals.nobodyAccount(), FakePrincipals.nobodyUser() );
+        return new UserFullName( FakePrincipals.nobodyAccount( ), FakePrincipals.nobodyUser( ) );
       } catch ( AuthException ex1 ) {
         LOG.error( ex1, ex1 );
         throw new UndeclaredThrowableException( ex );
@@ -187,7 +193,7 @@ public class UserFullName implements OwnerFullName {
     if ( this == obj ) return true;
     if ( !super.equals( obj ) ) return false;
     if ( getClass( ) != obj.getClass( ) ) return false;
-    if ( obj instanceof UserFullName ) { 
+    if ( obj instanceof UserFullName ) {
       UserFullName other = ( UserFullName ) obj;
       if ( this.userId == null ) {
         if ( other.userId != null ) return false;
@@ -210,7 +216,7 @@ public class UserFullName implements OwnerFullName {
     }
     return true;
   }
-
+  
   @Override
   public String getNamespace( ) {
     return this.accountNumber;

@@ -65,6 +65,7 @@ package com.eucalyptus.util;
 
 public interface OwnerFullName extends FullName {
   public String getAccountNumber( );
+  public String getAccountName( );
   public String getUserId( );
   public String getUserName( );
 }

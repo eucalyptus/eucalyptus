@@ -74,12 +74,14 @@ public class AccountFullName implements OwnerFullName {
   private static Logger       LOG    = Logger.getLogger( UserFullName.class );
   private static final String VENDOR = "euare";
   private final String        accountNumber;
+  private final String        accountName;
   private final String        authority;
   private final String        relativeId;
   private final String        qName;
   
   protected AccountFullName( OwnerFullName ownerFn, String... relativePath ) {
     this.accountNumber = ownerFn.getAccountNumber( );
+    this.accountName = ownerFn.getAccountName( );
     this.authority = ownerFn.getAuthority( );
     this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( relativePath );
     this.qName = this.authority + this.relativeId;
@@ -180,9 +182,9 @@ public class AccountFullName implements OwnerFullName {
   
   public static AccountFullName getInstance( Account account, String... relativePath ) {
     if ( account == null ) {
-      return new AccountFullName( FakePrincipals.nobodyAccount(), relativePath );
-    } else if ( account == FakePrincipals.systemUser() ) {
-      return new AccountFullName( FakePrincipals.nobodyAccount(), relativePath );
+      return new AccountFullName( FakePrincipals.nobodyAccount( ), relativePath );
+    } else if ( account == FakePrincipals.systemUser( ) ) {
+      return new AccountFullName( FakePrincipals.nobodyAccount( ), relativePath );
     } else {
       return new AccountFullName( account, relativePath );
     }
@@ -196,6 +198,11 @@ public class AccountFullName implements OwnerFullName {
   @Override
   public String getUserName( ) {
     return null;
+  }
+
+  @Override
+  public String getAccountName( ) {
+    return this.accountName;
   }
   
 }

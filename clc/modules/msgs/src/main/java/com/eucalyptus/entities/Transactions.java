@@ -4,11 +4,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
-import com.eucalyptus.cloud.util.PersistentResource;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.Logs;
@@ -191,6 +189,15 @@ public class Transactions {
     }
   }
   
+  public static <T extends HasNaturalId> T naturalId( T search ) throws TransactionException {
+    return naturalId( search, new Callback<T>( ) {
+      
+      @Override
+      public void fire( T t ) {}
+    } );
+  }
+  
+  @SuppressWarnings( "unchecked" )
   public static <T extends HasNaturalId> T naturalId( T search, Callback<T> c ) throws TransactionException {
     assertThat( search, notNullValue( ) );
     assertThat( c, notNullValue( ) );
@@ -207,7 +214,6 @@ public class Transactions {
       dbtl.remove( );
     }
   }
-
   
   public static <T> T one( T search, Callback<T> c ) throws TransactionException {
     assertThat( search, notNullValue( ) );
