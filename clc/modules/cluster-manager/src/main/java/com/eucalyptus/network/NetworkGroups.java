@@ -103,7 +103,7 @@ public class NetworkGroups {
   
   static NetworkGroup createDefault( OwnerFullName ownerFullName ) {
     try {
-      return lookup( ownerFullName, NETWORK_DEFAULT_NAME );
+      return Transactions.find( new NetworkGroup( ownerFullName, NETWORK_DEFAULT_NAME ) );
     } catch ( Exception e ) {
       try {
         return create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
