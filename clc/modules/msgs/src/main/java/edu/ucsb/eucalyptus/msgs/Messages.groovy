@@ -69,6 +69,7 @@ import com.eucalyptus.component.ServiceConfiguration
 import com.eucalyptus.component.ServiceConfigurations
 import com.eucalyptus.component.id.ComponentService
 import com.eucalyptus.component.id.Eucalyptus
+import com.eucalyptus.util.Exceptions
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord
 
 
@@ -191,7 +192,8 @@ public class ExceptionResponseType extends BaseMessage {
   public ExceptionResponseType() {
   }
   public ExceptionResponseType( BaseMessage msg, String message, Throwable exception ) {
-    this.message = message!=null?message:"not available";
+    this.source = exception.getClass( ).getCanonicalName( );
+    this.message = message!=null?message:exception.getMessage( );
     this.setUserId( msg.getUserId( ) );
     this.setCorrelationId( msg.getCorrelationId( ) );
     this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
@@ -200,7 +202,8 @@ public class ExceptionResponseType extends BaseMessage {
   }
   public ExceptionResponseType( BaseMessage msg, String message, HttpResponseStatus httpStatus, Throwable exception ) {
     this.httpStatus = httpStatus;
-    this.message = message!=null?message:"not available"
+    this.source = exception.getClass( ).getCanonicalName( );
+    this.message = message!=null?message:exception.getMessage( );
     this.setUserId( msg.getUserId( ) );
     this.setCorrelationId( msg.getCorrelationId( ) );
     this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
