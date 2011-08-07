@@ -84,9 +84,7 @@ public interface CloudMetadata<T> extends HasFullName<T>, CloudVendorInfo, HasOw
   public interface KeyPair<S extends KeyPair<S>> extends CloudMetadata<S> {}
   
   @PolicyResourceType( "securitygroup" )
-  public interface NetworkSecurityGroup<S extends NetworkSecurityGroup<S>> extends CloudMetadata<S> {
-    public abstract String getUniqueName( );
-  }
+  public interface NetworkSecurityGroup<S extends NetworkSecurityGroup<S>> extends CloudMetadata<S> {}
   
   @PolicyResourceType( "address" )
   public interface AddressMetadata<S extends AddressMetadata<S>> extends CloudMetadata<S> {}
