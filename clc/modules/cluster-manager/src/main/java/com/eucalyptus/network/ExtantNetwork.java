@@ -66,6 +66,7 @@ package com.eucalyptus.network;
 import java.util.HashSet;
 import java.util.Set;
 import javax.persistence.Column;
+import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
@@ -76,6 +77,7 @@ import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.cloud.util.ResourceAllocation;
+import com.eucalyptus.cloud.util.ResourceAllocation.State;
 import com.eucalyptus.entities.AbstractStatefulPersistent;
 
 @Entity
@@ -85,12 +87,91 @@ import com.eucalyptus.entities.AbstractStatefulPersistent;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation.State> {
   @OneToOne
-  @NotFound( action = NotFoundAction.IGNORE)
-  @Column( name = "metadata_extant_network_group_ref" ) 
-  private NetworkGroup networkGroup;
+  @JoinColumn( name = "id" )
+  @NotFound( action = NotFoundAction.IGNORE )
+  @Column( name = "metadata_extant_network_group_ref" )
+  private NetworkGroup             networkGroup;
   @Column( name = "metadata_extant_network_tag" )
   private Long                     tag;
   @OneToMany( mappedBy = "parent" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<PrivateNetworkIndex> indexes = new HashSet<PrivateNetworkIndex>( );
+  
+  public ExtantNetwork( ) {
+    super( );
+  }
+  
+  public ExtantNetwork( State state, String displayName ) {
+    super( state, displayName );
+  }
+  
+  public ExtantNetwork( String displayName ) {
+    super( displayName );
+  }
+  
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( this.networkGroup == null )
+      ? 0
+      : this.networkGroup.hashCode( ) );
+    result = prime * result + ( ( this.tag == null )
+      ? 0
+      : this.tag.hashCode( ) );
+    return result;
+  }
+  
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( !super.equals( obj ) ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    ExtantNetwork other = ( ExtantNetwork ) obj;
+    if ( this.networkGroup == null ) {
+      if ( other.networkGroup != null ) {
+        return false;
+      }
+    } else if ( !this.networkGroup.equals( other.networkGroup ) ) {
+      return false;
+    }
+    if ( this.tag == null ) {
+      if ( other.tag != null ) {
+        return false;
+      }
+    } else if ( !this.tag.equals( other.tag ) ) {
+      return false;
+    }
+    return true;
+  }
+  
+  protected NetworkGroup getNetworkGroup( ) {
+    return this.networkGroup;
+  }
+  
+  protected void setNetworkGroup( NetworkGroup networkGroup ) {
+    this.networkGroup = networkGroup;
+  }
+  
+  protected Long getTag( ) {
+    return this.tag;
+  }
+  
+  protected void setTag( Long tag ) {
+    this.tag = tag;
+  }
+  
+  protected Set<PrivateNetworkIndex> getIndexes( ) {
+    return this.indexes;
+  }
+  
+  protected void setIndexes( Set<PrivateNetworkIndex> indexes ) {
+    this.indexes = indexes;
+  }
 }
