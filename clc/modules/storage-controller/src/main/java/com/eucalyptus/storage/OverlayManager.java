@@ -1170,7 +1170,7 @@ public class OverlayManager implements LogicalStorageManager {
 			}
 		}
 
-		private int exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) throws EucalyptusCloudException {
+		private void exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) throws EucalyptusCloudException {
 			if(exportManager instanceof AOEManager) {
 				AOEVolumeInfo aoeVolumeInfo = (AOEVolumeInfo) lvmVolumeInfo;
 				exportManager.allocateTarget(aoeVolumeInfo);
@@ -1219,14 +1219,19 @@ public class OverlayManager implements LogicalStorageManager {
 				if(pid < 0)
 					throw new EucalyptusCloudException("invalid vblade pid: " + pid);
 				aoeVolumeInfo.setVbladePid(pid);
-				return pid;
 			} else if(exportManager instanceof ISCSIManager) {
 				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
 				exportManager.allocateTarget(iscsiVolumeInfo);
 				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-				((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
+				try {
+					((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
+				} catch (EucalyptusCloudException e) {
+					LOG.error(e);
+					//try again
+					exportManager.allocateTarget(iscsiVolumeInfo);
+					((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
+				}
 			}
-			return 0;
 		}
 	}
 
