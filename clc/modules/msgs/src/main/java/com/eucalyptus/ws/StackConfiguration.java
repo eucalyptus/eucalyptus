@@ -81,8 +81,8 @@ import com.eucalyptus.entities.AbstractPersistent;
 public class StackConfiguration extends AbstractPersistent {
 
   public static final Integer CHANNEL_CONNECT_TIMEOUT           = 500;
-  @ConfigurableField( initial = "" + 4, description = "Time interval duration (in seconds) during which duplicate signatures will be accepted to accomodate collisions for legitimate requests inherent in Query/REST signing protocol." )
-  public static Integer        REPLAY_SKEW_WINDOW_SEC            = 4;
+  @ConfigurableField( initial = "" + 3, description = "Time interval duration (in seconds) during which duplicate signatures will be accepted to accomodate collisions for legitimate requests inherent in Query/REST signing protocol." )
+  public static Integer        REPLAY_SKEW_WINDOW_SEC            = 3;
   public static final Boolean  SERVER_CHANNEL_REUSE_ADDRESS      = true;
   public static final Boolean  SERVER_CHANNEL_NODELAY            = true;
   public static final Boolean  CHANNEL_REUSE_ADDRESS             = true;
