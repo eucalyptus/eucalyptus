@@ -147,7 +147,7 @@ static void * rebooting_thread (void *arg)
 
     conn = check_hypervisor_conn();
     if (! conn) {
-        logprintfl (EUCAFATAL, "cannot restart instance %s, abandoning it\n", instance->instanceId);
+        logprintfl (EUCAERROR, "cannot restart instance %s, abandoning it\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         free (xml);
         return NULL;
@@ -202,7 +202,7 @@ static void * rebooting_thread (void *arg)
         }
     }
     if (dom==NULL) {
-        logprintfl (EUCAFATAL, "Failed to restart instance %s\n", instance->instanceId);
+        logprintfl (EUCAERROR, "Failed to restart instance %s\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         return NULL;
     }
@@ -227,11 +227,11 @@ doRebootInstance(	struct nc_state_t *nc,
     pthread_t tcb;
     // since shutdown/restart may take a while, we do them in a thread
     if ( pthread_create (&tcb, NULL, rebooting_thread, (void *)instance) ) {
-        logprintfl (EUCAFATAL, "failed to spawn a reboot thread\n");
+        logprintfl (EUCAERROR, "failed to spawn a reboot thread\n");
         return ERROR_FATAL;
     }
     if (pthread_detach(tcb)) {
-      logprintfl(EUCAFATAL, "failed to detach the monitoring thread\n");
+      logprintfl (EUCAERROR, "failed to detach the rebooting thread\n");
       return ERROR_FATAL;
     }
     
