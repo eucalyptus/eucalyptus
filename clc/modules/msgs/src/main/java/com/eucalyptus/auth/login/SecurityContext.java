@@ -24,7 +24,9 @@ public class SecurityContext extends Configuration {
   // Note: According WS-Security spec, WS-Security requests need 
   // to be cached for at least 5 min for timestamps to expire
   // For AWS query interface, default expiration time is 15 mins
-  private static TimedEvictionSet<String> replayQueue = new TimedEvictionSet<String>(TimeUnit.MILLISECONDS.convert(15, TimeUnit.MINUTES));
+  // we cache for 15 mins 20 secs to allow for some clock drift
+  // (in case creation Timestamp is up to 20 secs in the future)
+  private static TimedEvictionSet<String> replayQueue = new TimedEvictionSet<String>(TimeUnit.MILLISECONDS.convert(920, TimeUnit.SECONDS));
   private List<String> loginModules = Lists.newArrayList( );
   private SecurityContext( ) {}
   

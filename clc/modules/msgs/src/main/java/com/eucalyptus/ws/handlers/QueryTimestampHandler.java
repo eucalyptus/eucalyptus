@@ -101,13 +101,14 @@ public class QueryTimestampHandler extends MessageStackHandler {
           } catch ( Exception e ) {
             expires = Timestamps.parseTimestamp( URLDecoder.decode( timestamp ) );
           }
-
+	  // allow 20 secs for clock drift
+	  now.add( Calendar.SECOND, -20 );
 	  // make sure that the message wasn't generated in the future
           if( now.before( expires )) {
               throw new AuthenticationException( "Message was generated in the future (times in UTC): Timestamp=" + timestamp);
           }
-
-          expires.add( Calendar.MINUTE, 15 );
+	  // 15 mins - 20 secs adjustment to now time
+          expires.add( Calendar.SECOND, 880 );
         } else {
           exp = parameters.remove( SecurityParameter.Expires.toString( ) );
           try {

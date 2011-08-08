@@ -68,6 +68,7 @@ import java.io.InputStreamReader;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Vector;
 import org.apache.axiom.om.OMElement;
@@ -257,7 +258,13 @@ public class WSSecurity {
 	      LOG.warn("[security] ]Timestamp expiration is further in the future than replay cache expiration");
 	      //throw new WSSecurityException("Timestamp expiration is too far in the future");
 	  }
-	  
+
+	  // validate that creation time is not too far in the future
+	  Calendar now = Calendar.getInstance();
+	  now.add(Calendar.SECOND, -20);
+	  if(now.after(ts.getCreated())) {
+	      throw new WSSecurityException("Timestamp was created in the future: make sure you clocks are synchronized");
+	  }
   }
   
   /**
