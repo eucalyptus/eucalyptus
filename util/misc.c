@@ -104,7 +104,7 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
         int done = 0;
 
         // full path was given, so it just needs to be verified
-        if (helpers_path[i]!=NULL) {
+        if (helpers_path != NULL && helpers_path[i]!=NULL) {
             int rc = stat (helpers_path[i], &statbuf);
             if (!rc && S_ISREG(statbuf.st_mode)) {
                 done++;
@@ -112,6 +112,8 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
 
         } else { // no full path was given, so search $PATH
             char *tok, *toka, *path, *helper, *save, *savea;
+            if(helpers_path==NULL)
+		 helpers_path = (char**) calloc (num_helpers, sizeof(char*));
 
             tok = getenv("PATH");
             if (!tok) return -1;

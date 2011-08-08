@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*
 Copyright (c) 2009  Eucalyptus Systems, Inc.	
 
@@ -116,10 +119,11 @@ int main (int argc, char **argv)
         ncInstance * inst = NULL;
         ncInstance * Insts[INSTS];
         int i, n;
-
+        
+        printf ("========> testing instance struct management\n");
         free_instance (NULL);
         free_instance (&inst);
-	inst = allocate_instance ("the-uuid", "i1", NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 0);
+        inst = allocate_instance ("the-uuid", "i1", NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 0);
         assert(inst!=NULL);
         free_instance (&inst);
         assert(inst==NULL);
@@ -127,19 +131,19 @@ int main (int argc, char **argv)
         n = total_instances (&bag);
         assert(n==0);
         bag=NULL;
-
+        
         inst = find_instance(&bag, "foo");
         assert(inst==NULL);
         bag=NULL;
-
+        
         n = remove_instance(&bag, NULL);
         assert(n!=0);
         bag=NULL;
-
+        
         for (i=0; i<INSTS; i++) {
             char id[10];
             sprintf(id, "i-%d", i);
-	    inst = Insts[i] = allocate_instance ("the-uuid", id, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 0);
+            inst = Insts[i] = allocate_instance ("the-uuid", id, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 0);
             assert (inst!=NULL);
             n = add_instance(&bag, inst);
             assert (n==0);
@@ -153,7 +157,41 @@ int main (int argc, char **argv)
         n = total_instances (&bag);
         assert (n==INSTS-2);
 
-        printf ("OK\n");
+        printf ("========> testing volume struct management\n");
+        ncVolume * v;
+        inst = allocate_instance ("the-uuid", "i2", NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 0);
+        assert(inst!=NULL);
+        for (i=0; i<EUCA_MAX_VOLUMES; i++) {
+            char id[10];
+            sprintf (id, "v-%d", i);
+            v = save_volume (inst, id, "rd", "ld", "ldr", VOL_STATE_ATTACHED);
+            assert (v!=NULL);
+        }
+        assert (is_volume_used (v));
+        assert (save_volume (inst, "too-much", "rd", "ld", "ldr", VOL_STATE_ATTACHED)==NULL);
+        assert (save_volume (inst, v->volumeId, NULL, NULL, NULL, NULL)!=NULL);
+        assert (save_volume (inst, v->volumeId, "RD", NULL, NULL, NULL)!=NULL);
+        assert (save_volume (inst, v->volumeId, NULL, "LD", NULL, NULL)!=NULL);
+        assert (save_volume (inst, v->volumeId, NULL, NULL, "LDR", NULL)!=NULL);
+        assert (save_volume (inst, v->volumeId, NULL, NULL, NULL, VOL_STATE_DETACHED)!=NULL);
+        assert (strcmp (v->remoteDev, "RD") == 0);
+        assert (save_volume (inst, "v-x1", NULL, NULL, NULL, VOL_STATE_ATTACHING)!=NULL);
+        assert (save_volume (inst, "v-x2", NULL, NULL, NULL, VOL_STATE_ATTACHING)==NULL);
+        assert (save_volume (inst, "v-x1", NULL, NULL, NULL, VOL_STATE_DETACHING)!=NULL);
+        assert (save_volume (inst, "v-x2", NULL, NULL, NULL, VOL_STATE_ATTACHING)==NULL);
+        assert (save_volume (inst, "v-x1", NULL, NULL, NULL, VOL_STATE_DETACHING_FAILED)!=NULL);
+        assert (save_volume (inst, "v-x2", NULL, NULL, NULL, VOL_STATE_ATTACHING)==NULL);
+        assert (free_volume (inst, "v-x1")!=NULL);
+        for (i=0; i<EUCA_MAX_VOLUMES-1; i++) {
+            char id[10];
+            sprintf (id, "v-%d", i);
+            v = free_volume (inst, id);
+            assert (v!=NULL);
+        }
+        free_instance (&inst);
+        assert(inst==NULL);        
     }
+
+    printf ("OK\n");
     return 0;
 }

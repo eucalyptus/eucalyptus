@@ -1,4 +1,5 @@
 #
+# Makefile for Eucalyptus Node Controller
 #
 
 include ../Makedefs
