@@ -124,8 +124,6 @@ public interface StorageManager {
     public void sendHeaders(WalrusDataGetRequestType request, DefaultHttpResponse httpResponse, Long size, String etag,
 			String lastModified, String contentType, String contentDisposition, String versionId, BucketLogData logData);
 	
-    public void setRootDirectory(String rootDirectory);
-
 	public void disable() throws EucalyptusCloudException ;
 
 	public void enable() throws EucalyptusCloudException;
