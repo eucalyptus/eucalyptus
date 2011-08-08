@@ -102,13 +102,13 @@ public class QueryTimestampHandler extends MessageStackHandler {
             expires = Timestamps.parseTimestamp( URLDecoder.decode( timestamp ) );
           }
 	  // allow 20 secs for clock drift
-	  now.add( Calendar.SECOND, -20 );
+	  now.add( Calendar.SECOND, 20 );
 	  // make sure that the message wasn't generated in the future
           if( now.before( expires )) {
               throw new AuthenticationException( "Message was generated in the future (times in UTC): Timestamp=" + timestamp);
           }
-	  // 15 mins - 20 secs adjustment to now time
-          expires.add( Calendar.SECOND, 880 );
+	  // allow caching for 15 mins + 20 secs for clock drift
+          expires.add( Calendar.SECOND, 920 );
         } else {
           exp = parameters.remove( SecurityParameter.Expires.toString( ) );
           try {

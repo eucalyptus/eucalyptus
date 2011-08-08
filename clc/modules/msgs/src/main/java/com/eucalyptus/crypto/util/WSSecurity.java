@@ -261,8 +261,8 @@ public class WSSecurity {
 
 	  // validate that creation time is not too far in the future
 	  Calendar now = Calendar.getInstance();
-	  now.add(Calendar.SECOND, -20);
-	  if(now.after(ts.getCreated())) {
+	  now.add(Calendar.SECOND, 20);
+	  if(now.before(ts.getCreated())) {
 	      throw new WSSecurityException("Timestamp was created in the future: make sure you clocks are synchronized");
 	  }
   }
