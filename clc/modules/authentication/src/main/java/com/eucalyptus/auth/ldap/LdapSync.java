@@ -552,7 +552,7 @@ public class LdapSync {
     if ( membersAttr != null ) {
       NamingEnumeration<?> names = membersAttr.getAll( );
 	  while ( names.hasMore( ) ) {
-	    members.add( parseMemberName( idAttrName, ( String ) names.next( ) ) );
+	    members.add( parseMemberName( idAttrName, ( String ) names.next( ) ).toLowerCase( ) );
 	  }
     }
     return members;
@@ -647,7 +647,7 @@ public class LdapSync {
           }
         }
         infoMap.put( User.DN, dn );
-        userMap.put( getId( lic.getUserIdAttribute( ), attrs ), infoMap );
+        userMap.put( getId( lic.getUserIdAttribute( ), attrs ).toLowerCase( ), infoMap );
       }
       
     } );
