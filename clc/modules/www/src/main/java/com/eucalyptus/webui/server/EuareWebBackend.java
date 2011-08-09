@@ -153,6 +153,10 @@ public class EuareWebBackend {
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( PEM, "PEM", false, "0px", TableDisplay.NONE, Type.ARTICLE, false, false ) );
   }
   
+  private static boolean authenticateWithLdap( User user ) {
+	  return LdapSync.enabled( ) && !user.isSystemAdmin( ) && !user.isAccountAdmin( );
+  }
+  
   public static User getUser( String userName, String accountName ) throws EucalyptusServiceException {
     if ( userName == null || accountName == null ) {
       throw new EucalyptusServiceException( "Empty user name or account name" );
@@ -168,7 +172,7 @@ public class EuareWebBackend {
       LOG.debug( e, e );
       throw e;
     } catch ( Exception e ) {
-      LOG.error( "Failed to verify user " + userName + "@" + accountName );
+      LOG.error( "Failed to verify user " + userName + "@" + accountName, e );
       LOG.debug( e, e );
       throw new EucalyptusServiceException( "Failed to verify user " + userName + "@" + accountName + ": " + e.getMessage( ) );
     }
@@ -179,19 +183,23 @@ public class EuareWebBackend {
       String userProfileSearch = QueryBuilder.get( ).start( QueryType.user ).add( EuareWebBackend.ID, user.getUserId( ) ).query( );
       String userKeySearch = QueryBuilder.get( ).start( QueryType.key ).add( EuareWebBackend.USERID, user.getUserId( ) ).query( );
       LoginAction action = null;
-      if ( user.getPassword( ).equals( Crypto.generateHashedPassword( user.getName( ) ) ) || Strings.isNullOrEmpty( user.getInfo( User.EMAIL ) ) ) {
-        action = LoginAction.FIRSTTIME;
-      } else if ( user.getPasswordExpires( ) < System.currentTimeMillis( ) ) {
-        action = LoginAction.EXPIRATION;
+      if ( !authenticateWithLdap( user ) ) {
+	      if ( user.getPassword( ).equals( Crypto.generateHashedPassword( user.getName( ) ) ) || Strings.isNullOrEmpty( user.getInfo( User.EMAIL ) ) ) {
+	        action = LoginAction.FIRSTTIME;
+	      } else if ( user.getPasswordExpires( ) < System.currentTimeMillis( ) ) {
+	        action = LoginAction.EXPIRATION;
+	      }
       }
       return new LoginUserProfile( user.getUserId( ), user.getName( ), user.getAccount( ).getName( ), user.getToken( ), userProfileSearch, userKeySearch, action );
     } catch ( Exception e ) {
+      LOG.error( "Exception in retrieving user profile", e );
+      LOG.debug( e, e );
       throw new EucalyptusServiceException( "Failed to retrieve user profile" );
     }
   }
   
   public static void checkPassword( User user, String password ) throws EucalyptusServiceException {
-    if ( LdapSync.enabled( ) ) {
+    if ( authenticateWithLdap( user ) ) {
       authenticateLdap( user, password );
     } else {
       authenticateLocal( user, password );
