@@ -4,6 +4,7 @@ import java.util.*;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.ReportLineGenerator;
 import com.eucalyptus.reporting.ReportingCriterion;
@@ -73,11 +74,14 @@ public class InstanceReportLineGenerator
 	private static String getAttributeValue(ReportingCriterion criterion,
 			InstanceSummaryKey key)
 	{
+		log.debug("owner id:" + key.getOwnerId());
+
+		UserFullName userFullName = UserFullName.getInstance(key.getOwnerId()); //TODO: this fails
 		switch (criterion) {
 			case ACCOUNT:
-				return key.getAccountId();
+				return userFullName.getName();
 			case USER:
-				return key.getOwnerId();
+				return userFullName.getUserName();
 			case CLUSTER:
 				return key.getClusterName();
 			case AVAILABILITY_ZONE:
