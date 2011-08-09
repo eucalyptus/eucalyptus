@@ -191,7 +191,7 @@ public class EuareWebBackend {
   }
   
   public static void checkPassword( User user, String password ) throws EucalyptusServiceException {
-    if ( LdapSync.enabled( ) ) {
+    if ( LdapSync.enabled( ) && !user.isSystemAdmin( ) && !user.isAccountAdmin( ) ) {
       authenticateLdap( user, password );
     } else {
       authenticateLocal( user, password );
