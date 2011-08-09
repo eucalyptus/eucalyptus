@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 import javax.naming.InvalidNameException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.SearchResult;
@@ -636,7 +637,11 @@ public class LdapSync {
         }
         Map<String, String> infoMap = Maps.newHashMap( );
         for ( String attrName : lic.getUserInfoAttributes( ).keySet( ) ) {
-          infoMap.put( lic.getUserInfoAttributes( ).get( attrName ), ( String ) attrs.get( attrName ).get( ) );
+          String infoKey = lic.getUserInfoAttributes( ).get( attrName );
+          Attribute infoValAttr = attrs.get( attrName );
+          if ( infoValAttr != null ) {
+        	infoMap.put( infoKey, ( String ) infoValAttr.get( ) );
+          }
         }
         infoMap.put( User.DN, dn );
         userMap.put( getId( lic.getUserIdAttribute( ), attrs ), infoMap );
