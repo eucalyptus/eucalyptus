@@ -92,6 +92,10 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
   private NetworkGroup             networkGroup;
   @Column( name = "metadata_extant_network_tag", unique = true )
   private Long                     tag;
+  @Column( name = "metadata_extant_network_max_addr" )
+  private Long                     maxAddr;
+  @Column( name = "metadata_extant_network_min_addr" )
+  private Long                     minAddr;
   @OneToMany( mappedBy = "network" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<PrivateNetworkIndex> indexes = new HashSet<PrivateNetworkIndex>( );
@@ -173,4 +177,25 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
   protected void setIndexes( Set<PrivateNetworkIndex> indexes ) {
     this.indexes = indexes;
   }
+  
+  public PrivateNetworkIndex allocateNetworkIndex( ) {
+    return null;
+  }
+
+  protected Long getMaxAddr( ) {
+    return this.maxAddr;
+  }
+
+  protected void setMaxAddr( Long maxAddr ) {
+    this.maxAddr = maxAddr;
+  }
+
+  protected Long getMinAddr( ) {
+    return this.minAddr;
+  }
+
+  protected void setMinAddr( Long minAddr ) {
+    this.minAddr = minAddr;
+  }
+  
 }

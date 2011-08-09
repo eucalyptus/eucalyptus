@@ -76,6 +76,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.cluster.VmInstance.Reason;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Partitions;
@@ -93,7 +94,6 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.SystemState;
-import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.vm.VmState;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Predicate;
@@ -181,7 +181,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
     throw new NoSuchElementException( "Can't find vm with bundle task id:" + bundleId + " in " + this.getClass( ).getSimpleName( ) );
   }
   
-  public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final int networkIndex, final String networkFqName, final Cluster cluster ) {
+  public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final Long networkIndex, final String networkFqName, final Cluster cluster ) {
     UnconditionalCallback cleanup = new UnconditionalCallback( ) {
       public void fire( ) {
         if ( address != null ) {
@@ -197,7 +197,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
             LOG.debug( e, e );
           }
         }
-        vm.updateNetworkIndex( -1 );
+        vm.updateNetworkIndex( -1l );
         try {
           if ( networkFqName != null ) {
             //GRZE:NET
@@ -226,7 +226,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
     try {
       String networkFqName = !vm.getNetworkRulesGroups( ).isEmpty( ) ? vm.getOwner( ).getAccountNumber( ) + "-" + vm.getNetworkNames( ).first( ) : null;
       Cluster cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
-      int networkIndex = vm.getNetworkIndex( );
+      Long networkIndex = vm.getNetworkIndex( );
       VmInstances.cleanUpAttachedVolumes( vm );
 
       Address address = null;

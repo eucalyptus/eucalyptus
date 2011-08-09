@@ -245,13 +245,8 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   public String getClusterNetworkName( ) {
     return this.getOwnerUserId( ) + "-" + this.getDisplayName( );
   }
-  
-  /**
-   * GRZE:TODO: eliminate these symbols
-   */
-  public void returnNetworkIndex( Integer net ) {}
-  
-  public Integer allocateNetworkIndex( String cluster ) {
+
+  public ExtantNetwork extantNetwork( ) {
     return null;
   }
   

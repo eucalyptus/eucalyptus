@@ -73,7 +73,7 @@ import com.eucalyptus.util.OwnerFullName;
 
 public class NetworkToken implements Comparable {
   private final Integer         vlan;
-  private NavigableSet<Integer> indexes = new ConcurrentSkipListSet<Integer>( );
+  private NavigableSet<PrivateNetworkIndex> indexes = new ConcurrentSkipListSet<PrivateNetworkIndex>( );
   private final NetworkGroup    ruleGroup;
   
   public NetworkToken( final Partition partition, final NetworkGroup ruleGroup, final int vlan ) {
@@ -85,11 +85,11 @@ public class NetworkToken implements Comparable {
     return this.vlan;
   }
   
-  public void removeIndex( Integer index ) {
+  public void removeIndex( PrivateNetworkIndex index ) {
     this.indexes.remove( index );
   }
   
-  public void allocateIndex( Integer nextIndex ) {
+  public void allocateIndex( PrivateNetworkIndex nextIndex ) {
     this.indexes.add( nextIndex );
   }
   
@@ -97,7 +97,7 @@ public class NetworkToken implements Comparable {
     return this.indexes.isEmpty( );
   }
   
-  public NavigableSet<Integer> getIndexes( ) {
+  public NavigableSet<PrivateNetworkIndex> getIndexes( ) {
     return this.indexes;
   }
   

@@ -93,6 +93,7 @@ import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstance.Reason;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Components;
@@ -100,15 +101,15 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.Networks;
+import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -132,29 +133,6 @@ public class SystemState {
   public static Integer BURY_TIME      = -1;
   @ConfigurableField( description = "Amount of time (in milliseconds) before a VM which is not reported by a cluster will be marked as terminated.", initial = "" + 10 * 60 * 1000 )
   public static Integer SHUT_DOWN_TIME = -1;
-  
-  public enum Reason {
-    NORMAL( "" ),
-    EXPIRED( "Instance expired after not being reported for %s ms.", SystemState.SHUT_DOWN_TIME ),
-    FAILED( "The instance failed to start on the NC." ),
-    USER_TERMINATED( "User initiated terminate." ),
-    USER_STOPPED( "User initiated stop." ),
-    BURIED( "Instance buried after timeout of %s ms.", SystemState.BURY_TIME ),
-    APPEND( "" );
-    private String   message;
-    private Object[] args;
-    
-    Reason( String message, Object... args ) {
-      this.message = message;
-      this.args = args;
-    }
-    
-    @Override
-    public String toString( ) {
-      return String.format( this.message.toString( ), this.args );
-    }
-    
-  }
   
   public static void handle( VmDescribeResponseType request ) {
     VmInstances.flushBuried( );
@@ -224,7 +202,7 @@ public class SystemState {
       vm.updateVolumeAttachments( runVm.getVolumes( ) );
       try {
         NetworkGroup network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );
-      //GRZE:NET//        network.extantNetworkIndex( vm.getClusterName( ), vm.getNetworkIndex( ) );
+        //GRZE:NET//        network.extantNetworkIndex( vm.getClusterName( ), vm.getNetworkIndex( ) );
       } catch ( Exception e ) {}
     }
   }
@@ -305,7 +283,7 @@ public class SystemState {
       }
       VmType vmType = VmTypes.getVmType( runVm.getInstanceType( ).getName( ) );
       List<NetworkGroup> networks = Lists.transform( runVm.getGroupNames( ), new Function<String, NetworkGroup>( ) {
-
+        
         @Override
         public NetworkGroup apply( String arg0 ) {
           try {
@@ -321,7 +299,7 @@ public class SystemState {
                                       vmType,
                                       img.getPlatform( ).toString( ),
                                       networks,
-                                      Integer.toString( runVm.getNetParams( ).getNetworkIndex( ) ) );
+                                      new PrivateNetworkIndex( runVm.getNetParams( ).getVlan( ), runVm.getNetParams( ).getNetworkIndex( ) ) );
       vm.clearPending( );
       vm.updatePublicAddress( VmInstance.DEFAULT_IP );
       VmInstances.getInstance( ).register( vm );

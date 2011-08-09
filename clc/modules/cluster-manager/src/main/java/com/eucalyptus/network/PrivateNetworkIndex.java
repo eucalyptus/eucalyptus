@@ -67,6 +67,7 @@ import javax.persistence.Column;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
+import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
@@ -75,6 +76,7 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import org.hibernate.annotations.NaturalId;
 import com.eucalyptus.cloud.util.PersistentResource;
 import com.eucalyptus.cloud.util.ResourceAllocation;
 import com.eucalyptus.cluster.VmInstance;
@@ -88,31 +90,35 @@ import com.eucalyptus.util.TransactionException;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_indices" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex, VmInstance> {
-  @ManyToOne
-  @JoinColumn( name = "metadata_network_group_fk" )
-  private final ExtantNetwork network;
+public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex, VmInstance> implements Comparable<PrivateNetworkIndex> {
+  @NaturalId
   @Column( name = "metadata_network_index" )
-  private final Long          index;
+  private final Long index;
+  @NaturalId
+  @Column( name = "metadata_network_index_network_tag" )
+  private final Long tag;
   @Column( name = "metadata_network_index_vm_perm_uuid" )
-  private String              instanceNaturalId;
+  private String     instanceNaturalId;
   
   private PrivateNetworkIndex( ) {
     super( );
     this.index = null;
-    this.network = null;
+    this.tag = null;
   }
   
   private PrivateNetworkIndex( ExtantNetwork network, Long index ) {
     super( );
-    this.network = network;
+    this.tag = network.getTag( );
     this.index = index;
   }
   
-  @PrePersist
-  @PreUpdate
-  private void verifyState( ) {
-
+  public PrivateNetworkIndex( Long tag, Long index ) {
+    this.tag = tag;
+    this.index = index;
+  }
+  
+  public static PrivateNetworkIndex bogus( ) {
+    return new PrivateNetworkIndex( -1l, -1l );
   }
   
   public Long getIndex( ) {
@@ -125,10 +131,6 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   
   public void setInstanceNaturalId( String instanceNaturalId ) {
     this.instanceNaturalId = instanceNaturalId;
-  }
-  
-  public ExtantNetwork getParent( ) {
-    return this.network;
   }
   
   @Override
@@ -157,9 +159,6 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
     result = prime * result + ( ( this.index == null )
       ? 0
       : this.index.hashCode( ) );
-    result = prime * result + ( ( this.network == null )
-      ? 0
-      : this.network.hashCode( ) );
     return result;
   }
   
@@ -182,14 +181,13 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
     } else if ( !this.index.equals( other.index ) ) {
       return false;
     }
-    if ( this.network == null ) {
-      if ( other.network != null ) {
-        return false;
-      }
-    } else if ( !this.network.equals( other.network ) ) {
-      return false;
-    }
     return true;
   }
   
+  @Override
+  public int compareTo( PrivateNetworkIndex o ) {
+    return ( this.tag.equals( o.tag )
+      ? this.index.compareTo( o.index )
+      : this.tag.compareTo( o.tag ) );
+  }
 }

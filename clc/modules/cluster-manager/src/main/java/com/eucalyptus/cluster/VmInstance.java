@@ -97,14 +97,12 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata.VirtualMachineInstance;
 import com.eucalyptus.cloud.UserMetadata;
-import com.eucalyptus.cloud.util.PersistentResource;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.entities.AbstractStatefulPersistent;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
@@ -118,7 +116,6 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.vm.BundleTask;
 import com.eucalyptus.vm.SystemState;
-import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.vm.VmState;
 import com.eucalyptus.vm.VmType;
 import com.google.common.base.Function;
@@ -165,7 +162,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   @Transient
   private String                                      serviceTag;
   @Transient
-  private SystemState.Reason                          reason;
+  private Reason                                      reason;
   @Transient
   private final List<String>                          reasonDetails       = Lists.newArrayList( );
   @Transient
@@ -224,7 +221,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
                      final byte[] userData,
                      final VmTypeInfo vbr, final SshKeyPair sshKeyPair, final VmType vmType,
                      final String platform,
-                     final List<NetworkGroup> networkRulesGroups, final String networkIndex ) {
+                     final List<NetworkGroup> networkRulesGroups, final PrivateNetworkIndex networkIndex ) {
     super( owner, instanceId );
     this.privateNetwork = Boolean.FALSE;
     this.launchTime = new Date( );
@@ -251,7 +248,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     this.networkConfig.setMacAddress( "d0:0d:" + VmInstances.asMacAddress( this.instanceId ) );
     this.networkConfig.setIpAddress( DEFAULT_IP );
     this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
-    this.networkConfig.setNetworkIndex( Integer.parseInt( networkIndex ) );
+    this.networkConfig.setNetworkIndex( networkIndex.getIndex( ) );
     this.stopWatch.start( );
     this.updateWatch.start( );
     this.updateDns( );
@@ -301,7 +298,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     this.networkBytes += netbytes;
   }
   
-  public void updateNetworkIndex( final Integer newIndex ) {
+  public void updateNetworkIndex( final Long newIndex ) {
     if ( ( this.getNetworkConfig( ).getNetworkIndex( ) > 0 ) && ( newIndex > 0 )
          && ( VmState.RUNNING.equals( this.getState( ) ) || VmState.PENDING.equals( this.getState( ) ) ) ) {
       this.getNetworkConfig( ).setNetworkIndex( newIndex );
@@ -353,7 +350,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   
   @Override
   public void setState( final VmState state ) {
-    this.setState( state, SystemState.Reason.NORMAL );
+    this.setState( state, Reason.NORMAL );
   }
   
   public String getReason( ) {
@@ -371,7 +368,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     }
   }
   
-  public void setState( final VmState newState, SystemState.Reason reason, final String... extra ) {
+  public void setState( final VmState newState, Reason reason, final String... extra ) {
     this.updateWatch.split( );
     if ( this.updateWatch.getSplitTime( ) > ( 1000 * 60 * 60 ) ) {
       this.store( );
@@ -973,7 +970,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
                           this.transientVolumes );
   }
   
-  public int getNetworkIndex( ) {
+  public Long getNetworkIndex( ) {
     return this.getNetworkConfig( ).getNetworkIndex( );
   }
   
@@ -1050,4 +1047,28 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
                           .namespace( this.getOwnerAccountNumber( ) )
                           .relativeId( "instance", this.getDisplayName( ) );
   }
+  
+  public enum Reason {
+    NORMAL( "" ),
+    EXPIRED( "Instance expired after not being reported for %s ms.", SystemState.SHUT_DOWN_TIME ),
+    FAILED( "The instance failed to start on the NC." ),
+    USER_TERMINATED( "User initiated terminate." ),
+    USER_STOPPED( "User initiated stop." ),
+    BURIED( "Instance buried after timeout of %s ms.", SystemState.BURY_TIME ),
+    APPEND( "" );
+    private String   message;
+    private Object[] args;
+    
+    Reason( String message, Object... args ) {
+      this.message = message;
+      this.args = args;
+    }
+    
+    @Override
+    public String toString( ) {
+      return String.format( this.message.toString( ), this.args );
+    }
+    
+  }
 }
+

@@ -80,6 +80,7 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NoSuchTokenException;
 import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstance.Reason;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.StartNetworkCallback;
 import com.eucalyptus.cluster.callback.VmRunCallback;
@@ -90,21 +91,19 @@ import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkToken;
-import com.eucalyptus.network.Networks;
+import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.StatefulMessageSet;
-import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.vm.VmState;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.vmware.vim25.mo.Network;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
@@ -221,8 +220,8 @@ public class ClusterAllocator extends Thread {
       vlan = token.getPrimaryNetwork( ).getVlan( );
       if ( vlan < 0 ) vlan = 9;//FIXME: general vlan, should be min-1?
       networkNames = Lists.newArrayList( token.getPrimaryNetwork( ).getRuleGroup( ).getNaturalId( ) );
-      for ( Integer index : token.getPrimaryNetwork( ).getIndexes( ) ) {
-        networkIndexes.add( index.toString( ) );
+      for ( PrivateNetworkIndex index : token.getPrimaryNetwork( ).getIndexes( ) ) {
+        networkIndexes.add( index.getIndex( ).toString( ) );
       }
     } else {
       vlan = -1;
