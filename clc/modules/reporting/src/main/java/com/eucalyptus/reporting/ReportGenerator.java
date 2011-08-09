@@ -85,11 +85,11 @@ public class ReportGenerator
 		}
 
 
-		final String filename = (groupByCriterion==null)
+		final String jrxmlFilename = (groupByCriterion==null)
 								? reportType.getJrxmlFilename()
 								: reportType.getNestedJrxmlFilename();
 		final File jrxmlFile = 	new File(SubDirectory.REPORTS.toString()
-				+ File.separator + filename);
+				+ File.separator + jrxmlFilename);
 
 			
 		@SuppressWarnings("rawtypes")
