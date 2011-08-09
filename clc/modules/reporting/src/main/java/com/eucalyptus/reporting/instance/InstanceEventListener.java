@@ -33,7 +33,7 @@ public class InstanceEventListener
 	  final long receivedEventMs = this.getCurrentTimeMillis();
 	  if (e instanceof InstanceEvent) {
 		  InstanceEvent event = (InstanceEvent) e;
-		  log.info("Received instance event:" + event);
+		  log.debug("Received instance event:" + event);
 
 		  final String uuid = event.getUuid();
 		  if (uuid == null) {
@@ -47,7 +47,7 @@ public class InstanceEventListener
 		   */
 		  InstanceAttributes insAttrs = new InstanceAttributes(uuid,
 				  event.getInstanceId(), event.getInstanceType(),
-				  event.getUserId(), event.getAccountId(),
+				  event.getAccountId(), event.getUserId(),
 				  event.getClusterName(), event.getAvailabilityZone());
 		  InstanceUsageSnapshot insUsageSnapshot = new InstanceUsageSnapshot(
 				  uuid, receivedEventMs, event.getCumulativeNetworkIoMegs(),
