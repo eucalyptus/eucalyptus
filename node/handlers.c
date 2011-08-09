@@ -781,6 +781,7 @@ static int init (void)
 		else if (!strcmp(tmp,"WARN")) {i=EUCAWARN;}
 		else if (!strcmp(tmp,"ERROR")) {i=EUCAERROR;}
 		else if (!strcmp(tmp,"FATAL")) {i=EUCAFATAL;}
+        else if (!strcmp(tmp,"DEBUG2")) {i=EUCADEBUG2;}
 		free(tmp);
 	}
 	logfile(log, i);
