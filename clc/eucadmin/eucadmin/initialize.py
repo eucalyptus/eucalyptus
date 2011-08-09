@@ -61,5 +61,5 @@ class Initialize(object):
             print '\tOutput:'
             print cmd.stdout
             print cmd.stderr
-        return 0
+        return cmd.status
             

@@ -88,6 +88,7 @@ import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
 
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
+import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
 import edu.ucsb.eucalyptus.cloud.ws.ChunkedDataFile;
 import edu.ucsb.eucalyptus.cloud.ws.CompressedChunkedFile;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetRequestType;
@@ -105,13 +106,7 @@ public class FileSystemStorageManager implements StorageManager {
 	public static final int MAX_LOOP_DEVICES = 256;
 	private static Logger LOG = Logger.getLogger(FileSystemStorageManager.class);
 
-	private String rootDirectory;
-
 	public FileSystemStorageManager() {
-	}
-
-	public FileSystemStorageManager(String rootDirectory) {
-		this.rootDirectory = rootDirectory;
 	}
 
 	public void checkPreconditions() throws EucalyptusCloudException {
@@ -137,20 +132,16 @@ public class FileSystemStorageManager implements StorageManager {
 		}
 	}
 
-	public void setRootDirectory(String rootDirectory) {
-		this.rootDirectory = rootDirectory;
-	}
-
 	public boolean bucketExists(String bucket) {
-		return new File (rootDirectory + FILE_SEPARATOR + bucket).exists();        
+		return new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket).exists();        
 	}
 
 	public boolean objectExists(String bucket, String object) {
-		return new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object).exists();
+		return new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object).exists();
 	}
 
 	public void createBucket(String bucket) throws IOException {
-		File bukkit = new File (rootDirectory + FILE_SEPARATOR + bucket);
+		File bukkit = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket);
 		if(!bukkit.exists()) {
 			if(!bukkit.mkdirs()) {
 				throw new IOException("Unable to create bucket: " + bucket);
@@ -159,21 +150,21 @@ public class FileSystemStorageManager implements StorageManager {
 	}
 
 	public long getSize(String bucket, String object) {
-		File objectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+		File objectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
 		if(objectFile.exists())
 			return objectFile.length();
 		return -1;
 	}
 
 	public void deleteBucket(String bucket) throws IOException {
-		File bukkit = new File (rootDirectory + FILE_SEPARATOR + bucket);
+		File bukkit = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket);
 		if(!bukkit.delete()) {
 			throw new IOException("Unable to delete bucket: " + bucket);
 		}
 	}
 
 	public void createObject(String bucket, String object) throws IOException {
-		File objectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+		File objectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
 		if (!objectFile.exists()) {
 			if (!objectFile.createNewFile()) {
 				throw new IOException("Unable to create: " + objectFile.getAbsolutePath());
@@ -182,15 +173,15 @@ public class FileSystemStorageManager implements StorageManager {
 	}
 
 	public FileIO prepareForRead(String bucket, String object) throws Exception {
-		return new FileReader(rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+		return new FileReader(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
 	}
 
 	public FileIO prepareForWrite(String bucket, String object) throws Exception {
-		return new FileWriter(rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+		return new FileWriter(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
 	}
 
 	public int readObject(String bucket, String object, byte[] bytes, long offset) throws IOException {
-		return readObject(rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object, bytes, offset);
+		return readObject(WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object, bytes, offset);
 	}
 
 	public int readObject(String path, byte[] bytes, long offset) throws IOException {
@@ -208,7 +199,7 @@ public class FileSystemStorageManager implements StorageManager {
 	}
 
 	public void deleteObject(String bucket, String object) throws IOException {
-		File objectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+		File objectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
 		if (objectFile.exists()) {
 			if(!objectFile.delete()) {
 				throw new IOException("Unable to delete: " + objectFile.getAbsolutePath());
@@ -226,7 +217,7 @@ public class FileSystemStorageManager implements StorageManager {
 	}
 
 	public void putObject(String bucket, String object, byte[] base64Data, boolean append) throws IOException {
-		File objectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
+		File objectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object);
 		if (!objectFile.exists()) {
 			objectFile.createNewFile();
 		}
@@ -236,8 +227,8 @@ public class FileSystemStorageManager implements StorageManager {
 	}
 
 	public void renameObject(String bucket, String oldName, String newName) throws IOException {
-		File oldObjectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + oldName);
-		File newObjectFile = new File (rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + newName);
+		File oldObjectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + oldName);
+		File newObjectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + newName);
 		if(oldObjectFile.exists()) {
 			if (!oldObjectFile.renameTo(newObjectFile)) {
 				throw new IOException("Unable to rename " + oldObjectFile.getAbsolutePath() + " to " + newObjectFile.getAbsolutePath());
@@ -246,8 +237,8 @@ public class FileSystemStorageManager implements StorageManager {
 	}
 
 	public void copyObject(String sourceBucket, String sourceObject, String destinationBucket, String destinationObject) throws IOException {
-		File oldObjectFile = new File (rootDirectory + FILE_SEPARATOR + sourceBucket + FILE_SEPARATOR + sourceObject);
-		File newObjectFile = new File (rootDirectory + FILE_SEPARATOR + destinationBucket + FILE_SEPARATOR + destinationObject);
+		File oldObjectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + sourceBucket + FILE_SEPARATOR + sourceObject);
+		File newObjectFile = new File (WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + destinationBucket + FILE_SEPARATOR + destinationObject);
 		if(!oldObjectFile.equals(newObjectFile)) {			
 			FileInputStream fileInputStream = new FileInputStream(oldObjectFile);
 			FileChannel fileIn = fileInputStream.getChannel();
@@ -262,11 +253,11 @@ public class FileSystemStorageManager implements StorageManager {
 	}
 
 	public String getObjectPath(String bucket, String object) {
-		return rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object;
+		return WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object;
 	}
 
 	public long getObjectSize(String bucket, String object) {
-		String absoluteObjectPath = rootDirectory + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object;
+		String absoluteObjectPath = WalrusInfo.getWalrusInfo().getStorageDir() + FILE_SEPARATOR + bucket + FILE_SEPARATOR + object;
 
 		File objectFile = new File(absoluteObjectPath);
 		if(objectFile.exists())

@@ -169,7 +169,7 @@ public class ISCSIManager implements StorageExportManager {
 			if(errorValue.length() > 0)
 				throw new EucalyptusCloudException(errorValue);
 		} catch (Throwable t) {
-			LOG.error(t);
+			throw new EucalyptusCloudException(t);
 		}
 	}
 
