@@ -10,6 +10,6 @@ package com.eucalyptus.reporting;
  */
 public interface ReportLine
 {
-	public String getCriterionValue();
-	public String getGroupByValue();
+	public String getLabel();
+	public String getGroupBy();
 }
