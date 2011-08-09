@@ -539,7 +539,7 @@ public class LdapSync {
   }
   
   private static String getId( String idAttrName, Attributes attrs ) throws NamingException {
-    String id = ( String ) attrs.get( idAttrName ).get( );
+    String id = getAttrWithNullCheck( attrs, idAttrName );
     if ( LicParser.isEmpty( id ) ) {
       throw new NamingException( "Empty ID for " + attrs );
     }
@@ -548,9 +548,12 @@ public class LdapSync {
   
   private static Set<String> getMembers( String idAttrName, String memberAttrName, Attributes attrs ) throws NamingException {
     Set<String> members = Sets.newHashSet( );
-    NamingEnumeration names = attrs.get( memberAttrName ).getAll( );
-    while ( names.hasMore( ) ) {
-      members.add( parseMemberName( idAttrName, ( String ) names.next( ) ) );
+    Attribute membersAttr = attrs.get( memberAttrName );
+    if ( membersAttr != null ) {
+      NamingEnumeration<?> names = membersAttr.getAll( );
+	  while ( names.hasMore( ) ) {
+	    members.add( parseMemberName( idAttrName, ( String ) names.next( ) ) );
+	  }
     }
     return members;
   }
@@ -638,9 +641,9 @@ public class LdapSync {
         Map<String, String> infoMap = Maps.newHashMap( );
         for ( String attrName : lic.getUserInfoAttributes( ).keySet( ) ) {
           String infoKey = lic.getUserInfoAttributes( ).get( attrName );
-          Attribute infoValAttr = attrs.get( attrName );
-          if ( infoValAttr != null ) {
-        	infoMap.put( infoKey, ( String ) infoValAttr.get( ) );
+          String infoVal = getAttrWithNullCheck( attrs, attrName );
+          if ( infoVal != null ) {
+        	infoMap.put( infoKey, infoVal );
           }
         }
         infoMap.put( User.DN, dn );
@@ -651,4 +654,12 @@ public class LdapSync {
     return userMap;
   }
 
+  private static String getAttrWithNullCheck( Attributes attrs, String attrName ) throws NamingException {
+	Attribute attr = attrs.get( attrName );
+	if ( attr != null ) {
+      return ( String ) attr.get( );
+	}
+	return null;
+  }
+  
 }
