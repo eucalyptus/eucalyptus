@@ -1221,16 +1221,20 @@ public class OverlayManager implements LogicalStorageManager {
 				aoeVolumeInfo.setVbladePid(pid);
 			} else if(exportManager instanceof ISCSIManager) {
 				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
-				exportManager.allocateTarget(iscsiVolumeInfo);
+
 				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-				try {
-					((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
-				} catch (EucalyptusCloudException e) {
-					LOG.error(e);
-					//try again
+				int max_tries = 10;
+				int i = 0;
+				do {
 					exportManager.allocateTarget(iscsiVolumeInfo);
-					((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
-				}
+					try {
+						((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
+						//it worked. break out.
+						i = max_tries;
+					} catch (EucalyptusCloudException e) {
+						LOG.error(e);				
+					}
+				} while (i++ < max_tries);
 			}
 		}
 	}
