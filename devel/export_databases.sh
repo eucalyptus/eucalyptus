@@ -10,5 +10,5 @@ egrep -A27 "BEGIN (RSA|PRIVATE)" | grep -v 'Bag Attributes' > ${EUCALYPTUS}/var/
 
 PASS=$($(dirname $(readlink -f $0))/dbPass.sh)
 
-for xx in ${@}; do mysqldump -u eucalyptus --password=${PASS} --port=8777 --protocol=TCP $xx; done
+for xx in ${@}; do echo "connect $xx"; mysqldump -u eucalyptus --password=${PASS} --port=8777 --protocol=TCP $xx; done
 
