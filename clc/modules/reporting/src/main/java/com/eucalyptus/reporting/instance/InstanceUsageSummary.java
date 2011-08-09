@@ -314,23 +314,23 @@ public class InstanceUsageSummary
 		long timeSecs = (period.getEndingMs() - period.getBeginningMs())/1000;
 
 		//Autoboxing should work because we prevented nulls everywhere
-		if (type.equalsIgnoreCase("m1small")) {
+		if (type.equalsIgnoreCase("m1.small")) {
 			this.m1SmallNum = this.m1SmallNum + 1;
 			this.m1SmallTimeSecs = this.m1SmallTimeSecs + timeSecs;
-		} else if (type.equalsIgnoreCase("c1medium")) {
+		} else if (type.equalsIgnoreCase("c1.medium")) {
 			this.c1MediumNum = this.c1MediumNum + 1;
 			this.c1MediumTimeSecs = this.c1MediumTimeSecs + timeSecs;
-		} else if (type.equalsIgnoreCase("m1large")) {
+		} else if (type.equalsIgnoreCase("m1.large")) {
 			this.m1LargeNum = this.m1LargeNum + 1;
 			this.m1LargeTimeSecs = this.m1LargeTimeSecs + timeSecs;
-		} else if (type.equalsIgnoreCase("m1xlarge")) {
+		} else if (type.equalsIgnoreCase("m1.xlarge")) {
 			this.m1XLargeNum = this.m1XLargeNum + 1;
 			this.m1XLargeTimeSecs = this.m1XLargeTimeSecs + timeSecs;
-		} else if (type.equalsIgnoreCase("c1xlarge")) {
+		} else if (type.equalsIgnoreCase("c1.xlarge")) {
 			this.c1XLargeNum = this.c1XLargeNum + 1;
 			this.c1XLargeTimeSecs = this.c1XLargeTimeSecs + timeSecs;
 		} else {
-			System.err.println("Unrecognized type:" + type); //TODO
+			throw new RuntimeException("Unrecognized type:" + type);
 		}
 	}
 	
