@@ -101,7 +101,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.Text;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.binding.HoldMe;
-
+import com.eucalyptus.ws.StackConfiguration;
 
 public class WSSecurity {
   private static Logger             LOG = Logger.getLogger( WSSecurity.class );
@@ -261,7 +261,7 @@ public class WSSecurity {
 
 	  // validate that creation time is not too far in the future
 	  Calendar now = Calendar.getInstance();
-	  now.add(Calendar.SECOND, 20);
+	  now.add(Calendar.SECOND, StackConfiguration.CLOCK_SKEW_SEC);
 	  if(now.before(ts.getCreated())) {
 	      throw new WSSecurityException("Timestamp was created in the future: make sure you clocks are synchronized");
 	  }
