@@ -12,6 +12,7 @@ import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
 import com.google.gwt.uibinder.client.UiHandler;
+import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.LayoutPanel;
 import com.google.gwt.user.client.ui.ScrollPanel;
@@ -32,6 +33,12 @@ public class AccountViewImpl extends Composite implements AccountView {
   
   @UiField
   LayoutPanel tablePanel;
+  
+  @UiField
+  Button newButton;
+  
+  @UiField
+  Button delButton;
   
   private SearchResultTable table;
   
@@ -109,6 +116,16 @@ public class AccountViewImpl extends Composite implements AccountView {
   public void clear( ) {
     this.tablePanel.clear( );
     this.table = null;
+  }
+
+  @Override
+  public void enableNewButton(boolean enabled) {
+	newButton.setEnabled( enabled );
+  }
+
+  @Override
+  public void enableDelButton(boolean enabled) {
+	delButton.setEnabled( enabled );
   }
 
 }
