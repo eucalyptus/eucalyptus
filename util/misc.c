@@ -2069,7 +2069,7 @@ char* safe_strncpy (char *s1, const char *s2, size_t len)
 int get_blkid (const char * dev_path, char * uuid, unsigned int uuid_size) 
 {
     char cmd [1024];
-    snprintf (cmd, sizeof (cmd), "blkid -u filesystem %s", dev_path);
+    snprintf (cmd, sizeof (cmd), "blkid %s", dev_path); // option '-u filesystem' did not exist on Centos
     char * blkid_output = system_output (cmd);
     if (blkid_output==NULL) 
         return 1;
