@@ -240,7 +240,7 @@ int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *buck
 int get_value(			char *s,
 				const char *name,
 				long long *valp);
-int convert_dev_names(		char *localDev,
+int convert_dev_names(		const char *localDev,
 				char *localDevReal,
 				char *localDevTag);
 void libvirt_error_handler(	void * userData,
@@ -270,7 +270,6 @@ int get_instance_xml(		const char *gen_libvirt_cmd_path,
 void * monitoring_thread(	void *arg);
 void * startup_thread(		void *arg);
 
-int generate_attach_xml(char *localDevReal, char *remoteDev, struct nc_state_t *nc, ncInstance *instance, char *xml);
 int get_instance_stats(virDomainPtr dom, ncInstance *instance);
 ncInstance * find_global_instance (const char * instanceId);
 

@@ -88,6 +88,8 @@ permission notice:
 #include "vnetwork.h"
 #include "euca_auth.h"
 #include "vbr.h"
+#include "iscsi.h"
+#include "xml.h"
 
 #include "windows-bundle.h"
 
@@ -105,7 +107,7 @@ doInitialize (struct nc_state_t *nc)
 static int
 doRunInstance(	struct nc_state_t *nc,
                 ncMetadata *meta,
-		char *uuid,
+                char *uuid,
                 char *instanceId,
                 char *reservationId,
                 virtualMachine *params, 
@@ -130,7 +132,7 @@ doRunInstance(	struct nc_state_t *nc,
     instance = find_instance (&global_instances, instanceId);
     sem_v (inst_sem);
     if (instance) {
-        logprintfl (EUCAFATAL, "[%s] error: instance already running\n", instanceId);
+        logprintfl (EUCAERROR, "[%s] error: instance already running\n", instanceId);
         return 1; /* TODO: return meaningful error codes? */
     }
     if (!(instance = allocate_instance (uuid,
@@ -142,7 +144,7 @@ doRunInstance(	struct nc_state_t *nc,
                                         meta->userId, 
                                         &ncnet, keyName,
                                         userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize))) {
-        logprintfl (EUCAFATAL, "[%s] error: could not allocate instance struct\n", instanceId);
+        logprintfl (EUCAERROR, "[%s] error: could not allocate instance struct\n", instanceId);
         return ERROR;
     }
     instance->launchTime = time (NULL);
@@ -157,14 +159,14 @@ doRunInstance(	struct nc_state_t *nc,
     int error = add_instance (&global_instances, instance);
     sem_v (inst_sem);
     if ( error ) {
-        logprintfl (EUCAFATAL, "[%s] error: could not save instance struct\n", instanceId);
+        logprintfl (EUCAERROR, "[%s] error: could not save instance struct\n", instanceId);
         goto error;
     }
 
     // do the potentially long tasks in a thread
     pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
     if (!attr) { 
-        logprintfl (EUCAFATAL, "[%s] error: out of memory\n", instanceId);
+        logprintfl (EUCAERROR, "[%s] error: out of memory\n", instanceId);
         goto error;
     }
     pthread_attr_init(attr);
@@ -172,7 +174,7 @@ doRunInstance(	struct nc_state_t *nc,
     
     if ( pthread_create (&(instance->tcb), attr, startup_thread, (void *)instance) ) {
         pthread_attr_destroy(attr);
-        logprintfl (EUCAFATAL, "[%s] failed to spawn a VM startup thread\n", instanceId);
+        logprintfl (EUCAERROR, "[%s] failed to spawn a VM startup thread\n", instanceId);
         sem_p (inst_sem);
         remove_instance (&global_instances, instance);
         sem_v (inst_sem);
@@ -227,12 +229,15 @@ find_and_terminate_instance (
 	if (instance == NULL) 
 		return NOT_FOUND;
 	* instance_p = instance;
-
+    
     // detach all attached volumes
-    for (i=0 ; i < instance->volumesSize; ++i) {
-        int ret = OK;
-        ncVolume *volume = &instance->volumes[i];
-        logprintfl (EUCAINFO, "[%s, force=%d] on termination detaching volume %s\n", instanceId, force, volume->volumeId);
+    for (i=0 ; i < EUCA_MAX_VOLUMES; ++i) {
+        ncVolume * volume = &instance->volumes[i];
+        if (! is_volume_used (volume))
+            continue;
+
+        int ret;
+        logprintfl (EUCAINFO, "[%s] detaching volume %s, force=%d on termination\n", instanceId, volume->volumeId, force);
         if (nc_state->H->doDetachVolume) 
             ret = nc_state->H->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
         else
@@ -499,30 +504,368 @@ doStartNetwork(	struct nc_state_t *nc,
 	return (ret);
 }
 
-static int
-doAttachVolume(	struct nc_state_t *nc,
-                ncMetadata *meta,
-                char *instanceId,
-                char *volumeId,
-                char *remoteDev,
-                char *localDev)
+// because libvirt detach has a bug in some version (which one?)
+// this helper detaches volumes using 'virsh', bypassing libvirt
+static int xen_detach_helper (struct nc_state_t *nc, char *instanceId, char *localDevReal, char *xml) 
 {
-	logprintfl (EUCAERROR, "[%s] no default for doAttachVolume!\n", instanceId);
-	return ERROR_FATAL;
+    int err, rc;
+    
+    pid_t pid = fork();
+    if (!pid) {
+        char tmpfile[MAX_PATH];
+        snprintf(tmpfile, 32, "/tmp/detachxml.XXXXXX");
+        int fd = safe_mkstemp(tmpfile);
+        if (fd > 0) {
+            write(fd, xml, strlen(xml));
+            close(fd);
+
+            char cmd[MAX_PATH];
+            snprintf(cmd, MAX_PATH, "%s %s `which virsh` %s %s %s", 
+                     nc->detach_cmd_path, // TODO: does this work?
+                     nc->rootwrap_cmd_path, 
+                     instanceId, 
+                     localDevReal, 
+                     tmpfile);
+            rc = system(cmd);
+            rc = rc>>8;
+            unlink(tmpfile);
+        } else {
+            logprintfl(EUCAERROR, "xen_detach_helper(): could not write to tmpfile for detach XML: %s\n", tmpfile);
+            rc = 1;
+        } 
+        exit(rc);
+
+    } else { // parent or failed to fork
+        int status;
+        rc = timewait(pid, &status, 15);
+        if (WEXITSTATUS(status)) {
+            logprintfl(EUCAERROR, "xen_detach_helper(): failed to sucessfully run detach helper\n");
+            err = 1;
+        } else {
+            err = 0;
+        }
+    }
+    return(err);
 }
 
 static int
-doDetachVolume(	struct nc_state_t *nc,
-                ncMetadata *meta,
-                char *instanceId,
-                char *volumeId,
-                char *remoteDev,
-                char *localDev,
-                int force,
-                int grab_inst_sem)
+doAttachVolume (	struct nc_state_t *nc,
+ 			ncMetadata *meta,
+ 			char *instanceId,
+ 			char *volumeId,
+ 			char *remoteDev,
+ 			char *localDev)
+ {
+     int ret = OK;
+     int is_iscsi_target = 0;
+     int have_remote_device = 0;
+     
+     char * tagBuf;
+     char * localDevName;
+     char localDevReal[32], localDevTag[256], remoteDevReal[32];
+     if (!strcmp (nc->H->name, "xen")) {
+         tagBuf = NULL;
+         localDevName = localDevReal;
+     } else if (!strcmp (nc->H->name, "kvm")) {
+         tagBuf = localDevTag;
+         localDevName = localDevTag;
+     } else {
+         logprintfl (EUCAERROR, "AttachVolume(): unknown hypervisor type '%s'\n", nc->H->name);
+         return ERROR;
+     }
+     
+     // sets localDevReal to the file name from the device path 
+     // and, for KVM, sets localDevTag to the "unknown" string
+     ret = convert_dev_names (localDev, localDevReal, tagBuf);
+     if (ret)
+         return ret;
+     
+     // find the instance record
+     sem_p (inst_sem); 
+     ncInstance *instance = find_instance (&global_instances, instanceId);
+     sem_v (inst_sem);
+     if ( instance == NULL ) 
+         return NOT_FOUND;
+     
+     // try attaching to hypervisor
+     virConnectPtr *conn = check_hypervisor_conn();
+     if (conn==NULL) {
+         logprintfl(EUCAERROR, "AttachVolume(): cannot get connection to hypervisor\n");
+         return ERROR;
+     }
+     
+     // find domain on hypervisor
+     virDomainPtr dom = virDomainLookupByName (*conn, instanceId);
+     if (dom==NULL) {
+         if (instance->state != BOOTING && instance->state != STAGING) {
+             logprintfl (EUCAWARN, "AttachVolume(): domain %s not running on hypervisor, cannot attach device\n", instanceId);
+         }
+         return ERROR;
+     }
+     
+     // mark volume as 'attaching'
+     ncVolume * volume;
+     sem_p (inst_sem);
+     volume = save_volume (instance, volumeId, NULL, localDevName, localDevReal, VOL_STATE_ATTACHING); // we do not have RemoteDevReal yet
+     save_instance_struct (instance);
+     sem_v (inst_sem);
+     if (!volume) {
+         logprintfl (EUCAERROR, "AttachVolume(): failed to update the volume record, aborting volume attachment\n");
+         return ERROR;
+     }
+     
+     // do iscsi connect shellout if remoteDev is an iSCSI target
+     if (check_iscsi (remoteDev)) {
+         char *remoteDevStr=NULL;
+         is_iscsi_target = 1;
+         
+         // get credentials, decrypt them, login into target
+         remoteDevStr = connect_iscsi_target(remoteDev);
+         if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
+             logprintfl(EUCAERROR, "AttachVolume(): failed to connect to iscsi target\n");
+             remoteDevReal[0] = '\0';
+         } else { 
+             logprintfl(EUCADEBUG, "[%s] attached iSCSI target of host device '%s'\n", instanceId, remoteDevStr);
+             snprintf(remoteDevReal, 32, "%s", remoteDevStr);
+             have_remote_device = 1;
+         }
+         if (remoteDevStr) 
+             free(remoteDevStr);
+     } else {
+         snprintf(remoteDevReal, 32, "%s", remoteDev);
+         have_remote_device = 1;
+     }
+     
+     // something went wrong above, abort
+     if (!have_remote_device) {
+         ret = ERROR;
+         goto release;
+     }
+     
+     // make sure there is a block device
+     if (check_block (remoteDevReal)) {
+         logprintfl(EUCAERROR, "AttachVolume(): cannot verify that host device '%s' is available for hypervisor attach\n", remoteDevReal);
+         ret = ERROR;
+         goto release;
+     } 
+     
+     // generate XML for libvirt attachment request
+     char xml [1024];
+     if (gen_libvirt_attach_xml (instance, localDevReal, remoteDevReal, nc->config_use_virtio_disk, xml, sizeof(xml))) {
+         logprintfl(EUCAERROR, "AttachVolume(): could not produce attach device xml\n");
+         ret = ERROR;
+         goto release;
+     }
+     
+     // protect libvirt calls, just in case
+     sem_p (hyp_sem);
+     int err = virDomainAttachDevice (dom, xml);
+     sem_v (hyp_sem);
+     if (err) {
+         logprintfl (EUCAERROR, "[%s] failed to attach host device '%s' to guest device '%s'\n", instanceId, remoteDevReal, localDevReal);
+         logprintfl (EUCAERROR, "AttachVolume(): virDomainAttachDevice() failed (err=%d) XML='%s'\n", err, xml);
+         ret = ERROR;
+     }
+     
+ release:
+     
+     virDomainFree (dom); // release libvirt resource
+     
+     // record volume state in memory and on disk
+     char * next_vol_state;
+     if (ret==OK) {
+         next_vol_state = VOL_STATE_ATTACHED;
+     } else {
+         next_vol_state = VOL_STATE_ATTACHING_FAILED;
+     }
+     sem_p (inst_sem);
+     volume = save_volume (instance, volumeId, remoteDevReal, NULL, NULL, next_vol_state); // now we can record remoteDevReal
+     save_instance_struct (instance);
+     sem_v (inst_sem);
+     if (volume==NULL) {
+         logprintfl (EUCAERROR, "AttachVolume(): failed to save the volume record, aborting volume attachment (detaching)\n");
+         sem_p (hyp_sem);
+         err = virDomainDetachDevice (dom, xml);
+         sem_v (hyp_sem);
+         if (err) {
+             logprintfl (EUCAERROR, "AttachVolume(): virDomainDetachDevice() failed (err=%d) XML='%s'\n", err, xml);
+         }
+         ret = ERROR;
+     }
+
+     // if iSCSI and there were problems, try to disconnect the target
+     if (ret != OK && is_iscsi_target && have_remote_device) {
+         logprintfl(EUCADEBUG, "AttachVolume(): attempting to disconnect iscsi target due to attachment failure\n");
+         if (disconnect_iscsi_target(remoteDev) != 0) {
+             logprintfl (EUCAERROR, "AttachVolume(): disconnect_iscsi_target failed for %s\n", remoteDev);
+         }
+     }
+
+     if (ret==OK)
+         logprintfl (EUCAINFO, "[%s] attached '%s' as host device '%s' to guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
+          
+     return ret;
+ }
+
+static int
+doDetachVolume (	struct nc_state_t *nc,
+                    ncMetadata *meta,
+                    char *instanceId,
+                    char *volumeId,
+                    char *remoteDev,
+                    char *localDev,
+                    int force,
+                    int grab_inst_sem)
 {
-	logprintfl(EUCAERROR, "[%s] no default for doDetachVolume!\n", instanceId);
-	return ERROR_FATAL;
+    int ret = OK;
+    int is_iscsi_target = 0;
+    int have_remote_device = 0;
+    
+    char * tagBuf;
+    char * localDevName;
+    char localDevReal[32], localDevTag[256], remoteDevReal[32];
+    if (!strcmp (nc->H->name, "xen")) {
+        tagBuf = NULL;
+        localDevName = localDevReal;
+    } else if (!strcmp (nc->H->name, "kvm")) {
+        tagBuf = localDevTag;
+        localDevName = localDevTag;
+    } else {
+        logprintfl (EUCAERROR, "DetachVolume(): unknown hypervisor type '%s'\n", nc->H->name);
+        return ERROR;
+    }
+    
+    // get the file name from the device path and, for KVM, the "unknown" string
+    ret = convert_dev_names (localDev, localDevReal, tagBuf);
+    if (ret)
+        return ret;
+    
+    // find the instance record
+    if (grab_inst_sem) sem_p (inst_sem); 
+    ncInstance * instance = find_instance (&global_instances, instanceId);
+    if (grab_inst_sem) sem_v (inst_sem);
+    if (instance == NULL)
+        return NOT_FOUND;
+    
+    // try attaching to hypervisor
+    virConnectPtr *conn = check_hypervisor_conn();
+    if (conn==NULL) {
+        logprintfl(EUCAERROR, "DetachVolume(): cannot get connection to hypervisor\n");
+        return ERROR;
+    }
+    
+    // find domain on hypervisor
+    virDomainPtr dom = virDomainLookupByName (*conn, instanceId);
+    if (dom==NULL) {
+        if (instance->state != BOOTING && instance->state != STAGING) {
+            logprintfl (EUCAWARN, "DetachVolume(): domain %s not running on hypervisor, cannot attach device\n", instanceId);
+        }
+        return ERROR;
+    }
+    
+    // mark volume as 'detaching'
+    ncVolume * volume;
+    if (grab_inst_sem) sem_p (inst_sem);
+    volume = save_volume (instance, volumeId, NULL, localDevName, localDevReal, VOL_STATE_DETACHING); // we do not have RemoteDevReal yet
+    save_instance_struct (instance);
+    if (grab_inst_sem) sem_v (inst_sem);
+    if (!volume) {
+        logprintfl (EUCAERROR, "DetachVolume(): failed to update the volume record, aborting volume attachment\n");
+        return ERROR;
+    }
+
+    // do iscsi connect shellout if remoteDev is an iSCSI target
+    if (check_iscsi(remoteDev)) {
+        char *remoteDevStr=NULL;
+        is_iscsi_target = 1;
+        
+        // get credentials, decrypt them
+        remoteDevStr = get_iscsi_target (remoteDev);
+        if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
+            logprintfl(EUCAERROR, "DetachVolume(): failed to get local name of host iscsi device\n");
+            remoteDevReal[0] = '\0';
+        } else { 
+            snprintf(remoteDevReal, 32, "%s", remoteDevStr);
+            have_remote_device = 1;
+        }
+        if (remoteDevStr) 
+            free(remoteDevStr);
+    } else {
+        snprintf(remoteDevReal, 32, "%s", remoteDev);
+        have_remote_device = 1;
+    }
+    
+    // something went wrong above, abort
+    if (!have_remote_device) {
+        ret = ERROR;
+        goto release;
+    }
+    
+    // make sure there is a block device
+    if (check_block (remoteDevReal)) {
+        logprintfl(EUCAERROR, "DetachVolume(): cannot verify that host device '%s' is available for hypervisor attach\n", remoteDevReal);
+        if (!force) 
+            ret = ERROR;
+        goto release;
+    } 
+
+    // generate XML for libvirt detachment request
+    char xml [1024];
+    if (gen_libvirt_attach_xml (instance, localDevReal, remoteDevReal, nc->config_use_virtio_disk, xml, sizeof(xml))) {
+        logprintfl(EUCAERROR, "DetachVolume(): could not produce detach device xml\n");
+        ret = ERROR;
+        goto release;
+    }
+    
+    // protect libvirt calls, just in case
+    sem_p (hyp_sem);
+    int err = virDomainDetachDevice (dom, xml);
+    if (!strcmp (nc->H->name, "xen")) {
+        err = xen_detach_helper (nc, instanceId, localDevReal, xml);
+    }
+    sem_v (hyp_sem);
+    
+    if (err) {
+        logprintfl (EUCAERROR, "[%s] failed to detach host device '%s' from guest device '%s'\n", instanceId, remoteDevReal, localDevReal);
+        logprintfl (EUCAERROR, "DetachVolume(): virDomainDetachDevice() or 'virsh detach' failed (err=%d) XML='%s'\n", err, xml);
+        if (!force) 
+            ret = ERROR;
+    }
+    
+ release:
+    
+    virDomainFree (dom); // release libvirt resource
+    
+    // record volume state in memory and on disk
+    char * next_vol_state;
+    if (ret==OK) {
+        next_vol_state = VOL_STATE_DETACHED;
+    } else {
+        next_vol_state = VOL_STATE_DETACHING_FAILED;
+    }
+    if (grab_inst_sem) sem_p (inst_sem);
+    volume = save_volume (instance, volumeId, remoteDevReal, NULL, NULL, next_vol_state);
+    save_instance_struct (instance);
+    if (grab_inst_sem) sem_v (inst_sem);
+    if (volume==NULL) {
+        logprintfl (EUCAWARN, "DetachVolume(): failed to save the volume record\n");
+        ret=ERROR;
+    }
+    
+    // if iSCSI, try to disconnect the target
+    if (is_iscsi_target && have_remote_device) {
+        logprintfl(EUCADEBUG, "DetachVolume(): attempting to disconnect iscsi target\n");
+        if (disconnect_iscsi_target(remoteDev) != 0) {
+            logprintfl (EUCAERROR, "DetachVolume(): disconnect_iscsi_target failed for %s\n", remoteDev);
+            if (!force) 
+                ret = ERROR;
+        }
+    }
+    
+    if (ret==OK)
+        logprintfl (EUCAINFO, "[%s] detached '%s' as host device '%s' and guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
+    
+    return ret;
 }
 
 // helper for changing bundling task state and stateName together                                                              
@@ -925,8 +1268,8 @@ doBundleInstance(
 		|| filePrefix==NULL
 		|| walrusURL==NULL
 		|| userPublicKey==NULL
-	        || S3Policy == NULL
-	        || S3PolicySig == NULL) {
+        || S3Policy == NULL
+        || S3PolicySig == NULL) {
 		logprintfl (EUCAERROR, "doBundleInstance: bundling instance called with invalid parameters\n");
 		return ERROR;
 	}

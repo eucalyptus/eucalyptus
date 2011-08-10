@@ -128,7 +128,7 @@ public class ShellActivity extends AbstractActivity
       public void onFailure( Throwable caught ) {
         LOG.log( Level.WARNING, "Cannot get login user profile. Maybe session is invalid: " + caught );
         clientFactory.getLocalSession( ).clearSession( );
-        clientFactory.getLifecyclePlaceController( ).goTo( new LoginPlace( LoginPlace.DEFAULT_PROMPT ) );
+        clientFactory.getLifecyclePlaceController( ).goTo( new LoginPlace( LoginPlace.LOADING_FAILURE_PROMPT ) );
       }
       
       @Override

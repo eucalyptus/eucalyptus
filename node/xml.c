@@ -64,6 +64,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #define __USE_GNU
 #include <string.h> // strlen, strcpy
 #include <time.h>
@@ -189,12 +190,14 @@ int gen_instance_xml (const ncInstance * instance)
         for (int root=1; root>=0; root--){ 
            for (int i=0; i<EUCA_MAX_VBRS && i<instance->params.virtualBootRecordLen; i++) {
                const virtualBootRecord * vbr = &(instance->params.virtualBootRecord[i]); 
-               if(root && vbr->type != NC_RESOURCE_IMAGE) 
-                   continue;
-               if(!root && vbr->type == NC_RESOURCE_IMAGE)
-                   continue;
                // skip empty entries, if any
                if (vbr==NULL)
+                   continue;
+               // do EMI on the first iteration of the outer loop
+               if (root && vbr->type != NC_RESOURCE_IMAGE) 
+                   continue;
+               // ignore EMI on the second iteration of the outer loop
+               if (!root && vbr->type == NC_RESOURCE_IMAGE)
                    continue;
                // skip anything without a device on the guest, e.g., kernel and ramdisk
                if (!strcmp ("none", vbr->guestDeviceName)) 
@@ -213,15 +216,25 @@ int gen_instance_xml (const ncInstance * instance)
                xmlNodePtr disk = _ELEMENT(disks, "diskPath", vbr->backingPath);
                _ATTRIBUTE(disk, "targetDeviceType", libvirtDevTypeNames[vbr->guestDeviceType]);
                _ATTRIBUTE(disk, "targetDeviceName", vbr->guestDeviceName);
+               char devstr[SMALL_CHAR_BUFFER_SIZE];
+               snprintf(devstr, SMALL_CHAR_BUFFER_SIZE, "%s", vbr->guestDeviceName);             
                if (nc_state.config_use_virtio_root) {
-                   char virtiostr[SMALL_CHAR_BUFFER_SIZE];
-                   snprintf(virtiostr, SMALL_CHAR_BUFFER_SIZE, "%s", vbr->guestDeviceName);
-                   virtiostr[0] = 'v';
-                   _ATTRIBUTE(disk, "targetDeviceNameVirtio", virtiostr);
+                   devstr[0] = 'v';
+                   _ATTRIBUTE(disk, "targetDeviceNameVirtio", devstr);
                    _ATTRIBUTE(disk, "targetDeviceBusVirtio", "virtio");     
                }
                _ATTRIBUTE(disk, "targetDeviceBus", libvirtBusTypeNames[vbr->guestDeviceBus]);
                _ATTRIBUTE(disk, "sourceType", libvirtSourceTypeNames[vbr->backingType]);
+
+               if (root) {
+                   xmlNodePtr rootNode = _ELEMENT(disks, "root", NULL);
+                   _ATTRIBUTE(rootNode, "device", devstr);
+                   char root_uuid[64] = "";
+                   if (get_blkid (vbr->backingPath, root_uuid, sizeof(root_uuid)) == 0) {
+                       assert (strlen (root_uuid));
+                       _ATTRIBUTE(rootNode, "uuid", root_uuid);
+                   }
+               }
            }
            if (strlen (instance->floppyFilePath)) {
                _ELEMENT(disks, "floppyPath", instance->floppyFilePath);
@@ -342,6 +355,36 @@ static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * 
         xmlCleanupParser();
 
         return err;
+}
+
+int gen_libvirt_attach_xml (const ncInstance *instance, const char * localDevReal, const char * remoteDev, int use_virtio_disk, char * xml, unsigned int xml_size)
+{
+    int virtio_dev = 0;
+    
+	if (strncmp (instance->hypervisorType, "kvm", 3) == 0) { 
+	    if (strncmp(instance->platform, "windows", 7) == 0) {
+            // always use virtio for windows instances
+	        virtio_dev = 1; 
+
+        } else if (localDevReal[5] == 'v' && localDevReal[6] == 'd' && use_virtio_disk) {
+            // only attach using virtio when the device is /dev/vdXX
+            virtio_dev = 1;
+        }
+	}
+    
+    snprintf (xml, xml_size, "<disk type='block'><driver name='phy'/><source dev='%s'/><target dev='%s'%s/></disk>", 
+              remoteDev, 
+              localDevReal,
+              virtio_dev ? " bus='virtio'" : "");
+    
+    struct stat statbuf;
+    int rc = 0;
+    rc = stat (remoteDev, &statbuf);
+    if (rc) {
+        logprintfl(EUCAERROR, "AttachVolume(): cannot locate local block device file '%s'\n", remoteDev);
+        rc = 1;
+    }
+    return rc;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////

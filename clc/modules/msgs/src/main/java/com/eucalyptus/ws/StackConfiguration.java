@@ -65,11 +65,17 @@ package com.eucalyptus.ws;
 
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
+import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
@@ -81,8 +87,14 @@ import com.eucalyptus.entities.AbstractPersistent;
 public class StackConfiguration extends AbstractPersistent {
 
   public static final Integer CHANNEL_CONNECT_TIMEOUT           = 500;
-  @ConfigurableField( initial = "" + 4, description = "Time interval duration (in seconds) during which duplicate signatures will be accepted to accomodate collisions for legitimate requests inherent in Query/REST signing protocol." )
-  public static Integer        REPLAY_SKEW_WINDOW_SEC            = 4;
+  @ConfigurableField( initial = "" + 3, 
+		  description = "Time interval duration (in seconds) during which duplicate signatures will be accepted to accomodate collisions for legitimate requests inherent in Query/REST signing protocol.",
+		  changeListener = TimeChangeListener.class)
+  public static Integer        REPLAY_SKEW_WINDOW_SEC            = 3;
+  @ConfigurableField( initial = "" + 20, 
+		  description = "A max clock skew value (in seconds) between client and server accepted when validating timestamps in Query/REST protocol.",
+		  changeListener = TimeChangeListener.class )
+	    public static Integer        CLOCK_SKEW_SEC            = 20;
   public static final Boolean  SERVER_CHANNEL_REUSE_ADDRESS      = true;
   public static final Boolean  SERVER_CHANNEL_NODELAY            = true;
   public static final Boolean  CHANNEL_REUSE_ADDRESS             = true;
@@ -115,5 +127,30 @@ public class StackConfiguration extends AbstractPersistent {
   public static Long           CLIENT_POOL_MAX_MEM_PER_CONN      = 10485760l;
   public static Long           CLIENT_POOL_TOTAL_MEM             = 200 * 1024 * 1024l;
   public static Long           CLIENT_POOL_TIMEOUT_MILLIS        = 500l;
-  
+
+  private static Logger LOG        = Logger.getLogger( StackConfiguration.class );
+
+  public static class TimeChangeListener implements PropertyChangeListener {
+	  /**
+	   * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
+	   *      java.lang.Object)
+	   *      
+	   * Validates that the new value is >= 0
+	   */
+	  @Override
+	  public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+
+		  int time = -1;
+		  try {
+			  if ( newValue instanceof String ) {
+				  time = Integer.parseInt( (String)newValue );
+			  }
+		  } catch ( NumberFormatException e ) {
+			  LOG.debug("Failed to parse int from " + newValue);
+		  }
+		  if ( time < 0 )
+			  throw new ConfigurablePropertyException("An integer >= 0 is expected for " + t.getFieldName() );
+
+	  }
+  }
 }

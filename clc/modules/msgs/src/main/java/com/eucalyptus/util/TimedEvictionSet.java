@@ -22,11 +22,19 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
   class TimestampedElement implements Comparable<TimestampedElement> {
     private E element;
     private Long timeNanos;
+    
     public TimestampedElement( E element ) {
       super( );
       this.element = element;
       this.timeNanos = System.nanoTime( );
     }
+    
+    protected TimestampedElement( E element, Long nanos) {
+    	super();
+    	this.element = element;
+    	this.timeNanos = nanos;
+    }
+    
     @Override
     public int hashCode( ) {
       final int prime = 31;
@@ -78,12 +86,35 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
       this.timestamps.add( elem );
       return true;
     } else {
-      TimestampedElement elem = new TimestampedElement( e );
-      if( this.timestamps.contains( elem ) && TimeUnit.SECONDS.convert( System.nanoTime( ) - elem.getTimestamp( ), TimeUnit.NANOSECONDS ) < StackConfiguration.REPLAY_SKEW_WINDOW_SEC ) {
-        return true;
-      } else {
-        return false;
-      }
+
+	LOG.debug("Use of the same signature is detected: " + e );
+	
+	// Allow message with the same signature within the REPLAY_SKEW_WINDOW_SEC
+	// time interval
+    	Long now = System.nanoTime( );
+	Long adjust = TimeUnit.NANOSECONDS.convert(StackConfiguration.REPLAY_SKEW_WINDOW_SEC, TimeUnit.SECONDS);
+
+	// special case
+	if( adjust <= 0 ) {
+	    // no replay is allowed at all
+	    return false;
+	} 
+
+    	Long timeNanosAdj = now - adjust;
+    	TimestampedElement fakeElem = new TimestampedElement( e, timeNanosAdj );
+    	NavigableSet<TimestampedElement> elems = this.timestamps.tailSet(fakeElem, true);
+    	for(Iterator<TimestampedElement> iter = elems.iterator(); iter.hasNext();) {
+    		TimestampedElement elem = iter.next();
+    		E sig = elem.get();
+		// the signature was used within the allowed window, don't trigger replay
+    		if(e.equals(sig)) {
+    			LOG.debug("Found elem with signature " + sig + " within allowed " + StackConfiguration.REPLAY_SKEW_WINDOW_SEC
+    					+ " sec window ");
+    			return true;
+    		}
+    	}
+    	// a replay attack
+    	return false;
     }
   }
   
@@ -111,6 +142,10 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
   }
   
   public boolean add( E e ) {
+    Long skew = TimeUnit.NANOSECONDS.convert(StackConfiguration.REPLAY_SKEW_WINDOW_SEC, TimeUnit.SECONDS);
+    // replay detection is disabled
+    if(skew >= this.evictionNanos)
+	return true;
     return timestamp( e );
   }
 

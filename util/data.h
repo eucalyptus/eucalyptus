@@ -1,5 +1,5 @@
-// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-                                                                
-// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:                                                                                                                                              
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*
 Copyright (c) 2009  Eucalyptus Systems, Inc.	
@@ -236,6 +236,13 @@ typedef struct netConfig_t {
 } netConfig;
 int allocate_netConfig(netConfig *out, char *pvMac, char *pvIp, char *pbIp, int vlan, int networkIndex);
 
+#define VOL_STATE_ATTACHING        "attaching"
+#define VOL_STATE_ATTACHED         "attached"
+#define VOL_STATE_ATTACHING_FAILED "attaching failed"
+#define VOL_STATE_DETACHING        "detaching"
+#define VOL_STATE_DETACHED         "detached"
+#define VOL_STATE_DETACHING_FAILED "detaching failed"
+
 typedef struct ncVolume_t {
     char volumeId[CHAR_BUFFER_SIZE];
     char remoteDev[CHAR_BUFFER_SIZE];
@@ -303,7 +310,6 @@ typedef struct ncInstance_t {
 
     // updated by NC upon Attach/DetachVolume
     ncVolume volumes[EUCA_MAX_VOLUMES];
-    int volumesSize;
 
     // reported by NC back, for report generation
     long long blkbytes, netbytes;
@@ -345,23 +351,33 @@ ncMetadata * allocate_metadata(char *correlationId, char *userId);
 void free_metadata(ncMetadata ** meta);
 
 ncInstance * allocate_instance(char *uuid,
-			       char *instanceId, char *reservationId, 
+                               char *instanceId, 
+                               char *reservationId, 
                                virtualMachine *params, 
-                               char *stateName, int stateCode, char *userId, 
-                               netConfig *ncnet, char *keyName,
-                               char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize);
+                               char *stateName, 
+                               int stateCode, 
+                               char *userId, 
+                               netConfig *ncnet, 
+                               char *keyName,
+                               char *userData, 
+                               char *launchIndex, 
+                               char *platform, 
+                               int expiryTime, 
+                               char **groupNames, 
+                               int groupNamesSize);
 void free_instance (ncInstance ** inst);
 
 ncResource * allocate_resource(char *nodeStatus, 
-			       char *iqn,
+                               char *iqn,
                                int memorySizeMax, int memorySizeAvailable, 
                                int diskSizeMax, int diskSizeAvailable,
                                int numberOfCoresMax, int numberOfCoresAvailable,
                                char *publicSubnets);
 void free_resource(ncResource ** res);
-ncVolume * find_volume (ncInstance * instance, char *volumeId);
-ncVolume *  add_volume (ncInstance * instance, char *volumeId, char *remoteDev, char *localDev, char *localDevReal, char *stateName);
-ncVolume * free_volume (ncInstance * instance, char *volumeId, char *remoteDev, char *localDev);
+
+int is_volume_used (const ncVolume * v);
+ncVolume * save_volume (ncInstance * instance, const char *volumeId, const char *remoteDev, const char *localDev, const char *localDevReal, const char *stateName);
+ncVolume * free_volume (ncInstance * instance, const char *volumeId);
 
 #endif
 

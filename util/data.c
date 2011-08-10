@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*
 Copyright (c) 2009  Eucalyptus Systems, Inc.	
 
@@ -61,6 +64,7 @@ permission notice:
 #include <stdlib.h>
 #define __USE_GNU
 #include <string.h> 
+#include <assert.h>
 #include "data.h"
 
 int allocate_virtualMachine(virtualMachine *out, const virtualMachine *in)
@@ -119,7 +123,7 @@ void free_metadata (ncMetadata ** metap)
 
 /* instances are present in instance-related requests */
 ncInstance * allocate_instance (char *uuid,
-				char *instanceId, char *reservationId, 
+                                char *instanceId, char *reservationId, 
                                 virtualMachine *params, 
                                 char *stateName, int stateCode, char *userId, 
                                 netConfig *ncnet, char *keyName,
@@ -151,7 +155,6 @@ ncInstance * allocate_instance (char *uuid,
             safe_strncpy(inst->groupNames[i], groupNames[i], CHAR_BUFFER_SIZE);
         }
     }
-    inst->volumesSize = 0;
     
     if (ncnet != NULL) {
       memcpy(&(inst->ncnet), ncnet, sizeof(netConfig));
@@ -202,7 +205,7 @@ void free_instance (ncInstance ** instp)
 
 /* resource is used to return information about resources */
 ncResource * allocate_resource (char *nodeStatus,
-				char *iqn,
+                                char *iqn,
                                 int memorySizeMax, int memorySizeAvailable, 
                                 int diskSizeMax, int diskSizeAvailable,
                                 int numberOfCoresMax, int numberOfCoresAvailable,
@@ -339,49 +342,73 @@ int total_instances (bunchOfInstances **headp)
 
 /* 
  * finds a matching volume 
- * OR returns a pointer to the next empty volume slot 
+ * OR returns a pointer to the next empty/avail volume slot 
  * OR if full, returns NULL
  */
-ncVolume * find_volume (ncInstance * instance, char *volumeId) 
+static ncVolume * find_volume (ncInstance * instance, const char *volumeId) 
 {
     ncVolume * v = instance->volumes;
+    ncVolume * match = NULL;
+    ncVolume * avail = NULL;
+    ncVolume * empty = NULL;
 
-    int i;
-    for (i=0; i<EUCA_MAX_VOLUMES; i++,v++) {
-        if ( ! strncmp (v->volumeId, volumeId, CHAR_BUFFER_SIZE) )
-            break;
-        if ( ! strnlen (v->volumeId, CHAR_BUFFER_SIZE) )
-            break;
+    for (int i=0; i<EUCA_MAX_VOLUMES; i++,v++) {
+        // look for matches
+        if (! strncmp (v->volumeId, volumeId, CHAR_BUFFER_SIZE)) {
+            assert (match==NULL);
+            match = v;
+        }
+        
+        // look for the first empty and available slot
+        if (! strnlen (v->volumeId, CHAR_BUFFER_SIZE)) {
+            if (empty==NULL)
+                empty = v;
+        } else if (! is_volume_used (v)) {
+            if (avail==NULL)
+                avail = v;
+        }
     }
-    if (i==EUCA_MAX_VOLUMES)
-        v = NULL;
 
-    return v;
+    if (match) return match;
+    if (empty) return empty;
+    return avail;
 }
 
-ncVolume * add_volume (ncInstance * instance, char *volumeId, char *remoteDev, char *localDev, char *localDevReal, char *stateName)
+// returns 0 if volume slot is not in use and non-zero if it is
+int is_volume_used (const ncVolume * v)
 {
+    if (strlen (v->stateName) == 0) 
+        return 0;
+    else
+        return strcmp (v->stateName, VOL_STATE_ATTACHING_FAILED)
+            && strcmp (v->stateName, VOL_STATE_DETACHED);
+}
+
+// records volume's information in the instance struct, updating
+// the non-NULL values if the record already exists 
+ncVolume * save_volume (ncInstance * instance, const char *volumeId, const char *remoteDev, const char *localDev, const char *localDevReal, const char *stateName)
+{
+    assert (instance!=NULL);
+    assert (volumeId!=NULL);
     ncVolume * v = find_volume (instance, volumeId);
 
-    if ( v == NULL) {
-        return NULL; /* out of room */
-    }
-
-    if ( ! strncmp (v->volumeId, volumeId, CHAR_BUFFER_SIZE) ) {
-        return NULL; /* already there */
-    } else {
+    if ( v != NULL) {
         safe_strncpy (v->volumeId, volumeId, CHAR_BUFFER_SIZE);
-        safe_strncpy (v->remoteDev, remoteDev, CHAR_BUFFER_SIZE);
-        safe_strncpy (v->localDev, localDev , CHAR_BUFFER_SIZE);
-        safe_strncpy (v->localDevReal, localDevReal , CHAR_BUFFER_SIZE);
-	safe_strncpy (v->stateName, stateName , CHAR_BUFFER_SIZE);
-        instance->volumesSize++;
+        if (remoteDev)
+            safe_strncpy (v->remoteDev, remoteDev, CHAR_BUFFER_SIZE);
+        if (localDev)
+            safe_strncpy (v->localDev, localDev, CHAR_BUFFER_SIZE);
+        if (localDevReal)
+            safe_strncpy (v->localDevReal, localDevReal, CHAR_BUFFER_SIZE);
+        if (stateName)
+            safe_strncpy (v->stateName, stateName, CHAR_BUFFER_SIZE);
     }
-
+    
     return v;
 }
 
-ncVolume * free_volume (ncInstance * instance, char *volumeId, char *remoteDev, char *localDev)
+// zeroes out the volume's slot in the instance struct (no longer used)
+ncVolume * free_volume (ncInstance * instance, const char *volumeId)
 {
     ncVolume * v = find_volume (instance, volumeId);
     
@@ -401,7 +428,6 @@ ncVolume * free_volume (ncInstance * instance, char *volumeId, char *remoteDev, 
         
         /* empty the last one */
         bzero (last_v, sizeof(ncVolume));
-        instance->volumesSize--;
     }
     
     return v;

@@ -96,11 +96,6 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	public DRBDStorageManager() {
 	}
 
-	public DRBDStorageManager(String rootDirectory) {
-		super(rootDirectory);
-		LOG.info("Initializing DRBD Info: " + DRBDInfo.getDRBDInfo().getName());
-	}
-
 	private String getConnectionStatus() throws ExecutionException, EucalyptusCloudException {
 		String returnValue = SystemUtil.run(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "cstate", DRBDInfo.getDRBDInfo().getResource()});
 		if(returnValue.length() == 0) {
