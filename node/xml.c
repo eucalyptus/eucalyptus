@@ -64,6 +64,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #define __USE_GNU
 #include <string.h> // strlen, strcpy
 #include <time.h>
@@ -189,12 +190,14 @@ int gen_instance_xml (const ncInstance * instance)
         for (int root=1; root>=0; root--){ 
            for (int i=0; i<EUCA_MAX_VBRS && i<instance->params.virtualBootRecordLen; i++) {
                const virtualBootRecord * vbr = &(instance->params.virtualBootRecord[i]); 
-               if(root && vbr->type != NC_RESOURCE_IMAGE) 
-                   continue;
-               if(!root && vbr->type == NC_RESOURCE_IMAGE)
-                   continue;
                // skip empty entries, if any
                if (vbr==NULL)
+                   continue;
+               // do EMI on the first iteration of the outer loop
+               if (root && vbr->type != NC_RESOURCE_IMAGE) 
+                   continue;
+               // ignore EMI on the second iteration of the outer loop
+               if (!root && vbr->type == NC_RESOURCE_IMAGE)
                    continue;
                // skip anything without a device on the guest, e.g., kernel and ramdisk
                if (!strcmp ("none", vbr->guestDeviceName)) 
@@ -213,15 +216,25 @@ int gen_instance_xml (const ncInstance * instance)
                xmlNodePtr disk = _ELEMENT(disks, "diskPath", vbr->backingPath);
                _ATTRIBUTE(disk, "targetDeviceType", libvirtDevTypeNames[vbr->guestDeviceType]);
                _ATTRIBUTE(disk, "targetDeviceName", vbr->guestDeviceName);
+               char devstr[SMALL_CHAR_BUFFER_SIZE];               
                if (nc_state.config_use_virtio_root) {
-                   char virtiostr[SMALL_CHAR_BUFFER_SIZE];
-                   snprintf(virtiostr, SMALL_CHAR_BUFFER_SIZE, "%s", vbr->guestDeviceName);
-                   virtiostr[0] = 'v';
-                   _ATTRIBUTE(disk, "targetDeviceNameVirtio", virtiostr);
+                   snprintf(devstr, SMALL_CHAR_BUFFER_SIZE, "%s", vbr->guestDeviceName);
+                   devstr[0] = 'v';
+                   _ATTRIBUTE(disk, "targetDeviceNameVirtio", devstr);
                    _ATTRIBUTE(disk, "targetDeviceBusVirtio", "virtio");     
                }
                _ATTRIBUTE(disk, "targetDeviceBus", libvirtBusTypeNames[vbr->guestDeviceBus]);
                _ATTRIBUTE(disk, "sourceType", libvirtSourceTypeNames[vbr->backingType]);
+
+               if (root) {
+                   xmlNodePtr rootNode = _ELEMENT(disks, "root", NULL);
+                   _ATTRIBUTE(rootNode, "device", devstr);
+                   char root_uuid[64] = "";
+                   if (get_blkid (vbr->backingPath, root_uuid, sizeof(root_uuid)) == 0) {
+                       assert (strlen (root_uuid));
+                       _ATTRIBUTE(rootNode, "uuid", root_uuid);
+                   }
+               }
            }
            if (strlen (instance->floppyFilePath)) {
                _ELEMENT(disks, "floppyPath", instance->floppyFilePath);

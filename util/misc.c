@@ -2035,7 +2035,9 @@ long long time_usec (void)
     return (long long)tv.tv_sec * 1000000 + tv.tv_usec;
 }
 
-char *safe_mkdtemp(char *template){
+// ensure the temp file is only readable by the user
+char *safe_mkdtemp (char *template)
+{
     mode_t u;
     char *ret=NULL;
     u=umask(0077);
@@ -2043,7 +2045,10 @@ char *safe_mkdtemp(char *template){
     umask(u);
     return(ret);
 }
-int safe_mkstemp(char *template){
+
+// ensure the temp file is only readable by the user
+int safe_mkstemp (char *template)
+{
     mode_t u;
     int ret;
     u=umask(0077);
@@ -2052,9 +2057,36 @@ int safe_mkstemp(char *template){
     return(ret);
 }
 
-char* safe_strncpy(char *s1, const char *s2, size_t len) {
+// ensure the string is aways 0-terminated
+char* safe_strncpy (char *s1, const char *s2, size_t len) 
+{
     char* ret = strncpy(s1, s2, len);
     s1[len-1] = '\0';
+    return ret;
+}
+
+// try to get UUID of the block device, returning 0 on success and 1 otherwise (TODO: use blkidlib maybe)
+int get_blkid (const char * dev_path, char * uuid, unsigned int uuid_size) 
+{
+    char cmd [1024];
+    snprintf (cmd, sizeof (cmd), "blkid -u filesystem %s", dev_path);
+    char * blkid_output = system_output (cmd);
+    if (blkid_output==NULL) 
+        return 1;
+    int ret = 1;
+    char * first_char = strstr (blkid_output, "UUID=\"");
+    if (first_char) {
+        first_char += 6;
+        char * last_char = strchr (first_char, '"');
+        if (last_char && ((last_char-first_char)>0)) {
+            * last_char = '\0';
+            safe_strncpy (uuid, first_char, uuid_size);
+            assert (0 == strcmp (uuid, first_char));
+            ret = 0;
+        }
+    }
+    free (blkid_output);
+
     return ret;
 }
 
@@ -2086,6 +2118,18 @@ int main (int argc, char ** argv)
     assert (strlen (s) == strlen (_STR));
     free (s);
     fclose (fp);
+
+    printf ("testing get_blkid in misc.c\n");
+    char * devs [] = { "hda", "hdb", "hdc", "hdd", "sda", "sdb", "sdc", "sdd", NULL };
+    for (char ** d = devs; * d != NULL; d++) {
+        for (int p=1; p<4; p++) {
+            char dev_path [32];
+            char uuid [64] = "";
+            snprintf (dev_path, sizeof (dev_path), "/dev/%s%d", *d, p);
+            int ret = get_blkid (dev_path, uuid, sizeof (uuid));
+            printf ("\t%s: %s\n", dev_path, ret==0?uuid:"UUID not found");
+        }
+    }
 
     return 0;
 }
