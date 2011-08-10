@@ -75,6 +75,7 @@ import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.ws.StackConfiguration;
 
 @ChannelPipelineCoverage( "one" )
 public class QueryTimestampHandler extends MessageStackHandler {
@@ -102,13 +103,13 @@ public class QueryTimestampHandler extends MessageStackHandler {
             expires = Timestamps.parseTimestamp( URLDecoder.decode( timestamp ) );
           }
 	  // allow 20 secs for clock drift
-	  now.add( Calendar.SECOND, 20 );
+	  now.add( Calendar.SECOND, StackConfiguration.CLOCK_SKEW_SEC );
 	  // make sure that the message wasn't generated in the future
           if( now.before( expires )) {
               throw new AuthenticationException( "Message was generated in the future (times in UTC): Timestamp=" + timestamp);
           }
 	  // allow caching for 15 mins + 20 secs for clock drift
-          expires.add( Calendar.SECOND, 920 );
+          expires.add( Calendar.SECOND, 900 + StackConfiguration.CLOCK_SKEW_SEC );
         } else {
           exp = parameters.remove( SecurityParameter.Expires.toString( ) );
           try {

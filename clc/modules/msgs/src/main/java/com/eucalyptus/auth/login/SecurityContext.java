@@ -17,6 +17,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.util.TimedEvictionSet;
 import com.google.common.collect.Lists;
+import com.eucalyptus.ws.StackConfiguration;
 
 public class SecurityContext extends Configuration {
   private static SecurityContext singleton = new SecurityContext( );
@@ -26,7 +27,7 @@ public class SecurityContext extends Configuration {
   // For AWS query interface, default expiration time is 15 mins
   // we cache for 15 mins 20 secs to allow for some clock drift
   // (in case creation Timestamp is up to 20 secs in the future)
-  private static TimedEvictionSet<String> replayQueue = new TimedEvictionSet<String>(TimeUnit.MILLISECONDS.convert(920, TimeUnit.SECONDS));
+  private static TimedEvictionSet<String> replayQueue = new TimedEvictionSet<String>(TimeUnit.MILLISECONDS.convert(900 + StackConfiguration.CLOCK_SKEW_SEC, TimeUnit.SECONDS));
   private List<String> loginModules = Lists.newArrayList( );
   private SecurityContext( ) {}
   
