@@ -93,27 +93,31 @@ import com.eucalyptus.util.TransactionException;
 public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex, VmInstance> implements Comparable<PrivateNetworkIndex> {
   @NaturalId
   @Column( name = "metadata_network_index" )
-  private final Long index;
+  private final Long          index;
   @NaturalId
   @Column( name = "metadata_network_index_network_tag" )
-  private final Long tag;
+  private final Long          tag;
+  private final ExtantNetwork network;
   @Column( name = "metadata_network_index_vm_perm_uuid" )
-  private String     instanceNaturalId;
+  private String              instanceNaturalId;
   
   private PrivateNetworkIndex( ) {
     super( );
     this.index = null;
     this.tag = null;
+    this.network = null;
   }
   
   private PrivateNetworkIndex( ExtantNetwork network, Long index ) {
     super( );
+    this.network = network;
     this.tag = network.getTag( );
     this.index = index;
   }
   
   public PrivateNetworkIndex( Long tag, Long index ) {
     this.tag = tag;
+    this.network = null;
     this.index = index;
   }
   
