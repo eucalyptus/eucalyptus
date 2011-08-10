@@ -756,18 +756,7 @@ public class WalrusManager {
 			                           PolicySpec.VENDOR_S3,
 			                           PolicySpec.S3_RESOURCE_BUCKET,
 			                           bucketName,
-			                           bucket.getOwnerId()) &&
-			    Lookups.checkPrivilege(PolicySpec.S3_PUTOBJECT,
-			                           PolicySpec.VENDOR_S3,
-			                           PolicySpec.S3_RESOURCE_OBJECT,
-			                           PolicySpec.objectFullName(bucketName, objectKey),
-			                           bucket.getOwnerId()) &&
-			    Permissions.canAllocate(PolicySpec.S3_RESOURCE_BUCKET,
-			                            PolicySpec.VENDOR_S3,
-			                            bucketName,
-			                            PolicySpec.S3_PUTOBJECT,
-			                            ctx.getUser(),
-			                            objSize))) {
+			                           bucket.getOwnerId()))) {
 						if (logData != null)
 							reply.setLogData(logData);
 						String objectName;
@@ -958,6 +947,17 @@ public class WalrusManager {
 													"Key", objectKey);
 										}
 									}
+									if (!Permissions.canAllocate(PolicySpec.S3_RESOURCE_BUCKET,
+																PolicySpec.VENDOR_S3,
+																bucketName,
+																PolicySpec.S3_PUTOBJECT,
+																ctx.getUser(),
+																size) && 
+										!ctx.hasAdministrativePrivileges()) {
+										dbObject.rollback();
+										LOG.error("Quota exceeded for Walrus putObject");
+										throw new EntityTooLargeException("Key", objectKey);
+									}
 									bucket.setBucketSize(newSize);
 									if (WalrusProperties.trackUsageStatistics) {
 										walrusStatistics.updateBytesIn(size);
@@ -1141,18 +1141,7 @@ public class WalrusManager {
                                  PolicySpec.VENDOR_S3,
                                  PolicySpec.S3_RESOURCE_BUCKET,
                                  bucketName,
-                                 bucket.getOwnerId()) &&
-          Lookups.checkPrivilege(PolicySpec.S3_PUTOBJECT,
-                                 PolicySpec.VENDOR_S3,
-                                 PolicySpec.S3_RESOURCE_OBJECT,
-                                 PolicySpec.objectFullName(bucketName, objectKey),
-                                 bucket.getOwnerId()) &&
-          Permissions.canAllocate(PolicySpec.VENDOR_S3,
-                                  PolicySpec.S3_RESOURCE_BUCKET,
-                                  bucketName,
-                                  PolicySpec.S3_PUTOBJECT,
-                                  ctx.getUser(),
-                                  objSize))) {
+                                 bucket.getOwnerId()))) {
             EntityWrapper<ObjectInfo> dbObject = db
 						.recast(ObjectInfo.class);
 						ObjectInfo searchObjectInfo = new ObjectInfo();
@@ -1232,6 +1221,17 @@ public class WalrusManager {
 											logData);
 								}
 								bucket.setBucketSize(newSize);
+							}
+							if (Permissions.canAllocate(PolicySpec.VENDOR_S3,
+														PolicySpec.S3_RESOURCE_BUCKET,
+														bucketName,
+														PolicySpec.S3_PUTOBJECT,
+														ctx.getUser(),
+														size) &&
+								!ctx.hasAdministrativePrivileges()) {
+								db.rollback();
+								LOG.error("Quota exceeded in Walrus putObject");
+								throw new EntityTooLargeException("Key", objectKey, logData);
 							}
 							if (WalrusProperties.trackUsageStatistics) {
 								walrusStatistics.updateBytesIn(size);
