@@ -104,6 +104,17 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
     super( );
   }
   
+  public ExtantNetwork( NetworkGroup networkGroup, Long tag ) {
+    super( );
+    this.networkGroup = networkGroup;
+    this.tag = tag;
+    this.maxAddr = 2048l;//GRZE:FIXIT
+    this.minAddr = 9l;//GRZE:FIXIT
+    for( Long i = this.minAddr; i < this.maxAddr; i++ ) { 
+      this.getIndexes( ).add( new PrivateNetworkIndex( tag, i ) );
+    }
+  }
+
   public ExtantNetwork( State state, String displayName ) {
     super( state, displayName );
   }

@@ -79,6 +79,7 @@ import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
@@ -89,8 +90,11 @@ import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.TransactionException;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
@@ -101,6 +105,8 @@ import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 @Table( name = "metadata_network_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements NetworkSecurityGroup<NetworkGroup> {
+  private static Logger LOG = Logger.getLogger( NetworkGroup.class );
+  
   enum State {
     DISABLED,
     PENDING,
@@ -245,9 +251,22 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   public String getClusterNetworkName( ) {
     return this.getOwnerUserId( ) + "-" + this.getDisplayName( );
   }
-
+  
   public ExtantNetwork extantNetwork( ) {
-    return null;
+    ExtantNetwork ret = null;
+    try {
+      ret = Transactions.find( new ExtantNetwork( this, null ) );
+    } catch ( TransactionException ex ) {
+      for ( Long i = 9l; i < 4096; i++ ) {
+        try {
+          ret = Transactions.save( new ExtantNetwork( this, i ) );
+          break;
+        } catch ( TransactionException ex1 ) {
+          Logs.extreme( ).error( ex1, ex1 );
+        }
+      }
+    }
+    return ret;
   }
   
 }
