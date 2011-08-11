@@ -1,13 +1,10 @@
 package com.eucalyptus.reporting.user;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.ExposedCommand;
 
 public class FalseDataGenerator 
 {
-	public static final String FAKE_NAME_PREFIX = "Fake";
-	
 	private static final int NUM_ACCOUNTS = 4;
 	private static final int NUM_USERS_PER_ACCOUNT = 8;
 	
@@ -18,12 +15,13 @@ public class FalseDataGenerator
 
 		try {
 			for (int i=0; i < NUM_ACCOUNTS; i++) {
-				String accountName = String.format(FAKE_NAME_PREFIX + "AccountName:%d", i);
-				Account account = Accounts.addAccount(accountName);
+				String accountId = String.format("fakeAccountId-%d", i);
+				String accountName = String.format("fakeAccountName:%d", i);
+				ReportingAccountDao.getInstance().addUpdateAccount(accountId, accountName);
 				for (int j=0; j < NUM_USERS_PER_ACCOUNT; j++) {
-					String userName = String.format(FAKE_NAME_PREFIX + "Username:%d,%d", i, j);
-					account.addUser(userName, "/", true, true, null);
-					account.getUsers();
+					String userId = String.format("fakeUserId-%d", i);
+					String userName = String.format("fakeUserName:%d", i);
+					ReportingUserDao.getInstance().addUpdateUser(userId, userName);
 				}
 			}			
 		} catch (Exception ex) {
@@ -36,15 +34,26 @@ public class FalseDataGenerator
 	public static void removeFalseData()
 	{
 		System.out.println(" ----> REMOVING FALSE DATA");
-		
+
+		EntityWrapper<ReportingAccount> accountWrapper =
+			EntityWrapper.get(ReportingAccount.class);
+		EntityWrapper<ReportingUser> userWrapper =
+			EntityWrapper.get(ReportingUser.class);
+
 		try {
-			for (Account account: Accounts.listAllAccounts()) {
-				if (account.getName().startsWith("FakeAccountName")) {
-					
-				}
-			}
+			
+			accountWrapper.createQuery("delete ReportingAccount ra where ra.id like 'fake-%'")
+				.executeUpdate();
+			accountWrapper.commit();
+
+			userWrapper.createQuery("delete ReportingUser ru where ru.id like 'fake-%'")
+				.executeUpdate();
+			userWrapper.commit();
+			
 		} catch (Exception ex) {
-			ex.printStackTrace();
+			accountWrapper.rollback();
+			userWrapper.rollback();
+			throw new RuntimeException(ex);
 		}
 
 	}
