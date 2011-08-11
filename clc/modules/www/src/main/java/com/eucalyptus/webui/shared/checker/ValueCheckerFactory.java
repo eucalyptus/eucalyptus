@@ -18,6 +18,8 @@ public class ValueCheckerFactory {
 
   public static final HashSet<Character> PASSWORD_SPECIAL = new HashSet<Character>( Arrays.asList( '`', '~', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '=', '+', '[', ']', '{', '}', '\\', '|', ';', ':', '\'', '"', ',', '.', '<', '>', '/', '?' ) );
 
+  public static final HashSet<Character> WHITESPACES = new HashSet<Character>( Arrays.asList( '\t', ' ' ) );
+  
   public static ValueChecker createNonEmptyValueChecker( ) {
     return new ValueChecker( ) {
 
@@ -68,7 +70,7 @@ public class ValueCheckerFactory {
         }
         for ( int i = 0; i < value.length( ); i++ ) {
           char c = value.charAt( i );
-          if ( !Character.isLetterOrDigit( c ) && !USERGROUPNAME_EXTRA.contains( c ) && !Character.isSpace( c ) ) {
+          if ( !Character.isLetterOrDigit( c ) && !USERGROUPNAME_EXTRA.contains( c ) && !WHITESPACES.contains( c ) ) {
             throw new InvalidValueException( "Containing invalid character for user or group names: " + c );
           }
         }
