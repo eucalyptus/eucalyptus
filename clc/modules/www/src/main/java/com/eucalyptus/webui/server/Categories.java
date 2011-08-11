@@ -27,34 +27,34 @@ public class Categories {
       String accountId = login.getAccount( ).getAccountNumber( );
       String userId = login.getUserId( );
       return new ArrayList<CategoryTag>( Arrays.asList( 
-                            new CategoryTag( "System Management", 
-                                             new ArrayList<CategoryItem>( Arrays.asList(
-                                                            new CategoryItem( "Start", "Start guide", "home",
-                                                                              QueryBuilder.get( ).start( QueryType.start ).query( ) ),
-                                                            new CategoryItem( "Service Components", "Configuration of service components", "config",
-                                                                              QueryBuilder.get( ).start( QueryType.config ).query( ) ) ) ) ),
-                            new CategoryTag( "Identity Management",
-                                             new ArrayList<CategoryItem>( Arrays.asList(
-                                                            new CategoryItem( "All Accounts", "Accounts", "dollar", 
-                                                                              QueryBuilder.get( ).start( QueryType.account ).query( ) ),
-                                                            new CategoryItem( "Your Account's Groups", "User groups", "group",
-                                                                              QueryBuilder.get( ).start( QueryType.group ).add( EuareWebBackend.ACCOUNTID, accountId ).query( ) ),
-                                                            new CategoryItem( "Your Account's Users", "Users", "user",
-                                                                              QueryBuilder.get( ).start( QueryType.user ).add( EuareWebBackend.ACCOUNTID, accountId ).query( ) ),
-                                                            new CategoryItem( "Your Policies", "Policies", "lock",
-                                                                              QueryBuilder.get( ).start( QueryType.policy ).add( EuareWebBackend.USERID, userId ).query( ) ),
-                                                            new CategoryItem( "Your Keys", "Access keys", "key",
-                                                                              QueryBuilder.get( ).start( QueryType.key ).add( EuareWebBackend.USERID, userId ).query( ) ),
-                                                            new CategoryItem( "Your Certificates", "X509 certificates", "sun",
-                                                                              QueryBuilder.get( ).start( QueryType.cert ).add( EuareWebBackend.USERID, userId ).query( ) ) ) ) ),
-                            new CategoryTag( "Resource Management",
-                                             new ArrayList<CategoryItem>( Arrays.asList(
-                                                            new CategoryItem( "Images", "Virtual machine images (EMIs)", "image",
-                                                                              QueryBuilder.get( ).start( QueryType.image ).query( ) ),
-                                                            new CategoryItem( "VmTypes", "Virtual machine types", "type",
-                                                                              QueryBuilder.get( ).start( QueryType.vmtype ).query( ) ),
-                                                            new CategoryItem( "Usage Report", "Resource usage report", "report",
-                                                                              QueryBuilder.get( ).start( QueryType.report ).query( ) ) ) ) ) ) );
+              new CategoryTag( "System Management", 
+                               new ArrayList<CategoryItem>( Arrays.asList(
+                                              new CategoryItem( "Start", "Start guide", "home",
+                                                                QueryBuilder.get( ).start( QueryType.start ).query( ) ),
+                                              new CategoryItem( "Service Components", "Configuration of service components", "config",
+                                                                QueryBuilder.get( ).start( QueryType.config ).query( ) ) ) ) ),
+              new CategoryTag( "Identity Management",
+                               new ArrayList<CategoryItem>( Arrays.asList(
+                                              new CategoryItem( "All Accounts", "Accounts", "dollar", 
+                                                                QueryBuilder.get( ).start( QueryType.account ).query( ) ),
+                                              new CategoryItem( "Your Account's Groups", "User groups", "group",
+                                                                QueryBuilder.get( ).start( QueryType.group ).add( EuareWebBackend.ACCOUNTID, accountId ).query( ) ),
+                                              new CategoryItem( "Your Account's Users", "Users", "user",
+                                                                QueryBuilder.get( ).start( QueryType.user ).add( EuareWebBackend.ACCOUNTID, accountId ).query( ) ),
+                                              new CategoryItem( "Your Policies", "Policies", "lock",
+                                                                QueryBuilder.get( ).start( QueryType.policy ).add( EuareWebBackend.USERID, userId ).query( ) ),
+                                              new CategoryItem( "Your Keys", "Access keys", "key",
+                                                                QueryBuilder.get( ).start( QueryType.key ).add( EuareWebBackend.USERID, userId ).query( ) ),
+                                              new CategoryItem( "Your Certificates", "X509 certificates", "sun",
+                                                                QueryBuilder.get( ).start( QueryType.cert ).add( EuareWebBackend.USERID, userId ).query( ) ) ) ) ),
+              new CategoryTag( "Resource Management",
+                               new ArrayList<CategoryItem>( Arrays.asList(
+                                              new CategoryItem( "Images", "Virtual machine images (EMIs)", "image",
+                                                                QueryBuilder.get( ).start( QueryType.image ).query( ) ),
+                                              new CategoryItem( "VmTypes", "Virtual machine types", "type",
+                                                                QueryBuilder.get( ).start( QueryType.vmtype ).query( ) ),
+                                              new CategoryItem( "Usage Report", "Resource usage report", "report",
+                                                                QueryBuilder.get( ).start( QueryType.report ).query( ) ) ) ) ) ) );
     } catch ( Exception e ) {
       LOG.error( "Failed to load user information", e );
       LOG.debug( e, e );
@@ -67,26 +67,28 @@ public class Categories {
       String accountId = login.getAccount( ).getAccountNumber( );
       String userId = login.getUserId( );
       return new ArrayList<CategoryTag>( Arrays.asList( 
-                            new CategoryTag( "Identity Management",
-                                             new ArrayList<CategoryItem>( Arrays.asList(
-                                                            new CategoryItem( "All Accounts", "Accounts", "dollar", 
-                                                                              QueryBuilder.get( ).start( QueryType.account ).query( ) ),
-                                                            new CategoryItem( "Your Account's Groups", "User groups", "group",
-                                                                              QueryBuilder.get( ).start( QueryType.group ).add( EuareWebBackend.ACCOUNTID, accountId ).query( ) ),
-                                                            new CategoryItem( "Your Account's Users", "Users", "user",
-                                                                              QueryBuilder.get( ).start( QueryType.user ).add( EuareWebBackend.ACCOUNTID, accountId ).query( ) ),
-                                                            new CategoryItem( "Your Policies", "Policies", "lock",
-                                                                              QueryBuilder.get( ).start( QueryType.policy ).add( EuareWebBackend.USERID, userId ).query( ) ),
-                                                            new CategoryItem( "Your Keys", "Access keys", "key",
-                                                                              QueryBuilder.get( ).start( QueryType.key ).add( EuareWebBackend.USERID, userId ).query( ) ),
-                                                            new CategoryItem( "Your Certificates", "X509 certificates", "sun",
-                                                                              QueryBuilder.get( ).start( QueryType.cert ).add( EuareWebBackend.USERID, userId ).query( ) ) ) ) ),
-                            new CategoryTag( "Resource Management",
-                                             new ArrayList<CategoryItem>( Arrays.asList(
-                                                            new CategoryItem( "Images", "Virtual machine images (EMIs)", "image",
-                                                                              QueryBuilder.get( ).start( QueryType.image ).query( ) ),
-                                                            new CategoryItem( "VmTypes", "Virtual machine types", "type",
-                                                                              QueryBuilder.get( ).start( QueryType.vmtype ).query( ) ) ) ) ) ) );
+              new CategoryTag( "System Management", 
+                               new ArrayList<CategoryItem>( Arrays.asList(
+                                              new CategoryItem( "Start", "Start guide", "home",
+                                                                QueryBuilder.get( ).start( QueryType.start ).query( ) ) ) ) ),
+              new CategoryTag( "Identity Management",
+                               new ArrayList<CategoryItem>( Arrays.asList(
+                                              new CategoryItem( "All Accounts", "Accounts", "dollar", 
+                                                                QueryBuilder.get( ).start( QueryType.account ).query( ) ),
+                                              new CategoryItem( "Your Account's Groups", "User groups", "group",
+                                                                QueryBuilder.get( ).start( QueryType.group ).add( EuareWebBackend.ACCOUNTID, accountId ).query( ) ),
+                                              new CategoryItem( "Your Account's Users", "Users", "user",
+                                                                QueryBuilder.get( ).start( QueryType.user ).add( EuareWebBackend.ACCOUNTID, accountId ).query( ) ),
+                                              new CategoryItem( "Your Policies", "Policies", "lock",
+                                                                QueryBuilder.get( ).start( QueryType.policy ).add( EuareWebBackend.USERID, userId ).query( ) ),
+                                              new CategoryItem( "Your Keys", "Access keys", "key",
+                                                                QueryBuilder.get( ).start( QueryType.key ).add( EuareWebBackend.USERID, userId ).query( ) ),
+                                              new CategoryItem( "Your Certificates", "X509 certificates", "sun",
+                                                                QueryBuilder.get( ).start( QueryType.cert ).add( EuareWebBackend.USERID, userId ).query( ) ) ) ) ),
+              new CategoryTag( "Resource Management",
+                               new ArrayList<CategoryItem>( Arrays.asList(
+                                              new CategoryItem( "Images", "Virtual machine images (EMIs)", "image",
+                                                                QueryBuilder.get( ).start( QueryType.image ).query( ) ) ) ) ) ) );
     } catch ( Exception e ) {
       LOG.error( "Failed to load user information", e );
       LOG.debug( e, e );
