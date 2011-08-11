@@ -7,6 +7,8 @@ import org.apache.log4j.*;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.reporting.event.*;
+import com.eucalyptus.reporting.user.ReportingAccountDao;
+import com.eucalyptus.reporting.user.ReportingUserDao;
 
 public class InstanceEventListener
 	implements EventListener<Event>
@@ -40,6 +42,14 @@ public class InstanceEventListener
 			  log.warn("Received null uuid");
 			  return;
 		  }
+		  
+		  /* Retain records of all account and user id's and names encountered
+		   * even if they're subsequently deleted.
+		   */
+		  ReportingAccountDao.getInstance().addUpdateAccount(
+				  event.getAccountId(), event.getAccountName());
+		  ReportingUserDao.getInstance().addUpdateUser(
+				  event.getUserId(), event.getUserName());
 
 		  /* Convert InstanceEvents to internal types. Internal types are not
 		   * exposed because the reporting.instance package won't be present
