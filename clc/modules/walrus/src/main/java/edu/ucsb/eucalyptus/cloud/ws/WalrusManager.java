@@ -991,7 +991,9 @@ public class WalrusManager {
 									queueSender.send(new S3Event(true,
 											size / WalrusProperties.M,
 											ctx.getUser().getName(),
-											ctx.getAccount().getName()));
+											null,
+											ctx.getAccount().getName(),
+											null));
 									break;
 								} else {
 									assert (WalrusDataMessage.isData(dataMessage));
@@ -1256,7 +1258,9 @@ public class WalrusManager {
 							queueSender.send(new S3Event(true,
 									size / WalrusProperties.M,
 									ctx.getUser().getName(),
-									ctx.getAccount().getName()));
+									null,
+									ctx.getAccount().getName(),
+									null));
 						} catch (Exception ex) {
 							LOG.error(ex);
 							db.rollback();
@@ -1474,7 +1478,7 @@ public class WalrusManager {
 					.getSender(QueueIdentifier.S3);
 				queueSender.send(new S3Event(false,
 						size / WalrusProperties.M, ctx.getUser().getName(),
-						ctx.getAccount().getName()));			
+						null, ctx.getAccount().getName(), null));			
 			} catch (IOException ex) {
 				LOG.error(ex, ex);
 			}

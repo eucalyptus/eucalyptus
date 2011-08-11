@@ -171,8 +171,8 @@ public class SnapshotManager {
                 StorageUtil.dispatchAll( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
                 try {
                   ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, true, snap.getVolumeSize( ),
-                                                                               snap.getOwnerUserId( ),
-                                                                               snap.getOwnerAccountId( ), snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
+                                                                               snap.getOwnerUserId( ), null,
+                                                                               snap.getOwnerAccountId( ), null, snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
                 } catch ( EventFailedException ex ) {
                   LOG.error( ex, ex );
                 }
