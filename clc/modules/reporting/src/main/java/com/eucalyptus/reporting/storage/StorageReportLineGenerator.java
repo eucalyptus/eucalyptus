@@ -8,6 +8,8 @@ import com.eucalyptus.reporting.ReportLineGenerator;
 import com.eucalyptus.reporting.ReportingCriterion;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.units.Units;
+import com.eucalyptus.reporting.user.ReportingAccountDao;
+import com.eucalyptus.reporting.user.ReportingUserDao;
 
 public class StorageReportLineGenerator
 	implements ReportLineGenerator<StorageReportLine>
@@ -70,17 +72,19 @@ public class StorageReportLineGenerator
 	private static String getAttributeValue(ReportingCriterion criterion,
 			StorageSummaryKey key)
 	{
+		log.debug("owner id:" + key.getOwnerId() + " account id:" + key.getAccountId());
+
 		switch (criterion) {
 			case ACCOUNT:
-				return key.getAccountId();
+				return ReportingAccountDao.getInstance().getAccountName(key.getAccountId());
 			case USER:
-				return key.getOwnerId();
+				return ReportingUserDao.getInstance().getUserName(key.getOwnerId());
 			case CLUSTER:
 				return key.getClusterName();
 			case AVAILABILITY_ZONE:
 				return key.getAvailabilityZone();
 			default:
-				return key.getOwnerId();
+				return ReportingUserDao.getInstance().getUserName(key.getOwnerId());
 		}
 	}
 

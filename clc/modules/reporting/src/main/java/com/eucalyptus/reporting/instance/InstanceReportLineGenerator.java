@@ -9,6 +9,8 @@ import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.ReportLineGenerator;
 import com.eucalyptus.reporting.ReportingCriterion;
 import com.eucalyptus.reporting.units.Units;
+import com.eucalyptus.reporting.user.ReportingAccountDao;
+import com.eucalyptus.reporting.user.ReportingUserDao;
 
 public class InstanceReportLineGenerator
 	implements ReportLineGenerator<InstanceReportLine>
@@ -74,14 +76,13 @@ public class InstanceReportLineGenerator
 	private static String getAttributeValue(ReportingCriterion criterion,
 			InstanceSummaryKey key)
 	{
-		log.debug("owner id:" + key.getOwnerId());
+		log.debug("owner id:" + key.getOwnerId() + " account id:" + key.getAccountId());
 
-		UserFullName userFullName = UserFullName.getInstance(key.getOwnerId()); //TODO: this fails
 		switch (criterion) {
 			case ACCOUNT:
-				return userFullName.getName();
+				return ReportingAccountDao.getInstance().getAccountName(key.getAccountId());
 			case USER:
-				return userFullName.getUserName();
+				return ReportingUserDao.getInstance().getUserName(key.getOwnerId());
 			case CLUSTER:
 				return key.getClusterName();
 			case AVAILABILITY_ZONE:
