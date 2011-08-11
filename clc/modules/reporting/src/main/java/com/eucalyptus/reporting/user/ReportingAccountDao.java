@@ -1,8 +1,6 @@
 package com.eucalyptus.reporting.user;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.log4j.Logger;
 
@@ -12,9 +10,19 @@ public class ReportingAccountDao
 {
 	private static Logger log = Logger.getLogger( ReportingUserDao.class );
 
+	private static ReportingAccountDao instance = null;
+	
+	public static ReportingAccountDao getInstance()
+	{
+		if (instance == null) {
+			instance = new ReportingAccountDao();
+		}
+		return instance;
+	}
+	
 	private final Map<String,String> accounts = new HashMap<String,String>();
 	
-	public ReportingAccountDao()
+	private ReportingAccountDao()
 	{
 		
 	}

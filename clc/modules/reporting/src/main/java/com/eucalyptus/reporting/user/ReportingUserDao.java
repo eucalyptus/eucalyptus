@@ -10,9 +10,19 @@ public class ReportingUserDao
 {
 	private static Logger log = Logger.getLogger( ReportingUserDao.class );
 
+	private static ReportingUserDao instance = null;
+	
+	public static ReportingUserDao getInstance()
+	{
+		if (instance == null) {
+			instance = new ReportingUserDao();
+		}
+		return instance;
+	}
+	
 	private final Map<String,String> users = new HashMap<String,String>();
 	
-	public ReportingUserDao()
+	private ReportingUserDao()
 	{
 		
 	}
