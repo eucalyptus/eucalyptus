@@ -117,12 +117,12 @@ public class AccountViewImpl extends Composite implements AccountView {
 
   @Override
   public void enableNewButton(boolean enabled) {
-	newButton.setEnabled( enabled );
+	newButton.setVisible( enabled );
   }
 
   @Override
   public void enableDelButton(boolean enabled) {
-	delButton.setEnabled( enabled );
+	delButton.setVisible( enabled );
   }
 
 }
