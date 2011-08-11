@@ -68,7 +68,7 @@ public class ValueCheckerFactory {
         }
         for ( int i = 0; i < value.length( ); i++ ) {
           char c = value.charAt( i );
-          if ( !Character.isLetterOrDigit( c ) && !USERGROUPNAME_EXTRA.contains( c ) && !Character.isWhitespace( c ) ) {
+          if ( !Character.isLetterOrDigit( c ) && !USERGROUPNAME_EXTRA.contains( c ) && !Character.isSpace( c ) ) {
             throw new InvalidValueException( "Containing invalid character for user or group names: " + c );
           }
         }
