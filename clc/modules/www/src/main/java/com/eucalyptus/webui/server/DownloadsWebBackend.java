@@ -18,9 +18,6 @@ public class DownloadsWebBackend {
   
   private static final Integer TIMEOUT = 1000 * 10; // 10 seconds
   
-  public static final String IMAGE_DOWNLOAD_URL = "http://www.eucalyptussoftware.com/downloads/eucalyptus-images/list.php?version=";
-  public static final String TOOL_DOWNLOAD_URL = "http://www.eucalyptussoftware.com/downloads/eucalyptus-tools/list.php?version=";
-  
   private static final int MAX = 50;
   
   public static ArrayList<DownloadInfo> getDownloads( String downloadsUrl ) {
