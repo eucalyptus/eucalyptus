@@ -225,12 +225,18 @@ public class ConfigurationWebBackend {
           int n = k;
           t.setDoDynamicPublicAddresses( Boolean.parseBoolean( input.getField( n++ ) ) );
           try {
-            t.setMaxUserPublicAddresses( Integer.parseInt( input.getField( n++ ) ) );
+        	Integer val = Integer.parseInt( input.getField( n++ ) );
+        	if ( val > 0 ) {
+        	  t.setMaxUserPublicAddresses( val );
+        	}
           } catch ( Exception e ) {
             LOG.error( e, e );
           }
           try {
-            t.setSystemReservedPublicAddresses( Integer.parseInt( input.getField( n++ ) ) );
+        	Integer val = Integer.parseInt( input.getField( n++ ) );
+        	if ( val > 0 ) {
+              t.setSystemReservedPublicAddresses( val );
+        	}
           } catch ( Exception e ) {
             LOG.error( e, e );
           }
