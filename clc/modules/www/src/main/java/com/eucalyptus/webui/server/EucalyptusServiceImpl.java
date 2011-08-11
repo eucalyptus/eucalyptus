@@ -513,7 +513,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     } catch ( Exception e ) {
       version = WebProperties.getVersion( );
     }
-    return DownloadsWebBackend.getDownloads( DownloadsWebBackend.IMAGE_DOWNLOAD_URL + version );
+    return DownloadsWebBackend.getDownloads( WebProperties.getProperty( WebProperties.IMAGE_DOWNLOAD_URL, WebProperties.IMAGE_DOWNLOAD_URL_DEFAULT ) + version );
   }
 
   @Override
@@ -525,7 +525,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     } catch ( Exception e ) {
       version = WebProperties.getVersion( );
     }
-    return DownloadsWebBackend.getDownloads( DownloadsWebBackend.TOOL_DOWNLOAD_URL + version );
+    return DownloadsWebBackend.getDownloads( WebProperties.getProperty( WebProperties.TOOL_DOWNLOAD_URL, WebProperties.TOOL_DOWNLOAD_URL_DEFAULT ) + version );
   }
 
   @Override

@@ -18,6 +18,9 @@ public class PatternUtils {
   public static String toJavaPattern( String pattern ) {
     String result = pattern;
     
+    if ( pattern == null ) {
+      return null;
+    }
     result = ESCAPE_PATTERN.matcher( result ).replaceAll( "\\\\$1" );
     result = WILDCARD_SINGLE_PATTERN.matcher( result ).replaceAll( "." );
     result = WILDCARD_MULTIPLE_PATTERN.matcher( result ).replaceAll( ".*" );

@@ -139,6 +139,11 @@ public class AccountActivity extends AbstractSearchActivity
       container.setWidget( this.view );
       ( ( AccountView ) this.view ).clear( );
     }
+    // Turn on/off account action buttons based on if the user is system admin
+    boolean isSystemAdmin = this.clientFactory.getSessionData( ).getLoginUser( ).isSystemAdmin( );
+    ( ( AccountView ) this.view ).enableNewButton( isSystemAdmin );
+    ( ( AccountView ) this.view ).enableDelButton( isSystemAdmin );
+    
     ( ( AccountView ) this.view ).showSearchResult( result );    
   }
 

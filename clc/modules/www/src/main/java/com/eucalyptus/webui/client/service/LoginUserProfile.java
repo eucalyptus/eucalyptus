@@ -31,6 +31,10 @@ public class LoginUserProfile implements Serializable {
     this.setUserKeySearch( userKeySearch );
     this.setLoginAction( action );
   }
+  
+  public boolean isSystemAdmin( ) {
+	return "admin".equals( userName ) && "eucalyptus".equals( accountName );
+  }
 
   public void setUserName( String userName ) {
     this.userName = userName;
