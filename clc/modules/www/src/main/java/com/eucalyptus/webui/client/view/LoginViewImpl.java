@@ -9,6 +9,7 @@ import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
 import com.google.gwt.uibinder.client.UiHandler;
+import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.FormPanel;
 import com.google.gwt.user.client.ui.Label;
@@ -50,9 +51,15 @@ public class LoginViewImpl extends Composite implements LoginView {
   @UiField
   Label prompt;
   
+  @UiField
+  Anchor userSignup;
+  
   public LoginViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
     injectLoginForm( );
+    // temporarily disable user signup based on support team's suggestions.
+    // TODO(wenye): really remove it or recover it.
+    userSignup.setVisible( false );
   }
 
   @UiHandler( "accountSignup" )
