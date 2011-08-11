@@ -36,12 +36,12 @@ public class ImageWebBackend {
 
   public static final ArrayList<SearchResultFieldDesc> COMMON_FIELD_DESCS = Lists.newArrayList( );
   static {
-    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "15%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, "Name", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( DESC, "Description", false, "35%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( KERNEL, "Kernel", false, "15%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( RAMDISK, "Ramdisk", false, "15%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( STATE, "State", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, "Name", false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( DESC, "Description", false, "30%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( KERNEL, "Kernel", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( RAMDISK, "Ramdisk", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( STATE, "State", false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( TYPE, "Type", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( OWNER, "Owner", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ARCH, "Architecture", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
