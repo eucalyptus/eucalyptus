@@ -11,9 +11,9 @@ import org.hibernate.annotations.Entity;
 @Table(name="account")
 public class ReportingAccount
 {
-	@Column(name="user_id", nullable=false)
+	@Column(name="account_id", nullable=false)
 	private String id;
-	@Column(name="user_name", nullable=false)
+	@Column(name="account_name", nullable=false)
 	private String name;
 
 	public ReportingAccount()
