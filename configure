@@ -3579,7 +3579,7 @@ VDDK_HOME="${VDDK_HOME}"
 INTERFACE_THEME="eucalyptus"
 EXTENSIONS=""
 ANT=""
-JAVA="/usr/lib/jvm/java-1.6.0-openjdk/bin/java"
+JAVA=""
 WSDL2C=""
 java_min_version="1.6.0"
 ant_min_version="1.6.5"
@@ -4837,9 +4837,6 @@ fi
 if test -z "$ANT" ; then
         as_fn_error $? "Cannot find ant!" "$LINENO" 5
 fi
-
-echo $JAVA
-
 if test -z "$JAVA" ; then
         as_fn_error $? "Cannot find java!" "$LINENO" 5
 fi
