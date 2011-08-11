@@ -255,7 +255,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   public ExtantNetwork extantNetwork( ) {
     ExtantNetwork ret = null;
     try {
-      ret = Transactions.find( new ExtantNetwork( this, null ) );
+      ret = Transactions.find( new ExtantNetwork( this ) );
     } catch ( TransactionException ex ) {
       for ( Long i = 9l; i < 4096; i++ ) {
         try {
