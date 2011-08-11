@@ -44,10 +44,10 @@ public class StartActivity extends AbstractActivity {
   
   private void loadSnippets( StartView view, EventBus eventBus ) {
 	boolean isSystemAdmin = this.clientFactory.getSessionData( ).getLoginUser( ).isSystemAdmin( );
-	if ( isSystemAdmin ) {
-	  new RightScaleActivity( clientFactory ).start( view.getRightScaleSnippetDisplay( ), eventBus );
-	  new GenericGuideActivity( clientFactory, SERVICE_SNIPPET ).start( view.getServiceSnippetDisplay( ), eventBus );
-    }
+//	  if ( isSystemAdmin ) {
+//      new RightScaleActivity( clientFactory ).start( view.getRightScaleSnippetDisplay( ), eventBus );
+//      new GenericGuideActivity( clientFactory, SERVICE_SNIPPET ).start( view.getServiceSnippetDisplay( ), eventBus );
+//    }
     new DownloadActivity( clientFactory ).start( view.getDownloadSnippetDisplay( ), eventBus );
     new GenericGuideActivity( clientFactory, IAM_SNIPPET ).start( view.getIamSnippetDisplay( ), eventBus );
   }
