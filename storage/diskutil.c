@@ -121,10 +121,23 @@ static char * helpers [LASTHELPER] = {
 };
 
 static char * helpers_path [LASTHELPER];
+static char stage_files_dir [EUCA_MAX_PATH] = "";
 static char * pruntf (boolean log_error, char *format, ...);
 static int initialized = 0;
 static sem * loop_sem = NULL; // semaphore held while attaching/detaching loopback devices
 static unsigned char grub_version = 0;
+
+// looks for file 'stage1' in dir and, if found,
+// sets stage_files_dir and returns 1, else returns 0
+static int try_stage_dir (const char * dir)
+{
+    char stage_file_path [EUCA_MAX_PATH];
+    snprintf (stage_file_path, sizeof (stage_file_path), "%s/stage1", dir);
+    if (check_file (stage_file_path))
+        return 0;
+    safe_strncpy (stage_files_dir, dir, sizeof (stage_files_dir));
+    return 1;
+}
 
 int diskutil_init (void)
 {
@@ -138,7 +151,7 @@ int diskutil_init (void)
         else
             missing_handlers--;
 
-        if (helpers_path [GRUB_SETUP])
+        if (helpers_path [GRUB_SETUP]) // don't need it, but grub-setup only exists on v2
             grub_version = 2; // two is better than one
         else 
             missing_handlers--;
@@ -146,12 +159,22 @@ int diskutil_init (void)
         if (grub_version == 0) {
             logprintfl (EUCAERROR, "ERROR: cannot find either grub 1 or grub 2\n");
             ret = 1;   
-        } else { // grub is OK, check on everything else
-            if (missing_handlers) {
-                logprintfl (EUCAERROR, "ERROR: missing a required handler\n");
-                ret = 1;
+        } else { 
+            // grub commands seem present, check for stage files
+            if (try_stage_dir ("/usr/lib/grub/x86_64-pc") ||
+                try_stage_dir ("/usr/lib/grub/i386-pc") ||
+                try_stage_dir ("/usr/lib/grub") ||
+                try_stage_dir ("/boot/grub")) {
+                logprintfl (EUCAINFO, "found grub stage files in %s\n", stage_files_dir);
+
+                // flag missing handlers
+                if (missing_handlers) {
+                    logprintfl (EUCAERROR, "ERROR: missing a required handler\n");
+                    ret = 1;
+                }
             } else {
-                ret = 0;
+                logprintfl (EUCAERROR, "ERROR: failed to find grub stage files (in /boot/grub et al)\n");
+                ret = 1;
             }
         }
         initialized = 1;
@@ -548,7 +571,7 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
     free (output);
 
     if (grub_version==1) {
-        output = pruntf (TRUE, "%s %s /boot/grub/*stage* %s/boot/grub", helpers_path[ROOTWRAP], helpers_path[CP], mnt_pt);
+        output = pruntf (TRUE, "%s %s %s/*stage* %s/boot/grub", helpers_path[ROOTWRAP], helpers_path[CP], stage_files_dir, mnt_pt);
         if (!output) {
             logprintfl (EUCAINFO, "{%u} error: failed to copy stage files into grub directory\n", (unsigned int)pthread_self());
             return ERROR;
