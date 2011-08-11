@@ -30,26 +30,28 @@ public class ReportingUserDao
 	public void addUpdateUser(String id, String name)
 	{
 
-		loadIfNeeded();
+		loadIfNeededFromDb();
 		if (users.containsKey(id) && users.get(id).equals(name)) {
 			return;
 		} else if (users.containsKey(id)) {
-			update(id, name);
+			users.put(id, name);
+			updateInDb(id, name);
 		} else {
-			add(id, name);
+			users.put(id, name);
+			addToDb(id, name);
 		}
 		
 	}
 
 	public String getUserName(String id)
 	{
-		loadIfNeeded();
+		loadIfNeededFromDb();
 		return users.get(id);
 	}
 	
 
 	
-	private void loadIfNeeded()
+	private void loadIfNeededFromDb()
 	{
 		if (users.keySet().size() == 0) {
 
@@ -76,7 +78,7 @@ public class ReportingUserDao
 		}
 	}
 	
-	private void update(String id, String name)
+	private void updateInDb(String id, String name)
 	{
 		EntityWrapper<ReportingUser> entityWrapper =
 			EntityWrapper.get(ReportingUser.class);
@@ -95,7 +97,7 @@ public class ReportingUserDao
 		}			
 	}
 	
-	private void add(String id, String name)
+	private void addToDb(String id, String name)
 	{
 		EntityWrapper<ReportingUser> entityWrapper =
 			EntityWrapper.get(ReportingUser.class);

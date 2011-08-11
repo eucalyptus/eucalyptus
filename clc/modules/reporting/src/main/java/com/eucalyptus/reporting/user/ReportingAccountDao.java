@@ -30,26 +30,28 @@ public class ReportingAccountDao
 	public void addUpdateAccount(String id, String name)
 	{
 
-		loadIfNeeded();
+		loadIfNeededFromDb();
 		if (accounts.containsKey(id) && accounts.get(id).equals(name)) {
 			return;
 		} else if (accounts.containsKey(id)) {
-			update(id, name);
+			updateInDb(id, name);
+			accounts.put(id, name);
 		} else {
-			add(id, name);
+			addToDb(id, name);
+			accounts.put(id, name);
 		}
 		
 	}
 
 	public String getAccountName(String id)
 	{
-		loadIfNeeded();
+		loadIfNeededFromDb();
 		return accounts.get(id);
 	}
 	
 
 	
-	private void loadIfNeeded()
+	private void loadIfNeededFromDb()
 	{
 		if (accounts.keySet().size() == 0) {
 
@@ -76,7 +78,7 @@ public class ReportingAccountDao
 		}
 	}
 	
-	private void update(String id, String name)
+	private void updateInDb(String id, String name)
 	{
 		EntityWrapper<ReportingAccount> entityWrapper =
 			EntityWrapper.get(ReportingAccount.class);
@@ -95,7 +97,7 @@ public class ReportingAccountDao
 		}			
 	}
 	
-	private void add(String id, String name)
+	private void addToDb(String id, String name)
 	{
 		EntityWrapper<ReportingAccount> entityWrapper =
 			EntityWrapper.get(ReportingAccount.class);
