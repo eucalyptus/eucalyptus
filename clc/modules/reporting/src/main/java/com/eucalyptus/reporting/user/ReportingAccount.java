@@ -1,6 +1,7 @@
 package com.eucalyptus.reporting.user;
 
 import javax.persistence.Column;
+import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
@@ -8,10 +9,10 @@ import org.hibernate.annotations.Entity;
 
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="reporting")
-@Table(name="account")
+@Table(name="reporting_account")
 public class ReportingAccount
 {
-	@Column(name="account_id", nullable=false)
+	@Id @Column(name="account_id", nullable=false)
 	private String id;
 	@Column(name="account_name", nullable=false)
 	private String name;
