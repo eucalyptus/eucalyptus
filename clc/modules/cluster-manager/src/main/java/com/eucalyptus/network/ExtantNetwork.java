@@ -123,6 +123,10 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
     super( displayName );
   }
   
+  public ExtantNetwork( NetworkGroup networkGroup ) {
+    this.networkGroup = networkGroup;
+  }
+
   @Override
   public int hashCode( ) {
     final int prime = 31;
