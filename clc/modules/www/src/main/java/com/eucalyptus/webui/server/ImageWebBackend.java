@@ -3,6 +3,10 @@ package com.eucalyptus.webui.server;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
@@ -46,11 +50,15 @@ public class ImageWebBackend {
   }
   
   public static List<SearchResultRow> searchImages( User requestUser, String query ) throws EucalyptusServiceException {
-    // TODO: add permission check after fixing the image permission
     List<SearchResultRow> results = Lists.newArrayList( );
     try {
+      Account requestAccount = requestUser.getAccount( );
       for ( ImageInfo image : Images.listAllImages( ) ) {
-        results.add( serializeImage( image ) );
+    	if ( requestUser.isSystemAdmin( ) ||
+    		 ( image.checkPermission( requestAccount.getAccountNumber( ) ) &&
+    		   Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, image.getDisplayName( ), null, PolicySpec.EC2_DESCRIBEIMAGES, requestUser ) ) ) {
+    	  results.add( serializeImage( image ) );
+    	}
       }
     } catch ( Exception e ) {
       LOG.error( "Failed to get image info", e );
