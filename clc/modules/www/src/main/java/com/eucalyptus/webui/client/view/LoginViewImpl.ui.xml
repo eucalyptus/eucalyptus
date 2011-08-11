@@ -101,7 +101,7 @@
         <g:north size="28">
             <g:HTMLPanel addStyleNames="{style.top}">
                 <g:Anchor ui:field="accountSignup">Signup Account</g:Anchor>
-                <g:Anchor ui:field="userSignup" visible="false">Signup User</g:Anchor>
+                <g:Anchor ui:field="userSignup">Signup User</g:Anchor>
                 <g:Anchor ui:field="recover">Reset Password</g:Anchor>
             </g:HTMLPanel>   
         </g:north>
