@@ -1037,7 +1037,7 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
         unsigned int vols_count = 0;
         for (int j=0; j < EUCA_MAX_VOLUMES; ++j) {
             ncVolume * volume = &instance->volumes[j];
-            if (! is_volume_used (volume))
+            if (strlen (volume->volumeId)==0)
                 continue;
             vols_count++;
             
@@ -1051,7 +1051,7 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
             
             char vol_str [16];
             snprintf (vol_str, sizeof (vol_str), "%s%s:%s", 
-                      (vols_count>1)?(" "):(""),
+                      (vols_count>1)?(","):(""),
                       volume->volumeId, 
                       s);
             if ((strlen (vols_str) + strlen (vol_str)) < sizeof (vols_str)) {
@@ -1059,7 +1059,7 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
             }
         }
     
-        logprintfl(EUCADEBUG, "[%s] %s pub=%s priv=%s mac=%s vlan=%d net=%d plat=%s vols={%s}\n", 
+        logprintfl(EUCADEBUG, "[%s] %s pub=%s priv=%s mac=%s vlan=%d net=%d plat=%s vols=%s\n", 
                    instance->instanceId,
                    instance->stateName,
                    instance->ncnet.publicIp, 
