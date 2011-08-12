@@ -546,8 +546,8 @@ public class EuareService {
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
-      if ( userFound.isAccountAdmin( ) || userFound.isSystemAdmin( ) ) {
-        throw new AuthException( "System or account admin can not be updated" );
+      if ( userFound.isSystemAdmin( ) ) {
+        throw new AuthException( "System admin can not be updated" );
       }
     } catch ( Exception e ) {
       LOG.debug( e, e );
@@ -1103,8 +1103,8 @@ public class EuareService {
     User userToDelete = null;
     try {
       userToDelete = account.lookupUserByName( request.getUserName( ) );
-      if ( userToDelete.isAccountAdmin( ) || userToDelete.isSystemAdmin( ) ) {
-        throw new AuthException( "System or account admin can not be deleted" );
+      if ( userToDelete.isSystemAdmin( ) ) {
+        throw new AuthException( "System admin can not be deleted" );
       }
     } catch ( Exception e ) {
       LOG.debug( e, e );
