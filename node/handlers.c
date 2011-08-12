@@ -1049,7 +1049,7 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
             if (! strcmp(volume->stateName, VOL_STATE_DETACHED))         s = "D";
             if (! strcmp(volume->stateName, VOL_STATE_DETACHING_FAILED)) s = "df";
             
-            char vol_str [10];
+            char vol_str [16];
             snprintf (vol_str, sizeof (vol_str), "%s%s:%s", 
                       (vols_count>1)?(" "):(""),
                       volume->volumeId, 
