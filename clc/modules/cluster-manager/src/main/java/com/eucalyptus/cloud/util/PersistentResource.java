@@ -184,6 +184,11 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
                                                  + PersistentResource.this.getReferer( ) + " and is currently in state " + PersistentResource.this.getState( ) );
         }
       }
+
+      @Override
+      public T get( ) throws TransactionException {
+        return Transactions.naturalId( ( T ) PersistentResource.this );
+      }
       
     };
     return ref;

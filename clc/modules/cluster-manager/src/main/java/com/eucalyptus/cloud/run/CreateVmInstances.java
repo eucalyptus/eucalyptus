@@ -72,6 +72,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.cloud.util.ResourceAllocation.SetReference;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
@@ -104,8 +105,8 @@ public class CreateVmInstances {
     int vmIndex = 0; /*<--- this corresponds to the first instance id CANT COLLIDE WITH RSVID             */
     for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
       if ( Clusters.getInstance( ).hasNetworking( ) ) {
-        for ( PrivateNetworkIndex networkIndex : token.getPrimaryNetwork( ).getIndexes( ) ) {
-          VmInstance vmInst = getVmInstance( userFullName, allocInfo, reservationId, token, vmIndex++, networkIndex );
+        for ( SetReference<PrivateNetworkIndex, VmInstance> networkIndex : token.getPrimaryNetwork( ).getIndexes( ) ) {
+          VmInstance vmInst = getVmInstance( userFullName, allocInfo, reservationId, token, vmIndex++, networkIndex.get( ) );
           VmInstances.getInstance( ).register( vmInst );
           try {
             Transactions.save( vmInst );
