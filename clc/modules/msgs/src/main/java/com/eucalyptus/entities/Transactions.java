@@ -32,7 +32,7 @@ public class Transactions {
       Thread.currentThread( ).interrupt( );
       return new TransactionExecutionException( t.getCause( ).getMessage( ), t.getCause( ) );
     } else if ( t instanceof EucalyptusCloudException ) {
-      return new TransactionExecutionException( t.getCause( ).getMessage( ), t.getCause( ) );
+      return new TransactionExecutionException( t.getCause( ).getMessage( ) );
     } else if ( t instanceof UndeclaredThrowableException ) {
       return new TransactionCallbackException( t.getCause( ).getMessage( ), t.getCause( ) );
     } else {
