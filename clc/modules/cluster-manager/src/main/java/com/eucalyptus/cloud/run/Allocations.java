@@ -66,6 +66,7 @@ package com.eucalyptus.cloud.run;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
@@ -75,6 +76,7 @@ import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.ResourceAllocation.SetReference;
+import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.Clusters;
@@ -105,25 +107,27 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class Allocations {
+  private static Logger LOG = Logger.getLogger( Allocations.class );
+  
   public static class Allocation implements HasRequest {
-    private final Context                   context;
-    private final RunInstancesType          request;
-    private final UserFullName              ownerFullName;
-    private final List<ResourceToken>       allocationTokens  = Lists.newArrayList( );
-    private final List<String>              addresses         = Lists.newArrayList( );
-    private final List<Volume>              persistentVolumes = Lists.newArrayList( );
-    private final List<Volume>              transientVolumes  = Lists.newArrayList( );
-    private final List<PrivateNetworkIndex> networkIndexList  = Lists.newArrayList( );
-    private final String                    reservationId;
-    private byte[]                          userData;
-    private Partition                       partition;
-    private Long                            reservationIndex;
-    private SshKeyPair                      sshKeyPair;
-    private BootableSet                     bootSet;
-    private VmType                          vmType;
-    private Map<String, NetworkGroup>       networkRulesGroups;
-    private final int                       minCount;
-    private final int                       maxCount;
+    private final Context                                             context;
+    private final RunInstancesType                                    request;
+    private final UserFullName                                        ownerFullName;
+    private final List<ResourceToken>                                 allocationTokens  = Lists.newArrayList( );
+    private final List<String>                                        addresses         = Lists.newArrayList( );
+    private final List<Volume>                                        persistentVolumes = Lists.newArrayList( );
+    private final List<Volume>                                        transientVolumes  = Lists.newArrayList( );
+    private final List<SetReference<PrivateNetworkIndex, VmInstance>> networkIndexList  = Lists.newArrayList( );
+    private final String                                              reservationId;
+    private byte[]                                                    userData;
+    private Partition                                                 partition;
+    private Long                                                      reservationIndex;
+    private SshKeyPair                                                sshKeyPair;
+    private BootableSet                                               bootSet;
+    private VmType                                                    vmType;
+    private Map<String, NetworkGroup>                                 networkRulesGroups;
+    private final int                                                 minCount;
+    private final int                                                 maxCount;
     
     private Allocation( RunInstancesType request ) {
       super( );
@@ -176,7 +180,13 @@ public class Allocations {
     public void releaseNetworkIndexes( ) {
       for ( ResourceToken token : this.allocationTokens ) {
         if ( token.getPrimaryNetwork( ) != null ) {
-          for ( PrivateNetworkIndex net : token.getPrimaryNetwork( ).getIndexes( ) ) {}
+          for ( SetReference<PrivateNetworkIndex, VmInstance> netRef : token.getPrimaryNetwork( ).getIndexes( ) ) {
+            try {
+              netRef.abort( );
+            } catch ( ResourceAllocationException ex ) {
+              LOG.error( ex, ex );
+            }
+          }
           token.getPrimaryNetwork( ).getIndexes( ).clear( );
         }
       }
