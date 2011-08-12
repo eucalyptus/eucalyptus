@@ -198,7 +198,8 @@ public class VolumeManager {
         vol.setState( State.ANNIHILATING );
         db.commit( );
         try {
-          ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, vol.getSize( ), vol.getOwnerUserId( ), null,
+        	//TODO: GRZE!!!! 1111oneoneone1111111oneoneone
+          ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, vol.getSize( ), vol.getOwnerUserId( ), vol.getOwnerUserName(),
                                                                        vol.getOwnerAccountId( ), null, vol.getScName( ), vol.getPartition( ) ) );
         } catch ( EventFailedException ex ) {
           LOG.error( ex, ex );
@@ -246,7 +247,8 @@ public class VolumeManager {
           describeVolumes.add( v );
         } else {
           try {
-            ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, v.getSize( ), v.getOwnerUserId( ), null,
+          	//TODO: GRZE!!!! 1111oneoneone1111111oneoneone
+            ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, v.getSize( ), v.getOwnerUserId( ), v.getOwnerUserName(),
                                                                          v.getOwnerAccountId( ), null, v.getScName( ), v.getPartition( ) ) );
           } catch ( EventFailedException ex ) {
             LOG.error( ex, ex );

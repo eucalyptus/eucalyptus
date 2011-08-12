@@ -128,7 +128,7 @@ public class Volumes {
       public void fire( Volume t ) {
         t.setState( State.GENERATING );
         try {
-          ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, t.getSize( ), t.getOwnerUserId( ), null,
+          ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, t.getSize( ), t.getOwnerUserId( ), t.getOwnerUserName(),
                                                                        t.getOwnerAccountId( ), null, t.getScName( ), t.getPartition( ) ) );
           CreateStorageVolumeType req = new CreateStorageVolumeType( t.getDisplayName( ), t.getSize( ), snapId, null ).regardingUserRequest( request );
           ServiceDispatcher.lookup( sc ).send( req );

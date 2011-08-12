@@ -433,7 +433,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   
   private void store( ) {
     try {
-    	//TODO: GRZE!!!!!!! PTHBBBBB!!!! INSERT USERNAME AND ACCOUNT NAME HERE!!111!!11!! 111ONEONEONE1111ONEONE
+    	//TODO: GRZE!!!! 1111oneoneone1111111oneoneone
       ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getInstanceUuid( ), this.getDisplayName( ), this.vmType.getName( ),
                                                                     this.getOwner( ).getNamespace( ), null, this.getOwner( ).getName( ), null,
                                                                     this.clusterName, this.partitionName, this.networkBytes, this.blockBytes ) );

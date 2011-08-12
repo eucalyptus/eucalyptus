@@ -129,7 +129,8 @@ public class Snapshots {
       throw new EucalyptusCloudException( ex );
     }
     try {
-      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, true, snap.getVolumeSize( ), snap.getOwnerUserId( ), null,
+    	// TODO: GRZE!!!!! 111oneoneone11111oneoneone
+      ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, true, snap.getVolumeSize( ), snap.getOwnerUserId( ), snap.getOwnerUserName(),
                                                                    snap.getOwnerAccountId( ), null, snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
     } catch ( EventFailedException ex ) {
       LOG.error( ex, ex );
