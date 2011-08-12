@@ -126,7 +126,7 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
   @PostPersist
   private void onCommit( ) {
     for ( Long i = this.minAddr; i < this.maxAddr; i++ ) {
-      this.getIndexes( ).add( new PrivateNetworkIndex( this.tag, i ) );
+      this.getIndexes( ).add( new PrivateNetworkIndex( this, i ) );
     }
   }
   
@@ -206,7 +206,7 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
         
         @Override
         public SetReference<PrivateNetworkIndex, VmInstance> apply( ExtantNetwork input ) {
-          for ( PrivateNetworkIndex idx : input.indexes ) {
+          for ( PrivateNetworkIndex idx : input.getIndexes( ) ) {
             if ( ResourceAllocation.State.FREE.equals( idx.getState( ) ) ) {
               try {
                 return idx.allocate( );
