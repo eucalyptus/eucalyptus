@@ -231,7 +231,7 @@ find_and_terminate_instance (
 	* instance_p = instance;
     
     // detach all attached volumes
-    for (i=0 ; i < EUCA_MAX_VOLUMES; ++i) {
+    for (i=0; i < EUCA_MAX_VOLUMES; ++i) {
         ncVolume * volume = &instance->volumes[i];
         if (! is_volume_used (volume))
             continue;
