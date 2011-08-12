@@ -74,6 +74,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.cloud.util.ResourceAllocation.SetReference;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.Clusters;
@@ -211,7 +212,7 @@ public class Allocations {
       ExtantNetwork extantNetwork = net.extantNetwork( );
       for ( ResourceToken rscToken : this.allocationTokens ) {
         for ( int i = 0; i < rscToken.getAmount( ); i++ ) {
-          PrivateNetworkIndex addrIndex;
+          SetReference<PrivateNetworkIndex, VmInstance> addrIndex;
           try {
             addrIndex = extantNetwork.allocateNetworkIndex( );
           } catch ( Exception ex ) {
