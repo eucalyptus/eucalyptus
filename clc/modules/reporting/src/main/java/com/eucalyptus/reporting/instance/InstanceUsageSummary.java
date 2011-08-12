@@ -313,6 +313,7 @@ public class InstanceUsageSummary
 		}
 		long timeSecs = (period.getEndingMs() - period.getBeginningMs())/1000;
 
+		//TODO: the strings here should be in an enum or something. same with events?
 		//Autoboxing should work because we prevented nulls everywhere
 		if (type.equalsIgnoreCase("m1.small")) {
 			this.m1SmallNum = this.m1SmallNum + 1;
