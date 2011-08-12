@@ -220,7 +220,7 @@ public class EuareWebBackend {
     }    
   }
   
-  public static void changeUserPassword( User requestUser, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
+  public static User changeUserPassword( User requestUser, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
     try {
       User user = Accounts.lookupUserById( userId );
       EuarePermission.authorizeModifyUserPassword( requestUser, user.getAccount( ), user );
@@ -240,6 +240,7 @@ public class EuareWebBackend {
       if ( !Strings.isNullOrEmpty( email ) ) {
         user.setInfo( User.EMAIL, email );
       }
+      return user;
     } catch ( EucalyptusServiceException e ) {
       LOG.debug( e, e );
       throw e;
@@ -1581,7 +1582,7 @@ public class EuareWebBackend {
     }
   }
 
-  public static void resetPassword( String confirmationCode, String password ) throws EucalyptusServiceException {
+  public static User resetPassword( String confirmationCode, String password ) throws EucalyptusServiceException {
     try {
       User user = Accounts.lookupUserByConfirmationCode( confirmationCode );
       long expires = Long.parseLong( confirmationCode.substring( 0, 15 ) );
@@ -1592,6 +1593,7 @@ public class EuareWebBackend {
       user.setConfirmationCode( null );
       user.setPassword( Crypto.generateHashedPassword( password ) );
       user.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
+      return user;
     } catch ( Exception e ) {
       LOG.error( "Failed to reset password", e );
       LOG.debug( e , e );

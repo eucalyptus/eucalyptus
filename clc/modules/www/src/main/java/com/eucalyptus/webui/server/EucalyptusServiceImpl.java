@@ -5,6 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import org.apache.log4j.Logger;
+
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.webui.client.service.CategoryTag;
@@ -44,6 +47,28 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
       throw new EucalyptusServiceException( EucalyptusServiceException.INVALID_SESSION );
     }
     return EuareWebBackend.getUser( ws.getUserName( ), ws.getAccountName( ) );
+  }
+  
+  private static void invalidateSession( String userName, String accountName ) {
+	WebSession ws = WebSessionManager.getInstance( ).getSession( userName, accountName );
+	if ( ws != null ) {
+	  WebSessionManager.getInstance( ).removeSession( ws.getId( ) );
+	}
+  }
+  
+  private static void invalidateSession( User user ) throws EucalyptusServiceException {
+	if ( user == null ) {
+	  LOG.error( "Empty user for invalidating web session" );
+	  return;
+	}
+	try {
+	  String userName = user.getName( );
+      String accountName = user.getAccount( ).getName( );
+      invalidateSession( userName, accountName );
+    } catch ( AuthException e ) {
+	  LOG.error( e, e );
+	  throw new EucalyptusServiceException( "Invalid user to lookup in web sessions", e );
+	}
   }
   
   private static SearchQuery parseQuery( QueryType type, String query ) throws EucalyptusServiceException {
@@ -436,7 +461,8 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   @Override
   public void changePassword( Session session, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
     User requestUser = verifySession( session );
-    EuareWebBackend.changeUserPassword( requestUser, userId, oldPass, newPass, email );
+    User targetUser = EuareWebBackend.changeUserPassword( requestUser, userId, oldPass, newPass, email );
+    invalidateSession( targetUser );
   }
 
   @Override
@@ -495,7 +521,8 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
 
   @Override
   public void resetPassword( String confirmationCode, String password ) throws EucalyptusServiceException {
-    EuareWebBackend.resetPassword( confirmationCode, password );
+    User targetUser = EuareWebBackend.resetPassword( confirmationCode, password );
+    invalidateSession( targetUser );
   }
 
   @Override
@@ -513,7 +540,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     } catch ( Exception e ) {
       version = WebProperties.getVersion( );
     }
-    return DownloadsWebBackend.getDownloads( DownloadsWebBackend.IMAGE_DOWNLOAD_URL + version );
+    return DownloadsWebBackend.getDownloads( WebProperties.getProperty( WebProperties.IMAGE_DOWNLOAD_URL, WebProperties.IMAGE_DOWNLOAD_URL_DEFAULT ) + version );
   }
 
   @Override
@@ -525,7 +552,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     } catch ( Exception e ) {
       version = WebProperties.getVersion( );
     }
-    return DownloadsWebBackend.getDownloads( DownloadsWebBackend.TOOL_DOWNLOAD_URL + version );
+    return DownloadsWebBackend.getDownloads( WebProperties.getProperty( WebProperties.TOOL_DOWNLOAD_URL, WebProperties.TOOL_DOWNLOAD_URL_DEFAULT ) + version );
   }
 
   @Override

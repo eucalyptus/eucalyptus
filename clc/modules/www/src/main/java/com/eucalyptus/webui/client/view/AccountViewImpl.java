@@ -12,15 +12,13 @@ import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
 import com.google.gwt.uibinder.client.UiHandler;
+import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.LayoutPanel;
-import com.google.gwt.user.client.ui.ScrollPanel;
 import com.google.gwt.user.client.ui.Widget;
 import com.google.gwt.view.client.MultiSelectionModel;
 import com.google.gwt.view.client.SelectionChangeEvent;
 import com.google.gwt.view.client.SelectionChangeEvent.Handler;
-import com.google.gwt.view.client.SelectionModel;
-import com.google.gwt.view.client.SingleSelectionModel;
 
 public class AccountViewImpl extends Composite implements AccountView {
   
@@ -32,6 +30,12 @@ public class AccountViewImpl extends Composite implements AccountView {
   
   @UiField
   LayoutPanel tablePanel;
+  
+  @UiField
+  Anchor newButton;
+  
+  @UiField
+  Anchor delButton;
   
   private SearchResultTable table;
   
@@ -109,6 +113,16 @@ public class AccountViewImpl extends Composite implements AccountView {
   public void clear( ) {
     this.tablePanel.clear( );
     this.table = null;
+  }
+
+  @Override
+  public void enableNewButton(boolean enabled) {
+	newButton.setVisible( enabled );
+  }
+
+  @Override
+  public void enableDelButton(boolean enabled) {
+	delButton.setVisible( enabled );
   }
 
 }
