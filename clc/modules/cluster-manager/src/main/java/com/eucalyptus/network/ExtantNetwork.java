@@ -70,6 +70,7 @@ import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PostPersist;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -108,8 +109,12 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
     this.tag = tag;
     this.maxAddr = 2048l;//GRZE:FIXIT
     this.minAddr = 9l;//GRZE:FIXIT
+  }
+
+  @PostPersist
+  private void onCommit( ) {
     for ( Long i = this.minAddr; i < this.maxAddr; i++ ) {
-      this.getIndexes( ).add( new PrivateNetworkIndex( tag, i ) );
+      this.getIndexes( ).add( new PrivateNetworkIndex( this.tag, i ) );
     }
   }
   
