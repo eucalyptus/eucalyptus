@@ -8,7 +8,6 @@ import com.eucalyptus.reporting.*;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
-import com.eucalyptus.reporting.user.ReportingUserDao;
 import com.eucalyptus.util.ExposedCommand;
 
 /**
@@ -41,7 +40,19 @@ public class FalseDataGenerator
 	
 	private enum FalseInstanceType
 	{
-		M1SMALL, C1MEDIUM, M1LARGE, M1XLARGE, C1XLARGE;
+		M1SMALL("m1.small"),
+		C1MEDIUM("c1.medium"),
+		M1LARGE("m1.large"),
+		M1XLARGE("m1.xlarge"),
+		C1XLARGE("c1.xlarge");
+		
+		private final String name;
+		
+		private FalseInstanceType(String name) {
+			this.name = name;
+		}
+		
+		public String toString() { return name; }
 	}
 
 	@ExposedCommand
