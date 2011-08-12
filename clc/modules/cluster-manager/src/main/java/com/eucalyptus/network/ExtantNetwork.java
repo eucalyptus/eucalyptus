@@ -63,7 +63,9 @@
 
 package com.eucalyptus.network;
 
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.HashSet;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import javax.persistence.Column;
 import javax.persistence.JoinColumn;
@@ -72,14 +74,22 @@ import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostPersist;
 import javax.persistence.Table;
+import javax.persistence.Transient;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.cloud.util.ResourceAllocation;
+import com.eucalyptus.cloud.util.ResourceAllocation.SetReference;
 import com.eucalyptus.cloud.util.ResourceAllocation.State;
+import com.eucalyptus.cloud.util.ResourceAllocationException;
+import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.entities.AbstractStatefulPersistent;
+import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.util.TransactionException;
+import com.google.common.base.Function;
 
 @Entity
 @javax.persistence.Entity
@@ -87,6 +97,8 @@ import com.eucalyptus.entities.AbstractStatefulPersistent;
 @Table( name = "metadata_extant_network" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation.State> {
+  @Transient
+  private static Logger            LOG     = Logger.getLogger( ExtantNetwork.class );
   @Column( name = "metadata_extant_network_natural_id", unique = true )
   private String                   networkNaturalId;
   @Column( name = "metadata_extant_network_tag", unique = true )
@@ -110,7 +122,7 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
     this.maxAddr = 2048l;//GRZE:FIXIT
     this.minAddr = 9l;//GRZE:FIXIT
   }
-
+  
   @PostPersist
   private void onCommit( ) {
     for ( Long i = this.minAddr; i < this.maxAddr; i++ ) {
@@ -188,8 +200,27 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
     this.indexes = indexes;
   }
   
-  public PrivateNetworkIndex allocateNetworkIndex( ) {
-    return null;
+  public SetReference<PrivateNetworkIndex, VmInstance> allocateNetworkIndex( ) throws TransactionException {
+    try {
+      return Transactions.transformOne( this, new Function<ExtantNetwork, SetReference<PrivateNetworkIndex, VmInstance>>( ) {
+        
+        @Override
+        public SetReference<PrivateNetworkIndex, VmInstance> apply( ExtantNetwork input ) {
+          for ( PrivateNetworkIndex idx : input.indexes ) {
+            if ( ResourceAllocation.State.FREE.equals( idx.getState( ) ) ) {
+              try {
+                return idx.allocate( );
+              } catch ( ResourceAllocationException ex ) {
+                LOG.error( ex, ex );
+              }
+            }
+          }
+          throw new UndeclaredThrowableException( new NoSuchElementException( "Failed to locate a free network index." ) );
+        }
+      } );
+    } catch ( TransactionException ex ) {
+      throw ex;
+    }
   }
   
   protected Long getMaxAddr( ) {
