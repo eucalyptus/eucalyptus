@@ -76,6 +76,7 @@ import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.cloud.util.ResourceAllocation.SetReference;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NoSuchTokenException;
@@ -94,6 +95,7 @@ import com.eucalyptus.network.NetworkToken;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Request;
@@ -220,8 +222,12 @@ public class ClusterAllocator extends Thread {
       vlan = token.getPrimaryNetwork( ).getVlan( );
       if ( vlan < 0 ) vlan = 9;//FIXME: general vlan, should be min-1?
       networkNames = Lists.newArrayList( token.getPrimaryNetwork( ).getRuleGroup( ).getNaturalId( ) );
-      for ( PrivateNetworkIndex index : token.getPrimaryNetwork( ).getIndexes( ) ) {
-        networkIndexes.add( index.getIndex( ).toString( ) );
+      for ( SetReference<PrivateNetworkIndex, VmInstance> index : token.getPrimaryNetwork( ).getIndexes( ) ) {
+        try {
+          networkIndexes.add( index.get( ).getIndex( ).toString( ) );
+        } catch ( TransactionException ex ) {
+          LOG.error( ex , ex );
+        }
       }
     } else {
       vlan = -1;
