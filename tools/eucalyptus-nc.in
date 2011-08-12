@@ -155,6 +155,12 @@ do_start() {
 		exit 1
 	fi
 
+	# Add loop devices if necessary (and possible)
+	[ -z "$CREATE_NC_LOOP_DEVICES" ] && CREATE_NC_LOOP_DEVICES=256
+	if [ "$CREATE_NC_LOOP_DEVICES" -gt 0 ] 2>/dev/null; then
+            "$EUCALYPTUS/usr/share/eucalyptus/create-loop-devices" $CREATE_NC_LOOP_DEVICES
+	fi
+
 	if ! $EUCALYPTUS/usr/sbin/euca_conf --check nc ; then
 		exit 1
 	fi
@@ -300,8 +306,8 @@ fi
 LOOP_AVL="`/bin/ls /dev/loop* 2> /dev/null|wc -l`"
 if [ -z "$LOOP_AVL" -o "$LOOP_AVL" = "0" ]; then
 	echo "Couldn't find loop devices (/dev/loop*): expect problems"
-elif [ $LOOP_AVL -lt 32 ]; then
-	echo "You should have at least 32 loop devices"
+elif [ $LOOP_AVL -lt 50 ]; then
+	echo "You should have at least 50 loop devices"
 fi
 
 if [ -z "$EUCA_USER" ] ; then

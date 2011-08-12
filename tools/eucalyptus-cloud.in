@@ -193,6 +193,12 @@ do_start() {
                 do_upgrade
         fi
 
+        # Add loop devices if necessary (and possible)
+        [ -z "$CREATE_SC_LOOP_DEVICES" ] && CREATE_SC_LOOP_DEVICES=256
+        if [ "$CREATE_SC_LOOP_DEVICES" -gt 0 ] 2>/dev/null; then
+            "$EUCALYPTUS/usr/share/eucalyptus/create-loop-devices" $CREATE_SC_LOOP_DEVICES
+        fi
+
     # try log4j for a bit, see if anyone panics. $EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
 	ulimit -n 4096
 	$EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -L console-log >/dev/null 2>&1
