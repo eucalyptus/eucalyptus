@@ -1262,7 +1262,7 @@ public class EuareWebBackend {
         group.setName( ValueCheckerFactory.createUserAndGroupNameChecker( ).check( groupName ) );
       }
       if ( !group.getPath( ).equals( path ) ) {
-        group.setPath( path );
+        group.setPath( ValueCheckerFactory.createPathChecker( ).check( path ) );
       }
     } catch ( EucalyptusServiceException e ) {
       LOG.debug( e, e );
@@ -1310,7 +1310,7 @@ public class EuareWebBackend {
         user.setName( ValueCheckerFactory.createUserAndGroupNameChecker( ).check( userName ) );
       }
       if ( user.getPath( ) != null && !user.getPath( ).equals( path ) ) {
-        user.setPath( path );
+        user.setPath( ValueCheckerFactory.createPathChecker( ).check( path ) );
       }
       if ( !user.isEnabled( ).toString( ).equalsIgnoreCase( enabled ) ) {
         user.setEnabled( !user.isEnabled( ) );
