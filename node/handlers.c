@@ -1010,7 +1010,7 @@ static int init (void)
 
 int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen)
 {
-    int ret, len, i;
+    int ret, len;
 	char *file_name;
 	FILE *f;
 	long long used_mem, used_disk, used_cores;
@@ -1029,10 +1029,37 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 	if (ret)
 		return ret;
     
-    
-	for (i=0; i < (*outInstsLen); i++) {
+	for (int i=0; i < (*outInstsLen); i++) {
         ncInstance *instance = (*outInsts)[i];
-        logprintfl(EUCADEBUG, "[%s] %s publicIp=%s privateIp=%s mac=%s vlan=%d networkIndex=%d platform=%s\n", 
+
+        // construct a string summarizing the volumes attached to the instance
+        char vols_str [128] = "";
+        unsigned int vols_count = 0;
+        for (int j=0; j < EUCA_MAX_VOLUMES; ++j) {
+            ncVolume * volume = &instance->volumes[j];
+            if (strlen (volume->volumeId)==0)
+                continue;
+            vols_count++;
+            
+            char * s;
+            if (! strcmp(volume->stateName, VOL_STATE_ATTACHING))        s = "a";
+            if (! strcmp(volume->stateName, VOL_STATE_ATTACHED))         s = "A";
+            if (! strcmp(volume->stateName, VOL_STATE_ATTACHING_FAILED)) s = "af";
+            if (! strcmp(volume->stateName, VOL_STATE_DETACHING))        s = "d";
+            if (! strcmp(volume->stateName, VOL_STATE_DETACHED))         s = "D";
+            if (! strcmp(volume->stateName, VOL_STATE_DETACHING_FAILED)) s = "df";
+            
+            char vol_str [16];
+            snprintf (vol_str, sizeof (vol_str), "%s%s:%s", 
+                      (vols_count>1)?(","):(""),
+                      volume->volumeId, 
+                      s);
+            if ((strlen (vols_str) + strlen (vol_str)) < sizeof (vols_str)) {
+                strcat (vols_str, vol_str);
+            }
+        }
+    
+        logprintfl(EUCADEBUG, "[%s] %s pub=%s priv=%s mac=%s vlan=%d net=%d plat=%s vols=%s\n", 
                    instance->instanceId,
                    instance->stateName,
                    instance->ncnet.publicIp, 
@@ -1040,7 +1067,8 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
                    instance->ncnet.privateMac, 
                    instance->ncnet.vlan, 
                    instance->ncnet.networkIndex, 
-                   instance->platform);
+                   instance->platform,
+                   vols_str);
 	}
     
 	// allocate enough memory
