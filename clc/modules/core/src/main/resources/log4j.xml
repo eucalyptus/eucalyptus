@@ -71,12 +71,18 @@
     <param name="Threshold" value="${euca.log.level}" />
     <layout class="com.eucalyptus.system.EucaLayout" />
   </appender>
+  <appender name="console-warn" class="org.apache.log4j.ConsoleAppender">
+    <param name="Target" value="System.out" />
+    <param name="Threshold" value="WARN" />
+    <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%C.%M(%F):%L] %m%n" />
+    </layout>
+  </appender>
   <appender name="console-log" class="org.apache.log4j.RollingFileAppender">
     <param name="Threshold" value="${euca.log.level}" />
     <param name="File" value="${euca.log.dir}/cloud-output.log" />
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="10" />
-    <layout class="com.eucalyptus.system.EucaLayout" />
   </appender>
   <appender name="logfile" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-debug.log" />
@@ -140,6 +146,12 @@
       <param name="ConversionPattern" value="Timestamp: %d{ISO8601} %m%n" />
     </layout>
   </appender>
+  <appender name="upgrade" class="org.apache.log4j.FileAppender">
+    <param name="File" value="${euca.log.dir}/upgrade.log" />
+    <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%C.%M(%F):%L] %m%n" />
+    </layout>
+  </appender>
   <category name="com.eucalyptus" additivity="true">
     <priority value="${euca.log.level}" />
     <appender-ref ref="logfile" />
@@ -159,6 +171,11 @@
   <category name="EXTREME" additivity="true">
     <priority value="TRACE" />
     <appender-ref ref="cloud-extreme" />
+  </category>
+  <category name="com.eucalyptus.upgrade.StandalonePersistence" additivity="false">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="upgrade" />
+    <appender-ref ref="console-warn" />
   </category>
   <category name="com.eucalyptus.util.fsm.StateMachineBuilder" additivity="false">
     <priority value="${euca.log.level}" />
