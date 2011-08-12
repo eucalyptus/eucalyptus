@@ -968,12 +968,12 @@ public class EuareWebBackend {
     for ( String id : ids ) {
       try { 
         User user = Accounts.lookupUserById( id );
-        if ( !user.isSystemAdmin( ) ) {
+        if ( !user.isSystemAdmin( ) && !user.isAccountAdmin( ) ) {
           Account account = user.getAccount( );
           EuarePermission.authorizeDeleteUser( requestUser, account, user );
           account.deleteUser( user.getName( ), false, true );
         } else {
-          throw new IllegalArgumentException( "Can't delete system admin" );
+          throw new IllegalArgumentException( "Can't delete system or account admin" );
         }
       } catch ( Exception e ) {
         LOG.error( "Failed to delete user " + id, e );
@@ -1302,8 +1302,8 @@ public class EuareWebBackend {
       }
       
       User user = Accounts.lookupUserById( userId );
-      if ( user.isSystemAdmin( ) ) {
-        throw new EucalyptusServiceException( "Can not modify system admin" );
+      if ( user.isSystemAdmin( ) || user.isAccountAdmin( ) ) {
+        throw new EucalyptusServiceException( "Can not modify system or account admin" );
       }
       EuarePermission.authorizeModifyUser( requestUser, user.getAccount( ), user );
       if ( !user.getName( ).equals( userName ) ) {
