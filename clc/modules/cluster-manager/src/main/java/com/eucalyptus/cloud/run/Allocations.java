@@ -280,7 +280,7 @@ public class Allocations {
       return this.addresses;
     }
     
-    public List<PrivateNetworkIndex> getNetworkIndexList( ) {
+    public List<SetReference<PrivateNetworkIndex,VmInstance>> getNetworkIndexList( ) {
       return this.networkIndexList;
     }
     

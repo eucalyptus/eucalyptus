@@ -80,6 +80,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.vm.VmTypes;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
@@ -106,14 +107,18 @@ public class CreateVmInstances {
     for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
       if ( Clusters.getInstance( ).hasNetworking( ) ) {
         for ( SetReference<PrivateNetworkIndex, VmInstance> networkIndex : token.getPrimaryNetwork( ).getIndexes( ) ) {
-          VmInstance vmInst = getVmInstance( userFullName, allocInfo, reservationId, token, vmIndex++, networkIndex.get( ) );
-          VmInstances.getInstance( ).register( vmInst );
           try {
-            Transactions.save( vmInst );
-          } catch ( ExecutionException ex ) {
-            LOG.error( ex, ex );
+            VmInstance vmInst = getVmInstance( userFullName, allocInfo, reservationId, token, vmIndex++, networkIndex.get( ) );
+            VmInstances.getInstance( ).register( vmInst );
+            try {
+              Transactions.save( vmInst );
+            } catch ( ExecutionException ex ) {
+              LOG.error( ex, ex );
+            }
+            token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
+          } catch ( TransactionException ex ) {
+            LOG.error( ex , ex );
           }
-          token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
         }
       } else {
         for ( int i = 0; i < token.getAmount( ); i++ ) {
