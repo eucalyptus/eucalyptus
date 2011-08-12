@@ -170,9 +170,10 @@ public class SnapshotManager {
               if ( scReply.get_return( ) ) {
                 StorageUtil.dispatchAll( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
                 try {
-                  ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, true, snap.getVolumeSize( ),
-                                                                               snap.getOwnerUserId( ),
-                                                                               snap.getOwnerAccountId( ), snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
+                	//TODO: GRZE!!!! 1111oneoneone1111111oneoneone
+                  ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, false, snap.getVolumeSize( ),
+                                                                               snap.getOwnerUserId( ), snap.getOwnerUserName(),
+                                                                               snap.getOwnerAccountId( ), null, snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
                 } catch ( EventFailedException ex ) {
                   LOG.error( ex, ex );
                 }

@@ -7,7 +7,7 @@ import com.eucalyptus.webui.client.place.ReportPlace;
 import com.eucalyptus.webui.client.view.ReportView;
 import com.google.gwt.activity.shared.AbstractActivity;
 import com.google.gwt.event.shared.EventBus;
-import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.AcceptsOneWidget;
 
 public class ReportActivity extends AbstractActivity implements ReportView.Presenter {
@@ -52,7 +52,7 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
 			+ "&criterion=" + criteria
 			+ "&groupByCriterion=" + groupBy;
 
-	  clientFactory.getReportView( ).loadReport( reportUrl );
+	    Window.open( reportUrl, "_self", "" );
   }
   
   @Override

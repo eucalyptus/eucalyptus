@@ -40,7 +40,19 @@ public class FalseDataGenerator
 	
 	private enum FalseInstanceType
 	{
-		M1SMALL, C1MEDIUM, M1LARGE, M1XLARGE, C1XLARGE;
+		M1SMALL("m1.small"),
+		C1MEDIUM("c1.medium"),
+		M1LARGE("m1.large"),
+		M1XLARGE("m1.xlarge"),
+		C1XLARGE("c1.xlarge");
+		
+		private final String name;
+		
+		private FalseInstanceType(String name) {
+			this.name = name;
+		}
+		
+		public String toString() { return name; }
 	}
 
 	@ExposedCommand
@@ -59,35 +71,28 @@ public class FalseDataGenerator
 		List<InstanceAttributes> fakeInstances =
 				new ArrayList<InstanceAttributes>();
 
-		for (int i = 0; i < NUM_INSTANCE; i++) {
-
-			String uuid = new Long(i).toString();
-			String instanceId = String.format("instance-%d", (i % NUM_INSTANCE));
-			String userId = String.format("user-%d", (i % NUM_USER));
-			String accountId = String.format("account-%d", (i % NUM_ACCOUNT));
-			String clusterName = String.format("cluster-%d", (i % NUM_CLUSTER));
-			String availZone = String.format("zone-%d", (i % NUM_AVAIL_ZONE));
-			FalseInstanceType[] vals = FalseInstanceType.values();
-			String instanceType = vals[i % vals.length].toString();
-
-			InstanceAttributes insAttrs = new InstanceAttributes(uuid,
-					instanceId, instanceType, userId, accountId, clusterName,
-					availZone);
-			fakeInstances.add(insAttrs);
-		}
-
 		for (int i=0; i<NUM_USAGE; i++) {
 			listener.setCurrentTimeMillis(START_TIME + (i * TIME_USAGE_APART));
-			for (InstanceAttributes insAttrs : fakeInstances) {
-				long instanceNum = Long.parseLong(insAttrs.getUuid());
+			for (int j=0; j<NUM_INSTANCE; j++) {
+				String uuid = new Long(j).toString();
+				String instanceId = String.format("instance-%d", (j % NUM_INSTANCE));
+				String userId = String.format("fakeUserId-%d", (j % NUM_USER));
+				String userName = String.format("fakeUserName:%d", (j % NUM_USER));
+				String accountId = String.format("fakeAccountId-%d", (j % NUM_ACCOUNT));
+				String accountName = String.format("fakeAccountName:%d", (j % NUM_ACCOUNT));
+				String clusterName = String.format("cluster-%d", (j % NUM_CLUSTER));
+				String availZone = String.format("zone-%d", (j % NUM_AVAIL_ZONE));
+				FalseInstanceType[] vals = FalseInstanceType.values();
+				String instanceType = vals[j % vals.length].toString();
+				long instanceNum = Long.parseLong(uuid);
 				long netIoMegs = (instanceNum + i) * 1024;
 				long diskIoMegs = (instanceNum + i*2) * 1024;
-				InstanceEvent event = new InstanceEvent(insAttrs.getUuid(),
-						insAttrs.getInstanceId(), insAttrs.getInstanceType(),
-						insAttrs.getUserId(), insAttrs.getAccountId(),
-						insAttrs.getClusterName(),
-						insAttrs.getAvailabilityZone(), new Long(netIoMegs),
+
+				InstanceEvent event = new InstanceEvent(uuid,
+						instanceId, instanceType, userId, userName, accountId,
+						accountName, clusterName, availZone, new Long(netIoMegs),
 						new Long(diskIoMegs));
+
 				System.out.println("Generating:" + i);
 				queueSender.send(event);
 			}
@@ -111,7 +116,7 @@ public class FalseDataGenerator
 
 		try {
 			OutputStream os = new FileOutputStream("/tmp/testReport.csv");
-			ReportGenerator.generateReport(ReportType.INSTANCE, ReportFormat.CSV, new Period(1104566480000l, 1104571200000l),
+			ReportGenerator.getInstance().generateReport(ReportType.INSTANCE, ReportFormat.CSV, new Period(1104566480000l, 1104571200000l),
 					ReportingCriterion.USER, null, null, os);
 			os.close();
 		} catch (Exception e) {
