@@ -223,6 +223,9 @@ public class EuareWebBackend {
   public static User changeUserPassword( User requestUser, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
     try {
       User user = Accounts.lookupUserById( userId );
+      if ( authenticateWithLdap( user ) ) {
+    	throw new EucalyptusServiceException( "Currently authenticating with LDAP. Can not change password." );
+      }
       EuarePermission.authorizeModifyUserPassword( requestUser, user.getAccount( ), user );
       // Anyone want to change some other people's password must authenticate himself first
       if ( Strings.isNullOrEmpty( requestUser.getPassword( ) ) || !requestUser.getPassword( ).equals( Crypto.generateHashedPassword( oldPass ) ) ) {
