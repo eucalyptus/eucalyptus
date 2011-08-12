@@ -1,20 +1,20 @@
 #!/bin/bash
-#Copyright (c) 2009  Eucalyptus Systems, Inc.	
+#Copyright (c) 2009  Eucalyptus Systems, Inc.
 #
 #This program is free software: you can redistribute it and/or modify
-#it under the terms of the GNU General Public License as published by 
-#the Free Software Foundation, only version 3 of the License.  
-# 
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, only version 3 of the License.
+#
 #This file is distributed in the hope that it will be useful, but WITHOUT
 #ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 #FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-#for more details.  
+#for more details.
 #
 #You should have received a copy of the GNU General Public License along
 #with this program.  If not, see <http://www.gnu.org/licenses/>.
-# 
+#
 #Please contact Eucalyptus Systems, Inc., 130 Castilian
-#Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
+#Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
 #if you need additional information or have any questions.
 #
 #This file may incorporate work covered under the following copyright and
@@ -23,7 +23,7 @@
 #  Software License Agreement (BSD License)
 #
 #  Copyright (c) 2008, Regents of the University of California
-#  
+#
 #
 #  Redistribution and use of this software in source and binary forms, with
 #  or without modification, are permitted provided that the following
@@ -67,7 +67,7 @@
 ### BEGIN INIT INFO
 # Provides:                   eucalyptus-nc
 # Required-Start:             $remote_fs $syslog libvirtd
-# Required-Stop:              $remote_fs $syslog 
+# Required-Stop:              $remote_fs $syslog
 # Default-Start:              2 3 4 5
 # Default-Stop:               0 1 6
 # Short-Description:          Start Eucalyptus node controller
@@ -104,10 +104,10 @@ EUCA_USER="eucalyptus"
 
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then
-       EUCALYPTUS="@prefix@"                                   
+       EUCALYPTUS="@prefix@"
        if [ ! -e ${EUCALYPTUS}/etc/eucalyptus/eucalyptus.conf ] ; then
-              EUCALYPTUS="/"                                   
-       fi   
+              EUCALYPTUS="/"
+       fi
 fi
 export EUCALYPTUS
 
@@ -180,7 +180,7 @@ do_start() {
                 exit 1
             fi
 	fi
-	
+
 	# on SYSTEM or STATIC mode the bridge needs to exists
 	if [ "$VNET_MODE" = "SYSTEM" -o "$VNET_MODE" = "STATIC" ]; then
 		if [ -n "$BRCTL" -a -x $BRCTL ]; then
@@ -191,7 +191,7 @@ do_start() {
 		fi
 	fi
 
-	# we need aoe loaded 
+	# we need aoe loaded
 	if [ -z "$MODPROBE" ]; then
 		echo
 		echo "Cannot find modprobe: you may have problems."
@@ -261,13 +261,13 @@ do_stop() {
 		rm -f $pidfile
 		return
 	fi
-	
+
 	# now kill the services
 	if [ -s $pidfile ]; then
 		pid=`cat $pidfile 2> /dev/null`
-		kill $pid > /dev/null 2>&1 
+		kill $pid > /dev/null 2>&1
 	else
-		return	
+		return
 	fi
 	timeout=5
 	while [ $timeout -gt 0 ]; do
@@ -292,7 +292,7 @@ else
 	exit 1
 fi
 if [ "$EUCALYPTUS" = "not_configured" ]; then
-	echo "EUCALYPTUS not configured!" 
+	echo "EUCALYPTUS not configured!"
 	exit 1
 fi
 
@@ -380,11 +380,11 @@ case "$1" in
 		fi
 		exit 1
 	fi
-		
+
 	rm -f /dev/shm/sem.eucalyptus-nc* /dev/shm/sem.eucalyptus-st*
 	do_start
 	case "$?" in
-	0|1) 
+	0|1)
 		if [ "$VERBOSE" != no ]; then
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 0
@@ -406,7 +406,7 @@ case "$1" in
 	;;
   stop)
 	if [ "$VERBOSE" != no ]; then
-       		if [ "$WE_HAVE_LSB" = "Y" ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
 			log_begin_msg "Stopping $DESC"
 		else
 			echo -n "Stopping $DESC: "
@@ -440,13 +440,13 @@ case "$1" in
 			echo "done."
 		fi
 	fi
-  	;;
+	;;
   status)
 	if do_status ; then
 		echo "NC is running"
 	else
 		exit 3
-	fi 
+	fi
 	;;
   config)
 	echo "EUCALYPTUS=${EUCALYPTUS}"
