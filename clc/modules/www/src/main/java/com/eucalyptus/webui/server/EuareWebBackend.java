@@ -1060,6 +1060,7 @@ public class EuareWebBackend {
       // Deserialize
       int i = 0;
       String keyId = keySerialized.getField( i++ );
+      i++;//Secret key
       i++;//Active
       String accountName = keySerialized.getField( i++ );
       String userName = keySerialized.getField( i++ );
@@ -1089,7 +1090,7 @@ public class EuareWebBackend {
       Account account = Accounts.lookupAccountByName( accountName );
       User user = account.lookupUserByName( userName );
       EuarePermission.authorizeDeleteUserCertificate( requestUser, account, user );
-      user.removeKey( certId );
+      user.removeCertificate( certId );
     } catch ( EucalyptusServiceException e ) {
       LOG.debug( e, e );
       throw e;
