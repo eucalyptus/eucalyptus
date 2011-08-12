@@ -86,10 +86,8 @@ import com.eucalyptus.entities.AbstractStatefulPersistent;
 @Table( name = "metadata_extant_network" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation.State> {
-  @OneToOne
-  @JoinColumn( name = "id" )
-  @NotFound( action = NotFoundAction.IGNORE )
-  private NetworkGroup             networkGroup;
+  @Column( name = "metadata_extant_network_natural_id", unique = true )
+  private String                   networkNaturalId;
   @Column( name = "metadata_extant_network_tag", unique = true )
   private Long                     tag;
   @Column( name = "metadata_extant_network_max_addr" )
@@ -106,15 +104,15 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
   
   public ExtantNetwork( NetworkGroup networkGroup, Long tag ) {
     super( );
-    this.networkGroup = networkGroup;
+    this.networkNaturalId = networkGroup.getNaturalId( );
     this.tag = tag;
     this.maxAddr = 2048l;//GRZE:FIXIT
     this.minAddr = 9l;//GRZE:FIXIT
-    for( Long i = this.minAddr; i < this.maxAddr; i++ ) { 
+    for ( Long i = this.minAddr; i < this.maxAddr; i++ ) {
       this.getIndexes( ).add( new PrivateNetworkIndex( tag, i ) );
     }
   }
-
+  
   public ExtantNetwork( State state, String displayName ) {
     super( state, displayName );
   }
@@ -124,16 +122,16 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
   }
   
   public ExtantNetwork( NetworkGroup networkGroup ) {
-    this.networkGroup = networkGroup;
+    this.networkNaturalId = networkGroup.getNaturalId( );
   }
-
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = super.hashCode( );
-    result = prime * result + ( ( this.networkGroup == null )
+    result = prime * result + ( ( this.networkNaturalId == null )
       ? 0
-      : this.networkGroup.hashCode( ) );
+      : this.networkNaturalId.hashCode( ) );
     result = prime * result + ( ( this.tag == null )
       ? 0
       : this.tag.hashCode( ) );
@@ -152,11 +150,11 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
       return false;
     }
     ExtantNetwork other = ( ExtantNetwork ) obj;
-    if ( this.networkGroup == null ) {
-      if ( other.networkGroup != null ) {
+    if ( this.networkNaturalId == null ) {
+      if ( other.networkNaturalId != null ) {
         return false;
       }
-    } else if ( !this.networkGroup.equals( other.networkGroup ) ) {
+    } else if ( !this.networkNaturalId.equals( other.networkNaturalId ) ) {
       return false;
     }
     if ( this.tag == null ) {
@@ -167,14 +165,6 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
       return false;
     }
     return true;
-  }
-  
-  protected NetworkGroup getNetworkGroup( ) {
-    return this.networkGroup;
-  }
-  
-  protected void setNetworkGroup( NetworkGroup networkGroup ) {
-    this.networkGroup = networkGroup;
   }
   
   protected Long getTag( ) {
@@ -196,19 +186,19 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
   public PrivateNetworkIndex allocateNetworkIndex( ) {
     return null;
   }
-
+  
   protected Long getMaxAddr( ) {
     return this.maxAddr;
   }
-
+  
   protected void setMaxAddr( Long maxAddr ) {
     this.maxAddr = maxAddr;
   }
-
+  
   protected Long getMinAddr( ) {
     return this.minAddr;
   }
-
+  
   protected void setMinAddr( Long minAddr ) {
     this.minAddr = minAddr;
   }
