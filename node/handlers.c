@@ -502,7 +502,7 @@ monitoring_thread (void *arg)
             int destroy_files = !nc_state.save_instance_files;
             if (call_hooks (NC_EVENT_PRE_CLEAN, instance->instancePath)) {
                 if (destroy_files) {
-                    logprintfl (EUCAERROR, "[%s] cancelled instance cleanup by hooks\n", instance->instanceId);
+                    logprintfl (EUCAERROR, "[%s] cancelled instance cleanup via hooks\n", instance->instanceId);
                     destroy_files = 0;
                 }
             }
@@ -607,7 +607,7 @@ void *startup_thread (void * arg)
         goto free;
     }
     if (call_hooks (NC_EVENT_PRE_BOOT, instance->instancePath)) {
-        logprintfl (EUCAERROR, "[%s] cancelled instance startup by hooks\n", instance->instanceId);
+        logprintfl (EUCAERROR, "[%s] cancelled instance startup via hooks\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         goto free;
     }
