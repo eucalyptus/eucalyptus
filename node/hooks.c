@@ -65,9 +65,10 @@
 #define __USE_GNU
 #include <string.h>
 #include <time.h>
-#include <sys/types.h>
 #include <dirent.h>
+#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h> // WEXITSTATUS on Lucid
 
 #include "hooks.h"
 #include "misc.h"
@@ -154,11 +155,8 @@ int main (int argc, char ** argv)
     assert (init_hooks ("/tmp", "/foobar")!=0);
     assert (init_hooks ("/foobar", "/tmp")!=0);
     
-    char * d = tempnam (NULL, "euca-");
-    assert (mkdir (d, 0)==0);
-    assert (init_hooks ("/tmp", d)!=0);
-    assert (rmdir (d)==0);
-    assert (mkdir (d, 0700)==0);
+    char d [MAX_PATH] = "/tmp/euca-XXXXXX";
+    assert (mkdtemp (d)!=NULL);
     assert (init_hooks ("/tmp", d)==0);
 
     char h1 [MAX_PATH]; snprintf (h1, sizeof (h1), "%s/h1", d); write2file (h1, "#!/bin/bash\necho h1 -$1- -$2- -$3-\n"); chmod (h1, S_IXUSR | S_IRUSR);
