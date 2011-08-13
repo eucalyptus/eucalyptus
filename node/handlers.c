@@ -812,18 +812,19 @@ static int init (void)
 	}
 	logfile(log, i);
 
+    { // initialize hooks if their directory looks ok
+        char dir [MAX_PATH];
+        snprintf (dir, sizeof (dir), EUCALYPTUS_NC_HOOKS_DIR, nc_state.home);
+        if (check_directory (dir) == 0)
+            init_hooks (nc_state.home, dir);
+    }
+
 #define GET_VAR_INT(var,name) \
         s = getConfString(configFiles, 2, name); \
 	if (s){					\
 		var = atoi(s);\
 		free (s);\
 	}
-
-    // initialize hooks if their directory looks ok
-    snprintf (tmp, sizeof (tmp), EUCALYPTUS_NC_HOOKS_DIR, nc_state.home);
-    if (check_directory (tmp) == 0)
-        init_hooks (nc_state.home, tmp);
-
 	GET_VAR_INT(nc_state.config_max_mem,      CONFIG_MAX_MEM);
 	GET_VAR_INT(nc_state.config_max_disk,     CONFIG_MAX_DISK);
 	GET_VAR_INT(nc_state.config_max_cores,    CONFIG_MAX_CORES);
