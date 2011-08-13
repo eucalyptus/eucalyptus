@@ -1,9 +1,10 @@
 package com.eucalyptus.reporting.instance;
 
+import com.eucalyptus.reporting.ReportLine;
 import com.eucalyptus.reporting.units.*;
 
 public class InstanceReportLine
-	implements Comparable<InstanceReportLine>
+	implements Comparable<InstanceReportLine>, ReportLine
 {
 	private static final Units INTERNAL_UNITS =
 		new Units(TimeUnit.SECS, SizeUnit.MB, TimeUnit.SECS, SizeUnit.MB);

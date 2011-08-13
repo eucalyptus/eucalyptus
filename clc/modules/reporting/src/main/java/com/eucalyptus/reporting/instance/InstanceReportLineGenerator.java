@@ -4,11 +4,16 @@ import java.util.*;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.reporting.Period;
+import com.eucalyptus.reporting.ReportLineGenerator;
 import com.eucalyptus.reporting.ReportingCriterion;
 import com.eucalyptus.reporting.units.Units;
+import com.eucalyptus.reporting.user.ReportingAccountDao;
+import com.eucalyptus.reporting.user.ReportingUserDao;
 
 public class InstanceReportLineGenerator
+	implements ReportLineGenerator<InstanceReportLine>
 {
 	private static Logger log = Logger.getLogger( InstanceReportLineGenerator.class );
 
@@ -71,11 +76,13 @@ public class InstanceReportLineGenerator
 	private static String getAttributeValue(ReportingCriterion criterion,
 			InstanceSummaryKey key)
 	{
+		log.debug("owner id:" + key.getOwnerId() + " account id:" + key.getAccountId());
+
 		switch (criterion) {
 			case ACCOUNT:
-				return key.getAccountId();
+				return ReportingAccountDao.getInstance().getAccountName(key.getAccountId());
 			case USER:
-				return key.getOwnerId();
+				return ReportingUserDao.getInstance().getUserName(key.getOwnerId());
 			case CLUSTER:
 				return key.getClusterName();
 			case AVAILABILITY_ZONE:

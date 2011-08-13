@@ -60,6 +60,7 @@ permission notice:
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
 */
+
 #define _FILE_OFFSET_BITS 64 // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
@@ -94,6 +95,7 @@ permission notice:
 #include "xml.h"
 #include "vbr.h"
 #include "iscsi.h"
+#include "hooks.h"
 
 #include "windows-bundle.h"
 #define MONITORING_PERIOD (5)
@@ -498,6 +500,12 @@ monitoring_thread (void *arg)
             
             // ok, it's been condemned => destroy the files
             int destroy_files = !nc_state.save_instance_files;
+            if (call_hooks (NC_EVENT_PRE_CLEAN, instance->instancePath)) {
+                if (!destroy_files) {
+                    logprintfl (EUCAERROR, "[%s] cancelled instance cleanup by hooks\n", instance->instanceId);
+                    destroy_files = 1;
+                }
+            }
             logprintfl (EUCAINFO, "[%s] cleaning up state for instance%s\n", instance->instanceId, (destroy_files)?(""):(" (but keeping the files)"));
             if (destroy_instance_backing (instance, destroy_files)) {
                 logprintfl (EUCAWARN, "[%s] warning: failed to cleanup instance state\n", instance->instanceId);
@@ -594,7 +602,12 @@ void *startup_thread (void * arg)
         goto free;
     }
     if (instance->state==CANCELED) {
-        logprintfl (EUCAERROR, "[%s] startup of instance was cancelled\n", instance->instanceId);
+        logprintfl (EUCAERROR, "[%s] cancelled instance startup\n", instance->instanceId);
+        change_state (instance, SHUTOFF);
+        goto free;
+    }
+    if (call_hooks (NC_EVENT_PRE_BOOT, instance->instancePath)) {
+        logprintfl (EUCAERROR, "[%s] cancelled instance startup by hooks\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         goto free;
     }
@@ -711,6 +724,12 @@ void adopt_instances()
 			continue;
 		}
 
+        if (call_hooks (NC_EVENT_ADOPTING, instance->instancePath)) {
+            logprintfl (EUCAINFO, "ignoring running domain %s due to hooks\n", instance->instanceId);
+            free_instance (&instance);
+            continue;
+        }
+
 		change_state (instance, info.state);                    
 		sem_p (inst_sem);
 		int err = add_instance (&global_instances, instance);
@@ -720,8 +739,7 @@ void adopt_instances()
 			continue;
 		}
 
-		logprintfl (EUCAINFO, "- adopted running domain %s from user %s\n", instance->instanceId, instance->userId);
-		/* TODO: try to look up IPs? */
+		logprintfl (EUCAINFO, "- adopted running domain %s from user %s\n", instance->instanceId, instance->userId); // TODO: try to re-check IPs?
 
 		sem_p(hyp_sem);
 		virDomainFree (dom);
@@ -800,6 +818,11 @@ static int init (void)
 		var = atoi(s);\
 		free (s);\
 	}
+
+    // initialize hooks if their directory looks ok
+    snprintf (tmp, sizeof (tmp), EUCALYPTUS_NC_HOOKS_DIR, nc_state.home);
+    if (check_directory (tmp) == 0)
+        init_hooks (nc_state.home, tmp);
 
 	GET_VAR_INT(nc_state.config_max_mem,      CONFIG_MAX_MEM);
 	GET_VAR_INT(nc_state.config_max_disk,     CONFIG_MAX_DISK);
@@ -999,7 +1022,12 @@ static int init (void)
 	}
     
     if (pthread_detach(tcb)) {
-        logprintfl(EUCAFATAL, "failed to detach the monitoring thread\n");
+        logprintfl (EUCAFATAL, "failed to detach the monitoring thread\n");
+        return ERROR_FATAL;
+    }
+
+    if (call_hooks (NC_EVENT_INIT, NULL)) {
+        logprintfl (EUCAFATAL, "hooks prevented initialization\n");
         return ERROR_FATAL;
     }
     
