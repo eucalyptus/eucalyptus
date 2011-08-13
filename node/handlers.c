@@ -501,9 +501,9 @@ monitoring_thread (void *arg)
             // ok, it's been condemned => destroy the files
             int destroy_files = !nc_state.save_instance_files;
             if (call_hooks (NC_EVENT_PRE_CLEAN, instance->instancePath)) {
-                if (!destroy_files) {
+                if (destroy_files) {
                     logprintfl (EUCAERROR, "[%s] cancelled instance cleanup by hooks\n", instance->instanceId);
-                    destroy_files = 1;
+                    destroy_files = 0;
                 }
             }
             logprintfl (EUCAINFO, "[%s] cleaning up state for instance%s\n", instance->instanceId, (destroy_files)?(""):(" (but keeping the files)"));
