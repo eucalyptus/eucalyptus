@@ -148,7 +148,12 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
   }
   
   public OwnerFullName getOwnerFullName( ) {
-    return Transactions.naturalId( new NetworkGroup( ) {{setNaturalId( ExtantNetwork.this.networkNaturalId );}} ).getOwner( );
+    try {
+      return Transactions.naturalId( new NetworkGroup( ) {{setNaturalId( ExtantNetwork.this.networkNaturalId );}} ).getOwner( );
+    } catch ( TransactionException ex ) {
+      LOG.error( ex , ex );
+      return null;
+    }
   }
   
   @Override
