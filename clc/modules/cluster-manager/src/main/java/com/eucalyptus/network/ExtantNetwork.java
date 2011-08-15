@@ -89,6 +89,7 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.entities.AbstractStatefulPersistent;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.TransactionException;
+import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
 
 @Entity
@@ -123,7 +124,7 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
     this.minAddr = 9l;//GRZE:FIXIT
   }
   
-  private void onCommit( ) {
+  void populateIndexes( ) {
     for ( Long i = this.minAddr; i < this.maxAddr; i++ ) {
       this.getIndexes( ).add( new PrivateNetworkIndex( this, i ) );
     }
@@ -201,13 +202,19 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
   
   public SetReference<PrivateNetworkIndex, VmInstance> allocateNetworkIndex( ) throws TransactionException {
     try {
+      if ( this.getIndexes( ).isEmpty( ) ) {
+        Transactions.one( this, new Callback<ExtantNetwork>( ) {
+          
+          @Override
+          public void fire( ExtantNetwork input ) {
+            input.populateIndexes( );
+          }
+        } );
+      }
       return Transactions.transformOne( this, new Function<ExtantNetwork, SetReference<PrivateNetworkIndex, VmInstance>>( ) {
         
         @Override
         public SetReference<PrivateNetworkIndex, VmInstance> apply( ExtantNetwork input ) {
-          if( input.getIndexes( ).isEmpty( ) ) {
-            input.onCommit( );
-          }
           for ( PrivateNetworkIndex idx : input.getIndexes( ) ) {
             if ( ResourceAllocation.State.FREE.equals( idx.getState( ) ) ) {
               try {
