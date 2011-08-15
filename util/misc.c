@@ -557,6 +557,8 @@ char * fp2str (FILE * fp)
             }
             return NULL;
         }
+        memset(new_buf+buf_current, 0, INCREMENT * sizeof(char));
+
         buf = new_buf;
         logprintfl (EUCADEBUG2, "fp2str: enlarged buf to %d\n", buf_max);
         
@@ -594,6 +596,11 @@ char * system_output (char * shell_command )
   buf = fp2str (fp);
 
   pclose(fp);
+
+  if (buf && (strlen(buf) == 0)) {
+      free(buf);
+      buf = NULL;
+  }
   return buf;
 }
 
@@ -2100,13 +2107,24 @@ int main (int argc, char ** argv)
 {
     int errors = 0;
     char cwd [1024];
+    char *s;
     getcwd (cwd, sizeof (cwd));
     srandom (time(NULL));
+
+    printf("testing system_output() in misc.c\n");
+    s = system_output("echo Hello");
+    assert(s);
+    assert (strlen (s) != 0);
+    printf("echo Hello == |%s|\n", s);
+    free (s);
+
+    s = system_output("echo -n");
+    assert(!s);
 
     printf ("testing fp2str in misc.c\n");
     FILE * fp = tmpfile ();
     assert (fp);
-    char * s = fp2str (fp);
+    s = fp2str (fp);
     assert (s);
     assert (strlen (s) == 0);
     free (s);
