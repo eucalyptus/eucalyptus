@@ -84,6 +84,7 @@ permission notice:
 #define EUCALYPTUS_NC_CHECK_BUCKET "euca-check-bucket" // can be overriden from eucalyptus.conf
 #define EUCALYPTUS_NC_BUNDLE_UPLOAD "euca-bundle-upload" // can be overriden from eucalyptus.conf
 #define EUCALYPTUS_NC_DELETE_BUNDLE "euca-delete-bundle" // can be overriden from eucalyptus.conf
+#define EUCALYPTUS_NC_HOOKS_DIR     "%s/etc/eucalyptus/nc-hooks"
 
 #define NC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
 #define CC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
@@ -135,6 +136,12 @@ permission notice:
 #define DEFAULT_NC_WORK_SIZE  999999 // in MB
 #define DEFAULT_SWAP_SIZE 512 /* in MB */
 #define MAX_PATH_SIZE 4096 // TODO: remove
+
+// NC hook events
+#define NC_EVENT_INIT      "euca-nc-post-init"   // p1: NULL
+#define NC_EVENT_PRE_BOOT  "euca-nc-pre-boot"    // p1: instancePath
+#define NC_EVENT_ADOPTING  "euca-nc-pre-adopt"   // p1: instancePath
+#define NC_EVENT_PRE_CLEAN "euca-nc-pre-clean"   // p1: instancePath
 
 #define MEGABYTE 1048576
 
