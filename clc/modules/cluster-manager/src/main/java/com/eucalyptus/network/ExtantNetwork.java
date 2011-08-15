@@ -206,6 +206,9 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
         
         @Override
         public SetReference<PrivateNetworkIndex, VmInstance> apply( ExtantNetwork input ) {
+          if( input.getIndexes( ).isEmpty( ) ) {
+            input.onCommit( );
+          }
           for ( PrivateNetworkIndex idx : input.getIndexes( ) ) {
             if ( ResourceAllocation.State.FREE.equals( idx.getState( ) ) ) {
               try {
