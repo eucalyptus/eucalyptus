@@ -289,29 +289,32 @@ static void
 refresh_instance_info(	struct nc_state_t *nc,
                         ncInstance *instance)
 {
-    int now = instance->state;
+    int old_state = instance->state;
     
     if (! check_hypervisor_conn ())
 	    return;
     
-    /* no need to bug for domains without state on Hypervisor */
-    if (now==TEARDOWN || now==STAGING || now==BUNDLING_SHUTOFF || now==CREATEIMAGE_SHUTOFF)
+    // no need to bug for domains without state on Hypervisor
+    if (old_state==TEARDOWN || 
+        old_state==STAGING || 
+        old_state==BUNDLING_SHUTOFF || 
+        old_state==CREATEIMAGE_SHUTOFF)
         return;
     
     sem_p(hyp_sem);
     virDomainPtr dom = virDomainLookupByName (nc_state.conn, instance->instanceId);
     sem_v(hyp_sem);
-    if (dom == NULL) { /* hypervisor doesn't know about it */
-        if (now==BUNDLING_SHUTDOWN) {
+    if (dom == NULL) { // hypervisor doesn't know about it
+        if (old_state==BUNDLING_SHUTDOWN) {
             logprintfl (EUCAINFO, "[%s] detected disappearance of bundled domain\n", instance->instanceId);
             change_state (instance, BUNDLING_SHUTOFF);
-        } else if (now==CREATEIMAGE_SHUTDOWN) {
+        } else if (old_state==CREATEIMAGE_SHUTDOWN) {
             logprintfl (EUCAINFO, "[%s] detected disappearance of createImage domain\n", instance->instanceId);
             change_state (instance, CREATEIMAGE_SHUTOFF);
-        } else if (now==RUNNING ||
-                   now==BLOCKED ||
-                   now==PAUSED ||
-                   now==SHUTDOWN) {
+        } else if (old_state==RUNNING ||
+                   old_state==BLOCKED ||
+                   old_state==PAUSED ||
+                   old_state==SHUTDOWN) {
             // most likely the user has shut it down from the inside
             if (instance->retries) {
                 instance->retries--;
@@ -321,7 +324,7 @@ refresh_instance_info(	struct nc_state_t *nc,
             	change_state (instance, SHUTOFF);
             }
         }
-        // else 'now' stays in SHUTFOFF, BOOTING, CANCELED, or CRASHED
+        // else 'old_state' stays in SHUTFOFF, BOOTING, CANCELED, or CRASHED
         return;
     }
     
@@ -343,37 +346,42 @@ refresh_instance_info(	struct nc_state_t *nc,
         sem_v(hyp_sem);
         return;
     } 
-    int xen = info.state;
+    int new_state = info.state;
     
-    switch (now) {
+    switch (old_state) {
     case BOOTING:
     case RUNNING:
     case BLOCKED:
     case PAUSED:
+        if (new_state==SHUTOFF ||
+            new_state==SHUTDOWN ||
+            new_state==CRASHED) {
+            logprintfl (EUCAWARN, "[%s] warning: hypervisor reported previously running domain as %s\n", instance->instanceId, instance_state_names [new_state]);
+        }
         // change to state, whatever it happens to be
-        change_state (instance, xen);
+        change_state (instance, new_state);
         break;
     case SHUTDOWN:
     case SHUTOFF:
     case CRASHED:
-        if (xen==RUNNING ||
-            xen==BLOCKED ||
-            xen==PAUSED) {
+        if (new_state==RUNNING ||
+            new_state==BLOCKED ||
+            new_state==PAUSED) {
             // cannot go back!
             logprintfl (EUCAWARN, "[%s] warning: detected prodigal domain, terminating it\n", instance->instanceId);
             sem_p (hyp_sem);
             virDomainDestroy (dom);
             sem_v (hyp_sem);
         } else {
-            change_state (instance, xen);
+            change_state (instance, new_state);
         }
         break;
     case BUNDLING_SHUTDOWN:
     case CREATEIMAGE_SHUTDOWN:
-        logprintfl (EUCADEBUG, "[%s] hypervisor state for bundle/createImage domain is %s\n", instance->instanceId, instance_state_names [xen]);
+        logprintfl (EUCADEBUG, "[%s] hypervisor state for bundle/createImage domain is %s\n", instance->instanceId, instance_state_names [new_state]);
         break;
     default:
-        logprintfl (EUCAERROR, "[%s] error: refresh...(): unexpected state (%d)\n", instance->instanceId, now);
+        logprintfl (EUCAERROR, "[%s] error: refresh...(): unexpected state (%d)\n", instance->instanceId, old_state);
         return;
     }
     sem_p(hyp_sem);
@@ -781,6 +789,7 @@ static int init (void)
 		else if (!strcmp(tmp,"WARN")) {i=EUCAWARN;}
 		else if (!strcmp(tmp,"ERROR")) {i=EUCAERROR;}
 		else if (!strcmp(tmp,"FATAL")) {i=EUCAFATAL;}
+        else if (!strcmp(tmp,"DEBUG2")) {i=EUCADEBUG2;}
 		free(tmp);
 	}
 	logfile(log, i);
@@ -1001,7 +1010,7 @@ static int init (void)
 
 int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen)
 {
-    int ret, len, i;
+    int ret, len;
 	char *file_name;
 	FILE *f;
 	long long used_mem, used_disk, used_cores;
@@ -1020,10 +1029,37 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 	if (ret)
 		return ret;
     
-    
-	for (i=0; i < (*outInstsLen); i++) {
+	for (int i=0; i < (*outInstsLen); i++) {
         ncInstance *instance = (*outInsts)[i];
-        logprintfl(EUCADEBUG, "[%s] %s publicIp=%s privateIp=%s mac=%s vlan=%d networkIndex=%d platform=%s\n", 
+
+        // construct a string summarizing the volumes attached to the instance
+        char vols_str [128] = "";
+        unsigned int vols_count = 0;
+        for (int j=0; j < EUCA_MAX_VOLUMES; ++j) {
+            ncVolume * volume = &instance->volumes[j];
+            if (strlen (volume->volumeId)==0)
+                continue;
+            vols_count++;
+            
+            char * s;
+            if (! strcmp(volume->stateName, VOL_STATE_ATTACHING))        s = "a";
+            if (! strcmp(volume->stateName, VOL_STATE_ATTACHED))         s = "A";
+            if (! strcmp(volume->stateName, VOL_STATE_ATTACHING_FAILED)) s = "af";
+            if (! strcmp(volume->stateName, VOL_STATE_DETACHING))        s = "d";
+            if (! strcmp(volume->stateName, VOL_STATE_DETACHED))         s = "D";
+            if (! strcmp(volume->stateName, VOL_STATE_DETACHING_FAILED)) s = "df";
+            
+            char vol_str [16];
+            snprintf (vol_str, sizeof (vol_str), "%s%s:%s", 
+                      (vols_count>1)?(","):(""),
+                      volume->volumeId, 
+                      s);
+            if ((strlen (vols_str) + strlen (vol_str)) < sizeof (vols_str)) {
+                strcat (vols_str, vol_str);
+            }
+        }
+    
+        logprintfl(EUCADEBUG, "[%s] %s pub=%s priv=%s mac=%s vlan=%d net=%d plat=%s vols=%s\n", 
                    instance->instanceId,
                    instance->stateName,
                    instance->ncnet.publicIp, 
@@ -1031,7 +1067,8 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
                    instance->ncnet.privateMac, 
                    instance->ncnet.vlan, 
                    instance->ncnet.networkIndex, 
-                   instance->platform);
+                   instance->platform,
+                   vols_str);
 	}
     
 	// allocate enough memory

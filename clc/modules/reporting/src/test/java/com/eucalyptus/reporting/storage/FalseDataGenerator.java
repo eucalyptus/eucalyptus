@@ -41,9 +41,11 @@ public class FalseDataGenerator
 			listener.setCurrentTimeMillis(timestampMs);
 
 			for (int j = 0; j < NUM_USERS; j++) {
-				String userId = String.format("user-%d", j);
-				String accountId = String.format("account-%d",
+				String userId = String.format("fakeUserId-%d", j);
+				String userName = String.format("fakeUserName:%d", j);
+				String accountId = String.format("fakeAccountId-%d",
 						(j % NUM_ACCOUNTS));
+				String accountName = String.format("fakeAccountName:%d", (j % NUM_ACCOUNTS));
 				String clusterId = String.format("cluster-%d", (j % NUM_CLUSTERS));
 				String zoneId = String.format("zone-%d", (j % NUM_ZONES));
 
@@ -52,7 +54,8 @@ public class FalseDataGenerator
 					StorageEvent.EventType eventType =
 						StorageEvent.EventType.values()[k];
 					StorageEvent event = new StorageEvent(eventType, true,
-							sizeMegs, userId, accountId, clusterId, zoneId);
+							sizeMegs, userId, userName, accountId, accountName,
+							clusterId, zoneId);
 					queueSender.send(event);
 					System.out.printf("Sending event %d for %d,%d\n", k, i, j);
 				}

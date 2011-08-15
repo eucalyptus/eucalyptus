@@ -35,7 +35,9 @@ public class InstanceEvent
 	private String instanceId;
 	private String instanceType;
 	private String userId;
+	private String userName;
 	private String accountId;
+	private String accountName;
 	private String clusterName;
 	private String availabilityZone;
 	private Long   cumulativeNetworkIoMegs;
@@ -43,15 +45,17 @@ public class InstanceEvent
 	
 
 	public InstanceEvent(String uuid, String instanceId, String instanceType,
-			String userId, String accountId, String clusterName,
-			String availabilityZone, Long cumulativeNetworkIoMegs,
-			Long cumulativeDiskIoMegs)
+			String userId, String userName, String accountId,
+			String accountName, String clusterName,	String availabilityZone,
+			Long cumulativeNetworkIoMegs, Long cumulativeDiskIoMegs)
 	{
 		this.uuid = uuid;
 		this.instanceId = instanceId;
 		this.instanceType = instanceType;
 		this.userId = userId;
+		this.userName = userName;
 		this.accountId = accountId;
+		this.accountName = accountName;
 		this.clusterName = clusterName;
 		this.availabilityZone = availabilityZone;
 		this.cumulativeNetworkIoMegs = cumulativeNetworkIoMegs;
@@ -77,10 +81,20 @@ public class InstanceEvent
 	{
 		return userId;
 	}
+	
+	public String getUserName()
+	{
+		return userName;
+	}
 
 	public String getAccountId()
 	{
 		return accountId;
+	}
+	
+	public String getAccountName()
+	{
+		return accountName;
 	}
 	
 	public String getClusterName()

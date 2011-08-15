@@ -345,7 +345,7 @@ int total_instances (bunchOfInstances **headp)
  * OR returns a pointer to the next empty/avail volume slot 
  * OR if full, returns NULL
  */
-static ncVolume * find_volume (const ncInstance * instance, const char *volumeId) 
+static ncVolume * find_volume (ncInstance * instance, const char *volumeId) 
 {
     ncVolume * v = instance->volumes;
     ncVolume * match = NULL;
@@ -375,7 +375,7 @@ static ncVolume * find_volume (const ncInstance * instance, const char *volumeId
 }
 
 // returns 0 if volume slot is not in use and non-zero if it is
-int is_volume_used (ncVolume * v)
+int is_volume_used (const ncVolume * v)
 {
     if (strlen (v->stateName) == 0) 
         return 0;

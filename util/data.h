@@ -375,7 +375,7 @@ ncResource * allocate_resource(char *nodeStatus,
                                char *publicSubnets);
 void free_resource(ncResource ** res);
 
-int is_volume_used (ncVolume * v);
+int is_volume_used (const ncVolume * v);
 ncVolume * save_volume (ncInstance * instance, const char *volumeId, const char *remoteDev, const char *localDev, const char *localDevReal, const char *stateName);
 ncVolume * free_volume (ncInstance * instance, const char *volumeId);
 

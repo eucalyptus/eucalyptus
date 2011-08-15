@@ -151,6 +151,11 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     }
 
     @Override
+    public void setLogger( Logger log ) {
+        LOG = log;
+    }
+
+    @Override
     public void upgrade(File oldEucaHome, File newEucaHome) {
         // Do this in stages and bail out if something goes seriously wrong.
         def parts = [ 'Cluster', 'Auth', 'KeyPairs', 'Network', 'Walrus', 'Storage', 'SAN' ]

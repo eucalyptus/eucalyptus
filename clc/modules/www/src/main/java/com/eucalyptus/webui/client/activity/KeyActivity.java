@@ -155,7 +155,7 @@ public class KeyActivity extends AbstractSearchActivity implements KeyView.Prese
     }
     ConfirmationView dialog = this.clientFactory.getConfirmationView( );
     dialog.setPresenter( this );
-    dialog.display( DELETE_KEY_CAPTION, DELETE_KEY_SUBJECT, currentSelected, new ArrayList<Integer>( Arrays.asList( 0, 1 ) ) );
+    dialog.display( DELETE_KEY_CAPTION, DELETE_KEY_SUBJECT, currentSelected, new ArrayList<Integer>( Arrays.asList( 0, 2 ) ) );
   }
   
 }
