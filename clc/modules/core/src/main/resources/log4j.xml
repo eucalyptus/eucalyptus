@@ -83,6 +83,7 @@
     <param name="File" value="${euca.log.dir}/cloud-output.log" />
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="10" />
+    <layout class="com.eucalyptus.system.EucaLayout" />
   </appender>
   <appender name="logfile" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-debug.log" />
