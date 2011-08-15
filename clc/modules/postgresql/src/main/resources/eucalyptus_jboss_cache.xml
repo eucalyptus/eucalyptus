@@ -1,0 +1,14 @@
+<jbosscache xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="urn:jboss:jbosscache-core:config:3.1">
+ <transaction transactionManagerLookupClass="com.eucalyptus.empyrean.EmpyreanTransactionManager"/>
+  <locking isolationLevel="REPEATABLE_READ" lockParentForChildInsertRemove="false" lockAcquisitionTimeout="20000" 
+           nodeLockingScheme="mvcc" writeSkewCheck="false" concurrencyLevel="500"/>
+
+   <eviction wakeUpInterval="500">
+      <default algorithmClass="org.jboss.cache.eviction.LRUAlgorithm"
+         eventQueueSize="100000">
+         <property name="maxNodes" value="1000" />
+         <property name="timeToLive" value="1000" />
+      </default>
+   </eviction>
+</jbosscache>
+
