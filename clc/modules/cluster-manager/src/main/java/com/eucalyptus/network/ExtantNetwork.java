@@ -88,6 +88,7 @@ import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.entities.AbstractStatefulPersistent;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
@@ -144,6 +145,10 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
   
   public ExtantNetwork( NetworkGroup networkGroup ) {
     this.networkNaturalId = networkGroup.getNaturalId( );
+  }
+  
+  public OwnerFullName getOwnerFullName( ) {
+    return Transactions.naturalId( new NetworkGroup( ) {{setNaturalId( ExtantNetwork.this.networkNaturalId );}} ).getOwner( );
   }
   
   @Override

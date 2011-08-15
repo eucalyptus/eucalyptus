@@ -68,12 +68,17 @@ import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.Logs;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.async.Callback;
 
 @MappedSuperclass
 public abstract class PersistentResource<T extends PersistentResource<T, R>, R extends HasNaturalId> extends UserMetadata<ResourceAllocation.State> implements ResourceAllocation<T, R> {
   
+  protected PersistentResource( OwnerFullName owner, String displayName ) {
+    super( owner, displayName );
+  }
+
   /**
    * {@inheritDoc ResourceAllocation#currentState()}
    * 

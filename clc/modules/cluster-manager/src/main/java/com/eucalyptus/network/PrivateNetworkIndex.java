@@ -102,14 +102,14 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   private String              instanceNaturalId;
   
   private PrivateNetworkIndex( ) {
-    super( );
+    super( null, null );
     this.index = null;
     this.tag = null;
     this.network = null;
   }
   
   PrivateNetworkIndex( ExtantNetwork network, Long index ) {
-    super( );
+    super( network.getOwnerFullName( ), network.getTag( ) + ":" + index );
     this.network = network;
     this.tag = network.getTag( );
     this.index = index;
@@ -117,6 +117,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   }
   
   public PrivateNetworkIndex( Long tag, Long index ) {
+    super( null, null );
     this.tag = tag;
     this.network = null;
     this.index = index;
