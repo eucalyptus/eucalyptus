@@ -3,27 +3,23 @@
 #
 # Script to generate fake reporting data for testing of reporting.
 #
-# This generates several days worth of reporting data including many instances
-#  and storage allocations, 16 users or so, etc. It accomplishes this by
-#  calling methods in a running Eucalyptus instance in the FalseDataGenerator
-#  classes by using the CommandServlet. None of this is deployed in non-test
-#  Eucalyptus instances.
-#
 # Usage: generate_false_data adminPassword (create|delete) (instance|storage|s3)+
 #
-# NOTE: This assumes that the test classes are deployed with Eucalyptus and
-#   that Eucalyptus is running at present. Deploy the test classes from the
-#   $SRC_ROOT/clc folder, using: ant build build_test install, after you have
-#   already built and installed Eucalyptus.
+# This calls the FalseDataGenerator classes in a running Eucalyptus instance,
+#  by using the CommandServlet. The FalseDataGenerator classes then generate
+#  fake reporting data for testing. None of this is deployed in non-test
+#  Eucalyptus installations.
+#
+# NOTE: You must first deploy the test classes by stopping Euca, then:
+#   "cd $SRC/clc; ant build build_test install", then starting Euca again.
 #
 # (c)2011 Eucalyptus Systems, inc. All rights reserved.
 # author: tom.werges
 #
 
 
-#
 # Verify number of params, and display usage if wrong number
-#
+
 if [ "$#" -lt "3" ]
 then
 	echo "Usage: generate_false_data adminPassword (create|delete) (instance|storage|s3)+"
@@ -31,9 +27,8 @@ then
 fi
 
 
-#
 # Parse password and command params, and get method name
-#
+
 password=$1
 command=$2
 shift 2
@@ -52,9 +47,8 @@ case "$command" in
 esac
 
 
-#
 # Login using LoginServlet
-#
+
 wget -O /tmp/sessionId --no-check-certificate "https://localhost:8443/loginservlet?adminPw=$password"
 if [ "$?" -ne "0" ]
 then
@@ -65,9 +59,8 @@ export session=`cat /tmp/sessionId`
 echo "session id:" $session
 
 
-#
 # Parse type params and execute commands for instance, storage, and/or s3
-#
+
 for xx in ${@}
 do
 	case "$xx" in
