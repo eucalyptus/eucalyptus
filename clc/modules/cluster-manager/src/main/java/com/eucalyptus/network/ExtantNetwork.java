@@ -123,7 +123,6 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
     this.minAddr = 9l;//GRZE:FIXIT
   }
   
-  @PostPersist
   private void onCommit( ) {
     for ( Long i = this.minAddr; i < this.maxAddr; i++ ) {
       this.getIndexes( ).add( new PrivateNetworkIndex( this, i ) );
