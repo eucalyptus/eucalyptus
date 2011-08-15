@@ -127,7 +127,7 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
   void populateIndexes( ) {
     for ( Long i = this.minAddr; i < this.maxAddr; i++ ) {
       try {
-        this.getIndexes( ).add( Transactions.save( new PrivateNetworkIndex( this, i ) ) );
+        Transactions.save( new PrivateNetworkIndex( this, i ) );
       } catch ( TransactionException ex ) {
         LOG.error( ex , ex );
       }
