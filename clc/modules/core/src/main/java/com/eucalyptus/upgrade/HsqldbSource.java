@@ -43,10 +43,16 @@ public class HsqldbSource implements DatabaseSource {
           props = new Properties( );
           props.setProperty( "user", "sa" );
           props.setProperty( "password", SystemIds.databasePassword( ) );
+          // NB: readonly is HSQLDB-specific
+          props.setProperty( "readonly", "true" );
         }
       }
     }
-    Connection conn = driver.connect( url, props );
-    return new Sql( conn );
+    try {
+        Connection conn = driver.connect( url, props );
+        return new Sql( conn );
+    } catch ( SQLException e) {
+        return null;
+    }
   }
 }
