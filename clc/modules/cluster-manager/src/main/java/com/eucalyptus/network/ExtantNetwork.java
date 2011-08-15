@@ -202,15 +202,15 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
   
   public SetReference<PrivateNetworkIndex, VmInstance> allocateNetworkIndex( ) throws TransactionException {
     try {
-      if ( this.getIndexes( ).isEmpty( ) ) {
-        Transactions.one( this, new Callback<ExtantNetwork>( ) {
-          
-          @Override
-          public void fire( ExtantNetwork input ) {
+      Transactions.one( this, new Callback<ExtantNetwork>( ) {
+        
+        @Override
+        public void fire( ExtantNetwork input ) {
+          if ( input.getIndexes( ).isEmpty( ) ) {
             input.populateIndexes( );
           }
-        } );
-      }
+        }
+      } );
       return Transactions.transformOne( this, new Function<ExtantNetwork, SetReference<PrivateNetworkIndex, VmInstance>>( ) {
         
         @Override
