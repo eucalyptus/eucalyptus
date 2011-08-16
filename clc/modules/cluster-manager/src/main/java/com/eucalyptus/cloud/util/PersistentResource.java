@@ -154,9 +154,9 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
   @SuppressWarnings( "unchecked" )
   T doSetReferer( final R referer, final Resource.State preconditionState, final Resource.State finalState ) throws ResourceAllocationException {
     EntityWrapper<? extends PersistentResource> db = Entities.get( this.getClass( ) );
-    PersistentResource<T, R> input = db.getByNaturalId( this );
+    PersistentResource<T, R> thisEntity = db.getByNaturalId( this );
     try {
-      if ( preconditionState != null && !preconditionState.equals( input.getState( ) ) ) {
+      if ( thisEntity.getState( ) != null  && preconditionState != null && !preconditionState.equals( thisEntity.getState( ) ) ) {
         throw new RuntimeException( "Error allocating resource " + PersistentResource.this.getClass( ).getSimpleName( ) + " with id "
                                     + this.getDisplayName( ) + " as the state is not " + preconditionState.name( ) + " (currently "
                                     + this.getState( ) + ")." );
@@ -165,7 +165,7 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
         this.setState( finalState );
       }
       db.commit( );
-      return input.get( );
+      return thisEntity.get( );
     } catch ( Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       LOG.error( ex );
