@@ -63,12 +63,15 @@
 package com.eucalyptus.configurable;
 
 public abstract interface PropertyChangeListener {
-
+  
   /**
-   * Receiver for setValue events.  Invoked before the underlying value has been changed.  Throwing an exception will cause the property to not be set.
+   * Receiver for setValue events. Invoked before the underlying value has been changed. Throwing an
+   * exception will cause the property to not be set.
+   * 
    * @param t reference to the underlying ConfigurableProperty
    * @param newValue new value which will be set
    * @throws ConfigurablePropertyException
    */
-  public abstract void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException;  
+  public abstract void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException;
+  
 }
