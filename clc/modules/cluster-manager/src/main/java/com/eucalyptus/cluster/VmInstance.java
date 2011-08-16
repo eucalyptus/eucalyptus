@@ -164,6 +164,12 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   private final List<String>                          reasonDetails       = Lists.newArrayList( );
   @Transient
   private StringBuffer                                consoleOutput       = new StringBuffer( );
+  @Transient
+  private final ConcurrentMap<String, AttachedVolume> transientVolumes    = new ConcurrentSkipListMap<String, AttachedVolume>( );
+  @Transient
+  private final NetworkConfigType                     networkConfig       = new NetworkConfigType( );
+  @Transient
+  protected final AtomicMarkableReference<VmState>    runtimeState        = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
   
   @Column( name = "metadata_vm_reservation_id" )
   private final String                                reservationId;
@@ -189,16 +195,13 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   @ManyToOne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final SshKeyPair                            sshKeyPair;
-  @Column( name = "metadata_vm_type" )
+  @ManyToOne
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final VmType                                vmType;
-  
-  @Transient
-  private final ConcurrentMap<String, AttachedVolume> transientVolumes    = new ConcurrentSkipListMap<String, AttachedVolume>( );
-  @Transient
-  private final ConcurrentMap<String, AttachedVolume> persistentVolumes   = new ConcurrentSkipListMap<String, AttachedVolume>( );
-  @Transient
+  @Column( name = "metadata_vm_platform" )
   private String                                      platform;
-  @Transient
+  @Lob
+  @Column( name = "metadata_vm_vbr" )
   private final VmTypeInfo                            vbr;
   @ManyToMany( cascade = { CascadeType.PERSIST, CascadeType.MERGE } )
   @JoinTable( name = "metadata_metadata_vm_has_network_groups", joinColumns = { @JoinColumn( name = "metadata_vm_id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_group_id" ) } )
@@ -207,11 +210,9 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   @ManyToOne( cascade = { CascadeType.PERSIST, CascadeType.MERGE } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex                         networkIndex;
-  @Transient
-  private final NetworkConfigType                     networkConfig       = new NetworkConfigType( );
-  @Transient
-  protected final AtomicMarkableReference<VmState>    runtimeState        = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
-  
+  @Transient//TODO:GRZE:NOW
+  private final ConcurrentMap<String, AttachedVolume> persistentVolumes   = new ConcurrentSkipListMap<String, AttachedVolume>( );
+
   public VmInstance( final UserFullName owner,
                      final String instanceId, final String instanceUuid,
                      final String reservationId, final int launchIndex,
