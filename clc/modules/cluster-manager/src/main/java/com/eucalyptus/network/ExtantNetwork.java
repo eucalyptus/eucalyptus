@@ -171,7 +171,6 @@ public class ExtantNetwork extends UserMetadata<ResourceAllocation.State> implem
       exNet = db.getUnique( this );
       if ( exNet.getIndexes( ).isEmpty( ) ) {
         this.initNetworkIndexes( exNet );
-        db.commit( );
         db = Entities.get( ExtantNetwork.class );
       }
       exNet = db.getUnique( this );
@@ -192,6 +191,7 @@ public class ExtantNetwork extends UserMetadata<ResourceAllocation.State> implem
     for ( long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
       PrivateNetworkIndex netIdx = Entities.get( PrivateNetworkIndex.class ).persist( PrivateNetworkIndex.create( exNet, i ) );
       this.indexes.add( netIdx );
+      Entities.get( PrivateNetworkIndex.class ).commit( );
     }
   }
   

@@ -64,6 +64,7 @@
 package com.eucalyptus.entities;
 
 import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import com.eucalyptus.system.Ats;
@@ -72,11 +73,11 @@ import com.google.common.collect.Maps;
 public class Entities {
   private static Logger LOG = Logger.getLogger( Entities.class );
   
-  private static class DbConnectionsTl extends ThreadLocal<Map<String, EntityWrapper<?>>> {
+  private static class DbConnectionsTl extends ThreadLocal<ConcurrentMap<String, EntityWrapper<?>>> {
     DbConnectionsTl( ) {}
     
     @Override
-    protected Map<String, EntityWrapper<?>> initialValue( ) {
+    protected ConcurrentMap<String, EntityWrapper<?>> initialValue( ) {
       return Maps.newConcurrentMap( );
     }
     
@@ -88,19 +89,31 @@ public class Entities {
     private EntityWrapper<?> add( final PersistenceContext persistenceContext ) {
       EntityWrapper<?> entityWrapper = null;
       if ( this.get( ).containsKey( persistenceContext.name( ) ) ) {
-        entityWrapper = this.get( ).get( persistenceContext.name( ) );
-        if ( !entityWrapper.isActive( ) ) {
-          try {
-            entityWrapper.cleanUp( );
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
-          }
+        if ( this.checkStale( persistenceContext ) ) {
           entityWrapper = this.addEntityWrapper( persistenceContext );
+        } else {
+          entityWrapper = this.get( ).get( persistenceContext.name( ) );
         }
       } else {
         entityWrapper = this.addEntityWrapper( persistenceContext );
       }
       return entityWrapper;
+    }
+    
+    private boolean checkStale( final PersistenceContext persistenceContext ) {
+      EntityWrapper<?> entityWrapper = this.get( ).get( persistenceContext.name( ) );
+      if ( !entityWrapper.isActive( ) ) {
+        try {
+          entityWrapper.cleanUp( );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        } finally {
+          this.get( ).remove( persistenceContext.name( ) );
+        }
+        return true;
+      } else {
+        return false;
+      }
     }
     
     private EntityWrapper<?> addEntityWrapper( final PersistenceContext persistenceContext ) {
@@ -115,6 +128,11 @@ public class Entities {
       } );
       this.get( ).put( persistenceContext.name( ), entityWrapper );
       return entityWrapper;
+    }
+    
+    @Override
+    public ConcurrentMap<String, EntityWrapper<?>> get( ) {
+      return super.get( );
     }
     
   }
@@ -138,13 +156,13 @@ public class Entities {
     Class<T> klass = ( Class<T> ) obj.getClass( );
     return get( klass );
   }
-
+  
   public static void flush( ) {
     Map<String, EntityWrapper<?>> dbs = tl.get( );
     tl.remove( );
-    if( !dbs.isEmpty( ) ) {
-      for( EntityWrapper<?> db : dbs.values( ) ) {
-        if( db.isActive( ) ) {
+    if ( !dbs.isEmpty( ) ) {
+      for ( EntityWrapper<?> db : dbs.values( ) ) {
+        if ( db.isActive( ) ) {
           db.cleanUp( );
         }
       }
@@ -153,9 +171,9 @@ public class Entities {
   
   public static void commit( ) {
     Map<String, EntityWrapper<?>> dbs = tl.get( );
-    if( !dbs.isEmpty( ) ) {
-      for( EntityWrapper<?> db : dbs.values( ) ) {
-        if( db.isActive( ) ) {
+    if ( !dbs.isEmpty( ) ) {
+      for ( EntityWrapper<?> db : dbs.values( ) ) {
+        if ( db.isActive( ) ) {
           db.commit( );
         }
       }
