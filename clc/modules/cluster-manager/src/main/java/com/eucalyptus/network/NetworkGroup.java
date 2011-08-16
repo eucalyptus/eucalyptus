@@ -70,6 +70,7 @@ import java.util.HashSet;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
@@ -110,7 +111,7 @@ import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 @Table( name = "metadata_network_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements NetworkSecurityGroup<NetworkGroup> {
-  @Transient 
+  @Transient
   private static final long serialVersionUID = 1L;
   
   private static Logger     LOG              = Logger.getLogger( NetworkGroup.class );
@@ -132,9 +133,11 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   private Set<NetworkRule>      networkRules     = new HashSet<NetworkRule>( );
   
   @ManyToMany( cascade = { CascadeType.PERSIST, CascadeType.MERGE }, mappedBy = "networkGroups" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final Set<VmInstance> runningInstances = new HashSet<VmInstance>( );
   
-  @OneToOne( mappedBy = "networkGroup" )
+  @OneToOne( cascade = { CascadeType.ALL }, mappedBy = "networkGroup", fetch = FetchType.EAGER )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private ExtantNetwork         extantNetwork;
   
   NetworkGroup( ) {}

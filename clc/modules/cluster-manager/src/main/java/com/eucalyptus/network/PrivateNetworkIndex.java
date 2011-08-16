@@ -102,20 +102,20 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   private final String                     bogusId;
   @ManyToOne
   @JoinColumn( name = "metadata_network_index_extant_network" )
-  private final ExtantNetwork              network;
+  private final ExtantNetwork              extantNetwork;
   @Column( name = "metadata_network_index_vm_perm_uuid" )
   private String                           instanceNaturalId;
   
   private PrivateNetworkIndex( ) {
     super( null, null );
     this.index = null;
-    this.network = null;
+    this.extantNetwork = null;
     this.bogusId = null;
   }
   
   private PrivateNetworkIndex( ExtantNetwork network ) {
     super( null, null );
-    this.network = network;
+    this.extantNetwork = network;
     this.setState( Resource.State.FREE );
     this.bogusId = null;
     this.index = null;
@@ -123,7 +123,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   
   private PrivateNetworkIndex( ExtantNetwork network, Long index ) {
     super( network.getOwner( ), network.getTag( ) + ":" + index );
-    this.network = network;
+    this.extantNetwork = network;
     this.setState( Resource.State.FREE );
     this.bogusId = network.getTag( ) + ":" + index;
     this.index = index;
@@ -132,7 +132,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   public PrivateNetworkIndex( Integer tag, Long index ) {
     super( null, null );
     this.bogusId = tag + ":" + index;
-    this.network = null;
+    this.extantNetwork = null;
     this.index = index;
   }
   
@@ -177,8 +177,8 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
     return this.index;
   }
   
-  public ExtantNetwork getNetwork( ) {
-    return this.network;
+  public ExtantNetwork getExtantNetwork( ) {
+    return this.extantNetwork;
   }
   
   private String getBogusId( ) {
@@ -248,12 +248,12 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   
   @Override
   public int compareTo( PrivateNetworkIndex o ) {
-    if ( this.getNetwork( ) != null ) {
-      return ( this.getNetwork( ).getTag( ).equals( o.getNetwork( ).getTag( ) )
+    if ( this.getExtantNetwork( ) != null ) {
+      return ( this.getExtantNetwork( ).getTag( ).equals( o.getExtantNetwork( ).getTag( ) )
         ? this.getIndex( ).compareTo( o.getIndex( ) )
-        : this.getNetwork( ).compareTo( o.getNetwork( ) ) );
+        : this.getExtantNetwork( ).compareTo( o.getExtantNetwork( ) ) );
     } else {
-      return ( o.getNetwork( ) == null
+      return ( o.getExtantNetwork( ) == null
         ? 0
         : -1 );
     }
