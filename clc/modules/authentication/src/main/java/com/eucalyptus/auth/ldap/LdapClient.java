@@ -8,6 +8,7 @@ import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapContext;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.LdapException;
+import com.eucalyptus.auth.ldap.authentication.AuthenticationUtil;
 import com.eucalyptus.auth.ldap.authentication.LdapAuthenticatorFactory;
 
 public class LdapClient {
@@ -34,7 +35,7 @@ public class LdapClient {
                                                                                                               lic.isUseSsl( ),
                                                                                                               lic.isIgnoreSslCertValidation( ),
                                                                                                               lic.getAuthPrincipal( ),
-                                                                                                              lic.getAuthCredentials( ),
+                                                                                                              AuthenticationUtil.decryptPassword( lic.getAuthCredentials( ) ),
                                                                                                               lic.getKrb5Conf( ) );
     return new LdapClient( context );
   }

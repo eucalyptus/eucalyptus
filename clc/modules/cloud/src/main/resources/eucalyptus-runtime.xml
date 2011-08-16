@@ -72,6 +72,9 @@
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
 
 
+  <!--vm request verification pipeline -->
+  <endpoint name="StartVerifyWS" address="vm://VmVerify" synchronous="false" />
+  <endpoint name="FinishedVerifyWS" address="vm://VmVerified" synchronous="false" />
   <model name="eucalyptus-runtime">
     <default-service-exception-strategy>
       <outbound-endpoint ref="ReplyQueueEndpoint"/>
@@ -136,7 +139,7 @@
       <inbound>
         <inbound-endpoint ref="UpdateSystemWS"/>
       </inbound>
-      <component class="com.eucalyptus.sla.CreateVmInstances"/>
+      <component class="com.eucalyptus.cloud.run.CreateVmInstances"/>
       <outbound>
         <multicasting-router>
           <outbound-endpoint ref="ClusterSinkWS"/>
@@ -167,6 +170,37 @@
       </inbound>
       <component class="com.eucalyptus.vm.VmMetadata"/>
     </service>
+  </model>
+  <model name="eucalyptus-verification">
+
+    <default-service-exception-strategy>
+      <outbound-endpoint ref="ReplyQueueEndpoint" />
+    </default-service-exception-strategy>
+
+    <service name="StartVerify">
+      <inbound>
+        <inbound-endpoint ref="StartVerifyWS" />
+      </inbound>
+      <component class="com.eucalyptus.cloud.run.VerifyMetadata" />
+      <outbound>
+        <outbound-pass-through-router>
+          <outbound-endpoint ref="FinishedVerifyWS" />
+        </outbound-pass-through-router>
+      </outbound>
+    </service>
+
+    <service name="FinishedVerify">
+      <inbound>
+        <inbound-endpoint ref="FinishedVerifyWS" />
+      </inbound>
+      <component class="com.eucalyptus.cloud.run.AdmissionControl" />
+      <outbound>
+        <outbound-pass-through-router>
+          <outbound-endpoint ref="UpdateSystemWS" />
+        </outbound-pass-through-router>
+      </outbound>
+    </service>
+
   </model>
 
 </mule>

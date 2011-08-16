@@ -147,7 +147,11 @@ public class BlockStorage {
 		StorageProperties.updateWalrusUrl();
 		StorageProperties.updateName();
 		StorageProperties.updateStorageHost();
-		blockManager = BlockStorageManagerFactory.getBlockStorageManager();
+		try {
+			blockManager = BlockStorageManagerFactory.getBlockStorageManager();
+		} catch (Exception e) {
+			throw new EucalyptusCloudException(e);
+		}
 		checker = new BlockStorageChecker(blockManager);
 		if(StorageProperties.trackUsageStatistics) 
 			blockStorageStatistics = new BlockStorageStatistics();

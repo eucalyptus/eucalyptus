@@ -84,7 +84,7 @@ public class VmReplyTransform {
 
     List<String> networkNames = new ArrayList<String>();
     if ( allocInfo.getNetworks() != null ) {
-      for( Network vmNet : allocInfo.getNetworks() ) networkNames.add( vmNet.getName() );
+      for( Network vmNet : allocInfo.getNetworks() ) networkNames.add( vmNet.getNetworkName() );
     }
     ReservationInfoType reservation = new ReservationInfoType( allocInfo.getReservationId(),
                                                                ctx.getUserFullName().getNamespace( ),

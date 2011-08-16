@@ -29,5 +29,5 @@
 import eucadmin.deregisterarbitrator
 
 if __name__ == "__main__":
-    r = eucadmin.deregisterarbitrators.DeregisterArbitrator()
+    r = eucadmin.deregisterarbitrator.DeregisterArbitrator()
     r.main_cli()

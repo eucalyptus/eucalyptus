@@ -68,6 +68,7 @@ import java.io.InputStreamReader;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Vector;
 import org.apache.axiom.om.OMElement;
@@ -100,7 +101,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.Text;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.binding.HoldMe;
-
+import com.eucalyptus.ws.StackConfiguration;
 
 public class WSSecurity {
   private static Logger             LOG = Logger.getLogger( WSSecurity.class );
@@ -253,11 +254,17 @@ public class WSSecurity {
 	 
 	  Date expires = ts.getExpires().getTime();
 	 
-	  // TODO: GRZE throw an exception that will result in 
-	  // an error response sent back to the user
-	  if(!SecurityContext.validateTimestampPeriod(expires))
-		  throw new WSSecurityException("Timestamp expiration is too far in the future");
-	  
+	  if(!SecurityContext.validateTimestampPeriod(expires)) {
+	      LOG.warn("[security] ]Timestamp expiration is further in the future than replay cache expiration");
+	      //throw new WSSecurityException("Timestamp expiration is too far in the future");
+	  }
+
+	  // validate that creation time is not too far in the future
+	  Calendar now = Calendar.getInstance();
+	  now.add(Calendar.SECOND, StackConfiguration.CLOCK_SKEW_SEC);
+	  if(now.before(ts.getCreated())) {
+	      throw new WSSecurityException("Timestamp was created in the future: make sure you clocks are synchronized");
+	  }
   }
   
   /**

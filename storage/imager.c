@@ -239,6 +239,19 @@ int main (int argc, char * argv[])
         logprintfl (EUCADEBUG, "argv[]: %s\n", argv_str);
     }
 
+
+    // write pid
+    pid_t pid = getpid();
+    char pid_file[EUCA_MAX_PATH];
+    sprintf(pid_file, "%s/imager.pid", get_work_dir());
+    FILE *fp = fopen(pid_file, "w");
+    if(fp==NULL){
+         logprintfl (EUCAERROR, "could not create pid file");
+    }else {
+         fprintf(fp, "%d", pid);
+         fclose(fp);
+    }
+
     // invoke the requirements checkers in the same order as on command line,
     // constructing the artifact tree originating at 'root'
     artifact * root = NULL;

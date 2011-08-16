@@ -83,13 +83,6 @@ import com.eucalyptus.util.FullName;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 //@ConfigurableClass(root="eucalyptus",alias="vmtypes",deferred=true,singleton=false,description="Virtual Machine type definitions")
 public class VmType extends AbstractPersistent implements VirtualMachineType {
-  //TODO: enumerate.
-  public static String M1_SMALL  = "m1.small";
-  public static String M1_LARGE  = "m1.large";
-  public static String M1_XLARGE = "m1.xlarge";
-  public static String C1_MEDIUM = "c1.medium";
-  public static String C1_XLARGE = "c1.xlarge";
-  
 //  @ConfigurableIdentifier
   @Column( name = "metadata_vm_type_name" )
   private String       name;

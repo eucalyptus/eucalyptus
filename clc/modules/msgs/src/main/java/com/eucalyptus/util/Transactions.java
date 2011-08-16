@@ -16,6 +16,7 @@ import com.google.common.collect.Lists;
 public class Transactions {
   private static Logger                        LOG  = Logger.getLogger( Transactions.class );
   private static ThreadLocal<EntityWrapper<?>> dbtl = new ThreadLocal<EntityWrapper<?>>( );
+  
 //  
 //  public static <T> EntityWrapper<T> join( ) {
 //    return ( EntityWrapper<T> ) dbtl.get( );
@@ -37,8 +38,8 @@ public class Transactions {
 //        db = dbtl.get( ).recast( ( Class<T> ) search.getClass( ) );
 //      }
 //    } else {
-      db = EntityWrapper.get( search );
-      dbtl.set( db );
+    db = EntityWrapper.get( search );
+    dbtl.set( db );
 //    }
     return db;
   }
@@ -95,7 +96,16 @@ public class Transactions {
       public void fire( T t ) {}
     } );
   }
-
+  
+  public static <T> boolean delete( T search ) throws ExecutionException {
+    return delete( search, new Predicate<T>( ) {
+      
+      @Override
+      public boolean apply( T input ) {
+        return false;
+      }
+    } );
+  }
   
   public static <T> boolean delete( T search, Predicate<T> c ) throws ExecutionException {
     assertThat( search, notNullValue( ) );
@@ -103,7 +113,7 @@ public class Transactions {
     try {
       T entity = db.getUnique( search );
       boolean r = false;
-      if( r = c.apply( entity ) ) {
+      if ( r = c.apply( entity ) ) {
         db.delete( entity );
         db.commit( );
         return true;
@@ -122,7 +132,7 @@ public class Transactions {
       dbtl.remove( );
     }
   }
-
+  
   public static <T> T one( T search, Callback<T> c ) throws ExecutionException {
     assertThat( search, notNullValue( ) );
     EntityWrapper<T> db = Transactions.joinOrCreate( search );
@@ -209,7 +219,7 @@ public class Transactions {
   }
   
   public static <T> List<T> filter( T search, Predicate<T> condition ) {
-    return filteredTransform( search, condition, (Function<T,T>) Functions.identity( ) );
+    return filteredTransform( search, condition, ( Function<T, T> ) Functions.identity( ) );
   }
   
   public static <T, O> List<O> filteredTransform( T search, Predicate<T> condition, Function<T, O> transform ) {
@@ -234,6 +244,5 @@ public class Transactions {
     }
     return res;
   }
-
-
+  
 }

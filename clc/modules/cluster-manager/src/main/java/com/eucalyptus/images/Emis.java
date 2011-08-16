@@ -63,18 +63,32 @@
 
 package com.eucalyptus.images;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicyAnnotationRegistry;
+import com.eucalyptus.auth.policy.PolicyResourceType;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cloud.Image.StaticDiskImage;
+import com.eucalyptus.cloud.util.InvalidMetadataException;
+import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.cloud.util.VerificationException;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.HasOwningAccount;
 import com.eucalyptus.util.Lookup;
 import com.eucalyptus.util.Lookups;
 import com.eucalyptus.vm.VmType;
@@ -190,7 +204,7 @@ public class Emis {
                                 this.isLinux( ) );
     }
     
-    public VmTypeInfo populateVirtualBootRecord( VmType vmType ) throws EucalyptusCloudException {
+    public VmTypeInfo populateVirtualBootRecord( VmType vmType ) throws MetadataException {
       VmTypeInfo vmTypeInfo = VmTypes.asVmTypeInfo( vmType, this.getMachine( ) );
       if ( this.isLinux( ) ) {
         if ( this.hasKernel( ) ) {
@@ -232,25 +246,19 @@ public class Emis {
     }
   }
   
-  public static BootableSet newBootableSet( VmType vmType, Partition partition, String imageId ) throws EucalyptusCloudException {
+  public static BootableSet newBootableSet( VmType vmType, Partition partition, String imageId ) throws MetadataException, AuthException {
     BootableSet bootSet = null;
     try {
-      bootSet = new BootableSet( Lookups.doPrivileged( imageId, LookupMachine.INSTANCE ) );
+      bootSet = new BootableSet( doPrivileged( imageId, LookupMachine.INSTANCE ) );
     } catch ( Exception e ) {
       try {
-        bootSet = new BootableSet( Lookups.doPrivileged( imageId, LookupBlockStorage.INSTANCE ) );
-      } catch ( AuthException ex ) {
-        LOG.error( ex, ex );
-        throw new EucalyptusCloudException( ex );
+        bootSet = new BootableSet( doPrivileged( imageId, LookupBlockStorage.INSTANCE ) );
       } catch ( IllegalContextAccessException ex ) {
-        LOG.error( ex, ex );
-        throw new EucalyptusCloudException( ex );
+        throw new VerificationException( ex );
       } catch ( NoSuchElementException ex ) {
-        LOG.error( ex, ex );
-        throw new EucalyptusCloudException( ex );
+        throw new NoSuchMetadataException( ex );
       } catch ( PersistenceException ex ) {
-        LOG.error( ex, ex );
-        throw new EucalyptusCloudException( ex );
+        throw new InvalidMetadataException( ex );
       }
     }
     if ( bootSet.isLinux( ) ) {
@@ -261,53 +269,33 @@ public class Emis {
     return bootSet;
   }
   
-  private static BootableSet bootsetWithKernel( BootableSet bootSet ) throws EucalyptusCloudException {
+  private static BootableSet bootsetWithKernel( BootableSet bootSet ) throws MetadataException {
     String kernelId = determineKernelId( bootSet );
     LOG.debug( "Determined the appropriate kernelId to be " + kernelId + " for " + bootSet.toString( ) );
     try {
-      KernelImageInfo kernel = Lookups.doPrivileged( kernelId, LookupKernel.INSTANCE );
+      KernelImageInfo kernel = doPrivileged( kernelId, LookupKernel.INSTANCE );
       return new NoRamdiskBootableSet( bootSet.getMachine( ), kernel );
-    } catch ( AuthException ex ) {
-      LOG.error( ex, ex );
-      throw new EucalyptusCloudException( ex );
-    } catch ( IllegalContextAccessException ex ) {
-      LOG.error( ex, ex );
-      throw new EucalyptusCloudException( ex );
-    } catch ( NoSuchElementException ex ) {
-      LOG.error( ex, ex );
-      throw new EucalyptusCloudException( ex );
-    } catch ( PersistenceException ex ) {
-      LOG.error( ex, ex );
-      throw new EucalyptusCloudException( ex );
+    } catch ( Exception ex ) {
+      throw new NoSuchMetadataException( "Failed to lookup kernel image information: " + kernelId + " because of: " + ex.getMessage( ), ex );
     }
   }
   
-  private static BootableSet bootsetWithRamdisk( BootableSet bootSet ) throws EucalyptusCloudException {
+  private static BootableSet bootsetWithRamdisk( BootableSet bootSet ) throws MetadataException {
     String ramdiskId = determineRamdiskId( bootSet );
     LOG.debug( "Determined the appropriate ramdiskId to be " + ramdiskId + " for " + bootSet.toString( ) );
     if ( ramdiskId == null ) {
       return bootSet;
     } else {
       try {
-        RamdiskImageInfo ramdisk = Lookups.doPrivileged( ramdiskId, LookupRamdisk.INSTANCE );
+        RamdiskImageInfo ramdisk = doPrivileged( ramdiskId, LookupRamdisk.INSTANCE );
         return new TrifectaBootableSet( bootSet.getMachine( ), bootSet.getKernel( ), ramdisk );
-      } catch ( AuthException ex ) {
-        LOG.error( ex, ex );
-        throw new EucalyptusCloudException( ex );
-      } catch ( IllegalContextAccessException ex ) {
-        LOG.error( ex, ex );
-        throw new EucalyptusCloudException( ex );
-      } catch ( NoSuchElementException ex ) {
-        LOG.error( ex, ex );
-        throw new EucalyptusCloudException( ex );
-      } catch ( PersistenceException ex ) {
-        LOG.error( ex, ex );
-        throw new EucalyptusCloudException( ex );
+      } catch ( Exception ex ) {
+        throw new NoSuchMetadataException( "Failed to lookup ramdisk image information: " + ramdiskId + " because of: " + ex.getMessage( ), ex );
       }
     }
   }
   
-  private static String determineKernelId( BootableSet bootSet ) throws EucalyptusCloudException {
+  private static String determineKernelId( BootableSet bootSet ) throws MetadataException {
     BootableImageInfo disk = bootSet.getMachine( );
     String kernelId = null;
     Context ctx = null;
@@ -329,16 +317,16 @@ public class Emis {
       ? ctx.getRequest( ).toSimpleString( )
       : "UNKNOWN" ) );
     if ( kernelId == null ) {
-      throw new EucalyptusCloudException( "Unable to determine required kernel image for " + disk.getDisplayName( ) );
+      throw new NoSuchMetadataException( "Unable to determine required kernel image for " + disk.getDisplayName( ) );
     } else if ( !kernelId.startsWith( Image.Type.kernel.getTypePrefix( ) ) ) {
-      throw new EucalyptusCloudException( "Image specified is not a kernel: " + kernelId );
+      throw new InvalidMetadataException( "Image specified is not a kernel: " + kernelId );
     }
     return kernelId;
   }
   
-  private static String determineRamdiskId( BootableSet bootSet ) throws EucalyptusCloudException {
+  private static String determineRamdiskId( BootableSet bootSet ) throws MetadataException {
     if ( !bootSet.hasKernel( ) ) {
-      throw new EucalyptusCloudException( "Image specified does not have a kernel: " + bootSet );
+      throw new InvalidMetadataException( "Image specified does not have a kernel: " + bootSet );
     }
     boolean skipRamdisk = false;
     String ramdiskId = null;
@@ -369,9 +357,9 @@ public class Emis {
         ? ctx.getRequest( ).toSimpleString( )
         : "UNKNOWN" ) );
     if ( ramdiskId == null ) {
-      throw new EucalyptusCloudException( "Unable to determine required ramdisk image for " + bootSet.toString( ) );
+      throw new InvalidMetadataException( "Unable to determine required ramdisk image for " + bootSet.toString( ) );
     } else if ( !ramdiskId.startsWith( Image.Type.ramdisk.getTypePrefix( ) ) ) {
-      throw new EucalyptusCloudException( "Image specified is not a ramdisk: " + ramdiskId );
+      throw new InvalidMetadataException( "Image specified is not a ramdisk: " + ramdiskId );
     }
     return ramdiskId;
   }
@@ -391,5 +379,52 @@ public class Emis {
       LOG.error( ex, ex );
     }
   }
+  
+  /**
+   * Uses the provided {@code lookupFunction} to resolve the {@code identifier} to the underlying
+   * object {@code T} with privileges determined by the current messaging context.
+   * 
+   * @param <T> type of object which needs looking up
+   * @param identifier identifier of the desired object
+   * @param lookupFunction class which resolves string identifiers to the underlying object
+   * @return the object corresponding with the given {@code identifier}
+   * @throws AuthException if the user is not authorized
+   * @throws PersistenceException if an error occurred in the underlying retrieval mechanism
+   * @throws NoSuchElementException if the requested {@code identifier} does not exist and the user is authorized.
+   * @throws IllegalContextAccessException if the current request context cannot be determined.
+   */
+  private static <T extends ImageInfo> T doPrivileged( String identifier, Lookup<T> lookupFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + lookupFunction + " typed as " + Classes.genericsToClasses( lookupFunction ) );
+    List<Class> lookupTypes = Classes.genericsToClasses( lookupFunction );
+    if( lookupTypes.isEmpty( ) ) {
+      throw new IllegalArgumentException( "Failed to find required generic type for lookup " + lookupFunction.getClass( ) + " so the policy type for looking up " + identifier + " cannot be determined." );
+    } else {
+      PolicyResourceType type = PolicyAnnotationRegistry.extractResourceType( lookupTypes.get( 0 ) );
+      final Context ctx = Contexts.lookup( );
+      final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
+      final User requestUser = ctx.getUser( );
+      final String action = PolicySpec.requestToAction( ctx.getRequest( ) );
+
+      try {
+        T requestedObject = lookupFunction.lookup( identifier );
+        if( requestedObject == null ) {
+          throw new NoSuchElementException( "Failed to lookup requested " + type + " with id " + identifier + " using " + lookupFunction.getClass( ) ); 
+        }
+        if ( !ctx.hasAdministrativePrivileges( ) &&
+             ( !requestedObject.checkPermission( requestAccountId ) ||
+               !Permissions.isAuthorized( type.vendor( ), type.resource( ), identifier, null, action, requestUser ) ) ) {
+          throw new AuthException( "Not authorized to use " + type.resource( ) + " identified by " + identifier + " as the user " + requestUser.getName( ) );
+        }
+        return requestedObject;
+      } catch ( NoSuchElementException ex ) {
+        throw ex;
+      } catch ( AuthException ex ) {
+        throw ex;
+      } catch ( Throwable ex ) {
+        throw new PersistenceException( "Error occurred while attempting to lookup " + identifier + " using lookup: " + lookupFunction + " typed as " + Classes.genericsToClasses( lookupFunction ) );
+      }
+    }
+  }
+  
   
 }
