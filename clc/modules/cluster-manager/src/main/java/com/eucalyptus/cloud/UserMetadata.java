@@ -78,9 +78,9 @@ import com.eucalyptus.util.OwnerFullName;
 
 @MappedSuperclass
 public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMetadata<STATE> implements HasOwningUser {
-  @Transient 
+  @Transient
   private static final long serialVersionUID = 1L;
-
+  
   @Column( name = "metadata_user_id" )
   protected String          ownerUserId;
   @Column( name = "metadata_user_name" )
@@ -120,8 +120,10 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   
   @Override
   public OwnerFullName getOwner( ) {
-    OwnerFullName tempOwner = null;
-    if ( this.getOwnerUserId( ) != null ) {
+    if ( super.ownerFullNameCached != null ) {
+      return super.ownerFullNameCached;
+    } else if ( this.getOwnerUserId( ) != null ) {
+      OwnerFullName tempOwner = null;
       if ( FakePrincipals.nobodyFullName( ).getUserId( ).equals( this.getOwnerUserId( ) ) ) {
         tempOwner = FakePrincipals.nobodyFullName( );
       } else if ( FakePrincipals.systemFullName( ).getUserId( ).equals( this.getOwnerUserId( ) ) ) {
@@ -129,7 +131,7 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
       } else {
         tempOwner = UserFullName.getInstance( this.getOwnerUserId( ) );
       }
-      return tempOwner;
+      return ( super.ownerFullNameCached = tempOwner );
     } else {
       return super.getOwner( );
     }

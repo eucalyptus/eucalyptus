@@ -80,11 +80,13 @@ import com.eucalyptus.util.OwnerFullName;
 @MappedSuperclass
 public abstract class AccountMetadata<STATE extends Enum<STATE>> extends AbstractStatefulPersistent<STATE> implements HasOwningAccount {
   @Column( name = "metadata_account_id" )
-  private String ownerAccountNumber;
+  private String          ownerAccountNumber;
   @Column( name = "metadata_account_name" )
-  private String ownerAccountName;
+  private String          ownerAccountName;
   @Column( name = "metadata_unique_name", unique = true )
-  private String uniqueName;
+  private String          uniqueName;
+  @Transient
+  protected OwnerFullName ownerFullNameCached = null;
   
   /**
    * GRZE:NOTE: Should only /ever/ be used by sub classes.
@@ -115,7 +117,9 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   
   @Override
   public OwnerFullName getOwner( ) {
-    if ( this.getOwnerAccountNumber( ) != null ) {
+    if ( this.ownerFullNameCached != null ) {
+      return this.ownerFullNameCached;
+    } else if ( this.getOwnerAccountNumber( ) != null ) {
       OwnerFullName tempOwner;
       if ( FakePrincipals.nobodyFullName( ).getAccountNumber( ).equals( this.getOwnerAccountNumber( ) ) ) {
         tempOwner = FakePrincipals.nobodyFullName( );
@@ -124,7 +128,7 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
       } else {
         tempOwner = AccountFullName.getInstance( this.getOwnerAccountNumber( ) );
       }
-      return tempOwner;
+      return ( this.ownerFullNameCached = tempOwner );
     } else {
       throw new RuntimeException( "Failed to identify user with id " + this.ownerAccountNumber + " something has gone seriously wrong." );
     }
