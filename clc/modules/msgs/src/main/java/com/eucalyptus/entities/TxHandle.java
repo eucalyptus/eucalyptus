@@ -34,7 +34,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   private volatile long                                   splitTime   = 0l;
   private final Runnable                                  runnable;
   
-  public TxHandle( final String ctx, final Runnable runnable ) {
+  TxHandle( final String ctx, final Runnable runnable ) {
     this.runnable = runnable;
     this.txUuid = String.format( "%s:%s", ctx, UUID.randomUUID( ).toString( ) );
     this.owner = Threads.currentStackString( );
