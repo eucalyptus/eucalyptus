@@ -313,6 +313,16 @@ public class ServiceConfigurations {
     return lookup( example );
   }
   
+  @Deprecated//GRZE:PLS not using.
+  public static <T extends ServiceConfiguration, C extends ComponentId> T lookupByHost( final Class<C> type, final String host ) {
+    if ( !ComponentId.class.isAssignableFrom( type ) ) {
+      throw new PersistenceException( "Unknown configuration type passed: " + type.getCanonicalName( ) );
+    }
+    final T example = ( T ) ServiceBuilders.lookup( type ).newInstance( );
+    example.setHostName( host );
+    return lookup( example );
+  }
+
   public static <T extends ServiceConfiguration> List<T> list( final T type ) {
     return getProvider( ).list( type );
   }
