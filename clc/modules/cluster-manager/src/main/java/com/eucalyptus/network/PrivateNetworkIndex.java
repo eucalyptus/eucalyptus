@@ -80,6 +80,7 @@ import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cloud.util.ResourceAllocation.SetReference;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.RecoverablePersistenceException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.Logs;
@@ -254,19 +255,25 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
     }
   }
   
-  public static SetReference<PrivateNetworkIndex, VmInstance> allocateNext( ExtantNetwork exNet ) throws ResourceAllocationException {
-    List<PrivateNetworkIndex> ret = Entities.get( PrivateNetworkIndex.class ).query( PrivateNetworkIndex.free( exNet ) );
-    if ( ret.isEmpty( ) ) {
-      throw new NotEnoughResourcesAvailable( "Failed to find a free network index: " + ret );
-    } else {
-      PrivateNetworkIndex idx = ret.get( 0 );
-      try {
-        SetReference<PrivateNetworkIndex, VmInstance> setRef = idx.allocate( );
-        Entities.get( PrivateNetworkIndex.class ).commit( );
-        return setRef;
-      } catch ( ResourceAllocationException ex ) {
-        throw ex;
+  public static SetReference<PrivateNetworkIndex,VmInstance> allocateNext( ExtantNetwork exNet ) throws ResourceAllocationException {
+    return getNextIndex( exNet ).allocate( );
+  }
+  
+  private static PrivateNetworkIndex getNextIndex( ExtantNetwork exNet ) throws ResourceAllocationException {
+    EntityWrapper<PrivateNetworkIndex> db = Entities.get( PrivateNetworkIndex.class );
+    try {
+      List<PrivateNetworkIndex> ret = db.query( PrivateNetworkIndex.free( exNet ) );
+      if ( ret.isEmpty( ) ) {
+        throw new NotEnoughResourcesAvailable( "Failed to find a free network index: " + ret );
+      } else {
+        PrivateNetworkIndex idx = ret.get( 0 );
+        db.commit( );
+        return idx;
       }
+    } catch ( Exception ex ) {
+      db.rollback( );
+      Logs.extreme( ).error( ex , ex );
+      throw new ResourceAllocationException( "Failed to allocate network index: " + ex.getMessage( ), ex );
     }
   }
   

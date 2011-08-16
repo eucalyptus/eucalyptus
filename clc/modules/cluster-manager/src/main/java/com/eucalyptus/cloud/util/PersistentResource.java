@@ -67,12 +67,12 @@ import javax.persistence.MappedSuperclass;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TransactionException;
-import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.util.TransactionExecutionException;
 
 @MappedSuperclass
 public abstract class PersistentResource<T extends PersistentResource<T, R>, R extends HasNaturalId> extends UserMetadata<ResourceAllocation.State> implements ResourceAllocation<T, R> {
@@ -148,7 +148,8 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
   
   @SuppressWarnings( "unchecked" )
   T doSetReferer( final R referer, final ResourceAllocation.State preconditionState, final ResourceAllocation.State finalState ) throws ResourceAllocationException {
-    PersistentResource<T, R> input = Entities.get( this.getClass( ) ).getByNaturalId( this );
+    EntityWrapper<? extends PersistentResource> db = Entities.get( this.getClass( ) );
+    PersistentResource<T, R> input = db.getByNaturalId( this );
     try {
       if ( !preconditionState.equals( input.getState( ) ) ) {
         throw new RuntimeException( "Error allocating resource " + PersistentResource.this.getClass( ).getSimpleName( ) + " with id "
@@ -158,13 +159,13 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
         this.setReferer( referer );
         this.setState( finalState );
       }
-      Entities.get( this.getClass( ) ).commit( );
+      db.commit( );
       return input.get( );
     } catch ( Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       LOG.error( ex );
       try {
-        Entities.get( this.getClass( ) ).rollback( );
+        db.rollback( );
       } finally {
         throw new ResourceAllocationException( ex );
       }
@@ -201,7 +202,16 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
       
       @Override
       public T get( ) throws TransactionException {
-        return Transactions.naturalId( ( T ) PersistentResource.this );
+        EntityWrapper<T> db = Entities.get( ( Class<T> ) PersistentResource.this.getClass( ) );
+        try {
+          T ret = db.getByNaturalId( ( T ) PersistentResource.this );
+          db.commit( );
+          return ret;
+        } catch ( Exception ex ) {
+          Logs.extreme( ).error( ex, ex );
+          db.rollback( );
+          throw new TransactionExecutionException( ex.getMessage( ), ex );
+        }
       }
       
       @Override
