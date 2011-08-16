@@ -65,6 +65,7 @@ package com.eucalyptus.configurable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 
 public class StaticPropertyEntry extends AbstractConfigurableProperty {
@@ -87,27 +88,35 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
   
   @Override
   public String getValue( ) {
-    try {
-      return StaticDatabasePropertyEntry.lookup( this.getFieldCanonicalName( ), this.getQualifiedName( ), this.getDefaultValue( ) ).getValue( );
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
+    if ( Bootstrap.isFinished( ) ) {
+      try {
+        return StaticDatabasePropertyEntry.lookup( this.getFieldCanonicalName( ), this.getQualifiedName( ), this.getDefaultValue( ) ).getValue( );
+      } catch ( Exception e ) {
+        LOG.debug( e, e );
+        return super.getDefaultValue( );
+      }
+    } else {
       return super.getDefaultValue( );
     }
   }
   
   @Override
   public String setValue( String s ) {
-    try {
-      Object o = super.getTypeParser( ).parse( s );
-      this.fireChange( s );
-      StaticDatabasePropertyEntry.lookup( this.getFieldCanonicalName( ), this.getQualifiedName( ), s );
-      this.field.set( null, o );
-      LOG.info( "--> Set property value:  " + super.getQualifiedName( ) + " to " + s );
-    } catch ( Throwable t ) {
-      LOG.warn( "Failed to set property: " + super.getQualifiedName( ) + " because of " + t.getMessage( ) );
-      LOG.debug( t, t );
+    if ( Bootstrap.isFinished( ) ) {
+      try {
+        Object o = super.getTypeParser( ).parse( s );
+        this.fireChange( s );
+        StaticDatabasePropertyEntry.lookup( this.getFieldCanonicalName( ), this.getQualifiedName( ), s );
+        this.field.set( null, o );
+        LOG.info( "--> Set property value:  " + super.getQualifiedName( ) + " to " + s );
+      } catch ( Throwable t ) {
+        LOG.warn( "Failed to set property: " + super.getQualifiedName( ) + " because of " + t.getMessage( ) );
+        LOG.debug( t, t );
+      }
+      return this.getValue( );
+    } else {
+      return super.getDefaultValue( );
     }
-    return this.getValue( );
   }
   
   public static class StaticPropertyBuilder implements ConfigurablePropertyBuilder {
@@ -146,7 +155,7 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
         if ( Modifier.isPublic( modifiers ) && Modifier.isStatic( modifiers ) ) {
           entry = new StaticPropertyEntry( c, fqPrefix, field, description, defaultValue, p, annote.readonly( ), annote.displayName( ), annote.type( ), alias,
                                            changeListener );
-          entry.setValue( defaultValue );
+//          entry.setValue( defaultValue );
           return entry;
         }
       }
