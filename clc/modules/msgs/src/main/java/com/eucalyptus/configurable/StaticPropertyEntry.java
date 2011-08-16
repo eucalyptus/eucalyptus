@@ -92,7 +92,8 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
     if ( Bootstrap.isFinished( ) ) {
       try {
         String dbValue = StaticDatabasePropertyEntry.lookup( this.getFieldCanonicalName( ), this.getQualifiedName( ), this.safeGetFieldValue( ) ).getValue( );
-        this.field.set( null, dbValue );
+        Object o = super.getTypeParser( ).parse( dbValue );
+        this.field.set( null, o );
         return dbValue;
       } catch ( Exception e ) {
         LOG.warn( "Failed to get property: " + super.getQualifiedName( ) + " because of " + e.getMessage( ) );
