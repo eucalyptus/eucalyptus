@@ -259,7 +259,7 @@ public class EucalyptusData implements BaseData {
   }
 }
 /** *******************************************************************************/
-public class DescribeResourcesType extends EucalyptusMessage {
+public class DescribeResourcesType extends CloudClusterMessage {
   
   ArrayList<VmTypeInfo> instanceTypes = new ArrayList<VmTypeInfo>();
 }
@@ -504,6 +504,18 @@ public class VmNetworkPeer  extends EucalyptusData {
 
 
 public class CloudGatherLogMessage extends EucalyptusMessage {
+
+  public CloudGatherLogMessage( ) {
+    super( );
+  }
+
+  public CloudGatherLogMessage( EucalyptusMessage msg ) {
+    super( msg );
+  }
+
+  public CloudGatherLogMessage( String userId ) {
+    super( userId );
+  }
 }
 
 public class GetLogsType extends CloudGatherLogMessage implements Comparable {

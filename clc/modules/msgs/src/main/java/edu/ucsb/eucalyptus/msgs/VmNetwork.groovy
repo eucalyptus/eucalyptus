@@ -65,6 +65,18 @@ package edu.ucsb.eucalyptus.msgs
 import java.util.List;
 
 public class CloudClusterMessage extends EucalyptusMessage {
+  
+  public CloudClusterMessage( ) {
+    super( );
+  }
+  
+  public CloudClusterMessage( EucalyptusMessage msg ) {
+    super( msg );
+  }
+  
+  public CloudClusterMessage( String userId ) {
+    super( userId );
+  }
 }
 public class StartNetworkType extends CloudClusterMessage {
   String networkUuid;
@@ -75,7 +87,6 @@ public class StartNetworkType extends CloudClusterMessage {
   
   
   public StartNetworkType(){
-    
   }
   
   public StartNetworkType(final String userId, final Integer vlan, final String netName, final String networkUuid) {
@@ -93,7 +104,6 @@ public class StopNetworkType extends CloudClusterMessage {
   String netName;
   
   public StopNetworkType(){
-    
   }
   
   public StopNetworkType(final String userId, final String netName, final Integer vlan) {
@@ -268,7 +278,6 @@ public class ConfigureNetworkType extends CloudClusterMessage {
   }
   
   def ConfigureNetworkType(){
-    
   }
 }
 public class ConfigureNetworkResponseType extends CloudClusterMessage {

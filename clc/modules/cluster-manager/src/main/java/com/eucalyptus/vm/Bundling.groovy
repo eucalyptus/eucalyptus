@@ -71,6 +71,18 @@ import edu.ucsb.eucalyptus.msgs.Filter;
 import com.eucalyptus.binding.HttpParameterMapping;
 
 public class VmBundleMessage extends EucalyptusMessage {
+  
+  public VmBundleMessage( ) {
+    super( );
+  }
+  
+  public VmBundleMessage( EucalyptusMessage msg ) {
+    super( msg );
+  }
+  
+  public VmBundleMessage( String userId ) {
+    super( userId );
+  }
 }
 
 public class BundleInstanceType extends VmBundleMessage {
@@ -124,7 +136,9 @@ public class BundleTask extends EucalyptusData {
   String prefix;
   String errorMessage;
   String errorCode;
-  public BundleTask() {}
+  public BundleTask() {
+    
+  }
   public BundleTask( String bundleId, String instanceId, String bucket, String prefix ) {
     this.bundleId = bundleId;
     this.instanceId = instanceId;
