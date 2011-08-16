@@ -140,7 +140,12 @@ public class EntityWrapper<TYPE> {
   @SuppressWarnings( "unchecked" )
   public List<TYPE> query( TYPE example ) {
     Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
-    List<TYPE> resultList = ( List<TYPE> ) this.getSession( ).createCriteria( example.getClass( ) ).setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY ).setCacheable( true ).add( qbe ).list( );
+    List<TYPE> resultList = ( List<TYPE> ) this.getSession( )
+                                               .createCriteria( example.getClass( ) )
+                                               .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
+                                               .setCacheable( true )
+                                               .add( qbe )
+                                               .list( );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
   
@@ -451,13 +456,13 @@ public class EntityWrapper<TYPE> {
   public static <TYPE> EntityWrapper<TYPE> create( PersistenceContext persistenceContext, Runnable runnable ) {
     return new EntityWrapper<TYPE>( persistenceContext.name( ), runnable );
   }
-
+  
   protected void cleanUp( ) {
     try {
       LOG.error( "Cleaning up stray entity wrapper: " + this.tx );
       this.tx.rollback( );
     } catch ( Exception ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     }
   }
   

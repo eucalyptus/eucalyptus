@@ -73,6 +73,8 @@ import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import org.hibernate.criterion.Example;
+import org.hibernate.criterion.MatchMode;
 import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.cloud.util.PersistentResource;
 import com.eucalyptus.cloud.util.ResourceAllocation;
@@ -255,14 +257,16 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
     }
   }
   
-  public static SetReference<PrivateNetworkIndex,VmInstance> allocateNext( ExtantNetwork exNet ) throws ResourceAllocationException {
+  public static SetReference<PrivateNetworkIndex, VmInstance> allocateNext( ExtantNetwork exNet ) throws ResourceAllocationException {
     return getNextIndex( exNet ).allocate( );
   }
   
+  @SuppressWarnings( "unchecked" )
   private static PrivateNetworkIndex getNextIndex( ExtantNetwork exNet ) throws ResourceAllocationException {
     EntityWrapper<PrivateNetworkIndex> db = Entities.get( PrivateNetworkIndex.class );
     try {
-      List<PrivateNetworkIndex> ret = db.query( PrivateNetworkIndex.free( exNet ) );
+      Example ex = Example.create( PrivateNetworkIndex.free( exNet ) ).enableLike( MatchMode.EXACT );
+      List<PrivateNetworkIndex> ret = db.createCriteria( PrivateNetworkIndex.class ).setCacheable( true ).add( ex ).setMaxResults( 1 ).setFetchSize( 1 ).list( );
       if ( ret.isEmpty( ) ) {
         throw new NotEnoughResourcesAvailable( "Failed to find a free network index: " + ret );
       } else {
@@ -272,7 +276,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
       }
     } catch ( Exception ex ) {
       db.rollback( );
-      Logs.extreme( ).error( ex , ex );
+      Logs.extreme( ).error( ex, ex );
       throw new ResourceAllocationException( "Failed to allocate network index: " + ex.getMessage( ), ex );
     }
   }
