@@ -103,7 +103,6 @@ public class Properties {
         } catch ( Exception e ) {
           entry.setValue( oldValue );
         }
-        ConfigurationProperties.store( entry.getEntrySetName( ) );
         reply.setValue( entry.getValue( ) );
         reply.setName( request.getName( ) );
       } catch ( IllegalAccessException e ) {
