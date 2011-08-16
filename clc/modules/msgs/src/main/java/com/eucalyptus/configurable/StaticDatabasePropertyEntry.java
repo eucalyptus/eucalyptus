@@ -93,7 +93,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     this.value = value;
   }
   
-  static StaticDatabasePropertyEntry update( String fieldName, String propName, String newFieldValue ) {
+  static StaticDatabasePropertyEntry update( String fieldName, String propName, String newFieldValue ) throws Exception {
     EntityWrapper<StaticDatabasePropertyEntry> db = EntityWrapper.get( StaticDatabasePropertyEntry.class );
     try {
       StaticDatabasePropertyEntry dbEntry = db.getUnique( new StaticDatabasePropertyEntry( fieldName, propName, null ) );
@@ -101,24 +101,35 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       db.commit( );
       return dbEntry;
     } catch ( EucalyptusCloudException ex ) {
-      StaticDatabasePropertyEntry dbEntry = new StaticDatabasePropertyEntry( fieldName, propName, newFieldValue );
-      db.persist( dbEntry );
-      db.commit( );
+      StaticDatabasePropertyEntry dbEntry;
+      try {
+        dbEntry = new StaticDatabasePropertyEntry( fieldName, propName, newFieldValue );
+        db.persist( dbEntry );
+        db.commit( );
+      } catch ( Exception ex1 ) {
+        throw ex1;
+      }
       return dbEntry;
     }
   }
   
-  static StaticDatabasePropertyEntry lookup( String fieldName, String propName, String defaultFieldValue ) {
+  static StaticDatabasePropertyEntry lookup( String fieldName, String propName, String defaultFieldValue ) throws Exception {
     EntityWrapper<StaticDatabasePropertyEntry> db = EntityWrapper.get( StaticDatabasePropertyEntry.class );
     try {
       StaticDatabasePropertyEntry dbEntry = db.getUnique( new StaticDatabasePropertyEntry( fieldName, propName, null ) );
-      db.rollback( );
-      return dbEntry;
-    } catch ( EucalyptusCloudException ex ) {
-      StaticDatabasePropertyEntry dbEntry = new StaticDatabasePropertyEntry( fieldName, propName, defaultFieldValue );
-      db.persist( dbEntry );
       db.commit( );
       return dbEntry;
+    } catch ( EucalyptusCloudException ex ) {
+      StaticDatabasePropertyEntry dbEntry;
+      try {
+        dbEntry = new StaticDatabasePropertyEntry( fieldName, propName, defaultFieldValue );
+        db.persist( dbEntry );
+        db.commit( );
+        return dbEntry;
+      } catch ( Exception ex1 ) {
+        db.rollback( );
+        throw ex1;
+      }
     }
   }
   
@@ -133,11 +144,11 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
   public String getValue( ) {
     return this.value;
   }
-
+  
   public String getPropName( ) {
     return this.propName;
   }
-
+  
   private void setPropName( String propName ) {
     this.propName = propName;
   }

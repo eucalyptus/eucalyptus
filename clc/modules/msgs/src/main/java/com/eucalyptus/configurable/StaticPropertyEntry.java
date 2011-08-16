@@ -67,6 +67,7 @@ import java.lang.reflect.Modifier;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
+import com.eucalyptus.util.Logs;
 
 public class StaticPropertyEntry extends AbstractConfigurableProperty {
   static Logger LOG = Logger.getLogger( StaticPropertyEntry.class );
@@ -90,12 +91,28 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
   public String getValue( ) {
     if ( Bootstrap.isFinished( ) ) {
       try {
-        return StaticDatabasePropertyEntry.lookup( this.getFieldCanonicalName( ), this.getQualifiedName( ), this.getDefaultValue( ) ).getValue( );
+        String dbValue = StaticDatabasePropertyEntry.lookup( this.getFieldCanonicalName( ), this.getQualifiedName( ), this.safeGetFieldValue( ) ).getValue( );
+        this.field.set( null, dbValue );
+        return dbValue;
       } catch ( Exception e ) {
-        LOG.debug( e, e );
+        LOG.warn( "Failed to get property: " + super.getQualifiedName( ) + " because of " + e.getMessage( ) );
+        Logs.extreme( ).debug( e, e );
         return super.getDefaultValue( );
       }
     } else {
+      return super.getDefaultValue( );
+    }
+  }
+  
+  private String safeGetFieldValue( ) {
+    try {
+      Object o = this.field.get( null );
+      if ( o == null ) {
+        return super.getDefaultValue( );
+      } else {
+        return o.toString( );
+      }
+    } catch ( Exception ex ) {
       return super.getDefaultValue( );
     }
   }
@@ -106,12 +123,12 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
       try {
         Object o = super.getTypeParser( ).parse( s );
         this.fireChange( s );
-        StaticDatabasePropertyEntry.lookup( this.getFieldCanonicalName( ), this.getQualifiedName( ), s );
+        StaticDatabasePropertyEntry.update( this.getFieldCanonicalName( ), this.getQualifiedName( ), s );
         this.field.set( null, o );
         LOG.info( "--> Set property value:  " + super.getQualifiedName( ) + " to " + s );
-      } catch ( Throwable t ) {
-        LOG.warn( "Failed to set property: " + super.getQualifiedName( ) + " because of " + t.getMessage( ) );
-        LOG.debug( t, t );
+      } catch ( Exception e ) {
+        LOG.warn( "Failed to set property: " + super.getQualifiedName( ) + " because of " + e.getMessage( ) );
+        Logs.extreme( ).debug( e, e );
       }
       return this.getValue( );
     } else {
