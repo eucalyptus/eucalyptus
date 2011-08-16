@@ -191,7 +191,7 @@ public class ExtantNetwork extends UserMetadata<ResourceAllocation.State> implem
     EntityWrapper<PrivateNetworkIndex> db = Entities.get( PrivateNetworkIndex.class );
     for ( long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
       PrivateNetworkIndex newIdx = PrivateNetworkIndex.create( exNet, i );
-      PrivateNetworkIndex netIdx = db.persist( newIdx );
+      PrivateNetworkIndex netIdx = Entities.get( PrivateNetworkIndex.class ).persist( newIdx );
       this.indexes.add( netIdx );
     }
     db.commit( );
