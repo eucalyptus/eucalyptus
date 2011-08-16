@@ -74,6 +74,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.HostManager;
 import com.eucalyptus.component.TopologyChanges.CloudTopologyCallables;
@@ -119,7 +120,7 @@ public class Topology implements EventListener<Event> {
         : msgEpoch;
     }
   }
-
+  
   public static boolean check( BaseMessage msg ) {
     if ( !BootstrapArgs.isCloudController( ) && msg.get_epoch( ) != null ) {
       Integer msgEpoch = msg.get_epoch( );
@@ -129,7 +130,7 @@ public class Topology implements EventListener<Event> {
       return true;
     }
   }
-
+  
   public static Topology getInstance( ) {
     if ( singleton != null ) {
       return singleton;
@@ -194,20 +195,24 @@ public class Topology implements EventListener<Event> {
       
       @Override
       public T call( ) throws Exception {
-        Long serviceStart = System.currentTimeMillis( );
-        Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), callable.toString( ) )
-                                          .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) ) );
-        
-        try {
-          T result = callable.call( );
+        if ( Bootstrap.isShuttingDown( ) ) {
+          return null;
+        } else {
+          Long serviceStart = System.currentTimeMillis( );
+          Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), callable.toString( ) )
+                                            .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) ) );
           
-          Long finish = System.currentTimeMillis( );
-          Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), callable.toString( ) )
-                                            .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) ) );
-          return result;
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          throw ex;
+          try {
+            T result = callable.call( );
+            
+            Long finish = System.currentTimeMillis( );
+            Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), callable.toString( ) )
+                                              .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) ) );
+            return result;
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+            throw ex;
+          }
         }
       }
     } );
@@ -220,20 +225,24 @@ public class Topology implements EventListener<Event> {
       
       @Override
       public ServiceConfiguration call( ) throws Exception {
-        Long serviceStart = System.currentTimeMillis( );
-        Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
-                                          .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) ) );
-        try {
-          ServiceConfiguration result = function.apply( config );
-          
-          Long finish = System.currentTimeMillis( );
-          Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
-                                            .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) ) );
-          return result;
-        } catch ( Exception ex ) {
-          Logs.exhaust( ).error( ex, ex );
-          LOG.error( ex );
-          throw ex;
+        if ( Bootstrap.isShuttingDown( ) ) {
+          return null;
+        } else {
+          Long serviceStart = System.currentTimeMillis( );
+          Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
+                                            .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) ) );
+          try {
+            ServiceConfiguration result = function.apply( config );
+            
+            Long finish = System.currentTimeMillis( );
+            Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
+                                              .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) ) );
+            return result;
+          } catch ( Exception ex ) {
+            Logs.exhaust( ).error( ex, ex );
+            LOG.error( ex );
+            throw ex;
+          }
         }
       }
     } );
@@ -247,24 +256,28 @@ public class Topology implements EventListener<Event> {
       
       @Override
       public ServiceConfiguration call( ) throws Exception {
-        Long serviceStart = System.currentTimeMillis( );
-        EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
-                   .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) )
-                   .info( );
-        
-        try {
-          ServiceConfiguration result = function.apply( config );
-          
-          Long finish = System.currentTimeMillis( );
-          EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
-                     .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) )
+        if ( Bootstrap.isShuttingDown( ) ) {
+          return null;
+        } else {
+          Long serviceStart = System.currentTimeMillis( );
+          EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
+                     .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) )
                      .info( );
           
-          return result;
-        } catch ( Exception ex ) {
-          Logs.exhaust( ).error( ex, ex );
-          LOG.error( ex );
-          throw ex;
+          try {
+            ServiceConfiguration result = function.apply( config );
+            
+            Long finish = System.currentTimeMillis( );
+            EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
+                       .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) )
+                       .info( );
+            
+            return result;
+          } catch ( Exception ex ) {
+            Logs.exhaust( ).error( ex, ex );
+            LOG.error( ex );
+            throw ex;
+          }
         }
       }
     } );
