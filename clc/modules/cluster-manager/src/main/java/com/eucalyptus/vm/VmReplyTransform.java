@@ -93,7 +93,7 @@ public class VmReplyTransform {
     } );
     ReservationInfoType reservation = new ReservationInfoType( allocInfo.getReservationId( ),
                                                                ctx.getUserFullName( ).getNamespace( ),
-                                                               networkNames );
+                                                               Lists.newArrayList( networkNames ) );
     
     for ( ResourceToken allocToken : allocInfo.getAllocationTokens( ) ) {
       VmInstance vm = VmInstances.getInstance( ).lookup( allocToken.getInstanceId( ) );
