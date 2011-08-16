@@ -47,7 +47,7 @@ public class Exceptions {
   }
   public static <T extends Throwable> String string( T ex ) {
     Throwable t = ( ex == null ? new RuntimeException() : ex );
-    String allMessages = Joiner.on( '\n' ).join( Exceptions.causes( ex ) );
+    String allMessages = causeString( ex );
     ByteArrayOutputStream os = new ByteArrayOutputStream( );
     PrintWriter p = new PrintWriter( os );
     p.println( allMessages );
@@ -59,6 +59,10 @@ public class Exceptions {
     }
     p.close( );
     return os.toString( );
+  }
+
+  public static <T> String causeString( T ex ) {
+    return Joiner.on( "\nCaused by: " ).join( Exceptions.causes( ex ) );
   }
   
   public static <T extends Throwable> UndeclaredThrowableException undeclared( String message, T ex ) {

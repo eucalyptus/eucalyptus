@@ -69,6 +69,19 @@ import com.eucalyptus.binding.HttpParameterMapping
 
 @PolicyResourceType( "keypair" )//GRZE:WHINE: this needs to be a string in order to avoid build-deps cycle
 public class VmKeyPairMessage extends EucalyptusMessage {
+  
+  public VmKeyPairMessage( ) {
+    super( );
+  }
+  
+  public VmKeyPairMessage( EucalyptusMessage msg ) {
+    super( msg );
+  }
+  
+  public VmKeyPairMessage( String userId ) {
+    super( userId );
+  }
+  
 }
 /** *******************************************************************************/
 public class CreateKeyPairResponseType extends VmKeyPairMessage {

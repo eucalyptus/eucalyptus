@@ -70,6 +70,18 @@ import com.eucalyptus.binding.HttpParameterMapping
 
 @PolicyResourceType( "securitygroup" )
 public class VmSecurityMessage extends EucalyptusMessage{
+  
+  public VmSecurityMessage( ) {
+    super( );
+  }
+  
+  public VmSecurityMessage( EucalyptusMessage msg ) {
+    super( msg );
+  }
+  
+  public VmSecurityMessage( String userId ) {
+    super( userId );
+  }
 }
 /** *******************************************************************************/
 public class AuthorizeSecurityGroupIngressResponseType extends VmSecurityMessage {

@@ -95,6 +95,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Assertions;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.Templates;
 import com.eucalyptus.util.async.Futures;
@@ -133,6 +134,7 @@ public class ServiceContextManager {
                   try {
                     ServiceContextManager.this.update( );
                   } catch ( Throwable ex ) {
+                    LOG.error( Exceptions.causeString( ex ) );
                     LOG.error( ex, ex );
                   } finally {
                     ServiceContextManager.this.canHasWrite.unlock( );
