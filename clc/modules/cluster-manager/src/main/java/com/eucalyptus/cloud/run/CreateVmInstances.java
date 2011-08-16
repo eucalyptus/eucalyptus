@@ -108,7 +108,7 @@ public class CreateVmInstances {
     for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
       try {
         VmInstance vmInst = makeVmInstance( token );
-        VmInstances.getInstance( ).register( vmInst );
+        VmInstances.register( vmInst );
       } catch ( TransactionException ex ) {
         LOG.error( ex, ex );
       }

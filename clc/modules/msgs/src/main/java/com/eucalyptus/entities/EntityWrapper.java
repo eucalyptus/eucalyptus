@@ -73,6 +73,8 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
+import org.hibernate.NonUniqueResultException;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.criterion.Example;
@@ -171,29 +173,49 @@ public class EntityWrapper<TYPE> {
     if ( Logs.EXTREME ) {
       Logs.extreme( ).debug( Joiner.on( ":" ).join( EventType.PERSISTENCE, DbEvent.UNIQUE.begin( ), this.tx.getTxUuid( ) ) );
     }
-    Object id = null;
     try {
-      id = this.getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
-    } catch ( Exception ex ) {}
-    if ( id != null ) {
-      TYPE res = ( TYPE ) this.getEntityManager( ).find( example.getClass( ), id );
-      if ( res == null ) {
-        throw new EucalyptusCloudException( "Get unique failed (returning 0 results for " + LogUtil.dumpObject( example ) );
+      Object id = null;
+      try {
+        id = this.getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
+      } catch ( Exception ex ) {}
+      if ( id != null ) {
+        TYPE res = ( TYPE ) this.getEntityManager( ).find( example.getClass( ), id );
+        if ( res == null ) {
+          throw new NoSuchElementException( "@Id: " + id );
+        } else {
+          return res;
+        }
+      } else if ( example instanceof HasNaturalId && ( ( HasNaturalId ) example ).getNaturalId( ) != null ) {
+        String natId = ( ( HasNaturalId ) example ).getNaturalId( );
+        TYPE ret = ( TYPE ) this.createCriteria( example.getClass( ) )
+                                .add( Restrictions.naturalId( ).set( "naturalId", natId ) )
+                                .setCacheable( true )
+                                .setMaxResults( 1 )
+                                .setFetchSize( 1 )
+                                .uniqueResult( );
+        if ( ret == null ) {
+          throw new NoSuchElementException( "@NaturalId: " + natId );
+        }
+        return ret;
       } else {
-        return res;
+        TYPE ret = ( TYPE ) this.createCriteria( example.getClass( ) )
+                                .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
+                                .setCacheable( true )
+                                .setMaxResults( 1 )
+                                .setFetchSize( 1 )
+                                .uniqueResult( );
+        if ( ret == null ) {
+          throw new NoSuchElementException( "example: " + LogUtil.dumpObject( example ) );
+        }
+        return ret;
       }
-    } else if ( example instanceof HasNaturalId && ( ( HasNaturalId ) example ).getNaturalId( ) != null ) {
-      TYPE ret = ( TYPE ) this.createCriteria( example.getClass( ) )
-                              .add( Restrictions.naturalId( ).set( "naturalId", ( ( HasNaturalId ) example ).getNaturalId( ) ) )
-                              .setCacheable( true )
-                              .uniqueResult( );
-      return ret;
-    } else {
-      List<TYPE> res = this.query( example );
-      if ( res.size( ) != 1 ) {
-        throw new EucalyptusCloudException( "Get unique failed (returning " + res.size( ) + " results for " + LogUtil.dumpObject( example ) );
-      }
-      return res.get( 0 );
+    } catch ( NonUniqueResultException ex ) {
+      throw new EucalyptusCloudException( "Get unique failed for " + example.getClass( ).getSimpleName( ) + " because " + ex.getMessage( ), ex );
+    } catch ( NoSuchElementException ex ) {
+      throw new EucalyptusCloudException( "Get unique failed for " + example.getClass( ).getSimpleName( ) + " using " + ex.getMessage( ), ex );
+    } catch ( Exception ex ) {
+      RecoverablePersistenceException newEx = PersistenceErrorFilter.exceptionCaught( ex );
+      throw new EucalyptusCloudException( "Get unique failed for " + example.getClass( ).getSimpleName( ) + " because " + newEx.getMessage( ), newEx );
     }
   }
   

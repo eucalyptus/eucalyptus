@@ -308,7 +308,7 @@ public class SystemState {
                                       new PrivateNetworkIndex( runVm.getNetParams( ).getVlan( ), runVm.getNetParams( ).getNetworkIndex( ) ) );
       vm.clearPending( );
       vm.updatePublicAddress( VmInstance.DEFAULT_IP );
-      VmInstances.getInstance( ).register( vm );
+      VmInstances.register( vm );
     } catch ( NoSuchElementException e ) {
       ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
       AsyncRequests.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
