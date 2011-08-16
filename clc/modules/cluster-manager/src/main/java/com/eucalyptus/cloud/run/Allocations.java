@@ -155,12 +155,13 @@ public class Allocations {
       }
       this.reservationIndex = Counters.getIdBlock( request.getMaxCount( ) );
       this.reservationId = VmInstances.getId( this.reservationIndex, 0 ).replaceAll( "i-", "r-" );
+      byte[] tmpData = new byte[0];
       if ( this.request.getUserData( ) != null ) {
         try {
-          this.userData = Base64.decode( this.request.getUserData( ) );
+          tmpData = Base64.decode( this.request.getUserData( ) );
+          this.request.setUserData( new String( Base64.encode( tmpData ) ) );
         } catch ( Exception e ) {}
       }
-      this.request.setUserData( new String( Base64.encode( this.userData ) ) );
     }
     
     public RunInstancesType getRequest( ) {
