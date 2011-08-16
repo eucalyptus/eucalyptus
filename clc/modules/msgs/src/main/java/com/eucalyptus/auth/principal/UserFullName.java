@@ -64,15 +64,19 @@
 package com.eucalyptus.auth.principal;
 
 import java.lang.reflect.UndeclaredThrowableException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Objects;
+import com.google.gwt.thirdparty.guava.common.collect.Maps;
 import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class UserFullName implements OwnerFullName {
+  private static ConcurrentMap<String, UserFullName> userIdMap = Maps.newConcurrentMap( );
   
   @Override
   public String getAccountNumber( ) {
@@ -130,12 +134,16 @@ public class UserFullName implements OwnerFullName {
   }
   
   public static UserFullName getInstance( String userId, String... relativePath ) {
-    try {
-      return getInstance( Accounts.lookupUserById( userId ), relativePath );
-    } catch ( AuthException ex ) {
-      throw new UndeclaredThrowableException( ex );
-    }
-    
+    if ( userIdMap.containsKey( userId ) ) {
+      return userIdMap.get( userId );
+    } else {
+      try {
+        userIdMap.put( userId, getInstance( Accounts.lookupUserById( userId ), relativePath ) );
+        return userIdMap.get( userId );
+      } catch ( AuthException ex ) {
+        throw new UndeclaredThrowableException( ex );
+      }
+    }    
   }
   
   public static UserFullName getInstance( User user, String... relativePath ) {
