@@ -45,6 +45,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.async.AsyncRequests;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ComponentMessageType;
 
@@ -64,10 +65,10 @@ public class ComponentService {
   		if(service.isVmLocal()) {//send direct to local component using mule registry directly
         reply = ServiceContext.send(service.getComponentId().getLocalEndpointName(),request);
    		} else {//send remote
-  			reply = service.lookupService().getDispatcher().send(request);
+        reply = AsyncRequests.sendSync(service,request);
    		}
       return reply;
-    } catch (Exception e) {
+    } catch (Throwable e) {
       LOG.error(e);
       throw new EucalyptusCloudException("Unable to dispatch message to: "+service.getName());
     }
