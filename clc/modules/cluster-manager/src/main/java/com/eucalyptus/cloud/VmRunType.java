@@ -201,7 +201,7 @@ public class VmRunType extends CloudClusterMessage {
     return String.format(
                           "VmRunType [instanceIds=%s, keyInfo=%s, launchIndex=%s, amount=%s, networkIndexList=%s, networkNames=%s, reservationId=%s, userData=%s, vlan=%s, vmTypeInfo=%s]",
                           this.instanceId, this.keyInfo, this.launchIndex,
-                          this.amount, this.networkIndex, this.networkNames, this.reservationId,
+                          this.minCount, this.networkIndex, this.networkNames, this.reservationId,
                           this.userData, this.vlan, this.vmTypeInfo );
   }
   
@@ -258,7 +258,7 @@ public class VmRunType extends CloudClusterMessage {
   }
   
   public Integer getAmount( ) {
-    return this.amount;
+    return this.minCount;
   }
   
   public int getVlan( ) {
