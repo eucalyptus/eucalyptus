@@ -90,6 +90,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
   
   private StaticDatabasePropertyEntry( ) {
     super( );
+    this.fieldName = null;
   }
 
   private StaticDatabasePropertyEntry( String fieldName, String propName, String value ) {
