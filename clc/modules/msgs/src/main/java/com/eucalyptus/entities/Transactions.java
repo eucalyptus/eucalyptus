@@ -4,6 +4,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
@@ -23,26 +24,24 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
 
 public class Transactions {
-  private static Logger               LOG   = Logger.getLogger( Transactions.class );
-  private static ThreadLocal<Integer> depth = new ThreadLocal<Integer>( ) {
-                                              
-                                              @Override
-                                              protected Integer initialValue( ) {
-                                                return 0;
-                                              }
-                                              
-                                            };
+  private static Logger                     LOG   = Logger.getLogger( Transactions.class );
+  private static ThreadLocal<AtomicInteger> depth = new ThreadLocal<AtomicInteger>( ) {
+                                                    
+                                                    @Override
+                                                    protected AtomicInteger initialValue( ) {
+                                                      return new AtomicInteger( 0 );
+                                                    }
+                                                    
+                                                  };
   
   public static <T> EntityWrapper<T> get( T obj ) {
+    depth.get( ).incrementAndGet( );
     return Entities.get( obj );
   }
   
   public static void pop( ) {
-    Integer nextLevel = depth.get( ) - 1;
-    depth.set( nextLevel > 0
-      ? nextLevel
-      : 0 );
-    if ( depth.get( ) == 0 ) {
+    Integer nextLevel = depth.get( ).decrementAndGet( );
+    if ( nextLevel <= 0 ) {
       Entities.commit( );
       depth.remove( );
     }
