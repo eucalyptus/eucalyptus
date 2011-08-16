@@ -123,7 +123,7 @@ public class VmRunType extends CloudClusterMessage {
     }
     
     public VmRunType.Builder networkNames( List<NetworkGroup> list ) {
-      for( NetworkGroup g : list ) {
+      for ( NetworkGroup g : list ) {
         this.buildit.getNetworkNames( ).add( g.getClusterNetworkName( ) );
       }
       return this;
@@ -150,7 +150,7 @@ public class VmRunType extends CloudClusterMessage {
       assertThat( this.buildit.getVmTypeInfo( ), notNullValue( ) );
       return this.buildit;
     }
-
+    
     public VmRunType.Builder owner( UserFullName ownerFullName ) {
       this.buildit.setUserId( ownerFullName.getUserId( ) );
       return this;
@@ -168,7 +168,8 @@ public class VmRunType extends CloudClusterMessage {
   @Nullable
   private String        userData;
   private String        platform;
-  private final Integer amount       = 1;
+  private final Integer maxCount     = 1;
+  private final Integer minCount     = 1;
   private Integer       vlan;
   private Integer       launchIndex;
   private VmTypeInfo    vmTypeInfo;

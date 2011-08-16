@@ -135,8 +135,8 @@
     <structure usage="optional">
       <structure field="keyInfo" map-as="edu.ucsb.eucalyptus.cloud.VmKeyInfo" />
     </structure>
-    <value name="maxCount" field="amount" usage="required" />
-    <value name="minCount" field="amount" usage="required" />
+    <value name="maxCount" field="maxCount" usage="required" />
+    <value name="minCount" field="minCount" usage="required" />
     <value name="reservationId" field="reservationId" usage="required" />
     <value name="minCount" field="amount" usage="required" />
     <value name="instanceIds"  field="instanceId" />
