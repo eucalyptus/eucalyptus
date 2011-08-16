@@ -164,22 +164,22 @@ public class VmRunType extends CloudClusterMessage {
   
   /** these are for more convenient binding later on but really should be done differently... sigh **/
   
-  private String        reservationId;
+  private String       reservationId;
   @Nullable
-  private String        userData;
-  private String        platform;
-  private final Integer maxCount     = 1;
-  private final Integer minCount     = 1;
-  private Integer       vlan;
-  private Integer       launchIndex;
-  private VmTypeInfo    vmTypeInfo;
+  private String       userData;
+  private String       platform;
+  private Integer      maxCount     = 1;
+  private Integer      minCount     = 1;
+  private Integer      vlan;
+  private Integer      launchIndex;
+  private VmTypeInfo   vmTypeInfo;
   @Nullable
-  private VmKeyInfo     keyInfo;
-  private String        instanceId;
-  private String        uuid;
-  private String        macAddress;
-  private List<String>  networkNames = new ArrayList<String>( );
-  private Long          networkIndex;
+  private VmKeyInfo    keyInfo;
+  private String       instanceId;
+  private String       uuid;
+  private String       macAddress;
+  private List<String> networkNames = new ArrayList<String>( );
+  private Long         networkIndex;
   
   VmRunType( ) {}
   
@@ -261,7 +261,7 @@ public class VmRunType extends CloudClusterMessage {
     return this.minCount;
   }
   
-  public int getVlan( ) {
+  public Integer getVlan( ) {
     return this.vlan;
   }
   
