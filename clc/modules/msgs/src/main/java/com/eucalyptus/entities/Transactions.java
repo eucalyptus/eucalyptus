@@ -34,7 +34,7 @@ public class Transactions {
                                             };
   
   public static <T> EntityWrapper<T> get( T obj ) {
-    return Transactions.get( obj );
+    return Entities.get( obj );
   }
   
   public static void pop( ) {
