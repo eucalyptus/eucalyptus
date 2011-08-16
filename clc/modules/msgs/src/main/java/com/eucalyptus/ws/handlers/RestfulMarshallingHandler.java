@@ -167,6 +167,9 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
           httpResponse.setStatus( HttpResponseStatus.BAD_REQUEST );
         } else if ( httpResponse.getMessage( ) instanceof ExceptionResponseType ) {//handle error case specially
           ExceptionResponseType msg = ( ExceptionResponseType ) httpResponse.getMessage( );
+          if( msg.getException( ) != null ) {
+            Logs.extreme( ).debug( msg, msg.getException( ) );
+          }
           String response = Binding.createRestFault( msg.getRequestType( ), msg.getMessage( ), Exceptions.string( msg.getException( ) ) );
           byteOut.write( response.getBytes( ) );
           httpResponse.setStatus( msg.getHttpStatus( ) );
