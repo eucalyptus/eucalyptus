@@ -18,30 +18,35 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   private static Logger LOG = Logger.getLogger( DynamicSystemAddressManager.class );
   
-  
   @Override
   public List<Address> allocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesAvailable {
-    if ( Addresses.getInstance( ).listDisabledValues( ).size( ) < count ) throw new NotEnoughResourcesAvailable(
-                                                                                                                 "Not enough resources available: addresses (try --addressing private)" );
-    List<Address> addressList = Lists.newArrayList( );
-    for ( Address addr : Addresses.getInstance( ).listDisabledValues( ) ) {
-      try {
-        if ( partition.equals( addr.getPartition( ) ) && addressList.add( addr.pendingAssignment( ) ) && --count == 0 ) break;
-      } catch ( IllegalStateException e ) {
-        LOG.trace( e, e );
-      }
-    }
-    if ( count != 0 ) {
-      for ( Address addr : addressList ) {
+    if ( Addresses.getInstance( ).listDisabledValues( ).size( ) < count ) {
+      throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
+    } else {
+      List<Address> addressList = Lists.newArrayList( );
+      for ( Address addr : Addresses.getInstance( ).listDisabledValues( ) ) {
         try {
-          addr.release( );
+          if ( partition.getName( ).equals( addr.getPartition( ) )
+               && addressList.add( addr.pendingAssignment( ) ) 
+               && --count == 0 ) {
+            break;
+          }
         } catch ( IllegalStateException e ) {
-          LOG.error( e, e );
+          LOG.trace( e, e );
         }
       }
-      throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
+      if ( count != 0 ) {
+        for ( Address addr : addressList ) {
+          try {
+            addr.release( );
+          } catch ( IllegalStateException e ) {
+            LOG.error( e, e );
+          }
+        }
+        throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
+      }
+      return addressList;
     }
-    return addressList;
   }
   
   @Override
