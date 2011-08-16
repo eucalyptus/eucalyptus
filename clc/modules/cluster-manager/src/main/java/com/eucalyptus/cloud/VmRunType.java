@@ -78,6 +78,8 @@ import edu.ucsb.eucalyptus.msgs.CloudClusterMessage;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmRunType extends CloudClusterMessage {
+  private static final long serialVersionUID = 1L;
+  
   public static class Builder {
     private final VmRunType buildit = new VmRunType( );
     
