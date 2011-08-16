@@ -122,7 +122,7 @@ public class Entities {
         
         @Override
         public void run( ) {
-          DbConnectionsTl.this.get( ).remove( persistenceContext.name( ) );
+          tl.get( ).remove( persistenceContext.name( ) );
         }
         
       } );
