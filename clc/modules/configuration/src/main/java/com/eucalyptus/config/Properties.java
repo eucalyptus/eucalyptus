@@ -4,7 +4,6 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableProperty;
-import com.eucalyptus.configurable.ConfigurationProperties;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.scripting.Groovyness;
