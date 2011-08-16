@@ -100,7 +100,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       dbEntry.setValue( newFieldValue );
       db.commit( );
       return dbEntry;
-    } catch ( EucalyptusCloudException ex ) {
+    } catch ( Exception ex ) {
       StaticDatabasePropertyEntry dbEntry;
       try {
         dbEntry = new StaticDatabasePropertyEntry( fieldName, propName, newFieldValue );
@@ -119,7 +119,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       StaticDatabasePropertyEntry dbEntry = db.getUnique( new StaticDatabasePropertyEntry( fieldName, propName, null ) );
       db.commit( );
       return dbEntry;
-    } catch ( EucalyptusCloudException ex ) {
+    } catch ( Exception ex ) {
       StaticDatabasePropertyEntry dbEntry;
       try {
         dbEntry = new StaticDatabasePropertyEntry( fieldName, propName, defaultFieldValue );
