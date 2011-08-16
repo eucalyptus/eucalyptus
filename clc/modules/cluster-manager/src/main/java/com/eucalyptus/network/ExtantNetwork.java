@@ -118,6 +118,18 @@ public class ExtantNetwork extends UserMetadata<ResourceAllocation.State> implem
     super( );
   }
   
+  private ExtantNetwork( final Integer tag ) {
+    super( null, null );
+    this.tag = tag;
+  }
+  
+  public static ExtantNetwork named( Integer tag ) {
+    return new ExtantNetwork( tag );
+  }
+  
+  public static ExtantNetwork create( final NetworkGroup networkGroup, final Integer tag ) {
+    return new ExtantNetwork( networkGroup, tag );
+  }
   public ExtantNetwork( final NetworkGroup networkGroup, final Integer tag ) {
     super( networkGroup.getOwner( ), networkGroup.getDisplayName( ) + ":" + tag );
     this.tag = tag;

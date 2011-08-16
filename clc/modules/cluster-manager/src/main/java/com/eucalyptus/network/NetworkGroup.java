@@ -86,6 +86,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
+import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.cloud.CloudMetadata.NetworkSecurityGroup;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cluster.VmInstance;
@@ -95,6 +96,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Logs;
+import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.async.Callback;
@@ -108,7 +110,12 @@ import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 @Table( name = "metadata_network_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements NetworkSecurityGroup<NetworkGroup> {
-  private static Logger LOG = Logger.getLogger( NetworkGroup.class );
+  /**
+   * 
+   */
+  private static final long serialVersionUID = 1L;
+  
+  private static Logger     LOG              = Logger.getLogger( NetworkGroup.class );
   
   public enum State {
     DISABLED,
@@ -118,19 +125,19 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   }
   
   @Column( name = "metadata_network_group_description" )
-  private String           description;
+  private String                description;
   
   @OneToMany( cascade = { CascadeType.ALL } )
   @Fetch( FetchMode.JOIN )
   @JoinTable( name = "metadata_network_group_has_rules", joinColumns = { @JoinColumn( name = "id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_rule_id" ) } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<NetworkRule> networkRules     = new HashSet<NetworkRule>( );
+  private Set<NetworkRule>      networkRules     = new HashSet<NetworkRule>( );
   
   @ManyToMany( cascade = { CascadeType.PERSIST, CascadeType.MERGE }, mappedBy = "networkGroups" )
-  private Set<VmInstance>  runningInstances = new HashSet<VmInstance>( );
+  private final Set<VmInstance> runningInstances = new HashSet<VmInstance>( );
   
   @OneToOne( mappedBy = "networkGroup" )
-  private ExtantNetwork    extantNetwork;
+  private ExtantNetwork         extantNetwork;
   
   NetworkGroup( ) {}
   
@@ -151,7 +158,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   /**
    * @param naturalId
    */
-  private NetworkGroup( String naturalId ) {
+  private NetworkGroup( final String naturalId ) {
     this.setNaturalId( naturalId );
   }
   
@@ -168,7 +175,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     return this.description;
   }
   
-  protected void setDescription( String description ) {
+  protected void setDescription( final String description ) {
     this.description = description;
   }
   
@@ -176,7 +183,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     return this.networkRules;
   }
   
-  private void setNetworkRules( Set<NetworkRule> networkRules ) {
+  private void setNetworkRules( final Set<NetworkRule> networkRules ) {
     this.networkRules = networkRules;
   }
   
@@ -193,7 +200,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
 //  }
   
   public Collection<PacketFilterRule> lookupPacketFilterRules( ) {
-    Collection<PacketFilterRule> pfRules = Collections2.transform( this.getNetworkRules( ), this.ruleTransform );
+    final Collection<PacketFilterRule> pfRules = Collections2.transform( this.getNetworkRules( ), this.ruleTransform );
     return pfRules;
   }
   
@@ -221,11 +228,11 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   }
   
   @Override
-  public boolean equals( Object obj ) {
+  public boolean equals( final Object obj ) {
     if ( this == obj ) return true;
     if ( !super.equals( obj ) ) return false;
-    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
-    NetworkGroup other = ( NetworkGroup ) obj;
+    if ( !this.getClass( ).equals( obj.getClass( ) ) ) return false;
+    final NetworkGroup other = ( NetworkGroup ) obj;
     if ( this.getUniqueName( ) == null ) {
       if ( other.getUniqueName( ) != null ) return false;
     } else if ( !this.getUniqueName( ).equals( other.getUniqueName( ) ) ) return false;
@@ -241,23 +248,23 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   private final Function<NetworkRule, PacketFilterRule> ruleTransform = new Function<NetworkRule, PacketFilterRule>( ) {
                                                                         
                                                                         @Override
-                                                                        public PacketFilterRule apply( NetworkRule from ) {
-                                                                          PacketFilterRule pfrule = new PacketFilterRule(
-                                                                                                                          NetworkGroup.this.getOwnerAccountNumber( ),
-                                                                                                                          NetworkGroup.this.getDisplayName( ),
-                                                                                                                          from.getProtocol( ),
-                                                                                                                          from.getLowPort( ),
-                                                                                                                          from.getHighPort( ) );
-                                                                          for ( IpRange cidr : from.getIpRanges( ) )
+                                                                        public PacketFilterRule apply( final NetworkRule from ) {
+                                                                          final PacketFilterRule pfrule = new PacketFilterRule(
+                                                                                                                                NetworkGroup.this.getOwnerAccountNumber( ),
+                                                                                                                                NetworkGroup.this.getDisplayName( ),
+                                                                                                                                from.getProtocol( ),
+                                                                                                                                from.getLowPort( ),
+                                                                                                                                from.getHighPort( ) );
+                                                                          for ( final IpRange cidr : from.getIpRanges( ) )
                                                                             pfrule.getSourceCidrs( ).add( cidr.getValue( ) );
-                                                                          for ( NetworkPeer peer : from.getNetworkPeers( ) )
+                                                                          for ( final NetworkPeer peer : from.getNetworkPeers( ) )
                                                                             pfrule.addPeer( peer.getUserQueryKey( ), peer.getGroupName( ) );
                                                                           return pfrule;
                                                                         }
                                                                       };
   
   @Override
-  public int compareTo( NetworkGroup that ) {
+  public int compareTo( final NetworkGroup that ) {
     return this.getUniqueName( ).compareTo( that.getUniqueName( ) );
   }
   
@@ -265,34 +272,37 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     return this.getOwnerUserId( ) + "-" + this.getNaturalId( );
   }
   
-  public ExtantNetwork extantNetwork( ) {
+  public ExtantNetwork extantNetwork( ) throws NotEnoughResourcesAvailable {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       return ExtantNetwork.bogus( this );
     } else if ( this.extantNetwork == null ) {
-      try {
-        NetworkGroup newNetGroup = Transactions.naturalId( new NetworkGroup( this.getNaturalId( ) ), new Callback<NetworkGroup>( ) {
-          
-          @Override
-          public void fire( NetworkGroup input ) {
-            if ( input.getExtantNetwork( ) == null ) {
-              for ( int i = NetworkGroups.networkingConfiguration( ).getMinNetworkTag( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkTag( ); i++ ) {
-                EntityWrapper<ExtantNetwork> db = EntityWrapper.get( ExtantNetwork.class );
-                try {
-                  ExtantNetwork newExNet = new ExtantNetwork( NetworkGroup.this );
-                  db.add( newExNet );
-                  db.commit( );
-                } catch ( Exception ex ) {
-                  LOG.error( "Failed to add extant network: " + extantNetwork + " due to: " + ex.getMessage( ) );
-                  Logs.extreme( ).error( "Failed to add extant network: " + extantNetwork + " due to: " + ex.getMessage( ), ex );
-                }
-              }
+      ExtantNetwork exNet = null;
+      for ( int i = NetworkGroups.networkingConfiguration( ).getMinNetworkTag( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkTag( ); i++ ) {
+        final EntityWrapper<NetworkGroup> db = EntityWrapper.get( NetworkGroup.class );
+        try {
+          final NetworkGroup net = db.getUnique( this );
+          try {
+            db.recast( ExtantNetwork.class ).getUnique( ExtantNetwork.named( i ) );
+          } catch ( final Exception ex ) {
+            try {
+              exNet = db.recast( ExtantNetwork.class ).add( ExtantNetwork.create( net, i ) );
+              db.commit( );
+              this.extantNetwork = exNet;
+              break;
+            } catch ( final Exception ex1 ) {
+              exNet = null;
+              continue;
             }
           }
-        } );
-        return newNetGroup.getExtantNetwork( );
-      } catch ( TransactionException ex ) {
-        LOG.error( ex, ex );
-        return ExtantNetwork.bogus( this );
+        } catch ( final Exception ex ) {
+          LOG.error( "Failed to add extant network: " + this.extantNetwork + " due to: " + ex.getMessage( ) );
+          Logs.extreme( ).error( "Failed to add extant network: " + this.extantNetwork + " due to: " + ex.getMessage( ), ex );
+        }
+      }
+      if ( exNet == null ) {
+        throw new NotEnoughResourcesAvailable( "Failed to add extant network: " + this.extantNetwork + " due to: no network tags are free." );
+      } else {
+        return exNet;
       }
     } else {
       return this.getExtantNetwork( );
@@ -303,7 +313,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     return this.extantNetwork;
   }
   
-  private void setExtantNetwork( ExtantNetwork extantNetwork ) {
+  private void setExtantNetwork( final ExtantNetwork extantNetwork ) {
     this.extantNetwork = extantNetwork;
   }
   
