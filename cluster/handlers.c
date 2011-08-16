@@ -3774,10 +3774,37 @@ int syncNetworkState() {
 
 int maintainNetworkState() {
   int rc, i, ret=0;
-  time_t startTime, startTimeA;
   char pidfile[MAX_PATH], *pidstr=NULL;
   
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    {
+      int activeNetworks[NUMBER_OF_VLANS];
+      bzero(activeNetworks, sizeof(int) * NUMBER_OF_VLANS);
+
+      logprintfl(EUCADEBUG, "maintainNetworkState(): maintaining active networks\n");
+      /*
+      for (i=0; i<MAXINSTANCES; i++) {
+	if ( instanceCache->cacheState[i] != INSTINVALID ) {
+	  if ( strcmp(instanceCache->instances[i].state, "Teardown") ) {
+	    int vlan = instanceCache->instances[i].ccnet.vlan;
+	    activeNetworks[vlan] = 1;
+	    if ( ! vnetconfig->networks[vlan].active ) {
+	      logprintfl(EUCAWARN, "maintainNetworkState(): instance running in network that is currently inactive (%s, %s, %d)\n", vnetconfig->users[vlan].userName, vnetconfig->users[vlan].netName, vlan);
+	    }
+	  }
+	}
+      }
+      */
+      for (i=0; i<NUMBER_OF_VLANS; i++) {
+	if ( !activeNetworks[i] && vnetconfig->networks[i].active ) {
+	  logprintfl(EUCAWARN, "maintainNetworkState(): network active but no running instances (%s, %s, %d)\n", vnetconfig->users[i].userName, vnetconfig->users[i].netName, i);
+	  sem_mywait(VNET);
+	  rc = vnetStopNetwork(vnetconfig, i, vnetconfig->users[i].userName, vnetconfig->users[i].netName);
+	  sem_mypost(VNET);
+	}
+      }
+    }
+      
     logprintfl(EUCADEBUG, "maintainNetworkState(): maintaining metadata redirect and tunnel health\n");
     sem_mywait(VNET);
     
@@ -3799,7 +3826,7 @@ int maintainNetworkState() {
     // check to see if this CCs localIpId has changed
     if (vnetconfig->tunnels.localIpId != vnetconfig->tunnels.localIpIdLast) {
       logprintfl(EUCADEBUG, "maintainNetworkState(): local CC index has changed (%d -> %d): re-assigning gateway IPs and tunnel connections.\n", vnetconfig->tunnels.localIpId , vnetconfig->tunnels.localIpIdLast);
-
+      
       for (i=2; i<NUMBER_OF_VLANS; i++) {
 	if (vnetconfig->networks[i].active) {
 	  char brname[32];
@@ -3822,11 +3849,11 @@ int maintainNetworkState() {
 	logprintfl(EUCAERROR, "maintainNetworkState(): failed to tear down tunnels\n");
 	ret = 1;
       }
-
+      
       config->kick_dhcp = 1;
       vnetconfig->tunnels.localIpIdLast = vnetconfig->tunnels.localIpId;
     }
-        
+    
     rc = vnetSetupTunnels(vnetconfig);
     if (rc) {
       logprintfl(EUCAERROR, "maintainNetworkState(): failed to setup tunnels during maintainNetworkState()\n");
@@ -3841,7 +3868,6 @@ int maintainNetworkState() {
 	} else {
 	  snprintf(brname, 32, "%s", vnetconfig->privInterface);
 	}
-	startTime=time(NULL);
 	rc = vnetAttachTunnels(vnetconfig, i, brname);
 	if (rc) {
 	  logprintfl(EUCADEBUG, "maintainNetworkState(): failed to attach tunnels for vlan %d during maintainNetworkState()\n", i);
