@@ -188,11 +188,13 @@ public class ExtantNetwork extends UserMetadata<ResourceAllocation.State> implem
   }
   
   private void initNetworkIndexes( ExtantNetwork exNet ) {
+    EntityWrapper<PrivateNetworkIndex> db = Entities.get( PrivateNetworkIndex.class );
     for ( long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
-      PrivateNetworkIndex netIdx = Entities.get( PrivateNetworkIndex.class ).persist( PrivateNetworkIndex.create( exNet, i ) );
+      PrivateNetworkIndex newIdx = PrivateNetworkIndex.create( exNet, i );
+      PrivateNetworkIndex netIdx = db.persist( newIdx );
       this.indexes.add( netIdx );
     }
-    Entities.get( PrivateNetworkIndex.class ).commit( );
+    db.commit( );
   }
   
   public NetworkGroup getNetworkGroup( ) {
