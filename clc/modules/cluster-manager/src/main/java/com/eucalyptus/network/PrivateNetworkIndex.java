@@ -94,14 +94,14 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   @Transient
   private static final PrivateNetworkIndex bogusIndex = new PrivateNetworkIndex( -1, -1l );
   @Column( name = "metadata_network_index" )
-  private final Long          index;
+  private final Long                       index;
   @Column( name = "metadata_network_index_bogus_id", unique = true )
-  private final String        bogusId;
+  private final String                     bogusId;
   @ManyToOne
   @JoinColumn( name = "metadata_network_index_extant_network" )
-  private final ExtantNetwork network;
+  private final ExtantNetwork              network;
   @Column( name = "metadata_network_index_vm_perm_uuid" )
-  private String              instanceNaturalId;
+  private String                           instanceNaturalId;
   
   private PrivateNetworkIndex( ) {
     super( null, null );
@@ -110,12 +110,20 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
     this.bogusId = null;
   }
   
+  private PrivateNetworkIndex( ExtantNetwork network ) {
+    super( null, null );
+    this.network = network;
+    this.setState( ResourceAllocation.State.FREE );
+    this.bogusId = null;
+    this.index = null;
+  }
+  
   private PrivateNetworkIndex( ExtantNetwork network, Long index ) {
     super( network.getOwner( ), network.getTag( ) + ":" + index );
     this.network = network;
+    this.setState( ResourceAllocation.State.FREE );
     this.bogusId = network.getTag( ) + ":" + index;
     this.index = index;
-    this.setState( ResourceAllocation.State.FREE );
   }
   
   public PrivateNetworkIndex( Integer tag, Long index ) {
@@ -123,6 +131,10 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
     this.bogusId = tag + ":" + index;
     this.network = null;
     this.index = index;
+  }
+  
+  public static PrivateNetworkIndex free( ExtantNetwork exNet ) {
+    return new PrivateNetworkIndex( exNet );
   }
   
   public static PrivateNetworkIndex create( ExtantNetwork network, Long index ) {
@@ -241,10 +253,10 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
         : -1 );
     }
   }
-
+  
   public static SetReference<PrivateNetworkIndex, VmInstance> allocateNext( ExtantNetwork exNet ) throws ResourceAllocationException {
-    List<PrivateNetworkIndex> ret = Entities.get( PrivateNetworkIndex.class ).query( new PrivateNetworkIndex( exNet, null ) );
-    if( ret.isEmpty( ) ) {
+    List<PrivateNetworkIndex> ret = Entities.get( PrivateNetworkIndex.class ).query( PrivateNetworkIndex.free( exNet ) );
+    if ( ret.isEmpty( ) ) {
       throw new NotEnoughResourcesAvailable( "Failed to find a free network index: " + ret );
     } else {
       PrivateNetworkIndex idx = ret.get( 0 );
@@ -257,5 +269,5 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
       }
     }
   }
-
+  
 }
