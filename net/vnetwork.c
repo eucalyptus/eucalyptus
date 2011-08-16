@@ -1341,7 +1341,11 @@ int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts) {
       netmask = hex2dot(vnetconfig->networks[i].nm);
       broadcast = hex2dot(vnetconfig->networks[i].bc);
       nameserver = hex2dot(vnetconfig->networks[i].dns);      
-      router = hex2dot(vnetconfig->networks[i].router + vnetconfig->tunnels.localIpId);
+      if (vnetconfig->tunnels.localIpId < 0) {
+	router = hex2dot(vnetconfig->networks[i].router);
+      } else {
+	router = hex2dot(vnetconfig->networks[i].router + vnetconfig->tunnels.localIpId);
+      }
       
       if (vnetconfig->euca_ns != 0) {
 	euca_nameserver = hex2dot(vnetconfig->euca_ns);
