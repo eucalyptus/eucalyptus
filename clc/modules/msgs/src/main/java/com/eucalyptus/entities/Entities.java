@@ -67,7 +67,7 @@ import java.util.Map;
 import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import com.eucalyptus.system.Ats;
-import com.google.gwt.thirdparty.guava.common.collect.Maps;
+import com.google.common.collect.Maps;
 
 public class Entities {
   private static Logger LOG = Logger.getLogger( Entities.class );
