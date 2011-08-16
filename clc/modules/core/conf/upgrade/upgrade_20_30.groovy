@@ -3,6 +3,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.SQLException;
+import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -136,6 +137,22 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     // Map account names to account ids
     private static Map<String, String> accountIdMap = new HashMap<String, String>();
     private static Map<String, Sql> connMap = new HashMap<String, Sql>();
+    private static List<String> unmappedColumns = [ "walrus_stats_info.walrus_stats_info_id",
+                                "ISCSIMetadata.id",
+                                "direct_storage_info.storage_direct_id",
+                                "vm_types.id",
+                                "storage_info.storage_id",
+                                "storage_stats_info.storage_stats_info_id",
+                                "ARecords.arecord_id",
+                                "SOARecords.soarecord_id",
+                                "Snapshots.snapshot_id",
+                                "walrus_info.walrus_info_id",
+                                "Zones.zones_id",
+                                "NSRecords.nsrecord_id",
+                                "WalrusSnapshots.walrus_snapshot_id",
+                                "ImageCache.image_cache_id",
+                                "Volumes.volume_id",
+                              ];
 
     public upgrade_20_30() {
         super(1);        
@@ -288,7 +305,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         try {
             Object firstRow = conn.firstRow("SELECT * FROM " + entityKey);
             if(firstRow == null) {
-                LOG.warn("Unable to find anything in table: " + entityKey);
+                LOG.info("Unable to find anything in table: " + entityKey);
                 return null;
             }
             if(firstRow instanceof Map) {
@@ -316,8 +333,9 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     superClass = superClass.getSuperclass();
                 }
                 for (String column : columnNames) {
-                    if(!setterMap.containsKey(column)) {
-                        LOG.warn("No corresponding field for column: " + column + " found");
+                    if(!setterMap.containsKey(column) && !unmappedColumns.contains("${entityKey}.${column}".toString()) ) {
+                        print unmappedColumns;
+                        LOG.warn("No corresponding field for column: ${entityKey}.${column} found");
                     }
                 }
                 if (entityKey.equals('vm_types')) {
@@ -796,14 +814,22 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     }
 
     def has_table(dbName, tableName) {
-        // NB: http://programmingitch.blogspot.com/2010/10/be-careful-using-gstrings-for-sql.html
         try {
-            def query = "SELECT * FROM ${tableName}".toString();
-            connMap[dbName].firstRow(query);
-            return true;
-        } catch (Throwable t) {
-            return false;
+            // Gets the database metadata
+            DatabaseMetaData dbmd = connMap[dbName].getConnection().getMetaData();
+
+            // Specify the type of object; in this case we want tables
+            String[] types = {"TABLE"};
+            dbmd.getTables(null, null, "%", types).each { table ->
+                // Get the table name
+                if (table.getString(3) == tableName) {
+                    return true;
+                }
+            }
+        } catch (SQLException e) {
+            LOG.warn('During check for table ${tableName}: ${e}');
         }
+        return false;
     }
 
     public boolean upgradeSAN() {
