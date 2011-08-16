@@ -134,6 +134,7 @@ fi
 export EUCALYPTUS
 
 pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
+initlog=$EUCALYPTUS/var/log/eucalyptus/startup.log
 
 do_upgrade() {
         while IFS=: read -r a b; do
@@ -199,10 +200,9 @@ do_start() {
             "$EUCALYPTUS/usr/share/eucalyptus/create-loop-devices" $CREATE_SC_LOOP_DEVICES
         fi
 
-    # try log4j for a bit, see if anyone panics. $EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
 	ulimit -n 4096
-	$EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -L console-log >/dev/null 2>&1
-
+	$EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f \
+		-L console-log -o $initlog -e $initlog
 	return $?
 }
 
@@ -273,7 +273,10 @@ if [ -z "$EUCA_USER" ] ; then
 fi
 
 # set the library path correctly
-export VDDK_HOME="@VDDK_HOME@"
+if [ -z "$VDDK_HOME" ] ; then
+	VDDK_HOME="@VDDK_HOME@"
+fi
+export VDDK_HOME
 
 # moved these to the euca_imager wrapper itself
 #export LD_LIBRARY_PATH="$EUCALYPTUS/usr/lib/eucalyptus:$VDDK_HOME/lib:$VDDK_HOME/lib/vmware-vix-disklib/lib32:$VDDK_HOME/lib/vmware-vix-disklib/lib64/" # to ensure euca_imager finds VDDK libs
@@ -306,7 +309,7 @@ case "$1" in
 	do_start
 
 	case "$?" in
-	0|1)
+	0)
 		if [ "$VERBOSE" != no ]; then
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 0
@@ -320,7 +323,7 @@ case "$1" in
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 1
 			else
-				echo "failed!"
+				echo "failed! Check $initlog for details"
 			fi
 		fi
 		;;
