@@ -61,9 +61,8 @@
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.util;
+package com.eucalyptus.cloud.util;
 
-import com.eucalyptus.cloud.util.ResourceAllocationException;
 
 public class NotEnoughResourcesAvailable extends ResourceAllocationException {
   

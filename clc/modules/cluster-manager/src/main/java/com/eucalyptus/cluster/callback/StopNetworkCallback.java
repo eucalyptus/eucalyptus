@@ -64,6 +64,7 @@
 package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
@@ -71,7 +72,6 @@ import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Logs;
-import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.async.BroadcastCallback;
 import edu.ucsb.eucalyptus.msgs.StopNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StopNetworkType;

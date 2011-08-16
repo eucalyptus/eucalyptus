@@ -73,6 +73,7 @@ import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.cloud.util.PersistentResource;
 import com.eucalyptus.cloud.util.ResourceAllocation;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
@@ -82,7 +83,6 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.RecoverablePersistenceException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.Logs;
-import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.TransactionException;
 
 @Entity

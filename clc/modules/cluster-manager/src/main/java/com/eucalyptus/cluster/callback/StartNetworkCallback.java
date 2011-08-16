@@ -64,6 +64,7 @@
 package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
@@ -74,7 +75,6 @@ import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.NetworkToken;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Logs;
-import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.async.BroadcastCallback;
 import com.eucalyptus.util.async.Callback;
 import com.google.common.collect.Lists;
