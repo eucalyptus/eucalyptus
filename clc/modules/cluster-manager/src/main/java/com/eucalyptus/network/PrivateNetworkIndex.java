@@ -195,7 +195,9 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   
   @Override
   protected void setReferer( VmInstance referer ) {
-    this.instanceNaturalId = referer.getNaturalId( );
+    this.instanceNaturalId = referer != null
+      ? referer.getNaturalId( )
+      : null;
   }
   
   @Override

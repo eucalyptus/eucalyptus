@@ -63,6 +63,7 @@
 
 package com.eucalyptus.cloud.util;
 
+import javax.annotation.Nullable;
 import javax.persistence.MappedSuperclass;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.UserMetadata;
@@ -97,7 +98,11 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
     return this.getState( );
   }
   
-  protected abstract void setReferer( R referer );
+  /**
+   * Referer may be null!
+   * @param referer
+   */
+  protected abstract void setReferer( @Nullable R referer );
   
   protected abstract R getReferer( );
   
