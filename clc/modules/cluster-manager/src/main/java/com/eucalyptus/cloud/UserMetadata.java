@@ -85,9 +85,9 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
    */
   private static final long serialVersionUID = 1L;
   @Column( name = "metadata_user_id" )
-  protected String ownerUserId;
+  protected String          ownerUserId;
   @Column( name = "metadata_user_name" )
-  protected String ownerUserName;
+  protected String          ownerUserName;
   
   /**
    * GRZE:NOTE: Should only /ever/ be used by sub classes.
@@ -112,12 +112,12 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   
   @Override
   public void setOwner( final OwnerFullName owner ) {
-    this.ownerUserId = owner != null
+    this.setOwnerUserId( owner != null
       ? owner.getUniqueId( )
-      : null;
-    this.ownerUserName = owner != null
+      : null );
+    this.setOwnerUserName( owner != null
       ? owner.getUserName( )
-      : null;
+      : null );
     super.setOwner( owner );
   }
   
