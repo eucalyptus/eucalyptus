@@ -61,7 +61,7 @@ public class Exceptions {
     return os.toString( );
   }
 
-  public static <T> String causeString( T ex ) {
+  public static <T extends Throwable> String causeString( T ex ) {
     return Joiner.on( "\nCaused by: " ).join( Exceptions.causes( ex ) );
   }
   
