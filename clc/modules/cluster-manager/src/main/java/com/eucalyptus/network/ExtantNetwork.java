@@ -67,6 +67,7 @@ import java.util.HashSet;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
@@ -101,7 +102,7 @@ public class ExtantNetwork extends UserMetadata<ResourceAllocation.State> implem
   private static Logger            LOG              = Logger.getLogger( ExtantNetwork.class );
   @Column( name = "metadata_extant_network_tag", unique = true )
   private Integer                  tag;
-  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "network" )
+  @OneToMany( fetch = FetchType.EAGER, cascade = { CascadeType.ALL }, mappedBy = "network" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<PrivateNetworkIndex> indexes          = new HashSet<PrivateNetworkIndex>( );
   @OneToOne
@@ -192,7 +193,7 @@ public class ExtantNetwork extends UserMetadata<ResourceAllocation.State> implem
     for ( long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
       PrivateNetworkIndex newIdx = PrivateNetworkIndex.create( exNet, i );
       PrivateNetworkIndex netIdx = db.persist( newIdx );
-      this.indexes.add( netIdx );
+      this.getIndexes( ).add( netIdx );
     }
     db.commit( );
   }
