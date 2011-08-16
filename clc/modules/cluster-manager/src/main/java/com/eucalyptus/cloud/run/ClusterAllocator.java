@@ -162,7 +162,7 @@ public class ClusterAllocator implements Runnable {
       this.allocInfo.abort( );
       for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
         try {
-          final VmInstance vm = VmInstances.getInstance( ).lookup( token.getInstanceId( ) );
+          final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
           vm.setState( VmState.TERMINATED, Reason.FAILED, e.getMessage( ) );
           VmInstances.disable( vm );
         } catch ( final Exception e1 ) {

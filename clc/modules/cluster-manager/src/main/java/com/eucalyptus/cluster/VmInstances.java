@@ -325,7 +325,7 @@ public class VmInstances {
                  .format( "%s:%s:%s:%s", instanceId.substring( 2, 4 ), instanceId.substring( 4, 6 ), instanceId.substring( 6, 8 ), instanceId.substring( 8, 10 ) );
   }
   
-  public VmInstance lookup( String name ) throws NoSuchElementException {
+  public static VmInstance lookup( String name ) throws NoSuchElementException {
     EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
     try {
       VmInstance vm = db.getUnique( VmInstance.named( null, name ) );
@@ -401,7 +401,7 @@ public class VmInstances {
     }
   }
   
-  public VmInstance lookupDisabled( String name ) throws NoSuchElementException {
+  public static VmInstance lookupDisabled( String name ) throws NoSuchElementException {
     EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
     try {
       VmInstance vm = db.getUnique( VmInstance.namedTerminated( null, name ) );
