@@ -66,7 +66,12 @@
 package com.eucalyptus.cluster;
 
 import java.security.MessageDigest;
+import java.util.Collection;
+import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ExecutionException;
 import java.util.zip.Adler32;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
@@ -85,6 +90,8 @@ import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.network.NetworkGroups;
@@ -291,7 +298,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   }
   
   public static void flushBuried( ) {
-    for ( VmInstance vm : VmInstances.getInstance( ).getDisabledEntries( ) ) {
+    for ( VmInstance vm : VmInstances.getInstance( ).listDisabledValues( ) ) {
       if ( vm.getSplitTime( ) > SystemState.SHUT_DOWN_TIME && !VmState.BURIED.equals( vm.getState( ) ) ) {
         vm.setState( VmState.BURIED, Reason.BURIED );
       } else if ( vm.getSplitTime( ) > SystemState.BURY_TIME && VmState.BURIED.equals( vm.getState( ) ) ) {
@@ -320,6 +327,84 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
     } catch ( TransactionException ex ) {
       throw new NoSuchElementException( ex.getMessage( ) );
     }
+  }
+  
+  @Override
+  public void register( VmInstance obj ) {
+    EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+    try {
+      db.merge( obj );
+      db.commit( );
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
+      db.rollback( );
+    }
+    super.register( obj );
+  }
+  
+  @Override
+  public void deregister( String key ) {
+    super.deregister( key );
+  }
+  
+  @Override
+  public void registerDisabled( VmInstance obj ) {
+    super.registerDisabled( obj );
+  }
+  
+  @Override
+  public List<VmInstance> listDisabledValues( ) {
+    return super.listDisabledValues( );
+  }
+  
+  @Override
+  public List<VmInstance> listValues( ) {
+    return super.listValues( );
+  }
+  
+  @Override
+  public VmInstance lookupDisabled( String name ) throws NoSuchElementException {
+    return super.lookupDisabled( name );
+  }
+  
+  @Override
+  public void disable( VmInstance that ) throws NoSuchElementException {
+    super.disable( that );
+  }
+  
+  @Override
+  public void disable( String name ) {
+    super.disable( name );
+  }
+  
+  @Override
+  public void enable( VmInstance that ) throws NoSuchElementException {
+    super.enable( that );
+  }
+  
+  @Override
+  public void enable( String name ) throws NoSuchElementException {
+    super.enable( name );
+  }
+  
+  @Override
+  public boolean contains( VmInstance obj ) {
+    return super.contains( obj );
+  }
+  
+  @Override
+  public boolean contains( String name ) {
+    return super.contains( name );
+  }
+  
+  @Override
+  public VmInstance enableFirst( ) throws NoSuchElementException {
+    return super.enableFirst( );
+  }
+  
+  @Override
+  public String toString( ) {
+    return super.toString( );
   }
   
 }

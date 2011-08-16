@@ -87,38 +87,6 @@ public abstract class AbstractNamedRegistry<TYPE extends HasName<? extends TYPE>
     this.disabledMap = new ConcurrentSkipListMap<String, TYPE>( );
   }
   
-  public Set<String> getKeys( ) {
-    return this.activeMap.keySet( );
-  }
-  
-  public Set<String> getDisabledKeys( ) {
-    return this.disabledMap.keySet( );
-  }
-
-  public boolean isRegistered( TYPE that ) {
-    return this.isRegistered( that.getName( ) );
-  }
-  
-  public boolean isRegisteredDisabled( TYPE that ) {
-    return this.isRegisteredDisabled( that.getName( ) );
-  }
-
-  public boolean isRegistered( String key ) {
-    return this.activeMap.containsKey( key );
-  }
-  
-  public boolean isRegisteredDisabled( String key ) {
-    return this.disabledMap.containsKey( key );
-  }
-
-  public Collection<TYPE> getEntries( ) {
-    return this.activeMap.values( );
-  }
-  
-  public Collection<TYPE> getDisabledEntries( ) {
-    return this.disabledMap.values( );
-  }
-  
   public void deregister( String key ) {
     this.canHas.writeLock( ).lock( );
     try {
@@ -155,28 +123,10 @@ public abstract class AbstractNamedRegistry<TYPE extends HasName<? extends TYPE>
     }
   }
   
-  public List<String> listDisabledKeys( ) {
-    this.canHas.readLock( ).lock( );
-    try {
-      return Lists.newArrayList( this.disabledMap.keySet( ) );
-    } finally {
-      this.canHas.readLock( ).unlock( );
-    }
-  }
-  
   public List<TYPE> listDisabledValues( ) {
     this.canHas.readLock( ).lock( );
     try {
       return Lists.newArrayList( this.disabledMap.values( ) );
-    } finally {
-      this.canHas.readLock( ).unlock( );
-    }
-  }
-  
-  public List<String> listKeys( ) {
-    this.canHas.readLock( ).lock( );
-    try {
-      return Lists.newArrayList( this.activeMap.keySet( ) );
     } finally {
       this.canHas.readLock( ).unlock( );
     }
@@ -188,25 +138,6 @@ public abstract class AbstractNamedRegistry<TYPE extends HasName<? extends TYPE>
       return Lists.newArrayList( this.activeMap.values( ) );
     } finally {
       this.canHas.readLock( ).unlock( );
-    }
-  }
-  
-  public TYPE replace( TYPE newValue ) throws NoSuchElementException {
-    TYPE oldValue = null;
-    this.canHas.writeLock( ).lock( );
-    try {
-      if ( ( oldValue = this.disabledMap.remove( newValue.getName( ) ) ) == null ) {
-        oldValue = this.activeMap.replace( newValue.getName( ), newValue );
-      } else {
-        this.activeMap.put( newValue.getName( ), newValue );
-      }
-      if ( oldValue == null ) {
-        throw new NoSuchElementException( "Can't find registered object: " + newValue.getName( ) + " in " + this.getClass( ).getSimpleName( ) );
-      } else {
-        return oldValue;
-      }
-    } finally {
-      this.canHas.writeLock( ).unlock( );
     }
   }
   
@@ -222,7 +153,7 @@ public abstract class AbstractNamedRegistry<TYPE extends HasName<? extends TYPE>
       this.canHas.readLock( ).unlock( );
     }
   }
-
+  
   public TYPE lookup( String name ) throws NoSuchElementException {
     this.canHas.readLock( ).lock( );
     try {
@@ -239,12 +170,12 @@ public abstract class AbstractNamedRegistry<TYPE extends HasName<? extends TYPE>
   public void disable( TYPE that ) throws NoSuchElementException {
     this.disable( that.getName( ) );
   }
-
+  
   public void disable( String name ) {
     this.canHas.writeLock( ).lock( );
     try {
       TYPE obj = null;
-      if ( ( obj = this.activeMap.remove( name ) ) == null  && ( ( obj = this.disabledMap.remove( name ) ) == null ) ) {
+      if ( ( obj = this.activeMap.remove( name ) ) == null && ( ( obj = this.disabledMap.remove( name ) ) == null ) ) {
         throw new NoSuchElementException( "Can't find registered object: " + name + " in " + this.getClass( ).getSimpleName( ) );
       } else {
         this.disabledMap.putIfAbsent( obj.getName( ), obj );
@@ -257,7 +188,7 @@ public abstract class AbstractNamedRegistry<TYPE extends HasName<? extends TYPE>
   public void enable( TYPE that ) throws NoSuchElementException {
     this.enable( that.getName( ) );
   }
-
+  
   public void enable( String name ) throws NoSuchElementException {
     this.canHas.writeLock( ).lock( );
     try {
@@ -275,7 +206,7 @@ public abstract class AbstractNamedRegistry<TYPE extends HasName<? extends TYPE>
   public boolean contains( TYPE obj ) {
     return this.contains( obj.getName( ) );
   }
-
+  
   public boolean contains( String name ) {
     this.canHas.readLock( ).lock( );
     try {
@@ -285,19 +216,11 @@ public abstract class AbstractNamedRegistry<TYPE extends HasName<? extends TYPE>
     }
   }
   
-  protected ConcurrentNavigableMap<String, TYPE> getActiveMap( ) {
-    return activeMap;
-  }
-  
-  protected ConcurrentNavigableMap<String, TYPE> getDisabledMap( ) {
-    return disabledMap;
-  }
-
-  public TYPE enableFirst() throws NoSuchElementException {
+  public TYPE enableFirst( ) throws NoSuchElementException {
     this.canHas.writeLock( ).lock( );
-    try {      
-      Map.Entry<String,TYPE> entry = this.disabledMap.pollFirstEntry( );
-      if( entry == null ) {
+    try {
+      Map.Entry<String, TYPE> entry = this.disabledMap.pollFirstEntry( );
+      if ( entry == null ) {
         throw new NoSuchElementException( "Disabled map is empty." );
       }
       TYPE first = entry.getValue( );

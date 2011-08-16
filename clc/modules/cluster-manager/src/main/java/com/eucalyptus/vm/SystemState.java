@@ -140,7 +140,13 @@ public class SystemState {
     for ( VmInfo runVm : request.getVms( ) ) {
       SystemState.updateVmInstance( originCluster, runVm );
     }
-    final Set<String> unreportedVms = VmInstances.getInstance( ).getKeys( );
+    final List<String> unreportedVms = Lists.transform( VmInstances.getInstance( ).listValues( ), new Function<VmInstance, String>( ) {
+      
+      @Override
+      public String apply( VmInstance input ) {
+        return input.getInstanceId( );
+      }
+    } );
     final List<String> runningVmIds = Lists.transform( request.getVms( ), new Function<VmInfo, String>( ) {
       @Override
       public String apply( VmInfo arg0 ) {

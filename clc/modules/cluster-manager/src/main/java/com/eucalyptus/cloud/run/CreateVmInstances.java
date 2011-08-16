@@ -109,11 +109,6 @@ public class CreateVmInstances {
       try {
         VmInstance vmInst = makeVmInstance( token );
         VmInstances.getInstance( ).register( vmInst );
-        try {
-          Transactions.save( vmInst );
-        } catch ( ExecutionException ex ) {
-          LOG.error( ex, ex );
-        }
       } catch ( TransactionException ex ) {
         LOG.error( ex, ex );
       }
