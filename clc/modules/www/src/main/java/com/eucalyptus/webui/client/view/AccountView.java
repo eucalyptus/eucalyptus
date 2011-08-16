@@ -4,6 +4,9 @@ import com.google.gwt.user.client.ui.IsWidget;
 
 public interface AccountView extends IsWidget, CanDisplaySearchResult, Clearable {
     
+  void enableNewButton( boolean enabled );
+  void enableDelButton( boolean enabled );
+  
   void setPresenter( Presenter presenter );
   
   public interface Presenter extends SearchRangeChangeHandler, MultiSelectionChangeHandler, KnowsPageSize {

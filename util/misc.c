@@ -104,7 +104,7 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
         int done = 0;
 
         // full path was given, so it just needs to be verified
-        if (helpers_path[i]!=NULL) {
+        if (helpers_path != NULL && helpers_path[i]!=NULL) {
             int rc = stat (helpers_path[i], &statbuf);
             if (!rc && S_ISREG(statbuf.st_mode)) {
                 done++;
@@ -112,6 +112,8 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
 
         } else { // no full path was given, so search $PATH
             char *tok, *toka, *path, *helper, *save, *savea;
+            if(helpers_path==NULL)
+		 helpers_path = (char**) calloc (num_helpers, sizeof(char*));
 
             tok = getenv("PATH");
             if (!tok) return -1;
@@ -362,34 +364,39 @@ int check_process(pid_t pid, char *search) {
   return(ret);
 }
 
-int check_directory(char *dir) {
-  int rc;
-  struct stat mystat;
-  
-  if (!dir) {
-    return(1);
-  }
-  
-  rc = lstat(dir, &mystat);
-  if (rc < 0)
-    return 1;
-
-  if (!S_ISDIR(mystat.st_mode)) {
-    if (S_ISLNK(mystat.st_mode)) { // links to dirs are OK
-      char tmp [4096];
-      snprintf (tmp, 4096, "%s/", dir);
-
-      rc = lstat (tmp, &mystat);
-      if (rc < 0)
-          return 1;
-
-      if (S_ISDIR(mystat.st_mode)) {
-        return 0;
-      }
+// make sure 'dir' is a directory or a soft-link to one
+// and that it is readable by the current user (1 on error)
+int check_directory (const char *dir) 
+{    
+    if (!dir) {
+        return (1);
     }
-    return 1;
-  }
-  return 0;
+    
+    char checked_dir [MAX_PATH];
+    snprintf (checked_dir, sizeof (checked_dir), "%s", dir);
+    
+    struct stat mystat;
+    int rc = lstat (checked_dir, &mystat);
+    if (rc < 0)
+        return 1;
+    
+    // if a soft link, append '/' and try lstat() again
+    if (!S_ISDIR(mystat.st_mode) && S_ISLNK(mystat.st_mode)) {
+        snprintf (checked_dir, sizeof (checked_dir), "%s/", dir);
+        rc = lstat (checked_dir, &mystat);
+        if (rc < 0)
+            return 1;
+    } 
+    
+    if (!S_ISDIR (mystat.st_mode)) 
+        return 1;
+    
+    DIR * d = opendir (checked_dir);
+    if (d==NULL)
+        return 1;
+
+    closedir (d);
+    return 0;
 }
 
 int check_file_newer_than(char *file, time_t mtime) {
@@ -555,6 +562,8 @@ char * fp2str (FILE * fp)
             }
             return NULL;
         }
+        memset(new_buf+buf_current, 0, INCREMENT * sizeof(char));
+
         buf = new_buf;
         logprintfl (EUCADEBUG2, "fp2str: enlarged buf to %d\n", buf_max);
         
@@ -592,6 +601,11 @@ char * system_output (char * shell_command )
   buf = fp2str (fp);
 
   pclose(fp);
+
+  if (buf && (strlen(buf) == 0)) {
+      free(buf);
+      buf = NULL;
+  }
   return buf;
 }
 
@@ -2033,7 +2047,9 @@ long long time_usec (void)
     return (long long)tv.tv_sec * 1000000 + tv.tv_usec;
 }
 
-char *safe_mkdtemp(char *template){
+// ensure the temp file is only readable by the user
+char *safe_mkdtemp (char *template)
+{
     mode_t u;
     char *ret=NULL;
     u=umask(0077);
@@ -2041,7 +2057,10 @@ char *safe_mkdtemp(char *template){
     umask(u);
     return(ret);
 }
-int safe_mkstemp(char *template){
+
+// ensure the temp file is only readable by the user
+int safe_mkstemp (char *template)
+{
     mode_t u;
     int ret;
     u=umask(0077);
@@ -2050,9 +2069,36 @@ int safe_mkstemp(char *template){
     return(ret);
 }
 
-char* safe_strncpy(char *s1, const char *s2, size_t len) {
+// ensure the string is aways 0-terminated
+char* safe_strncpy (char *s1, const char *s2, size_t len) 
+{
     char* ret = strncpy(s1, s2, len);
     s1[len-1] = '\0';
+    return ret;
+}
+
+// try to get UUID of the block device, returning 0 on success and 1 otherwise (TODO: use blkidlib maybe)
+int get_blkid (const char * dev_path, char * uuid, unsigned int uuid_size) 
+{
+    char cmd [1024];
+    snprintf (cmd, sizeof (cmd), "blkid %s", dev_path); // option '-u filesystem' did not exist on Centos
+    char * blkid_output = system_output (cmd);
+    if (blkid_output==NULL) 
+        return 1;
+    int ret = 1;
+    char * first_char = strstr (blkid_output, "UUID=\"");
+    if (first_char) {
+        first_char += 6;
+        char * last_char = strchr (first_char, '"');
+        if (last_char && ((last_char-first_char)>0)) {
+            * last_char = '\0';
+            safe_strncpy (uuid, first_char, uuid_size);
+            assert (0 == strcmp (uuid, first_char));
+            ret = 0;
+        }
+    }
+    free (blkid_output);
+
     return ret;
 }
 
@@ -2066,13 +2112,24 @@ int main (int argc, char ** argv)
 {
     int errors = 0;
     char cwd [1024];
+    char *s;
     getcwd (cwd, sizeof (cwd));
     srandom (time(NULL));
+
+    printf("testing system_output() in misc.c\n");
+    s = system_output("echo Hello");
+    assert(s);
+    assert (strlen (s) != 0);
+    printf("echo Hello == |%s|\n", s);
+    free (s);
+
+    s = system_output("echo -n");
+    assert(!s);
 
     printf ("testing fp2str in misc.c\n");
     FILE * fp = tmpfile ();
     assert (fp);
-    char * s = fp2str (fp);
+    s = fp2str (fp);
     assert (s);
     assert (strlen (s) == 0);
     free (s);
@@ -2084,6 +2141,18 @@ int main (int argc, char ** argv)
     assert (strlen (s) == strlen (_STR));
     free (s);
     fclose (fp);
+
+    printf ("testing get_blkid in misc.c\n");
+    char * devs [] = { "hda", "hdb", "hdc", "hdd", "sda", "sdb", "sdc", "sdd", NULL };
+    for (char ** d = devs; * d != NULL; d++) {
+        for (int p=1; p<4; p++) {
+            char dev_path [32];
+            char uuid [64] = "";
+            snprintf (dev_path, sizeof (dev_path), "/dev/%s%d", *d, p);
+            int ret = get_blkid (dev_path, uuid, sizeof (uuid));
+            printf ("\t%s: %s\n", dev_path, ret==0?uuid:"UUID not found");
+        }
+    }
 
     return 0;
 }

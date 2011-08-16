@@ -68,5 +68,6 @@
 
 int gen_instance_xml (const ncInstance * instance);
 int gen_libvirt_xml (const ncInstance * instance, const char * libvirtXsltPath);
+int gen_libvirt_attach_xml (const ncInstance *instance, const char * localDevReal, const char * remoteDev, int use_virtio_disk, char * xml, unsigned int xml_size);
 
 #endif

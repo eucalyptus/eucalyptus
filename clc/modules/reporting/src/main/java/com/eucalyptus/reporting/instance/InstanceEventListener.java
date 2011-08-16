@@ -7,6 +7,8 @@ import org.apache.log4j.*;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.reporting.event.*;
+import com.eucalyptus.reporting.user.ReportingAccountDao;
+import com.eucalyptus.reporting.user.ReportingUserDao;
 
 public class InstanceEventListener
 	implements EventListener<Event>
@@ -33,13 +35,21 @@ public class InstanceEventListener
 	  final long receivedEventMs = this.getCurrentTimeMillis();
 	  if (e instanceof InstanceEvent) {
 		  InstanceEvent event = (InstanceEvent) e;
-		  log.info("Received instance event:" + event);
+		  log.debug("Received instance event:" + event);
 
 		  final String uuid = event.getUuid();
 		  if (uuid == null) {
 			  log.warn("Received null uuid");
 			  return;
 		  }
+		  
+		  /* Retain records of all account and user id's and names encountered
+		   * even if they're subsequently deleted.
+		   */
+		  ReportingAccountDao.getInstance().addUpdateAccount(
+				  event.getAccountId(), event.getAccountName());
+		  ReportingUserDao.getInstance().addUpdateUser(
+				  event.getUserId(), event.getUserName());
 
 		  /* Convert InstanceEvents to internal types. Internal types are not
 		   * exposed because the reporting.instance package won't be present
@@ -47,7 +57,7 @@ public class InstanceEventListener
 		   */
 		  InstanceAttributes insAttrs = new InstanceAttributes(uuid,
 				  event.getInstanceId(), event.getInstanceType(),
-				  event.getUserId(), event.getAccountId(),
+				  event.getAccountId(), event.getUserId(),
 				  event.getClusterName(), event.getAvailabilityZone());
 		  InstanceUsageSnapshot insUsageSnapshot = new InstanceUsageSnapshot(
 				  uuid, receivedEventMs, event.getCumulativeNetworkIoMegs(),

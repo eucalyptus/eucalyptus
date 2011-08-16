@@ -3,6 +3,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.SQLException;
+import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -136,6 +137,22 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     // Map account names to account ids
     private static Map<String, String> accountIdMap = new HashMap<String, String>();
     private static Map<String, Sql> connMap = new HashMap<String, Sql>();
+    private static List<String> unmappedColumns = [ "walrus_stats_info.walrus_stats_info_id",
+                                "ISCSIMetadata.id",
+                                "direct_storage_info.storage_direct_id",
+                                "vm_types.id",
+                                "storage_info.storage_id",
+                                "storage_stats_info.storage_stats_info_id",
+                                "ARecords.arecord_id",
+                                "SOARecords.soarecord_id",
+                                "Snapshots.snapshot_id",
+                                "walrus_info.walrus_info_id",
+                                "Zones.zones_id",
+                                "NSRecords.nsrecord_id",
+                                "WalrusSnapshots.walrus_snapshot_id",
+                                "ImageCache.image_cache_id",
+                                "Volumes.volume_id",
+                              ];
 
     public upgrade_20_30() {
         super(1);        
@@ -148,6 +165,11 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         if(TO_VERSION.equals(to) && FROM_VERSION.contains(from))
             return true;
         return false;
+    }
+
+    @Override
+    public void setLogger( Logger log ) {
+        LOG = log;
     }
 
     @Override
@@ -169,6 +191,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             }
             String contextName = getContextName(entityKey);
             if (optionalTables.contains(entityKey) && !has_table(contextName, entityKey)) {
+                LOG.info("table ${entityKey} does not exist; skipping.");
                 continue;
             }
             Sql conn;
@@ -282,7 +305,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         try {
             Object firstRow = conn.firstRow("SELECT * FROM " + entityKey);
             if(firstRow == null) {
-                LOG.warn("Unable to find anything in table: " + entityKey);
+                LOG.info("Unable to find anything in table: " + entityKey);
                 return null;
             }
             if(firstRow instanceof Map) {
@@ -310,8 +333,9 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     superClass = superClass.getSuperclass();
                 }
                 for (String column : columnNames) {
-                    if(!setterMap.containsKey(column)) {
-                        LOG.warn("No corresponding field for column: " + column + " found");
+                    if(!setterMap.containsKey(column) && !unmappedColumns.contains("${entityKey}.${column}".toString()) ) {
+                        print unmappedColumns;
+                        LOG.warn("No corresponding field for column: ${entityKey}.${column} found");
                     }
                 }
                 if (entityKey.equals('vm_types')) {
@@ -423,13 +447,13 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             connMap['eucalyptus_auth'].rows("""SELECT c.* FROM auth_users
                          JOIN auth_user_has_x509 on auth_users.id=auth_user_has_x509.auth_user_id
                          JOIN auth_x509 c on auth_user_has_x509.auth_x509_id=c.id
-                         WHERE auth_users.auth_user_name=${ it.auth_user_name }""").each { certificate ->
+                         WHERE auth_users.auth_user_name=?""", [it.auth_user_name]).each { certificate ->
                 X509Certificate x509cert = X509CertHelper.toCertificate(certificate.auth_x509_pem_certificate);
                 def cert = user.addCertificate(x509cert);
                 // cert.setRevoked(certificate.auth_x509_revoked);
             }
             // The test data I have includes duplicate rows here.  Why?
-            def uInfo = connMap['eucalyptus_general'].firstRow("""SELECT * FROM Users WHERE Users.user_name=${ it.auth_user_name }""");
+            def uInfo = connMap['eucalyptus_general'].firstRow("SELECT * FROM Users WHERE Users.user_name=?", [it.auth_user_name]);
             if (uInfo != null) {
                 Map<String, String> info = new HashMap<String, String>( );
                 userInfoFields.each { k,v ->
@@ -451,7 +475,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             dbAuth.commit();
             
             def ufn = UserFullName.getInstance(user);
-            connMap['eucalyptus_general'].rows("""SELECT * FROM Images WHERE image_owner_id=${ it.auth_user_name }""").each { img ->
+            connMap['eucalyptus_general'].rows("SELECT * FROM Images WHERE image_owner_id=?", [it.auth_user_name]).each { img ->
                 EntityWrapper<ImageInfo> dbGen = EntityWrapper.get(ImageInfo.class);
                 LOG.debug("Adding image ${img.image_name}");
                 def path = img.image_path.split("/");
@@ -462,9 +486,8 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 def ckSum = null;
                 def ckSumType = null;
                 def platform = Image.Platform.valueOf("linux");
-                def cachedImg = connMap['eucalyptus_general'].firstRow("""SELECT manifest_name,size sz FROM ImageCache 
-                                                      WHERE bucket_name=${ path[0] }
-                                                      AND manifest_name=${ path[1] }""");
+                def cachedImg = connMap['eucalyptus_walrus'].firstRow("""SELECT manifest_name,size sz FROM ImageCache 
+                                                      WHERE bucket_name=? AND manifest_name=?""", path);
                 if (cachedImg != null)
                     imgSize = cachedImg.sz.toInteger();
                 if (img.image_platform != null)
@@ -501,7 +524,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 connMap['eucalyptus_general'].rows("""SELECT image_product_code_value FROM image_product_code
                                  JOIN image_has_product_codes 
                                  ON image_product_code.image_product_code_id=image_has_product_codes.image_product_code_id
-                                 WHERE image_id=${ img.image_id }""").each { prodCode ->
+                                 WHERE image_id=?""", [ img.image_id ]).each { prodCode ->
                     EntityWrapper<ProductCode> dbPC = EntityWrapper.get(ProductCode.class);
                     dbPC.add(new ProductCode(ii, prodCode.image_product_code_value));
                     dbPC.commit();
@@ -509,16 +532,17 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 connMap['eucalyptus_general'].rows("""SELECT * FROM image_authorization
                                  JOIN image_has_user_auth
                                  ON image_authorization.image_auth_id=image_has_user_auth.image_auth_id
-                                 WHERE image_id=${ img.image_id }""").each { imgAuth ->
+                                 WHERE image_id=?""", [ img.image_id ]).each { imgAuth ->
                     EntityWrapper<LaunchPermission> dbLP = EntityWrapper.get(LaunchPermission.class);
                     dbLP.add(new LaunchPermission(ii, imgAuth.image_auth_name));
                     dbLP.commit();
                 }
             }
 
-            connMap['eucalyptus_images'].rows("""SELECT * FROM Volume WHERE username=${ it.auth_user_name }""").each { vol ->
+            connMap['eucalyptus_images'].rows("SELECT * FROM Volume WHERE username=?", [ it.auth_user_name ]).each { vol ->
                 EntityWrapper<Volume> dbVol = EntityWrapper.get(Volume.class);
-                def vol_meta = connMap['eucalyptus_storage'].firstRow("""SELECT * FROM Volumes WHERE volume_name=${ vol.displayname }""");
+                def vol_meta = connMap['eucalyptus_storage'].firstRow("SELECT * FROM Volumes WHERE volume_name=?", 
+                                                                      [ vol.displayname ]);
                 if (vol.cluster == "default") {
                     vol.cluster = System.getProperty("euca.storage.name");
                 }
@@ -533,9 +557,9 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 dbVol.add(v);
                 dbVol.commit();
             }
-            connMap['eucalyptus_images'].rows("""SELECT * FROM Snapshot WHERE username=${ it.auth_user_name }""").each { snap ->
+            connMap['eucalyptus_images'].rows("SELECT * FROM Snapshot WHERE username=?", [ it.auth_user_name ]).each { snap ->
                 EntityWrapper<Snapshot> dbSnap = EntityWrapper.get(Snapshot.class);
-                def snap_meta = connMap['eucalyptus_storage'].firstRow("""SELECT * FROM Snapshots WHERE snapshot_name=${ snap.displayname }""");
+                def snap_meta = connMap['eucalyptus_storage'].firstRow("SELECT * FROM Snapshots WHERE snapshot_name=?", [ snap.displayname ]);
                 def scName = (snap_meta == null) ? null :  snap_meta.sc_name;
                 // Second scName is partition
                 Snapshot s = new Snapshot( ufn, snap.displayname, snap.parentvolume, scName, scName);
@@ -611,7 +635,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 b.setTargetPrefix(it.target_prefix);
                 connMap['eucalyptus_walrus'].rows("""SELECT g.* FROM bucket_has_grants has_thing 
                                     LEFT OUTER JOIN Grants g on g.grant_id=has_thing.grant_id
-                                    WHERE has_thing.bucket_id=${ it.bucket_id }""").each{  grant ->
+                                    WHERE has_thing.bucket_id=?""", [ it.bucket_id ]).each{  grant ->
                     LOG.debug("--> grant: ${it.bucket_id}/${grant.user_id}");
                     GrantInfo grantInfo = new GrantInfo();
                                         initMetaClass(grantInfo, grantInfo.class);
@@ -655,7 +679,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 objectInfo.setLast(it.is_last);
                 connMap['eucalyptus_walrus'].rows("""SELECT g.* FROM object_has_grants has_thing 
                                     LEFT OUTER JOIN Grants g on g.grant_id=has_thing.grant_id 
-                                    WHERE has_thing.object_id=${ it.object_id }""").each{  grant ->
+                                    WHERE has_thing.object_id=?""", [ it.object_id ]).each{  grant ->
                     LOG.debug("--> grant: ${it.object_name}/${grant.user_id}")
                     GrantInfo grantInfo = new GrantInfo();
                     initMetaClass(grantInfo, grantInfo.class);
@@ -669,7 +693,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 }
                 connMap['eucalyptus_walrus'].rows("""SELECT m.* FROM object_has_metadata has_thing 
                                     LEFT OUTER JOIN MetaData m on m.metadata_id=has_thing.metadata_id 
-                                    WHERE has_thing.object_id=${ it.object_id }""").each{  metadata ->
+                                    WHERE has_thing.object_id=?""", [ it.object_id ]).each{  metadata ->
                     LOG.debug("--> metadata: ${it.object_name}/${metadata.name}")
                     MetaDataInfo mInfo = new MetaDataInfo();
                     initMetaClass(mInfo, mInfo.class);
@@ -714,7 +738,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                                  FROM metadata_network_group_has_rules 
                                  LEFT OUTER JOIN metadata_network_rule r 
                                  ON r.metadata_network_rule_id=metadata_network_group_has_rules.metadata_network_rule_id 
-                                 WHERE metadata_network_group_has_rules.id=${ it.id }""").each { rule ->
+                                 WHERE metadata_network_group_has_rules.id=?""", [ it.id ]).each { rule ->
                     NetworkRule networkRule = new NetworkRule(rule.metadata_network_rule_protocol, 
                                                               rule.metadata_network_rule_low_port, 
                                                               rule.metadata_network_rule_high_port);
@@ -723,7 +747,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                                      FROM metadata_network_rule_has_ip_range 
                                      LEFT OUTER JOIN metadata_network_rule_ip_range ip
                                      ON ip.metadata_network_rule_ip_range_id=metadata_network_rule_has_ip_range.metadata_network_rule_ip_range_id 
-                                     WHERE metadata_network_rule_has_ip_range.metadata_network_rule_id=${ rule.metadata_network_rule_id }""").each { iprange ->
+                                     WHERE metadata_network_rule_has_ip_range.metadata_network_rule_id=?""", [ rule.metadata_network_rule_id ]).each { iprange ->
                         IpRange ipRange = new IpRange(iprange.metadata_network_rule_ip_range_value);
                         initMetaClass(ipRange, ipRange.class);
                         networkRule.getIpRanges().add(ipRange);
@@ -733,7 +757,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                                      FROM metadata_network_rule_has_peer_network 
                                      LEFT OUTER JOIN network_rule_peer_network peer
                                      ON peer.network_rule_peer_network_id=metadata_network_rule_has_peer_network.metadata_network_rule_peer_network_id 
-                                     WHERE metadata_network_rule_has_peer_network.metadata_network_rule_id=${ rule.metadata_network_rule_id }""").each { peer ->
+                                     WHERE metadata_network_rule_has_peer_network.metadata_network_rule_id=?""", [ rule.metadata_network_rule_id ]).each { peer ->
                         NetworkPeer networkPeer = new NetworkPeer(peer.network_rule_peer_network_user_query_key, peer.network_rule_peer_network_user_group);
                         initMetaClass(networkPeer, networkPeer.class);
                         networkRule.getNetworkPeers().add(networkPeer);
@@ -791,11 +815,21 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 
     def has_table(dbName, tableName) {
         try {
-            connMap[dbName].firstRow("SELECT * FROM ${tableName}");
-            return true;
-        } catch (Throwable t) {
-            return false;
+            // Gets the database metadata
+            DatabaseMetaData dbmd = connMap[dbName].getConnection().getMetaData();
+
+            // Specify the type of object; in this case we want tables
+            String[] types = {"TABLE"};
+            dbmd.getTables(null, null, "%", types).each { table ->
+                // Get the table name
+                if (table.getString(3) == tableName) {
+                    return true;
+                }
+            }
+        } catch (SQLException e) {
+            LOG.warn('During check for table ${tableName}: ${e}');
         }
+        return false;
     }
 
     public boolean upgradeSAN() {
@@ -841,8 +875,8 @@ class upgrade_20_30 extends AbstractUpgradeScript {
             EntityWrapper<ClusterConfiguration> dbCluster = EntityWrapper.get(ClusterConfiguration.class);
             EntityWrapper<Partition> dbPart = EntityWrapper.get(Partition.class);
             try {
-                 def clCert = connMap['eucalyptus_auth'].firstRow("SELECT * from auth_x509 x join auth_clusters ac ON ac.auth_cluster_x509_certificate=x.id where ac.auth_cluster_name=${it.config_component_name}");
-                 def nodeCert = connMap['eucalyptus_auth'].firstRow("SELECT * from auth_x509 x join auth_clusters ac ON ac.auth_cluster_node_x509_certificate=x.id where ac.auth_cluster_name=${it.config_component_name}");
+                 def clCert = connMap['eucalyptus_auth'].firstRow("SELECT * from auth_x509 x join auth_clusters ac ON ac.auth_cluster_x509_certificate=x.id WHERE ac.auth_cluster_name=?", [it.config_component_name]);
+                 def nodeCert = connMap['eucalyptus_auth'].firstRow("SELECT * from auth_x509 x join auth_clusters ac ON ac.auth_cluster_node_x509_certificate=x.id WHERE ac.auth_cluster_name=?", [it.config_component_name]);
 
                  Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
                  PEMReader pem = new PEMReader(new FileReader("${ oldHome }/var/lib/eucalyptus/keys/${ it.config_component_name }/node-pk.pem"));

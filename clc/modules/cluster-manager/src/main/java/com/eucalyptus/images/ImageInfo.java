@@ -87,6 +87,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.Image;
@@ -249,19 +250,19 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   
   public boolean checkPermission( final Account account ) {
     return true;
-//    final boolean[] result = { false };
-//    try {
-//      Transactions.one( new ImageInfo( this.displayName ), new Tx<ImageInfo>( ) {
-//        @Override
-//        public void fire( ImageInfo t ) throws Throwable {
-//          result[0] = t.getPermissions( ).contains( new LaunchPermission( t, account.getId( ) ) );
-//        }
-//      }
-//                  );
-//    } catch ( ExecutionException e ) {
-//      return false;
-//    }
-//    return result[0];
+  }
+  
+  public boolean checkPermission( final String accountId ) {
+    final boolean[] result = { false };
+    Transactions.each( new ImageInfo( this.displayName ), new Callback<ImageInfo>( ) {
+
+      @Override
+      public void fire( ImageInfo t ) {
+        result[0] = t.hasPermissionForOne( accountId );
+      }
+        
+    } );
+    return result[0];
   }
   
   public ImageInfo resetPermission( ) {
@@ -467,4 +468,84 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   protected void setImageName( final String imageName ) {
     this.imageName = imageName;
   }
+  
+  /**
+   * Can only be used within the scope of a db transaction.
+   * 
+   * @param accountIds
+   * @return true if image has launch permission for any of the account in accountIds
+   */
+  public boolean hasExplicitPermissionForAny( Set<String> accountIds ) {
+    final Set<LaunchPermission> permissions = getPermissions( );
+    for ( String aid : accountIds ) {
+      if ( permissions.contains( new LaunchPermission( this, aid ) ) ) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  /**
+   * Can only be used within the scope of a db transaction.
+   * 
+   * @param accountId
+   * @return true if image has launch permission including public, explicit and implicit
+   */
+  public boolean hasPermissionForOne( String accountId ) {
+    return getImagePublic( ) || hasExplicitOrImplicitPermissionForOne( accountId );
+  }
+  
+  /**
+   * Can only be used within the scope of a db transaction.
+   * 
+   * @param accountId
+   * @return true if image has explicit or implicit launch permission
+   */
+  public boolean hasExplicitOrImplicitPermissionForOne( String accountId ) {
+    return getOwnerAccountId( ).equals( accountId ) ||
+           getPermissions( ).contains( new LaunchPermission( this, accountId ) );
+  }
+  
+  /**
+   * Add launch permissions.
+   * 
+   * Can only be used within the scope of a db transaction.
+   * 
+   * @param accountIds
+   */
+  public void addPermissions( List<String> accountIds ) {
+    for ( String aid : accountIds ) {
+      try {
+        // Verify account ID
+        Account account = Accounts.lookupAccountById( aid );
+        LaunchPermission perm = new LaunchPermission( this, account.getAccountNumber( ) );
+        if ( !getPermissions( ).contains( perm ) ) {
+          getPermissions( ).add( perm );
+        }
+      } catch ( Exception e ) {
+        LOG.error( e, e );
+      }
+    }
+  }
+
+  /**
+   * Remove launch permissions.
+   * 
+   * Can only be used within the scope of a db transaction.
+   * 
+   * @param accountIds
+   */
+  public void removePermissions( List<String> accountIds ) {
+    for ( String aid : accountIds ) {
+      try {
+        // Verify account ID
+        Account account = Accounts.lookupAccountById( aid );
+        LaunchPermission perm = new LaunchPermission( this, account.getAccountNumber( ) );
+        getPermissions( ).remove( perm );
+      } catch ( Exception e ) {
+        LOG.error( e, e );
+      }
+    }    
+  }
+  
 }

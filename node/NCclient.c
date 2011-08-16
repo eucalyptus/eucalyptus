@@ -523,16 +523,16 @@ int main (int argc, char **argv)
                 printf ("\n");
                 
                 printf ("              attached volumes: ");
-                if (inst->volumesSize>0) {
-                    int j;
-                    for (j=0; j<inst->volumesSize; j++) {
-                        if (j>0)
-                            printf ("                                ");
-                        printf ("%s %s %s\n", inst->volumes[j].volumeId, inst->volumes[j].remoteDev, inst->volumes[j].localDev);
-                    }
-                } else {
-                    printf ("(none)\n");
+                int vol_count=0;
+                for (int j=0; j<EUCA_MAX_VOLUMES; j++) {
+                        if (strlen (inst->volumes[j].volumeId)>0) {
+                                if (vol_count>0)
+                                        printf ("                                ");
+                                printf ("%s %s %s\n", inst->volumes[j].volumeId, inst->volumes[j].remoteDev, inst->volumes[j].localDev);
+                        }
                 }
+                if (vol_count)
+                        printf ("(none)\n");
 
                 free_instance(&(outInsts[i]));
             }

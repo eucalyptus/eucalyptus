@@ -8,6 +8,8 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.reporting.event.Event;
 import com.eucalyptus.reporting.event.S3Event;
+import com.eucalyptus.reporting.user.ReportingAccountDao;
+import com.eucalyptus.reporting.user.ReportingUserDao;
 
 public class S3EventListener
 	implements EventListener<Event>
@@ -28,6 +30,15 @@ public class S3EventListener
 	{
 		if (event instanceof S3Event) {
 			S3Event s3Event = (S3Event) event;
+
+			/* Retain records of all account and user id's and names encountered
+			 * even if they're subsequently deleted.
+			 */
+			ReportingAccountDao.getInstance().addUpdateAccount(
+					s3Event.getAccountId(), s3Event.getAccountName());
+			ReportingUserDao.getInstance().addUpdateUser(s3Event.getOwnerId(),
+					s3Event.getOwnerName());
+
 			long timeMillis = getCurrentTimeMillis();
 
 			final S3UsageLog usageLog = S3UsageLog.getS3UsageLog();
@@ -125,6 +136,10 @@ public class S3EventListener
 		return new Long(a.longValue() + b);
 	}
 
+	/**
+	 * Overridable for the purpose of testing. Testing generates fake events
+	 * with fake times.
+	 */
 	protected long getCurrentTimeMillis()
 	{
 		return (this.testCurrentTimeMillis == null)

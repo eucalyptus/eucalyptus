@@ -5,6 +5,7 @@ import com.eucalyptus.event.StatefulNamedRegistry;
 import edu.ucsb.eucalyptus.cloud.Network;
 
 public class Networks extends StatefulNamedRegistry<Network, Networks.State>{
+
   public enum State {
     DISABLED,
     AWAITING_PEER,

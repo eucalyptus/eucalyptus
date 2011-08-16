@@ -25,56 +25,21 @@ import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
 import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Logs;
+import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.handlers.ChannelStateMonitor;
 import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
 import com.eucalyptus.ws.handlers.http.NioSslHandler;
 import com.eucalyptus.ws.server.NioServerHandler;
 
-@ConfigurableClass( root = "ws", description = "Parameters controlling the web services endpoint." )
 public class ChannelUtil {
   private static Logger        LOG                               = Logger.getLogger( ChannelUtil.class );
-  private static final Integer CHANNEL_CONNECT_TIMEOUT           = 500;
-  public static final Boolean  SERVER_CHANNEL_REUSE_ADDRESS      = true;
-  public static final Boolean  SERVER_CHANNEL_NODELAY            = true;
-  public static final Boolean  CHANNEL_REUSE_ADDRESS             = true;
-  public static final Boolean  CHANNEL_KEEP_ALIVE                = true;
-  public static final Boolean  CHANNEL_NODELAY                   = true;
-  @ConfigurableField( initial = "" + 17, description = "Server worker thread pool max." )
-  public static Integer        SERVER_POOL_MAX_THREADS           = Runtime.getRuntime( ).availableProcessors( ) * 2 + 1;
-  @ConfigurableField( initial = "" + 1048576l, description = "Server max worker memory per connection." )
-  public static Long           SERVER_POOL_MAX_MEM_PER_CONN      = 1048576l;
-  @ConfigurableField( initial = "" + 100 * 1024 * 1024l, description = "Server max worker memory total." )
-  public static Long           SERVER_POOL_TOTAL_MEM             = 100 * 1024 * 1024l;
-  public static Long           SERVER_POOL_TIMEOUT_MILLIS        = 500l;
-  @ConfigurableField( initial = "" + 17, description = "Server selector thread pool max." )
-  public static Integer        SERVER_BOSS_POOL_MAX_THREADS      = Runtime.getRuntime( ).availableProcessors( ) + 1;
-  @ConfigurableField( initial = "" + 1048576l, description = "Server max selector memory per connection." )
-  public static Long           SERVER_BOSS_POOL_MAX_MEM_PER_CONN = 1048576l;
-  @ConfigurableField( initial = "" + 17, description = "Server max selector memory total." )
-  public static Long           SERVER_BOSS_POOL_TOTAL_MEM        = 100 * 1024 * 1024l;
-  public static Long           SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500l;
-  @ConfigurableField( initial = "" + 8773, description = "Web services port.", readonly = true )
-  public static Integer        PORT                              = 8773;
-  public static Long           CLIENT_IDLE_TIMEOUT_SECS          = 4 * 60l;
-  public static Long           CLUSTER_IDLE_TIMEOUT_SECS         = 4 * 60l;
-  public static Long           CLUSTER_CONNECT_TIMEOUT_MILLIS    = 2000l;
-  @ConfigurableField( initial = "" + 20, description = "Server socket read time-out." )
-  public static Long           PIPELINE_READ_TIMEOUT_SECONDS     = 20l;
-  @ConfigurableField( initial = "" + 20, description = "Server socket write time-out." )
-  public static Long           PIPELINE_WRITE_TIMEOUT_SECONDS    = 20l;
-  public static Integer        CLIENT_POOL_MAX_THREADS           = 40;
-  public static Long           CLIENT_POOL_MAX_MEM_PER_CONN      = 10485760l;
-  public static Long           CLIENT_POOL_TOTAL_MEM             = 200 * 1024 * 1024l;
-  public static Long           CLIENT_POOL_TIMEOUT_MILLIS        = 500l;
-  
   static class NioServerPipelineFactory implements ChannelPipelineFactory {
     public ChannelPipeline getPipeline( ) throws Exception {
       final ChannelPipeline pipeline = Channels.pipeline( );
-      pipeline.addLast("ssl", new NioSslHandler());
+      pipeline.addLast( "ssl", new NioSslHandler( ) );
       //ChannelUtil.addPipelineMonitors( pipeline );
       pipeline.addLast( "decoder", new NioHttpDecoder( ) );
       pipeline.addLast( "encoder", new HttpResponseEncoder( ) );
@@ -139,12 +104,12 @@ public class ChannelUtil {
     try {
       if ( clientWorkerThreadPool == null ) {
         LOG.trace( LogUtil.subheader( "Creating client worker thread pool." ) );
-        LOG.trace( String.format( "-> Pool threads:              %8d", CLIENT_POOL_MAX_THREADS ) );
-        LOG.trace( String.format( "-> Pool timeout:              %8d ms", CLIENT_POOL_TIMEOUT_MILLIS ) );
-        LOG.trace( String.format( "-> Max memory per connection: %8.2f MB", CLIENT_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
-        LOG.trace( String.format( "-> Max total memory:          %8.2f MB", CLIENT_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
-        clientWorkerThreadPool = new OrderedMemoryAwareThreadPoolExecutor( CLIENT_POOL_MAX_THREADS, CLIENT_POOL_MAX_MEM_PER_CONN, CLIENT_POOL_TOTAL_MEM,
-                                                                           CLIENT_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
+        LOG.trace( String.format( "-> Pool threads:              %8d", StackConfiguration.CLIENT_POOL_MAX_THREADS ) );
+        LOG.trace( String.format( "-> Pool timeout:              %8d ms", StackConfiguration.CLIENT_POOL_TIMEOUT_MILLIS ) );
+        LOG.trace( String.format( "-> Max memory per connection: %8.2f MB", StackConfiguration.CLIENT_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
+        LOG.trace( String.format( "-> Max total memory:          %8.2f MB", StackConfiguration.CLIENT_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
+        clientWorkerThreadPool = new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.CLIENT_POOL_MAX_THREADS, StackConfiguration.CLIENT_POOL_MAX_MEM_PER_CONN, StackConfiguration.CLIENT_POOL_TOTAL_MEM,
+                                                                           StackConfiguration.CLIENT_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
       }
     } finally {
       canHas.unlock( );
@@ -157,12 +122,12 @@ public class ChannelUtil {
     try {
       if ( clientBossThreadPool == null ) {
         LOG.trace( LogUtil.subheader( "Creating client boss thread pool." ) );
-        LOG.trace( String.format( "-> Pool threads:              %8d", CLIENT_POOL_MAX_THREADS ) );
-        LOG.trace( String.format( "-> Pool timeout:              %8d ms", CLIENT_POOL_TIMEOUT_MILLIS ) );
-        LOG.trace( String.format( "-> Max memory per connection: %8.2f MB", CLIENT_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
-        LOG.trace( String.format( "-> Max total memory:          %8.2f MB", CLIENT_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
-        clientBossThreadPool = new OrderedMemoryAwareThreadPoolExecutor( CLIENT_POOL_MAX_THREADS, CLIENT_POOL_MAX_MEM_PER_CONN, CLIENT_POOL_TOTAL_MEM,
-                                                                         CLIENT_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
+        LOG.trace( String.format( "-> Pool threads:              %8d", StackConfiguration.CLIENT_POOL_MAX_THREADS ) );
+        LOG.trace( String.format( "-> Pool timeout:              %8d ms", StackConfiguration.CLIENT_POOL_TIMEOUT_MILLIS ) );
+        LOG.trace( String.format( "-> Max memory per connection: %8.2f MB", StackConfiguration.CLIENT_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
+        LOG.trace( String.format( "-> Max total memory:          %8.2f MB", StackConfiguration.CLIENT_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
+        clientBossThreadPool = new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.CLIENT_POOL_MAX_THREADS, StackConfiguration.CLIENT_POOL_MAX_MEM_PER_CONN, StackConfiguration.CLIENT_POOL_TOTAL_MEM,
+                                                                         StackConfiguration.CLIENT_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
       }
     } finally {
       canHas.unlock( );
@@ -174,17 +139,17 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( serverBossThreadPool == null ) {
-        if( !Logs.EXTREME ) {
+        if ( !Logs.EXTREME ) {
           LOG.info( "Creating server boss thread pool. (log level EXTREME for details)" );
         } else {
           LOG.trace( LogUtil.subheader( "Creating server boss thread pool." ) );
-          LOG.trace( String.format( "-> Pool threads:              %8d", SERVER_BOSS_POOL_MAX_THREADS ) );
-          LOG.trace( String.format( "-> Pool timeout:              %8d ms", SERVER_BOSS_POOL_TIMEOUT_MILLIS ) );
-          LOG.trace( String.format( "-> Max memory per connection: %8.2f MB", SERVER_BOSS_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
-          LOG.trace( String.format( "-> Max total memory:          %8.2f MB", SERVER_BOSS_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
+          LOG.trace( String.format( "-> Pool threads:              %8d", StackConfiguration.SERVER_BOSS_POOL_MAX_THREADS ) );
+          LOG.trace( String.format( "-> Pool timeout:              %8d ms", StackConfiguration.SERVER_BOSS_POOL_TIMEOUT_MILLIS ) );
+          LOG.trace( String.format( "-> Max memory per connection: %8.2f MB", StackConfiguration.SERVER_BOSS_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
+          LOG.trace( String.format( "-> Max total memory:          %8.2f MB", StackConfiguration.SERVER_BOSS_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
         }
-        serverBossThreadPool = new OrderedMemoryAwareThreadPoolExecutor( SERVER_BOSS_POOL_MAX_THREADS, SERVER_BOSS_POOL_MAX_MEM_PER_CONN,
-                                                                         SERVER_BOSS_POOL_TOTAL_MEM, SERVER_BOSS_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
+        serverBossThreadPool = new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.SERVER_BOSS_POOL_MAX_THREADS, StackConfiguration.SERVER_BOSS_POOL_MAX_MEM_PER_CONN,
+                                                                         StackConfiguration.SERVER_BOSS_POOL_TOTAL_MEM, StackConfiguration.SERVER_BOSS_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
       }
     } finally {
       canHas.unlock( );
@@ -196,17 +161,17 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( serverWorkerThreadPool == null ) {
-        if( !Logs.EXTREME ) {
+        if ( !Logs.EXTREME ) {
           LOG.info( "Creating server worker thread pool. (log level EXTREME for details)" );
         } else {
           LOG.trace( LogUtil.subheader( "Creating server worker thread pool." ) );
-          LOG.trace( String.format( "-> Pool threads:              %8d", SERVER_POOL_MAX_THREADS ) );
-          LOG.trace( String.format( "-> Pool timeout:              %8d ms", SERVER_POOL_TIMEOUT_MILLIS ) );
-          LOG.trace( String.format( "-> Max memory per connection: %8.2f MB", SERVER_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
-          LOG.trace( String.format( "-> Max total memory:          %8.2f MB", SERVER_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
+          LOG.trace( String.format( "-> Pool threads:              %8d", StackConfiguration.SERVER_POOL_MAX_THREADS ) );
+          LOG.trace( String.format( "-> Pool timeout:              %8d ms", StackConfiguration.SERVER_POOL_TIMEOUT_MILLIS ) );
+          LOG.trace( String.format( "-> Max memory per connection: %8.2f MB", StackConfiguration.SERVER_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
+          LOG.trace( String.format( "-> Max total memory:          %8.2f MB", StackConfiguration.SERVER_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
         }
-        serverWorkerThreadPool = new OrderedMemoryAwareThreadPoolExecutor( SERVER_POOL_MAX_THREADS, SERVER_POOL_MAX_MEM_PER_CONN, SERVER_POOL_TOTAL_MEM,
-                                                                           SERVER_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
+        serverWorkerThreadPool = new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.SERVER_POOL_MAX_THREADS, StackConfiguration.SERVER_POOL_MAX_MEM_PER_CONN, StackConfiguration.SERVER_POOL_TOTAL_MEM,
+                                                                           StackConfiguration.SERVER_POOL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS );
       }
     } finally {
       canHas.unlock( );
@@ -228,28 +193,28 @@ public class ChannelUtil {
     ChannelUtil.setupServer( );
     final ServerBootstrap bootstrap = new ServerBootstrap( ChannelUtil.getServerSocketChannelFactory( ) );
     bootstrap.setPipelineFactory( ChannelUtil.getServerPipeline( ) );
-    if( !Logs.EXTREME ) {
+    if ( !Logs.EXTREME ) {
       LOG.info( "Creating server bootstrap. (log level EXTREME for details)" );
     } else {
       LOG.trace( LogUtil.subheader( "Creating server boss thread pool." ) );
-      LOG.trace( String.format( "-> Server option: %25.25s = %s", "child.tcpNoDelay", CHANNEL_NODELAY ) );
-      LOG.trace( String.format( "-> Server option: %25.25s = %s", "child.keepAlive", CHANNEL_KEEP_ALIVE ) );
-      LOG.trace( String.format( "-> Server option: %25.25s = %s", "child.reuseAddress", CHANNEL_REUSE_ADDRESS ) );
-      LOG.trace( String.format( "-> Server option: %25.25s = %s", "child.connectTimeoutMillis", CHANNEL_CONNECT_TIMEOUT ) );
-      LOG.trace( String.format( "-> Server option: %25.25s = %s", "tcpNoDelay", SERVER_CHANNEL_NODELAY ) );
-      LOG.trace( String.format( "-> Server option: %25.25s = %s", "reuseAddress", SERVER_CHANNEL_REUSE_ADDRESS ) );
+      LOG.trace( String.format( "-> Server option: %25.25s = %s", "child.tcpNoDelay", StackConfiguration.CHANNEL_NODELAY ) );
+      LOG.trace( String.format( "-> Server option: %25.25s = %s", "child.keepAlive", StackConfiguration.CHANNEL_KEEP_ALIVE ) );
+      LOG.trace( String.format( "-> Server option: %25.25s = %s", "child.reuseAddress", StackConfiguration.CHANNEL_REUSE_ADDRESS ) );
+      LOG.trace( String.format( "-> Server option: %25.25s = %s", "child.connectTimeoutMillis", StackConfiguration.CHANNEL_CONNECT_TIMEOUT ) );
+      LOG.trace( String.format( "-> Server option: %25.25s = %s", "tcpNoDelay", StackConfiguration.SERVER_CHANNEL_NODELAY ) );
+      LOG.trace( String.format( "-> Server option: %25.25s = %s", "reuseAddress", StackConfiguration.SERVER_CHANNEL_REUSE_ADDRESS ) );
     }
-    bootstrap.setOption( "child.tcpNoDelay", CHANNEL_NODELAY );
-    bootstrap.setOption( "child.keepAlive", CHANNEL_KEEP_ALIVE );
-    bootstrap.setOption( "child.reuseAddress", CHANNEL_REUSE_ADDRESS );
-    bootstrap.setOption( "child.connectTimeoutMillis", CHANNEL_CONNECT_TIMEOUT );
-    bootstrap.setOption( "tcpNoDelay", SERVER_CHANNEL_NODELAY );
-    bootstrap.setOption( "reuseAddress", SERVER_CHANNEL_REUSE_ADDRESS );
+    bootstrap.setOption( "child.tcpNoDelay", StackConfiguration.CHANNEL_NODELAY );
+    bootstrap.setOption( "child.keepAlive", StackConfiguration.CHANNEL_KEEP_ALIVE );
+    bootstrap.setOption( "child.reuseAddress", StackConfiguration.CHANNEL_REUSE_ADDRESS );
+    bootstrap.setOption( "child.connectTimeoutMillis", StackConfiguration.CHANNEL_CONNECT_TIMEOUT );
+    bootstrap.setOption( "tcpNoDelay", StackConfiguration.SERVER_CHANNEL_NODELAY );
+    bootstrap.setOption( "reuseAddress", StackConfiguration.SERVER_CHANNEL_REUSE_ADDRESS );
     return bootstrap;
   }
   
   public static Channel getServerChannel( ) {
-    return ChannelUtil.getServerBootstrap( ).bind( new InetSocketAddress( ChannelUtil.PORT ) );
+    return ChannelUtil.getServerBootstrap( ).bind( new InetSocketAddress( StackConfiguration.PORT ) );
   }
   
   public static ChannelPipelineFactory getServerPipeline( ) {
@@ -269,7 +234,7 @@ public class ChannelUtil {
     try {
       if ( clientSocketFactory == null ) {
         clientSocketFactory = new NioClientSocketChannelFactory( ChannelUtil.getClientBossThreadPool( ), ChannelUtil.getClientWorkerThreadPool( ),
-                                                                 CLIENT_POOL_MAX_THREADS );
+                                                                 StackConfiguration.CLIENT_POOL_MAX_THREADS );
       }
     } finally {
       canHas.unlock( );
@@ -282,7 +247,7 @@ public class ChannelUtil {
     try {
       if ( serverSocketFactory == null ) {
         serverSocketFactory = new NioServerSocketChannelFactory( ChannelUtil.getServerBossThreadPool( ), ChannelUtil.getServerWorkerThreadPool( ),
-                                                                 SERVER_POOL_MAX_THREADS );
+                                                                 StackConfiguration.SERVER_POOL_MAX_THREADS );
       }
     } finally {
       canHas.unlock( );

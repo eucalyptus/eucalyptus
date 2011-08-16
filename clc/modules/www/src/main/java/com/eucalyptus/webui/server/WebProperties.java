@@ -61,6 +61,12 @@ public class WebProperties {
   public static final String RIGHTSCALE_WHOAMI_URL = "rightscale-whoami-url";
   public static final String RIGHTSCALE_WHOAMI_URL_DEFAULT = "https://my.rightscale.com/whoami?api_version=1.0&cloud=0";
   
+  public static final String IMAGE_DOWNLOAD_URL = "image-download-url";
+  public static final String IMAGE_DOWNLOAD_URL_DEFAULT = "http://www.eucalyptussoftware.com/downloads/eucalyptus-images/list.php?version=";
+  
+  public static final String TOOL_DOWNLOAD_URL = "tool-download-url";
+  public static final String TOOL_DOWNLOAD_URL_DEFAULT = "http://www.eucalyptussoftware.com/downloads/eucalyptus-tools/list.php?version=";
+  
   public static HashMap<String, String> getProperties( ) {
     Properties props = new Properties( );
     FileInputStream input = null;
