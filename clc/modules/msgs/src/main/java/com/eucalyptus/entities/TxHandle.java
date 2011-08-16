@@ -210,7 +210,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   
   @Override
   public String toString( ) {
-    return String.format( "TxHandle:txUuid=%s:startTime=%s:splitTime=%s:owner=%s", this.txUuid, this.startTime, this.splitTime, Logs.EXTREME
+    return String.format( "TxHandle:txUuid=%s:startTime=%s:splitTime=%s:owner=%s", this.txUuid, this.startTime.getTime( ), this.splitTime, Logs.EXTREME
       ? this.owner
       : "n/a" );
   }
