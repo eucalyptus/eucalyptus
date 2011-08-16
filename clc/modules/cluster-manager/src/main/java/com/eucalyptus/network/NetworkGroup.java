@@ -74,6 +74,7 @@ import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
@@ -90,11 +91,13 @@ import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TransactionException;
+import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
@@ -107,7 +110,7 @@ import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements NetworkSecurityGroup<NetworkGroup> {
   private static Logger LOG = Logger.getLogger( NetworkGroup.class );
   
-  enum State {
+  public enum State {
     DISABLED,
     PENDING,
     AWAITING_PEER,
@@ -126,6 +129,9 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @ManyToMany( cascade = { CascadeType.PERSIST, CascadeType.MERGE }, mappedBy = "networkGroups" )
   private Set<VmInstance>  runningInstances = new HashSet<VmInstance>( );
   
+  @OneToOne( mappedBy = "networkGroup" )
+  private ExtantNetwork    extantNetwork;
+  
   NetworkGroup( ) {}
   
   NetworkGroup( final OwnerFullName ownerFullName ) {
@@ -140,6 +146,13 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     this( ownerFullName, groupName );
     assertThat( groupDescription, notNullValue( ) );
     this.description = groupDescription;
+  }
+  
+  /**
+   * @param naturalId
+   */
+  private NetworkGroup( String naturalId ) {
+    this.setNaturalId( naturalId );
   }
   
   @PrePersist
@@ -249,24 +262,49 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   }
   
   public String getClusterNetworkName( ) {
-    return this.getOwnerUserId( ) + "-" + this.getDisplayName( );
+    return this.getOwnerUserId( ) + "-" + this.getNaturalId( );
   }
   
   public ExtantNetwork extantNetwork( ) {
-    ExtantNetwork ret = null;
-    try {
-      ret = Transactions.find( new ExtantNetwork( this ) );
-    } catch ( TransactionException ex ) {
-      for ( Long i = 9l; i < 4096; i++ ) {
-        try {
-          ret = Transactions.save( new ExtantNetwork( this, i ) );
-          break;
-        } catch ( TransactionException ex1 ) {
-          Logs.extreme( ).error( ex1, ex1 );
-        }
+    if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
+      return ExtantNetwork.bogus( this );
+    } else if ( this.extantNetwork == null ) {
+      try {
+        NetworkGroup newNetGroup = Transactions.naturalId( new NetworkGroup( this.getNaturalId( ) ), new Callback<NetworkGroup>( ) {
+          
+          @Override
+          public void fire( NetworkGroup input ) {
+            if ( input.getExtantNetwork( ) == null ) {
+              for ( int i = NetworkGroups.networkingConfiguration( ).getMinNetworkTag( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkTag( ); i++ ) {
+                EntityWrapper<ExtantNetwork> db = EntityWrapper.get( ExtantNetwork.class );
+                try {
+                  ExtantNetwork newExNet = new ExtantNetwork( NetworkGroup.this );
+                  db.add( newExNet );
+                  db.commit( );
+                } catch ( Exception ex ) {
+                  LOG.error( "Failed to add extant network: " + extantNetwork + " due to: " + ex.getMessage( ) );
+                  Logs.extreme( ).error( "Failed to add extant network: " + extantNetwork + " due to: " + ex.getMessage( ), ex );
+                }
+              }
+            }
+          }
+        } );
+        return newNetGroup.getExtantNetwork( );
+      } catch ( TransactionException ex ) {
+        LOG.error( ex, ex );
+        return ExtantNetwork.bogus( this );
       }
+    } else {
+      return this.getExtantNetwork( );
     }
-    return ret;
+  }
+  
+  private ExtantNetwork getExtantNetwork( ) {
+    return this.extantNetwork;
+  }
+  
+  private void setExtantNetwork( ExtantNetwork extantNetwork ) {
+    this.extantNetwork = extantNetwork;
   }
   
 }

@@ -72,7 +72,7 @@ public interface Callback<R> {
    * 
    * @param t
    */
-  public void fire( R t );
+  public void fire( R input );
   
   /**
    * Allows for handling exceptions which occur during the asynchronous operation.
@@ -102,9 +102,9 @@ public interface Callback<R> {
      * @return
      */
     @Override
-    public boolean apply( R arg0 ) {
+    public boolean apply( R input ) {
       try {
-        this.fire( arg0 );
+        this.fire( input );
         return true;
       } catch ( Exception ex ) {
         return false;
@@ -140,7 +140,7 @@ public interface Callback<R> {
      * @param r
      */
     @Override
-    public final void fire( R r ) {
+    public final void fire( R input ) {
       this.fire( );
     }
     
@@ -150,7 +150,7 @@ public interface Callback<R> {
      * @return
      */
     @Override
-    public boolean apply( R arg0 ) {
+    public boolean apply( R input ) {
       try {
         this.fire( );
         return true;

@@ -252,8 +252,8 @@ public class ConfigurationWebBackend {
     result.addField( clusterConf.getHostName( ) );
     result.addField( clusterConf.getPort( ) == null ? null : clusterConf.getPort( ).toString( ) );
     // Specific
-    result.addField( clusterConf.getMinVlan( ) == null ? null : clusterConf.getMinVlan( ).toString( ) );
-    result.addField( clusterConf.getMaxVlan( ) == null ? null : clusterConf.getMaxVlan( ).toString( ) );
+    result.addField( clusterConf.getMinNetworkTag( ) == null ? null : clusterConf.getMinNetworkTag( ).toString( ) );
+    result.addField( clusterConf.getMaxNetworkTag( ) == null ? null : clusterConf.getMaxNetworkTag( ).toString( ) );
   }
   
   /**
@@ -279,11 +279,11 @@ public class ConfigurationWebBackend {
     int i = COMMON_FIELD_DESCS.size( );
     try {
       Integer val = Integer.parseInt( input.getField( i++ ) );
-      clusterConf.setMaxVlan( val );
+      clusterConf.setMaxNetworkTag( val );
     } catch ( Exception e ) { }
     try {
       Integer val = Integer.parseInt( input.getField( i++ ) );
-      clusterConf.setMinVlan( val );
+      clusterConf.setMinNetworkTag( val );
     } catch ( Exception e ) { }
   }
   

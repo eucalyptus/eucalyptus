@@ -2,13 +2,14 @@ package com.eucalyptus.address;
 
 import java.util.List;
 import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.component.Partition;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.google.common.collect.Lists;
 
 public class NullSystemAddressManager extends AbstractSystemAddressManager {
   
   @Override
-  public List<Address> allocateSystemAddresses( String cluster, int count ) throws NotEnoughResourcesAvailable {
+  public List<Address> allocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesAvailable {
     throw new RuntimeException( "The system is not configured to support public addresses." );
     //TODO: add some output to help figure out why.
   }

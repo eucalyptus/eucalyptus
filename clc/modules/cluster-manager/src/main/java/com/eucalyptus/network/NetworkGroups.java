@@ -68,20 +68,112 @@ import java.util.concurrent.ExecutionException;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.cluster.ClusterConfiguration;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.async.Callback;
+import com.google.common.primitives.Ints;
+import com.google.gwt.thirdparty.guava.common.primitives.Longs;
 import edu.ucsb.eucalyptus.msgs.NetworkInfoType;
 
+@ConfigurableClass( root = "net", description = "Default values used to bootstrap networking state discovery." )
 public class NetworkGroups {
-  private static final String DEFAULT_NETWORK_NAME = "default";
-  private static Logger       LOG                  = Logger.getLogger( NetworkGroups.class );
-  private static String        NETWORK_DEFAULT_NAME = "default";
+  private static final String DEFAULT_NETWORK_NAME      = "default";
+  private static Logger       LOG                       = Logger.getLogger( NetworkGroups.class );
+  private static String       NETWORK_DEFAULT_NAME      = "default";
+  
+  @ConfigurableField( initial = "" + 16581375l, description = "Default max network index." )
+  private static final long   DEFAULT_MAX_NETWORK_INDEX = 16581375l;
+  @ConfigurableField( initial = "" + 9, description = "Default min network index." )
+  private static final long   DEFAULT_MIN_NETWORK_INDEX = 9l;
+  @ConfigurableField( initial = "" + 4096, description = "Default max vlan tag." )
+  private static final int    DEFAULT_MAX_NETWORK_TAG   = 4096;
+  @ConfigurableField( initial = "" + 9, description = "Default min vlan tag." )
+  private static final int    DEFAULT_MIN_NETWORK_TAG   = 9;
+  
+  public static class NetworkRangeConfiguration {
+    private Boolean useNetworkTags  = Boolean.TRUE;
+    private Integer minNetworkTag   = DEFAULT_MIN_NETWORK_TAG;
+    private Integer maxNetworkTag   = DEFAULT_MAX_NETWORK_TAG;
+    private Long    minNetworkIndex = DEFAULT_MIN_NETWORK_INDEX;
+    private Long    maxNetworkIndex = DEFAULT_MAX_NETWORK_INDEX;
+    
+    public Boolean hasNetworking( ) {
+      return this.useNetworkTags;
+    }
+    
+    public Boolean getUseNetworkTags( ) {
+      return this.useNetworkTags;
+    }
+    
+    public void setUseNetworkTags( Boolean useNetworkTags ) {
+      this.useNetworkTags = useNetworkTags;
+    }
+    
+    public Integer getMinNetworkTag( ) {
+      return this.minNetworkTag;
+    }
+    
+    public void setMinNetworkTag( Integer minNetworkTag ) {
+      this.minNetworkTag = minNetworkTag;
+    }
+    
+    public Integer getMaxNetworkTag( ) {
+      return this.maxNetworkTag;
+    }
+    
+    public void setMaxNetworkTag( Integer maxNetworkTag ) {
+      this.maxNetworkTag = maxNetworkTag;
+    }
+    
+    public Long getMaxNetworkIndex( ) {
+      return this.maxNetworkIndex;
+    }
+    
+    public void setMaxNetworkIndex( Long maxNetworkIndex ) {
+      this.maxNetworkIndex = maxNetworkIndex;
+    }
+    
+    public Long getMinNetworkIndex( ) {
+      return this.minNetworkIndex;
+    }
+    
+    public void setMinNetworkIndex( Long minNetworkIndex ) {
+      this.minNetworkIndex = minNetworkIndex;
+    }
+    
+  }
+  
+  static final NetworkRangeConfiguration netConfig = new NetworkRangeConfiguration( );
+  
+  public static void updateNetworkRangeConfiguration( ) {
+    Transactions.each( new ClusterConfiguration( ), new Callback<ClusterConfiguration>( ) {
+      
+      @Override
+      public void fire( ClusterConfiguration input ) {
+        netConfig.setUseNetworkTags( netConfig.getUseNetworkTags( ) && !input.getUseNetworkTags( ) );
+        
+        netConfig.setMinNetworkTag( Ints.max( netConfig.getMinNetworkTag( ), input.getMinNetworkTag( ) ) );
+        netConfig.setMaxNetworkTag( Ints.min( netConfig.getMaxNetworkTag( ), input.getMaxNetworkTag( ) ) );
+        
+        netConfig.setMinNetworkIndex( Longs.max( netConfig.getMinNetworkIndex( ), input.getMinNetworkIndex( ) ) );
+        netConfig.setMaxNetworkIndex( Longs.min( netConfig.getMaxNetworkIndex( ), input.getMaxNetworkIndex( ) ) );
+        
+      }
+    } );
+  }
+  
+  public static NetworkRangeConfiguration networkingConfiguration( ) {
+    return netConfig;
+  }
   
   public static NetworkGroup lookup( final String uuid ) throws NoSuchMetadataException {
     try {
       return Transactions.find( new NetworkGroup( ) {
         {
-          this.setUniqueName( uuid );
+          this.setNaturalId( uuid );
         }
       } );
     } catch ( Exception ex ) {
@@ -125,7 +217,5 @@ public class NetworkGroups {
       throw new RuntimeException( "Failed to create group: " + groupName + " for user: " + ownerFullName );
     }
   }
-  
-  public static void update( Integer useVlans, Integer addrsPerNet, Integer addrIndexMax, Integer addrIndexMax2, ArrayList<NetworkInfoType> activeNetworks ) {}
   
 }

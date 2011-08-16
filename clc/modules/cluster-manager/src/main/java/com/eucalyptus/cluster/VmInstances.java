@@ -85,11 +85,14 @@ import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.AbstractNamedRegistry;
+import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.UnconditionalCallback;
@@ -127,12 +130,6 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
       vmId = String.format( "i-%08X", hash.getValue( ) );
     } while ( VmInstances.getInstance( ).contains( vmId ) );
     return vmId;
-  }
-  
-  public static String getAsMAC( String instanceId ) {
-    String mac = String.format( "d0:0d:%s:%s:%s:%s", instanceId.substring( 2, 4 ), instanceId.substring( 4, 6 ), instanceId.substring( 6, 8 ),
-                                instanceId.substring( 8, 10 ) );
-    return mac;
   }
   
   public VmInstance lookupByInstanceIp( String ip ) throws NoSuchElementException {
@@ -200,7 +197,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
         vm.updateNetworkIndex( -1l );
         try {
           if ( networkFqName != null ) {
-            //GRZE:NET
+                                    //GRZE:NET
 //            Network net = Networks.getInstance( ).lookup( networkFqName );
 //            if ( networkIndex > 0 && vm.getNetworkNames( ).size( ) > 0 ) {
 //              net.returnNetworkIndex( networkIndex );
@@ -213,25 +210,27 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
 //                AsyncRequests.newRequest( stopNet.newInstance( ) ).dispatch( c.getConfiguration( ) );
 //              }
 //            }
-          }
-        } catch ( NoSuchElementException e1 ) {} catch ( Throwable e1 ) {
-          LOG.debug( e1, e1 );
-        }
-      }
+                                  }
+                                } catch ( NoSuchElementException e1 ) {} catch ( Throwable e1 ) {
+                                  LOG.debug( e1, e1 );
+                                }
+                              }
     };
     return cleanup;
   }
-
+  
   public static void cleanUp( final VmInstance vm ) {
     try {
-      String networkFqName = !vm.getNetworkRulesGroups( ).isEmpty( ) ? vm.getOwner( ).getAccountNumber( ) + "-" + vm.getNetworkNames( ).first( ) : null;
+      String networkFqName = !vm.getNetworkRulesGroups( ).isEmpty( )
+        ? vm.getOwner( ).getAccountNumber( ) + "-" + vm.getNetworkNames( ).first( )
+        : null;
       Cluster cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
       Long networkIndex = vm.getNetworkIndex( );
       VmInstances.cleanUpAttachedVolumes( vm );
-
+      
       Address address = null;
       Request<TerminateInstancesType, TerminateInstancesResponseType> req = AsyncRequests.newRequest( new TerminateCallback( vm.getInstanceId( ) ) );
-      if ( Clusters.getInstance( ).hasNetworking( ) ) {
+      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
         try {
           address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
         } catch ( NoSuchElementException e ) {} catch ( Throwable e1 ) {
@@ -246,10 +245,11 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   }
   
   private static final Predicate<AttachedVolume> anyVolumePred = new Predicate<AttachedVolume>( ) {
-    public boolean apply( AttachedVolume arg0 ) {
-      return true;
-    }
-  };
+                                                                 public boolean apply( AttachedVolume arg0 ) {
+                                                                   return true;
+                                                                 }
+                                                               };
+  
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
     try {
       final Cluster cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
@@ -273,7 +273,7 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
       LOG.error( "Failed to lookup Storage Controller configuration for: " + vm.getInstanceId( ) + " (placement=" + vm.getPartition( ) + ").  " );
     }
   }
-
+  
   public static VmInstance restrictedLookup( BaseMessage request, String instanceId ) throws EucalyptusCloudException {
     VmInstance vm = VmInstances.getInstance( ).lookup( instanceId ); //TODO: test should throw error.
     Context ctx = Contexts.lookup( );
@@ -283,7 +283,8 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
     } catch ( AuthException e ) {
       throw new EucalyptusCloudException( e );
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, addrAccount, PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, addrAccount, PolicySpec.requestToAction( request ),
+                                    ctx.getUser( ) ) ) {
       throw new EucalyptusCloudException( "Permission denied while trying to access instance " + instanceId + " by " + ctx.getUser( ) );
     }
     return vm;
@@ -310,6 +311,15 @@ public class VmInstances extends AbstractNamedRegistry<VmInstance> {
   public static String asMacAddress( final String instanceId ) {
     return String
                  .format( "%s:%s:%s:%s", instanceId.substring( 2, 4 ), instanceId.substring( 4, 6 ), instanceId.substring( 6, 8 ), instanceId.substring( 8, 10 ) );
+  }
+  
+  @Override
+  public VmInstance lookup( String name ) throws NoSuchElementException {
+    try {
+      return Transactions.find( VmInstance.named( null, name ) );
+    } catch ( TransactionException ex ) {
+      throw new NoSuchElementException( ex.getMessage( ) );
+    }
   }
   
 }

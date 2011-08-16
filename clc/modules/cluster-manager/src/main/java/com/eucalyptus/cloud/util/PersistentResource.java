@@ -194,6 +194,11 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
       public T get( ) throws TransactionException {
         return Transactions.naturalId( ( T ) PersistentResource.this );
       }
+
+      @Override
+      public int compareTo( T o ) {
+        return PersistentResource.this.compareTo( o );
+      }
       
     };
     return ref;

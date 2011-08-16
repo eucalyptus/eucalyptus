@@ -107,7 +107,7 @@ public class Partitions {
     }
   }
 
-  private static Partition lookupByName( String partitionName ) throws NoSuchElementException {
+  public static Partition lookupByName( String partitionName ) throws NoSuchElementException {
     EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
     Partition p = null;
     try {

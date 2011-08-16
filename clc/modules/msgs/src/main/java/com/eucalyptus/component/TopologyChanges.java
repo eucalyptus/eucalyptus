@@ -289,7 +289,7 @@ public class TopologyChanges {
       @Override
       public ServiceConfiguration apply( ServiceConfiguration input ) {
         try {
-          if ( Component.State.ENABLED.isIn( input ) ) {
+          if ( Component.State.ENABLED.equals( input.lookupState( ) ) ) {
             DISABLE.apply( input );
           }
           return input.lookupComponent( ).stopTransition( input ).get( );

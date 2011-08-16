@@ -64,12 +64,16 @@
 package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.NetworkToken;
-import com.eucalyptus.network.Networks;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.BroadcastCallback;
+import com.eucalyptus.util.async.Callback;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.StartNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
@@ -78,23 +82,27 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
   
   private static Logger      LOG = Logger.getLogger( StartNetworkCallback.class );
   
-  private final NetworkToken networkToken;
+  private final NetworkGroup networkGroup;
   
-  public StartNetworkCallback( final NetworkToken networkToken ) {
-    this.networkToken = networkToken;
-  //GRZE:NET
-    //    StartNetworkType msg = new StartNetworkType( networkToken.getUserFullName( ).getUserId( ), networkToken.getVlan( ), networkToken.getNetworkName( ),
-//                                                 networkToken.getNetworkUuid( ) ).regarding( );
-//    msg.setUserId( networkToken.getUserFullName( ).getUserId( ) );
-//    this.setRequest( msg );
-  //GRZE:NET
+  public StartNetworkCallback( final NetworkGroup networkGroup ) {
+    this.networkGroup = networkGroup;
+    StartNetworkType msg = new StartNetworkType( networkGroup.getOwnerUserId( ),
+                                                 networkGroup.extantNetwork( ).getTag( ),
+                                                 networkGroup.getNaturalId( ),
+                                                 networkGroup.getNaturalId( ) );
+    this.setRequest( msg );
   }
   
   @Override
   public void fire( StartNetworkResponseType msg ) {
     try {
-//GRZE:NET
-//      Networks.getInstance( ).setState( networkToken.getName( ), Networks.State.ACTIVE );
+      Transactions.naturalId( this.networkGroup, new Callback<NetworkGroup>( ) {
+        
+        @Override
+        public void fire( NetworkGroup input ) {
+          input.setState( NetworkGroup.State.ACTIVE );
+        }
+      } );
     } catch ( Throwable e ) {
       LOG.debug( e, e );
     }
@@ -118,7 +126,7 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
   
   @Override
   public BroadcastCallback<StartNetworkType, StartNetworkResponseType> newInstance( ) {
-    return new StartNetworkCallback( this.networkToken );
+    return new StartNetworkCallback( this.networkGroup );
   }
   
 }

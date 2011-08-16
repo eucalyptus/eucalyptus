@@ -461,7 +461,7 @@ public class VmControl {
     reply.set_return( true );
     Component walrus = Components.lookup( Walrus.class );
     NavigableSet<ServiceConfiguration> configs = walrus.lookupServiceConfigurations( );
-    if ( configs.isEmpty( ) || !Component.State.ENABLED.isIn( configs.first( ) ) ) {
+    if ( configs.isEmpty( ) || !Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
       throw new EucalyptusCloudException( "Failed to bundle instance because there is no available walrus service at the moment." );
     }
     final String walrusUrl = configs.first( ).getUri( ).toASCIIString( );

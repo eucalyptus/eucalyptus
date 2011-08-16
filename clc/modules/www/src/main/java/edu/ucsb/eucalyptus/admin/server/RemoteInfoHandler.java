@@ -120,13 +120,14 @@ public class RemoteInfoHandler {
     for ( final ClusterInfoWeb clusterWeb : newClusterList ) {
       try {
         ClusterConfiguration ccConfig = ServiceConfigurations.lookupByName( ClusterController.class, clusterWeb.getName( ) );
-        ccConfig.setMaxVlan( clusterWeb.getMaxVlans( ) );
-        ccConfig.setMinVlan( clusterWeb.getMinVlans( ) );
+        ccConfig.setMaxNetworkTag( clusterWeb.getMaxVlans( ) );
+        ccConfig.setMinNetworkTag( clusterWeb.getMinVlans( ) );
         EntityWrapper.get( ccConfig ).mergeAndCommit( ccConfig );
       } catch ( Exception e ) {
         LOG.debug( e, e );
       }
-      clusterConfig.add( new ClusterConfiguration( clusterWeb.getName( ) /**ASAP: FIXME: GRZE **/, clusterWeb.getName( ), clusterWeb.getHost( ), clusterWeb.getPort( ), clusterWeb.getMinVlans( ),
+      clusterConfig.add( new ClusterConfiguration( clusterWeb.getName( ) /** ASAP: FIXME: GRZE **/
+      , clusterWeb.getName( ), clusterWeb.getHost( ), clusterWeb.getPort( ), clusterWeb.getMinVlans( ),
                                                    clusterWeb.getMaxVlans( ) ) );
     }
     updateClusterConfigurations( clusterConfig );
@@ -136,8 +137,8 @@ public class RemoteInfoHandler {
     List<ClusterInfoWeb> clusterList = new ArrayList<ClusterInfoWeb>( );
     try {
       for ( ServiceConfiguration serviceConfig : ServiceConfigurations.list( ClusterController.class ) ) {//NOTE:GRZE: depending on referencing the Cluster-specific configuration type is not a safe assumption as that is a component-private type
-        ClusterConfiguration c = (ClusterConfiguration ) serviceConfig; 
-        clusterList.add( new ClusterInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ), c.getMinVlan( ), c.getMaxVlan( ) ) );
+        ClusterConfiguration c = ( ClusterConfiguration ) serviceConfig;
+        clusterList.add( new ClusterInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ), c.getMinNetworkTag( ), c.getMaxNetworkTag( ) ) );
       }
     } catch ( Throwable e ) {
       LOG.debug( "Got an error while trying to retrieving storage controller configuration list", e );
@@ -149,8 +150,12 @@ public class RemoteInfoHandler {
     List<ServiceConfiguration> storageControllerConfig = Lists.newArrayList( );
     List<Runnable> dispatchParameters = Lists.newArrayList( );
     for ( StorageInfoWeb storageControllerWeb : newStorageList ) {
-      final StorageControllerConfiguration scConfig = new StorageControllerConfiguration( null /**ASAP: FIXME: GRZE **/, storageControllerWeb.getName( ), storageControllerWeb.getHost( ),
-                                          storageControllerWeb.getPort( ) );
+      final StorageControllerConfiguration scConfig = new StorageControllerConfiguration( null /**
+       * 
+       * ASAP: FIXME: GRZE
+       **/
+      , storageControllerWeb.getName( ), storageControllerWeb.getHost( ),
+                                                                                          storageControllerWeb.getPort( ) );
       final UpdateStorageConfigurationType updateStorageConfiguration = new UpdateStorageConfigurationType( );
       updateStorageConfiguration.setName( scConfig.getName( ) );
       updateStorageConfiguration.setStorageParams( convertProps( storageControllerWeb.getStorageParams( ) ) );
@@ -165,7 +170,8 @@ public class RemoteInfoHandler {
             LOG.error( "The storage controller's configuration may be out of sync!" );
             LOG.debug( e, e );
           }
-        }} );
+        }
+      } );
       storageControllerConfig.add( scConfig );
     }
     updateStorageControllerConfigurations( storageControllerConfig );
@@ -187,7 +193,11 @@ public class RemoteInfoHandler {
       }
       StorageControllerConfiguration c;
       try {
-        c = ServiceConfigurations.lookup( new StorageControllerConfiguration() {{ this.setName( cc.getName( ) ); }} );
+        c = ServiceConfigurations.lookup( new StorageControllerConfiguration( ) {
+          {
+            this.setName( cc.getName( ) );
+          }
+        } );
         StorageInfoWeb scInfo = new StorageInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ) );
         try {
           GetStorageConfigurationResponseType getStorageConfigResponse = RemoteInfoHandler.sendForStorageInfo( cc, c );
@@ -226,7 +236,7 @@ public class RemoteInfoHandler {
     for ( WalrusInfoWeb walrusInfoWeb : newWalrusList ) {
       UpdateWalrusConfigurationType updateWalrusConfiguration = new UpdateWalrusConfigurationType( );
       updateWalrusConfiguration.setName( WalrusProperties.NAME );
-      updateWalrusConfiguration.setProperties(convertProps(walrusInfoWeb.getProperties()));
+      updateWalrusConfiguration.setProperties( convertProps( walrusInfoWeb.getProperties( ) ) );
       Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) );
       scDispatch.send( updateWalrusConfiguration );
     }
@@ -239,16 +249,16 @@ public class RemoteInfoHandler {
         GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType( WalrusProperties.NAME );
         Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) );
         GetWalrusConfigurationResponseType getWalrusConfigResponse = scDispatch.send( getWalrusConfiguration );
-        walrusList.add( new WalrusInfoWeb( c.getName( ), 
-      		  c.getHostName( ), 
-      		  c.getPort( ),
-      		  convertParams(getWalrusConfigResponse.getProperties())));
+        walrusList.add( new WalrusInfoWeb( c.getName( ),
+                                           c.getHostName( ),
+                                           c.getPort( ),
+                                           convertParams( getWalrusConfigResponse.getProperties( ) ) ) );
       }
     } catch ( PersistenceException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       throw new EucalyptusCloudException( ex );
     } catch ( NoSuchElementException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       throw new EucalyptusCloudException( ex );
     }
     return walrusList;
@@ -275,7 +285,6 @@ public class RemoteInfoHandler {
   
   public static void updateClusterConfigurations( List<ServiceConfiguration> clusterConfigs ) throws EucalyptusCloudException {
     updateComponentConfigurations( ServiceConfigurations.list( ClusterController.class ), clusterConfigs );
-    ClusterState.trim( );
   }
   
   public static void updateStorageControllerConfigurations( List<ServiceConfiguration> storageControllerConfigs ) throws EucalyptusCloudException {
@@ -313,7 +322,7 @@ public class RemoteInfoHandler {
 //          regComponent = new DeregisterComponentType( );
 //        }
 //        regComponent.setName( config.getName( ) );
-        ComponentRegistrationHandler.deregister( Components.oneWhichHandles( config.getClass( ) ), 
+        ComponentRegistrationHandler.deregister( Components.oneWhichHandles( config.getClass( ) ),
                                                  config.getPartition( ), config.getHostName( ) );
       }
       for ( ComponentConfiguration config : addComponents ) {
@@ -330,7 +339,7 @@ public class RemoteInfoHandler {
 //        regComponent.setName( config.getName( ) );
 //        regComponent.setHost( config.getHostName( ) );
 //        regComponent.setPort( config.getPort( ) );
-        ComponentRegistrationHandler.register( Components.oneWhichHandles( config.getClass( ) ), 
+        ComponentRegistrationHandler.register( Components.oneWhichHandles( config.getClass( ) ),
                                                config.getPartition( ), config.getName( ), config.getHostName( ), config.getPort( ) );
       }
     } catch ( Exception e ) {
@@ -339,6 +348,7 @@ public class RemoteInfoHandler {
     }
     
   }
+  
   private static ArrayList<String> convertParams( ArrayList<ComponentProperty> properties ) {
     ArrayList<String> params = new ArrayList<String>( );
     for ( ComponentProperty property : properties ) {

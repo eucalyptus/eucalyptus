@@ -92,6 +92,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.gwt.thirdparty.guava.common.collect.Collections2;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
@@ -176,8 +177,7 @@ public class ClusterEndpoint implements Startable {
           try {
             Cluster c = Clusters.getInstance( ).lookup( partitionName );
             reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c, args ) );
-          } catch ( NoSuchElementException ex ) {
-          }
+          } catch ( NoSuchElementException ex ) {}
         }
       }
     }
@@ -361,19 +361,19 @@ public class ClusterEndpoint implements Startable {
   
   public DescribeRegionsResponseType DescribeRegions( DescribeRegionsType request ) {//TODO:GRZE:URGENT fix the behaviour here.
     DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
-    try {
+    try {//TODO:GRZE:wtfugly
       Component euca = Components.lookup( Eucalyptus.class );
       NavigableSet<ServiceConfiguration> configs = euca.lookupServiceConfigurations( );
-      if( !configs.isEmpty( ) && Component.State.ENABLED.isIn( configs.first( ) ) ) {
+      if ( !configs.isEmpty( ) && Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
         reply.getRegionInfo( ).add( new RegionInfoType( euca.getComponentId( ).name( ), configs.first( ).getUri( ).toASCIIString( ) ) );
       }
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex, ex );
     }
-    try {
+    try {//TODO:GRZE:wtfugly
       Component walrus = Components.lookup( Walrus.class );
       NavigableSet<ServiceConfiguration> configs = walrus.lookupServiceConfigurations( );
-      if( !configs.isEmpty( ) && Component.State.ENABLED.isIn( configs.first( ) ) ) {
+      if ( !configs.isEmpty( ) && Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
         reply.getRegionInfo( ).add( new RegionInfoType( walrus.getComponentId( ).name( ), configs.first( ).getUri( ).toASCIIString( ) ) );
       }
     } catch ( NoSuchElementException ex ) {

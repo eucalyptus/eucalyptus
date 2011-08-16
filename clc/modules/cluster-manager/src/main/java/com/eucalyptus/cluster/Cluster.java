@@ -424,10 +424,10 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             }
             break;
           case ENABLED:
-            if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_ENABLED ) && Component.State.ENABLED.isIn( this.configuration ) ) {
+            if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_ENABLED ) && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
               transition = Automata.sequenceTransitions( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
                                                          State.ENABLED_NET, State.ENABLED_VMS, State.ENABLED );
-            } else if ( initialized && Component.State.DISABLED.isIn( this.configuration ) || Component.State.NOTREADY.isIn( this.configuration ) ) {
+            } else if ( initialized && Component.State.DISABLED.equals( this.configuration.lookupState( ) ) || Component.State.NOTREADY.equals( this.configuration.lookupState( ) ) ) {
               transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
             }
             break;

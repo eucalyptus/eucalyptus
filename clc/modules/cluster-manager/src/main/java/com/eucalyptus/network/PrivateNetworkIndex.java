@@ -64,23 +64,18 @@
 package com.eucalyptus.network;
 
 import javax.persistence.Column;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
-import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PrePersist;
-import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import org.hibernate.annotations.NaturalId;
 import com.eucalyptus.cloud.util.PersistentResource;
 import com.eucalyptus.cloud.util.ResourceAllocation;
+import com.eucalyptus.cloud.util.ResourceAllocationException;
+import com.eucalyptus.cloud.util.ResourceAllocation.SetReference;
 import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.entities.AbstractStatefulPersistent;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.TransactionException;
@@ -91,12 +86,12 @@ import com.eucalyptus.util.TransactionException;
 @Table( name = "metadata_network_indices" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex, VmInstance> implements Comparable<PrivateNetworkIndex> {
-  @NaturalId
   @Column( name = "metadata_network_index" )
   private final Long          index;
-  @NaturalId
-  @Column( name = "metadata_network_index_network_tag" )
-  private final Long          tag;
+  @Column( name = "metadata_network_index_bogus_id", unique = true )
+  private final String        bogusId;
+  @ManyToOne
+  @JoinColumn( name = "metadata_network_index_extant_network" )
   private final ExtantNetwork network;
   @Column( name = "metadata_network_index_vm_perm_uuid" )
   private String              instanceNaturalId;
@@ -104,31 +99,66 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   private PrivateNetworkIndex( ) {
     super( null, null );
     this.index = null;
-    this.tag = null;
     this.network = null;
+    this.bogusId = null;
   }
   
   PrivateNetworkIndex( ExtantNetwork network, Long index ) {
-    super( network.getOwnerFullName( ), network.getTag( ) + ":" + index );
+    super( network.getOwner( ), network.getTag( ) + ":" + index );
     this.network = network;
-    this.tag = network.getTag( );
+    this.bogusId = network.getTag( ) + ":" + index;
     this.index = index;
     this.setState( ResourceAllocation.State.FREE );
   }
   
-  public PrivateNetworkIndex( Long tag, Long index ) {
+  public PrivateNetworkIndex( Integer tag, Long index ) {
     super( null, null );
-    this.tag = tag;
+    this.bogusId = tag + ":" + index;
     this.network = null;
     this.index = index;
   }
   
+  private static final PrivateNetworkIndex bogusIndex = new PrivateNetworkIndex( -1, -1l );
+  
   public static PrivateNetworkIndex bogus( ) {
-    return new PrivateNetworkIndex( -1l, -1l );
+    return bogusIndex;
+  }
+  
+  public static SetReference<PrivateNetworkIndex, VmInstance> bogusSetReference( ) {
+    return new SetReference<PrivateNetworkIndex, VmInstance>( ) {
+      
+      @Override
+      public int compareTo( PrivateNetworkIndex o ) {
+        return bogusIndex.compareTo( o );
+      }
+      
+      @Override
+      public PrivateNetworkIndex set( VmInstance referer ) throws ResourceAllocationException {
+        return bogusIndex;
+      }
+      
+      @Override
+      public PrivateNetworkIndex get( ) throws TransactionException {
+        return bogusIndex;
+      }
+      
+      @Override
+      public PrivateNetworkIndex abort( ) throws ResourceAllocationException {
+        return bogusIndex;
+      }
+    };
   }
   
   public Long getIndex( ) {
     return this.index;
+  }
+  
+  public ExtantNetwork getNetwork( ) {
+    return this.network;
+  }
+  
+  private String getBogusId( ) {
+    return this.bogusId;
   }
   
   public String getInstanceNaturalId( ) {
@@ -192,8 +222,15 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   
   @Override
   public int compareTo( PrivateNetworkIndex o ) {
-    return ( this.tag.equals( o.tag )
-      ? this.index.compareTo( o.index )
-      : this.tag.compareTo( o.tag ) );
+    if ( this.getNetwork( ) != null ) {
+      return ( this.getNetwork( ).getTag( ).equals( o.getNetwork( ).getTag( ) )
+        ? this.getIndex( ).compareTo( o.getIndex( ) )
+        : this.getNetwork( ).compareTo( o.getNetwork( ) ) );
+    } else {
+      return ( o.getNetwork( ) == null
+        ? 0
+        : -1 );
+    }
   }
+  
 }

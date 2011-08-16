@@ -74,17 +74,13 @@ import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.OwnerFullName;
 
 public class NetworkToken implements Comparable {
-  private final Integer         vlan;
+  private final ExtantNetwork                                         extantNetwork;
   private NavigableSet<SetReference<PrivateNetworkIndex, VmInstance>> indexes = new ConcurrentSkipListSet<SetReference<PrivateNetworkIndex, VmInstance>>( );
-  private final NetworkGroup    ruleGroup;
+  private final NetworkGroup                                          ruleGroup;
   
-  public NetworkToken( final Partition partition, final NetworkGroup ruleGroup, final int vlan ) {
+  public NetworkToken( final Partition partition, final NetworkGroup ruleGroup ) {
     this.ruleGroup = ruleGroup;
-    this.vlan = vlan;
-  }
-  
-  public Integer getVlan( ) {
-    return this.vlan;
+    this.extantNetwork = ruleGroup.extantNetwork( );
   }
   
   public boolean isEmpty( ) {
@@ -101,7 +97,7 @@ public class NetworkToken implements Comparable {
   
   @Override
   public String toString( ) {
-    return String.format( "NetworkToken:%s:cluster=%s:vlan=%s:indexes=%s", this.vlan, this.indexes );
+    return String.format( "NetworkToken:%s:cluster=%s:vlan=%s:indexes=%s", this.extantNetwork.getTag( ), this.indexes );
   }
   
   @Override
@@ -123,6 +119,10 @@ public class NetworkToken implements Comparable {
   public int compareTo( Object o ) {
     NetworkToken that = ( NetworkToken ) o;
     return this.ruleGroup.compareTo( that.ruleGroup );
+  }
+  
+  public ExtantNetwork getExtantNetwork( ) {
+    return this.extantNetwork;
   }
   
 }

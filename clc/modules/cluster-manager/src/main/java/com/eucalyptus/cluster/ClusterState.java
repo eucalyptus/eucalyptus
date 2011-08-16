@@ -91,13 +91,15 @@ import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 
 public class ClusterState {
   private static Logger                                       LOG                   = Logger.getLogger( ClusterState.class );
-  private String                                              clusterName;
-  private static NavigableSet<Integer>                        availableVlans        = populate( );                                              //GRZE:GROAN:this is wrong.  partition it.
-  private Integer                                             mode                  = 1;
+  private final String                                        clusterName;
   private Integer                                             addressCapacity;
   private Boolean                                             publicAddressing      = false;
   private Boolean                                             addressingInitialized = false;
   private ConcurrentNavigableMap<ClusterAddressInfo, Integer> orphans               = new ConcurrentSkipListMap<ClusterAddressInfo, Integer>( );
+  
+  ClusterState( String clusterName ) {
+    this.clusterName = clusterName;
+  }
   
   public void clearOrphan( ClusterAddressInfo address ) {
     Integer delay = orphans.remove( address );
@@ -151,76 +153,6 @@ public class ClusterState {
     this.publicAddressing = publicAddressing;
   }
   
-  public static void trim( ) {
-    NavigableSet<Integer> newVlanList = Sets.newTreeSet( );
-    int min = 2;
-    int max = 4095;
-    try {
-      for ( ServiceConfiguration conf : ServiceConfigurations.list( ClusterController.class ) ) {
-        ClusterConfiguration cc = ( ClusterConfiguration ) conf;
-        if ( cc.getMinVlan( ) != null ) min = cc.getMinVlan( ) > min
-          ? cc.getMinVlan( )
-          : min;
-        if ( cc.getMaxVlan( ) != null ) max = cc.getMaxVlan( ) < max
-          ? cc.getMaxVlan( )
-          : max;
-      }
-    } catch ( PersistenceException e ) {
-      LOG.debug( e, e );
-    }
-    for ( int i = min; i < max; i++ )
-      newVlanList.add( i );
-    newVlanList.removeAll( availableVlans );
-    availableVlans.removeAll( availableVlans.headSet( min ) );
-    availableVlans.removeAll( availableVlans.tailSet( max ) );
-    for ( int i = min; i < max; i++ ) {
-      if ( !newVlanList.contains( i ) ) {
-        availableVlans.add( i );
-      }
-    }
-    EventRecord.here( ClusterState.class, EventType.CONFIG_VLANS, Integer.toString( min ), Integer.toString( max ),
-                                 availableVlans.toString( )
-                                               .substring( 0, 50 > availableVlans.toString( ).length( )
-                                                 ? availableVlans.toString( ).length( )
-                                                 : 50 ) ).debug( );
-  }
-  
-  private static NavigableSet<Integer> populate( ) {
-    NavigableSet<Integer> list = new ConcurrentSkipListSet<Integer>( );
-    for ( int i = 2; i < 4095; i++ )
-      list.add( i );
-    return list;
-  }
-  
-  public ClusterState( String clusterName ) {
-    this.clusterName = clusterName;
-  }
-  
-  public NetworkToken extantAllocation( String userId, String networkName, String networkUuid, int vlan ) throws NetworkAlreadyExistsException {
-    UserFullName userFn = UserFullName.getInstance( userId );
-  //GRZE:NET
-    NetworkToken netToken = null;//new NetworkToken( this.clusterName, userFn, networkName, networkUuid, vlan );
-    if ( !ClusterState.availableVlans.remove( vlan ) ) {
-      throw new NetworkAlreadyExistsException( );
-    }
-    return netToken;
-  }
-  
-  public static NetworkToken getNetworkAllocation( UserFullName userFullName, ResourceToken rscToken, String networkName ) throws NotEnoughResourcesAvailable {
-    ClusterState.trim( );
-    try {
-      //GRZE:NET
-//      NetworkRulesGroup network = getVlanAssignedNetwork( networkName );
-//      NetworkToken token = network.createNetworkToken( rscToken.getCluster( ) );
-//      EventRecord.caller( NetworkToken.class, EventType.TOKEN_RESERVED, token.toString( ) ).info( );
-//      return token;
-      return null;
-    } catch ( NoSuchElementException e ) {
-      LOG.debug( e, e );
-      throw new NotEnoughResourcesAvailable( "Failed to create registry entry for network named: " + networkName );
-    }
-  }
-  
   private static NetworkGroup getVlanAssignedNetwork( String networkName ) throws NotEnoughResourcesAvailable {
     NetworkGroup network = Networks.getInstance( ).lookup( networkName );
     //GRZE:NET
@@ -241,7 +173,7 @@ public class ClusterState {
   
   public void releaseNetworkAllocation( NetworkToken token ) {
     EventRecord.caller( NetworkToken.class, EventType.TOKEN_RETURNED, token.toString( ) ).info( );
-  //GRZE:NET
+    //GRZE:NET
 //    try {
 //      Network existingNet = Networks.getInstance( ).lookup( token.getName( ) );
 //      if ( !existingNet.hasTokens( ) ) {
@@ -271,14 +203,6 @@ public class ClusterState {
     return clusterName;
   }
   
-  public Integer getMode( ) {
-    return mode;
-  }
-  
-  public void setMode( Integer mode ) {
-    this.mode = mode;
-  }
-  
   public Integer getAddressCapacity( ) {
     return addressCapacity;
   }
@@ -289,7 +213,7 @@ public class ClusterState {
   
   @Override
   public String toString( ) {
-    return String.format( "ClusterState [addressCapacity=%s, clusterName=%s, mode=%s]", this.addressCapacity, this.clusterName, this.mode );
+    return String.format( "ClusterState [addressCapacity=%s, clusterName=%s]", this.addressCapacity, this.clusterName );
   }
   
 }

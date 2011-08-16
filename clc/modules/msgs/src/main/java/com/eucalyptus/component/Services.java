@@ -85,8 +85,12 @@ public class Services {
           this.setSeverity( input.getSeverity( ).toString( ) );
           this.setUuid( input.getUuid( ) );
           this.setTimestamp( input.getTimestamp( ).toString( ) );
-          this.setMessage( input.getMessage( ) != null ? input.getMessage( ) : "No summary information available." );
-          this.setStackTrace( input.getStackTrace( ) != null ? input.getStackTrace( ) : Exceptions.string( new RuntimeException( "Error while mapping service event record:  No stack information available" ) ) );
+          this.setMessage( input.getMessage( ) != null
+            ? input.getMessage( )
+            : "No summary information available." );
+          this.setStackTrace( input.getStackTrace( ) != null
+            ? input.getStackTrace( )
+            : Exceptions.string( new RuntimeException( "Error while mapping service event record:  No stack information available" ) ) );
           this.setServiceFullName( input.getServiceFullName( ) );
           this.setServiceHost( input.getServiceHost( ) );
           this.setServiceName( input.getServiceName( ) );
@@ -110,44 +114,25 @@ public class Services {
 //    if ( config.isVmLocal( ) && !config.lookupComponent( ).isAvailableLocally( ) ) {
 //      return new BasicService.Broken( config );
 //    } else {
-      return new MessagableService( config );
+    return new MessagableService( config );
 //    }
   }
-
-  public static final Predicate<ServiceConfiguration> enabledService( ) {
-    return new Predicate<ServiceConfiguration>( ) {
-      
-      @Override
-      public boolean apply( ServiceConfiguration arg0 ) {
-        return Component.State.ENABLED.isIn( arg0 );
-      }
-    };
-  }
-
-  public static Predicate<ServiceConfiguration> serviceInPartition( final Partition partition ) {
-    return new Predicate<ServiceConfiguration>( ) {
-      
-      @Override
-      public boolean apply( ServiceConfiguration arg0 ) {
-        return partition.getName( ).equals( arg0.getPartition( ) ) && Component.State.ENABLED.isIn( arg0 );
-      }
-    };
-  }
-
+  
   public static List<ServiceConfiguration> collect( Predicate<ServiceConfiguration> predicate ) {
     List<ServiceConfiguration> configs = Lists.newArrayList( );
-    for( Component comp : Components.list( ) ) {
-      for( ServiceConfiguration config : comp.lookupServiceConfigurations( ) ) {
+    for ( Component comp : Components.list( ) ) {
+      for ( ServiceConfiguration config : comp.lookupServiceConfigurations( ) ) {
         try {
-          if( predicate.apply( config ) ) {
+          if ( predicate.apply( config ) ) {
             Logs.exhaust( ).debug( "ServiceConfigurations.collect( ) accepted config " + config + " for predicate: " + predicate.getClass( ) );
             configs.add( config );
           } else {
             Logs.exhaust( ).debug( "ServiceConfigurations.collect( ) rejected config " + config + " for predicate: " + predicate.getClass( ) );
           }
         } catch ( Exception ex ) {
-          Logs.exhaust( ).debug( "ServiceConfigurations.collect( ) failed for config " + config + " using predicate: " + predicate.getClass( ) + " because of " + ex.getMessage( ) );
-          ServiceConfigurations.LOG.error( ex , ex );
+          Logs.exhaust( ).debug( "ServiceConfigurations.collect( ) failed for config " + config + " using predicate: " + predicate.getClass( ) + " because of "
+                                     + ex.getMessage( ) );
+          ServiceConfigurations.LOG.error( ex, ex );
         }
       }
     }

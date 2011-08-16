@@ -129,32 +129,23 @@
     <value name="previousStateName" field="previousStateName" usage="optional" />
   </mapping>
 
-  <mapping name="RunInstances" class="edu.ucsb.eucalyptus.cloud.VmRunType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="RunInstances" class="com.eucalyptus.cloud.VmRunType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <structure name="instanceType" usage="optional">
-      <structure field="vmTypeInfo" map-as="edu.ucsb.eucalyptus.msgs.VmTypeInfo" />
-    </structure>
+    <structure name="instanceType" field="vmTypeInfo" map-as="edu.ucsb.eucalyptus.msgs.VmTypeInfo" />
     <structure usage="optional">
       <structure field="keyInfo" map-as="edu.ucsb.eucalyptus.cloud.VmKeyInfo" />
     </structure>
-    <value name="maxCount" field="max" usage="required" />
-    <value name="minCount" field="min" usage="required" />
+    <value name="maxCount" field="amount" usage="required" />
+    <value name="minCount" field="amount" usage="required" />
     <value name="reservationId" field="reservationId" usage="required" />
-    <collection field="instanceIds" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <value name="instanceIds" type="java.lang.String" />
-    </collection>
+    <value name="minCount" field="amount" usage="required" />
+    <value name="instanceIds"  field="instanceId" />
     <collection field="networkNames" factory="org.jibx.runtime.Utility.arrayListFactory">
       <value name="netNames" type="java.lang.String" />
     </collection>
-    <collection field="macAddresses" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <value name="macAddresses" type="java.lang.String" />
-    </collection>
-    <collection field="networkIndexList" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <value name="networkIndexList" type="java.lang.String" />
-    </collection>
-    <collection field="uuids" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <value name="uuids" type="java.lang.String" />
-    </collection>
+    <value name="macAddresses" field="macAddress" />
+    <value name="networkIndexList" field="networkIndex" />
+    <value name="uuids" field="uuid"/>
     <value name="vlan" field="vlan" usage="required" />
     <value name="userData" field="userData" usage="required" />
     <value name="launchIndex" field="launchIndex" usage="required" />

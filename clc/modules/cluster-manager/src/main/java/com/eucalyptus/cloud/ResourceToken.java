@@ -63,77 +63,65 @@
 
 package com.eucalyptus.cloud;
 
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 import java.util.UUID;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.network.NetworkToken;
+import javax.annotation.Nullable;
+import org.apache.log4j.Logger;
+import com.eucalyptus.address.Address;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.cloud.util.ResourceAllocation.SetReference;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.NoSuchTokenException;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.network.NetworkGroups;
+import com.eucalyptus.network.PrivateNetworkIndex;
 
-public class ResourceToken implements Comparable {
-  private final String       cluster;
-  private final String       correlationId;
-  private final UserFullName userFullName;
-  private List<String>       instanceIds   = new ArrayList<String>( );
-  private List<String>       instanceUuids = new ArrayList<String>( );
-  private List<String>       addresses     = new ArrayList<String>( );
-  private List<NetworkToken> networkTokens = new ArrayList<NetworkToken>( );
-  private final Integer      amount;
-  private final String       vmType;
-  private final Date         creationTime;
-  private final Integer      sequenceNumber;
+public class ResourceToken implements Comparable<ResourceToken> {
+  private static Logger                                 LOG    = Logger.getLogger( ResourceToken.class );
+  private final Allocation                              allocation;
+  private final Integer                                 launchIndex;
+  private final String                                  instanceId;
+  private final String                                  instanceUuid;
+  @Nullable
+  private Address                                       address;
+  @Nullable
+  private NetworkGroup                                  networkGroup;
+  @Nullable
+  private SetReference<PrivateNetworkIndex, VmInstance> networkIndex;
+  private final Date                                    creationTime;
+  private final Integer                                 resourceAllocationSequenceNumber;
+  private final Integer                                 amount = 1;
   
-  public ResourceToken( final UserFullName userFullName, final String correlationId, final String cluster, final int amount, final int sequenceNumber,
-                        final String vmType ) {
-    this.cluster = cluster;
-    this.correlationId = correlationId;
-    this.userFullName = userFullName;
-    this.amount = amount;
-    for( int i = 0; i < amount; i ++ ) {
-      this.instanceUuids.add( UUID.randomUUID( ).toString( ) );
-    }
-    this.sequenceNumber = sequenceNumber;
+  public ResourceToken( final Allocation allocInfo, final int resourceAllocationSequenceNumber, final int launchIndex ) {
+    this.allocation = allocInfo;
+    this.launchIndex = launchIndex;
+    this.instanceId = VmInstances.getId( allocInfo.getReservationIndex( ), launchIndex );
+    this.instanceUuid = UUID.randomUUID( ).toString( );
+    this.resourceAllocationSequenceNumber = resourceAllocationSequenceNumber;
     this.creationTime = Calendar.getInstance( ).getTime( );
-    this.vmType = vmType;
   }
   
-  public NetworkToken getPrimaryNetwork( ) {
-    return this.networkTokens.size( ) > 0
-      ? this.networkTokens.get( 0 )
-      : null;
+  public Allocation getAllocationInfo( ) {
+    return this.allocation;
   }
   
-  public String getCluster( ) {
-    return this.cluster;
+  public String getInstanceId( ) {
+    return this.instanceId;
   }
   
-  public String getCorrelationId( ) {
-    return this.correlationId;
-  }
-  
-  public UserFullName getUserFullName( ) {
-    return this.userFullName;
-  }
-  
-  public List<String> getInstanceIds( ) {
-    return this.instanceIds;
-  }
-  
-  public List<String> getAddresses( ) {
-    return this.addresses;
-  }
-  
-  public List<NetworkToken> getNetworkTokens( ) {
-    return this.networkTokens;
+  public Address getAddress( ) {
+    return this.address;
   }
   
   public Integer getAmount( ) {
     return this.amount;
-  }
-  
-  public String getVmType( ) {
-    return this.vmType;
   }
   
   public Date getCreationTime( ) {
@@ -141,41 +129,114 @@ public class ResourceToken implements Comparable {
   }
   
   public Integer getSequenceNumber( ) {
-    return this.sequenceNumber;
+    return this.resourceAllocationSequenceNumber;
   }
   
   @Override
-  public boolean equals( final Object o ) {
-    if ( this == o ) return true;
-    if ( !( o instanceof ResourceToken ) ) return false;
-    
-    ResourceToken that = ( ResourceToken ) o;
-    
-    if ( !amount.equals( that.amount ) ) return false;
-    if ( !cluster.equals( that.cluster ) ) return false;
-    if ( !correlationId.equals( that.correlationId ) ) return false;
-    if ( !creationTime.equals( that.creationTime ) ) return false;
-    
-    return true;
+  public int compareTo( final ResourceToken that ) {
+    return this.resourceAllocationSequenceNumber - that.resourceAllocationSequenceNumber;
+  }
+  
+  public String getInstanceUuid( ) {
+    return this.instanceUuid;
+  }
+  
+  public SetReference<PrivateNetworkIndex, VmInstance> getNetworkIndex( ) {
+    return this.networkIndex != null
+      ? this.networkIndex
+      : PrivateNetworkIndex.bogusSetReference( );
+  }
+  
+  public Integer getLaunchIndex( ) {
+    return this.launchIndex;
+  }
+  
+  NetworkGroup getNetworkGroup( ) {
+    return this.networkGroup;
+  }
+  
+  public void abort( ) {
+    try {
+      final ServiceConfiguration config = Partitions.lookupService( ClusterController.class, this.getAllocationInfo( ).getPartition( ) );
+      final Cluster cluster = Clusters.lookup( config );
+      cluster.getNodeState( ).releaseToken( this );
+    } catch ( final Exception ex ) {
+      LOG.error( ex, ex );
+    }
+    try {
+      this.networkIndex.abort( );
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
+    }
+    try {
+      this.address.release( );
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
+    }
   }
   
   @Override
   public int hashCode( ) {
-    int result = cluster.hashCode( );
-    result = 31 * result + correlationId.hashCode( );
-    result = 31 * result + amount;
-    result = 31 * result + creationTime.hashCode( );
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.instanceUuid == null )
+      ? 0
+      : this.instanceUuid.hashCode( ) );
     return result;
   }
   
   @Override
-  public int compareTo( final Object o ) {
-    ResourceToken that = ( ResourceToken ) o;
-    return this.sequenceNumber - that.sequenceNumber;
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( obj == null ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    ResourceToken other = ( ResourceToken ) obj;
+    if ( this.instanceUuid == null ) {
+      if ( other.instanceUuid != null ) {
+        return false;
+      }
+    } else if ( !this.instanceUuid.equals( other.instanceUuid ) ) {
+      return false;
+    }
+    return true;
   }
   
-  public List<String> getInstanceUuids( ) {
-    return this.instanceUuids;
+  static Logger getLOG( ) {
+    return LOG;
   }
   
+  Allocation getAllocation( ) {
+    return this.allocation;
+  }
+  
+  Integer getResourceAllocationSequenceNumber( ) {
+    return this.resourceAllocationSequenceNumber;
+  }
+  
+  public void submit( ) throws NoSuchTokenException {
+    Clusters.lookup( this.getAllocationInfo( ).getPartition( ) ).getNodeState( ).submitToken( this );
+  }
+  
+  public void redeem( ) throws NoSuchTokenException {
+    Clusters.lookup( this.getAllocationInfo( ).getPartition( ) ).getNodeState( ).redeemToken( this );
+  }
+  
+  public void release( ) throws NoSuchTokenException {
+    Clusters.lookup( this.getAllocationInfo( ).getPartition( ) ).getNodeState( ).releaseToken( this );
+  }
+
+  public void setNetworkIndex( SetReference<PrivateNetworkIndex, VmInstance> networkIndex ) {
+    this.networkIndex = networkIndex;
+  }
+
+  public void setAddress( Address address ) {
+    this.address = address;
+  }
+
 }

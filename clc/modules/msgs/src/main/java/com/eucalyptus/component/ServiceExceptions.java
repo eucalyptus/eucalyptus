@@ -141,7 +141,7 @@ public class ServiceExceptions {
       
       @Override
       public boolean apply( final Throwable ex ) {
-        if ( State.ENABLED.isIn( parent ) && ( parent.isVmLocal( ) || ( BootstrapArgs.isCloudController( ) && parent.isHostLocal( ) ) ) ) {
+        if ( State.ENABLED.equals( parent.lookupState( ) ) && ( parent.isVmLocal( ) || ( BootstrapArgs.isCloudController( ) && parent.isHostLocal( ) ) ) ) {
           try {
             Topology.disable( parent );
           } catch ( ServiceRegistrationException ex1 ) {

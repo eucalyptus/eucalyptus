@@ -82,6 +82,7 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.event.AbstractNamedRegistry;
@@ -138,8 +139,8 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
                                                  }
                                                };
   
-  public static List<Address> allocateSystemAddresses( String cluster, int count ) throws NotEnoughResourcesAvailable {
-    return getAddressManager( ).allocateSystemAddresses( cluster, count );
+  public static Address allocateSystemAddress( Partition partition ) throws NotEnoughResourcesAvailable {
+    return getAddressManager( ).allocateSystemAddresses( partition, 1 ).get( 0 );
   }
   
   private static AbstractSystemAddressManager getProvider( ) {

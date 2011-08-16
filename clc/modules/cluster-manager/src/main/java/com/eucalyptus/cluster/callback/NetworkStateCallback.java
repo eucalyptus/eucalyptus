@@ -3,6 +3,7 @@ package com.eucalyptus.cluster.callback;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.entities.EntityWrapper;
@@ -10,6 +11,7 @@ import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.google.common.collect.Lists;
@@ -35,12 +37,23 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
    */
   @Override
   public void fire( final DescribeNetworksResponseType reply ) {
-    /** update network mode (yes/no vlan) **/
-    this.getSubject( ).getState( ).setMode( reply.getUseVlans( ) );
-    /** set vlan interval **/
-    this.getSubject( ).getConfiguration( ).setMinVlan( reply.getVlanMin( ) );
-    this.getSubject( ).getConfiguration( ).setMaxVlan( reply.getVlanMax( ) );
-    ClusterState.trim( );
+    try {
+      Transactions.one( this.getSubject( ).getConfiguration( ), new Callback<ClusterConfiguration>( ) {
+        
+        @Override
+        public void fire( ClusterConfiguration input ) {
+          input.setNetworkMode( reply.getMode( ) );
+          input.setUseNetworkTags( reply.getUseVlans( ) == 1 );
+          input.setMinNetworkTag( reply.getVlanMin( ) );
+          input.setMaxNetworkTag( reply.getVlanMax( ) );
+          input.setAddressesPerNetwork( reply.getAddrsPerNet( ) );
+          input.setVnetNetmask( reply.getVnetNetmask( ) );
+          input.setVnetSubnet( reply.getVnetSubnet( ) );
+        }
+      } );
+    } catch ( TransactionException ex ) {
+      LOG.error( ex, ex );
+    }
     /** verify network indexes **/
 //    EntityWrapper<ExtantNetwork> db = EntityWrapper.get( ExtantNetwork.class );
 //    List<ExtantNetwork> allNets = db.query( new ExtantNetwork( ) );

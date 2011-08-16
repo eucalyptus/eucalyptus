@@ -10,6 +10,8 @@ import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
@@ -33,9 +35,17 @@ public abstract class AbstractSystemAddressManager {
   }
   
   public abstract void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesAvailable;
+  
   public abstract List<Address> getReservedAddresses( );
+  
   public abstract void inheritReservedAddresses( List<Address> previouslyReservedAddresses );
-  public abstract List<Address> allocateSystemAddresses( String cluster, int count ) throws NotEnoughResourcesAvailable;
+  
+  public abstract List<Address> allocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesAvailable;
+  
+  public Address allocateSystemAddress( String partition ) throws NotEnoughResourcesAvailable {
+    return allocateSystemAddresses( Partitions.lookupByName( partition ), 1 ).get( 0 );
+    
+  }
   
   public void update( Cluster cluster, List<ClusterAddressInfo> ccList ) {
     if ( !cluster.getState( ).isAddressingInitialized( ) ) {
@@ -46,7 +56,7 @@ public abstract class AbstractSystemAddressManager {
       try {
         Address address = Helper.lookupOrCreate( cluster, addrInfo );
         if ( address.isAssigned( ) && !address.isPending( ) ) {
-          if ( FakePrincipals.nobodyFullName().equals( address.getOwner( ) ) ) {
+          if ( FakePrincipals.nobodyFullName( ).equals( address.getOwner( ) ) ) {
             Helper.markAsAllocated( cluster, addrInfo, address );
           }
           try {
@@ -63,7 +73,7 @@ public abstract class AbstractSystemAddressManager {
               cluster.getState( ).handleOrphan( addrInfo );
             }
           }
-        } else if ( address.isAllocated( ) && FakePrincipals.nobodyFullName().equals( address.getOwner( ) ) && !address.isPending( ) ) {
+        } else if ( address.isAllocated( ) && FakePrincipals.nobodyFullName( ).equals( address.getOwner( ) ) && !address.isPending( ) ) {
           Helper.markAsAllocated( cluster, addrInfo, address );
         }
       } catch ( Throwable e ) {
@@ -71,7 +81,7 @@ public abstract class AbstractSystemAddressManager {
       }
     }
   }
-    
+  
   protected static class Helper {
     protected static Address lookupOrCreate( Cluster cluster, ClusterAddressInfo addrInfo ) {
       Address addr = null;
@@ -96,38 +106,38 @@ public abstract class AbstractSystemAddressManager {
         } else if ( addr != null && vm == null ) {
           cluster.getState( ).handleOrphan( addrInfo );
         } else if ( addr == null && vm != null ) {
-          addr = new Address( FakePrincipals.systemFullName(), addrInfo.getAddress( ), cluster.getPartition( ), vm.getInstanceId( ), vm.getPrivateAddress( ) );
+          addr = new Address( FakePrincipals.systemFullName( ), addrInfo.getAddress( ), cluster.getPartition( ), vm.getInstanceId( ), vm.getPrivateAddress( ) );
           cluster.getState( ).clearOrphan( addrInfo );
-        } else if( addr == null && vm == null ) {
+        } else if ( addr == null && vm == null ) {
           addr = new Address( addrInfo.getAddress( ), cluster.getPartition( ) );
-          cluster.getState().handleOrphan( addrInfo );
+          cluster.getState( ).handleOrphan( addrInfo );
         }
       } else {
-        if( addr != null && addr.isAssigned( ) && !addr.isPending( ) ) {
+        if ( addr != null && addr.isAssigned( ) && !addr.isPending( ) ) {
           cluster.getState( ).handleOrphan( addrInfo );
-        } else if( addr != null && !addr.isAssigned( ) && !addr.isPending( ) && addr.isSystemOwned( ) ) {
+        } else if ( addr != null && !addr.isAssigned( ) && !addr.isPending( ) && addr.isSystemOwned( ) ) {
           try {
             addr.release( );
           } catch ( Exception ex ) {
             LOG.error( ex );
           }
-        } else if( addr != null && Address.Transition.system.equals( addr.getTransition( ) ) ) {
+        } else if ( addr != null && Address.Transition.system.equals( addr.getTransition( ) ) ) {
           cluster.getState( ).handleOrphan( addrInfo );
-        } else if( addr == null ) {
+        } else if ( addr == null ) {
           addr = new Address( addrInfo.getAddress( ), cluster.getPartition( ) );
           Helper.clearVmState( addrInfo );
         }
-      } 
+      }
       return addr;
     }
     
     private static void markAsAllocated( Cluster cluster, ClusterAddressInfo addrInfo, Address address ) {
       try {
-        if( !address.isPending( ) ) {
+        if ( !address.isPending( ) ) {
           for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
             if ( addrInfo.getInstanceIp( ).equals( vm.getPrivateAddress( ) ) && VmState.RUNNING.equals( vm.getState( ) ) ) {
               LOG.warn( "Out of band address state change: " + LogUtil.dumpObject( addrInfo ) + " address=" + address + " vm=" + vm );
-              if( !address.isAllocated( ) ) {
+              if ( !address.isAllocated( ) ) {
                 address.pendingAssignment( ).assign( vm ).clearPending( );
               } else {
                 address.assign( vm ).clearPending( );
@@ -141,23 +151,22 @@ public abstract class AbstractSystemAddressManager {
         LOG.error( e );
       }
     }
-
+    
     private static void clearAddressCachedState( Address addr ) {
       try {
-        if( !addr.isPending( ) ) {
+        if ( !addr.isPending( ) ) {
           addr.unassign( ).clearPending( );
         }
       } catch ( Throwable t ) {
         LOG.trace( t, t );
       }
     }
-
+    
     private static void clearVmState( ClusterAddressInfo addrInfo ) {
       try {
         VmInstance vm = VmInstances.getInstance( ).lookupByPublicIp( addrInfo.getAddress( ) );
         vm.updatePublicAddress( vm.getPrivateAddress( ) );
-      } catch ( NoSuchElementException e ) {
-      }
+      } catch ( NoSuchElementException e ) {}
     }
     
     private static VmInstance maybeFindVm( String publicIp, String privateIp ) {

@@ -6,6 +6,7 @@ import java.lang.reflect.Modifier;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Entity;
+import org.hibernate.annotations.NaturalId;
 
 public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty implements ConfigurableProperty {
   private static Logger LOG = Logger.getLogger( MultiDatabasePropertyEntry.class );
@@ -62,6 +63,14 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
           if ( field.isAnnotationPresent( ConfigurableIdentifier.class ) ) {
             identifierField = field;
             break;
+          }
+        }
+        if ( identifierField == null ) {
+          for ( Field field : c.getFields( ) ) {
+            if ( field.isAnnotationPresent( NaturalId.class ) ) {
+              identifierField = field;
+              break;
+            }
           }
         }
         if ( identifierField == null ) {

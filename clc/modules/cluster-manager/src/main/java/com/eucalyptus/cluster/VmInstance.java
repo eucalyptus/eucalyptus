@@ -1036,8 +1036,8 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     return this.sshKeyPair;
   }
   
-  public static VmInstance named( final UserFullName userFullName, final String instanceId2 ) {
-    return new VmInstance( userFullName, instanceId2 );
+  public static VmInstance named( final UserFullName userFullName, final String instanceId ) {
+    return new VmInstance( userFullName, instanceId );
   }
   
   @Override

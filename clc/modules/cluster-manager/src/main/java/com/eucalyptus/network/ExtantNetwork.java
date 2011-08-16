@@ -67,6 +67,7 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
@@ -81,6 +82,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
+import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.util.ResourceAllocation;
 import com.eucalyptus.cloud.util.ResourceAllocation.SetReference;
 import com.eucalyptus.cloud.util.ResourceAllocation.State;
@@ -98,71 +100,108 @@ import com.google.common.base.Function;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_extant_network" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation.State> {
+public class ExtantNetwork extends UserMetadata<ResourceAllocation.State> implements Comparable<ExtantNetwork> {
   @Transient
-  private static Logger            LOG     = Logger.getLogger( ExtantNetwork.class );
-  @Column( name = "metadata_extant_network_natural_id", unique = true )
-  private String                   networkNaturalId;
+  private static final long        serialVersionUID = 1L;
+  @Transient
+  private static Logger            LOG              = Logger.getLogger( ExtantNetwork.class );
   @Column( name = "metadata_extant_network_tag", unique = true )
-  private Long                     tag;
-  @Column( name = "metadata_extant_network_max_addr" )
-  private Long                     maxAddr;
-  @Column( name = "metadata_extant_network_min_addr" )
-  private Long                     minAddr;
-  @OneToMany( mappedBy = "network" )
+  private Integer                  tag;
+  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "network" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<PrivateNetworkIndex> indexes = new HashSet<PrivateNetworkIndex>( );
+  private Set<PrivateNetworkIndex> indexes          = new HashSet<PrivateNetworkIndex>( );
+  @OneToOne
+  @JoinColumn( name = "metadata_extant_network_group_id" )
+  private NetworkGroup             networkGroup;
   
-  public ExtantNetwork( ) {
+  private ExtantNetwork( ) {
     super( );
   }
   
-  public ExtantNetwork( NetworkGroup networkGroup, Long tag ) {
-    super( );
-    this.networkNaturalId = networkGroup.getNaturalId( );
+  public ExtantNetwork( final NetworkGroup networkGroup, final Integer tag ) {
+    super( networkGroup.getOwner( ), networkGroup.getDisplayName( ) + ":" + tag );
     this.tag = tag;
-    this.maxAddr = 2048l;//GRZE:FIXIT
-    this.minAddr = 9l;//GRZE:FIXIT
+  }
+  
+  public static ExtantNetwork bogus( NetworkGroup networkGroup ) {
+    return new ExtantNetwork( networkGroup, -1 );
   }
   
   void populateIndexes( ) {
-    for ( Long i = this.minAddr; i < this.maxAddr; i++ ) {
+    for ( Long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
       try {
         Transactions.save( new PrivateNetworkIndex( this, i ) );
-      } catch ( TransactionException ex ) {
-        LOG.error( ex , ex );
+      } catch ( final TransactionException ex ) {
+        LOG.error( ex, ex );
       }
     }
   }
   
-  public ExtantNetwork( State state, String displayName ) {
-    super( state, displayName );
+  public ExtantNetwork( final NetworkGroup networkGroup ) {
+    super( networkGroup.getOwner( ), networkGroup.getDisplayName( ) );
+    this.networkGroup = networkGroup;
   }
   
-  public ExtantNetwork( String displayName ) {
-    super( displayName );
+  public Integer getTag( ) {
+    return this.tag;
   }
   
-  public ExtantNetwork( NetworkGroup networkGroup ) {
-    this.networkNaturalId = networkGroup.getNaturalId( );
+  protected void setTag( final Integer tag ) {
+    this.tag = tag;
   }
   
-  public OwnerFullName getOwnerFullName( ) {
+  protected Set<PrivateNetworkIndex> getIndexes( ) {
+    return this.indexes;
+  }
+  
+  protected void setIndexes( final Set<PrivateNetworkIndex> indexes ) {
+    this.indexes = indexes;
+  }
+  
+  public SetReference<PrivateNetworkIndex, VmInstance> allocateNetworkIndex( ) throws TransactionException {
     try {
-      return Transactions.naturalId( new NetworkGroup( ) {{setNaturalId( ExtantNetwork.this.networkNaturalId );}} ).getOwner( );
-    } catch ( TransactionException ex ) {
-      LOG.error( ex , ex );
-      return null;
+      Transactions.one( this, new Callback<ExtantNetwork>( ) {
+        
+        @Override
+        public void fire( final ExtantNetwork input ) {
+          if ( input.getIndexes( ).isEmpty( ) ) {
+            input.populateIndexes( );
+          }
+        }
+      } );
+      return Transactions.transformOne( this, new Function<ExtantNetwork, SetReference<PrivateNetworkIndex, VmInstance>>( ) {
+        
+        @Override
+        public SetReference<PrivateNetworkIndex, VmInstance> apply( final ExtantNetwork input ) {
+          for ( final PrivateNetworkIndex idx : input.getIndexes( ) ) {
+            if ( ResourceAllocation.State.FREE.equals( idx.getState( ) ) ) {
+              try {
+                return idx.allocate( );
+              } catch ( final ResourceAllocationException ex ) {
+                LOG.error( ex, ex );
+              }
+            }
+          }
+          throw new UndeclaredThrowableException( new NoSuchElementException( "Failed to locate a free network index." ) );
+        }
+      } );
+    } catch ( final TransactionException ex ) {
+      throw ex;
     }
+  }
+  
+  public NetworkGroup getNetworkGroup( ) {
+    return this.networkGroup;
+  }
+  
+  private void setNetworkGroup( NetworkGroup networkGroup ) {
+    this.networkGroup = networkGroup;
   }
   
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = super.hashCode( );
-    result = prime * result + ( ( this.networkNaturalId == null )
-      ? 0
-      : this.networkNaturalId.hashCode( ) );
     result = prime * result + ( ( this.tag == null )
       ? 0
       : this.tag.hashCode( ) );
@@ -181,13 +220,6 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
       return false;
     }
     ExtantNetwork other = ( ExtantNetwork ) obj;
-    if ( this.networkNaturalId == null ) {
-      if ( other.networkNaturalId != null ) {
-        return false;
-      }
-    } else if ( !this.networkNaturalId.equals( other.networkNaturalId ) ) {
-      return false;
-    }
     if ( this.tag == null ) {
       if ( other.tag != null ) {
         return false;
@@ -198,68 +230,9 @@ public class ExtantNetwork extends AbstractStatefulPersistent<ResourceAllocation
     return true;
   }
   
-  protected Long getTag( ) {
-    return this.tag;
-  }
-  
-  protected void setTag( Long tag ) {
-    this.tag = tag;
-  }
-  
-  protected Set<PrivateNetworkIndex> getIndexes( ) {
-    return this.indexes;
-  }
-  
-  protected void setIndexes( Set<PrivateNetworkIndex> indexes ) {
-    this.indexes = indexes;
-  }
-  
-  public SetReference<PrivateNetworkIndex, VmInstance> allocateNetworkIndex( ) throws TransactionException {
-    try {
-      Transactions.one( this, new Callback<ExtantNetwork>( ) {
-        
-        @Override
-        public void fire( ExtantNetwork input ) {
-          if ( input.getIndexes( ).isEmpty( ) ) {
-            input.populateIndexes( );
-          }
-        }
-      } );
-      return Transactions.transformOne( this, new Function<ExtantNetwork, SetReference<PrivateNetworkIndex, VmInstance>>( ) {
-        
-        @Override
-        public SetReference<PrivateNetworkIndex, VmInstance> apply( ExtantNetwork input ) {
-          for ( PrivateNetworkIndex idx : input.getIndexes( ) ) {
-            if ( ResourceAllocation.State.FREE.equals( idx.getState( ) ) ) {
-              try {
-                return idx.allocate( );
-              } catch ( ResourceAllocationException ex ) {
-                LOG.error( ex, ex );
-              }
-            }
-          }
-          throw new UndeclaredThrowableException( new NoSuchElementException( "Failed to locate a free network index." ) );
-        }
-      } );
-    } catch ( TransactionException ex ) {
-      throw ex;
-    }
-  }
-  
-  protected Long getMaxAddr( ) {
-    return this.maxAddr;
-  }
-  
-  protected void setMaxAddr( Long maxAddr ) {
-    this.maxAddr = maxAddr;
-  }
-  
-  protected Long getMinAddr( ) {
-    return this.minAddr;
-  }
-  
-  protected void setMinAddr( Long minAddr ) {
-    this.minAddr = minAddr;
+  @Override
+  public int compareTo( ExtantNetwork that ) {
+    return this.getTag( ).compareTo( that.getTag( ) );
   }
   
 }

@@ -77,16 +77,22 @@ import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.ResourceAllocation.SetReference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
+import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.NoSuchContextException;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.ExtantNetwork;
@@ -96,6 +102,7 @@ import com.eucalyptus.network.Networks;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.util.Counters;
 import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
@@ -110,24 +117,27 @@ public class Allocations {
   private static Logger LOG = Logger.getLogger( Allocations.class );
   
   public static class Allocation implements HasRequest {
-    private final Context                                             context;
-    private final RunInstancesType                                    request;
-    private final UserFullName                                        ownerFullName;
-    private final List<ResourceToken>                                 allocationTokens  = Lists.newArrayList( );
-    private final List<String>                                        addresses         = Lists.newArrayList( );
-    private final List<Volume>                                        persistentVolumes = Lists.newArrayList( );
-    private final List<Volume>                                        transientVolumes  = Lists.newArrayList( );
-    private final List<SetReference<PrivateNetworkIndex, VmInstance>> networkIndexList  = Lists.newArrayList( );
-    private final String                                              reservationId;
-    private byte[]                                                    userData;
-    private Partition                                                 partition;
-    private Long                                                      reservationIndex;
-    private SshKeyPair                                                sshKeyPair;
-    private BootableSet                                               bootSet;
-    private VmType                                                    vmType;
-    private Map<String, NetworkGroup>                                 networkRulesGroups;
-    private final int                                                 minCount;
-    private final int                                                 maxCount;
+    /** to be eliminated **/
+    private final Context             context;
+    private final RunInstancesType    request;
+    /** values determined by the request **/
+    private final UserFullName        ownerFullName;
+    private byte[]                    userData;
+    private final int                 minCount;
+    private final int                 maxCount;
+    /** verified references determined by the request **/
+    private Partition                 partition;
+    private final List<Volume>        persistentVolumes = Lists.newArrayList( );
+    private final List<Volume>        transientVolumes  = Lists.newArrayList( );
+    private SshKeyPair                sshKeyPair;
+    private BootableSet               bootSet;
+    private VmType                    vmType;
+    private Map<String, NetworkGroup> networkGroups;
+    
+    /** intermediate allocation state **/
+    private final String              reservationId;
+    private final List<ResourceToken> allocationTokens  = Lists.newArrayList( );
+    private Long                      reservationIndex;
     
     private Allocation( RunInstancesType request ) {
       super( );
@@ -145,13 +155,12 @@ public class Allocations {
       }
       this.reservationIndex = Counters.getIdBlock( request.getMaxCount( ) );
       this.reservationId = VmInstances.getId( this.reservationIndex, 0 ).replaceAll( "i-", "r-" );
-      byte[] userData = new byte[0];
       if ( this.request.getUserData( ) != null ) {
         try {
           this.userData = Base64.decode( this.request.getUserData( ) );
         } catch ( Exception e ) {}
       }
-      this.request.setUserData( new String( Base64.encode( userData ) ) );
+      this.request.setUserData( new String( Base64.encode( this.userData ) ) );
     }
     
     public RunInstancesType getRequest( ) {
@@ -159,96 +168,58 @@ public class Allocations {
     }
     
     public NetworkGroup getPrimaryNetwork( ) {
-      if ( this.networkRulesGroups.size( ) < 1 ) {
+      if ( this.networkGroups.size( ) < 1 ) {
         throw new IllegalArgumentException( "At least one network group must be specified." );
       } else {
-        NetworkGroup firstRules = this.networkRulesGroups.values( ).iterator( ).next( );
-        return firstRules;
-      }
-    }
-    
-    public void releaseNetworkAllocationTokens( ) {
-      for ( ResourceToken token : this.allocationTokens ) {
-        if ( token.getPrimaryNetwork( ) != null ) {
-          for ( NetworkToken networkToken : token.getNetworkTokens( ) ) {
-            Clusters.getInstance( ).lookup( token.getCluster( ) ).getState( ).releaseNetworkAllocation( networkToken );
-          }
+        try {
+          return Transactions.naturalId( this.networkGroups.values( ).iterator( ).next( ) );
+        } catch ( TransactionException ex ) {
+          LOG.error( ex, ex );
+          throw new RuntimeException( ex );
         }
       }
     }
     
-    public void releaseNetworkIndexes( ) {
+    public void abort( ) {
       for ( ResourceToken token : this.allocationTokens ) {
-        if ( token.getPrimaryNetwork( ) != null ) {
-          for ( SetReference<PrivateNetworkIndex, VmInstance> netRef : token.getPrimaryNetwork( ).getIndexes( ) ) {
-            try {
-              netRef.abort( );
-            } catch ( ResourceAllocationException ex ) {
-              LOG.error( ex, ex );
-            }
-          }
-          token.getPrimaryNetwork( ).getIndexes( ).clear( );
-        }
+        token.abort( );
       }
     }
     
-    public void releaseAllocationTokens( ) {
-      for ( ResourceToken token : this.allocationTokens ) {
-        Clusters.getInstance( ).lookup( token.getCluster( ) ).getNodeState( ).releaseToken( token );
-      }
+    public List<NetworkGroup> getNetworkGroups( ) {
+      return Lists.newArrayList( this.networkGroups.values( ) );
     }
     
-    public List<NetworkGroup> getNetworkRulesGroups( ) {
-      return Lists.newArrayList( this.networkRulesGroups.values( ) );
-    }
-    
-    public ResourceToken requestResourceToken( ClusterNodeState state, String vmTypeName, int tryAmount, int maxAmount ) throws NotEnoughResourcesAvailable {
-      ResourceToken rscToken = state.getResourceAllocation( this.request.getCorrelationId( ), this.ownerFullName, vmTypeName, tryAmount, maxAmount );
-      this.allocationTokens.add( rscToken );
+    public List<ResourceToken> requestResourceToken( int tryAmount, int maxAmount ) throws NotEnoughResourcesAvailable {
+      ServiceConfiguration config = Partitions.lookupService( ClusterController.class, this.getPartition( ) );
+      Cluster cluster = Clusters.lookup( config );
+      ClusterNodeState state = cluster.getNodeState( );
+      List<ResourceToken> rscToken = state.requestResourceAllocation( this, tryAmount, maxAmount );
+      this.allocationTokens.addAll( rscToken );
       return rscToken;
     }
     
     public void requestNetworkTokens( ) throws NotEnoughResourcesAvailable {
       NetworkGroup net = this.getPrimaryNetwork( );
-      for ( ResourceToken rscToken : this.allocationTokens ) {
-        ClusterState clusterState = Clusters.getInstance( ).lookup( rscToken.getCluster( ) ).getState( );
-        NetworkToken networkToken = clusterState.getNetworkAllocation( this.ownerFullName, rscToken, net.getName( ) );
-        rscToken.getNetworkTokens( ).add( networkToken );//TODO:GRZE:FIXME
-      }
+      net.extantNetwork( );
     }
     
     public void requestNetworkIndexes( ) throws NotEnoughResourcesAvailable {
       NetworkGroup net = this.getPrimaryNetwork( );
       ExtantNetwork extantNetwork = net.extantNetwork( );
       for ( ResourceToken rscToken : this.allocationTokens ) {
-        for ( int i = 0; i < rscToken.getAmount( ); i++ ) {
-          SetReference<PrivateNetworkIndex, VmInstance> addrIndex;
-          try {
-            addrIndex = extantNetwork.allocateNetworkIndex( );
-          } catch ( Exception ex ) {
-            throw new NotEnoughResourcesAvailable( "Not enough addresses left in the network subnet assigned to requested group: " + net, ex );
-          }
-          rscToken.getPrimaryNetwork( ).getIndexes( ).add( addrIndex );
+        try {
+          SetReference<PrivateNetworkIndex, VmInstance> addrIndex = extantNetwork.allocateNetworkIndex( );
+          rscToken.setNetworkIndex( addrIndex );
+        } catch ( Exception ex ) {
+          throw new NotEnoughResourcesAvailable( "Not enough addresses left in the network subnet assigned to requested group: " + net, ex );
         }
-        ClusterState clusterState = Clusters.getInstance( ).lookup( rscToken.getCluster( ) ).getState( );
-        NetworkToken networkToken = clusterState.getNetworkAllocation( this.ownerFullName, rscToken, net.getName( ) );
-        rscToken.getNetworkTokens( ).add( networkToken );//TODO:GRZE:FIXME
       }
     }
     
     public void requestAddressTokens( ) throws NotEnoughResourcesAvailable {
-      for ( ResourceToken toke : this.allocationTokens ) {
-        for ( Address addr : Addresses.allocateSystemAddresses( toke.getCluster( ), toke.getAmount( ) ) ) {
-          toke.getAddresses( ).add( addr.getDisplayName( ) );
-        }
-      }
-    }
-    
-    public void releaseAddressTokens( ) {
-      for ( ResourceToken toke : this.allocationTokens ) {
-        for ( String addr : toke.getAddresses( ) ) {
-          Addresses.release( Addresses.getInstance( ).lookup( addr ) );
-        }
+      for ( ResourceToken token : this.allocationTokens ) {
+        token.setAddress( Addresses.allocateSystemAddress( token.getAllocationInfo( ).getPartition( ) ) );
       }
     }
     
@@ -274,14 +245,6 @@ public class Allocations {
     
     public List<ResourceToken> getAllocationTokens( ) {
       return this.allocationTokens;
-    }
-    
-    public List<String> getAddresses( ) {
-      return this.addresses;
-    }
-    
-    public List<SetReference<PrivateNetworkIndex,VmInstance>> getNetworkIndexList( ) {
-      return this.networkIndexList;
     }
     
     public byte[] getUserData( ) {
@@ -325,7 +288,7 @@ public class Allocations {
     }
     
     public void setNetworkRules( Map<String, NetworkGroup> networkRuleGroups ) {
-      this.networkRulesGroups = networkRuleGroups;
+      this.networkGroups = networkRuleGroups;
     }
     
     public VmTypeInfo getVmTypeInfo( ) throws MetadataException {

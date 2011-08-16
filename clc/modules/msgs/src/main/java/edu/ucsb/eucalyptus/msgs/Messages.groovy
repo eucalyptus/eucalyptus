@@ -376,7 +376,7 @@ public class NetworkConfigType extends EucalyptusData {
   String ignoredPublicIp;
   String privateDnsName;
   String publicDnsName;
-  Long vlan;
+  Integer vlan;
   Long networkIndex;
   
   def NetworkConfigType() {

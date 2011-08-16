@@ -596,7 +596,7 @@ public class Topology implements EventListener<Event> {
                 } else if ( disabledServices.contains( arg0 ) ) {
                   Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": service was just DISABLED." );
                   return false;
-                } else if ( Component.State.NOTREADY.isIn( arg0 ) ) {
+                } else if ( Component.State.NOTREADY.equals( arg0.lookupState( ) ) ) {
                   Logs.exhaust( ).debug( "FAILOVER-REJECT: " + arg0 + ": service is NOTREADY." );
                   return false;
                 } else if ( Topology.this.services.containsKey( key ) && arg0.equals( Topology.this.services.get( key ) ) ) {

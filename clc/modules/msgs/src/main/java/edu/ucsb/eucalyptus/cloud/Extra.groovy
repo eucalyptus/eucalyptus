@@ -138,59 +138,6 @@ public class VmInfo extends EucalyptusData {
   }
 }
 
-public class VmRunType extends CloudClusterMessage {
-  
-  /** these are for more convenient binding later on but really should be done differently... sigh    **/
-  
-  String reservationId, userData, platform;
-  int min, max, vlan, launchIndex;
-  
-  VmTypeInfo vmTypeInfo;
-  VmKeyInfo keyInfo;
-  
-  List<String> instanceIds = new ArrayList<String>();
-  List<String> uuids = new ArrayList<String>();
-  List<String> macAddresses = new ArrayList<String>();
-  List<String> networkNames = new ArrayList<String>();
-  ArrayList<String> networkIndexList = new ArrayList<String>();
-  
-  def VmRunType() {
-  }
-  
-  def VmRunType(final String reservationId, final String userData, final int amount,
-  final VmTypeInfo vmTypeInfo, final VmKeyInfo keyInfo, final String platform,
-  final List<String> instanceIds, final List<String> macAddresses,
-  final int vlan, final List<String> networkNames, final List<String> networkIndexList, final List<String> uuids ) {
-    this.reservationId = reservationId;
-    this.userData = userData;
-    this.min = amount;
-    this.max = amount;
-    this.vlan = vlan;
-    this.vmTypeInfo = vmTypeInfo;
-    this.keyInfo = keyInfo;
-    this.instanceIds = instanceIds;
-    this.macAddresses = macAddresses;
-    this.networkNames = networkNames;
-    this.networkIndexList = networkIndexList;
-    this.uuids = uuids;
-    this.platform = platform;
-  }
-  
-  def VmRunType(RunInstancesType request) {
-    this.setUserId( msg.getUserId( ) );
-    this.setEffectiveUserId( msg.getEffectiveUserId( ) );
-    this.setCorrelationId( msg.getCorrelationId( ) );
-  }
-  
-  @Override
-  public String toString( ) {
-    return String.format(
-    "VmRunType [instanceIds=%s, keyInfo=%s, launchIndex=%s, max=%s, min=%s, networkIndexList=%s, networkNames=%s, reservationId=%s, userData=%s, vlan=%s, vmTypeInfo=%s]",
-    this.instanceIds, this.keyInfo, this.launchIndex,
-    this.max, this.min, this.networkIndexList, this.networkNames, this.reservationId,
-    this.userData, this.vlan, this.vmTypeInfo );
-  }
-}
 
 public class VirtualBootRecord extends EucalyptusData implements Cloneable {
   String id = "none";

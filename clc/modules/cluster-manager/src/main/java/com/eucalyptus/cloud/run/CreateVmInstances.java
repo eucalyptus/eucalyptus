@@ -78,6 +78,7 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.TransactionException;
@@ -88,7 +89,7 @@ public class CreateVmInstances {
   private static Logger LOG = Logger.getLogger( CreateVmInstances.class );
   
   public Allocation allocate( final Allocation allocInfo ) throws EucalyptusCloudException, MetadataException {
-    long quantity = getVmAllocationNumber( allocInfo );
+    long quantity = allocInfo.getAllocationTokens( ).size( );
     Context ctx = allocInfo.getContext( );
     User requestUser = ctx.getUser( );
     UserFullName userFullName = ctx.getUserFullName( );
@@ -105,66 +106,42 @@ public class CreateVmInstances {
     String reservationId = VmInstances.getId( allocInfo.getReservationIndex( ), -1 ).replaceAll( "i-", "r-" );
     int vmIndex = 0; /*<--- this corresponds to the first instance id CANT COLLIDE WITH RSVID             */
     for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-      if ( Clusters.getInstance( ).hasNetworking( ) ) {
-        for ( SetReference<PrivateNetworkIndex, VmInstance> networkIndex : token.getPrimaryNetwork( ).getIndexes( ) ) {
-          try {
-            VmInstance vmInst = getVmInstance( userFullName, allocInfo, reservationId, token, vmIndex++, networkIndex.get( ) );
-            VmInstances.getInstance( ).register( vmInst );
-            try {
-              Transactions.save( vmInst );
-            } catch ( ExecutionException ex ) {
-              LOG.error( ex, ex );
-            }
-            token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
-          } catch ( TransactionException ex ) {
-            LOG.error( ex , ex );
-          }
+      try {
+        VmInstance vmInst = makeVmInstance( token );
+        VmInstances.getInstance( ).register( vmInst );
+        try {
+          Transactions.save( vmInst );
+        } catch ( ExecutionException ex ) {
+          LOG.error( ex, ex );
         }
-      } else {
-        for ( int i = 0; i < token.getAmount( ); i++ ) {
-          VmInstance vmInst = getVmInstance( userFullName, allocInfo, reservationId, token, vmIndex++, PrivateNetworkIndex.bogus( ) );
-          VmInstances.getInstance( ).register( vmInst );
-          try {
-            Transactions.save( vmInst );
-          } catch ( ExecutionException ex ) {
-            LOG.error( ex, ex );
-          }
-          token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
-        }
+      } catch ( TransactionException ex ) {
+        LOG.error( ex, ex );
       }
     }
     return allocInfo;
   }
   
-  private int getVmAllocationNumber( Allocation allocInfo ) {
-    int vmNum = 0;
-    for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-      if ( Clusters.getInstance( ).hasNetworking( ) ) {
-        vmNum += token.getPrimaryNetwork( ).getIndexes( ).size( );
-      } else {
-        vmNum += token.getAmount( );
-      }
-    }
-    return vmNum;
-  }
-  
-  private VmInstance getVmInstance( UserFullName userFullName, Allocation allocInfo, String reservationId, ResourceToken token, Integer index, PrivateNetworkIndex networkIndex ) {
+  private VmInstance makeVmInstance( ResourceToken token ) throws TransactionException {
+    Allocation allocInfo = token.getAllocationInfo( );
     VmTypeInfo vbr = null;//TODO:GRZE:this is crap.
     try {
       vbr = VmTypes.asVmTypeInfo( allocInfo.getVmType( ), allocInfo.getBootSet( ).getMachine( ) );
     } catch ( MetadataException ex ) {
       LOG.error( ex, ex );
     }
-    VmInstance vmInst = new VmInstance( userFullName, VmInstances.getId( allocInfo.getReservationIndex( ), index ), token.getInstanceUuids( ).get( index ),
-                                        reservationId,
-                                        index, token.getCluster( ),
+    VmInstance vmInst = new VmInstance( allocInfo.getOwnerFullName( ),
+                                        token.getInstanceId( ),
+                                        token.getInstanceUuid( ),
+                                        allocInfo.getReservationId( ),
+                                        token.getLaunchIndex( ),
+                                        allocInfo.getRequest( ).getAvailabilityZone( ),
                                         allocInfo.getUserData( ),
                                         vbr,
                                         allocInfo.getSshKeyPair( ),
                                         allocInfo.getVmType( ),
                                         allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ),
-                                        allocInfo.getNetworkRulesGroups( ),
-                                        networkIndex );
+                                        allocInfo.getNetworkGroups( ),
+                                        token.getNetworkIndex( ).get( ) );
     return vmInst;
   }
 }

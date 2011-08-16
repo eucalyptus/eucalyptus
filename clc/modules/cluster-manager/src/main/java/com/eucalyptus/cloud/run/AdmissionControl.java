@@ -83,6 +83,7 @@ import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.images.BlockStorageImageInfo;
+import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
@@ -199,11 +200,11 @@ public class AdmissionControl {
                   ? state.getAvailability( vmTypeName ).getAvailable( )
                   : remaining;
                 
-                ResourceToken token = allocInfo.requestResourceToken( state, vmTypeName, tryAmount, maxAmount );
-                remaining -= token.getAmount( );
+                List<ResourceToken> tokens = allocInfo.requestResourceToken( tryAmount, maxAmount );
+                remaining -= tokens.size( );
               } catch ( Throwable t ) {
                 if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) || remaining > 0 ) {
-                  allocInfo.releaseAllocationTokens( );
+                  allocInfo.abort( );
                   throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
                 } else {
                   LOG.error( t, t );
@@ -260,7 +261,7 @@ public class AdmissionControl {
     
     @Override
     public void fail( Allocation allocInfo, Throwable t ) {
-      allocInfo.releaseAllocationTokens( );
+      allocInfo.abort( );
     }
     
   }
@@ -270,14 +271,14 @@ public class AdmissionControl {
     
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
-      if ( Clusters.getInstance( ).hasNetworking( ) ) {
+      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
         allocInfo.requestAddressTokens( );
       }
     }
     
     @Override
     public void fail( Allocation allocInfo, Throwable t ) {
-      allocInfo.releaseAddressTokens( );
+      allocInfo.abort( );
     }
   }
   
@@ -286,14 +287,14 @@ public class AdmissionControl {
     
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
-      if ( Clusters.getInstance( ).hasNetworking( ) ) {
+      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
         allocInfo.requestNetworkTokens( );
       }
     }
     
     @Override
     public void fail( Allocation allocInfo, Throwable t ) {
-      allocInfo.releaseNetworkAllocationTokens( );
+      allocInfo.abort( );
     }
   }
   
@@ -302,14 +303,14 @@ public class AdmissionControl {
     
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
-      if ( Clusters.getInstance( ).hasNetworking( ) ) {
+      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
         allocInfo.requestNetworkIndexes( );
       }
     }
     
     @Override
     public void fail( Allocation allocInfo, Throwable t ) {
-      allocInfo.releaseNetworkIndexes( );
+      allocInfo.abort( );
     }
   }
 }

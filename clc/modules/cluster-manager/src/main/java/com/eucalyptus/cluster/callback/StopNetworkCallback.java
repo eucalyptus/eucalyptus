@@ -81,7 +81,7 @@ public class StopNetworkCallback extends BroadcastCallback<StopNetworkType, Stop
   public StopNetworkCallback( final NetworkToken networkToken ) {
     this.token = networkToken;
     StopNetworkType msg = new StopNetworkType( this.token.getRuleGroup( ).getOwnerUserId( ), this.token.getRuleGroup( ).getNaturalId( ),
-                                               this.token.getVlan( ) ).regarding( );
+                                               this.token.getExtantNetwork( ).getTag( ) ).regarding( );
     msg.setUserId( this.token.getRuleGroup( ).getOwnerUserId( ) );
     this.setRequest( msg );
   }
@@ -93,7 +93,7 @@ public class StopNetworkCallback extends BroadcastCallback<StopNetworkType, Stop
   public void initialize( StopNetworkType msg ) throws Exception {
     try {
       NetworkGroup net = Networks.getInstance( ).lookup( token.getRuleGroup( ) );
-    //GRZE:NET
+      //GRZE:NET
       //      Cluster cluster = Clusters.getInstance( ).lookup( token.getCluster( ) );
       LOG.debug( "Releasing network token back to cluster: " + token );
 //      if ( net.hasTokens( ) ) throw new EucalyptusClusterException( "Returning stop network event since it still exists." );

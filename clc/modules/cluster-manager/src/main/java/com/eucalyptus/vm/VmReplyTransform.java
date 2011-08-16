@@ -66,6 +66,7 @@ package com.eucalyptus.vm;
 import java.util.List;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -75,6 +76,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 public class VmReplyTransform {
   
@@ -82,7 +84,7 @@ public class VmReplyTransform {
     RunInstancesResponseType reply = allocInfo.getRequest( ).getReply( );
     Context ctx = Contexts.lookup( );
     
-    List<String> networkNames = Lists.transform( allocInfo.getNetworkRulesGroups( ), new Function<NetworkGroup, String>( ) {
+    List<String> networkNames = Lists.transform( allocInfo.getNetworkGroups( ), new Function<NetworkGroup, String>( ) {
       
       @Override
       public String apply( NetworkGroup arg0 ) {
@@ -93,11 +95,11 @@ public class VmReplyTransform {
                                                                ctx.getUserFullName( ).getNamespace( ),
                                                                networkNames );
     
-    for ( ResourceToken allocToken : allocInfo.getAllocationTokens( ) )
-      for ( String instId : allocToken.getInstanceIds( ) ) {
-        reservation.getInstancesSet( ).add( VmInstances.getInstance( ).lookup( instId ).getAsRunningInstanceItemType( ) );
-      }
-    
+    for ( ResourceToken allocToken : allocInfo.getAllocationTokens( ) ) {
+      VmInstance vm = VmInstances.getInstance( ).lookup( allocToken.getInstanceId( ) );
+      RunningInstancesItemType runVm = vm.getAsRunningInstanceItemType( );
+      reservation.getInstancesSet( ).add( runVm );
+    }
     reply.setRsvInfo( reservation );
     return reply;
   }

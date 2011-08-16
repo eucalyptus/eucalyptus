@@ -130,18 +130,18 @@ public class ServiceTransitions {
   static final CheckedListenableFuture<ServiceConfiguration> startTransitionChain( final ServiceConfiguration config ) {
     Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
     if ( !State.NOTREADY.equals( config.lookupState( ) ) && !State.DISABLED.equals( config.lookupState( ) ) && !State.ENABLED.equals( config.lookupState( ) ) ) {
-      if ( State.STOPPED.isIn( config ) ) {
+      if ( State.STOPPED.equals( config.lookupState( ) ) ) {
         transition = Automata.sequenceTransitions( config,
                                                    Component.State.INITIALIZED,
                                                    Component.State.LOADED,
                                                    Component.State.NOTREADY,
                                                    Component.State.DISABLED );
-      } else if ( State.INITIALIZED.isIn( config ) ) {
+      } else if ( State.INITIALIZED.equals( config.lookupState( ) ) ) {
         transition = Automata.sequenceTransitions( config,
                                                    Component.State.LOADED,
                                                    Component.State.NOTREADY,
                                                    Component.State.DISABLED );
-      } else if ( State.BROKEN.isIn( config ) ) {
+      } else if ( State.BROKEN.equals( config.lookupState( ) ) ) {
         transition = Automata.sequenceTransitions( config,
                                                      Component.State.BROKEN,
                                                      Component.State.INITIALIZED,
@@ -176,11 +176,11 @@ public class ServiceTransitions {
   
   static final CheckedListenableFuture<ServiceConfiguration> disableTransitionChain( final ServiceConfiguration config ) {
     Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
-    if ( State.ENABLED.isIn( config ) ) {
+    if ( State.ENABLED.equals( config.lookupState( ) ) ) {
       transition = Automata.sequenceTransitions( config,
                                                  Component.State.ENABLED,
                                                  Component.State.DISABLED );
-    } else if ( !State.DISABLED.isIn( config ) && !State.NOTREADY.isIn( config ) ) {
+    } else if ( !State.DISABLED.equals( config.lookupState( ) ) && !State.NOTREADY.equals( config.lookupState( ) ) ) {
       transition = Automata.sequenceTransitions( config,
                                                  Component.State.BROKEN,
                                                  Component.State.INITIALIZED,
@@ -188,11 +188,11 @@ public class ServiceTransitions {
                                                  Component.State.NOTREADY,
                                                  Component.State.DISABLED,
                                                  Component.State.DISABLED );
-    } else if ( State.DISABLED.isIn( config ) ) {
+    } else if ( State.DISABLED.equals( config.lookupState( ) ) ) {
       transition = Automata.sequenceTransitions( config,
                                                  Component.State.DISABLED,
                                                  Component.State.DISABLED );
-    } else if ( State.NOTREADY.isIn( config ) ) {
+    } else if ( State.NOTREADY.equals( config.lookupState( ) ) ) {
       transition = Automata.sequenceTransitions( config,
                                                  Component.State.NOTREADY,
                                                  Component.State.DISABLED );
@@ -220,7 +220,7 @@ public class ServiceTransitions {
   
   static final CheckedListenableFuture<ServiceConfiguration> destroyTransitionChain( final ServiceConfiguration config ) {
     Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
-    if ( !State.INITIALIZED.isIn( config ) ) {
+    if ( !State.INITIALIZED.equals( config.lookupState( ) ) ) {
       transition = Automata.sequenceTransitions( config,
                                                  Component.State.ENABLED,
                                                  Component.State.DISABLED,
