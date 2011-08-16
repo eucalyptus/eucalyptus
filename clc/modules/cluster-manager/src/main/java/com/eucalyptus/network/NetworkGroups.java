@@ -85,13 +85,13 @@ public class NetworkGroups {
   private static String       NETWORK_DEFAULT_NAME      = "default";
   
   @ConfigurableField( initial = "" + 16581375l, description = "Default max network index." )
-  private static final long   DEFAULT_MAX_NETWORK_INDEX = 16581375l;
+  public static final long    DEFAULT_MAX_NETWORK_INDEX = 16581375l;
   @ConfigurableField( initial = "" + 9, description = "Default min network index." )
-  private static final long   DEFAULT_MIN_NETWORK_INDEX = 9l;
+  public static final long    DEFAULT_MIN_NETWORK_INDEX = 9l;
   @ConfigurableField( initial = "" + 4096, description = "Default max vlan tag." )
-  private static final int    DEFAULT_MAX_NETWORK_TAG   = 4096;
+  public static final int     DEFAULT_MAX_NETWORK_TAG   = 4096;
   @ConfigurableField( initial = "" + 9, description = "Default min vlan tag." )
-  private static final int    DEFAULT_MIN_NETWORK_TAG   = 9;
+  public static final int    DEFAULT_MIN_NETWORK_TAG   = 9;
   
   public static class NetworkRangeConfiguration {
     private Boolean useNetworkTags  = Boolean.TRUE;
