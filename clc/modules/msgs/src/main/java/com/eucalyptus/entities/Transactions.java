@@ -24,25 +24,40 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
 
 public class Transactions {
-  private static Logger                     LOG   = Logger.getLogger( Transactions.class );
-  private static ThreadLocal<AtomicInteger> depth = new ThreadLocal<AtomicInteger>( ) {
-                                                    
-                                                    @Override
-                                                    protected AtomicInteger initialValue( ) {
-                                                      return new AtomicInteger( 0 );
-                                                    }
-                                                    
-                                                  };
+  private static Logger                           LOG      = Logger.getLogger( Transactions.class );
+  private static ThreadLocal<AtomicInteger>       depth    = new ThreadLocal<AtomicInteger>( ) {
+                                                             
+                                                             @Override
+                                                             protected AtomicInteger initialValue( ) {
+                                                               return new AtomicInteger( 0 );
+                                                             }
+                                                             
+                                                           };
+  private static ThreadLocal<List<EntityWrapper>> wrappers = new ThreadLocal<List<EntityWrapper>>( ) {
+                                                             
+                                                             @Override
+                                                             protected List<EntityWrapper> initialValue( ) {
+                                                               return Lists.newArrayList( );
+                                                             }
+                                                             
+                                                           };
   
   public static <T> EntityWrapper<T> get( T obj ) {
     depth.get( ).incrementAndGet( );
-    return Entities.get( obj );
+    EntityWrapper<T> db = Entities.get( obj );
+    wrappers.get( ).add( db );
+    return db;
   }
   
   public static void pop( ) {
     Integer nextLevel = depth.get( ).decrementAndGet( );
     if ( nextLevel <= 0 ) {
-      Entities.commit( );
+      for ( EntityWrapper db : wrappers.get( ) ) {
+        if ( db.isActive( ) ) {
+          db.commit( );
+        }
+      }
+      wrappers.remove( );
       depth.remove( );
     }
   }
