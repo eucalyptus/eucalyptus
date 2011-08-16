@@ -65,6 +65,7 @@ package com.eucalyptus.ws.server;
 
 import java.net.URI;
 import java.util.NoSuchElementException;
+import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -112,7 +113,7 @@ public enum SystemChecksHandler implements ChannelUpstreamHandler {
             this.sendError( ctx, e, comp, request.getServicePath( ) );
           }
         } catch ( NoSuchElementException ex ) {
-          Logs.extreme( ).debug( "Failed to find reverse component mapping for message type: " + msg.getClass( ) );
+          LOG.warn( "Failed to find reverse component mapping for message type: " + msg.getClass( ) );
           ctx.sendUpstream( e );
         } catch ( Exception ex ) {
           Logs.extreme( ).error( ex, ex );
@@ -149,6 +150,8 @@ public enum SystemChecksHandler implements ChannelUpstreamHandler {
       }
     }
   };
+  private static Logger LOG = Logger.getLogger( SystemChecksHandler.class );
+  
   protected void sendError( ChannelHandlerContext ctx, ChannelEvent e, Component comp, String originalPath ) {
     e.getFuture( ).cancel( );
     HttpResponse response = null;
