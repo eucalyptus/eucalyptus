@@ -3783,7 +3783,6 @@ int maintainNetworkState() {
 
       logprintfl(EUCADEBUG, "maintainNetworkState(): maintaining active networks\n");
       for (i=0; i<MAXINSTANCES; i++) {
-	//	logprintfl(EUCADEBUG, "MEH: %s %s %d %d %d\n", instanceCache->instances[i].instanceId, instanceCache->instances[i].state, instanceCache->cacheState[i], INSTINVALID, i);
 	if ( instanceCache->cacheState[i] != INSTINVALID ) {
 	  if ( strcmp(instanceCache->instances[i].state, "Teardown") ) {
 	    int vlan = instanceCache->instances[i].ccnet.vlan;
