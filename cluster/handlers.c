@@ -3782,6 +3782,7 @@ int maintainNetworkState() {
       bzero(activeNetworks, sizeof(int) * NUMBER_OF_VLANS);
 
       logprintfl(EUCADEBUG, "maintainNetworkState(): maintaining active networks\n");
+      /*
       for (i=0; i<MAXINSTANCES; i++) {
 	if ( instanceCache->cacheState[i] != INSTINVALID ) {
 	  if ( strcmp(instanceCache->instances[i].state, "Teardown") ) {
@@ -3793,6 +3794,7 @@ int maintainNetworkState() {
 	  }
 	}
       }
+      */
       for (i=0; i<NUMBER_OF_VLANS; i++) {
 	if ( !activeNetworks[i] && vnetconfig->networks[i].active ) {
 	  logprintfl(EUCAWARN, "maintainNetworkState(): network active but no running instances (%s, %s, %d)\n", vnetconfig->users[i].userName, vnetconfig->users[i].netName, i);
