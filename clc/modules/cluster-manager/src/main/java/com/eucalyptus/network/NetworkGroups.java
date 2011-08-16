@@ -85,7 +85,7 @@ public class NetworkGroups {
   private static String       NETWORK_DEFAULT_NAME      = "default";
   
   @ConfigurableField( initial = "" + 2048l, description = "Default max network index." )
-  public static final long    DEFAULT_MAX_NETWORK_INDEX = 2048l;
+  public static final long    DEFAULT_MAX_NETWORK_INDEX = 128l;
   @ConfigurableField( initial = "" + 9, description = "Default min network index." )
   public static final long    DEFAULT_MIN_NETWORK_INDEX = 9l;
   @ConfigurableField( initial = "" + 4096, description = "Default max vlan tag." )
