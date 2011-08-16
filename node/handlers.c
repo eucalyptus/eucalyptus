@@ -815,8 +815,9 @@ static int init (void)
     { // initialize hooks if their directory looks ok
         char dir [MAX_PATH];
         snprintf (dir, sizeof (dir), EUCALYPTUS_NC_HOOKS_DIR, nc_state.home);
-        if (check_directory (dir) == 0)
-            init_hooks (nc_state.home, dir);
+        // if 'dir' does not exist, init_hooks() will silently fail, 
+        // and all future call_hooks() will silently succeed
+        init_hooks (nc_state.home, dir); 
     }
 
 #define GET_VAR_INT(var,name) \

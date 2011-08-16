@@ -97,7 +97,7 @@ int init_hooks (const char * euca_dir, const char * hooks_dir)
 int call_hooks (const char * event_name, const char * param1)
 {
     assert (event_name);
-    if (!initialized) return 1;
+    if (!initialized) return 0; // return OK if hooks were not initialized
     
     DIR * dir;
     if ((dir=opendir(hooks_path))==NULL) {
