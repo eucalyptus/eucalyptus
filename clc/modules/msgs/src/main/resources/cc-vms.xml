@@ -138,7 +138,6 @@
     <value name="maxCount" field="maxCount" usage="required" />
     <value name="minCount" field="minCount" usage="required" />
     <value name="reservationId" field="reservationId" usage="required" />
-    <value name="minCount" field="amount" usage="required" />
     <value name="instanceIds"  field="instanceId" />
     <collection field="networkNames" factory="org.jibx.runtime.Utility.arrayListFactory">
       <value name="netNames" type="java.lang.String" />
