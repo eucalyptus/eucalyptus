@@ -69,7 +69,7 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmRunType;
-import com.eucalyptus.cloud.util.ResourceAllocation.SetReference;
+import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NoSuchTokenException;
 import com.eucalyptus.cluster.VmInstance;

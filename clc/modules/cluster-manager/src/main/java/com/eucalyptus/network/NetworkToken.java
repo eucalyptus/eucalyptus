@@ -68,7 +68,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
-import com.eucalyptus.cloud.util.ResourceAllocation.SetReference;
+import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.entities.Transactions;

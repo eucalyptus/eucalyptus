@@ -77,9 +77,9 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.cloud.util.PersistentResource;
-import com.eucalyptus.cloud.util.ResourceAllocation;
+import com.eucalyptus.cloud.util.Resource;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
-import com.eucalyptus.cloud.util.ResourceAllocation.SetReference;
+import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
@@ -116,7 +116,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   private PrivateNetworkIndex( ExtantNetwork network ) {
     super( null, null );
     this.network = network;
-    this.setState( ResourceAllocation.State.FREE );
+    this.setState( Resource.State.FREE );
     this.bogusId = null;
     this.index = null;
   }
@@ -124,7 +124,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   private PrivateNetworkIndex( ExtantNetwork network, Long index ) {
     super( network.getOwner( ), network.getTag( ) + ":" + index );
     this.network = network;
-    this.setState( ResourceAllocation.State.FREE );
+    this.setState( Resource.State.FREE );
     this.bogusId = network.getTag( ) + ":" + index;
     this.index = index;
   }

@@ -79,8 +79,8 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.cloud.UserMetadata;
-import com.eucalyptus.cloud.util.ResourceAllocation;
-import com.eucalyptus.cloud.util.ResourceAllocation.SetReference;
+import com.eucalyptus.cloud.util.Resource;
+import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.entities.Entities;
@@ -95,7 +95,7 @@ import com.eucalyptus.util.TransactionExecutionException;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_extant_network" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class ExtantNetwork extends UserMetadata<ResourceAllocation.State> implements Comparable<ExtantNetwork> {
+public class ExtantNetwork extends UserMetadata<Resource.State> implements Comparable<ExtantNetwork> {
   @Transient
   private static final long        serialVersionUID = 1L;
   @Transient
@@ -142,7 +142,7 @@ public class ExtantNetwork extends UserMetadata<ResourceAllocation.State> implem
   
   public boolean hasIndexes( ) {
     for ( PrivateNetworkIndex index : this.getIndexes( ) ) {
-      if ( ResourceAllocation.State.EXTANT.equals( index.getState( ) ) ) {
+      if ( Resource.State.EXTANT.equals( index.getState( ) ) ) {
         return true;
       }
     }

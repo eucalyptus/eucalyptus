@@ -80,7 +80,7 @@ import com.eucalyptus.cloud.VmRunType;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
-import com.eucalyptus.cloud.util.ResourceAllocation.SetReference;
+import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NoSuchTokenException;
