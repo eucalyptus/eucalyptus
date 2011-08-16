@@ -65,14 +65,12 @@ package com.eucalyptus.cloud;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
-import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
+import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Transient;
-import org.hibernate.annotations.NaturalId;
-import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.util.HasOwningUser;
@@ -80,10 +78,9 @@ import com.eucalyptus.util.OwnerFullName;
 
 @MappedSuperclass
 public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMetadata<STATE> implements HasOwningUser {
-  /**
-   * 
-   */
+  @Transient 
   private static final long serialVersionUID = 1L;
+
   @Column( name = "metadata_user_id" )
   protected String          ownerUserId;
   @Column( name = "metadata_user_name" )

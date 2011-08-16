@@ -64,25 +64,34 @@
 package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
-import com.eucalyptus.network.NetworkToken;
-import com.eucalyptus.network.Networks;
+import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.Logs;
+import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.async.BroadcastCallback;
 import edu.ucsb.eucalyptus.msgs.StopNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StopNetworkType;
 
 public class StopNetworkCallback extends BroadcastCallback<StopNetworkType, StopNetworkResponseType> implements Expendable<StopNetworkCallback> {
-  private static Logger LOG = Logger.getLogger( StopNetworkCallback.class );
-  private NetworkToken  token;
+  private static Logger      LOG = Logger.getLogger( StopNetworkCallback.class );
+  private final NetworkGroup networkGroup;
+  private Integer            tag;
   
-  public StopNetworkCallback( final NetworkToken networkToken ) {
-    this.token = networkToken;
-    StopNetworkType msg = new StopNetworkType( this.token.getRuleGroup( ).getOwnerUserId( ), this.token.getRuleGroup( ).getNaturalId( ),
-                                               this.token.getExtantNetwork( ).getTag( ) ).regarding( );
-    msg.setUserId( this.token.getRuleGroup( ).getOwnerUserId( ) );
+  @SuppressWarnings( "deprecation" )
+  public StopNetworkCallback( final NetworkGroup networkGroup ) {
+    this.networkGroup = networkGroup;
+    try {
+      this.tag = this.networkGroup.extantNetwork( ).getTag( );
+    } catch ( NotEnoughResourcesAvailable ex ) {
+      this.tag = -1;
+    }
+    StopNetworkType msg = new StopNetworkType( this.networkGroup.getOwnerUserId( ), this.networkGroup.getNaturalId( ),
+                                               this.tag ).regarding( );
+    msg.setUserId( this.networkGroup.getOwnerUserId( ) );
     this.setRequest( msg );
   }
   
@@ -92,15 +101,14 @@ public class StopNetworkCallback extends BroadcastCallback<StopNetworkType, Stop
   @Override
   public void initialize( StopNetworkType msg ) throws Exception {
     try {
-      NetworkGroup net = Networks.getInstance( ).lookup( token.getRuleGroup( ) );
-      //GRZE:NET
-      //      Cluster cluster = Clusters.getInstance( ).lookup( token.getCluster( ) );
-      LOG.debug( "Releasing network token back to cluster: " + token );
-//      if ( net.hasTokens( ) ) throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
-//      cluster.getState( ).releaseNetworkAllocation( token );
-//    } catch ( EucalyptusClusterException e ) {
-//      LOG.debug( "Aborting stop network for network with live instances: " + e.getMessage( ), e );
-//      throw e;
+      NetworkGroup net = NetworkGroups.lookup( this.networkGroup.getNaturalId( ) );
+      ExtantNetwork exNet = net.extantNetwork( );
+      if ( !net.extantNetwork( ).hasIndexes( ) ) {
+        LOG.debug( "Aborting stop network for network with live instances: " + net.extantNetwork( ) );
+        throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
+      } else {
+        LOG.debug( "Releasing network token back to cluster: " + net.extantNetwork( ) );
+      }
     } catch ( Exception e ) {
       LOG.debug( e );
     }
@@ -108,13 +116,13 @@ public class StopNetworkCallback extends BroadcastCallback<StopNetworkType, Stop
   
   @Override
   public BroadcastCallback<StopNetworkType, StopNetworkResponseType> newInstance( ) {
-    return new StopNetworkCallback( token );
+    return new StopNetworkCallback( this.networkGroup );
   }
   
   @Override
   public void fireException( Throwable e ) {
-    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
-    LOG.debug( e, e );
+    LOG.debug( "Request failed: " + LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
+    Logs.extreme( ).error( e, e );
   }
   
   @Override

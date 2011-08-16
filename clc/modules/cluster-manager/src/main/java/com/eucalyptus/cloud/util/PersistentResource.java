@@ -64,7 +64,9 @@
 package com.eucalyptus.cloud.util;
 
 import javax.persistence.MappedSuperclass;
+import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.UserMetadata;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.Logs;
@@ -74,11 +76,16 @@ import com.eucalyptus.util.async.Callback;
 
 @MappedSuperclass
 public abstract class PersistentResource<T extends PersistentResource<T, R>, R extends HasNaturalId> extends UserMetadata<ResourceAllocation.State> implements ResourceAllocation<T, R> {
+  private static Logger LOG = Logger.getLogger( PersistentResource.class );
   
   protected PersistentResource( OwnerFullName owner, String displayName ) {
     super( owner, displayName );
   }
-
+  
+  private T get( ) {
+    return ( T ) this;
+  }
+  
   /**
    * {@inheritDoc ResourceAllocation#currentState()}
    * 
@@ -141,24 +148,26 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
   
   @SuppressWarnings( "unchecked" )
   T doSetReferer( final R referer, final ResourceAllocation.State preconditionState, final ResourceAllocation.State finalState ) throws ResourceAllocationException {
+    PersistentResource<T, R> input = Entities.get( this.getClass( ) ).getByNaturalId( this );
     try {
-      return Transactions.naturalId( ( T ) this, new Callback<T>( ) {
-        
-        @Override
-        public void fire( T input ) {
-          if ( !preconditionState.equals( input.getState( ) ) ) {
-            throw new RuntimeException( "Error allocating resource " + PersistentResource.this.getClass( ).getSimpleName( ) + " with id "
-                                        + PersistentResource.this.getDisplayName( ) + " as the state is not " + preconditionState.name( ) + " (currently "
-                                        + PersistentResource.this.getState( ) + ")." );
-          } else {
-            PersistentResource.this.setReferer( referer );
-            PersistentResource.this.setState( finalState );
-          }
-        }
-      } );
-    } catch ( TransactionException ex ) {
+      if ( !preconditionState.equals( input.getState( ) ) ) {
+        throw new RuntimeException( "Error allocating resource " + PersistentResource.this.getClass( ).getSimpleName( ) + " with id "
+                                    + this.getDisplayName( ) + " as the state is not " + preconditionState.name( ) + " (currently "
+                                    + this.getState( ) + ")." );
+      } else {
+        this.setReferer( referer );
+        this.setState( finalState );
+      }
+      Entities.get( this.getClass( ) ).commit( );
+      return input.get( );
+    } catch ( Exception ex ) {
       Logs.extreme( ).error( ex, ex );
-      throw new ResourceAllocationException( ex );
+      LOG.error( ex );
+      try {
+        Entities.get( this.getClass( ) ).rollback( );
+      } finally {
+        throw new ResourceAllocationException( ex );
+      }
     }
   }
   
@@ -189,12 +198,12 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
                                                  + PersistentResource.this.getReferer( ) + " and is currently in state " + PersistentResource.this.getState( ) );
         }
       }
-
+      
       @Override
       public T get( ) throws TransactionException {
         return Transactions.naturalId( ( T ) PersistentResource.this );
       }
-
+      
       @Override
       public int compareTo( T o ) {
         return PersistentResource.this.compareTo( o );

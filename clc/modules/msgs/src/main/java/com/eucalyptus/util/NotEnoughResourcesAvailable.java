@@ -63,7 +63,9 @@
  */
 package com.eucalyptus.util;
 
-public class NotEnoughResourcesAvailable extends Exception {
+import com.eucalyptus.cloud.util.ResourceAllocationException;
+
+public class NotEnoughResourcesAvailable extends ResourceAllocationException {
   
   public NotEnoughResourcesAvailable( String string ) {
     super( string );

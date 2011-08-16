@@ -72,6 +72,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import com.eucalyptus.util.Classes;
+import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
@@ -83,7 +85,7 @@ import com.google.common.collect.Maps;
 public class Ats {
   private final List<AnnotatedElement> ancestry = Lists.newArrayList( );
   
-  public Ats( AnnotatedElement... ancestry ) {
+  private Ats( AnnotatedElement... ancestry ) {
     for ( AnnotatedElement c : ancestry ) {
       if ( c instanceof AnnotatedElement ) {
         this.ancestry.add( c );
@@ -108,9 +110,11 @@ public class Ats {
   
   public <A extends Annotation> A get( Class<A> annotation ) {
     AnnotatedElement decl = find( annotation );
-    return decl == null ? null : decl.getAnnotation( annotation );
+    return decl == null
+      ? null
+      : decl.getAnnotation( annotation );
   }
-
+  
   public <A extends Annotation> AnnotatedElement find( final Class<A> annotation ) {
     for ( final AnnotatedElement a : this.ancestry ) {
       if ( a.isAnnotationPresent( annotation ) ) {
@@ -125,7 +129,7 @@ public class Ats {
     }
     return this.ancestry.get( 0 );
   }
-
+  
   public static Ats from( Object o ) {
     if ( o instanceof Class ) {
       return new Ats( ( AnnotatedElement ) o );
@@ -144,4 +148,22 @@ public class Ats {
     }
   }
   
+  List<AnnotatedElement> getAncestry( ) {
+    return this.ancestry;
+  }
+  
+  enum AnnotatedElementToString implements Function<AnnotatedElement, String> {
+    INSTANCE;
+    
+    @Override
+    public String apply( AnnotatedElement input ) {
+      return input.toString( ) + ":" + "[" + Joiner.on( "," ).join( input.getAnnotations( ) ) + "]";
+    }
+  }
+  
+  @Override
+  public String toString( ) {
+    return String.format( "Ats:class=%s\nAts:ancestor=%s", this.ancestry.get( 0 ),
+                          Joiner.on( "Ats:ancestor=" ).join( Lists.transform( this.ancestry, AnnotatedElementToString.INSTANCE ) ) );
+  }
 }

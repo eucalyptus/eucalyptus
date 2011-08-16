@@ -95,6 +95,7 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.keys.SshKeyPair;
+import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.PrivateNetworkIndex;
@@ -102,6 +103,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Logs;
+import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callback;
@@ -259,15 +261,22 @@ public class ClusterAllocator implements Runnable {
     final String platform = this.allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ) != null
       ? this.allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( )
       : "linux"; // ASAP:FIXME:GRZE
+    ExtantNetwork exNet;
+    try {
+      exNet = this.allocInfo.getPrimaryNetwork( ).extantNetwork( );
+    } catch ( NotEnoughResourcesAvailable ex ) {
+      Logs.extreme( ).error( ex, ex );
+      exNet = ExtantNetwork.bogus( this.allocInfo.getPrimaryNetwork( ) );
+    }
     final VmRunType run = VmRunType.builder( )
                                    .instanceId( childToken.getInstanceId( ) )
                                    .keyInfo( vmKeyInfo )
-                                   .launchIndex( this.allocInfo.getPrimaryNetwork( ).extantNetwork( ).getTag( ) )
+                                   .launchIndex( childToken.getLaunchIndex( ) )
                                    .networkNames( this.allocInfo.getNetworkGroups( ) )
                                    .platform( platform )
                                    .reservationId( childToken.getAllocationInfo( ).getReservationId( ) )
                                    .userData( this.allocInfo.getRequest( ).getUserData( ) )
-                                   .vlan( this.allocInfo.getPrimaryNetwork( ).extantNetwork( ).getTag( ) )
+                                   .vlan( exNet.getTag( ) )
                                    .vmTypeInfo( vmInfo )
                                    .owner( this.allocInfo.getOwnerFullName( ) )
                                    .create( );

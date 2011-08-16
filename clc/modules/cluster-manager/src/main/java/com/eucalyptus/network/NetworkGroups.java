@@ -171,7 +171,7 @@ public class NetworkGroups {
   
   public static NetworkGroup lookup( final String uuid ) throws NoSuchMetadataException {
     try {
-      return Transactions.find( new NetworkGroup( ) {
+      return Transactions.naturalId( new NetworkGroup( ) {
         {
           this.setNaturalId( uuid );
         }

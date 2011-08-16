@@ -71,6 +71,7 @@ import com.eucalyptus.cloud.util.ResourceAllocation.SetReference;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.OwnerFullName;
 
 public class NetworkToken implements Comparable {
@@ -78,7 +79,7 @@ public class NetworkToken implements Comparable {
   private NavigableSet<SetReference<PrivateNetworkIndex, VmInstance>> indexes = new ConcurrentSkipListSet<SetReference<PrivateNetworkIndex, VmInstance>>( );
   private final NetworkGroup                                          ruleGroup;
   
-  public NetworkToken( final Partition partition, final NetworkGroup ruleGroup ) {
+  public NetworkToken( final Partition partition, final NetworkGroup ruleGroup ) throws NotEnoughResourcesAvailable {
     this.ruleGroup = ruleGroup;
     this.extantNetwork = ruleGroup.extantNetwork( );
   }

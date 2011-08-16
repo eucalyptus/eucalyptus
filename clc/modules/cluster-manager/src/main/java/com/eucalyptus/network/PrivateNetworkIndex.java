@@ -63,11 +63,13 @@
 
 package com.eucalyptus.network;
 
+import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
@@ -76,8 +78,11 @@ import com.eucalyptus.cloud.util.ResourceAllocation;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cloud.util.ResourceAllocation.SetReference;
 import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.RecoverablePersistenceException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.Logs;
+import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.TransactionException;
 
 @Entity
@@ -86,6 +91,8 @@ import com.eucalyptus.util.TransactionException;
 @Table( name = "metadata_network_indices" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex, VmInstance> implements Comparable<PrivateNetworkIndex> {
+  @Transient
+  private static final PrivateNetworkIndex bogusIndex = new PrivateNetworkIndex( -1, -1l );
   @Column( name = "metadata_network_index" )
   private final Long          index;
   @Column( name = "metadata_network_index_bogus_id", unique = true )
@@ -103,7 +110,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
     this.bogusId = null;
   }
   
-  PrivateNetworkIndex( ExtantNetwork network, Long index ) {
+  private PrivateNetworkIndex( ExtantNetwork network, Long index ) {
     super( network.getOwner( ), network.getTag( ) + ":" + index );
     this.network = network;
     this.bogusId = network.getTag( ) + ":" + index;
@@ -118,7 +125,9 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
     this.index = index;
   }
   
-  private static final PrivateNetworkIndex bogusIndex = new PrivateNetworkIndex( -1, -1l );
+  public static PrivateNetworkIndex create( ExtantNetwork network, Long index ) {
+    return new PrivateNetworkIndex( network, index );
+  }
   
   public static PrivateNetworkIndex bogus( ) {
     return bogusIndex;
@@ -232,5 +241,21 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
         : -1 );
     }
   }
-  
+
+  public static SetReference<PrivateNetworkIndex, VmInstance> allocateNext( ExtantNetwork exNet ) throws ResourceAllocationException {
+    List<PrivateNetworkIndex> ret = Entities.get( PrivateNetworkIndex.class ).query( new PrivateNetworkIndex( exNet, null ) );
+    if( ret.isEmpty( ) ) {
+      throw new NotEnoughResourcesAvailable( "Failed to find a free network index: " + ret );
+    } else {
+      PrivateNetworkIndex idx = ret.get( 0 );
+      try {
+        SetReference<PrivateNetworkIndex, VmInstance> setRef = idx.allocate( );
+        Entities.get( PrivateNetworkIndex.class ).commit( );
+        return setRef;
+      } catch ( ResourceAllocationException ex ) {
+        throw ex;
+      }
+    }
+  }
+
 }

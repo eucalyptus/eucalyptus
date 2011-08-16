@@ -473,6 +473,10 @@ public class Threads {
       }
     };
   }
+
+  public static String currentStackString( ) {
+    return Joiner.on( "\t\n" ).join( Thread.currentThread( ).getStackTrace( ) );
+  }
   
   public static StackTraceElement currentStack( final int frameOffset ) {
     return Thread.currentThread( ).getStackTrace( ).length <= frameOffset

@@ -15,7 +15,9 @@ import org.hibernate.ejb.EntityManagerFactoryImpl;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Assertions;
+import com.eucalyptus.util.Logs;
 
 public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   private static Logger                                   LOG         = Logger.getLogger( TxHandle.class );
@@ -24,20 +26,22 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   private EntityManager                                   em;
   private final WeakReference<Session>                    session;
   private EntityTransaction                               delegate;
-  private final Exception                                 owner;
+  private final String                                    owner;
   private final Calendar                                  startTime;
   private final String                                    txUuid;
   private final StopWatch                                 stopWatch;
   
   private volatile long                                   splitTime   = 0l;
+  private final Runnable                                  runnable;
   
-  public TxHandle( String ctx ) {
+  public TxHandle( final String ctx, final Runnable runnable ) {
+    this.runnable = runnable;
     this.txUuid = String.format( "%s:%s", ctx, UUID.randomUUID( ).toString( ) );
-    this.owner = new Exception( );
+    this.owner = Threads.currentStackString( );
     this.startTime = Calendar.getInstance( );
     this.stopWatch = new StopWatch( );
     this.stopWatch.start( );
-    EntityManagerFactory anemf = ( EntityManagerFactoryImpl ) PersistenceContexts.getEntityManagerFactory( ctx );
+    final EntityManagerFactory anemf = ( EntityManagerFactoryImpl ) PersistenceContexts.getEntityManagerFactory( ctx );
     Assertions.assertNotNull( anemf, "Failed to find persistence context for ctx=" + ctx );
     try {
       this.em = anemf.createEntityManager( );
@@ -45,7 +49,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
       this.delegate = this.em.getTransaction( );
       this.delegate.begin( );
       this.session = new WeakReference<Session>( ( Session ) this.em.getDelegate( ) );
-    } catch ( Throwable e ) {
+    } catch ( final Throwable e ) {
       this.rollback( );
       LOG.error( e, e );
       throw new RuntimeException( e );
@@ -55,12 +59,12 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   }
   
   public boolean isExpired( ) {
-    long splitTime = split( );
+    final long splitTime = this.split( );
     return ( splitTime - 30000 ) > this.startTime.getTimeInMillis( );
   }
   
   public long splitOperation( ) {
-    long oldSplit = this.splitTime;
+    final long oldSplit = this.splitTime;
     this.stopWatch.split( );
     this.splitTime = this.stopWatch.getSplitTime( );
     this.stopWatch.unsplit( );
@@ -74,12 +78,13 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
     return this.splitTime;
   }
   
+  @Override
   public void rollback( ) {
     try {
-      if ( this.delegate != null && this.delegate.isActive( ) ) {
+      if ( ( this.delegate != null ) && this.delegate.isActive( ) ) {
         this.delegate.rollback( );
       }
-    } catch ( Throwable e ) {
+    } catch ( final Throwable e ) {
       LOG.error( e, e );
     } finally {
       this.cleanup( );
@@ -88,7 +93,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   
   private void cleanup( ) {
     try {
-      if ( this.session != null && this.session.get( ) != null ) {
+      if ( ( this.session != null ) && ( this.session.get( ) != null ) ) {
         this.session.clear( );
       }
       this.delegate = null;
@@ -97,28 +102,34 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
       }
       this.em = null;
     } finally {
+      try {
+        this.runnable.run( );
+      } catch ( final Exception ex ) {
+        LOG.error( ex, ex );
+      }
       outstanding.remove( this.txUuid );
     }
   }
   
   private void verifyOpen( ) {
-    if ( this.delegate == null || this.em == null ) {
+    if ( ( this.delegate == null ) || ( this.em == null ) ) {
       throw new RuntimeException( "Calling a closed tx handle: " + this.txUuid );
     }
   }
   
+  @Override
   public void commit( ) {
     this.verifyOpen( );
     try {
       this.delegate.commit( );
-    } catch ( RuntimeException e ) {
-      if ( this.delegate != null && this.delegate.isActive( ) ) {
+    } catch ( final RuntimeException e ) {
+      if ( ( this.delegate != null ) && this.delegate.isActive( ) ) {
         this.delegate.rollback( );
         LOG.debug( e, e );
       }
       throw e;
     } finally {
-      cleanup( );
+      this.cleanup( );
     }
   }
   
@@ -127,21 +138,24 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
     return this.txUuid;
   }
   
+  @Override
   public boolean getRollbackOnly( ) {
     return this.delegate.getRollbackOnly( );
   }
   
+  @Override
   public boolean isActive( ) {
     return this.delegate.isActive( );
   }
   
+  @Override
   public void setRollbackOnly( ) {
     this.delegate.setRollbackOnly( );
   }
   
   public Session getSession( ) {
     if ( this.session.get( ) == null ) {
-      RuntimeException e = new RuntimeException( "Someone is calling a closed tx handle: " + this.txUuid );
+      final RuntimeException e = new RuntimeException( "Someone is calling a closed tx handle: " + this.txUuid );
       LOG.error( e, e );
       throw e;
     }
@@ -156,6 +170,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
     return this.em;
   }
   
+  @Override
   public void begin( ) {
     this.delegate.begin( );
   }
@@ -174,11 +189,11 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   }
   
   @Override
-  public boolean equals( Object obj ) {
+  public boolean equals( final Object obj ) {
     if ( this == obj ) return true;
     if ( obj == null ) return false;
-    if ( getClass( ) != obj.getClass( ) ) return false;
-    TxHandle other = ( TxHandle ) obj;
+    if ( this.getClass( ) != obj.getClass( ) ) return false;
+    final TxHandle other = ( TxHandle ) obj;
     if ( this.owner == null ) {
       if ( other.owner != null ) return false;
     } else if ( !this.owner.equals( other.owner ) ) return false;
@@ -189,24 +204,24 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   }
   
   @Override
-  public int compareTo( TxHandle o ) {
+  public int compareTo( final TxHandle o ) {
     return this.startTime.compareTo( o.getStartTime( ) );
   }
   
   @Override
   public String toString( ) {
-    return String.format( "TxHandle:txUuid=%s:startTime=%s:splitTime=%s", this.txUuid, this.startTime, this.splitTime );
+    return String.format( "TxHandle:txUuid=%s:startTime=%s:splitTime=%s:owner=%s", this.txUuid, this.startTime, this.splitTime, Logs.EXTREME ? this.owner : "n/a" );
   }
   
   public static class TxWatchdog implements EventListener {
     
     @Override
-    public void fireEvent( Event event ) {
+    public void fireEvent( final Event event ) {
       if ( event instanceof ClockTick ) {
-        for ( TxHandle tx : TxHandle.outstanding.values( ) ) {
+        for ( final TxHandle tx : TxHandle.outstanding.values( ) ) {
           if ( tx.isExpired( ) ) {
             LOG.error( "Found expired TxHandle: " + tx );
-            LOG.error( tx.owner, tx.owner );
+            LOG.error( tx.owner );
           }
         }
       }

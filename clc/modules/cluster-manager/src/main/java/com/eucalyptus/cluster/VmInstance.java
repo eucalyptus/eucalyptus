@@ -136,9 +136,6 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 @Table( name = "metadata_instances" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class VmInstance extends UserMetadata<VmState> implements VirtualMachineInstance<VmInstance> {
-  /**
-   * 
-   */
   private static final long                           serialVersionUID    = 1L;
   @Transient
   private static Logger                               LOG                 = Logger.getLogger( VmInstance.class );
@@ -903,7 +900,9 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
       /**
        * 
        */
-      private static final long serialVersionUID = 1L;
+      @Transient 
+  private static final long serialVersionUID = 1L;
+
       
       {
         for ( final AttachedVolume v : ncAttachedVols ) {

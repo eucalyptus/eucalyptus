@@ -153,35 +153,6 @@ public class ClusterState {
     this.publicAddressing = publicAddressing;
   }
   
-  private static NetworkGroup getVlanAssignedNetwork( String networkName ) throws NotEnoughResourcesAvailable {
-    NetworkGroup network = Networks.getInstance( ).lookup( networkName );
-    //GRZE:NET
-    //    Integer vlan = network.getVlan( );
-//    if ( vlan == null || Integer.valueOf( 0 ).equals( vlan ) ) {
-//      vlan = ClusterState.availableVlans.pollFirst( );
-//      if ( vlan == null ) {
-//        throw new NotEnoughResourcesAvailable( "Not enough resources available: vlan tags" );
-//      } else if ( !network.initVlan( vlan ) ) {
-//        ClusterState.availableVlans.add( vlan );
-//        throw new NotEnoughResourcesAvailable( "Not enough resources available: an error occured obtaining a usable vlan tag" );
-//      } else {
-//        EventRecord.caller( NetworkToken.class, EventType.TOKEN_RESERVED, network.toString( ) ).info( );
-//      }
-//    }
-    return network;
-  }
-  
-  public void releaseNetworkAllocation( NetworkToken token ) {
-    EventRecord.caller( NetworkToken.class, EventType.TOKEN_RETURNED, token.toString( ) ).info( );
-    //GRZE:NET
-//    try {
-//      Network existingNet = Networks.getInstance( ).lookup( token.getName( ) );
-//      if ( !existingNet.hasTokens( ) ) {
-//        ClusterState.availableVlans.add( existingNet.getVlan( ) );
-//      }
-//    } catch ( NoSuchElementException e ) {}
-  }
-  
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;

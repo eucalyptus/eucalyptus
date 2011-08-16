@@ -110,9 +110,7 @@ import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 @Table( name = "metadata_network_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements NetworkSecurityGroup<NetworkGroup> {
-  /**
-   * 
-   */
+  @Transient 
   private static final long serialVersionUID = 1L;
   
   private static Logger     LOG              = Logger.getLogger( NetworkGroup.class );

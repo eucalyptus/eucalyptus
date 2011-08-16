@@ -68,10 +68,13 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.NetworkToken;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.Logs;
+import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.async.BroadcastCallback;
 import com.eucalyptus.util.async.Callback;
 import com.google.common.collect.Lists;
@@ -83,11 +86,19 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
   private static Logger      LOG = Logger.getLogger( StartNetworkCallback.class );
   
   private final NetworkGroup networkGroup;
+  private final Integer      tag;
   
   public StartNetworkCallback( final NetworkGroup networkGroup ) {
     this.networkGroup = networkGroup;
+    Integer ttag = -1;
+    try {
+      ttag = networkGroup.extantNetwork( ).getTag( );
+    } catch ( NotEnoughResourcesAvailable ex ) {
+      Logs.extreme( ).error( ex, ex );
+    }
+    this.tag = ttag;
     StartNetworkType msg = new StartNetworkType( networkGroup.getOwnerUserId( ),
-                                                 networkGroup.extantNetwork( ).getTag( ),
+                                                 this.tag,
                                                  networkGroup.getNaturalId( ),
                                                  networkGroup.getNaturalId( ) );
     this.setRequest( msg );

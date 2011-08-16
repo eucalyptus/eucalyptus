@@ -77,9 +77,11 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.RecoverablePersistenceException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.Callback;
 
 @Entity
@@ -114,12 +116,12 @@ public class ImageConfiguration extends AbstractPersistent {
   public static ImageConfiguration getInstance( ) {
     ImageConfiguration ret = null;
     try {
-      ret = EntityWrapper.get( ImageConfiguration.class ).lookupAndClose( new ImageConfiguration( ) );
+      ret = Entities.get( ImageConfiguration.class ).lookupAndClose( new ImageConfiguration( ) );
     } catch ( NoSuchElementException ex1 ) {
       try {
-        ret = EntityWrapper.get( ImageConfiguration.class ).mergeAndCommit( new ImageConfiguration( ) );
-      } catch ( RecoverablePersistenceException ex ) {
-        LOG.error( ex, ex );
+        ret = Entities.get( ImageConfiguration.class ).mergeAndCommit( new ImageConfiguration( ) );
+      } catch ( final Exception ex ) {
+        Logs.extreme( ).error( ex, ex );
         ret = new ImageConfiguration( );
       }
     }

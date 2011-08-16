@@ -88,31 +88,25 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 public class EntityWrapper<TYPE> {
+  private static Logger  LOG = Logger.getLogger( EntityWrapper.class );
+  private final TxHandle tx;
   
-  static Logger                LOG   = Logger.getLogger( EntityWrapper.class );
-  private final TxHandle       tx;
-  private static final boolean TRACE = "TRACE".equals( System.getProperty( "euca.log.exhaustive.db" ) );
-  
-  private static Class determineEntityClass( Class type ) {
-    for ( Class c = type; c != Object.class; c = c.getSuperclass( ) ) {
-      if ( c.isAnnotationPresent( PersistenceContext.class ) ) {
-        return c;
-      }
-    }
-    return type;
-  }
-  
+/**
+   * @see {@link Entities#get(Class)
+   * @deprecated {@link Entities#get(Class))
+   */
+  @Deprecated
   public static <T> EntityWrapper<T> get( Class<T> type ) {
-    for ( Class c = type; c != Object.class; c = c.getSuperclass( ) ) {
-      if ( c.isAnnotationPresent( PersistenceContext.class ) ) {
-        return new EntityWrapper<T>( ( ( PersistenceContext ) c.getAnnotation( PersistenceContext.class ) ).name( ), true );
-      }
-    }
-    throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + type.getCanonicalName( ) );
+    return Entities.get( type );
   }
   
+/**
+   * @see {@link Entities#get(Object)
+   * @deprecated {@link Entities#get(Object)
+   */
+  @Deprecated
   public static <T> EntityWrapper<T> get( T obj ) {
-    return get( ( Class<T> ) obj.getClass( ) );
+    return Entities.get( obj );
   }
   
   /**
@@ -123,12 +117,12 @@ public class EntityWrapper<TYPE> {
    */
   @Deprecated
   @SuppressWarnings( "unchecked" )
-  private EntityWrapper( String persistenceContext, boolean ignored ) {
+  EntityWrapper( String persistenceContext, Runnable runnable ) {
     try {
       if ( Logs.EXTREME ) {
         Logs.extreme( ).debug( Joiner.on( ":" ).join( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.begin( ) ) );
       }
-      this.tx = new TxHandle( persistenceContext );
+      this.tx = new TxHandle( persistenceContext, runnable );
     } catch ( Throwable e ) {
       if ( Logs.EXTREME ) {
         Logs.extreme( ).debug( Joiner.on( ":" ).join( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.fail( ), "" + e.getMessage( ) ) );
@@ -160,6 +154,11 @@ public class EntityWrapper<TYPE> {
       throw new NoSuchElementException( ex.getMessage( ) );
     }
     return ret;
+  }
+  
+  @SuppressWarnings( "unchecked" )
+  public <N extends HasNaturalId> TYPE getByNaturalId( N example ) {
+    return ( TYPE ) this.createCriteria( example.getClass( ) ).add( Restrictions.naturalId( ).set( "naturalId", example.getNaturalId( ) ) ).setCacheable( true ).uniqueResult( );
   }
   
   @SuppressWarnings( "unchecked" )
@@ -198,7 +197,7 @@ public class EntityWrapper<TYPE> {
    * 
    * @see http://opensource.atlassian.com/projects/hibernate/browse/HHH-1273
    * @param newObject
-   * @return 
+   * @return
    */
   public TYPE persist( TYPE newObject ) {
     try {
@@ -316,19 +315,18 @@ public class EntityWrapper<TYPE> {
    * @param newObject
    * @throws PersistenceException
    */
-  public TYPE mergeAndCommit( TYPE newObject ) throws RecoverablePersistenceException {
+  public TYPE mergeAndCommit( TYPE newObject ) {
     try {
       newObject = this.getEntityManager( ).merge( newObject );
       this.commit( );
       return newObject;
     } catch ( RuntimeException ex ) {
-      PersistenceErrorFilter.exceptionCaught( ex );
-      this.rollback( );
-      throw ex;
-    } catch ( Throwable ex ) {
-      LOG.error( ex, ex );
-      this.rollback( );
-      throw new RecoverablePersistenceException( ex );
+      try {
+        PersistenceErrorFilter.exceptionCaught( ex );
+        throw ex;
+      } finally {
+        this.rollback( );
+      }
     }
   }
   
@@ -444,6 +442,23 @@ public class EntityWrapper<TYPE> {
   
   public Query createSQLQuery( String sqlQuery ) {
     return this.getSession( ).createSQLQuery( sqlQuery );
+  }
+  
+  public boolean isActive( ) {
+    return this.tx.isActive( );
+  }
+  
+  public static <TYPE> EntityWrapper<TYPE> create( PersistenceContext persistenceContext, Runnable runnable ) {
+    return new EntityWrapper<TYPE>( persistenceContext.name( ), runnable );
+  }
+
+  protected void cleanUp( ) {
+    try {
+      LOG.error( "Cleaning up stray entity wrapper: " + this.tx );
+      this.tx.rollback( );
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+    }
   }
   
 }

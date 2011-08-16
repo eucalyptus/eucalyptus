@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,70 +63,103 @@
 
 package com.eucalyptus.entities;
 
-import java.util.UUID;
-import javax.persistence.Column;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.MappedSuperclass;
-import javax.persistence.PrePersist;
-import javax.persistence.PreUpdate;
-import javax.persistence.Transient;
-import org.hibernate.annotations.NaturalId;
+import java.util.Map;
+import javax.persistence.PersistenceContext;
+import org.apache.log4j.Logger;
+import com.eucalyptus.system.Ats;
+import com.google.gwt.thirdparty.guava.common.collect.Maps;
 
-@MappedSuperclass
-public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> extends AbstractPersistent {
-  @Transient 
-  private static final long serialVersionUID = 1L;
+public class Entities {
+  private static Logger LOG = Logger.getLogger( Entities.class );
+  
+  private static class DbConnectionsTl extends ThreadLocal<Map<String, EntityWrapper<?>>> {
+    DbConnectionsTl( ) {}
+    
+    @Override
+    protected Map<String, EntityWrapper<?>> initialValue( ) {
+      return Maps.newHashMap( );
+    }
+    
+    @SuppressWarnings( "unchecked" )
+    <T> EntityWrapper<T> lookup( final PersistenceContext persistenceContext ) {
+      return ( EntityWrapper<T> ) this.add( persistenceContext );
+    }
+    
+    private EntityWrapper<?> add( final PersistenceContext persistenceContext ) {
+      EntityWrapper<?> entityWrapper = null;
+      if ( this.get( ).containsKey( persistenceContext.name( ) ) ) {
+        entityWrapper = this.get( ).get( persistenceContext.name( ) );
+        if ( !entityWrapper.isActive( ) ) {
+          try {
+            entityWrapper.cleanUp( );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+          entityWrapper = this.addEntityWrapper( persistenceContext );
+        }
+      } else {
+        entityWrapper = this.addEntityWrapper( persistenceContext );
+      }
+      return entityWrapper;
+    }
+    
+    private EntityWrapper<?> addEntityWrapper( final PersistenceContext persistenceContext ) {
+      EntityWrapper<?> entityWrapper;
+      entityWrapper = EntityWrapper.create( persistenceContext, new Runnable( ) {
+        
+        @Override
+        public void run( ) {
+          DbConnectionsTl.this.get( ).remove( persistenceContext.name( ) );
+        }
+        
+      } );
+      this.get( ).put( persistenceContext.name( ), entityWrapper );
+      return entityWrapper;
+    }
+    
+  }
+  
+  private static DbConnectionsTl tl = new DbConnectionsTl( );
+  
+  public static <T> EntityWrapper<T> get( Class<T> type ) {
+    Ats ats = Ats.inClassHierarchy( type );
+    if ( !ats.has( PersistenceContext.class ) ) {
+      throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + type.getCanonicalName( )
+                                  + ".  Class hierarchy contains: \n" + ats.toString( ) );
+    } else {
+      final PersistenceContext persistenceContext = ats.get( PersistenceContext.class );
+      EntityWrapper<T> entityWrapper = tl.lookup( persistenceContext );
+      return entityWrapper;
+    }
+  }
+  
+  public static <T> EntityWrapper<T> get( T obj ) {
+    @SuppressWarnings( "unchecked" )
+    Class<T> klass = ( Class<T> ) obj.getClass( );
+    return get( klass );
+  }
 
-  @Column( name = "metadata_state" )
-  @Enumerated( EnumType.STRING )
-  STATE                     state;
-  @Column( name = "metadata_display_name" )
-  protected String          displayName;
-  
-  protected AbstractStatefulPersistent( ) {
-    super( );
+  public static void flush( ) {
+    Map<String, EntityWrapper<?>> dbs = tl.get( );
+    tl.remove( );
+    if( !dbs.isEmpty( ) ) {
+      for( EntityWrapper<?> db : dbs.values( ) ) {
+        if( db.isActive( ) ) {
+          db.cleanUp( );
+        }
+      }
+    }
   }
   
-  protected AbstractStatefulPersistent( final STATE state, final String displayName ) {
-    super( );
-    this.state = state;
-    this.displayName = displayName;
+  public static void commit( ) {
+    Map<String, EntityWrapper<?>> dbs = tl.get( );
+    if( !dbs.isEmpty( ) ) {
+      for( EntityWrapper<?> db : dbs.values( ) ) {
+        if( db.isActive( ) ) {
+          db.commit( );
+        }
+      }
+    }
+    tl.remove( );
   }
-  
-  protected AbstractStatefulPersistent( final String displayName ) {
-    super( );
-    this.displayName = displayName;
-  }
-  
-  public STATE getState( ) {
-    return this.state;
-  }
-  
-  public void setState( final STATE state ) {
-    this.state = state;
-  }
-  
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = super.hashCode( );
-    result = prime * result + ( ( this.displayName == null )
-      ? 0
-      : this.displayName.hashCode( ) );
-    return result;
-  }
-  
-  public String getDisplayName( ) {
-    return this.displayName;
-  }
-  
-  public void setDisplayName( final String displayName ) {
-    this.displayName = displayName;
-  }
-  
-  public final String getName( ) {
-    return this.getDisplayName( );
-  }
-  
 }

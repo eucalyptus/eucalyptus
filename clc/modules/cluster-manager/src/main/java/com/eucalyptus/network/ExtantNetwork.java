@@ -63,9 +63,7 @@
 
 package com.eucalyptus.network;
 
-import java.lang.reflect.UndeclaredThrowableException;
 import java.util.HashSet;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -73,27 +71,23 @@ import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PostPersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import org.hibernate.annotations.NotFound;
-import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.util.ResourceAllocation;
 import com.eucalyptus.cloud.util.ResourceAllocation.SetReference;
-import com.eucalyptus.cloud.util.ResourceAllocation.State;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.entities.AbstractStatefulPersistent;
-import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.TransactionException;
-import com.eucalyptus.util.async.Callback;
-import com.google.common.base.Function;
+import com.eucalyptus.util.TransactionExecutionException;
 
 @Entity
 @javax.persistence.Entity
@@ -123,6 +117,11 @@ public class ExtantNetwork extends UserMetadata<ResourceAllocation.State> implem
     this.tag = tag;
   }
   
+  private ExtantNetwork( final NetworkGroup networkGroup, final Integer tag ) {
+    super( networkGroup.getOwner( ), networkGroup.getDisplayName( ) + ":" + tag );
+    this.tag = tag;
+  }
+  
   public static ExtantNetwork named( Integer tag ) {
     return new ExtantNetwork( tag );
   }
@@ -130,28 +129,23 @@ public class ExtantNetwork extends UserMetadata<ResourceAllocation.State> implem
   public static ExtantNetwork create( final NetworkGroup networkGroup, final Integer tag ) {
     return new ExtantNetwork( networkGroup, tag );
   }
-  public ExtantNetwork( final NetworkGroup networkGroup, final Integer tag ) {
-    super( networkGroup.getOwner( ), networkGroup.getDisplayName( ) + ":" + tag );
-    this.tag = tag;
-  }
   
   public static ExtantNetwork bogus( NetworkGroup networkGroup ) {
     return new ExtantNetwork( networkGroup, -1 );
   }
   
-  void populateIndexes( ) {
-    for ( Long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
-      try {
-        Transactions.save( new PrivateNetworkIndex( this, i ) );
-      } catch ( final TransactionException ex ) {
-        LOG.error( ex, ex );
-      }
-    }
-  }
-  
   public ExtantNetwork( final NetworkGroup networkGroup ) {
     super( networkGroup.getOwner( ), networkGroup.getDisplayName( ) );
     this.networkGroup = networkGroup;
+  }
+  
+  public boolean hasIndexes( ) {
+    for ( PrivateNetworkIndex index : this.getIndexes( ) ) {
+      if ( ResourceAllocation.State.EXTANT.equals( index.getState( ) ) ) {
+        return true;
+      }
+    }
+    return false;
   }
   
   public Integer getTag( ) {
@@ -171,34 +165,33 @@ public class ExtantNetwork extends UserMetadata<ResourceAllocation.State> implem
   }
   
   public SetReference<PrivateNetworkIndex, VmInstance> allocateNetworkIndex( ) throws TransactionException {
+    EntityWrapper<ExtantNetwork> db = Entities.get( ExtantNetwork.class );
+    ExtantNetwork exNet = this;
     try {
-      Transactions.one( this, new Callback<ExtantNetwork>( ) {
-        
-        @Override
-        public void fire( final ExtantNetwork input ) {
-          if ( input.getIndexes( ).isEmpty( ) ) {
-            input.populateIndexes( );
-          }
-        }
-      } );
-      return Transactions.transformOne( this, new Function<ExtantNetwork, SetReference<PrivateNetworkIndex, VmInstance>>( ) {
-        
-        @Override
-        public SetReference<PrivateNetworkIndex, VmInstance> apply( final ExtantNetwork input ) {
-          for ( final PrivateNetworkIndex idx : input.getIndexes( ) ) {
-            if ( ResourceAllocation.State.FREE.equals( idx.getState( ) ) ) {
-              try {
-                return idx.allocate( );
-              } catch ( final ResourceAllocationException ex ) {
-                LOG.error( ex, ex );
-              }
-            }
-          }
-          throw new UndeclaredThrowableException( new NoSuchElementException( "Failed to locate a free network index." ) );
-        }
-      } );
-    } catch ( final TransactionException ex ) {
-      throw ex;
+      exNet = db.getUnique( this );
+      if ( exNet.getIndexes( ).isEmpty( ) ) {
+        this.initNetworkIndexes( exNet );
+        db.commit( );
+        db = Entities.get( ExtantNetwork.class );
+      }
+      exNet = db.getUnique( this );
+      SetReference<PrivateNetworkIndex, VmInstance> next = PrivateNetworkIndex.allocateNext( exNet );
+      return next;
+    } catch ( EucalyptusCloudException ex ) {
+      Logs.extreme( ).error( ex, ex );
+      db.rollback( );
+      throw new TransactionExecutionException( ex );
+    } catch ( ResourceAllocationException ex ) {
+      Logs.extreme( ).error( ex, ex );
+      db.rollback( );
+      throw new TransactionExecutionException( ex );
+    }
+  }
+  
+  private void initNetworkIndexes( ExtantNetwork exNet ) {
+    for ( long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
+      PrivateNetworkIndex netIdx = Entities.get( PrivateNetworkIndex.class ).persist( PrivateNetworkIndex.create( exNet, i ) );
+      this.indexes.add( netIdx );
     }
   }
   
@@ -245,6 +238,11 @@ public class ExtantNetwork extends UserMetadata<ResourceAllocation.State> implem
   @Override
   public int compareTo( ExtantNetwork that ) {
     return this.getTag( ).compareTo( that.getTag( ) );
+  }
+  
+  @Override
+  public String toString( ) {
+    return String.format( "ExtantNetwork:networkGroup=%s:tag=%s:indexes=%s", this.networkGroup.getFullName( ), this.tag, this.indexes );
   }
   
 }

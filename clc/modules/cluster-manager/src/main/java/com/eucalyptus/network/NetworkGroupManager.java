@@ -12,9 +12,12 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.RecoverablePersistenceException;
+import com.eucalyptus.images.ImageConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.Types;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -53,10 +56,10 @@ public class NetworkGroupManager {
     CreateSecurityGroupResponseType reply = ( CreateSecurityGroupResponseType ) request.getReply( );
     NetworkGroup newGroup = NetworkGroups.create( ctx.getUserFullName( ), request.getGroupName( ), request.getGroupDescription( ) ); 
     try {
-      EntityWrapper.get( NetworkGroup.class ).mergeAndCommit( newGroup );
+      Entities.get( NetworkGroup.class ).mergeAndCommit( newGroup );
       return reply;
-    } catch ( RecoverablePersistenceException ex ) {
-      LOG.error( ex , ex );
+    } catch ( final Exception ex ) {
+      Logs.extreme( ).error( ex, ex );
 //      if( ex.getCause( ) instanceof  ) {
 //        return reply.markFailed( );
 //      } else {
@@ -171,9 +174,9 @@ public class NetworkGroupManager {
         for ( NetworkRule r : filtered ) {
           ruleGroup.getNetworkRules( ).remove( r );
         }
-        ruleGroup = EntityWrapper.get( NetworkGroup.class ).mergeAndCommit( ruleGroup );
-      } catch ( RecoverablePersistenceException ex ) {
-        LOG.error( ex , ex );
+        ruleGroup = Entities.get( NetworkGroup.class ).mergeAndCommit( ruleGroup );
+      } catch ( Exception ex ) {
+        Logs.extreme( ).error( ex , ex );
         throw new EucalyptusCloudException( "RevokeSecurityGroupIngress failed because: " + ex.getMessage( ), ex );
       }
       return reply;
@@ -186,9 +189,9 @@ public class NetworkGroupManager {
       }
       if ( reply.get_return( ) ) {
         try {
-          ruleGroup = EntityWrapper.get( NetworkGroup.class ).mergeAndCommit( ruleGroup );
-        } catch ( RecoverablePersistenceException ex ) {
-          LOG.error( ex , ex );
+          ruleGroup = Entities.get( NetworkGroup.class ).mergeAndCommit( ruleGroup );
+        } catch ( Exception ex ) {
+          Logs.extreme( ).error( ex , ex );
           throw new EucalyptusCloudException( "RevokeSecurityGroupIngress failed because: " + ex.getMessage( ), ex );
         }
       }
@@ -202,7 +205,7 @@ public class NetworkGroupManager {
     Context ctx = Contexts.lookup();
     NetworkGroups.createDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
     AuthorizeSecurityGroupIngressResponseType reply = ( AuthorizeSecurityGroupIngressResponseType ) request.getReply( );
-    EntityWrapper<NetworkGroup> db = EntityWrapper.get( NetworkGroup.class );
+    EntityWrapper<NetworkGroup> db = Entities.get( NetworkGroup.class );
     NetworkGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ) );
     if ( !ctx.hasAdministrativePrivileges( ) && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, request.getGroupName( ), ctx.getAccount( ), PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to authorize network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
