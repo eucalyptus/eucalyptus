@@ -192,6 +192,7 @@ public class EntityWrapper<TYPE> {
                                 .setCacheable( true )
                                 .setMaxResults( 1 )
                                 .setFetchSize( 1 )
+                                .setFirstResult( 0 )
                                 .uniqueResult( );
         if ( ret == null ) {
           throw new NoSuchElementException( "@NaturalId: " + natId );
@@ -203,6 +204,7 @@ public class EntityWrapper<TYPE> {
                                 .setCacheable( true )
                                 .setMaxResults( 1 )
                                 .setFetchSize( 1 )
+                                .setFirstResult( 0 )
                                 .uniqueResult( );
         if ( ret == null ) {
           throw new NoSuchElementException( "example: " + LogUtil.dumpObject( example ) );

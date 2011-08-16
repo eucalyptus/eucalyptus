@@ -179,10 +179,12 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
       return next;
     } catch ( EucalyptusCloudException ex ) {
       Logs.extreme( ).error( ex, ex );
+      LOG.debug( ex );
       db.rollback( );
       throw new TransactionExecutionException( ex );
     } catch ( ResourceAllocationException ex ) {
       Logs.extreme( ).error( ex, ex );
+      LOG.debug( ex );
       db.rollback( );
       throw new TransactionExecutionException( ex );
     }

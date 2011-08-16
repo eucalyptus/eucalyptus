@@ -268,7 +268,12 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
     EntityWrapper<PrivateNetworkIndex> db = Entities.get( PrivateNetworkIndex.class );
     try {
       Example ex = Example.create( PrivateNetworkIndex.free( exNet ) ).enableLike( MatchMode.EXACT );
-      PrivateNetworkIndex ret = ( PrivateNetworkIndex ) db.createCriteria( PrivateNetworkIndex.class ).setCacheable( true ).add( ex ).setMaxResults( 1 ).setFetchSize( 1 ).uniqueResult( );
+      PrivateNetworkIndex ret = ( PrivateNetworkIndex ) db.createCriteria( PrivateNetworkIndex.class )
+                                                          .setMaxResults( 1 )
+                                                          .setFetchSize( 1 )
+                                                          .setFirstResult( 0 )
+                                                          .add( ex )
+                                                          .uniqueResult( );
       if ( ret == null ) {
         throw new NotEnoughResourcesAvailable( "Failed to find a free network index: " + ret );
       } else {
