@@ -77,7 +77,7 @@ class HyperVRegister(object):
         cmd = 'smbclient "//%s/EucaKeyShare"' % self.hostname
         cmd += ' --user=Administrator'
         l = ['put %s' % fn for fn in files]
-        cmd += ' --command "%s%' % '; '.join(l)
+        cmd += ' --command "%s"' % '; '.join(l)
         cmd = command.Command(cmd)
         os.chdir(cur_dir)
         for fn in files:

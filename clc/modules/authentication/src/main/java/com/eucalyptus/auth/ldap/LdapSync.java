@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 import javax.naming.InvalidNameException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.SearchResult;
@@ -538,7 +539,7 @@ public class LdapSync {
   }
   
   private static String getId( String idAttrName, Attributes attrs ) throws NamingException {
-    String id = ( String ) attrs.get( idAttrName ).get( );
+    String id = getAttrWithNullCheck( attrs, idAttrName );
     if ( LicParser.isEmpty( id ) ) {
       throw new NamingException( "Empty ID for " + attrs );
     }
@@ -547,9 +548,12 @@ public class LdapSync {
   
   private static Set<String> getMembers( String idAttrName, String memberAttrName, Attributes attrs ) throws NamingException {
     Set<String> members = Sets.newHashSet( );
-    NamingEnumeration names = attrs.get( memberAttrName ).getAll( );
-    while ( names.hasMore( ) ) {
-      members.add( parseMemberName( idAttrName, ( String ) names.next( ) ) );
+    Attribute membersAttr = attrs.get( memberAttrName );
+    if ( membersAttr != null ) {
+      NamingEnumeration<?> names = membersAttr.getAll( );
+	  while ( names.hasMore( ) ) {
+	    members.add( parseMemberName( idAttrName, ( String ) names.next( ) ).toLowerCase( ) );
+	  }
     }
     return members;
   }
@@ -636,14 +640,26 @@ public class LdapSync {
         }
         Map<String, String> infoMap = Maps.newHashMap( );
         for ( String attrName : lic.getUserInfoAttributes( ).keySet( ) ) {
-          infoMap.put( lic.getUserInfoAttributes( ).get( attrName ), ( String ) attrs.get( attrName ).get( ) );
+          String infoKey = lic.getUserInfoAttributes( ).get( attrName );
+          String infoVal = getAttrWithNullCheck( attrs, attrName );
+          if ( infoVal != null ) {
+        	infoMap.put( infoKey, infoVal );
+          }
         }
         infoMap.put( User.DN, dn );
-        userMap.put( getId( lic.getUserIdAttribute( ), attrs ), infoMap );
+        userMap.put( getId( lic.getUserIdAttribute( ), attrs ).toLowerCase( ), infoMap );
       }
       
     } );
     return userMap;
   }
 
+  private static String getAttrWithNullCheck( Attributes attrs, String attrName ) throws NamingException {
+	Attribute attr = attrs.get( attrName );
+	if ( attr != null ) {
+      return ( String ) attr.get( );
+	}
+	return null;
+  }
+  
 }

@@ -140,7 +140,7 @@ typedef struct _blobstore_filelock {
 __thread blobstore_error_t _blobstore_errno = BLOBSTORE_ERROR_OK; // thread-local errno
 static void (* err_fn) (const char * msg) = NULL; 
 static unsigned char _do_print_errors = 1;
-static unsigned char _do_print_trace = 0;
+static unsigned char _do_print_trace = 1;
 static pthread_mutex_t _blobstore_mutex = PTHREAD_MUTEX_INITIALIZER; // process-global mutex
 static blobstore_filelock * locks_list = NULL; // process-global LL head (TODO: replace this with a hash table)
 
@@ -222,14 +222,16 @@ static void err (blobstore_error_t error, const char * custom_msg, const int src
     dump_trace (_blobstore_last_trace, sizeof(_blobstore_last_trace));
     
     if (_do_print_errors) {
-        myprintf (EUCAERROR, "error: %s\n", msg);
+        myprintf (EUCAERROR, "error: %s\n", _blobstore_last_msg);
         if (_do_print_trace)
             myprintf (EUCAERROR, "%s", _blobstore_last_trace);
     }
     _blobstore_errno = error;
 }
 
-__INLINE__ static void propagate_system_errno (blobstore_error_t default_errno)
+#define PROPAGATE_ERR(_ERRNO) propagate_system_errno(_ERRNO,__LINE__,__FILE__)
+
+__INLINE__ static void propagate_system_errno (blobstore_error_t default_errno, const int src_line_no, const char * src_file_name)
 {
     switch (errno) {
     case ENOENT: _blobstore_errno = BLOBSTORE_ERROR_NOENT; break;
@@ -243,7 +245,7 @@ __INLINE__ static void propagate_system_errno (blobstore_error_t default_errno)
         perror ("blobstore");
         _blobstore_errno = default_errno;
     }
-    ERR (_blobstore_errno, NULL); // print the message
+    err (_blobstore_errno, NULL, src_line_no, src_file_name);
 }
 
 void blobstore_set_error_function ( void (* fn) (const char * msg) )
@@ -472,7 +474,7 @@ static int open_and_lock (const char * path,
     // open/create the file, using Posix file locks for inter-process locking
     int fd = open (path, o_flags, mode);
     if (fd == -1) {
-        propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         goto error;
     }
     for (;;) {
@@ -489,7 +491,7 @@ static int open_and_lock (const char * path,
                 break; // success!
             pthread_rwlock_unlock (&(path_lock->lock)); // give up the posix lock
             if (errno != EAGAIN) { // any error other than inability to get the lock
-                propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
+                PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
                 goto error;
             }
         }
@@ -890,7 +892,7 @@ static int write_blockblob_metadata_path (blockblob_path_t path_t, const blobsto
         fprintf (FH, "%s", str);
         fclose (FH);
     } else {
-        propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);        
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);        
         return -1;
     }
     return 0;    
@@ -905,7 +907,7 @@ static int read_blockblob_metadata_path (blockblob_path_t path_t, const blobstor
 
     int fd = open (path, O_RDONLY);
     if (fd == -1) {
-        propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         return -1;
     }
         
@@ -931,19 +933,19 @@ static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const b
     FILE * fp = fopen (path, "w+");
     umask (old_umask);
     if (fp == NULL) {
-        propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         return -1;
     }
 
     for (int i=0; i<array_size; i++) {
         if (fprintf (fp, "%s\n", array [i]) < 0) {
-            propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
+            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
             ret = -1;
             break;
         }
     }
     if (fclose (fp) == -1) {
-        propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         ret = -1;
     }
     return ret;
@@ -977,7 +979,7 @@ static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const bl
                 free (line);
                 break;
             }
-            propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
+            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
             ret = -1;
             break;
         }
@@ -995,7 +997,7 @@ static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const bl
         lines [i] = line;
     }
     if (fclose (fp) == -1) {
-        propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         ret = -1;
     }
     if (ret == -1) {
@@ -1527,7 +1529,6 @@ blockblob * blockblob_open ( blobstore * bs,
                              unsigned long long timeout_usec ) // maximum wait, in microseconds
 {
     long long size_blocks = round_up_sec (size_bytes) / 512;
-
     if (flags & ~(BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL)) {
         ERR (BLOBSTORE_ERROR_INVAL, "only _CREAT and _EXCL flags are allowed");
         return NULL;
@@ -1568,7 +1569,7 @@ blockblob * blockblob_open ( blobstore * bs,
     }
     int created_directory = ensure_blockblob_metadata_path (bs, bb->id); // TODO: maybe don't create directories needlessly if flags==0?
     if (created_directory==-1) {
-        propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
+        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         goto unlock;
     }
     if (blobstore_unlock(bs)==-1) {
@@ -1579,10 +1580,11 @@ blockblob * blockblob_open ( blobstore * bs,
     int saved_errno = 0;
     int created_blob = 0;
     bb->fd = open_and_lock (bb->blocks_path, flags | BLOBSTORE_FLAG_RDWR, timeout_usec, BLOBSTORE_FILE_PERM); // blobs are always opened with exclusive write access
+
     if (bb->fd != -1) { 
         struct stat sb;
         if (fstat (bb->fd, &sb)==-1) {
-            propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
+            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
             goto clean;
         }
         
@@ -1635,11 +1637,11 @@ blockblob * blockblob_open ( blobstore * bs,
             }
             
             if (lseek (bb->fd, size_bytes - 1, SEEK_CUR) == (off_t)-1) { // create a file with a hole
-                propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
+                PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
                 goto clean;
             }
             if (write (bb->fd, zero_buf, 1) != (ssize_t)1) {
-                propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
+                PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
                 goto clean;
             }
             if (sig)
@@ -1893,20 +1895,20 @@ static int dm_create_devices (char * dev_names[], char * dm_tables[], int size)
         myprintf (EUCAINFO, "creating device %s\n", dev_names [i]);
 
         if (pipe (pipefds) == -1) {
-            propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
+            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
             goto cleanup;
         }
 
         pid_t cpid = fork();
 
         if (cpid<0) {
-            propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
+            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
             goto cleanup;
 
         } else if (cpid==0) { // child
             close (pipefds [1]);
             if (dup2 (pipefds [0], 0) == -1) {
-                propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
+                PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
                 _exit (1);
             }
             _exit (execl (helpers_path [ROOTWRAP], helpers_path [ROOTWRAP], helpers_path [DMSETUP], "create", dev_names[i], NULL));
@@ -1918,7 +1920,7 @@ static int dm_create_devices (char * dev_names[], char * dm_tables[], int size)
 
             int status;
             if (waitpid (cpid, &status, 0) == -1) {
-                propagate_system_errno (BLOBSTORE_ERROR_UNKNOWN);
+                PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
                 goto cleanup;
             }
             if (WEXITSTATUS(status) != 0) {
@@ -2087,7 +2089,7 @@ static int verify_bb ( const blockblob * bb, unsigned long long min_size_bytes )
     }
     struct stat sb;
     if (fstat (bb->fd, &sb)==-1) {
-        propagate_system_errno (BLOBSTORE_ERROR_NOENT);
+        PROPAGATE_ERR (BLOBSTORE_ERROR_NOENT);
         return -1;
     }
     if (sb.st_size < bb->size_bytes) {
@@ -2099,7 +2101,7 @@ static int verify_bb ( const blockblob * bb, unsigned long long min_size_bytes )
         return -1;
     }
     if (stat (bb->device_path, &sb)==-1) {
-        propagate_system_errno (BLOBSTORE_ERROR_NOENT);
+        PROPAGATE_ERR (BLOBSTORE_ERROR_NOENT);
         return -1;
     }
     if (!S_ISBLK(sb.st_mode)) {
@@ -2189,7 +2191,7 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
             }
             struct stat sb;
             if (stat (path, &sb)==-1) {
-                propagate_system_errno (BLOBSTORE_ERROR_NOENT);
+                PROPAGATE_ERR (BLOBSTORE_ERROR_NOENT);
                 return -1;
             }
             if (!S_ISBLK(sb.st_mode)) {
@@ -3044,7 +3046,8 @@ static int do_metadata_test (const char * base, const char * name)
 
     blockblob * bb1;
     _OPENBB(bb1,B1,BB_SIZE,NULL,_CBB,0,0); // bs size: 10
-    
+    if (bb1==NULL) return 1; // so test does not SEGFAULT when run as non-root
+
     int t = 1;
     char ** array;
     int array_size;

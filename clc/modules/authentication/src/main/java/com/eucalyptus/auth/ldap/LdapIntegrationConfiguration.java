@@ -49,7 +49,6 @@ public class LdapIntegrationConfiguration {
   // Selected users
   private String userBaseDn;
   private String userIdAttribute;
-  private String passwordAttribute;
   private Map<String, String> userInfoAttributes = Maps.newHashMap( );
   private Selection usersSelection = new Selection( );
   
@@ -91,7 +90,6 @@ public class LdapIntegrationConfiguration {
     sb.append( "users:\n" );
     sb.append( '\t' ).append( "base-dn:" ).append( this.userBaseDn ).append( '\n' );
     sb.append( '\t' ).append( "id-attribute:" ).append( this.userIdAttribute ).append( '\n' );
-    sb.append( '\t' ).append( "password-attribute:" ).append( this.passwordAttribute ).append( '\n' );
     sb.append( '\t' ).append( "user-info-attributes:" ).append( this.userInfoAttributes ).append( '\n' );
     sb.append( '\t' ).append( "selection:" ).append( this.usersSelection ).append( '\n' );
     return sb.toString( );
@@ -151,14 +149,6 @@ public class LdapIntegrationConfiguration {
 
   public String getGroupsAttribute( ) {
     return groupsAttribute;
-  }
-
-  public void setPasswordAttribute( String passwordAttribute ) {
-    this.passwordAttribute = passwordAttribute;
-  }
-
-  public String getPasswordAttribute( ) {
-    return passwordAttribute;
   }
 
   public void setEnableSync( boolean enableSync ) {

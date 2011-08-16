@@ -756,18 +756,7 @@ public class WalrusManager {
 			                           PolicySpec.VENDOR_S3,
 			                           PolicySpec.S3_RESOURCE_BUCKET,
 			                           bucketName,
-			                           bucket.getOwnerId()) &&
-			    Lookups.checkPrivilege(PolicySpec.S3_PUTOBJECT,
-			                           PolicySpec.VENDOR_S3,
-			                           PolicySpec.S3_RESOURCE_OBJECT,
-			                           PolicySpec.objectFullName(bucketName, objectKey),
-			                           bucket.getOwnerId()) &&
-			    Permissions.canAllocate(PolicySpec.S3_RESOURCE_BUCKET,
-			                            PolicySpec.VENDOR_S3,
-			                            bucketName,
-			                            PolicySpec.S3_PUTOBJECT,
-			                            ctx.getUser(),
-			                            objSize))) {
+			                           bucket.getOwnerId()))) {
 						if (logData != null)
 							reply.setLogData(logData);
 						String objectName;
@@ -958,6 +947,17 @@ public class WalrusManager {
 													"Key", objectKey);
 										}
 									}
+									if (!Permissions.canAllocate(PolicySpec.S3_RESOURCE_BUCKET,
+																PolicySpec.VENDOR_S3,
+																bucketName,
+																PolicySpec.S3_PUTOBJECT,
+																ctx.getUser(),
+																size) && 
+										!ctx.hasAdministrativePrivileges()) {
+										dbObject.rollback();
+										LOG.error("Quota exceeded for Walrus putObject");
+										throw new EntityTooLargeException("Key", objectKey);
+									}
 									bucket.setBucketSize(newSize);
 									if (WalrusProperties.trackUsageStatistics) {
 										walrusStatistics.updateBytesIn(size);
@@ -990,7 +990,9 @@ public class WalrusManager {
 										.getSender(QueueIdentifier.S3);
 									queueSender.send(new S3Event(true,
 											size / WalrusProperties.M,
+											ctx.getUser().getUserId(),
 											ctx.getUser().getName(),
+											ctx.getAccount().getAccountNumber(),
 											ctx.getAccount().getName()));
 									break;
 								} else {
@@ -1141,18 +1143,7 @@ public class WalrusManager {
                                  PolicySpec.VENDOR_S3,
                                  PolicySpec.S3_RESOURCE_BUCKET,
                                  bucketName,
-                                 bucket.getOwnerId()) &&
-          Lookups.checkPrivilege(PolicySpec.S3_PUTOBJECT,
-                                 PolicySpec.VENDOR_S3,
-                                 PolicySpec.S3_RESOURCE_OBJECT,
-                                 PolicySpec.objectFullName(bucketName, objectKey),
-                                 bucket.getOwnerId()) &&
-          Permissions.canAllocate(PolicySpec.VENDOR_S3,
-                                  PolicySpec.S3_RESOURCE_BUCKET,
-                                  bucketName,
-                                  PolicySpec.S3_PUTOBJECT,
-                                  ctx.getUser(),
-                                  objSize))) {
+                                 bucket.getOwnerId()))) {
             EntityWrapper<ObjectInfo> dbObject = db
 						.recast(ObjectInfo.class);
 						ObjectInfo searchObjectInfo = new ObjectInfo();
@@ -1233,6 +1224,17 @@ public class WalrusManager {
 								}
 								bucket.setBucketSize(newSize);
 							}
+							if (Permissions.canAllocate(PolicySpec.VENDOR_S3,
+														PolicySpec.S3_RESOURCE_BUCKET,
+														bucketName,
+														PolicySpec.S3_PUTOBJECT,
+														ctx.getUser(),
+														size) &&
+								!ctx.hasAdministrativePrivileges()) {
+								db.rollback();
+								LOG.error("Quota exceeded in Walrus putObject");
+								throw new EntityTooLargeException("Key", objectKey, logData);
+							}
 							if (WalrusProperties.trackUsageStatistics) {
 								walrusStatistics.updateBytesIn(size);
 								walrusStatistics.updateSpaceUsed(size);
@@ -1255,7 +1257,9 @@ public class WalrusManager {
 								.getSender(QueueIdentifier.S3);
 							queueSender.send(new S3Event(true,
 									size / WalrusProperties.M,
+									ctx.getUser().getUserId(),
 									ctx.getUser().getName(),
+									ctx.getAccount().getAccountNumber(),
 									ctx.getAccount().getName()));
 						} catch (Exception ex) {
 							LOG.error(ex);
@@ -1474,7 +1478,7 @@ public class WalrusManager {
 					.getSender(QueueIdentifier.S3);
 				queueSender.send(new S3Event(false,
 						size / WalrusProperties.M, ctx.getUser().getName(),
-						ctx.getAccount().getName()));			
+						null, ctx.getAccount().getName(), null));			
 			} catch (IOException ex) {
 				LOG.error(ex, ex);
 			}

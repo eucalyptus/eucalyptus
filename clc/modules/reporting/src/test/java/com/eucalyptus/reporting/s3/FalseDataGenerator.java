@@ -40,15 +40,19 @@ public class FalseDataGenerator
 			listener.setCurrentTimeMillis(timestampMs);
 
 			for (int j = 0; j < NUM_USERS; j++) {
-				String userId = String.format("user-%d", j);
-				String accountId = String.format("account-%d",
+				String userId = String.format("fakeUserId-%d", j);
+				String userName = String.format("fakeUserName:%d", j);
+				String accountId = String.format("fakeAccountId-%d",
 						(j % NUM_ACCOUNTS));
+				String accountName = String.format("fakeAccountName:%d", (j % NUM_ACCOUNTS));
 
 				long sizeMegs = 1024 + i;
-				S3Event event = new S3Event(true, sizeMegs, userId, accountId);
+				S3Event event = new S3Event(true, sizeMegs, userId, userName,
+						accountId, accountName);
 				queueSender.send(event);
 				if (i % 10 == 0) {
-					event = new S3Event(true, userId, accountId);
+					event = new S3Event(true, userId, userName, accountId,
+							accountName);
 					queueSender.send(event);
 				}
 				System.out.printf("Sending event for %d,%d\n", i, j);

@@ -82,6 +82,7 @@
 #include "blobstore.h"
 #include "diskutil.h"
 #include "iscsi.h"
+#include "http.h"
 
 #define VBR_SIZE_SCALING 1024 // TODO: remove this adjustment after CLC sends bytes instead of KBs
 
@@ -527,6 +528,23 @@ static void update_vbr_with_backing_info (artifact * a)
 // combining, and augmenting existing artifacts.  When invoked, creators
 // can assume that any input blobs and the output blob are open (and 
 // thus locked for their exclusive use).
+
+static int url_creator (artifact * a)
+{
+    assert (a->bb);
+    assert (a->vbr);
+    virtualBootRecord * vbr = a->vbr;
+    const char * dest_path = blockblob_get_file (a->bb);
+
+    assert (vbr->preparedResourceLocation);
+    logprintfl (EUCAINFO, "[%s] downloading %s\n", a->instanceId, vbr->preparedResourceLocation);
+    if (http_get (vbr->preparedResourceLocation, dest_path) != OK) {
+        logprintfl (EUCAERROR, "[%s] error: failed to download component %s\n", a->instanceId, vbr->preparedResourceLocation);
+        return ERROR;
+    }
+
+    return OK;
+}
 
 static int walrus_creator (artifact * a) // creates an artifact by downloading it from Walrus
 {
@@ -1052,17 +1070,75 @@ static void convert_id (const char * src, char * dst, unsigned int size)
     }
 }
 
+static char * url_get_digest (const char * url)
+{
+    char * digest_str = NULL;
+    char * digest_path = strdup ("/tmp/url-digest-XXXXXX");
+
+    if(!digest_path) {
+       logprintfl (EUCAERROR, "{%u} error: failed to strdup digest path\n", (unsigned int)pthread_self());
+       return digest_path;
+    }
+
+    int tmp_fd = safe_mkstemp (digest_path);
+    if (tmp_fd<0) {
+        logprintfl (EUCAERROR, "{%u} error: failed to create a digest file %s\n", (unsigned int)pthread_self(), digest_path);
+    } else {
+        close (tmp_fd);
+
+        // download a fresh digest
+        if (http_get_timeout (url, digest_path, 10, 4, 0, 0) != 0 ) {
+            logprintfl (EUCAERROR, "{%u} error: failed to download digest to %s\n", (unsigned int)pthread_self(), digest_path);
+        } else {
+            digest_str = file2strn (digest_path, 100000);
+        }
+        unlink (digest_path);
+    }
+    if(digest_path) {
+        free(digest_path);
+    }
+    return digest_str;
+}
+
 static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean do_make_work_copy, boolean must_be_file, const char * sshkey)
 {
     artifact * a = NULL;
 
     switch (vbr->locationType) {
-    case NC_LOCATION_URL:
     case NC_LOCATION_CLC: 
     case NC_LOCATION_SC:
         logprintfl (EUCAERROR, "[%s] error: location of type %d is NOT IMPLEMENTED\n", current_instanceId, vbr->locationType);
         return NULL;
 
+    case NC_LOCATION_URL: {
+        logprintfl(EUCADEBUG, "MEH: %s\n", vbr->preparedResourceLocation);
+        
+        // get the digest for size and signature
+        char manifestURL[MAX_PATH];
+        char * blob_sig = NULL;
+        int rc;
+        snprintf(manifestURL, MAX_PATH, "%s.manifest.xml", vbr->preparedResourceLocation);
+        blob_sig = url_get_digest(manifestURL);
+        if (blob_sig==NULL) goto u_out;
+        
+        // extract size from the digest
+        long long bb_size_bytes = str2longlong (blob_sig, "<size>", "</size>"); // pull size from the digest
+        if (bb_size_bytes < 1) goto u_out;
+        vbr->size = bb_size_bytes; // record size in VBR now that we know it
+
+        // generate ID of the artifact (append -##### hash of sig)
+        char art_id [48];
+        if (art_gen_id (art_id, sizeof(art_id), vbr->id, blob_sig) != OK) goto w_out;
+
+        // allocate artifact struct
+        a = art_alloc (art_id, blob_sig, bb_size_bytes, TRUE, must_be_file, url_creator, vbr);
+
+        u_out:
+        
+        if (blob_sig)
+            free (blob_sig);
+        break;
+    }
     case NC_LOCATION_WALRUS: {
         // get the digest for size and signature
         char * blob_sig = walrus_get_digest (vbr->preparedResourceLocation);
@@ -1489,7 +1565,7 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
 {
     int ret = ERROR;
     assert (a);
-
+ 
     // determine blob IDs for cache and work
     const char * id_cache = a->id;
     char id_work  [BLOBSTORE_MAX_PATH];
@@ -1497,7 +1573,7 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
         snprintf (id_work, sizeof (id_work), "%s/%s", work_prefix, a->id);
     else 
         safe_strncpy (id_work, a->id, sizeof (id_work));
-    
+
     // see if a file and if it exists
     if (a->id_is_path) {
         if (check_path (a->id)) {

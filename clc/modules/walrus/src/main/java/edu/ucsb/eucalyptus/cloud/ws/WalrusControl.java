@@ -179,7 +179,6 @@ public class WalrusControl {
 		WalrusInfo walrusInfo = WalrusInfo.getWalrusInfo();
                 try {
 			storageManager = BackendStorageManagerFactory.getStorageManager();
-			storageManager.setRootDirectory(walrusInfo.getStorageDir());
 		} catch (Exception ex) {
 			LOG.error (ex);
 		}
