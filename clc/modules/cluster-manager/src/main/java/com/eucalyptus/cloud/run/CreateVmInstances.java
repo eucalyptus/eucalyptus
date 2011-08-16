@@ -88,7 +88,7 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 public class CreateVmInstances {
   private static Logger LOG = Logger.getLogger( CreateVmInstances.class );
   
-  public Allocation allocate( final Allocation allocInfo ) throws EucalyptusCloudException, MetadataException {
+  public Allocation allocate( final Allocation allocInfo ) throws EucalyptusCloudException, MetadataException, TransactionException {
     long quantity = allocInfo.getAllocationTokens( ).size( );
     Context ctx = allocInfo.getContext( );
     User requestUser = ctx.getUser( );
@@ -111,6 +111,7 @@ public class CreateVmInstances {
         VmInstances.register( vmInst );
       } catch ( TransactionException ex ) {
         LOG.error( ex, ex );
+        throw ex;
       }
     }
     return allocInfo;
