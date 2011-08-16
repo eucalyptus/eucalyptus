@@ -93,6 +93,11 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   
   private void cleanup( ) {
     try {
+      this.runnable.run( );
+    } catch ( final Exception ex ) {
+      LOG.error( ex, ex );
+    }
+    try {
       if ( ( this.session != null ) && ( this.session.get( ) != null ) ) {
         this.session.clear( );
       }
@@ -102,11 +107,6 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
       }
       this.em = null;
     } finally {
-      try {
-        this.runnable.run( );
-      } catch ( final Exception ex ) {
-        LOG.error( ex, ex );
-      }
       outstanding.remove( this.txUuid );
     }
   }
@@ -210,7 +210,9 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   
   @Override
   public String toString( ) {
-    return String.format( "TxHandle:txUuid=%s:startTime=%s:splitTime=%s:owner=%s", this.txUuid, this.startTime, this.splitTime, Logs.EXTREME ? this.owner : "n/a" );
+    return String.format( "TxHandle:txUuid=%s:startTime=%s:splitTime=%s:owner=%s", this.txUuid, this.startTime, this.splitTime, Logs.EXTREME
+      ? this.owner
+      : "n/a" );
   }
   
   public static class TxWatchdog implements EventListener {
