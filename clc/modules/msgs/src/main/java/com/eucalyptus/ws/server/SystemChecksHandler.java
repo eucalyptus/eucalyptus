@@ -64,6 +64,7 @@
 package com.eucalyptus.ws.server;
 
 import java.net.URI;
+import java.util.NoSuchElementException;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -76,6 +77,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.mortbay.log.Log;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -109,6 +111,9 @@ public enum SystemChecksHandler implements ChannelUpstreamHandler {
           } else {
             this.sendError( ctx, e, comp, request.getServicePath( ) );
           }
+        } catch ( NoSuchElementException ex ) {
+          Logs.extreme( ).debug( "Failed to find reverse component mapping for message type: " + msg.getClass( ) );
+          ctx.sendUpstream( e );
         } catch ( Exception ex ) {
           Logs.extreme( ).error( ex, ex );
           ctx.sendUpstream( e );
