@@ -90,6 +90,7 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudM
   @Lob
   @Column( name = "metadata_keypair_public_key" )
   private String publicKey;
+  @Lob
   @Column( name = "metadata_keypair_finger_print" )
   private String fingerPrint;
   

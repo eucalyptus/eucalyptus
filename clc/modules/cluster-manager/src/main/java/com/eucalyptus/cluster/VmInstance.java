@@ -186,7 +186,8 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   private Long                                        blockBytes;
   @Column( name = "metadata_vm_network_bytes" )
   private Long                                        networkBytes;
-  @Column( name = "metadata_vm_ssh_key_pair" )
+  @ManyToOne
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final SshKeyPair                            sshKeyPair;
   @Column( name = "metadata_vm_type" )
   private final VmType                                vmType;
