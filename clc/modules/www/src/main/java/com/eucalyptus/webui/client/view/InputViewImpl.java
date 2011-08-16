@@ -227,6 +227,8 @@ public class InputViewImpl extends DialogBox implements InputView {
           
           protected final PasswordTextBox getPasswordInput( ) {
             final PasswordTextBox box = new PasswordTextBox( );
+            //TODO(wenye): disable strength indication for now. The security Tsar said it is confusing.
+            /*
             box.addKeyPressHandler( new KeyPressHandler( ) {
 
               @Override
@@ -240,6 +242,7 @@ public class InputViewImpl extends DialogBox implements InputView {
               }
 
             } );
+            */
             return box;
           }
           

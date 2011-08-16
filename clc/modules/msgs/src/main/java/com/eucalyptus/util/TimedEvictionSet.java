@@ -10,23 +10,31 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
+import com.eucalyptus.ws.StackConfiguration;
 
 public class TimedEvictionSet<E extends Comparable> implements Set<E> {
   private static Logger LOG = Logger.getLogger( TimedEvictionSet.class );
   private NavigableSet<E> entries = new ConcurrentSkipListSet<E>();
   private NavigableSet<TimestampedElement> timestamps = new ConcurrentSkipListSet<TimestampedElement>();
-  //private Long evictionMillis = 15*1000*60l;
   private Long evictionNanos = 15*1000*60*1000*1000l;
   private AtomicBoolean busy = new AtomicBoolean( false );
   
   class TimestampedElement implements Comparable<TimestampedElement> {
     private E element;
     private Long timeNanos;
+    
     public TimestampedElement( E element ) {
       super( );
       this.element = element;
       this.timeNanos = System.nanoTime( );
     }
+    
+    protected TimestampedElement( E element, Long nanos) {
+    	super();
+    	this.element = element;
+    	this.timeNanos = nanos;
+    }
+    
     @Override
     public int hashCode( ) {
       final int prime = 31;
@@ -78,12 +86,35 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
       this.timestamps.add( elem );
       return true;
     } else {
-      TimestampedElement elem = new TimestampedElement( e );
-      if( this.timestamps.contains( elem ) && TimeUnit.SECONDS.convert( System.nanoTime( ) - elem.getTimestamp( ), TimeUnit.NANOSECONDS ) < 2 ) {
-        return true;
-      } else {
-        return false;
-      }
+
+	LOG.debug("Use of the same signature is detected: " + e );
+	
+	// Allow message with the same signature within the REPLAY_SKEW_WINDOW_SEC
+	// time interval
+    	Long now = System.nanoTime( );
+	Long adjust = TimeUnit.NANOSECONDS.convert(StackConfiguration.REPLAY_SKEW_WINDOW_SEC, TimeUnit.SECONDS);
+
+	// special case
+	if( adjust <= 0 ) {
+	    // no replay is allowed at all
+	    return false;
+	} 
+
+    	Long timeNanosAdj = now - adjust;
+    	TimestampedElement fakeElem = new TimestampedElement( e, timeNanosAdj );
+    	NavigableSet<TimestampedElement> elems = this.timestamps.tailSet(fakeElem, true);
+    	for(Iterator<TimestampedElement> iter = elems.iterator(); iter.hasNext();) {
+    		TimestampedElement elem = iter.next();
+    		E sig = elem.get();
+		// the signature was used within the allowed window, don't trigger replay
+    		if(e.equals(sig)) {
+    			LOG.debug("Found elem with signature " + sig + " within allowed " + StackConfiguration.REPLAY_SKEW_WINDOW_SEC
+    					+ " sec window ");
+    			return true;
+    		}
+    	}
+    	// a replay attack
+    	return false;
     }
   }
   
@@ -111,6 +142,10 @@ public class TimedEvictionSet<E extends Comparable> implements Set<E> {
   }
   
   public boolean add( E e ) {
+    Long skew = TimeUnit.NANOSECONDS.convert(StackConfiguration.REPLAY_SKEW_WINDOW_SEC, TimeUnit.SECONDS);
+    // replay detection is disabled
+    if(skew >= this.evictionNanos)
+	return true;
     return timestamp( e );
   }
 

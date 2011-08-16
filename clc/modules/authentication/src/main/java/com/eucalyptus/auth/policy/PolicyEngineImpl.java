@@ -49,13 +49,20 @@ public class PolicyEngineImpl implements PolicyEngine {
   private static final Matcher PATTERN_MATCHER = new Matcher( ) {
     @Override
     public boolean match( String pattern, String instance ) {
-      return Pattern.matches( PatternUtils.toJavaPattern( pattern ), instance );
+      pattern = PatternUtils.toJavaPattern( pattern );
+      if ( pattern == null ) {
+        return false;
+      }
+      return Pattern.matches( pattern, instance );
     }
   };
   
   private static final Matcher ADDRESS_MATCHER = new Matcher( ) {
     @Override
     public boolean match( String pattern, String instance ) {
+      if ( pattern == null ) {
+        return false;
+      }
       return AddressUtil.addressRangeMatch( pattern, instance );
     }
   };

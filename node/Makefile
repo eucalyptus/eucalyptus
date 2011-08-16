@@ -1,4 +1,5 @@
 #
+# Makefile for Eucalyptus Node Controller
 #
 
 include ../Makedefs
@@ -14,12 +15,12 @@ SERVICE_NAME=EucalyptusNC
 CLIENT=NCclient
 #WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
 NC_LIBS	= $(LIBS) $(LDFLAGS) -lvirt -lcurl -lssl -lcrypto -lrampart `xslt-config --libs`
-NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o xml.o
+NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o xml.o hooks.o
 STORAGE_OBJS=../storage/backing.o ../storage/diskutil.o ../storage/blobstore.o ../storage/walrus.o ../storage/vbr.o ../storage/iscsi.o
 BUILD_ID=-DEUCA_COMPILE_TIMESTAMP=\""[built `date --rfc-3339='sec'`]"\"
 #EFENCE=-lefence
 
-all: generated/stubs
+all: generated/stubs test_hooks
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) buildall) || exit $$? ; done
 
@@ -106,6 +107,9 @@ test: test.c ../util/misc.o ../util/data.o
 
 test_nc: test_nc.c ../util/misc.o ../storage/diskutil.o
 	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc test_nc.c ../util/misc.o ../storage/diskutil.o ../util/euca_auth.o ../util/ipc.o
+
+test_hooks: hooks.c ../util/misc.o ../storage/diskutil.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_hooks -D__STANDALONE hooks.c ../util/misc.o ../storage/diskutil.o ../util/euca_auth.o ../util/ipc.o
 
 deploy:
 	$(INSTALL) -d $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/

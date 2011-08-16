@@ -149,7 +149,7 @@ int logprintfl(int level, const char *format, ...);
 void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other);
 int logfile(char *file, int in_loglevel);
 int check_process(pid_t pid, char *search);
-int check_directory(char *dir);
+int check_directory(const char *dir);
 int check_file (const char *file);
 int check_block (const char *file);
 int check_path (const char *path);
@@ -159,6 +159,8 @@ int check_file_newer_than(char *file, time_t mtime);
 char *safe_mkdtemp(char *);
 int safe_mkstemp(char *);
 char* safe_strncpy(char *s1, const char *s2, size_t len);
+
+int get_blkid (const char * dev_path, char * uuid, unsigned int uuid_size);
 
 // argument checker
 int param_check(char *func, ...);

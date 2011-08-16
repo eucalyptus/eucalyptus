@@ -32,8 +32,8 @@ test: test.c storage.h storage.o storage-windows.o ../util/misc.o ../util/data.o
 test_blobstore: blobstore.o blobstore.c blobstore.h map.o diskutil.o ../util/misc.o
 	$(CC) -g -rdynamic $(CFLAGS) $(INCLUDES) -D_UNIT_TEST blobstore.c -o test_blobstore map.o diskutil.o ../util/misc.o ../util/ipc.o $(STORAGE_LIBS) $(EFENCE) ../util/euca_auth.o
 
-test_vbr: iscsi.o vbr.o blobstore.o diskutil.o walrus.o ../util/misc.o ../util/data.h
-	$(CC) -g -rdynamic $(CFLAGS) $(INCLUDES) -D_UNIT_TEST vbr.c -o test_vbr blobstore.o diskutil.o walrus.o iscsi.o ../util/misc.o ../util/ipc.o $(STORAGE_LIBS) $(EFENCE) ../util/euca_auth.o
+test_vbr: iscsi.o vbr.o blobstore.o diskutil.o walrus.o http.o ../util/misc.o ../util/data.h
+	$(CC) -g -rdynamic $(CFLAGS) $(INCLUDES) -D_UNIT_TEST vbr.c -o test_vbr blobstore.o diskutil.o walrus.o iscsi.o http.o ../util/misc.o ../util/ipc.o $(STORAGE_LIBS) $(EFENCE) ../util/euca_auth.o
 
 test_url: http.c
 	$(CC) -D_UNIT_TEST -o test_url http.c
