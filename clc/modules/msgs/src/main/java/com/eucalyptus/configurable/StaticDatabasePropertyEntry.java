@@ -72,6 +72,7 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Logs;
 
 @Entity
 @javax.persistence.Entity
@@ -86,6 +87,11 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
   @Column( name = "config_static_prop_name", nullable = false, unique = true )
   private String       propName;
   
+  
+  private StaticDatabasePropertyEntry( ) {
+    super( );
+  }
+
   private StaticDatabasePropertyEntry( String fieldName, String propName, String value ) {
     super( );
     this.propName = propName;
@@ -127,6 +133,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
         db.commit( );
         return dbEntry;
       } catch ( Exception ex1 ) {
+        Logs.extreme( ).error( "Failed to lookup static configuration property for: " + fieldName + " with property name: " + propName ); 
         db.rollback( );
         throw ex1;
       }
