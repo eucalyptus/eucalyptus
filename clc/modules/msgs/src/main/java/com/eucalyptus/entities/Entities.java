@@ -77,7 +77,7 @@ public class Entities {
     
     @Override
     protected Map<String, EntityWrapper<?>> initialValue( ) {
-      return Maps.newHashMap( );
+      return Maps.newConcurrentMap( );
     }
     
     @SuppressWarnings( "unchecked" )
