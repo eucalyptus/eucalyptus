@@ -103,6 +103,8 @@ import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
@@ -112,7 +114,9 @@ import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.reporting.event.InstanceEvent;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.vm.BundleTask;
 import com.eucalyptus.vm.SystemState;
@@ -210,9 +214,10 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   @ManyToOne( cascade = { CascadeType.PERSIST, CascadeType.MERGE } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex                         networkIndex;
-  @Transient//TODO:GRZE:NOW
+  @Transient
+  //TODO:GRZE:NOW
   private final ConcurrentMap<String, AttachedVolume> persistentVolumes   = new ConcurrentSkipListMap<String, AttachedVolume>( );
-
+  
   public VmInstance( final UserFullName owner,
                      final String instanceId, final String instanceUuid,
                      final String reservationId, final int launchIndex,
@@ -441,17 +446,14 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     } catch ( final EventFailedException ex ) {
       LOG.error( ex, ex );
     }
+    EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
     try {
-      Transactions.one( VmInstance.named( ( UserFullName ) this.getOwner( ), this.getDisplayName( ) ), new Callback<VmInstance>( ) {
-        
-        @Override
-        public void fire( final VmInstance t ) {
-          t.setBlockBytes( VmInstance.this.getBlockBytes( ) );
-          t.setNetworkBytes( VmInstance.this.getNetworkBytes( ) );
-        }
-      } );
-    } catch ( final ExecutionException ex ) {
-      LOG.error( ex, ex );
+      VmInstance vmEntity = db.getUnique( this );
+      vmEntity.setBlockBytes( this.getBlockBytes( ) );
+      vmEntity.setNetworkBytes( this.getNetworkBytes( ) );
+    } catch ( Exception ex ) {
+      Logs.extreme( ).error( ex, ex );
+      LOG.debug( ex );
     }
   }
   
