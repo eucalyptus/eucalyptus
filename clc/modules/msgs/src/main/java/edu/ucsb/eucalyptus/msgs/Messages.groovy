@@ -188,6 +188,7 @@ public class ExceptionResponseType extends BaseMessage {
   String message = "not available";
   String requestType = "not available";
   Throwable exception;
+  String error = "not available";
   HttpResponseStatus httpStatus = HttpResponseStatus.BAD_REQUEST;
   public ExceptionResponseType() {
   }
@@ -198,6 +199,9 @@ public class ExceptionResponseType extends BaseMessage {
     this.setCorrelationId( msg.getCorrelationId( ) );
     this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
     this.exception = exception;
+    if( this.exception != null ) {
+      this.error = Exceptions.string( exception );
+    }
     this.set_return(false);
   }
   public ExceptionResponseType( BaseMessage msg, String message, HttpResponseStatus httpStatus, Throwable exception ) {
@@ -208,6 +212,9 @@ public class ExceptionResponseType extends BaseMessage {
     this.setCorrelationId( msg.getCorrelationId( ) );
     this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
     this.exception = exception;
+    if( this.exception != null ) {
+      this.error = Exceptions.string( exception );
+    }
     this.set_return(false);
   }
 }
