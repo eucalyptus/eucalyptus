@@ -145,7 +145,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   
   @Override
   public boolean isActive( ) {
-    return this.delegate.isActive( );
+    return this.delegate != null && this.delegate.isActive( );
   }
   
   @Override
