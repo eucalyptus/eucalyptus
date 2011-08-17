@@ -70,6 +70,7 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
@@ -179,6 +180,10 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudM
   @Override
   public int compareTo( SshKeyPair that ) {
     return this.getFullName( ).toString( ).compareTo( that.getFullName( ).toString( ) );
+  }
+
+  static SshKeyPair noKey( ) {
+    return new SshKeyPair( FakePrincipals.nobodyFullName( ), "nokey", "", "" );
   }
   
 }
