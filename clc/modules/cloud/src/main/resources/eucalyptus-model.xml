@@ -102,7 +102,7 @@
         </filtering-router>
         <filtering-router>
           <outbound-endpoint ref="ClusterEndpointWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ClusterMessage" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.CloudClusterMessage" />
         </filtering-router>
         <filtering-router>
           <outbound-endpoint ref="KeyPairWS" />
