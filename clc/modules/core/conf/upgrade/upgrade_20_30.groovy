@@ -98,7 +98,7 @@ import edu.ucsb.eucalyptus.cloud.entities.WalrusStatsInfo;
 import com.eucalyptus.network.IpRange;
 import com.eucalyptus.network.NetworkPeer;
 import com.eucalyptus.network.NetworkRule;
-import com.eucalyptus.network.NetworkRulesGroup;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.vm.VmType;
@@ -720,7 +720,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
          */ 
 
         connMap['eucalyptus_general'].rows('SELECT * FROM metadata_network_group').each {
-            EntityWrapper<NetworkRulesGroup> dbGen = EntityWrapper.get(NetworkRulesGroup.class);
+            EntityWrapper<NetworkGroup> dbGen = EntityWrapper.get(NetworkGroup.class);
             try {
                 if (!userIdMap.containsKey(it.metadata_user_name)) {
                     return;
@@ -730,7 +730,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 if ( it.metadata_user_name == 'admin' && it.metadata_display_name == 'default' ) {
                     uniqueName = it.metadata_display_name;
                 }
-                def rulesGroup = new NetworkRulesGroup(ufn, uniqueName, it.metadata_network_group_description);
+                def rulesGroup = new NetworkGroup(ufn, uniqueName, it.metadata_network_group_description);
                 initMetaClass(rulesGroup, rulesGroup.class);
                 rulesGroup.setDisplayName(uniqueName);
                 LOG.debug("Adding network rules for ${ it.metadata_user_name }/${it.metadata_display_name}");
