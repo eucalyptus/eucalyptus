@@ -26,9 +26,11 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.util.Logs;
 import com.google.common.collect.Lists;
 
-@Entity @javax.persistence.Entity
+@Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_records" )
 @Table( name = "records" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -37,142 +39,134 @@ import com.google.common.collect.Lists;
 @DiscriminatorValue( value = "base" )
 public class BaseRecord extends AbstractPersistent implements Serializable, Record {
   @Transient
-  private static Logger       LOG    = Logger.getLogger( BaseRecord.class );
+  private static Logger                     LOG    = Logger.getLogger( BaseRecord.class );
   @Column( name = "record_timestamp" )
-  private Date                timestamp;
+  private Date                              timestamp;
   @Column( name = "record_type" )
   @Enumerated( EnumType.STRING )
-  private EventType           type;
+  private EventType                         type;
   @Column( name = "record_class" )
   @Enumerated( EnumType.STRING )
-  private EventClass          eventClass;
+  private EventClass                        eventClass;
   @Column( name = "record_creator" )
-  private String              creator;
+  private String                            creator;
   @Column( name = "record_code_location" )
-  private String              codeLocation;
+  private String                            codeLocation;
   @Column( name = "record_user_id" )
-  private String              userId;
+  private String                            userId;
   @Column( name = "record_correlation_id" )
-  private String              correlationId;
+  private String                            correlationId;
   @Lob
   @Column( name = "record_extra" )
-  private String              extra;
+  private String                            extra;
   @Column( name = "record_level" )
   @Enumerated( EnumType.STRING )
-  private RecordLevel         level;
+  private RecordLevel                       level;
   @Transient
-  private ArrayList           others = Lists.newArrayList( );
+  private ArrayList                         others = Lists.newArrayList( );
   @Transient
-  private static final String ISNULL = "NULL";
+  private static final String               ISNULL = "NULL";
   @Transient
-  protected static final String NEXT   = "\n";
+  protected static final String             NEXT   = "\n";
   @Transient
-  private transient String    lead;
+  private transient String                  lead;
   @Transient
-  private Class               realCreator;
+  private Class                             realCreator;
   @Transient
-  private static BlockingQueue<EventRecord> trace = new LinkedBlockingDeque<EventRecord>( );
+  private static BlockingQueue<EventRecord> trace  = new LinkedBlockingDeque<EventRecord>( );
   @Transient
-  private static BlockingQueue<EventRecord> debug = new LinkedBlockingDeque<EventRecord>( );
+  private static BlockingQueue<EventRecord> debug  = new LinkedBlockingDeque<EventRecord>( );
   @Transient
-  private static BlockingQueue<EventRecord> info = new LinkedBlockingDeque<EventRecord>( );
+  private static BlockingQueue<EventRecord> info   = new LinkedBlockingDeque<EventRecord>( );
   @Transient
-  private static BlockingQueue<EventRecord> warn = new LinkedBlockingDeque<EventRecord>( );
+  private static BlockingQueue<EventRecord> warn   = new LinkedBlockingDeque<EventRecord>( );
   @Transient
-  private static BlockingQueue<EventRecord> error = new LinkedBlockingDeque<EventRecord>( );
+  private static BlockingQueue<EventRecord> error  = new LinkedBlockingDeque<EventRecord>( );
   @Transient
-  private static BlockingQueue<EventRecord> fatal = new LinkedBlockingDeque<EventRecord>( );
+  private static BlockingQueue<EventRecord> fatal  = new LinkedBlockingDeque<EventRecord>( );
+  
   public BaseRecord( EventType type, EventClass clazz, Class creator, StackTraceElement codeLocation, String userId, String correlationId, String other ) {
     this.type = type;
     this.eventClass = clazz;
     this.realCreator = creator;
-    this.creator = creator != null ? creator.getSimpleName( ) : "";
-    this.codeLocation = codeLocation != null ? codeLocation.toString( ) : "";
+    this.creator = creator != null
+      ? creator.getSimpleName( )
+      : "";
+    this.codeLocation = codeLocation != null
+      ? codeLocation.toString( )
+      : "";
     this.userId = userId;
     this.correlationId = correlationId;
-    this.timestamp = new Date();
+    this.timestamp = new Date( );
     this.extra = other;
     this.others.add( other );
   }
   
   public BaseRecord( ) {}
   
-  /**
-   * @see com.eucalyptus.records.Record#info()
-   * @return
-   */
   public Record info( ) {
     this.level = RecordLevel.INFO;
     Logger.getLogger( this.realCreator ).info( this );
     return this;
   }
   
-  /**
-   * @see com.eucalyptus.records.Record#error()
-   * @return
-   */
   public Record error( ) {
     this.level = RecordLevel.ERROR;
     Logger.getLogger( this.realCreator ).error( this );
     return this;
   }
   
-  /**
-   * @see com.eucalyptus.records.Record#trace()
-   * @return
-   */
   public Record trace( ) {
     this.level = RecordLevel.TRACE;
     Logger.getLogger( this.realCreator ).trace( this );
     return this;
   }
   
-  /**
-   * @see com.eucalyptus.records.Record#debug()
-   * @return
-   */
   public Record debug( ) {
     this.level = RecordLevel.DEBUG;
     Logger.getLogger( this.realCreator ).debug( this );
     return this;
   }
   
-  /**
-   * @see com.eucalyptus.records.Record#warn()
-   * @return
-   */
+  @Override
+  public Record extreme( ) {
+    this.level = RecordLevel.TRACE;
+    Logs.extreme( ).trace( this );
+    return this;
+  }
+  
+  @Override
+  public Record exhaust( ) {
+    this.level = RecordLevel.TRACE;
+    Logs.exhaust( ).trace( this );
+    return this;
+  }
+
   public Record warn( ) {
     this.level = RecordLevel.WARN;
     Logger.getLogger( this.realCreator ).warn( this );
     return this;
   }
-
-  /**
-   * @see com.eucalyptus.records.Record#next()
-   * @return
-   */
+  
   public Record next( ) {
     this.extra = "";
     for ( Object o : this.others ) {
-      if( o == null ) continue;
+      if ( o == null ) continue;
       this.extra += ":" + o.toString( );
     }
     Record newThis = new LogFileRecord( this.eventClass, this.type, this.realCreator, null, this.userId, this.correlationId, "" );
     return newThis;
   }
-    
-  /**
-   * @see com.eucalyptus.records.Record#append(java.lang.Object)
-   * @param obj
-   * @return
-   */
+  
   public Record append( Object... obj ) {
     for ( Object o : obj ) {
-      this.others.add( o == null ? ISNULL : "" + o );
+      this.others.add( o == null
+        ? ISNULL
+        : "" + o );
     }
     this.extra = "";
     for ( Object o : this.others ) {
-      if( o == null ) continue;
+      if ( o == null ) continue;
       this.extra += ":" + o.toString( );
     }
     return this;
@@ -195,19 +189,21 @@ public class BaseRecord extends AbstractPersistent implements Serializable, Reco
   }
   
   private String leadIn( ) {
-    return lead == null ? ( lead = String.format( ":%010d:%s:%s:%s:%s:", this.getTimestamp( ).getTime( ), this.getCreator( ),
-                                                  ( ( this.correlationId != null ) ? this.correlationId : "" ), ( ( this.userId != null ) ? this.userId : "" ),
-                                                  this.type ) ) : lead;
+    return lead == null
+      ? ( lead = String.format( ":%010d:%s:%s:%s:%s:", this.getTimestamp( ).getTime( ), this.getCreator( ),
+                                                  ( ( this.correlationId != null )
+                                                    ? this.correlationId
+                                                    : "" ), ( ( this.userId != null )
+                                                    ? this.userId
+                                                    : "" ),
+                                                  this.type ) )
+      : lead;
   }
   
-  /**
-   * @see com.eucalyptus.records.Record#toString()
-   * @return
-   */
   public String toString( ) {
     String ret = this.leadIn( );
     for ( Object o : this.others ) {
-      if( o == null ) continue;
+      if ( o == null ) continue;
       ret += ":" + o.toString( );
     }
     return ret.replaceAll( "::*", ":" ).replaceAll( NEXT, NEXT + this.leadIn( ) );
@@ -216,11 +212,11 @@ public class BaseRecord extends AbstractPersistent implements Serializable, Reco
   public Date getTimestamp( ) {
     return this.timestamp;
   }
-
+  
   public void setTimestamp( Date timestamp ) {
     this.timestamp = timestamp;
   }
-
+  
   public EventType getType( ) {
     return this.type;
   }
@@ -282,30 +278,40 @@ public class BaseRecord extends AbstractPersistent implements Serializable, Reco
     this.correlationId = primaryInfo;
     return this.withDetails( key, value );
   }
-
+  
   public Record withDetails( String key, String value ) {
     this.others.clear( );
     this.others.add( key );
     this.others.add( value );
-    this.info();
-    return this.next();
+    this.info( );
+    return this.next( );
   }
-
-  /**
-   * @see com.eucalyptus.records.Record#hashCode()
-   * @return
-   */
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.eventClass == null ) ? 0 : this.eventClass.hashCode( ) );
-    result = prime * result + ( ( this.codeLocation == null ) ? 0 : this.codeLocation.hashCode( ) );
-    result = prime * result + ( ( this.correlationId == null ) ? 0 : this.correlationId.hashCode( ) );
-    result = prime * result + ( ( this.creator == null ) ? 0 : this.creator.hashCode( ) );
-    result = prime * result + ( ( this.timestamp == null ) ? 0 : this.timestamp.hashCode( ) );
-    result = prime * result + ( ( this.type == null ) ? 0 : this.type.hashCode( ) );
-    result = prime * result + ( ( this.userId == null ) ? 0 : this.userId.hashCode( ) );
+    result = prime * result + ( ( this.eventClass == null )
+      ? 0
+      : this.eventClass.hashCode( ) );
+    result = prime * result + ( ( this.codeLocation == null )
+      ? 0
+      : this.codeLocation.hashCode( ) );
+    result = prime * result + ( ( this.correlationId == null )
+      ? 0
+      : this.correlationId.hashCode( ) );
+    result = prime * result + ( ( this.creator == null )
+      ? 0
+      : this.creator.hashCode( ) );
+    result = prime * result + ( ( this.timestamp == null )
+      ? 0
+      : this.timestamp.hashCode( ) );
+    result = prime * result + ( ( this.type == null )
+      ? 0
+      : this.type.hashCode( ) );
+    result = prime * result + ( ( this.userId == null )
+      ? 0
+      : this.userId.hashCode( ) );
     return result;
   }
   

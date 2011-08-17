@@ -310,7 +310,7 @@ public class ServiceTransitions {
                           this.name( ),
                           parent.lookupState( ).toString( ),
                           parent.getFullName( ).toString( ),
-                          parent.toString( ) ).debug( );
+                          parent.toString( ) ).exhaust( );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
@@ -324,7 +324,7 @@ public class ServiceTransitions {
                         this.name( ),
                         parent.lookupState( ).toString( ),
                         parent.getFullName( ).toString( ),
-                        parent.toString( ) ).debug( );
+                        parent.toString( ) ).exhaust( );
       ServiceTransitions.processTransition( parent, transitionCallback, this );
     }
     
@@ -336,7 +336,7 @@ public class ServiceTransitions {
                           this.name( ),
                           parent.lookupState( ).toString( ),
                           parent.getFullName( ).toString( ),
-                          parent.toString( ) ).debug( );
+                          parent.toString( ) ).exhaust( );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
@@ -350,7 +350,7 @@ public class ServiceTransitions {
                           this.name( ),
                           parent.lookupState( ).toString( ),
                           parent.getFullName( ).toString( ),
-                          parent.toString( ) ).debug( );
+                          parent.toString( ) ).exhaust( );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
@@ -612,7 +612,7 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration config ) {
         EventRecord.here( ServiceBuilder.class,
                           EventType.COMPONENT_SERVICE_START,
-                          config.getFullName( ).toString( ), config.toString( ) ).debug( );
+                          config.getFullName( ).toString( ), config.toString( ) ).extreme( );
         LifecycleEvents.start( config );
       }
     },
@@ -621,7 +621,7 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration config ) {
         EventRecord.here( ServiceBuilder.class,
                                          EventType.COMPONENT_SERVICE_STOP,
-                                         config.getFullName( ).toString( ), config.toString( ) ).debug( );
+                                         config.getFullName( ).toString( ), config.toString( ) ).extreme( );
         LifecycleEvents.stop( config );
       }
     },
@@ -630,7 +630,7 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration config ) {
         EventRecord.here( ServiceBuilder.class,
                                          EventType.COMPONENT_SERVICE_ENABLE,
-                                         config.getFullName( ).toString( ), config.toString( ) ).debug( );
+                                         config.getFullName( ).toString( ), config.toString( ) ).extreme( );
         LifecycleEvents.enable( config );
       }
     },
@@ -639,7 +639,7 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration config ) {
         EventRecord.here( ServiceBuilder.class,
                                          EventType.COMPONENT_SERVICE_DISABLE,
-                                         config.getFullName( ).toString( ), config.toString( ) ).debug( );
+                                         config.getFullName( ).toString( ), config.toString( ) ).extreme( );
         LifecycleEvents.disable( config );
       }
       

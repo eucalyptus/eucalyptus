@@ -149,7 +149,7 @@ public class ComponentBootstrapper {
     for ( Stage s : Bootstrap.Stage.values( ) ) {
       for ( Bootstrapper b : Lists.newArrayList( this.bootstrappers.get( s ) ) ) {
         EventRecord.here( this.component.getClass( ), transition, this.component.getComponentId( ).name( ), "stage", s.name( ),
-                          b.getClass( ).getCanonicalName( ) ).debug( );
+                          b.getClass( ).getCanonicalName( ) ).extreme( );
         try {
           boolean result = checkedFunction.apply( b );
           if ( !result ) {

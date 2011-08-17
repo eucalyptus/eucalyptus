@@ -10,6 +10,10 @@ public interface Record {
   
   public abstract Record debug( );
   
+  public abstract Record extreme( );
+
+  public abstract Record exhaust( );
+  
   public abstract Record warn( );
   
   public abstract Record next( );
@@ -27,5 +31,5 @@ public interface Record {
   public abstract EventType getType( );
 
   public abstract EventClass getEventClass( );
-  
+
 }
