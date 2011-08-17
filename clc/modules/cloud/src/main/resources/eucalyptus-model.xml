@@ -105,6 +105,10 @@
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.CloudClusterMessage" />
         </filtering-router>
         <filtering-router>
+          <outbound-endpoint ref="ClusterEndpointWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.CloudTopologyMessage" />
+        </filtering-router>
+        <filtering-router>
           <outbound-endpoint ref="KeyPairWS" />
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmKeyPairMessage" />
         </filtering-router>
