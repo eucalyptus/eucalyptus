@@ -1745,7 +1745,7 @@ blockblob * blockblob_open ( blobstore * bs,
  out:
     logprintfl (EUCADEBUG2, "{%u} blockblob_open: done with blob id=%s ret=%012lx\n", (unsigned int)pthread_self(), id, bb);
     if (bb==NULL) {
-        logprintfl (EUCADEBUG2, "{%u} blockblob_open: errno=%d msg=%s\n", _blobstore_errno, blobstore_get_last_msg());
+        logprintfl (EUCADEBUG2, "{%u} blockblob_open: errno=%d msg=%s\n", (unsigned int)pthread_self(), _blobstore_errno, blobstore_get_last_msg());
     }
     
     free_bbs (bbs);
