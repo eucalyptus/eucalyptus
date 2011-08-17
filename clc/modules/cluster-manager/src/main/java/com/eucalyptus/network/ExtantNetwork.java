@@ -123,8 +123,16 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
     this.tag = tag;
   }
   
+  private ExtantNetwork( NetworkGroup networkGroup ) {
+    super( networkGroup.getOwner( ), networkGroup.getDisplayName( ) );
+  }
+  
   public static ExtantNetwork named( Integer tag ) {
     return new ExtantNetwork( tag );
+  }
+  
+  public static ExtantNetwork named( NetworkGroup networkGroup ) {
+    return new ExtantNetwork( networkGroup );
   }
   
   public static ExtantNetwork create( final NetworkGroup networkGroup, final Integer tag ) {
@@ -244,5 +252,4 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   public String toString( ) {
     return String.format( "ExtantNetwork:networkGroup=%s:tag=%s:indexes=%s", this.networkGroup.getFullName( ), this.tag, this.indexes );
   }
-  
 }

@@ -276,19 +276,32 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   public ExtantNetwork extantNetwork( ) throws NotEnoughResourcesAvailable {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       return ExtantNetwork.bogus( this );
-    } else if ( this.extantNetwork == null ) {
+    } else if ( this.getExtantNetwork( ) == null ) {
       ExtantNetwork exNet = null;
       final EntityWrapper<NetworkGroup> db = Entities.get( NetworkGroup.class );
-      for ( Integer i : NetworkGroups.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
-        try {
-          db.uniqueResult( ExtantNetwork.named( i ) );
-        } catch ( TransactionException ex ) {
-          exNet = db.persist( ExtantNetwork.create( this, i ) );
-          db.commit( );
-          return exNet;
+      try {
+        exNet = db.uniqueResult( ExtantNetwork.named( this ) );
+        return exNet;
+      } catch ( TransactionException ex2 ) {
+        for ( Integer i : NetworkGroups.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
+          try {
+            exNet = db.uniqueResult( ExtantNetwork.named( i ) );
+          } catch ( TransactionException ex ) {}
+          if ( exNet == null ) {
+            try {
+              exNet = db.persist( ExtantNetwork.create( this, i ) );
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
+            }
+          }
         }
+        db.commit( );
       }
-      throw new NotEnoughResourcesAvailable( "Failed to add extant network: " + this.extantNetwork + " due to: no network tags are free." );
+      if ( exNet != null ) {
+        return exNet;
+      } else {
+        throw new NotEnoughResourcesAvailable( "Failed to add extant network: " + this.extantNetwork + " due to: no network tags are free." );
+      }
     } else {
       return this.getExtantNetwork( );
     }
