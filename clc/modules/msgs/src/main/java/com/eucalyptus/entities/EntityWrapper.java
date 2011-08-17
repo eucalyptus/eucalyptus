@@ -459,13 +459,13 @@ public class EntityWrapper<TYPE> {
       this.runnable = runnable;
       try {
         this.txUuid = String.format( "%s:%s", ctx, UUID.randomUUID( ).toString( ) );
-        this.eventLog( TxState.BEGIN, TxEvent.CREATE );
         this.owner = Logs.isExtrrreeeme( )
           ? Threads.currentStackString( )
           : "n/a";
         this.startTime = System.currentTimeMillis( );
         this.stopWatch = new StopWatch( );
         this.stopWatch.start( );
+        this.eventLog( TxState.BEGIN, TxEvent.CREATE );
         final EntityManagerFactory anemf = ( EntityManagerFactoryImpl ) PersistenceContexts.getEntityManagerFactory( ctx );
         assertThat( anemf, notNullValue( ) );
         this.em = anemf.createEntityManager( );
