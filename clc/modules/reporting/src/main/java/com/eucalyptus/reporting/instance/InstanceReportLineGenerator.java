@@ -1,10 +1,13 @@
 package com.eucalyptus.reporting.instance;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.ReportLineGenerator;
 import com.eucalyptus.reporting.ReportingCriterion;
@@ -33,13 +36,14 @@ public class InstanceReportLineGenerator
 	}
 	
 	public List<InstanceReportLine> getReportLines(Period period,
-			ReportingCriterion criterion,	Units displayUnits)
+			ReportingCriterion criterion, Units displayUnits,
+			String accountId)
 	{
-		return getReportLines(period, null, criterion, displayUnits);
+		return getReportLines(period, null, criterion, displayUnits, accountId);
 	}
 
 	public List<InstanceReportLine> getReportLines(Period period, ReportingCriterion groupByCrit,
-			ReportingCriterion crit, Units displayUnits)
+			ReportingCriterion crit, Units displayUnits, String accountId)
 	{
 		if (period==null || crit==null || displayUnits==null) {
 			throw new IllegalArgumentException("Args can't be null");
@@ -50,7 +54,7 @@ public class InstanceReportLineGenerator
 		
 		InstanceUsageLog usageLog = InstanceUsageLog.getInstanceUsageLog();
 		Map<InstanceSummaryKey, InstanceUsageSummary> usageMap = 
-			usageLog.getUsageSummaryMap(period);
+			usageLog.getUsageSummaryMap(period, accountId);
 		for (InstanceSummaryKey key: usageMap.keySet()) {
 			String critVal = getAttributeValue(crit, key);
 			String groupVal = (groupByCrit==null) ? null : getAttributeValue(groupByCrit, key);

@@ -5,10 +5,9 @@ import java.util.*;
 import org.apache.log4j.Logger;
 import org.mortbay.log.Log;
 
+import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.ReportLineGenerator;
 import com.eucalyptus.reporting.ReportingCriterion;
-import com.eucalyptus.reporting.Period;
-import com.eucalyptus.reporting.instance.InstanceReportLineGenerator;
 import com.eucalyptus.reporting.units.Units;
 import com.eucalyptus.reporting.user.ReportingAccountDao;
 import com.eucalyptus.reporting.user.ReportingUserDao;
@@ -34,20 +33,21 @@ public class S3ReportLineGenerator
 	}
 	
 	public List<S3ReportLine> getReportLines(Period period,
-			ReportingCriterion criterion,	Units displayUnits)
+			ReportingCriterion criterion, Units displayUnits,
+			String accountId)
 	{
-		return getReportLines(period, null, criterion, displayUnits);
+		return getReportLines(period, null, criterion, displayUnits, accountId);
 	}
 
 	public List<S3ReportLine> getReportLines(Period period, ReportingCriterion groupByCrit,
-			ReportingCriterion crit, Units displayUnits)
+			ReportingCriterion crit, Units displayUnits, String accountId)
 	{
 		Map<S3ReportLineKey, S3ReportLine> reportLineMap =
 			new HashMap<S3ReportLineKey, S3ReportLine>();
 		
 		S3UsageLog usageLog = S3UsageLog.getS3UsageLog();
 		Map<S3SummaryKey, S3UsageSummary> usageMap = 
-			usageLog.getUsageSummaryMap(period);
+			usageLog.getUsageSummaryMap(period, accountId);
 		for (S3SummaryKey key: usageMap.keySet()) {
 			Log.info("Adding key:" + key + " data:" + usageMap.get(key));
 			String critVal = getAttributeValue(crit, key);

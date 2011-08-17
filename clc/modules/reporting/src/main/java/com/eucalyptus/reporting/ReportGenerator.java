@@ -62,7 +62,7 @@ public class ReportGenerator
 	public void generateReport(ReportType reportType, ReportFormat format,
 			Period period, ReportingCriterion criterion,
 			ReportingCriterion groupByCriterion, Units displayUnits,
-			OutputStream out)
+			OutputStream out, String accountId)
 	{
 		if (reportType == null)
 			throw new IllegalArgumentException("ReportType can't be null");
@@ -131,7 +131,7 @@ public class ReportGenerator
 				}
 			}
 			reportLines = generator.getReportLines(period, groupByCriterion,
-					criterion, displayUnits);
+					criterion, displayUnits, accountId);
 			log.info("Generated report data from db:" + key);
 			lineListMap.put(key, reportLines);
 			

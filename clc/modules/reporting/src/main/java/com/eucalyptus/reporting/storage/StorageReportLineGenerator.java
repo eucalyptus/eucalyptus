@@ -32,20 +32,21 @@ public class StorageReportLineGenerator
 	}
 	
 	public List<StorageReportLine> getReportLines(Period period,
-			ReportingCriterion criterion,	Units displayUnits)
+			ReportingCriterion criterion, Units displayUnits,
+			String accountId)
 	{
-		return getReportLines(period, null, criterion, displayUnits);
+		return getReportLines(period, null, criterion, displayUnits, accountId);
 	}
 
 	public List<StorageReportLine> getReportLines(Period period, ReportingCriterion groupByCrit,
-			ReportingCriterion crit, Units displayUnits)
+			ReportingCriterion crit, Units displayUnits, String accountId)
 	{
 		Map<StorageReportLineKey, StorageReportLine> reportLineMap =
 			new HashMap<StorageReportLineKey, StorageReportLine>();
 		
 		StorageUsageLog usageLog = StorageUsageLog.getStorageUsageLog();
 		Map<StorageSummaryKey, StorageUsageSummary> usageMap = 
-			usageLog.getUsageSummaryMap(period);
+			usageLog.getUsageSummaryMap(period, accountId);
 		for (StorageSummaryKey key: usageMap.keySet()) {
 			String critVal = getAttributeValue(crit, key);
 			String groupVal = (groupByCrit==null) ? null : getAttributeValue(groupByCrit, key);

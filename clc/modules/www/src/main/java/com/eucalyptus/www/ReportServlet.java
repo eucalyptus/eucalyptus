@@ -7,6 +7,7 @@ import javax.servlet.http.*;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.reporting.*;
 import com.eucalyptus.reporting.units.Units;
@@ -33,7 +34,10 @@ public class ReportServlet
 	protected void doGet(HttpServletRequest req, HttpServletResponse res)
 		throws ServletException, IOException
 	{
-		this.verifySession(Param.session.getRaw(req));
+		User user = this.getUserFromSession(Param.session.getRaw(req));
+	    if ( user==null ) {
+	    	throw new RuntimeException("User was null");
+	    }
 
 		/* Parse all params
 		 */
@@ -67,9 +71,25 @@ public class ReportServlet
 		
 		/* Generate the report and send it thru the OutputStream
 		 */
-		ReportGenerator.getInstance().generateReport(reportType, format,
+		if (user.isSystemAdmin()) {
+			//Generate report of all accounts
+			ReportGenerator.getInstance().generateReport(reportType, format,
 				period, criterion, groupByCriterion, displayUnits,
-				res.getOutputStream());
+				res.getOutputStream(), null);
+		} else if (user.isAccountAdmin()) {
+			String accountId;
+			try {
+				accountId = user.getAccount().getAccountNumber();
+			} catch (AuthException aex) {
+				throw new RuntimeException("Auth failed");
+			}
+			//Generate report of this account only
+			ReportGenerator.getInstance().generateReport(reportType, format,
+					period, criterion, groupByCriterion, displayUnits,
+					res.getOutputStream(), accountId);			
+		} else {
+			throw new RuntimeException("Only admins can generate reports");
+		}
 	  
 	}
 
@@ -121,7 +141,7 @@ public class ReportServlet
 		}		
 	}
 	
-	private void verifySession( String sessionId )
+	private User getUserFromSession( String sessionId )
 	{
 	    WebSession ws = WebSessionManager.getInstance( ).getSession( sessionId );
 	    if ( ws == null ) {
@@ -133,9 +153,7 @@ public class ReportServlet
 		} catch ( EucalyptusServiceException ex ) {
 			throw new RuntimeException("Session verification failed", ex);
 		}
-	    if ( user==null || !user.isSystemAdmin() ) {
-	    	throw new RuntimeException("Only admins can generate reports");
-	    }
+	    return user;
 	}
 	
 }

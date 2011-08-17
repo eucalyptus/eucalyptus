@@ -144,7 +144,8 @@ public class S3UsageLog
 	/**
 	 * <p>Gather a Map of all S3 resource usage for a period.
 	 */
-    public Map<S3SummaryKey, S3UsageSummary> getUsageSummaryMap(Period period)
+    public Map<S3SummaryKey, S3UsageSummary> getUsageSummaryMap(Period period,
+    		String accountId)
     {
     	log.info("GetUsageSummaryMap period:" + period);
     	final Map<S3SummaryKey, S3UsageSummary> usageMap =
@@ -168,13 +169,27 @@ public class S3UsageLog
 				findLatestAllSnapshotBefore(period.getBeginningMs());
 
 			@SuppressWarnings("rawtypes")
-			List list = entityWrapper.createQuery(
+			List list = null;
+			
+			if (accountId == null) {
+				list = entityWrapper.createQuery(
 					"from S3UsageSnapshot as sus"
 					+ " WHERE sus.key.timestampMs > ?"
 					+ " AND sus.key.timestampMs < ?")
 					.setLong(0, new Long(latestSnapshotBeforeMs))
 					.setLong(1, new Long(period.getEndingMs()))
 					.list();
+			} else {
+				list = entityWrapper.createQuery(
+						"from S3UsageSnapshot as sus"
+						+ " WHERE sus.key.timestampMs > ?"
+						+ " AND sus.key.timestampMs < ?"
+						+ " AND sus.key.accountId = ?")
+						.setLong(0, new Long(latestSnapshotBeforeMs))
+						.setLong(1, new Long(period.getEndingMs()))
+						.setString(2, accountId)
+						.list();				
+			}
 			
 			for (Object obj: list) {
 				

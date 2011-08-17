@@ -146,7 +146,8 @@ public class StorageUsageLog
 	/**
 	 * <p>Gather a Map of all Storage resource usage for a period.
 	 */
-    public Map<StorageSummaryKey, StorageUsageSummary> getUsageSummaryMap(Period period)
+    public Map<StorageSummaryKey, StorageUsageSummary> getUsageSummaryMap(
+    		Period period, String accountId)
     {
     	log.info("GetUsageSummaryMap period:" + period);
     	final Map<StorageSummaryKey, StorageUsageSummary> usageMap =
@@ -170,13 +171,27 @@ public class StorageUsageLog
 				findLatestAllSnapshotBefore(period.getBeginningMs());
 
 			@SuppressWarnings("rawtypes")
-			List list = entityWrapper.createQuery(
+			List list = null;
+
+			if (accountId == null) {
+				list = entityWrapper.createQuery(
 					"from StorageUsageSnapshot as sus"
 					+ " WHERE sus.key.timestampMs > ?"
 					+ " AND sus.key.timestampMs < ?")
 					.setLong(0, (latestSnapshotBeforeMs!=null ? latestSnapshotBeforeMs : 0l))
 					.setLong(1, new Long(period.getEndingMs()))
 					.list();
+			} else {
+				list = entityWrapper.createQuery(
+						"from StorageUsageSnapshot as sus"
+						+ " WHERE sus.key.timestampMs > ?"
+						+ " AND sus.key.timestampMs < ?"
+						+ " AND sus.key.accountId = ?")
+						.setLong(0, (latestSnapshotBeforeMs!=null ? latestSnapshotBeforeMs : 0l))
+						.setLong(1, new Long(period.getEndingMs()))
+						.setString(2, accountId)
+						.list();
+			}
 			
 			for (Object obj: list) {
 				

@@ -136,7 +136,8 @@ public class InstanceUsageLog
 	/**
 	 * <p>Gather a Map of all Instance resource usage for a period.
 	 */
-    public Map<InstanceSummaryKey, InstanceUsageSummary> getUsageSummaryMap(Period period)
+    public Map<InstanceSummaryKey, InstanceUsageSummary> getUsageSummaryMap(
+    		Period period, String accountId)
     {
     	log.info("GetUsageSummaryMap period:" + period);
 
@@ -158,7 +159,10 @@ public class InstanceUsageLog
 
 			
 			@SuppressWarnings("rawtypes")
-			List list = entityWrapper.createQuery(
+			List list = null;
+			
+			if (accountId == null) {
+				list = entityWrapper.createQuery(
 					"from InstanceAttributes as ia, InstanceUsageSnapshot as ius"
 					+ " where ia.uuid = ius.uuid"
 					+ " and ius.timestampMs > ?"
@@ -166,6 +170,18 @@ public class InstanceUsageLog
 					.setLong(0, latestSnapshotBeforeMs)
 					.setLong(1, afterEnd)
 					.list();
+			} else {
+				list = entityWrapper.createQuery(
+						"from InstanceAttributes as ia, InstanceUsageSnapshot as ius"
+						+ " where ia.uuid = ius.uuid"
+						+ " and ia.accountId = ?"
+						+ " and ius.timestampMs > ?"
+						+ " and ius.timestampMs < ?")
+						.setString(0, accountId)
+						.setLong(1, latestSnapshotBeforeMs)
+						.setLong(2, afterEnd)
+						.list();		
+			}
 			
 
 			
