@@ -84,11 +84,11 @@ import com.eucalyptus.util.OwnerFullName;
 
 public class KeyPairs {
   private static Logger     LOG         = Logger.getLogger( KeyPairs.class );
-  private static SshKeyPair NO_KEY      = new SshKeyPair( FakePrincipals.nobodyFullName( ), "", "", "" );
+  private static SshKeyPair NO_KEY      = SshKeyPair.noKey( );
   public static String      NO_KEY_NAME = "";
   
   public static SshKeyPair noKey( ) {
-    return Entities.get( NO_KEY ).mergeAndCommit( NO_KEY );
+    return NO_KEY;
   }
   
   public static SshKeyPair lookup( OwnerFullName ownerFullName, String keyName ) throws NoSuchMetadataException {
