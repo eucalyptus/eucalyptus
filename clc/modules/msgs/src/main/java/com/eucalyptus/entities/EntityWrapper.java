@@ -140,9 +140,9 @@ public class EntityWrapper<TYPE> {
   }
   
   @SuppressWarnings( "unchecked" )
-  public List<TYPE> query( TYPE example ) {
+  public <T> List<T> query( T example ) {
     Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
-    List<TYPE> resultList = ( List<TYPE> ) this.getSession( )
+    List<T> resultList = ( List<T> ) this.getSession( )
                                                .createCriteria( example.getClass( ) )
                                                .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
                                                .setCacheable( true )
@@ -151,8 +151,8 @@ public class EntityWrapper<TYPE> {
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
   
-  public TYPE lookupAndClose( TYPE example ) throws NoSuchElementException {
-    TYPE ret = null;
+  public <T> T lookupAndClose( T example ) throws NoSuchElementException {
+    T ret = null;
     try {
       ret = this.getUnique( example );
       this.commit( );
@@ -161,11 +161,6 @@ public class EntityWrapper<TYPE> {
       throw new NoSuchElementException( ex.getMessage( ) );
     }
     return ret;
-  }
-  
-  @SuppressWarnings( "unchecked" )
-  public <N extends HasNaturalId> TYPE getByNaturalId( N example ) {
-    return ( TYPE ) this.createCriteria( example.getClass( ) ).add( Restrictions.naturalId( ).set( "naturalId", example.getNaturalId( ) ) ).setCacheable( true ).uniqueResult( );
   }
   
   @SuppressWarnings( "unchecked" )
@@ -180,14 +175,14 @@ public class EntityWrapper<TYPE> {
   }
   
   @SuppressWarnings( "unchecked" )
-  public TYPE getUnique( TYPE example ) throws EucalyptusCloudException {
+  public <T> T getUnique( T example ) throws EucalyptusCloudException {
     try {
       Object id = null;
       try {
         id = this.getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
       } catch ( Exception ex ) {}
       if ( id != null ) {
-        TYPE res = ( TYPE ) this.getEntityManager( ).find( example.getClass( ), id );
+        T res = ( T ) this.getEntityManager( ).find( example.getClass( ), id );
         if ( res == null ) {
           throw new NoSuchElementException( "@Id: " + id );
         } else {
@@ -195,25 +190,25 @@ public class EntityWrapper<TYPE> {
         }
       } else if ( example instanceof HasNaturalId && ( ( HasNaturalId ) example ).getNaturalId( ) != null ) {
         String natId = ( ( HasNaturalId ) example ).getNaturalId( );
-        TYPE ret = ( TYPE ) this.createCriteria( example.getClass( ) )
-                                .add( Restrictions.naturalId( ).set( "naturalId", natId ) )
-                                .setCacheable( true )
-                                .setMaxResults( 1 )
-                                .setFetchSize( 1 )
-                                .setFirstResult( 0 )
-                                .uniqueResult( );
+        T ret = ( T ) this.createCriteria( example.getClass( ) )
+                          .add( Restrictions.naturalId( ).set( "naturalId", natId ) )
+                          .setCacheable( true )
+                          .setMaxResults( 1 )
+                          .setFetchSize( 1 )
+                          .setFirstResult( 0 )
+                          .uniqueResult( );
         if ( ret == null ) {
           throw new NoSuchElementException( "@NaturalId: " + natId );
         }
         return ret;
       } else {
-        TYPE ret = ( TYPE ) this.createCriteria( example.getClass( ) )
-                                .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
-                                .setCacheable( true )
-                                .setMaxResults( 1 )
-                                .setFetchSize( 1 )
-                                .setFirstResult( 0 )
-                                .uniqueResult( );
+        T ret = ( T ) this.createCriteria( example.getClass( ) )
+                          .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
+                          .setCacheable( true )
+                          .setMaxResults( 1 )
+                          .setFetchSize( 1 )
+                          .setFirstResult( 0 )
+                          .uniqueResult( );
         if ( ret == null ) {
           throw new NoSuchElementException( "example: " + LogUtil.dumpObject( example ) );
         }
@@ -268,17 +263,6 @@ public class EntityWrapper<TYPE> {
   }
   
   /**
-   * TODO: not use this.
-   * 
-   * @param class1
-   * @param uuid
-   * @return
-   */
-  public Object get( Class<TYPE> class1, String uuid ) {
-    return this.getSession( ).get( class1, uuid );
-  }
-  
-  /**
    * <table>
    * <tbody>
    * <tr valign="top">
@@ -326,7 +310,7 @@ public class EntityWrapper<TYPE> {
    * 
    * @param newObject
    */
-  public TYPE merge( TYPE newObject ) {
+  public <T> T merge( T newObject ) {
     try {
       return this.getEntityManager( ).merge( newObject );
     } catch ( RuntimeException ex ) {
@@ -340,7 +324,7 @@ public class EntityWrapper<TYPE> {
    * @param newObject
    * @throws PersistenceException
    */
-  public TYPE mergeAndCommit( TYPE newObject ) {
+  public <T> T mergeAndCommit( T newObject ) {
     try {
       newObject = this.getEntityManager( ).merge( newObject );
       this.commit( );
@@ -382,8 +366,13 @@ public class EntityWrapper<TYPE> {
   }
   
   @SuppressWarnings( "unchecked" )
-  public <NEWTYPE> EntityWrapper<NEWTYPE> recast( Class<NEWTYPE> c ) {
-    return ( com.eucalyptus.entities.EntityWrapper<NEWTYPE> ) this;
+  public <N> EntityWrapper<N> recast( Class<N> c ) {
+    return ( com.eucalyptus.entities.EntityWrapper<N> ) this;
+  }
+  
+  @SuppressWarnings( "unchecked" )
+  public <N> EntityWrapper<N> recast( ) {
+    return ( com.eucalyptus.entities.EntityWrapper<N> ) this;
   }
   
   public static StackTraceElement getMyStackTraceElement( ) {
