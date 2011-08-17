@@ -72,6 +72,7 @@ import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import javax.jms.IllegalStateException;
@@ -93,6 +94,7 @@ import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.entities.Entities.TxUnroll;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -103,6 +105,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -115,7 +118,7 @@ public class EntityWrapper<TYPE> {
    * @deprecated {@link Entities#get(Class))
    */
   @Deprecated
-  public static <T> EntityWrapper<T> get( Class<T> type ) {
+  public static <T> EntityWrapper<T> get( final Class<T> type ) {
     return Entities.get( type );
   }
   
@@ -124,7 +127,7 @@ public class EntityWrapper<TYPE> {
    * @deprecated {@link Entities#get(Object)
    */
   @Deprecated
-  public static <T> EntityWrapper<T> get( T obj ) {
+  public static <T> EntityWrapper<T> get( final T obj ) {
     return Entities.get( obj );
   }
   
@@ -135,14 +138,14 @@ public class EntityWrapper<TYPE> {
    * @param persistenceContext
    */
   @SuppressWarnings( "unchecked" )
-  EntityWrapper( String persistenceContext, Runnable runnable ) {
-    this.tx = new TransactionState( persistenceContext, runnable );
+  EntityWrapper( final String persistenceContext, final Predicate<TxUnroll> predicate ) {
+    this.tx = new TransactionState( persistenceContext, predicate );
   }
   
   @SuppressWarnings( "unchecked" )
-  public <T> List<T> query( T example ) {
-    Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
-    List<T> resultList = ( List<T> ) this.getSession( )
+  public <T> List<T> query( final T example ) {
+    final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
+    final List<T> resultList = ( List<T> ) this.getSession( )
                                                .createCriteria( example.getClass( ) )
                                                .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
                                                .setCacheable( true )
@@ -151,12 +154,12 @@ public class EntityWrapper<TYPE> {
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
   
-  public <T> T lookupAndClose( T example ) throws NoSuchElementException {
+  public <T> T lookupAndClose( final T example ) throws NoSuchElementException {
     T ret = null;
     try {
       ret = this.getUnique( example );
       this.commit( );
-    } catch ( EucalyptusCloudException ex ) {
+    } catch ( final EucalyptusCloudException ex ) {
       this.rollback( );
       throw new NoSuchElementException( ex.getMessage( ) );
     }
@@ -164,33 +167,33 @@ public class EntityWrapper<TYPE> {
   }
   
   @SuppressWarnings( "unchecked" )
-  public <T> T uniqueResult( T example ) throws TransactionException {
+  public <T> T uniqueResult( final T example ) throws TransactionException {
     try {
       return this.recast( ( Class<T> ) example.getClass( ) ).getUnique( example );
-    } catch ( RuntimeException ex ) {
+    } catch ( final RuntimeException ex ) {
       throw new TransactionInternalException( ex.getMessage( ), ex );
-    } catch ( EucalyptusCloudException ex ) {
+    } catch ( final EucalyptusCloudException ex ) {
       throw new TransactionExecutionException( ex.getMessage( ), ex );
     }
   }
   
   @SuppressWarnings( "unchecked" )
-  public <T> T getUnique( T example ) throws EucalyptusCloudException {
+  public <T> T getUnique( final T example ) throws EucalyptusCloudException {
     try {
       Object id = null;
       try {
         id = this.getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
-      } catch ( Exception ex ) {}
+      } catch ( final Exception ex ) {}
       if ( id != null ) {
-        T res = ( T ) this.getEntityManager( ).find( example.getClass( ), id );
+        final T res = ( T ) this.getEntityManager( ).find( example.getClass( ), id );
         if ( res == null ) {
           throw new NoSuchElementException( "@Id: " + id );
         } else {
           return res;
         }
-      } else if ( example instanceof HasNaturalId && ( ( HasNaturalId ) example ).getNaturalId( ) != null ) {
-        String natId = ( ( HasNaturalId ) example ).getNaturalId( );
-        T ret = ( T ) this.createCriteria( example.getClass( ) )
+      } else if ( ( example instanceof HasNaturalId ) && ( ( ( HasNaturalId ) example ).getNaturalId( ) != null ) ) {
+        final String natId = ( ( HasNaturalId ) example ).getNaturalId( );
+        final T ret = ( T ) this.createCriteria( example.getClass( ) )
                           .add( Restrictions.naturalId( ).set( "naturalId", natId ) )
                           .setCacheable( true )
                           .setMaxResults( 1 )
@@ -202,7 +205,7 @@ public class EntityWrapper<TYPE> {
         }
         return ret;
       } else {
-        T ret = ( T ) this.createCriteria( example.getClass( ) )
+        final T ret = ( T ) this.createCriteria( example.getClass( ) )
                           .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
                           .setCacheable( true )
                           .setMaxResults( 1 )
@@ -214,12 +217,12 @@ public class EntityWrapper<TYPE> {
         }
         return ret;
       }
-    } catch ( NonUniqueResultException ex ) {
+    } catch ( final NonUniqueResultException ex ) {
       throw new EucalyptusCloudException( "Get unique failed for " + example.getClass( ).getSimpleName( ) + " because " + ex.getMessage( ), ex );
-    } catch ( NoSuchElementException ex ) {
+    } catch ( final NoSuchElementException ex ) {
       throw new EucalyptusCloudException( "Get unique failed for " + example.getClass( ).getSimpleName( ) + " using " + ex.getMessage( ), ex );
-    } catch ( Exception ex ) {
-      Exception newEx = PersistenceExceptions.throwFiltered( ex );
+    } catch ( final Exception ex ) {
+      final Exception newEx = PersistenceExceptions.throwFiltered( ex );
       throw new EucalyptusCloudException( "Get unique failed for " + example.getClass( ).getSimpleName( ) + " because " + newEx.getMessage( ), newEx );
     }
   }
@@ -231,11 +234,11 @@ public class EntityWrapper<TYPE> {
    * @param newObject
    * @return
    */
-  public <T> T persist( T newObject ) {
+  public <T> T persist( final T newObject ) {
     try {
       this.getEntityManager( ).persist( newObject );
       return newObject;
-    } catch ( RuntimeException ex ) {
+    } catch ( final RuntimeException ex ) {
       PersistenceExceptions.throwFiltered( ex );
       throw ex;
     }
@@ -248,7 +251,7 @@ public class EntityWrapper<TYPE> {
    * @param newObject
    */
   @Deprecated
-  public <T> T add( T newObject ) {
+  public <T> T add( final T newObject ) {
     return this.persist( newObject );
   }
   
@@ -258,7 +261,7 @@ public class EntityWrapper<TYPE> {
    * @param string
    * @return
    */
-  public Query createQuery( String string ) {
+  public Query createQuery( final String string ) {
     return this.getSession( ).createQuery( string );
   }
   
@@ -310,10 +313,10 @@ public class EntityWrapper<TYPE> {
    * 
    * @param newObject
    */
-  public <T> T merge( T newObject ) {
+  public <T> T merge( final T newObject ) {
     try {
       return this.getEntityManager( ).merge( newObject );
-    } catch ( RuntimeException ex ) {
+    } catch ( final RuntimeException ex ) {
       PersistenceExceptions.throwFiltered( ex );
       throw ex;
     }
@@ -329,7 +332,7 @@ public class EntityWrapper<TYPE> {
       newObject = this.getEntityManager( ).merge( newObject );
       this.commit( );
       return newObject;
-    } catch ( RuntimeException ex ) {
+    } catch ( final RuntimeException ex ) {
       try {
         PersistenceExceptions.throwFiltered( ex );
         throw ex;
@@ -339,7 +342,7 @@ public class EntityWrapper<TYPE> {
     }
   }
   
-  public void delete( Object deleteObject ) {
+  public void delete( final Object deleteObject ) {
     this.getEntityManager( ).remove( deleteObject );
   }
   
@@ -351,7 +354,7 @@ public class EntityWrapper<TYPE> {
     this.tx.commit( );
   }
   
-  public Criteria createCriteria( Class class1 ) {
+  public Criteria createCriteria( final Class class1 ) {
     return this.getSession( ).createCriteria( class1 );
   }
   
@@ -366,7 +369,7 @@ public class EntityWrapper<TYPE> {
   }
   
   @SuppressWarnings( "unchecked" )
-  public <N> EntityWrapper<N> recast( Class<N> c ) {
+  public <N> EntityWrapper<N> recast( final Class<N> c ) {
     return ( com.eucalyptus.entities.EntityWrapper<N> ) this;
   }
   
@@ -377,8 +380,8 @@ public class EntityWrapper<TYPE> {
   
   public static StackTraceElement getMyStackTraceElement( ) {
     int i = 0;
-    for ( StackTraceElement ste : Thread.currentThread( ).getStackTrace( ) ) {
-      if ( i++ < 2 || ste.getClassName( ).matches( ".*EntityWrapper.*" )
+    for ( final StackTraceElement ste : Thread.currentThread( ).getStackTrace( ) ) {
+      if ( ( i++ < 2 ) || ste.getClassName( ).matches( ".*EntityWrapper.*" )
            || ste.getClassName( ).matches( ".*TxHandle.*" )
            || ste.getMethodName( ).equals( "getEntityWrapper" ) ) {
         continue;
@@ -389,7 +392,7 @@ public class EntityWrapper<TYPE> {
     throw new RuntimeException( "BUG: Reached bottom of stack trace without finding any relevent frames." );
   }
   
-  public Query createSQLQuery( String sqlQuery ) {
+  public Query createSQLQuery( final String sqlQuery ) {
     return this.getSession( ).createSQLQuery( sqlQuery );
   }
   
@@ -397,15 +400,15 @@ public class EntityWrapper<TYPE> {
     return this.tx.isActive( );
   }
   
-  public static <TYPE> EntityWrapper<TYPE> create( PersistenceContext persistenceContext, Runnable runnable ) {
-    return new EntityWrapper<TYPE>( persistenceContext.name( ), runnable );
+  public static <TYPE> EntityWrapper<TYPE> create( final PersistenceContext persistenceContext, final Predicate<TxUnroll> predicate ) {
+    return new EntityWrapper<TYPE>( persistenceContext.name( ), predicate );
   }
   
   protected void cleanUp( ) {
     try {
       LOG.error( "Cleaning up stray entity wrapper: " + this.tx );
       this.tx.rollback( );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       LOG.error( ex, ex );
     }
   }
@@ -428,7 +431,7 @@ public class EntityWrapper<TYPE> {
     
     enum TxState {
       BEGIN, END, FAIL;
-      public String event( TxEvent e ) {
+      public String event( final TxEvent e ) {
         return e.name( ) + ":" + this.name( );
       }
     }
@@ -443,12 +446,11 @@ public class EntityWrapper<TYPE> {
     private final Long                                              startTime;
     private final String                                            txUuid;
     private final StopWatch                                         stopWatch;
-    
     private volatile long                                           splitTime   = 0l;
-    private final Runnable                                          runnable;
+    private final Predicate<TxUnroll>                               guard;
     
-    TransactionState( final String ctx, final Runnable runnable ) {
-      this.runnable = runnable;
+    TransactionState( final String ctx, final Predicate<TxUnroll> predicate ) {
+      this.guard = predicate;
       try {
         this.txUuid = String.format( "%s:%s", ctx, UUID.randomUUID( ).toString( ) );
         this.owner = Logs.isExtrrreeeme( )
@@ -466,13 +468,12 @@ public class EntityWrapper<TYPE> {
         this.transaction.begin( );
         this.session = new WeakReference<Session>( ( Session ) this.em.getDelegate( ) );
         this.eventLog( TxState.END, TxEvent.CREATE );
-      } catch ( Throwable ex ) {
+      } catch ( final Throwable ex ) {
         Logs.exhaust( ).error( ex, ex );
         this.eventLog( TxState.FAIL, TxEvent.CREATE );
         this.rollback( );
         throw new RuntimeException( PersistenceExceptions.throwFiltered( ex ) );
       } finally {
-        this.runnable.run( );
         outstanding.put( this.txUuid, this );
       }
     }
@@ -489,13 +490,13 @@ public class EntityWrapper<TYPE> {
       return this.splitTime;
     }
     
-    private final void eventLog( TxState txState, TxEvent txAction ) {
+    private final void eventLog( final TxState txState, final TxEvent txAction ) {
       if ( Logs.isExtrrreeeme( ) ) {
         final long oldSplit = this.splitTime;
         this.stopWatch.split( );
         this.splitTime = this.stopWatch.getSplitTime( );
         this.stopWatch.unsplit( );
-        Long split = this.splitTime - oldSplit;
+        final Long split = this.splitTime - oldSplit;
         Logs.exhaust( ).debug( Joiner.on( ":" ).join( EventType.PERSISTENCE, txState.event( txAction ), Long.toString( split ),
                                                       this.getTxUuid( ) ) );
       }
@@ -504,6 +505,7 @@ public class EntityWrapper<TYPE> {
     @Override
     public void rollback( ) {
       this.eventLog( TxState.BEGIN, TxEvent.ROLLBACK );
+      this.guard.apply( TxUnroll.ROLLBACK );
       try {
         if ( ( this.transaction != null ) && this.transaction.isActive( ) ) {
           this.transaction.rollback( );
@@ -522,13 +524,15 @@ public class EntityWrapper<TYPE> {
         if ( ( this.session != null ) && ( this.session.get( ) != null ) ) {
           this.session.clear( );
         }
+        if ( ( this.transaction != null ) && this.transaction.isActive( ) ) {
+          this.transaction.rollback( );
+        }
         this.transaction = null;
-        if ( this.em != null ) {
+        if ( ( this.em != null ) && this.em.isOpen( ) ) {
           this.em.close( );
         }
         this.em = null;
       } finally {
-        this.runnable.run( );
         outstanding.remove( this.txUuid );
       }
     }
@@ -544,26 +548,24 @@ public class EntityWrapper<TYPE> {
       this.eventLog( TxState.BEGIN, TxEvent.COMMIT );
       try {
         this.verifyOpen( );
-      } catch ( RuntimeException ex ) {
-        this.cleanup( );
+      } catch ( final RuntimeException ex ) {
+        this.rollback( );
         this.eventLog( TxState.FAIL, TxEvent.COMMIT );
         PersistenceExceptions.throwFiltered( ex );
         throw ex;
       }
-      try {
-        this.transaction.commit( );
-        this.eventLog( TxState.END, TxEvent.COMMIT );
-      } catch ( final RuntimeException e ) {
-        if ( ( this.transaction != null ) && this.transaction.isActive( ) ) {
-          this.transaction.rollback( );
-          LOG.debug( e, e );
+      if ( this.guard.apply( TxUnroll.SAFELY ) )
+        try {
+          this.transaction.commit( );
+          this.eventLog( TxState.END, TxEvent.COMMIT );
+        } catch ( final RuntimeException e ) {
+          this.rollback( );
+          this.eventLog( TxState.FAIL, TxEvent.COMMIT );
+          PersistenceExceptions.throwFiltered( e );
+          throw e;
+        } finally {
+          this.cleanup( );
         }
-        this.eventLog( TxState.FAIL, TxEvent.COMMIT );
-        PersistenceExceptions.throwFiltered( e );
-        throw e;
-      } finally {
-        this.cleanup( );
-      }
     }
     
     public String getTxUuid( ) {
@@ -578,9 +580,9 @@ public class EntityWrapper<TYPE> {
     
     @Override
     public boolean isActive( ) {
-      boolean hasEm = this.em != null && this.em.isOpen( );
-      boolean hasSession = this.session.get( ) != null && this.session.get( ).isOpen( );
-      boolean hasTx = this.transaction != null && this.transaction.isActive( );
+      final boolean hasEm = ( this.em != null ) && this.em.isOpen( );
+      final boolean hasSession = ( this.session.get( ) != null ) && this.session.get( ).isOpen( );
+      final boolean hasTx = ( this.transaction != null ) && this.transaction.isActive( );
       if ( hasEm && hasSession && hasTx ) {
         return true;
       } else {

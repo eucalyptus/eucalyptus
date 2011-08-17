@@ -63,21 +63,26 @@
 
 package com.eucalyptus.entities;
 
-import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicStampedReference;
 import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import com.eucalyptus.system.Ats;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Maps;
 
 public class Entities {
+  public enum TxUnroll {
+    SAFELY, ROLLBACK
+  }
+  
   private static Logger LOG = Logger.getLogger( Entities.class );
   
-  private static class DbConnectionsTl extends ThreadLocal<ConcurrentMap<String, EntityWrapper<?>>> {
+  private static class DbConnectionsTl extends ThreadLocal<ConcurrentMap<String, AtomicStampedReference<EntityWrapper<?>>>> {
     DbConnectionsTl( ) {}
     
     @Override
-    protected ConcurrentMap<String, EntityWrapper<?>> initialValue( ) {
+    protected ConcurrentMap<String, AtomicStampedReference<EntityWrapper<?>>> initialValue( ) {
       return Maps.newConcurrentMap( );
     }
     
@@ -87,24 +92,24 @@ public class Entities {
     }
     
     private EntityWrapper<?> add( final PersistenceContext persistenceContext ) {
-      EntityWrapper<?> entityWrapper = null;
+      AtomicStampedReference<EntityWrapper<?>> ref = null;
       if ( this.get( ).containsKey( persistenceContext.name( ) ) ) {
-        if ( this.checkStale( persistenceContext ) ) {
-          entityWrapper = this.addEntityWrapper( persistenceContext );
+        if ( this.clearStale( persistenceContext ) ) {
+          ref = this.addEntityWrapper( persistenceContext );
         } else {
-          entityWrapper = this.get( ).get( persistenceContext.name( ) );
+          ref = this.get( ).get( persistenceContext.name( ) );
         }
       } else {
-        entityWrapper = this.addEntityWrapper( persistenceContext );
+        ref = this.addEntityWrapper( persistenceContext );
       }
-      return entityWrapper;
+      return ref.getReference( );
     }
     
-    private boolean checkStale( final PersistenceContext persistenceContext ) {
-      EntityWrapper<?> entityWrapper = this.get( ).get( persistenceContext.name( ) );
-      if ( !entityWrapper.isActive( ) ) {
+    private boolean clearStale( final PersistenceContext persistenceContext ) {
+      AtomicStampedReference<EntityWrapper<?>> stampedWrapper = this.get( ).get( persistenceContext.name( ) );
+      if ( !stampedWrapper.getReference( ).isActive( ) || stampedWrapper.getStamp( ) == 0 ) {
         try {
-          entityWrapper.cleanUp( );
+          stampedWrapper.getReference( ).cleanUp( );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         } finally {
@@ -116,23 +121,45 @@ public class Entities {
       }
     }
     
-    private EntityWrapper<?> addEntityWrapper( final PersistenceContext persistenceContext ) {
-      EntityWrapper<?> entityWrapper;
-      entityWrapper = EntityWrapper.create( persistenceContext, new Runnable( ) {
+    private AtomicStampedReference<EntityWrapper<?>> addEntityWrapper( final PersistenceContext persistenceContext ) {
+      EntityWrapper<?> entityWrapper = EntityWrapper.create( persistenceContext, new Predicate<TxUnroll>( ) {
         
+        /**
+         * Handles nesting of transactions and unrolling nested failures.
+         * 
+         * During normal operations {@link #apply(TxUnroll)} should be called with
+         * {@link TxUnroll#ROLLBACK} as
+         * the argument. The returned {@code boolean} value indicates whether or not it is safe to
+         * modify the transaction state -- i.e. have we unrolled the whole stack.
+         * 
+         * In the case of a failure, {@link #apply(TxUnroll)} should be called with
+         * {@link TxUnroll#SAFELY}.
+         * This will force a rollback and clean up nested transactions state.
+         * 
+         * @param forceClose
+         * @return {@code true} if it is safe to modify the state of any inflight transactions.
+         *         {@code false} otherwise
+         */
         @Override
-        public void run( ) {
-          tl.get( ).remove( persistenceContext.name( ) );
+        public boolean apply( TxUnroll forceClose ) {
+          if ( TxUnroll.ROLLBACK.equals( forceClose ) ) {
+            AtomicStampedReference<EntityWrapper<?>> ref = tl.get( ).remove( persistenceContext.name( ) );
+            if ( ref.getReference( ).isActive( ) ) {
+              ref.getReference( ).rollback( );
+            }
+            return false;
+          } else {
+            AtomicStampedReference<EntityWrapper<?>> ref = tl.get( ).get( persistenceContext.name( ) );
+            int stamp = ref.getStamp( );
+            ref.set( ref.getReference( ), stamp - 1 );
+            return ref.getStamp( ) <= 0;
+          }
         }
         
       } );
-      this.get( ).put( persistenceContext.name( ), entityWrapper );
-      return entityWrapper;
-    }
-    
-    @Override
-    public ConcurrentMap<String, EntityWrapper<?>> get( ) {
-      return super.get( );
+      AtomicStampedReference<EntityWrapper<?>> ref = new AtomicStampedReference<EntityWrapper<?>>( entityWrapper, 1 );
+      this.get( ).put( persistenceContext.name( ), ref );
+      return ref;
     }
     
   }
