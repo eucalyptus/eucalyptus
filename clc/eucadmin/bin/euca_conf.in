@@ -719,8 +719,8 @@ class EucaConf(object):
             print '         command on the VMwareBroker host.'
                                 
     def do_register_vmwarebroker(self):
-        self._check_host()
         if hasattr(self.options, 'register_vmwarebroker'):
+            self._check_host()
             self._do_register('eucadmin.registervmwarebroker',
                               'RegisterVMwareBroker', None)
             # Make some changes in eucalyptus.conf file
