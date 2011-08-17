@@ -448,10 +448,10 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     }
     EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
     try {
-      VmInstance vmEntity = db.getUnique( this );
-      vmEntity.setBlockBytes( this.getBlockBytes( ) );
-      vmEntity.setNetworkBytes( this.getNetworkBytes( ) );
+      db.merge( this );
+      db.commit( );
     } catch ( Exception ex ) {
+      db.rollback( );
       LOG.debug( ex );
     }
   }
