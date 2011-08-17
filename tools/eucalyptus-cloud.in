@@ -1,20 +1,20 @@
 #!/bin/bash
-#Copyright (c) 2009  Eucalyptus Systems, Inc.	
+#Copyright (c) 2009  Eucalyptus Systems, Inc.
 #
 #This program is free software: you can redistribute it and/or modify
-#it under the terms of the GNU General Public License as published by 
-#the Free Software Foundation, only version 3 of the License.  
-# 
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, only version 3 of the License.
+#
 #This file is distributed in the hope that it will be useful, but WITHOUT
 #ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 #FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-#for more details.  
+#for more details.
 #
 #You should have received a copy of the GNU General Public License along
 #with this program.  If not, see <http://www.gnu.org/licenses/>.
-# 
+#
 #Please contact Eucalyptus Systems, Inc., 130 Castilian
-#Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
+#Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
 #if you need additional information or have any questions.
 #
 #This file may incorporate work covered under the following copyright and
@@ -23,7 +23,7 @@
 #  Software License Agreement (BSD License)
 #
 #  Copyright (c) 2008, Regents of the University of California
-#  
+#
 #
 #  Redistribution and use of this software in source and binary forms, with
 #  or without modification, are permitted provided that the following
@@ -64,12 +64,12 @@
 #
 ### BEGIN INIT INFO
 # Provides:                   eucalyptus
-# Required-Start:             $remote_fs $syslog 
+# Required-Start:             $remote_fs $syslog
 # Should-Start:               START
-# Required-Stop:              $remote_fs $syslog 
+# Required-Stop:              $remote_fs $syslog
 # Default-Start:              2 3 4 5
 # Default-Stop:	              0 1 6
-# Short-Description:          Start Eucalyptus 
+# Short-Description:          Start Eucalyptus
 # Description:                Start the Eucalyptus services
 # X-UnitedLinux-Default-Enabled: yes
 ### END INIT INFO
@@ -102,7 +102,7 @@ fi
 # honor the ENV variable if found otherwise look in root
 if [ -z "$EUCALYPTUS" ] ; then
        EUCALYPTUS="@prefix@"
-       if [ ! -e ${EUCALYPTUS}/etc/eucalyptus/eucalyptus.conf ] ; then 
+       if [ ! -e ${EUCALYPTUS}/etc/eucalyptus/eucalyptus.conf ] ; then
               EUCALYPTUS="/"
        fi
 fi
@@ -114,7 +114,7 @@ if [ -r $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf ]; then
 
 	# has eucalyptus been configured?
 	if [ "$EUCALYPTUS" = "not_configured" ]; then
-		echo "EUCALYPTUS not configured!" 
+		echo "EUCALYPTUS not configured!"
 		exit 1
 	fi
 
@@ -134,6 +134,7 @@ fi
 export EUCALYPTUS
 
 pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
+initlog=$EUCALYPTUS/var/log/eucalyptus/startup.log
 
 do_upgrade() {
         while IFS=: read -r a b; do
@@ -193,10 +194,15 @@ do_start() {
                 do_upgrade
         fi
 
-    # try log4j for a bit, see if anyone panics. $EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -o $EUCALYPTUS/var/log/eucalyptus/cloud-output.log >/dev/null 2>&1
-	ulimit -n 4096
-	$EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f -L console-log >/dev/null 2>&1
+        # Add loop devices if necessary (and possible)
+        [ -z "$CREATE_SC_LOOP_DEVICES" ] && CREATE_SC_LOOP_DEVICES=256
+        if [ "$CREATE_SC_LOOP_DEVICES" -gt 0 ] 2>/dev/null; then
+            "$EUCALYPTUS/usr/share/eucalyptus/create-loop-devices" $CREATE_SC_LOOP_DEVICES
+        fi
 
+	ulimit -n 4096
+	$EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f \
+		-L console-log -o $initlog -e $initlog
 	return $?
 }
 
@@ -254,7 +260,7 @@ do_stop() {
 		fi
 	done
 	if [ $timeout -eq 0 ]; then
-		kill -9 $pid > /dev/null 2>&1 
+		kill -9 $pid > /dev/null 2>&1
 		kill -9 $ppid > /dev/null 2>&1
 	fi
 	rm -f $pidfile
@@ -267,7 +273,10 @@ if [ -z "$EUCA_USER" ] ; then
 fi
 
 # set the library path correctly
-export VDDK_HOME="@VDDK_HOME@"
+if [ -z "$VDDK_HOME" ] ; then
+	VDDK_HOME="@VDDK_HOME@"
+fi
+export VDDK_HOME
 
 # moved these to the euca_imager wrapper itself
 #export LD_LIBRARY_PATH="$EUCALYPTUS/usr/lib/eucalyptus:$VDDK_HOME/lib:$VDDK_HOME/lib/vmware-vix-disklib/lib32:$VDDK_HOME/lib/vmware-vix-disklib/lib64/" # to ensure euca_imager finds VDDK libs
@@ -300,7 +309,7 @@ case "$1" in
 	do_start
 
 	case "$?" in
-	0|1) 
+	0)
 		if [ "$VERBOSE" != no ]; then
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 0
@@ -314,7 +323,7 @@ case "$1" in
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 1
 			else
-				echo "failed!"
+				echo "failed! Check $initlog for details"
 			fi
 		fi
 		;;
@@ -328,7 +337,7 @@ case "$1" in
 			echo -n "Stopping $DESC: $NAME"
 		fi
 	fi
-	
+
 	# let's check there is a previous cloud running
 	if ! do_status ; then
 		echo
@@ -354,7 +363,7 @@ case "$1" in
   restart)
 	$0 stop
 	$0 start
-  	;;
+	;;
   status)
 	if do_status ; then
 		echo "$DESC are running"

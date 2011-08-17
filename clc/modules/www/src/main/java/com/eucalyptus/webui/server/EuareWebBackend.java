@@ -223,6 +223,9 @@ public class EuareWebBackend {
   public static User changeUserPassword( User requestUser, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
     try {
       User user = Accounts.lookupUserById( userId );
+      if ( authenticateWithLdap( user ) ) {
+    	throw new EucalyptusServiceException( "Currently authenticating with LDAP. Can not change password." );
+      }
       EuarePermission.authorizeModifyUserPassword( requestUser, user.getAccount( ), user );
       // Anyone want to change some other people's password must authenticate himself first
       if ( Strings.isNullOrEmpty( requestUser.getPassword( ) ) || !requestUser.getPassword( ).equals( Crypto.generateHashedPassword( oldPass ) ) ) {
@@ -968,9 +971,13 @@ public class EuareWebBackend {
     for ( String id : ids ) {
       try { 
         User user = Accounts.lookupUserById( id );
-        Account account = user.getAccount( );
-        EuarePermission.authorizeDeleteUser( requestUser, account, user );
-        account.deleteUser( user.getName( ), false, true );
+        if ( !( user.isSystemAdmin( ) && user.isAccountAdmin( ) ) ) {
+          Account account = user.getAccount( );
+          EuarePermission.authorizeDeleteUser( requestUser, account, user );
+          account.deleteUser( user.getName( ), false, true );
+        } else {
+          throw new IllegalArgumentException( "Can't delete admin@eucalyptus" );
+        }
       } catch ( Exception e ) {
         LOG.error( "Failed to delete user " + id, e );
         LOG.debug( e, e );
@@ -1060,6 +1067,7 @@ public class EuareWebBackend {
       // Deserialize
       int i = 0;
       String keyId = keySerialized.getField( i++ );
+      i++;//Secret key
       i++;//Active
       String accountName = keySerialized.getField( i++ );
       String userName = keySerialized.getField( i++ );
@@ -1089,7 +1097,7 @@ public class EuareWebBackend {
       Account account = Accounts.lookupAccountByName( accountName );
       User user = account.lookupUserByName( userName );
       EuarePermission.authorizeDeleteUserCertificate( requestUser, account, user );
-      user.removeKey( certId );
+      user.removeCertificate( certId );
     } catch ( EucalyptusServiceException e ) {
       LOG.debug( e, e );
       throw e;
@@ -1257,7 +1265,7 @@ public class EuareWebBackend {
         group.setName( ValueCheckerFactory.createUserAndGroupNameChecker( ).check( groupName ) );
       }
       if ( !group.getPath( ).equals( path ) ) {
-        group.setPath( path );
+        group.setPath( ValueCheckerFactory.createPathChecker( ).check( path ) );
       }
     } catch ( EucalyptusServiceException e ) {
       LOG.debug( e, e );
@@ -1297,12 +1305,15 @@ public class EuareWebBackend {
       }
       
       User user = Accounts.lookupUserById( userId );
+      if ( user.isSystemAdmin( ) && user.isAccountAdmin( ) ) {
+        throw new EucalyptusServiceException( "Can not modify admin@eucalyptus" );
+      }
       EuarePermission.authorizeModifyUser( requestUser, user.getAccount( ), user );
       if ( !user.getName( ).equals( userName ) ) {
         user.setName( ValueCheckerFactory.createUserAndGroupNameChecker( ).check( userName ) );
       }
       if ( user.getPath( ) != null && !user.getPath( ).equals( path ) ) {
-        user.setPath( path );
+        user.setPath( ValueCheckerFactory.createPathChecker( ).check( path ) );
       }
       if ( !user.isEnabled( ).toString( ).equalsIgnoreCase( enabled ) ) {
         user.setEnabled( !user.isEnabled( ) );

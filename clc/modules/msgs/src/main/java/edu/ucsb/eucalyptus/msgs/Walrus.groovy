@@ -797,7 +797,11 @@ public class GetWalrusSnapshotResponseType extends WalrusDataGetResponseType {
 public class GetWalrusSnapshotSizeType extends WalrusDataGetRequestType {
 }
 
-public class WalrusComponentMessageType extends ComponentMessageType {	
+public class WalrusComponentMessageType extends ComponentMessageType {
+  @Override
+  public String getComponent( ) {
+    return "walrus";
+  }
 }
 
 public class GetWalrusSnapshotSizeResponseType extends WalrusDataGetResponseType {

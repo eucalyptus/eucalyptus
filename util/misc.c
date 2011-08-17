@@ -364,34 +364,39 @@ int check_process(pid_t pid, char *search) {
   return(ret);
 }
 
-int check_directory(char *dir) {
-  int rc;
-  struct stat mystat;
-  
-  if (!dir) {
-    return(1);
-  }
-  
-  rc = lstat(dir, &mystat);
-  if (rc < 0)
-    return 1;
-
-  if (!S_ISDIR(mystat.st_mode)) {
-    if (S_ISLNK(mystat.st_mode)) { // links to dirs are OK
-      char tmp [4096];
-      snprintf (tmp, 4096, "%s/", dir);
-
-      rc = lstat (tmp, &mystat);
-      if (rc < 0)
-          return 1;
-
-      if (S_ISDIR(mystat.st_mode)) {
-        return 0;
-      }
+// make sure 'dir' is a directory or a soft-link to one
+// and that it is readable by the current user (1 on error)
+int check_directory (const char *dir) 
+{    
+    if (!dir) {
+        return (1);
     }
-    return 1;
-  }
-  return 0;
+    
+    char checked_dir [MAX_PATH];
+    snprintf (checked_dir, sizeof (checked_dir), "%s", dir);
+    
+    struct stat mystat;
+    int rc = lstat (checked_dir, &mystat);
+    if (rc < 0)
+        return 1;
+    
+    // if a soft link, append '/' and try lstat() again
+    if (!S_ISDIR(mystat.st_mode) && S_ISLNK(mystat.st_mode)) {
+        snprintf (checked_dir, sizeof (checked_dir), "%s/", dir);
+        rc = lstat (checked_dir, &mystat);
+        if (rc < 0)
+            return 1;
+    } 
+    
+    if (!S_ISDIR (mystat.st_mode)) 
+        return 1;
+    
+    DIR * d = opendir (checked_dir);
+    if (d==NULL)
+        return 1;
+
+    closedir (d);
+    return 0;
 }
 
 int check_file_newer_than(char *file, time_t mtime) {
@@ -557,6 +562,8 @@ char * fp2str (FILE * fp)
             }
             return NULL;
         }
+        memset(new_buf+buf_current, 0, INCREMENT * sizeof(char));
+
         buf = new_buf;
         logprintfl (EUCADEBUG2, "fp2str: enlarged buf to %d\n", buf_max);
         
@@ -594,6 +601,11 @@ char * system_output (char * shell_command )
   buf = fp2str (fp);
 
   pclose(fp);
+
+  if (buf && (strlen(buf) == 0)) {
+      free(buf);
+      buf = NULL;
+  }
   return buf;
 }
 
@@ -2100,13 +2112,24 @@ int main (int argc, char ** argv)
 {
     int errors = 0;
     char cwd [1024];
+    char *s;
     getcwd (cwd, sizeof (cwd));
     srandom (time(NULL));
+
+    printf("testing system_output() in misc.c\n");
+    s = system_output("echo Hello");
+    assert(s);
+    assert (strlen (s) != 0);
+    printf("echo Hello == |%s|\n", s);
+    free (s);
+
+    s = system_output("echo -n");
+    assert(!s);
 
     printf ("testing fp2str in misc.c\n");
     FILE * fp = tmpfile ();
     assert (fp);
-    char * s = fp2str (fp);
+    s = fp2str (fp);
     assert (s);
     assert (strlen (s) == 0);
     free (s);
