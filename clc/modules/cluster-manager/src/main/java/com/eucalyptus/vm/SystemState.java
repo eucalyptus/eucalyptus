@@ -356,24 +356,4 @@ public class SystemState {
     return new ArrayList<ReservationInfoType>( rsvMap.values( ) );
   }
   
-  public static Long countByAccount( String accountId ) throws AuthException {
-    long vmNum = 0;
-    for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-      if ( Accounts.lookupUserById( v.getOwner( ).getUniqueId( ) ).getAccount( ).getAccountNumber( ).equals( accountId ) ) {
-        vmNum++;
-      }
-    }
-    return vmNum;
-  }
-  
-  public static Long countByUser( String userId ) throws AuthException {
-    long vmNum = 0;
-    for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-      if ( v.getOwner( ).getUniqueId( ).equals( userId ) ) {
-        vmNum++;
-      }
-    }
-    return vmNum;
-  }
-  
 }

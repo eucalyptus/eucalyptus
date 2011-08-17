@@ -4,13 +4,9 @@ import net.sf.json.JSONException;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.EuareService;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.policy.key.Keys;
-import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ImageMetadata;
-import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
-import com.eucalyptus.images.ImageUtil;
 import com.eucalyptus.util.Types;
 
 /**
