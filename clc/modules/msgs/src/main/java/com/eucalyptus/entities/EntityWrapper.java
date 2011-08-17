@@ -392,7 +392,7 @@ public class EntityWrapper<TYPE> {
   }
   
   private final void eventLog( TxState txState, TxEvent txAction ) {
-    if ( Logs.EXTREME ) {
+    if ( Logs.EXTREME && this.tx != null ) {
       Logs.exhaust( ).debug( Joiner.on( ":" ).join( EventType.PERSISTENCE, txState.event( txAction ), Long.toString( this.tx.splitOperation( ) ),
                                                     this.tx.getTxUuid( ) ) );
     }
