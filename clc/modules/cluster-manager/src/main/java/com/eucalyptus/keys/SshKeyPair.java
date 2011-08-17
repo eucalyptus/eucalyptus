@@ -88,6 +88,7 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudM
     available, removing
   }
   
+  @Lob
   @Column( name = "metadata_keypair_public_key" )
   private String publicKey;
   @Column( name = "metadata_keypair_finger_print" )
@@ -129,7 +130,6 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudM
   public String toString( ) {
     return String.format( "SshKeyPair:%s:fingerPrint=%s", this.getUniqueName( ), this.fingerPrint );
   }
-
   
   @Override
   public String getPartition( ) {
@@ -148,7 +148,7 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudM
   public int compareTo( SshKeyPair that ) {
     return this.getFullName( ).toString( ).compareTo( that.getFullName( ).toString( ) );
   }
-
+  
   static SshKeyPair noKey( ) {
     return new SshKeyPair( FakePrincipals.nobodyFullName( ), "nokey", "", "" );
   }
