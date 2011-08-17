@@ -41,7 +41,7 @@ public class DatabaseGroupProxy implements Group {
     final StringBuilder sb = new StringBuilder( );
     try {
       Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
-        public void fire( GroupEntity t ) throws Throwable {
+        public void fire( GroupEntity t ) {
           sb.append( t.toString( ) );
         }
       } );
@@ -65,7 +65,7 @@ public class DatabaseGroupProxy implements Group {
       // not found
       try {
         Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
-          public void fire( GroupEntity t ) throws Throwable {
+          public void fire( GroupEntity t ) {
             t.setName( name );
           }
         } );
@@ -88,7 +88,7 @@ public class DatabaseGroupProxy implements Group {
   public void setPath( final String path ) throws AuthException {
     try {
       Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
-        public void fire( GroupEntity t ) throws Throwable {
+        public void fire( GroupEntity t ) {
           t.setPath( path );
         }
       } );
@@ -107,7 +107,7 @@ public class DatabaseGroupProxy implements Group {
   public void setUserGroup( final Boolean userGroup ) throws AuthException {
     try {
       Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
-        public void fire( GroupEntity t ) throws Throwable {
+        public void fire( GroupEntity t ) {
           t.setUserGroup( userGroup );
         }
       } );
@@ -173,7 +173,7 @@ public class DatabaseGroupProxy implements Group {
     final List<Policy> results = Lists.newArrayList( );
     try {
       Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
-        public void fire( GroupEntity t ) throws Throwable {
+        public void fire( GroupEntity t ) {
           for ( PolicyEntity p : t.getPolicies( ) ) {
             results.add( new DatabasePolicyProxy( p ) );
           }
@@ -240,7 +240,7 @@ public class DatabaseGroupProxy implements Group {
     final List<User> results = Lists.newArrayList( );
     try {
       Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
-        public void fire( GroupEntity t ) throws Throwable {
+        public void fire( GroupEntity t ) {
           for ( UserEntity u : t.getUsers( ) ) {
             results.add( new DatabaseUserProxy( u ) );
           }
@@ -257,7 +257,7 @@ public class DatabaseGroupProxy implements Group {
     final List<DatabaseAccountProxy> results = Lists.newArrayList( );
     try {
       Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId( ) ), new Tx<GroupEntity>( ) {
-        public void fire( GroupEntity t ) throws Throwable {
+        public void fire( GroupEntity t ) {
           results.add( new DatabaseAccountProxy( ( AccountEntity) t.getAccount( ) ) );
         }
       } );

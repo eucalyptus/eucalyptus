@@ -47,7 +47,7 @@ public class DatabasePolicyProxy implements Policy {
     final List<Group> results = Lists.newArrayList( );
     try {
       Transactions.one( PolicyEntity.newInstanceWithId( this.delegate.getPolicyId( ) ), new Tx<PolicyEntity>( ) {
-        public void fire( PolicyEntity t ) throws Throwable {
+        public void fire( PolicyEntity t ) {
           results.add( new DatabaseGroupProxy( t.getGroup( ) ) );
         }
       } );

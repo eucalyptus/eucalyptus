@@ -63,9 +63,9 @@
 
 package com.eucalyptus.util.fsm;
 
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.async.Callback;
-import com.eucalyptus.util.async.Callback.Completion;
+import com.eucalyptus.util.Callback.Completion;
 
 /**
  * <p>

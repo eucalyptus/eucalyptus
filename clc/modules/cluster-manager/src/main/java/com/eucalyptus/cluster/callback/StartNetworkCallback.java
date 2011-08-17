@@ -73,10 +73,10 @@ import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.NetworkToken;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.BroadcastCallback;
-import com.eucalyptus.util.async.Callback;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.StartNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
@@ -107,7 +107,7 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
   @Override
   public void fire( StartNetworkResponseType msg ) {
     try {
-      Transactions.naturalId( this.networkGroup, new Callback<NetworkGroup>( ) {
+      Transactions.one( this.networkGroup, new Callback<NetworkGroup>( ) {
         
         @Override
         public void fire( NetworkGroup input ) {

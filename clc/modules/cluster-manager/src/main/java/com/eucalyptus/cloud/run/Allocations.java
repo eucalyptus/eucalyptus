@@ -173,7 +173,7 @@ public class Allocations {
         throw new IllegalArgumentException( "At least one network group must be specified." );
       } else {
         try {
-          return Transactions.naturalId( this.networkGroups.values( ).iterator( ).next( ) );
+          return Transactions.find( this.networkGroups.values( ).iterator( ).next( ) );
         } catch ( TransactionException ex ) {
           LOG.error( ex, ex );
           throw new RuntimeException( ex );

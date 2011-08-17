@@ -7,8 +7,9 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.async.Callback.Checked;
+import com.eucalyptus.util.Callback.Checked;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Callbacks {

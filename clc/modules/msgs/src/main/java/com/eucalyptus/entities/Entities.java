@@ -139,6 +139,10 @@ public class Entities {
   
   private static DbConnectionsTl tl = new DbConnectionsTl( );
   
+  static boolean hasTransaction( ) {
+    return !tl.get( ).isEmpty( );
+  }
+  
   public static <T> EntityWrapper<T> get( Class<T> type ) {
     Ats ats = Ats.inClassHierarchy( type );
     if ( !ats.has( PersistenceContext.class ) ) {
@@ -155,29 +159,5 @@ public class Entities {
     @SuppressWarnings( "unchecked" )
     Class<T> klass = ( Class<T> ) obj.getClass( );
     return get( klass );
-  }
-  
-  public static void flush( ) {
-    Map<String, EntityWrapper<?>> dbs = tl.get( );
-    tl.remove( );
-    if ( !dbs.isEmpty( ) ) {
-      for ( EntityWrapper<?> db : dbs.values( ) ) {
-        if ( db.isActive( ) ) {
-          db.cleanUp( );
-        }
-      }
-    }
-  }
-  
-  public static void commit( ) {
-    Map<String, EntityWrapper<?>> dbs = tl.get( );
-    if ( !dbs.isEmpty( ) ) {
-      for ( EntityWrapper<?> db : dbs.values( ) ) {
-        if ( db.isActive( ) ) {
-          db.commit( );
-        }
-      }
-    }
-    tl.remove( );
   }
 }

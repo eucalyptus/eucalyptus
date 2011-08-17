@@ -81,8 +81,8 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.RecoverablePersistenceException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Logs;
-import com.eucalyptus.util.async.Callback;
 
 @Entity
 @javax.persistence.Entity

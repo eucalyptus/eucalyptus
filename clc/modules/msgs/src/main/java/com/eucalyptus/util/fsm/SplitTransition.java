@@ -1,7 +1,7 @@
 package com.eucalyptus.util.fsm;
 
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.async.Callback;
 
 /**
  * Simple top/bottom half transition. Delegates

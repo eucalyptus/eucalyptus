@@ -61,68 +61,104 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.images;
+package com.eucalyptus.util;
 
-import java.util.List;
-import org.apache.log4j.Logger;
-import com.eucalyptus.cloud.Image;
-import com.eucalyptus.entities.EntityWrapper;
+import com.google.common.base.Predicate;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-public class ForwardImages {
-  private static Logger LOG = Logger.getLogger( ForwardImages.class );
+public interface Callback<R> {
   /**
-   * Transitional while pulling out forward references.
-   * @deprecated
+   * The operation completed. Guaranteed to be called only once per corresponding dispatch.
+   * 
+   * @param t
    */
-  public static String defaultRamdisk( ) {
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
-    try {
-      List<ImageInfo> images = db.query( new ImageInfo( Image.Type.ramdisk ) );
-      if( images.size( ) > 0 ) {
-        db.commit( );
-        return images.get( 0 ).getDisplayName( );
-      } else {
-        db.commit( );
-        return null;
-      }
-    } catch ( Exception ex ) {
-      db.rollback( );
-      LOG.error( ex , ex );
-      return null;
-    }
-  }
+  public void fire( R input );
+  
   /**
-   * Transitional while pulling out forward references.
-   * @deprecated
+   * Allows for handling exceptions which occur during the asynchronous operation.
+   * 
+   * @author decker
+   * @param <R>
    */
-  public static String defaultKernel( ) {
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
-    try {
-      List<ImageInfo> images = db.query( new ImageInfo( Image.Type.kernel ) );
-      if( images.size( ) > 0 ) {
-        db.commit( );
-        return images.get( 0 ).getDisplayName( );
-      } else {
-        db.commit( );
-        return null;
-      }
-    } catch ( Exception ex ) {
-      LOG.error( ex , ex );
-      db.rollback( );
-      return null;
-    }
-  }
-  /**
-   * Transitional while pulling out forward references.
-   * @deprecated
-   */
-  @Deprecated
-  public static ImageInfo exampleWithImageId( final String imageId ) {
-    return new ImageInfo( ) {
-      {
-        setDisplayName( imageId );
-      }
-    };
+  public interface Checked<R> extends Callback<R> {
+    public void fireException( Throwable t );
   }
   
+  public interface TwiceChecked<Q, R> extends Checked<R> {
+    public void initialize( Q request ) throws Exception;
+  }
+  
+  /**
+   * Only invoked when the requested operation succeeds.
+   * 
+   * @author decker
+   * @param <R>
+   */
+  public abstract class Success<R> implements Callback<R>, Predicate<R> {
+
+    /**
+     * @see com.google.common.base.Predicate#apply(java.lang.Object)
+     * @param arg0
+     * @return
+     */
+    @Override
+    public boolean apply( R input ) {
+      try {
+        this.fire( input );
+        return true;
+      } catch ( Exception ex ) {
+        return false;
+      }
+    }
+    
+  }
+  
+  /**
+   * Invoked only when the associated operation fails. The method {@link Callback.Checked#fireException(Throwable)} will be called with the cause of the
+   * failure.
+   * 
+   * @author decker
+   */
+  public abstract class Failure<R> implements Checked<R> {
+    /**
+     * @see com.eucalyptus.util.Callback#fire(java.lang.Object)
+     * @param response
+     */
+    @Override
+    public final void fire( R response ) {}
+    
+    /**
+     * @see com.eucalyptus.util.Callback.Checked#fireException(java.lang.Throwable)
+     * @param t
+     */
+    public abstract void fireException( Throwable t );
+  }
+  
+  public abstract class Completion<R> implements Checked<R>, Predicate<R> {
+    /**
+     * @see com.eucalyptus.util.Callback#fire(java.lang.Object)
+     * @param r
+     */
+    @Override
+    public final void fire( R input ) {
+      this.fire( );
+    }
+    
+    /**
+     * @see com.google.common.base.Predicate#apply(java.lang.Object)
+     * @param arg0
+     * @return
+     */
+    @Override
+    public boolean apply( R input ) {
+      try {
+        this.fire( );
+        return true;
+      } catch ( Exception ex ) {
+        return false;
+      }
+    }
+
+    public abstract void fire( );
+  }
 }

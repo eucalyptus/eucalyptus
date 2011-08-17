@@ -60,7 +60,7 @@ public class DatabaseAccountProxy implements Account {
       try {
         // not found
         Transactions.one( AccountEntity.newInstanceWithAccountNumber( this.delegate.getAccountNumber( ) ), new Tx<AccountEntity>( ) {
-          public void fire( AccountEntity t ) throws Throwable {
+          public void fire( AccountEntity t ) {
             t.setName( name );
           }
         } );

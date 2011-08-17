@@ -8,7 +8,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Logs;
-import com.eucalyptus.util.async.Callback.Completion;
+import com.eucalyptus.util.Callback.Completion;
 import com.eucalyptus.util.fsm.TransitionListener.Phases;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Maps;

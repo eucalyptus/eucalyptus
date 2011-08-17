@@ -12,6 +12,7 @@ import com.eucalyptus.component.Component.State;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.empyrean.ServiceStatusType;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
@@ -43,7 +44,7 @@ public class ServiceConfigurations {
     
     @Override
     public <T extends ServiceConfiguration> List<T> list( final T example ) {
-      final EntityWrapper<T> db = EntityWrapper.get( example );
+      final EntityWrapper<T> db = Entities.get( example );
       List<T> componentList;
       try {
         componentList = db.query( example );
@@ -62,7 +63,7 @@ public class ServiceConfigurations {
     
     @Override
     public <T extends ServiceConfiguration> T lookup( final T example ) {
-      final EntityWrapper<T> db = EntityWrapper.get( example );
+      final EntityWrapper<T> db = Entities.get( example );
       T existingName = null;
       try {
         existingName = db.getUnique( example );
@@ -81,10 +82,9 @@ public class ServiceConfigurations {
     
     @Override
     public <T extends ServiceConfiguration> T store( T config ) {
-      final EntityWrapper<T> db = EntityWrapper.get( config );
+      final EntityWrapper<T> db = Entities.get( config );
       try {
-        db.add( config );
-        config = db.getUnique( config );
+        config = db.persist( config );
         db.commit( );
         EventRecord.here( Provider.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, config.toString( ) ).info( );
       } catch ( final PersistenceException ex ) {
@@ -103,7 +103,7 @@ public class ServiceConfigurations {
     
     @Override
     public <T extends ServiceConfiguration> T remove( final T config ) {
-      final EntityWrapper<T> db = EntityWrapper.get( config );
+      final EntityWrapper<T> db = Entities.get( config );
       try {
         final T searchConfig = ( T ) config.getClass( ).newInstance( );
         searchConfig.setName( config.getName( ) );

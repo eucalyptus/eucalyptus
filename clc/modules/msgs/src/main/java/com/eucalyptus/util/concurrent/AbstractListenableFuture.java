@@ -83,11 +83,11 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
   protected <T> void add( ExecPair<T> pair ) {
     this.listeners.add( pair );
     if ( this.finished.get( ) ) {
-      EventRecord.here( pair.getClass( ), EventType.FUTURE, "run(" + pair.toString( ) + ")" ).debug( );
+      EventRecord.here( pair.getClass( ), EventType.FUTURE, "run(" + pair.toString( ) + ")" ).exhaust( );
       this.listeners.remove( pair );
       pair.run( );
     } else {
-      EventRecord.here( pair.getClass( ), EventType.FUTURE, "add(" + pair.toString( ) + ")" ).debug( );
+      EventRecord.here( pair.getClass( ), EventType.FUTURE, "add(" + pair.toString( ) + ")" ).exhaust( );
     }
   }
   
@@ -165,11 +165,11 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
     public void run( ) {
       try {
         if ( this.runnable != null ) {
-          EventRecord.here( runnable.getClass( ), EventType.FUTURE, "run(" + runnable.toString( ) + ")" ).debug( );
+          EventRecord.here( runnable.getClass( ), EventType.FUTURE, "run(" + runnable.toString( ) + ")" ).exhaust( );
           this.executor.submit( this.runnable, null ).get( );
           this.future.set( null );
         } else {
-          EventRecord.here( callable.getClass( ), EventType.FUTURE, "call(" + callable.toString( ) + ")" ).debug( );
+          EventRecord.here( callable.getClass( ), EventType.FUTURE, "call(" + callable.toString( ) + ")" ).exhaust( );
           this.future.set( this.executor.submit( callable ).get( ) );
         }
       } catch ( InterruptedException ex ) {

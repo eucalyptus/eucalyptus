@@ -64,7 +64,7 @@
 package com.eucalyptus.util.fsm;
 
 import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.async.Callback.Completion;
+import com.eucalyptus.util.Callback.Completion;
 
 /**
  * Trivial TransitionAction implementation with no-op implementations for
@@ -74,7 +74,7 @@ import com.eucalyptus.util.async.Callback.Completion;
 public abstract class AbstractTransitionAction<P extends HasName<P>> implements TransitionAction<P> {
   /**
    * @see com.eucalyptus.util.fsm.TransitionAction#leave(com.eucalyptus.util.HasName,
-   *      com.eucalyptus.util.async.Callback.Completion)
+   *      com.eucalyptus.util.Callback.Completion)
    * @param parent
    * @param transitionCallback
    */

@@ -152,7 +152,7 @@ public class Counters extends AbstractPersistent implements Serializable {
         try {
           Transactions.one( Counters.uninitialized( ), new Tx<Counters>( ) {
             @Override
-            public void fire( Counters t ) throws Throwable {
+            public void fire( Counters t ) {
               t.setMessageId( idStart );
             }
           } );

@@ -15,8 +15,9 @@ import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Logs;
-import com.eucalyptus.util.async.Callback.TwiceChecked;
+import com.eucalyptus.util.Callback.TwiceChecked;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implements Request<Q, R> {
@@ -215,7 +216,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   }
   
   /**
-   * @see com.eucalyptus.util.async.Request#then(com.eucalyptus.util.async.Callback.Completion)
+   * @see com.eucalyptus.util.async.Request#then(com.eucalyptus.util.Callback.Completion)
    * @param callback
    * @return
    */
@@ -226,7 +227,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   }
   
   /**
-   * @see com.eucalyptus.util.async.Request#then(com.eucalyptus.util.async.Callback.Failure)
+   * @see com.eucalyptus.util.async.Request#then(com.eucalyptus.util.Callback.Failure)
    * @param callback
    * @return
    */
@@ -237,7 +238,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   }
   
   /**
-   * @see com.eucalyptus.util.async.Request#then(com.eucalyptus.util.async.Callback.Success)
+   * @see com.eucalyptus.util.async.Request#then(com.eucalyptus.util.Callback.Success)
    * @param callback
    * @return
    */

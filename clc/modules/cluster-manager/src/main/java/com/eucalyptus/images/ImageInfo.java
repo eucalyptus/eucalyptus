@@ -94,11 +94,12 @@ import com.eucalyptus.cloud.Image;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.Tx;
-import com.eucalyptus.util.async.Callback;
 import com.google.common.collect.Lists;
 
 @Entity
@@ -192,6 +193,14 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     this.platform = platform;
     this.imagePublic = ImageConfiguration.getInstance( ).getDefaultVisibility( );
   }
+
+  static ImageInfo self( ImageInfo image ) {
+    return new ImageInfo( image.getDisplayName( ) );
+  }
+  
+  public static ImageInfo named( String imageId ) {
+    return new ImageInfo( imageId );
+  }
   
   public Image.Type getImageType( ) {
     return this.imageType;
@@ -235,10 +244,8 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
       Transactions.one( new ImageInfo( this.displayName ), new Callback<ImageInfo>( ) {
         @Override
         public void fire( final ImageInfo t ) {
-//          EntityWrapper<ImageInfo> db = Transactions.join( );
           LaunchPermission imgAuth = new LaunchPermission( t, account.getAccountNumber( ) );
           if ( !t.getPermissions( ).contains( imgAuth ) ) {
-//            db.recast( LaunchPermission.class ).add( imgAuth );
             t.getPermissions( ).add( imgAuth );
           }
         }
@@ -255,14 +262,18 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   
   public boolean checkPermission( final String accountId ) {
     final boolean[] result = { false };
-    Transactions.each( new ImageInfo( this.displayName ), new Callback<ImageInfo>( ) {
-      
-      @Override
-      public void fire( ImageInfo t ) {
-        result[0] = t.hasPermissionForOne( accountId );
-      }
-      
-    } );
+    try {
+      Transactions.each( new ImageInfo( this.displayName ), new Callback<ImageInfo>( ) {
+        
+        @Override
+        public void fire( ImageInfo t ) {
+          result[0] = t.hasPermissionForOne( accountId );
+        }
+        
+      } );
+    } catch ( TransactionException ex ) {
+      LOG.error( ex, ex );
+    }
     return result[0];
   }
   
@@ -270,7 +281,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     try {
       Transactions.one( new ImageInfo( this.displayName ), new Tx<ImageInfo>( ) {
         @Override
-        public void fire( final ImageInfo t ) throws Throwable {
+        public void fire( final ImageInfo t ) {
           t.getPermissions( ).clear( );
           t.getPermissions( ).add( new LaunchPermission( t, t.getOwnerAccountNumber( ) ) );
           t.setImagePublic( ImageConfiguration.getInstance( ).getDefaultVisibility( ) );
@@ -285,10 +296,9 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   public List<String> listProductCodes( ) {
     final List<String> prods = Lists.newArrayList( );
     try {
-      ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
-      Transactions.one( search, new Tx<ImageInfo>( ) {
+      Transactions.one( ImageInfo.self( this ), new Tx<ImageInfo>( ) {
         @Override
-        public void fire( final ImageInfo t ) throws Throwable {
+        public void fire( final ImageInfo t ) {
           for ( ProductCode p : t.getProductCodes( ) ) {
             prods.add( p.getValue( ) );
           }
@@ -303,10 +313,9 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   public List<String> listLaunchPermissions( ) {
     final List<String> perms = Lists.newArrayList( );
     try {
-      ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
-      Transactions.one( search, new Tx<ImageInfo>( ) {
+      Transactions.one( ImageInfo.self( this ), new Tx<ImageInfo>( ) {
         @Override
-        public void fire( final ImageInfo t ) throws Throwable {
+        public void fire( final ImageInfo t ) {
           for ( LaunchPermission p : t.getPermissions( ) ) {
             perms.add( p.getAccountId( ) );
           }
@@ -320,10 +329,9 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   
   public ImageInfo resetProductCodes( ) {
     try {
-      ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
-      Transactions.one( search, new Tx<ImageInfo>( ) {
+      Transactions.one( ImageInfo.self( this ), new Tx<ImageInfo>( ) {
         @Override
-        public void fire( final ImageInfo t ) throws Throwable {
+        public void fire( final ImageInfo t ) {
           t.getProductCodes( ).clear( );
         }
       } );
@@ -335,10 +343,9 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   
   public ImageInfo revokePermission( final Account account ) {
     try {
-      ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
-      Transactions.one( search, new Tx<ImageInfo>( ) {
+      Transactions.one( ImageInfo.self( this ), new Callback<ImageInfo>( ) {
         @Override
-        public void fire( final ImageInfo t ) throws Throwable {
+        public void fire( final ImageInfo t ) {
           LaunchPermission imgAuth;
           t.getPermissions( ).remove( new LaunchPermission( t, account.getAccountNumber( ) ) );
         }
@@ -430,10 +437,9 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   
   public boolean addProductCode( final String prodCode ) {
     try {
-      ImageInfo search = ForwardImages.exampleWithImageId( this.getDisplayName( ) );
-      Transactions.one( search, new Tx<ImageInfo>( ) {
+      Transactions.one( ImageInfo.self( this ), new Callback<ImageInfo>( ) {
         @Override
-        public void fire( final ImageInfo t ) throws Throwable {
+        public void fire( final ImageInfo t ) {
           t.getProductCodes( ).add( new ProductCode( t, prodCode ) );
         }
       }

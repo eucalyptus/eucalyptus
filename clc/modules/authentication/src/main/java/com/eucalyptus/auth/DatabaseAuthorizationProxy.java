@@ -36,7 +36,7 @@ public class DatabaseAuthorizationProxy implements Authorization {
     final List<Condition> results = Lists.newArrayList( );
     try {
       Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getAuthorizationId() ), new Tx<AuthorizationEntity>( ) {
-        public void fire( AuthorizationEntity t ) throws Throwable {
+        public void fire( AuthorizationEntity t ) {
           for ( ConditionEntity c : t.getStatement( ).getConditions( ) ) {
             results.add( new DatabaseConditionProxy( c ) );
           }
@@ -53,7 +53,7 @@ public class DatabaseAuthorizationProxy implements Authorization {
     final StringBuilder sb = new StringBuilder( );
     try {
       Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getAuthorizationId() ), new Tx<AuthorizationEntity>( ) {
-        public void fire( AuthorizationEntity t ) throws Throwable {
+        public void fire( AuthorizationEntity t ) {
           sb.append( t.toString( ) );
         }
       } );
@@ -83,7 +83,7 @@ public class DatabaseAuthorizationProxy implements Authorization {
     final Set<String> results = Sets.newHashSet( );
     try {
       Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getAuthorizationId() ), new Tx<AuthorizationEntity>( ) {
-        public void fire( AuthorizationEntity t ) throws Throwable {
+        public void fire( AuthorizationEntity t ) {
           results.addAll( t.getActions( ) );
         }
       } );
@@ -98,7 +98,7 @@ public class DatabaseAuthorizationProxy implements Authorization {
     final Set<String> results = Sets.newHashSet( );
     try {
       Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getAuthorizationId() ), new Tx<AuthorizationEntity>( ) {
-        public void fire( AuthorizationEntity t ) throws Throwable {
+        public void fire( AuthorizationEntity t ) {
           results.addAll( t.getResources( ) );
         }
       } );
@@ -113,7 +113,7 @@ public class DatabaseAuthorizationProxy implements Authorization {
     final List<Group> results = Lists.newArrayList( );
     try {
       Transactions.one( AuthorizationEntity.newInstanceWithId( this.delegate.getAuthorizationId() ), new Tx<AuthorizationEntity>( ) {
-        public void fire( AuthorizationEntity t ) throws Throwable {
+        public void fire( AuthorizationEntity t ) {
           results.add( new DatabaseGroupProxy( t.getStatement( ).getPolicy( ).getGroup( ) ) );
         }
       } );

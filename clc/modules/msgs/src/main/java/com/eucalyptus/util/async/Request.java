@@ -64,6 +64,7 @@ package com.eucalyptus.util.async;
 
 import java.util.concurrent.ExecutionException;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.util.Callback;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public interface Request<Q extends BaseMessage, R extends BaseMessage> {

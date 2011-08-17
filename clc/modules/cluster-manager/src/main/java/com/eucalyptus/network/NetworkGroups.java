@@ -73,9 +73,11 @@ import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.async.Callback;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -151,20 +153,24 @@ public class NetworkGroups {
   static final NetworkRangeConfiguration netConfig = new NetworkRangeConfiguration( );
   
   public static void updateNetworkRangeConfiguration( ) {
-    Transactions.each( new ClusterConfiguration( ), new Callback<ClusterConfiguration>( ) {
-      
-      @Override
-      public void fire( ClusterConfiguration input ) {
-        netConfig.setUseNetworkTags( netConfig.getUseNetworkTags( ) && !input.getUseNetworkTags( ) );
+    try {
+      Transactions.each( new ClusterConfiguration( ), new Callback<ClusterConfiguration>( ) {
         
-        netConfig.setMinNetworkTag( Ints.max( netConfig.getMinNetworkTag( ), input.getMinNetworkTag( ) ) );
-        netConfig.setMaxNetworkTag( Ints.min( netConfig.getMaxNetworkTag( ), input.getMaxNetworkTag( ) ) );
-        
-        netConfig.setMinNetworkIndex( Longs.max( netConfig.getMinNetworkIndex( ), input.getMinNetworkIndex( ) ) );
-        netConfig.setMaxNetworkIndex( Longs.min( netConfig.getMaxNetworkIndex( ), input.getMaxNetworkIndex( ) ) );
-        
-      }
-    } );
+        @Override
+        public void fire( ClusterConfiguration input ) {
+          netConfig.setUseNetworkTags( netConfig.getUseNetworkTags( ) && !input.getUseNetworkTags( ) );
+          
+          netConfig.setMinNetworkTag( Ints.max( netConfig.getMinNetworkTag( ), input.getMinNetworkTag( ) ) );
+          netConfig.setMaxNetworkTag( Ints.min( netConfig.getMaxNetworkTag( ), input.getMaxNetworkTag( ) ) );
+          
+          netConfig.setMinNetworkIndex( Longs.max( netConfig.getMinNetworkIndex( ), input.getMinNetworkIndex( ) ) );
+          netConfig.setMaxNetworkIndex( Longs.min( netConfig.getMaxNetworkIndex( ), input.getMaxNetworkIndex( ) ) );
+          
+        }
+      } );
+    } catch ( TransactionException ex ) {
+      Logs.extreme( ).error( ex, ex );
+    }
   }
   
   public static List<Long> networkIndexInterval( ) {
@@ -180,7 +186,7 @@ public class NetworkGroups {
     Collections.shuffle( interval );
     return interval;
   }
-
+  
   public static List<Integer> networkTagInterval( ) {
     List<Integer> interval = Lists.newArrayList( );
     for ( int i = NetworkGroups.networkingConfiguration( ).getMinNetworkTag( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkTag( ); i++ ) {
@@ -196,7 +202,7 @@ public class NetworkGroups {
   
   public static NetworkGroup lookup( final String uuid ) throws NoSuchMetadataException {
     try {
-      return Transactions.naturalId( new NetworkGroup( ) {
+      return Transactions.find( new NetworkGroup( ) {
         {
           this.setNaturalId( uuid );
         }

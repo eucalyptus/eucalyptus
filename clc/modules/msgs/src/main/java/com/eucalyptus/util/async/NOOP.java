@@ -75,7 +75,7 @@ public class NOOP implements RemoteCallback {
   public void initialize( BaseMessage msg ) throws Exception {}
   
   /**
-   * @see com.eucalyptus.util.async.Callback.TwiceChecked#initialize(java.lang.Object)
+   * @see com.eucalyptus.util.Callback.TwiceChecked#initialize(java.lang.Object)
    * @param request
    * @throws Exception
    */
@@ -83,7 +83,7 @@ public class NOOP implements RemoteCallback {
   public void initialize( Object request ) throws Exception {}
   
   /**
-   * @see com.eucalyptus.util.async.Callback#fire(java.lang.Object)
+   * @see com.eucalyptus.util.Callback#fire(java.lang.Object)
    * @param t
    */
   @Override
