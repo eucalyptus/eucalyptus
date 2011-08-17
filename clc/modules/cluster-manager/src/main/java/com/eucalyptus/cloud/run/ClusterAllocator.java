@@ -270,7 +270,7 @@ public class ClusterAllocator implements Runnable {
     }
     final VmRunType run = VmRunType.builder( )
                                    .instanceId( childToken.getInstanceId( ) )
-                                   .instanceId( childToken.getInstanceUuid( ) )
+                                   .naturalId( childToken.getInstanceUuid( ) )
                                    .keyInfo( vmKeyInfo )
                                    .launchIndex( childToken.getLaunchIndex( ) )
                                    .networkIndex( childToken.getNetworkIndex( ).get( ).getIndex( ) )
