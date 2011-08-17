@@ -107,8 +107,8 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
         /** transactions **/
         'hibernate.current_session_context_class': 'jta',
         'hibernate.jndi.class': 'bitronix.tm.jndi.BitronixInitialContextFactory',
-        'hibernate.transaction.flush_before_completion':'false',//@Configurable
-        'hibernate.transaction.hibernate.transaction.auto_close_session':'false',//@Configurable
+        'hibernate.transaction.flush_before_completion':'true',
+        'hibernate.transaction.hibernate.transaction.auto_close_session':'true',
         'hibernate.transaction.manager_lookup_class': 'com.eucalyptus.empyrean.EmpyreanTransactionManager',
         /** l2 cache **/
         'hibernate.cache.use_second_level_cache': 'true',
