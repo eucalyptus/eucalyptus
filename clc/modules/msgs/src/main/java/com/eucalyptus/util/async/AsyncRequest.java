@@ -58,7 +58,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       public void fire( R r ) {
         try {
           if ( Logs.EXTREME ) {
-            Logs.extreme( ).debug( cb.getClass( ).getCanonicalName( ) + ".fire():\n" + r );
+            Logs.exhaust( ).debug( cb.getClass( ).getCanonicalName( ) + ".fire():\n" + r );
           }
           cb.fire( r );
           AsyncRequest.this.result.set( r );
@@ -82,7 +82,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       @Override
       public void initialize( Q request ) throws Exception {
         if ( Logs.EXTREME ) {
-          Logs.extreme( ).debug( cb.getClass( ).getCanonicalName( ) + ".initialize():\n" + request );
+          Logs.exhaust( ).debug( cb.getClass( ).getCanonicalName( ) + ".initialize():\n" + request );
         }
         try {
           cb.initialize( request );

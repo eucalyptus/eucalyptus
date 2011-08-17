@@ -452,7 +452,6 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
       vmEntity.setBlockBytes( this.getBlockBytes( ) );
       vmEntity.setNetworkBytes( this.getNetworkBytes( ) );
     } catch ( Exception ex ) {
-      Logs.extreme( ).error( ex, ex );
       LOG.debug( ex );
     }
   }

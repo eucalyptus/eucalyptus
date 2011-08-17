@@ -342,7 +342,7 @@ public class VmInstances {
   public static void register( VmInstance obj ) {
     EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
     try {
-      db.merge( obj );
+      db.persist( obj );
       db.commit( );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
