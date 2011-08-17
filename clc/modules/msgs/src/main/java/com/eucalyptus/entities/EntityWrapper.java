@@ -74,6 +74,7 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import javax.jms.IllegalStateException;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
@@ -82,9 +83,11 @@ import javax.persistence.PersistenceException;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
 import org.hibernate.NonUniqueResultException;
 import org.hibernate.Query;
 import org.hibernate.Session;
+import org.hibernate.SessionException;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
@@ -370,7 +373,7 @@ public class EntityWrapper<TYPE> {
   
   /** package default on purpose **/
   EntityManager getEntityManager( ) {
-    return this.getEntityManager( );
+    return this.tx.getEntityManager( );
   }
   
   /** :| should also be package default **/
@@ -607,16 +610,19 @@ public class EntityWrapper<TYPE> {
     }
     
     public Session getSession( ) {
-      if ( this.session.get( ) == null ) {
-        final RuntimeException e = new RuntimeException( "Someone is calling a closed tx handle: " + this.txUuid );
-        LOG.error( e, e );
-        throw e;
+      if ( this.isActive( ) ) {
+        return this.session.get( );
+      } else {
+        throw new SessionException( "This session is no longer active: " + this.getTxUuid( ) );
       }
-      return this.session.get( );
     }
     
     public EntityManager getEntityManager( ) {
-      return this.em;
+      if ( this.isActive( ) ) {
+        return this.em;
+      } else {
+        throw new SessionException( "This session is no longer active: " + this.getTxUuid( ) );
+      }
     }
     
     @Override
