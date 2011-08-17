@@ -215,7 +215,7 @@ public class EuareWebBackend {
   }
   
   private static void authenticateLocal( User user, String password ) throws EucalyptusServiceException {
-    if ( !user.getPassword( ).equals( Crypto.generateHashedPassword( password ) ) ) {
+    if ( !Strings.isNullOrEmpty( user.getPassword( ) ) && !user.getPassword( ).equals( Crypto.generateHashedPassword( password ) ) ) {
       throw new EucalyptusServiceException( "Incorrect password" );
     }    
   }
@@ -845,7 +845,7 @@ public class EuareWebBackend {
     return result;
   }
 
-  public static String createAccount( User requestUser, String accountName ) throws EucalyptusServiceException {
+  public static String createAccount( User requestUser, String accountName, String password ) throws EucalyptusServiceException {
     if ( !requestUser.isSystemAdmin( ) ) {
       throw new EucalyptusServiceException( "Operation is not authorized" );
     }
@@ -854,7 +854,8 @@ public class EuareWebBackend {
       User admin = account.addUser( User.ACCOUNT_ADMIN, "/", true/*skipRegistration*/, true/*enabled*/, null/*info*/ );
       admin.createToken( );
       admin.createConfirmationCode( );
-      admin.createPassword( );
+      admin.setPassword( Crypto.generateHashedPassword( password ) );
+      admin.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
       return account.getAccountNumber( );
     } catch ( Exception e ) {
       LOG.error( "Failed to create account " + accountName, e );

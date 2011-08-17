@@ -271,9 +271,9 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
 
   @Override
-  public String createAccount( Session session, String accountName ) throws EucalyptusServiceException {
+  public String createAccount( Session session, String accountName, String password ) throws EucalyptusServiceException {
     User user = verifySession( session );
-    return EuareWebBackend.createAccount( user, accountName );
+    return EuareWebBackend.createAccount( user, accountName, password );
   }
 
   @Override
