@@ -77,11 +77,9 @@ import com.eucalyptus.cloud.util.MetadataCreationException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.crypto.Certs;
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.OwnerFullName;
 
 public class KeyPairs {
@@ -90,7 +88,7 @@ public class KeyPairs {
   public static String      NO_KEY_NAME = "";
   
   public static SshKeyPair noKey( ) {
-    return NO_KEY;
+    return Entities.get( NO_KEY ).mergeAndCommit( NO_KEY );
   }
   
   public static SshKeyPair lookup( OwnerFullName ownerFullName, String keyName ) throws NoSuchMetadataException {
