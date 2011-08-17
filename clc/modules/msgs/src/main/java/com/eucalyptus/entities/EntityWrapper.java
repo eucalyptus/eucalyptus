@@ -539,23 +539,9 @@ public class EntityWrapper<TYPE> {
       }
     }
     
-    private void verifyOpen( ) {
-      if ( ( this.transaction == null ) || ( this.em == null ) ) {
-        throw new RuntimeException( "Calling a closed tx handle: " + this.txUuid );
-      }
-    }
-    
     @Override
     public void commit( ) {
       this.eventLog( TxState.BEGIN, TxEvent.COMMIT );
-      try {
-        this.verifyOpen( );
-      } catch ( final RuntimeException ex ) {
-        this.rollback( );
-        this.eventLog( TxState.FAIL, TxEvent.COMMIT );
-        PersistenceExceptions.throwFiltered( ex );
-        throw ex;
-      }
       if ( this.guard.apply( TxUnroll.SAFELY ) )
         try {
           this.transaction.commit( );
