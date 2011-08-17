@@ -67,6 +67,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -87,22 +88,21 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
-import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.cloud.CloudMetadata.NetworkSecurityGroup;
-import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.cloud.UserMetadata;
+import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.TransactionException;
-import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
+import com.google.gwt.thirdparty.guava.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 
 @Entity
@@ -278,33 +278,17 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
       return ExtantNetwork.bogus( this );
     } else if ( this.extantNetwork == null ) {
       ExtantNetwork exNet = null;
-      for ( int i = NetworkGroups.networkingConfiguration( ).getMinNetworkTag( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkTag( ); i++ ) {
-        final EntityWrapper<NetworkGroup> db = EntityWrapper.get( NetworkGroup.class );
+      final EntityWrapper<NetworkGroup> db = Entities.get( NetworkGroup.class );
+      for ( Integer i : NetworkGroups.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
         try {
-          final NetworkGroup net = db.getUnique( this );
-          try {
-            db.recast( ExtantNetwork.class ).getUnique( ExtantNetwork.named( i ) );
-          } catch ( final Exception ex ) {
-            try {
-              exNet = db.recast( ExtantNetwork.class ).add( ExtantNetwork.create( net, i ) );
-              db.commit( );
-              this.extantNetwork = exNet;
-              break;
-            } catch ( final Exception ex1 ) {
-              exNet = null;
-              continue;
-            }
-          }
-        } catch ( final Exception ex ) {
-          LOG.error( "Failed to add extant network: " + this.extantNetwork + " due to: " + ex.getMessage( ) );
-          Logs.extreme( ).error( "Failed to add extant network: " + this.extantNetwork + " due to: " + ex.getMessage( ), ex );
+          db.uniqueResult( ExtantNetwork.named( i ) );
+        } catch ( TransactionException ex ) {
+          exNet = db.persist( ExtantNetwork.create( this, i ) );
+          db.commit( );
+          return exNet;
         }
       }
-      if ( exNet == null ) {
-        throw new NotEnoughResourcesAvailable( "Failed to add extant network: " + this.extantNetwork + " due to: no network tags are free." );
-      } else {
-        return exNet;
-      }
+      throw new NotEnoughResourcesAvailable( "Failed to add extant network: " + this.extantNetwork + " due to: no network tags are free." );
     } else {
       return this.getExtantNetwork( );
     }

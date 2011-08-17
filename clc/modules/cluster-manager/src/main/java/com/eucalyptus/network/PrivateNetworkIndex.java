@@ -84,9 +84,9 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.RecoverablePersistenceException;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.Logs;
-import com.eucalyptus.util.TransactionException;
 
 @Entity
 @javax.persistence.Entity

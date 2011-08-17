@@ -61,7 +61,8 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.util;
+package com.eucalyptus.entities;
+
 
 public class TransactionCallbackException extends TransactionException {
 

@@ -1,4 +1,4 @@
-package com.eucalyptus.util;
+package com.eucalyptus.entities;
 
 import java.util.concurrent.ExecutionException;
 

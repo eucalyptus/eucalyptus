@@ -77,11 +77,11 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.TransactionException;
 import com.eucalyptus.vm.VmTypes;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 

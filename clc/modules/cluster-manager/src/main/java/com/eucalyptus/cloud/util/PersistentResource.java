@@ -69,11 +69,11 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.TransactionException;
-import com.eucalyptus.util.TransactionExecutionException;
 
 @MappedSuperclass
 public abstract class PersistentResource<T extends PersistentResource<T, R>, R extends HasNaturalId> extends UserMetadata<Resource.State> implements Resource<T, R> {

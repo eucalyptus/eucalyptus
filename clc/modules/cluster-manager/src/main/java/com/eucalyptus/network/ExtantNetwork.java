@@ -85,10 +85,10 @@ import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Logs;
-import com.eucalyptus.util.TransactionException;
-import com.eucalyptus.util.TransactionExecutionException;
 
 @Entity
 @javax.persistence.Entity
@@ -119,7 +119,7 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   }
   
   private ExtantNetwork( final NetworkGroup networkGroup, final Integer tag ) {
-    super( networkGroup.getOwner( ), networkGroup.getDisplayName( ) + ":" + tag );
+    super( networkGroup.getOwner( ), networkGroup.getDisplayName( ) );
     this.tag = tag;
   }
   
@@ -133,11 +133,6 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   
   public static ExtantNetwork bogus( NetworkGroup networkGroup ) {
     return new ExtantNetwork( networkGroup, -1 );
-  }
-  
-  public ExtantNetwork( final NetworkGroup networkGroup ) {
-    super( networkGroup.getOwner( ), networkGroup.getDisplayName( ) );
-    this.networkGroup = networkGroup;
   }
   
   public boolean hasIndexes( ) {

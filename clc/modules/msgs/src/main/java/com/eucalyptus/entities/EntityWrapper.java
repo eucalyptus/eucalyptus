@@ -121,22 +121,14 @@ public class EntityWrapper<TYPE> {
   @SuppressWarnings( "unchecked" )
   EntityWrapper( String persistenceContext, Runnable runnable ) {
     try {
-      if ( Logs.EXTREME ) {
-        Logs.extreme( ).debug( Joiner.on( ":" ).join( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.begin( ) ) );
-      }
+      this.eventLog( TxState.BEGIN, TxEvent.CREATE );
       this.tx = new TxHandle( persistenceContext, runnable );
     } catch ( Throwable e ) {
-      if ( Logs.EXTREME ) {
-        Logs.extreme( ).debug( Joiner.on( ":" ).join( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.fail( ), "" + e.getMessage( ) ) );
-      }
+      this.eventLog( TxState.FAIL, TxEvent.CREATE );
       RecoverablePersistenceException ex = PersistenceErrorFilter.exceptionCaught( e );
       throw new RuntimeException( ex );
     }
-    if ( Logs.EXTREME ) {
-      Logs.extreme( ).debug( Joiner.on( ":" ).join( EntityWrapper.class, EventType.PERSISTENCE, DbEvent.CREATE.end( ),
-                                                    Long.toString( this.tx.splitOperation( ) ),
-                                                    this.tx.getTxUuid( ) ) );
-    }
+    this.eventLog( TxState.END, TxEvent.CREATE );
   }
   
   @SuppressWarnings( "unchecked" )
@@ -169,10 +161,19 @@ public class EntityWrapper<TYPE> {
   }
   
   @SuppressWarnings( "unchecked" )
-  public TYPE getUnique( TYPE example ) throws EucalyptusCloudException {
-    if ( Logs.EXTREME ) {
-      Logs.extreme( ).debug( Joiner.on( ":" ).join( EventType.PERSISTENCE, DbEvent.UNIQUE.begin( ), this.tx.getTxUuid( ) ) );
+  public <T> T uniqueResult( T example ) throws TransactionException {
+    try {
+      return this.recast( ( Class<T> ) example.getClass( ) ).getUnique( example );
+    } catch ( RuntimeException ex ) {
+      throw new TransactionInternalException( ex.getMessage( ), ex );
+    } catch ( EucalyptusCloudException ex ) {
+      throw new TransactionExecutionException( ex.getMessage( ), ex );
     }
+  }
+  
+  @SuppressWarnings( "unchecked" )
+  public TYPE getUnique( TYPE example ) throws EucalyptusCloudException {
+    this.eventLog( TxState.BEGIN, TxEvent.UNIQUE );
     try {
       Object id = null;
       try {
@@ -228,7 +229,7 @@ public class EntityWrapper<TYPE> {
    * @param newObject
    * @return
    */
-  public TYPE persist( TYPE newObject ) {
+  public <T> T persist( T newObject ) {
     try {
       this.getEntityManager( ).persist( newObject );
       return newObject;
@@ -246,7 +247,7 @@ public class EntityWrapper<TYPE> {
    * @param e
    */
   @Deprecated
-  public void save( TYPE e ) {
+  public <T> void save( T e ) {
     this.getSession( ).save( e );
   }
   
@@ -257,7 +258,7 @@ public class EntityWrapper<TYPE> {
    * @param newObject
    */
   @Deprecated
-  public TYPE add( TYPE newObject ) {
+  public <T> T add( T newObject ) {
     return this.persist( newObject );
   }
   
@@ -364,47 +365,35 @@ public class EntityWrapper<TYPE> {
   }
   
   public void rollback( ) {
-    if ( Logs.EXTREME ) {
-      Logs.extreme( ).debug( Joiner.on( ":" ).join( EventType.PERSISTENCE, DbEvent.ROLLBACK.begin( ), this.tx.getTxUuid( ) ) );
-    }
+    this.eventLog( TxState.BEGIN, TxEvent.ROLLBACK );
     try {
       this.tx.rollback( );
     } catch ( Throwable e ) {
-      if ( Logs.EXTREME ) {
-        Logs.extreme( ).debug( Joiner.on( ":" ).join( EventType.PERSISTENCE, DbEvent.ROLLBACK.fail( ), Long.toString( this.tx.splitOperation( ) ),
-                                                      this.tx.getTxUuid( ) ) );
-      }
+      this.eventLog( TxState.FAIL, TxEvent.ROLLBACK );
       PersistenceErrorFilter.exceptionCaught( e );
     }
-    if ( Logs.EXTREME ) {
-      Logs.extreme( ).debug( Joiner.on( ":" ).join( EventType.PERSISTENCE, DbEvent.ROLLBACK.end( ), Long.toString( this.tx.splitOperation( ) ),
-                                                    this.tx.getTxUuid( ) ) );
-    }
+    this.eventLog( TxState.END, TxEvent.ROLLBACK );
   }
   
   public void commit( ) {
-    if ( Logs.EXTREME ) {
-      Logs.extreme( ).debug( Joiner.on( ":" ).join( EventType.PERSISTENCE, DbEvent.COMMIT.begin( ), this.tx.getTxUuid( ) ) );
-    }
+    this.eventLog( TxState.BEGIN, TxEvent.COMMIT );
     try {
       this.tx.commit( );
     } catch ( RuntimeException e ) {
-      if ( Logs.EXTREME ) {
-        Logs.extreme( ).debug( Joiner.on( ":" ).join( EventType.PERSISTENCE, DbEvent.COMMIT.fail( ), Long.toString( this.tx.splitOperation( ) ),
-                                                      this.tx.getTxUuid( ) ) );
-      }
+      this.eventLog( TxState.FAIL, TxEvent.COMMIT );
       PersistenceErrorFilter.exceptionCaught( e );
       throw e;
     } catch ( Throwable e ) {
-      if ( Logs.EXTREME ) {
-        Logs.extreme( ).debug( Joiner.on( ":" ).join( EventType.PERSISTENCE, DbEvent.COMMIT.fail( ), Long.toString( this.tx.splitOperation( ) ),
-                                                      this.tx.getTxUuid( ) ) );
-      }
+      this.eventLog( TxState.FAIL, TxEvent.COMMIT );
       PersistenceErrorFilter.exceptionCaught( e );
       throw new RuntimeException( e );
     }
+    this.eventLog( TxState.END, TxEvent.COMMIT );
+  }
+  
+  private final void eventLog( TxState txState, TxEvent txAction ) {
     if ( Logs.EXTREME ) {
-      Logs.extreme( ).debug( Joiner.on( ":" ).join( EventType.PERSISTENCE, DbEvent.COMMIT.end( ), Long.toString( this.tx.splitOperation( ) ),
+      Logs.exhaust( ).debug( Joiner.on( ":" ).join( EventType.PERSISTENCE, txState.event( txAction ), Long.toString( this.tx.splitOperation( ) ),
                                                     this.tx.getTxUuid( ) ) );
     }
   }
@@ -442,24 +431,19 @@ public class EntityWrapper<TYPE> {
     throw new RuntimeException( "BUG: Reached bottom of stack trace without finding any relevent frames." );
   }
   
-  enum DbEvent {
+  enum TxState {
+    BEGIN, END, FAIL;
+    public String event( TxEvent e ) {
+      return e.name( ) + ":" + this.name( );
+    }
+  }
+  
+  enum TxEvent {
     CREATE,
     COMMIT,
     ROLLBACK,
     UNIQUE,
     QUERY;
-    public String fail( ) {
-      return this.name( ) + ":FAIL";
-    }
-    
-    public String begin( ) {
-      return this.name( ) + ":BEGIN";
-    }
-    
-    public String end( ) {
-      return this.name( ) + ":END";
-    }
-    
     public String getMessage( ) {
       if ( Logs.EXTREME ) {
         return EntityWrapper.getMyStackTraceElement( ).toString( );

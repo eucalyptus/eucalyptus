@@ -63,8 +63,8 @@
 
 package com.eucalyptus.cloud.util;
 
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.util.HasNaturalId;
-import com.eucalyptus.util.TransactionException;
 
 public interface Resource<T extends HasNaturalId, R extends HasNaturalId> extends Comparable<T> {
   public interface SetReference<T, R> extends Comparable<T> {

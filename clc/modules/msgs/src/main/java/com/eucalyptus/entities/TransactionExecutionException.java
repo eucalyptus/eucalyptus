@@ -1,4 +1,5 @@
-package com.eucalyptus.util;
+package com.eucalyptus.entities;
+
 
 public class TransactionExecutionException extends TransactionException {
 

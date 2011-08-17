@@ -64,6 +64,7 @@
 package com.eucalyptus.network;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
@@ -75,7 +76,9 @@ import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.async.Callback;
 import com.google.common.primitives.Ints;
+import com.google.gwt.thirdparty.guava.common.collect.Lists;
 import com.google.gwt.thirdparty.guava.common.primitives.Longs;
+import edu.emory.mathcs.backport.java.util.Collections;
 import edu.ucsb.eucalyptus.msgs.NetworkInfoType;
 
 @ConfigurableClass( root = "net", description = "Default values used to bootstrap networking state discovery." )
@@ -163,6 +166,29 @@ public class NetworkGroups {
         
       }
     } );
+  }
+  
+  public static List<Long> networkIndexInterval( ) {
+    List<Long> interval = Lists.newArrayList( );
+    for ( Long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
+      interval.add( i );
+    }
+//    Collections.shuffle( interval );
+    return interval;
+  }
+  
+  public static <T extends Number> List<T> shuffled( List<T> interval ) {
+    Collections.shuffle( interval );
+    return interval;
+  }
+
+  public static List<Integer> networkTagInterval( ) {
+    List<Integer> interval = Lists.newArrayList( );
+    for ( int i = NetworkGroups.networkingConfiguration( ).getMinNetworkTag( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkTag( ); i++ ) {
+      interval.add( i );
+    }
+//    Collections.shuffle( interval );
+    return interval;
   }
   
   public static NetworkRangeConfiguration networkingConfiguration( ) {
