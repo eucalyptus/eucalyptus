@@ -530,11 +530,6 @@ public class EntityWrapper<TYPE> {
     
     private void cleanup( ) {
       try {
-        this.runnable.run( );
-      } catch ( final Exception ex ) {
-        LOG.error( ex, ex );
-      }
-      try {
         if ( ( this.session != null ) && ( this.session.get( ) != null ) ) {
           this.session.clear( );
         }
@@ -544,6 +539,7 @@ public class EntityWrapper<TYPE> {
         }
         this.em = null;
       } finally {
+        this.runnable.run( );
         outstanding.remove( this.txUuid );
       }
     }
@@ -609,7 +605,7 @@ public class EntityWrapper<TYPE> {
       this.transaction.setRollbackOnly( );
     }
     
-    public Session getSession( ) {
+    private Session getSession( ) {
       if ( this.isActive( ) ) {
         return this.session.get( );
       } else {
@@ -617,7 +613,7 @@ public class EntityWrapper<TYPE> {
       }
     }
     
-    public EntityManager getEntityManager( ) {
+    private EntityManager getEntityManager( ) {
       if ( this.isActive( ) ) {
         return this.em;
       } else {
