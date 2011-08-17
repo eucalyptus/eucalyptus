@@ -71,6 +71,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Topology.ServiceKey;
+import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.google.common.base.Function;
 
@@ -190,7 +191,7 @@ public class TopologyChanges {
             Future<ServiceConfiguration> result = ServiceTransitions.transitionChain( config, nextState );//TODO:GRZE:OMGFIXME timeout here.
             ServiceConfiguration endConfig = result.get( );
             State endState = endConfig.lookupState( );
-            LOG.debug( this.toString( ) + " completed for: " + endConfig + " trying " + initialState + "->" + nextState + " ended in: " + endState );
+            Logs.exhaust( ).debug( this.toString( ) + " completed for: " + endConfig + " trying " + initialState + "->" + nextState + " ended in: " + endState );
             return endConfig;
           } catch ( InterruptedException ex ) {
             Thread.currentThread( ).interrupt( );
@@ -319,7 +320,7 @@ public class TopologyChanges {
             Future<ServiceConfiguration> result = ServiceTransitions.transitionChain( config, nextState );
             ServiceConfiguration endConfig = result.get( );
             State endState = endConfig.lookupState( );
-            LOG.debug( this.toString( ) + " completed for: " + endConfig.getFullName( ) + " trying " + initialState + "->" + nextState + " ended in: " + endState );
+            Logs.exhaust( ).debug( this.toString( ) + " completed for: " + endConfig.getFullName( ) + " trying " + initialState + "->" + nextState + " ended in: " + endState );
             return endConfig;
           } catch ( InterruptedException ex ) {
             Thread.currentThread( ).interrupt( );
@@ -327,7 +328,7 @@ public class TopologyChanges {
           } catch ( UndeclaredThrowableException ex ) {
             throw ex;
           } catch ( Exception ex ) {
-            LOG.debug( this.toString( ) + " failed for: " + config.getFullName( ) + " trying " + initialState + "->" + nextState + " because of: " + ex.getMessage( ), ex );
+            LOG.warn( this.toString( ) + " failed for: " + config.getFullName( ) + " trying " + initialState + "->" + nextState + " because of: " + ex.getMessage( ), ex );
             throw new UndeclaredThrowableException( ex );
           }
         }
