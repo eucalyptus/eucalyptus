@@ -8,6 +8,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
@@ -64,7 +65,7 @@ public class NetworkGroupUtil {
   }
   
   @Deprecated
-  public static NetworkGroup createUserNetworkRulesGroup( UserFullName userFullName, String groupName, String groupDescription ) throws EucalyptusCloudException {
+  public static NetworkGroup createUserNetworkRulesGroup( UserFullName userFullName, String groupName, String groupDescription ) throws DuplicateMetadataException {
     return NetworkGroups.create( userFullName, groupName, groupDescription );
   }
   

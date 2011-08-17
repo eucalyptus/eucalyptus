@@ -10,6 +10,7 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
@@ -38,7 +39,7 @@ import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 public class NetworkGroupManager {
   private static Logger LOG = Logger.getLogger( NetworkGroupManager.class );
   
-  public CreateSecurityGroupResponseType create( CreateSecurityGroupType request ) throws EucalyptusCloudException {
+  public CreateSecurityGroupResponseType create( CreateSecurityGroupType request ) throws EucalyptusCloudException, DuplicateMetadataException {
     Context ctx = Contexts.lookup();
     NetworkGroups.createDefault( ctx.getUserFullName( ) );/** GRZE:WARN: do this /first/, ensure the default group exists to cover some old broken installs **/
     if ( !Types.isContextAuthorized( null ) ) {

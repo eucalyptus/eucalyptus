@@ -67,6 +67,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
+import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -235,6 +237,8 @@ public class NetworkGroups {
   public static NetworkGroup create( OwnerFullName ownerFullName, String groupName, String groupDescription ) {
     try {
       return Transactions.save( new NetworkGroup( ownerFullName, groupName, groupDescription ) );
+    } catch ( ConstraintViolationException ex ) {
+      throw new DuplicateMetadataException( "Group already exists: " + groupName, ex );
     } catch ( ExecutionException ex ) {
       LOG.error( ex, ex );
       throw new RuntimeException( "Failed to create group: " + groupName + " for user: " + ownerFullName );
