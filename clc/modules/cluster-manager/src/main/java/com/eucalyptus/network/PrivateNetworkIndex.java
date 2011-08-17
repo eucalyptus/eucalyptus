@@ -116,7 +116,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   private PrivateNetworkIndex( ExtantNetwork network ) {
     super( null, null );
     this.extantNetwork = network;
-    this.setRuntimeState( Resource.State.FREE );
+    this.setState( Resource.State.FREE );
     this.bogusId = null;
     this.index = null;
   }
@@ -124,7 +124,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   private PrivateNetworkIndex( ExtantNetwork network, Long index ) {
     super( network.getOwner( ), network.getTag( ) + ":" + index );
     this.extantNetwork = network;
-    this.setRuntimeState( Resource.State.FREE );
+    this.setState( Resource.State.FREE );
     this.bogusId = network.getTag( ) + ":" + index;
     this.index = index;
   }

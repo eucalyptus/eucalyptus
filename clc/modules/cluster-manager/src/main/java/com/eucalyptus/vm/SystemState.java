@@ -158,7 +158,7 @@ public class SystemState {
     for ( String vmId : unreportedVms ) {
       try {
         VmInstance vm = VmInstances.getInstance( ).lookup( vmId );
-        if ( vm.getSplitTime( ) > SHUT_DOWN_TIME && !VmState.STOPPED.equals( vm.getRuntimeState( ) ) && !VmState.STOPPING.equals( vm.getRuntimeState( ) ) ) {
+        if ( vm.getSplitTime( ) > SHUT_DOWN_TIME && !VmState.STOPPED.equals( vm.getState( ) ) && !VmState.STOPPING.equals( vm.getState( ) ) ) {
           vm.setState( VmState.TERMINATED, Reason.EXPIRED );
         }
       } catch ( NoSuchElementException e ) {}
@@ -173,7 +173,7 @@ public class SystemState {
     } catch ( NoSuchElementException e ) {
       try {
         vm = VmInstances.getInstance( ).lookupDisabled( runVm.getInstanceId( ) );
-        if ( !VmState.BURIED.equals( vm.getRuntimeState( ) ) && vm.getSplitTime( ) > BURY_TIME ) {
+        if ( !VmState.BURIED.equals( vm.getState( ) ) && vm.getSplitTime( ) > BURY_TIME ) {
           vm.setState( VmState.BURIED, Reason.BURIED );
         }
         return;
@@ -185,21 +185,21 @@ public class SystemState {
       }
     }
     long splitTime = vm.getSplitTime( );
-    VmState oldState = vm.getRuntimeState( );
+    VmState oldState = vm.getState( );
     vm.setServiceTag( runVm.getServiceTag( ) );
     vm.setPlatform( runVm.getPlatform( ) );
     vm.setBundleTaskState( runVm.getBundleTaskStateName( ) );
     
-    if ( VmState.SHUTTING_DOWN.equals( vm.getRuntimeState( ) ) && splitTime > SHUT_DOWN_TIME ) {
+    if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && splitTime > SHUT_DOWN_TIME ) {
       vm.setState( VmState.TERMINATED, Reason.EXPIRED );
-    } else if ( VmState.STOPPING.equals( vm.getRuntimeState( ) ) && splitTime > SHUT_DOWN_TIME ) {
+    } else if ( VmState.STOPPING.equals( vm.getState( ) ) && splitTime > SHUT_DOWN_TIME ) {
       vm.setState( VmState.STOPPED, Reason.EXPIRED );
-    } else if ( VmState.STOPPING.equals( vm.getRuntimeState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
+    } else if ( VmState.STOPPING.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
       vm.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
-    } else if ( VmState.SHUTTING_DOWN.equals( vm.getRuntimeState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
+    } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
       vm.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
     } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
-                && ( VmState.PENDING.equals( vm.getRuntimeState( ) ) || VmState.RUNNING.equals( vm.getRuntimeState( ) ) ) ) {
+                && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
       if ( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
         vm.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
       }
@@ -344,7 +344,7 @@ public class SystemState {
     }
     if ( isAdmin ) {
       for ( VmInstance v : VmInstances.getInstance( ).listDisabledValues( ) ) {
-        if ( VmState.BURIED.equals( v.getRuntimeState( ) ) ) continue;
+        if ( VmState.BURIED.equals( v.getState( ) ) ) continue;
         if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) continue;
         if ( rsvMap.get( v.getReservationId( ) ) == null ) {
           ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ), v.getNetworkNames( ) );

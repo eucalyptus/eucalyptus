@@ -26,8 +26,8 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
         regarding( );
         for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
           if ( vm.getPartition( ).equals( VmPendingCallback.this.getSubject( ).getConfiguration( ).getPartition( ) ) ) {
-            if ( VmState.PENDING.equals( vm.getRuntimeState( ) )
-                        || vm.getRuntimeState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
+            if ( VmState.PENDING.equals( vm.getState( ) )
+                        || vm.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
               this.getInstancesSet( ).add( vm.getInstanceId( ) );
             } else if ( vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
               @Override
@@ -54,12 +54,12 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
       try {
         final VmInstance vm = VmInstances.getInstance( ).lookup( runVm.getInstanceId( ) );
         vm.setServiceTag( runVm.getServiceTag( ) );
-        if ( VmState.SHUTTING_DOWN.equals( vm.getRuntimeState( ) ) && vm.getSplitTime( ) > SystemState.SHUT_DOWN_TIME ) {
+        if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && vm.getSplitTime( ) > SystemState.SHUT_DOWN_TIME ) {
           vm.setState( VmState.TERMINATED, Reason.EXPIRED );
-        } else if ( VmState.SHUTTING_DOWN.equals( vm.getRuntimeState( ) ) && VmState.SHUTTING_DOWN.equals( state ) ) {
+        } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( state ) ) {
           vm.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
         } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
-                    && ( VmState.PENDING.equals( vm.getRuntimeState( ) ) || VmState.RUNNING.equals( vm.getRuntimeState( ) ) ) ) {
+                    && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
           if ( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
             vm.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
           }

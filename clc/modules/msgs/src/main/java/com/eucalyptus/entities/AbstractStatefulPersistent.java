@@ -99,11 +99,11 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
     this.displayName = displayName;
   }
   
-  public STATE getRuntimeState( ) {
+  public STATE getState( ) {
     return this.state;
   }
   
-  public void setRuntimeState( final STATE state ) {
+  public void setState( final STATE state ) {
     this.state = state;
   }
   

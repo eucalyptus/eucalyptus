@@ -126,7 +126,7 @@ public class Volumes {
       
       @Override
       public void fire( Volume t ) {
-        t.setRuntimeState( State.GENERATING );
+        t.setState( State.GENERATING );
         try {
           ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, t.getSize( ), t.getOwnerUserId( ),
                                                                        t.getOwnerAccountNumber( ), t.getScName( ), t.getPartition( ) ) );

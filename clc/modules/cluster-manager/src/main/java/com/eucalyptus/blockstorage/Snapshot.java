@@ -106,11 +106,11 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata<Sn
     this.parentVolume = parentVolume;
     this.volumeSc = volumeScName;
     this.volumePartition = volumePartition;
-    super.setRuntimeState( State.NIHIL );
+    super.setState( State.NIHIL );
   }
   
   public String mapState( ) {
-    switch ( this.getRuntimeState( ) ) {
+    switch ( this.getState( ) ) {
       case GENERATING:
         return "pending";
       case EXTANT:
@@ -122,14 +122,14 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata<Sn
   
   public void setMappedState( final String state ) {
     if ( StorageProperties.Status.creating.toString( ).equals( state ) )
-      this.setRuntimeState( State.GENERATING );
+      this.setState( State.GENERATING );
     else if ( StorageProperties.Status.pending.toString( ).equals( state ) )
-      this.setRuntimeState( State.GENERATING );
+      this.setState( State.GENERATING );
     else if ( StorageProperties.Status.completed.toString( ).equals( state ) )
-      this.setRuntimeState( State.EXTANT );
+      this.setState( State.EXTANT );
     else if ( StorageProperties.Status.available.toString( ).equals( state ) )
-      this.setRuntimeState( State.EXTANT );
-    else if ( StorageProperties.Status.failed.toString( ).equals( state ) ) this.setRuntimeState( State.FAIL );
+      this.setState( State.EXTANT );
+    else if ( StorageProperties.Status.failed.toString( ).equals( state ) ) this.setState( State.FAIL );
   }
   
   public edu.ucsb.eucalyptus.msgs.Snapshot morph( final edu.ucsb.eucalyptus.msgs.Snapshot snap ) {
@@ -137,7 +137,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata<Sn
     snap.setStatus( this.mapState( ) );
     snap.setStartTime( this.getCreationTimestamp( ) );
     snap.setVolumeId( this.getParentVolume( ) );
-    snap.setProgress( this.getRuntimeState( ).equals( State.EXTANT )
+    snap.setProgress( this.getState( ).equals( State.EXTANT )
       ? "100%"
       : "" );
     return snap;

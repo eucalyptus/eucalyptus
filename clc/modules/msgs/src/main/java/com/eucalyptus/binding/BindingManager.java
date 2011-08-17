@@ -73,28 +73,30 @@ import com.eucalyptus.util.Logs;
 
 public class BindingManager {
   
-  private static Logger               LOG        = Logger.getLogger( BindingManager.class );
-  private static Map<String, Binding> bindingMap = new HashMap<String, Binding>( );
-  public static final String DEFAULT_BINDING_NAMESPACE = "http://msgs.eucalyptus.com";
-  public static final String DEFAULT_BINDING_NAME =  BindingManager.sanitizeNamespace( DEFAULT_BINDING_NAMESPACE );
-  private static Binding DEFAULT = null;
+  private static Logger               LOG                       = Logger.getLogger( BindingManager.class );
+  private static Map<String, Binding> bindingMap                = new HashMap<String, Binding>( );
+  private static final String         DEFAULT_BINDING_NAMESPACE = "http://msgs.eucalyptus.com";
+  private static final String         DEFAULT_BINDING_NAME      = BindingManager.sanitizeNamespace( defaultBindingNamespace( ) );
+  private static Binding              DEFAULT                   = null;
+  
   public static Binding getDefaultBinding( ) {
-    if( DEFAULT != null ) {
+    if ( DEFAULT != null ) {
       return DEFAULT;
     } else {
-      synchronized( BindingManager.class ) {
-        if( DEFAULT != null ) {
+      synchronized ( BindingManager.class ) {
+        if ( DEFAULT != null ) {
           return DEFAULT;
         } else {
-            return ( DEFAULT = BindingManager.getBinding( BindingManager.sanitizeNamespace( BindingManager.DEFAULT_BINDING_NAME ) ) );
+          return ( DEFAULT = BindingManager.getBinding( BindingManager.sanitizeNamespace( BindingManager.defaultBindingName( ) ) ) );
         }
       }
     }
   }
+  
   public static String sanitizeNamespace( String namespace ) {
     return namespace.replaceAll( "(http://)|(/$)", "" ).replaceAll( "[./-]", "_" );
   }
-
+  
   public static boolean seedBinding( final String bindingName, final Class seedClass ) {
     if ( !BindingManager.bindingMap.containsKey( bindingName ) ) {
       try {
@@ -112,6 +114,7 @@ public class BindingManager {
   public static boolean isRegisteredBinding( final String bindingName ) {
     return BindingManager.bindingMap.containsKey( bindingName );
   }
+  
   public static Binding getBinding( final String bindingName ) {
     if ( BindingManager.bindingMap.containsKey( bindingName ) ) {
       return BindingManager.bindingMap.get( bindingName );
@@ -120,6 +123,14 @@ public class BindingManager {
       BindingManager.bindingMap.put( bindingName, newBinding );
       return newBinding;
     }
+  }
+  
+  public static String defaultBindingName( ) {
+    return DEFAULT_BINDING_NAME;
+  }
+  
+  public static String defaultBindingNamespace( ) {
+    return DEFAULT_BINDING_NAMESPACE;
   }
   
 }

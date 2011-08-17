@@ -166,8 +166,8 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @PrePersist
   @PreUpdate
   private void prePersist( ) {
-    if ( this.getRuntimeState( ) == null ) {
-      this.setRuntimeState( State.PENDING );
+    if ( this.getState( ) == null ) {
+      this.setState( State.PENDING );
     }
     
   }

@@ -140,10 +140,10 @@ public class StorageUtil {
             size = Integer.parseInt( vol.getSize( ) );
             actualDeviceName = vol.getActualDeviceName( );
           } else {
-            v.setRuntimeState( State.ANNIHILATED );
+            v.setState( State.ANNIHILATED );
           }
           if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
-            v.setRuntimeState( State.BUSY );
+            v.setState( State.BUSY );
           } else if( status != null ) {
             v.setMappedState( status );
           }
@@ -158,7 +158,7 @@ public class StorageUtil {
             aVolume.setStatus( v.mapState( ) );
             aVolume.getAttachmentSet().add( attachedVolumes.get( aVolume.getVolumeId() ) );
           }
-          if ( "invalid".equals( v.getRemoteDevice( ) ) && !State.FAIL.equals( v.getRuntimeState( ) ) ) {
+          if ( "invalid".equals( v.getRemoteDevice( ) ) && !State.FAIL.equals( v.getState( ) ) ) {
             aVolume.setStatus( "creating" );
           }
           reply.add( aVolume );

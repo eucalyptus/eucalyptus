@@ -75,7 +75,7 @@ public class ImageWebBackend {
     } else {
       result.addField( "" );
     }
-    result.addField( image.getRuntimeState( ).toString( ) );
+    result.addField( image.getState( ).toString( ) );
     result.addField( image.getImageType( ).toString( ) );
     result.addField( image.getOwnerAccountNumber( ) );
     result.addField( image.getArchitecture( ).toString( ) );

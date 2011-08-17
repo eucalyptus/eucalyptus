@@ -197,7 +197,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       LOG.error( "Falling back to default (unvalidated) binding for: " + operationName + " with params=" + params );
       LOG.error( "Failed to build a valid message: " + e.getMessage( ), e );
       try {
-        BindingManager.getDefaultBinding( ).toOM( eucaMsg, BindingManager.DEFAULT_BINDING_NAMESPACE );
+        BindingManager.getDefaultBinding( ).toOM( eucaMsg, BindingManager.defaultBindingNamespace() );
       } catch ( RuntimeException ex ) {
         throw new BindingException( "Default binding failed to build a valid message: " + ex.getMessage( ), ex );
       }

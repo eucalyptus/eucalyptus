@@ -64,6 +64,7 @@
 
 package com.eucalyptus.cluster;
 
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -75,7 +76,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -97,7 +97,12 @@ import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import org.jibx.runtime.BindingDirectory;
+import org.jibx.runtime.IBindingFactory;
+import org.jibx.runtime.IMarshallingContext;
+import org.jibx.runtime.JiBXException;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.cloud.CloudMetadata.VirtualMachineInstance;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cluster.callback.BundleCallback;
@@ -108,7 +113,6 @@ import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.keys.KeyPairs;
@@ -118,10 +122,7 @@ import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.reporting.event.InstanceEvent;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.Logs;
-import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.vm.BundleTask;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.VmState;
@@ -178,59 +179,83 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   private final NetworkConfigType                     networkConfig       = new NetworkConfigType( );
   @Transient
   protected final AtomicMarkableReference<VmState>    runtimeState        = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
-  @PrePersist
-  @PreUpdate
-  private void storeState( ) {
-    super.setRuntimeState( this.runtimeState.getReference( ) );
-  }
-  @PostLoad
-  private void restoreState( ) {
-    super.setRuntimeState( this.runtimeState.getReference( ) );
-  }
-  
-  
   @Column( name = "metadata_vm_reservation_id" )
-  private final String                                reservationId;
+  private final String     reservationId;
   @Column( name = "metadata_vm_launch_index" )
-  private final Integer                               launchIndex;
+  private final Integer    launchIndex;
   @Column( name = "metadata_vm_instance_id" )
-  private final String                                instanceId;
+  private final String     instanceId;
   @Column( name = "metadata_vm_partition_name" )
-  private final String                                partitionName;
+  private final String     partitionName;
   @Lob
   @Column( name = "metadata_vm_user_data" )
-  private final byte[]                                userData;
+  private final byte[]     userData;
   @Column( name = "metadata_vm_launch_time" )
-  private final Date                                  launchTime;
+  private final Date       launchTime;
   @Column( name = "metadata_vm_password_data" )
-  private String                                      passwordData;
+  private String           passwordData;
   @Column( name = "metadata_vm_private_networking" )
-  private final Boolean                               privateNetwork;
+  private final Boolean    privateNetwork;
   @Column( name = "metadata_vm_block_bytes" )
-  private Long                                        blockBytes;
+  private Long             blockBytes;
   @Column( name = "metadata_vm_network_bytes" )
-  private Long                                        networkBytes;
+  private Long             networkBytes;
   @ManyToOne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final SshKeyPair                            sshKeyPair;
+  private final SshKeyPair sshKeyPair;
   @ManyToOne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final VmType                                vmType;
+  private final VmType     vmType;
   @Column( name = "metadata_vm_platform" )
-  private String                                      platform;
-  @Lob
+  private String           platform;
   @Column( name = "metadata_vm_vbr" )
-  private final VmTypeInfo                            vbr;
+  private String           vbrString;
+  @Transient
+  private VmTypeInfo       vbr;
+  
+  @PrePersist
+  @PreUpdate
+  private void serializeVbr( ) {
+    super.setState( this.runtimeState.getReference( ) );
+    final StringWriter sw = new StringWriter( );
+    if ( this.vbr != null ) {
+      try {
+        final IBindingFactory bindingFactory = BindingDirectory.getFactory( BindingManager.defaultBindingNamespace( ), this.vbr.getClass( ) );
+        final IMarshallingContext mctx = bindingFactory.createMarshallingContext( );
+        mctx.setIndent( 2 );
+        mctx.marshalDocument( this, "UTF-8", null, sw );
+        this.vbrString = sw.toString( );
+      } catch ( final JiBXException ex ) {
+        LOG.error( ex, ex );
+        this.vbrString = null;
+      }
+    } else {
+      this.vbrString = null;
+    }
+  }
+  
+  @PostLoad
+  private void deserializeVbr( ) {
+    this.runtimeState.set( this.getState( ), false );
+    if ( this.vbrString != null ) {
+      try {
+        this.vbr = ( VmTypeInfo ) BindingManager.getDefaultBinding( ).fromOM( this.vbrString );
+      } catch ( Exception ex ) {
+        this.vbr = null;
+      }
+    }
+  }
+  
   @ManyToMany( cascade = { CascadeType.PERSIST, CascadeType.MERGE } )
   @JoinTable( name = "metadata_metadata_vm_has_network_groups", joinColumns = { @JoinColumn( name = "metadata_vm_id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_group_id" ) } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final Set<NetworkGroup>                     networkGroups       = Sets.newHashSet( );
+  private final Set<NetworkGroup>                     networkGroups     = Sets.newHashSet( );
   @ManyToOne( cascade = { CascadeType.PERSIST, CascadeType.MERGE } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex                         networkIndex;
   @Transient
   //TODO:GRZE:NOW
-  private final ConcurrentMap<String, AttachedVolume> persistentVolumes   = new ConcurrentSkipListMap<String, AttachedVolume>( );
+  private final ConcurrentMap<String, AttachedVolume> persistentVolumes = new ConcurrentSkipListMap<String, AttachedVolume>( );
   
   public VmInstance( final UserFullName owner,
                      final String instanceId, final String instanceUuid,
@@ -261,7 +286,9 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     this.partitionName = p;
     this.userData = userData;
     this.platform = platform;
-    this.sshKeyPair = KeyPairs.noKey( ).equals( sshKeyPair ) || sshKeyPair == null ? null : sshKeyPair;
+    this.sshKeyPair = KeyPairs.noKey( ).equals( sshKeyPair ) || ( sshKeyPair == null )
+      ? null
+      : sshKeyPair;
     this.vmType = vmType;
     this.networkConfig.setMacAddress( "d0:0d:" + VmInstances.asMacAddress( this.instanceId ) );
     this.networkConfig.setIpAddress( DEFAULT_IP );
@@ -318,7 +345,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   
   public void updateNetworkIndex( final Long newIndex ) {
     if ( ( this.getNetworkConfig( ).getNetworkIndex( ) > 0 ) && ( newIndex > 0 )
-         && ( VmState.RUNNING.equals( this.getRuntimeState( ) ) || VmState.PENDING.equals( this.getRuntimeState( ) ) ) ) {
+         && ( VmState.RUNNING.equals( this.getState( ) ) || VmState.PENDING.equals( this.getState( ) ) ) ) {
       this.getNetworkConfig( ).setNetworkIndex( newIndex );
     }
   }
@@ -351,23 +378,23 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   }
   
   public boolean clearPending( ) {
-    if ( this.runtimeState.isMarked( ) && ( this.getRuntimeState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
-      this.runtimeState.set( this.getRuntimeState( ), false );
+    if ( this.runtimeState.isMarked( ) && ( this.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
+      this.runtimeState.set( this.getState( ), false );
       VmInstances.cleanUp( this );
       return true;
     } else {
-      this.runtimeState.set( this.getRuntimeState( ), false );
+      this.runtimeState.set( this.getState( ), false );
       return false;
     }
   }
   
   @Override
-  public VmState getRuntimeState( ) {
+  public VmState getState( ) {
     return this.runtimeState.getReference( );
   }
   
   @Override
-  public void setRuntimeState( final VmState state ) {
+  public void setState( final VmState state ) {
     this.setState( state, Reason.NORMAL );
   }
   
@@ -408,21 +435,21 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
       }
     } else if ( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) {
       VmInstances.deregister( this.getName( ) );
-    } else if ( !this.getRuntimeState( ).equals( newState ) ) {
+    } else if ( !this.getState( ).equals( newState ) ) {
       if ( Reason.APPEND.equals( reason ) ) {
         reason = this.reason;
       }
       this.addReasonDetail( extra );
-      LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getRuntimeState( ), newState ) );
+      LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getState( ), newState ) );
       this.reason = reason;
-      if ( this.runtimeState.isMarked( ) && VmState.PENDING.equals( this.getRuntimeState( ) ) ) {
+      if ( this.runtimeState.isMarked( ) && VmState.PENDING.equals( this.getState( ) ) ) {
         if ( VmState.SHUTTING_DOWN.equals( newState ) || VmState.PENDING.equals( newState ) ) {
           this.runtimeState.set( newState, true );
         } else {
           this.runtimeState.set( newState, false );
         }
-      } else if ( this.runtimeState.isMarked( ) && VmState.SHUTTING_DOWN.equals( this.getRuntimeState( ) ) ) {
-        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getRuntimeState( ) );
+      } else if ( this.runtimeState.isMarked( ) && VmState.SHUTTING_DOWN.equals( this.getState( ) ) ) {
+        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
       } else if ( !this.runtimeState.isMarked( ) ) {
         if ( ( oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) && ( newState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
           this.runtimeState.set( newState, false );
@@ -444,9 +471,10 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
         }
         this.store( );
       } else {
-        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getRuntimeState( ) );
+        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
       }
-      if ( !this.getRuntimeState( ).equals( oldState ) ) {
+      super.setState( this.runtimeState.getReference( ) );
+      if ( !this.getState( ).equals( oldState ) ) {
         EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.getOwner( ), this.runtimeState.getReference( ).name( ), this.launchTime );
       }
     }
@@ -460,11 +488,11 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     } catch ( final EventFailedException ex ) {
       LOG.error( ex, ex );
     }
-    EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+    final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
     try {
       db.merge( this );
       db.commit( );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       db.rollback( );
       LOG.debug( ex );
     }
@@ -1053,6 +1081,11 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   
   public static VmInstance namedTerminated( final UserFullName userFullName, final String instanceId ) {
     return new VmInstance( userFullName, instanceId ) {
+      /**
+       * 
+       */
+      private static final long serialVersionUID = 1L;
+      
       {
         this.runtimeState.set( VmState.TERMINATED, false );
       }
@@ -1078,7 +1111,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     private String   message;
     private Object[] args;
     
-    Reason( String message, Object... args ) {
+    Reason( final String message, final Object... args ) {
       this.message = message;
       this.args = args;
     }

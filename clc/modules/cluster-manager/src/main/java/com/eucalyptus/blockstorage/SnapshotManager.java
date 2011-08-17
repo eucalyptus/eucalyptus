@@ -160,7 +160,7 @@ public class SnapshotManager {
         
         @Override
         public boolean apply( Snapshot snap ) {
-          if ( !State.EXTANT.equals( snap.getRuntimeState( ) ) ) {
+          if ( !State.EXTANT.equals( snap.getState( ) ) ) {
             return false;
           } else if ( !Types.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, request.getSnapshotId( ), snap.getOwner( ) ) ) {
             throw Exceptions.undeclared( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ),

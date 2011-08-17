@@ -93,7 +93,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   private static Logger        LOG                     = Logger.getLogger( RestfulMarshallingHandler.class );
   private String               namespace;
   private final String         namespacePattern;
-  private String               defaultBindingNamespace = BindingManager.DEFAULT_BINDING_NAMESPACE;
+  private String               defaultBindingNamespace = BindingManager.defaultBindingNamespace();
   private Binding              defaultBinding          = BindingManager.getDefaultBinding( );
   private Binding              binding;
   
@@ -118,7 +118,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       if ( bindingVersion.matches( "\\d\\d\\d\\d-\\d\\d-\\d\\d" ) ) {
         this.setNamespaceVersion( bindingVersion );
       } else {
-        this.setNamespace( BindingManager.DEFAULT_BINDING_NAME );
+        this.setNamespace( BindingManager.defaultBindingName() );
       }
       try {
         BaseMessage msg = ( BaseMessage ) this.bind( httpRequest );

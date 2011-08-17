@@ -443,9 +443,9 @@ public class ImageManager {
     if ( !Types.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, request.getInstanceId( ), vm.getOwner( ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to create an image from instance " + request.getInstanceId( ) + " as " + ctx.getUser( ).getName( ) );
     }
-    if ( !VmState.RUNNING.equals( vm.getRuntimeState( ) ) && !VmState.STOPPED.equals( vm.getRuntimeState( ) ) ) {
+    if ( !VmState.RUNNING.equals( vm.getState( ) ) && !VmState.STOPPED.equals( vm.getState( ) ) ) {
       throw new EucalyptusCloudException( "Cannot create an image from an instance which is not in either the 'running' or 'stopped' state: "
-                                          + vm.getInstanceId( ) + " is in state " + vm.getRuntimeState( ).getName( ) );
+                                          + vm.getInstanceId( ) + " is in state " + vm.getState( ).getName( ) );
     }
 //    if ( !"ebs".equals( vm.getVmTypeInfo( ).lookupRoot( ).getType( ) ) && !ctx.hasAdministrativePrivileges( ) ) {
 //      throw new EucalyptusCloudException( "Cannot create an image from an instance which is not booted from a volume: " + vm.getInstanceId( ) + " is in state "

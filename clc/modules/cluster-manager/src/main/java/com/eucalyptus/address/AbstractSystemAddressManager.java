@@ -101,7 +101,7 @@ public abstract class AbstractSystemAddressManager {
         if ( addr != null && vm != null ) {
           Helper.ensureAllocated( addr, vm );
           cluster.getState( ).clearOrphan( addrInfo );
-        } else if ( addr != null && vm != null && vm.getRuntimeState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
+        } else if ( addr != null && vm != null && vm.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
           cluster.getState( ).handleOrphan( addrInfo );
         } else if ( addr != null && vm == null ) {
           cluster.getState( ).handleOrphan( addrInfo );
@@ -135,7 +135,7 @@ public abstract class AbstractSystemAddressManager {
       try {
         if ( !address.isPending( ) ) {
           for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
-            if ( addrInfo.getInstanceIp( ).equals( vm.getPrivateAddress( ) ) && VmState.RUNNING.equals( vm.getRuntimeState( ) ) ) {
+            if ( addrInfo.getInstanceIp( ).equals( vm.getPrivateAddress( ) ) && VmState.RUNNING.equals( vm.getState( ) ) ) {
               LOG.warn( "Out of band address state change: " + LogUtil.dumpObject( addrInfo ) + " address=" + address + " vm=" + vm );
               if ( !address.isAllocated( ) ) {
                 address.pendingAssignment( ).assign( vm ).clearPending( );
@@ -173,9 +173,9 @@ public abstract class AbstractSystemAddressManager {
       VmInstance vm = null;
       try {
         vm = VmInstances.getInstance( ).lookupByInstanceIp( privateIp );
-        LOG.trace( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getRuntimeState( ) + " " + publicIp );
+        LOG.trace( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
         if ( publicIp.equals( vm.getPublicAddress( ) ) ) {
-          LOG.trace( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getRuntimeState( ) + " " + publicIp );
+          LOG.trace( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
           return vm;
         }
       } catch ( NoSuchElementException e ) {}
@@ -212,8 +212,8 @@ public abstract class AbstractSystemAddressManager {
       if ( vmCount > 1 ) {
         String vmList = "";
         for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-          if ( addrInfo.getAddress( ).equals( v.getPublicAddress( ) ) && ( VmState.PENDING.equals( v.getRuntimeState( ) ) || VmState.RUNNING.equals( v.getRuntimeState( ) ) ) ) {
-            vmList += " " + v.getInstanceId( ) + "(" + v.getRuntimeState( ) + ")";
+          if ( addrInfo.getAddress( ).equals( v.getPublicAddress( ) ) && ( VmState.PENDING.equals( v.getState( ) ) || VmState.RUNNING.equals( v.getState( ) ) ) ) {
+            vmList += " " + v.getInstanceId( ) + "(" + v.getState( ) + ")";
           }
         }
         LOG.error( "Found " + vmCount + " vms with the same address: " + addrInfo + " -> " + vmList );

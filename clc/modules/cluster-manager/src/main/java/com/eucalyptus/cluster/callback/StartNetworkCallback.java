@@ -111,7 +111,7 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
         
         @Override
         public void fire( NetworkGroup input ) {
-          input.setRuntimeState( NetworkGroup.State.ACTIVE );
+          input.setState( NetworkGroup.State.ACTIVE );
         }
       } );
     } catch ( Throwable e ) {

@@ -146,7 +146,7 @@ public class VmInstances {
   
   public VmInstance lookupByInstanceIp( String ip ) throws NoSuchElementException {
     for ( VmInstance vm : this.listValues( ) ) {
-      if ( ip.equals( vm.getPrivateAddress( ) ) && ( VmState.PENDING.equals( vm.getRuntimeState( ) ) || VmState.RUNNING.equals( vm.getRuntimeState( ) ) ) ) {
+      if ( ip.equals( vm.getPrivateAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
         return vm;
       }
     }
@@ -156,7 +156,7 @@ public class VmInstances {
   public int countByPublicIp( String ip ) throws NoSuchElementException {
     int count = 0;
     for ( VmInstance vm : this.listValues( ) ) {
-      if ( ip.equals( vm.getPublicAddress( ) ) && ( VmState.PENDING.equals( vm.getRuntimeState( ) ) || VmState.RUNNING.equals( vm.getRuntimeState( ) ) ) ) {
+      if ( ip.equals( vm.getPublicAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
         count++;
       }
     }
@@ -165,7 +165,7 @@ public class VmInstances {
   
   public VmInstance lookupByPublicIp( String ip ) throws NoSuchElementException {
     for ( VmInstance vm : this.listValues( ) ) {
-      if ( ip.equals( vm.getPublicAddress( ) ) && ( VmState.PENDING.equals( vm.getRuntimeState( ) ) || VmState.RUNNING.equals( vm.getRuntimeState( ) ) ) ) {
+      if ( ip.equals( vm.getPublicAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
         return vm;
       }
     }
@@ -304,15 +304,15 @@ public class VmInstances {
   
   public static void flushBuried( ) {
     for ( VmInstance vm : VmInstances.getInstance( ).listDisabledValues( ) ) {
-      if ( vm.getSplitTime( ) > SystemState.SHUT_DOWN_TIME && !VmState.BURIED.equals( vm.getRuntimeState( ) ) ) {
+      if ( vm.getSplitTime( ) > SystemState.SHUT_DOWN_TIME && !VmState.BURIED.equals( vm.getState( ) ) ) {
         vm.setState( VmState.BURIED, Reason.BURIED );
-      } else if ( vm.getSplitTime( ) > SystemState.BURY_TIME && VmState.BURIED.equals( vm.getRuntimeState( ) ) ) {
+      } else if ( vm.getSplitTime( ) > SystemState.BURY_TIME && VmState.BURIED.equals( vm.getState( ) ) ) {
         VmInstances.getInstance( ).deregister( vm.getName( ) );
       }
     }
     if ( ( float ) Runtime.getRuntime( ).freeMemory( ) / ( float ) Runtime.getRuntime( ).maxMemory( ) < 0.10f ) {
       for ( VmInstance vm : VmInstances.getInstance( ).listDisabledValues( ) ) {
-        if ( VmState.BURIED.equals( vm.getRuntimeState( ) ) || vm.getSplitTime( ) > SystemState.BURY_TIME ) {
+        if ( VmState.BURIED.equals( vm.getState( ) ) || vm.getSplitTime( ) > SystemState.BURY_TIME ) {
           VmInstances.getInstance( ).deregister( vm.getInstanceId( ) );
           LOG.info( EventRecord.here( VmInstances.class, EventType.FLUSH_CACHE, LogUtil.dumpObject( vm ) ) );
         }
@@ -329,7 +329,7 @@ public class VmInstances {
     EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
     try {
       VmInstance vm = db.getUnique( VmInstance.named( null, name ) );
-      if ( vm == null || VmState.TERMINATED.equals( vm.getRuntimeState( ) ) ) {
+      if ( vm == null || VmState.TERMINATED.equals( vm.getState( ) ) ) {
         throw new NoSuchElementException( "Failed to lookup vm instance: " + name );
       }
       return vm;
@@ -387,7 +387,7 @@ public class VmInstances {
         @Override
         public boolean apply( VmInstance input ) {
           input.getNetworkRulesGroups( ).toArray( );//TODO:GRZE:figure out how to trigger the lazy load plox.
-          return !VmState.TERMINATED.equals( input.getRuntimeState( ) );
+          return !VmState.TERMINATED.equals( input.getState( ) );
         }
       } );
       db.commit( );
@@ -421,10 +421,10 @@ public class VmInstances {
   public static void disable( VmInstance that ) throws NoSuchElementException {
     EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
     try {
-      if ( VmState.TERMINATED.equals( that.getRuntimeState( ) ) ) {
+      if ( VmState.TERMINATED.equals( that.getState( ) ) ) {
         db.mergeAndCommit( that );
       } else {
-        throw new NoSuchElementException( "Instance state is invalid: " + that.getRuntimeState( ) );
+        throw new NoSuchElementException( "Instance state is invalid: " + that.getState( ) );
       }
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
