@@ -69,8 +69,8 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import com.eucalyptus.cloud.Image;
-import com.eucalyptus.cloud.Image.StaticDiskImage;
+import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
@@ -94,7 +94,7 @@ public class VmTypes {
     }
     VmTypeInfo vmTypeInfo = null;
     if ( img instanceof StaticDiskImage ) {
-      if( Image.Platform.windows.equals( img.getPlatform( ) ) ) {
+      if( ImageMetadata.Platform.windows.equals( img.getPlatform( ) ) ) {
         vmTypeInfo  = VmTypes.InstanceStoreWindowsVmTypeInfoMapper.INSTANCE.apply( vmType );
         vmTypeInfo.setEphemeral( 0, "sdb", vmType.getDisk( )*1024l*1024l*1024l - imgSize /**bytes**/ );
       } else {

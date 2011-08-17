@@ -70,7 +70,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.ImageMetadata;
 
 @Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
@@ -83,18 +83,18 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
   private String ramdiskId;
   
   public MachineImageInfo( ) {
-    super( Image.Type.machine );
+    super( ImageMetadata.Type.machine );
   }
 
   public MachineImageInfo( final String imageId ) {
-    super( Image.Type.machine, imageId );
+    super( ImageMetadata.Type.machine, imageId );
   }
 
   public MachineImageInfo( final UserFullName userFullName, final String imageId, 
                            final String imageName, final String imageDescription, final Long imageSizeBytes, final Architecture arch, final Platform platform, 
                            final String imageLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType,
                            final String kernelId, final String ramdiskId ) {
-    super( userFullName, imageId, Image.Type.machine, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum, imageChecksumType );
+    super( userFullName, imageId, ImageMetadata.Type.machine, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum, imageChecksumType );
     this.kernelId = kernelId;
     this.ramdiskId = ramdiskId;
   }

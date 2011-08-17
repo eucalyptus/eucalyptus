@@ -123,6 +123,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.vm.BundleTask;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.VmState;
@@ -300,8 +301,8 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     this.store( );
   }
   
-  protected VmInstance( final UserFullName userFullName, final String instanceId2 ) {
-    super( userFullName, instanceId2 );
+  protected VmInstance( final OwnerFullName ownerFullName, final String instanceId2 ) {
+    super( ownerFullName, instanceId2 );
     this.instanceId = instanceId2;
     this.launchTime = null;
     this.launchIndex = null;
@@ -1075,17 +1076,12 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     return this.sshKeyPair;
   }
   
-  public static VmInstance named( final UserFullName userFullName, final String instanceId ) {
-    return new VmInstance( userFullName, instanceId );
+  public static VmInstance named( final OwnerFullName ownerFullName, final String instanceId ) {
+    return new VmInstance( ownerFullName, instanceId );
   }
   
-  public static VmInstance namedTerminated( final UserFullName userFullName, final String instanceId ) {
-    return new VmInstance( userFullName, instanceId ) {
-      /**
-       * 
-       */
-      private static final long serialVersionUID = 1L;
-      
+  public static VmInstance namedTerminated( final OwnerFullName ownerFullName, final String instanceId ) {
+    return new VmInstance( ownerFullName, instanceId ) {
       {
         this.runtimeState.set( VmState.TERMINATED, false );
       }

@@ -71,7 +71,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -95,7 +95,7 @@ import edu.ucsb.eucalyptus.util.XMLParser;
 public class WalrusUtil {
   private static Logger LOG = Logger.getLogger( WalrusUtil.class );
   
-  public static void triggerCaching( Image.StaticDiskImage imgInfo ) {
+  public static void triggerCaching( ImageMetadata.StaticDiskImage imgInfo ) {
     String[] parts = imgInfo.getManifestLocation( ).split( "/" );
     CacheImageType cache = new CacheImageType( ).regarding( Contexts.lookup( ).getRequest( ) );
     cache.setBucket( parts[0] );
@@ -103,7 +103,7 @@ public class WalrusUtil {
     ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) ).dispatch( cache );
   }
   
-  public static void invalidate( Image.StaticDiskImage imgInfo ) {
+  public static void invalidate( ImageMetadata.StaticDiskImage imgInfo ) {
     String[] parts = imgInfo.getManifestLocation( ).split( "/" );
     try {
       ServiceDispatcher.lookupSingle( Components.lookup( Walrus.class ) ).dispatch( new FlushCachedImageType( parts[0], parts[1] ) );

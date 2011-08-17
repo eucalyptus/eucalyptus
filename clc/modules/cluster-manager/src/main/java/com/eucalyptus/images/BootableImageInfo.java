@@ -63,7 +63,7 @@
 
 package com.eucalyptus.images;
 
-import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.ImageMetadata;
 
 public interface BootableImageInfo {
  
@@ -75,7 +75,7 @@ public interface BootableImageInfo {
   
   public abstract boolean hasRamdisk( );
 
-  public abstract Image.Platform getPlatform( );
+  public abstract ImageMetadata.Platform getPlatform( );
 
   public abstract Long getImageSizeBytes( );
 

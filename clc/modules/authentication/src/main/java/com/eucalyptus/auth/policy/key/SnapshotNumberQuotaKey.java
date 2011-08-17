@@ -2,15 +2,15 @@ package com.eucalyptus.auth.policy.key;
 
 import net.sf.json.JSONException;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.euare.EuareService;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
+import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.util.Types;
 
 /**
- * GRZE:NOTE: this class is a {@link EuareService} specific type and needs to move as well as not
+ * GRZE:NOTE: this class is a {@link Euare} specific type and needs to move as well as not
  * referring to private implementation types. {@link SnapshotMetadata} should be considered a public
  * type while {@code Snapshot} is implementation specific and will change as needed by the
  * implementation.

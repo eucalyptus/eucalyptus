@@ -84,8 +84,8 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.cloud.Image;
-import com.eucalyptus.cloud.Image.DeviceMappingType;
+import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.cloud.ImageMetadata.DeviceMappingType;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -187,11 +187,11 @@ public class ImageManifests {
   }
   public static class ImageManifest {
     private final String                    imageLocation;
-    private final Image.Architecture        architecture;
+    private final ImageMetadata.Architecture        architecture;
     private final String                    kernelId;
     private final String                    ramdiskId;
-    private final Image.Type                imageType;
-    private final Image.Platform            platform;
+    private final ImageMetadata.Type                imageType;
+    private final ImageMetadata.Platform            platform;
     private final String                    signature;
     private final String                    checksum;
     private final String                    checksumType;
@@ -255,10 +255,10 @@ public class ImageManifests {
         : null;
       this.encryptedKey = this.xpathHelper.apply( "//ec2_encrypted_key" );
       this.encryptedIV = this.xpathHelper.apply( "//ec2_encrypted_iv" );
-      Predicate<Image.Type> checkIdType = new Predicate<Image.Type>( ) {
+      Predicate<ImageMetadata.Type> checkIdType = new Predicate<ImageMetadata.Type>( ) {
         
         @Override
-        public boolean apply( Image.Type input ) {
+        public boolean apply( ImageMetadata.Type input ) {
           String value = ImageManifest.this.xpathHelper.apply( input.getManifestPath( ) );
           if ( "yes".equals( value ) || "true".equals( value ) || manifestName.startsWith( input.getNamePrefix( ) ) ) {
             return true;
@@ -267,7 +267,7 @@ public class ImageManifests {
           }
         }
       };
-      String typeInManifest = this.xpathHelper.apply( Image.TYPE_MANIFEST_XPATH );
+      String typeInManifest = this.xpathHelper.apply( ImageMetadata.TYPE_MANIFEST_XPATH );
       
       this.size = ( ( temp = this.xpathHelper.apply( "/manifest/image/size/text()" ) ) != null )
         ? Long.parseLong( temp )
@@ -277,7 +277,7 @@ public class ImageManifests {
         : -1l;
       
         String arch = this.xpathHelper.apply( "/manifest/machine_configuration/architecture/text()" );
-      this.architecture = Image.Architecture.valueOf( ( ( arch == null )
+      this.architecture = ImageMetadata.Architecture.valueOf( ( ( arch == null )
           ? "i386"
             : arch ) );
       try {
@@ -312,39 +312,39 @@ public class ImageManifests {
         LOG.error( ex , ex );
       }
 
-      if ( ( checkIdType.apply( Image.Type.kernel ) || checkIdType.apply( Image.Type.ramdisk ) ) && !ctx.hasAdministrativePrivileges( ) ) {
+      if ( ( checkIdType.apply( ImageMetadata.Type.kernel ) || checkIdType.apply( ImageMetadata.Type.ramdisk ) ) && !ctx.hasAdministrativePrivileges( ) ) {
         throw new EucalyptusCloudException( "Only administrators can register kernel images." );
       } else {
-        if ( checkIdType.apply( Image.Type.kernel ) ) {
-          this.imageType = Image.Type.kernel;
-          this.platform = Image.Platform.linux;
+        if ( checkIdType.apply( ImageMetadata.Type.kernel ) ) {
+          this.imageType = ImageMetadata.Type.kernel;
+          this.platform = ImageMetadata.Platform.linux;
           this.kernelId = null;
           this.ramdiskId = null;
-        } else if ( checkIdType.apply( Image.Type.ramdisk ) ) {
-          this.imageType = Image.Type.ramdisk;
-          this.platform = Image.Platform.linux;
+        } else if ( checkIdType.apply( ImageMetadata.Type.ramdisk ) ) {
+          this.imageType = ImageMetadata.Type.ramdisk;
+          this.platform = ImageMetadata.Platform.linux;
           this.kernelId = null;
           this.ramdiskId = null;
         } else {
-          String kId = this.xpathHelper.apply( Image.Type.kernel.getManifestPath( ) );
-          String rId = this.xpathHelper.apply( Image.Type.ramdisk.getManifestPath( ) );
-          this.imageType = Image.Type.machine;
-          if ( !manifestName.startsWith( Image.Platform.windows.toString( ) ) ) {
-            this.platform = Image.Platform.linux;
-            if ( kId != null && kId.startsWith( Image.Type.kernel.getTypePrefix( ) ) ) {
+          String kId = this.xpathHelper.apply( ImageMetadata.Type.kernel.getManifestPath( ) );
+          String rId = this.xpathHelper.apply( ImageMetadata.Type.ramdisk.getManifestPath( ) );
+          this.imageType = ImageMetadata.Type.machine;
+          if ( !manifestName.startsWith( ImageMetadata.Platform.windows.toString( ) ) ) {
+            this.platform = ImageMetadata.Platform.linux;
+            if ( kId != null && kId.startsWith( ImageMetadata.Type.kernel.getTypePrefix( ) ) ) {
               ImageManifests.checkPrivileges( this.kernelId );
               this.kernelId = kId;
             } else {
               this.kernelId = null;
             }
-            if ( kId != null && kId.startsWith( Image.Type.kernel.getTypePrefix( ) ) ) {
+            if ( kId != null && kId.startsWith( ImageMetadata.Type.kernel.getTypePrefix( ) ) ) {
               ImageManifests.checkPrivileges( this.ramdiskId );
               this.ramdiskId = rId;
             } else {
               this.ramdiskId = null;
             }
           } else {
-            this.platform = Image.Platform.windows;
+            this.platform = ImageMetadata.Platform.windows;
             this.kernelId = null;
             this.ramdiskId = null;
           }
@@ -409,11 +409,11 @@ public class ImageManifests {
       return this.signature;
     }
     
-    public Image.Platform getPlatform( ) {
+    public ImageMetadata.Platform getPlatform( ) {
       return this.platform;
     }
     
-    public Image.Architecture getArchitecture( ) {
+    public ImageMetadata.Architecture getArchitecture( ) {
       return this.architecture;
     }
     
@@ -425,7 +425,7 @@ public class ImageManifests {
       return this.ramdiskId;
     }
     
-    public Image.Type getImageType( ) {
+    public ImageMetadata.Type getImageType( ) {
       return this.imageType;
     }
     

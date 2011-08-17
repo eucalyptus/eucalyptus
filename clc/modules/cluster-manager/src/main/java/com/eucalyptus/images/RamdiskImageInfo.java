@@ -69,7 +69,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.ImageMetadata;
 
 @Entity
 @javax.persistence.Entity
@@ -79,18 +79,18 @@ import com.eucalyptus.cloud.Image;
 public class RamdiskImageInfo extends PutGetImageInfo {
   
   public RamdiskImageInfo( ) {
-    super( Image.Type.ramdisk );
+    super( ImageMetadata.Type.ramdisk );
   }
   
   public RamdiskImageInfo( final String imageId ) {
-    super( Image.Type.ramdisk, imageId );
+    super( ImageMetadata.Type.ramdisk, imageId );
   }
   
   public RamdiskImageInfo( final UserFullName userFullName, final String imageId, 
                            final String imageName, final String imageDescription, final Long imageSizeBytes,
                            final Architecture arch, final Platform platform,
                            final String imageLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType ) {
-    super( userFullName, imageId, Image.Type.ramdisk, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum, imageChecksumType );
+    super( userFullName, imageId, ImageMetadata.Type.ramdisk, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum, imageChecksumType );
   }
   
   @Override

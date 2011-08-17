@@ -104,13 +104,13 @@ public class Volumes {
     @Override
     public Long apply( OwnerFullName input ) {
       EntityWrapper<Volume> db = Entities.get( Volume.class );
-      int i = db.createCriteria( Volume.class ).add( Example.create( Snapshots.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( ).size( );
+      int i = db.createCriteria( Volume.class ).add( Example.create( Volume.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( ).size( );
       db.rollback( );
       return ( long ) i;
     }
     
   }
-
+  
   @ResourceUsageMetricFunction( VolumeMetadata.class )
   public enum MeasureVolumes implements Function<OwnerFullName, Long> {
     INSTANCE;
@@ -119,7 +119,7 @@ public class Volumes {
     @Override
     public Long apply( OwnerFullName input ) {
       EntityWrapper<Volume> db = Entities.get( Volume.class );
-      List<Volume> vols = db.createCriteria( Volume.class ).add( Example.create( Snapshots.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( );
+      List<Volume> vols = db.createCriteria( Volume.class ).add( Example.create( Volume.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( );
       Long size = 0l;
       for ( Volume v : vols ) {
         size += v.getSize( );

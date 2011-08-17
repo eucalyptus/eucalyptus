@@ -70,7 +70,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.ImageMetadata;
 
 @Entity
 @javax.persistence.Entity
@@ -88,18 +88,18 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
   private String  ramdiskId;
   
   BlockStorageImageInfo( ) {
-    super( Image.Type.machine );
+    super( ImageMetadata.Type.machine );
   }
   
   BlockStorageImageInfo( String imageId ) {
-    super( Image.Type.machine , imageId );
+    super( ImageMetadata.Type.machine , imageId );
   }
   
   BlockStorageImageInfo( UserFullName userFullName, String imageId, String imageName, String imageDescription, Long imageSizeBytes,
-                         Image.Architecture arch, Image.Platform platform,
+                         ImageMetadata.Architecture arch, ImageMetadata.Platform platform,
                          String kernelId, String ramdiskId,
                          String snapshotId, Boolean deleteOnTerminate ) {
-    super( userFullName, imageId, Image.Type.machine, imageName, imageDescription, imageSizeBytes, arch, platform );
+    super( userFullName, imageId, ImageMetadata.Type.machine, imageName, imageDescription, imageSizeBytes, arch, platform );
     this.kernelId = kernelId;
     this.ramdiskId = ramdiskId;
     this.snapshotId = snapshotId;

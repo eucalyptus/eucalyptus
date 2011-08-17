@@ -69,9 +69,6 @@ import java.security.MessageDigest;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Set;
-import java.util.concurrent.ConcurrentNavigableMap;
-import java.util.concurrent.ExecutionException;
 import java.util.zip.Adler32;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
@@ -82,6 +79,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.cloud.CloudMetadata.VirtualMachineInstance;
 import com.eucalyptus.cluster.VmInstance.Reason;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Dispatcher;
@@ -93,25 +91,24 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.TransactionException;
-import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.ResourceQuantityMetricFunction;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.VmState;
 import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
-import com.google.gwt.thirdparty.guava.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
@@ -129,14 +126,27 @@ public class VmInstances {
     return singleton;
   }
   
-  public static String getId( Long rsvId, int launchIndex ) {
+  @ResourceQuantityMetricFunction( VirtualMachineInstance.class )
+  public enum CountVmInstances implements Function<OwnerFullName, Long> {
+    INSTANCE;
+    
+    @Override
+    public Long apply( final OwnerFullName input ) {
+      final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+      final int i = db.createCriteria( VmInstance.class ).add( Example.create( VmInstance.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( ).size( );
+      db.rollback( );
+      return ( long ) i;
+    }
+  }
+  
+  public static String getId( final Long rsvId, final int launchIndex ) {
     String vmId = null;
     do {
-      MessageDigest digest = Digest.MD5.get( );
+      final MessageDigest digest = Digest.MD5.get( );
       digest.reset( );
       digest.update( Long.toString( rsvId + launchIndex + System.currentTimeMillis( ) ).getBytes( ) );
       
-      Adler32 hash = new Adler32( );
+      final Adler32 hash = new Adler32( );
       hash.reset( );
       hash.update( digest.digest( ) );
       vmId = String.format( "i-%08X", hash.getValue( ) );
@@ -144,8 +154,8 @@ public class VmInstances {
     return vmId;
   }
   
-  public VmInstance lookupByInstanceIp( String ip ) throws NoSuchElementException {
-    for ( VmInstance vm : this.listValues( ) ) {
+  public VmInstance lookupByInstanceIp( final String ip ) throws NoSuchElementException {
+    for ( final VmInstance vm : this.listValues( ) ) {
       if ( ip.equals( vm.getPrivateAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
         return vm;
       }
@@ -153,9 +163,9 @@ public class VmInstances {
     throw new NoSuchElementException( "Can't find registered object with ip:" + ip + " in " + this.getClass( ).getSimpleName( ) );
   }
   
-  public int countByPublicIp( String ip ) throws NoSuchElementException {
+  public int countByPublicIp( final String ip ) throws NoSuchElementException {
     int count = 0;
-    for ( VmInstance vm : this.listValues( ) ) {
+    for ( final VmInstance vm : this.listValues( ) ) {
       if ( ip.equals( vm.getPublicAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
         count++;
       }
@@ -163,8 +173,8 @@ public class VmInstances {
     return count;
   }
   
-  public VmInstance lookupByPublicIp( String ip ) throws NoSuchElementException {
-    for ( VmInstance vm : this.listValues( ) ) {
+  public VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
+    for ( final VmInstance vm : this.listValues( ) ) {
       if ( ip.equals( vm.getPublicAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
         return vm;
       }
@@ -172,15 +182,15 @@ public class VmInstances {
     throw new NoSuchElementException( "Can't find registered object with public ip:" + ip + " in " + this.getClass( ).getSimpleName( ) );
   }
   
-  public VmInstance lookupByBundleId( String bundleId ) throws NoSuchElementException {
-    for ( VmInstance vm : this.listValues( ) ) {
+  public VmInstance lookupByBundleId( final String bundleId ) throws NoSuchElementException {
+    for ( final VmInstance vm : this.listValues( ) ) {
       if ( vm.getBundleTask( ) == null ) {
         continue;
       } else if ( bundleId.equals( vm.getBundleTask( ).getBundleId( ) ) ) {
         return vm;
       }
     }
-    for ( VmInstance vm : this.listDisabledValues( ) ) {
+    for ( final VmInstance vm : this.listDisabledValues( ) ) {
       if ( vm.getBundleTask( ) == null ) {
         continue;
       } else if ( bundleId.equals( vm.getBundleTask( ).getBundleId( ) ) ) {
@@ -191,7 +201,8 @@ public class VmInstances {
   }
   
   public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final Long networkIndex, final String networkFqName, final Cluster cluster ) {
-    UnconditionalCallback cleanup = new UnconditionalCallback( ) {
+    final UnconditionalCallback cleanup = new UnconditionalCallback( ) {
+      @Override
       public void fire( ) {
         if ( address != null ) {
           try {
@@ -202,14 +213,14 @@ public class VmInstances {
               EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
               AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getPartition( ) );
             }
-          } catch ( IllegalStateException e ) {} catch ( Throwable e ) {
+          } catch ( final IllegalStateException e ) {} catch ( final Throwable e ) {
             LOG.debug( e, e );
           }
         }
         vm.updateNetworkIndex( -1l );
         try {
           if ( networkFqName != null ) {
-                                    //GRZE:NET
+                                          //GRZE:NET
 //            Network net = Networks.getInstance( ).lookup( networkFqName );
 //            if ( networkIndex > 0 && vm.getNetworkNames( ).size( ) > 0 ) {
 //              net.returnNetworkIndex( networkIndex );
@@ -222,42 +233,43 @@ public class VmInstances {
 //                AsyncRequests.newRequest( stopNet.newInstance( ) ).dispatch( c.getConfiguration( ) );
 //              }
 //            }
-                                  }
-                                } catch ( NoSuchElementException e1 ) {} catch ( Throwable e1 ) {
-                                  LOG.debug( e1, e1 );
-                                }
-                              }
+                                        }
+                                      } catch ( final NoSuchElementException e1 ) {} catch ( final Throwable e1 ) {
+                                        LOG.debug( e1, e1 );
+                                      }
+                                    }
     };
     return cleanup;
   }
   
   public static void cleanUp( final VmInstance vm ) {
     try {
-      String networkFqName = !vm.getNetworkRulesGroups( ).isEmpty( )
+      final String networkFqName = !vm.getNetworkRulesGroups( ).isEmpty( )
         ? vm.getOwner( ).getAccountNumber( ) + "-" + vm.getNetworkNames( ).first( )
         : null;
-      Cluster cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
-      Long networkIndex = vm.getNetworkIndex( );
+      final Cluster cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
+      final Long networkIndex = vm.getNetworkIndex( );
       VmInstances.cleanUpAttachedVolumes( vm );
       
       Address address = null;
-      Request<TerminateInstancesType, TerminateInstancesResponseType> req = AsyncRequests.newRequest( new TerminateCallback( vm.getInstanceId( ) ) );
+      final Request<TerminateInstancesType, TerminateInstancesResponseType> req = AsyncRequests.newRequest( new TerminateCallback( vm.getInstanceId( ) ) );
       if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
         try {
           address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
-        } catch ( NoSuchElementException e ) {} catch ( Throwable e1 ) {
+        } catch ( final NoSuchElementException e ) {} catch ( final Throwable e1 ) {
           LOG.debug( e1, e1 );
         }
       }
       req.then( VmInstances.getCleanUpCallback( address, vm, networkIndex, networkFqName, cluster ) );
       req.dispatch( cluster.getConfiguration( ) );
-    } catch ( Throwable e ) {
+    } catch ( final Throwable e ) {
       LOG.error( e, e );
     }
   }
   
   private static final Predicate<AttachedVolume> anyVolumePred = new Predicate<AttachedVolume>( ) {
-                                                                 public boolean apply( AttachedVolume arg0 ) {
+                                                                 @Override
+                                                                 public boolean apply( final AttachedVolume arg0 ) {
                                                                    return true;
                                                                  }
                                                                };
@@ -267,32 +279,32 @@ public class VmInstances {
       final Cluster cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
       vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
         @Override
-        public boolean apply( AttachedVolume arg0 ) {
+        public boolean apply( final AttachedVolume arg0 ) {
           try {
             final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vm.getPartition( ) );
             vm.removeVolumeAttachment( arg0.getVolumeId( ) );
-            Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
+            final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
             scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
             return true;
-          } catch ( Throwable e ) {
+          } catch ( final Throwable e ) {
             LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )
                        + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
             return false;
           }
         }
       } );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       LOG.error( "Failed to lookup Storage Controller configuration for: " + vm.getInstanceId( ) + " (placement=" + vm.getPartition( ) + ").  " );
     }
   }
   
-  public static VmInstance restrictedLookup( BaseMessage request, String instanceId ) throws EucalyptusCloudException {
-    VmInstance vm = VmInstances.getInstance( ).lookup( instanceId ); //TODO: test should throw error.
-    Context ctx = Contexts.lookup( );
+  public static VmInstance restrictedLookup( final BaseMessage request, final String instanceId ) throws EucalyptusCloudException {
+    final VmInstance vm = VmInstances.getInstance( ).lookup( instanceId ); //TODO: test should throw error.
+    final Context ctx = Contexts.lookup( );
     Account addrAccount = null;
     try {
       addrAccount = Accounts.lookupUserById( vm.getOwner( ).getUniqueId( ) ).getAccount( );
-    } catch ( AuthException e ) {
+    } catch ( final AuthException e ) {
       throw new EucalyptusCloudException( e );
     }
     if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, addrAccount, PolicySpec.requestToAction( request ),
@@ -303,16 +315,16 @@ public class VmInstances {
   }
   
   public static void flushBuried( ) {
-    for ( VmInstance vm : VmInstances.getInstance( ).listDisabledValues( ) ) {
-      if ( vm.getSplitTime( ) > SystemState.SHUT_DOWN_TIME && !VmState.BURIED.equals( vm.getState( ) ) ) {
+    for ( final VmInstance vm : VmInstances.getInstance( ).listDisabledValues( ) ) {
+      if ( ( vm.getSplitTime( ) > SystemState.SHUT_DOWN_TIME ) && !VmState.BURIED.equals( vm.getState( ) ) ) {
         vm.setState( VmState.BURIED, Reason.BURIED );
-      } else if ( vm.getSplitTime( ) > SystemState.BURY_TIME && VmState.BURIED.equals( vm.getState( ) ) ) {
+      } else if ( ( vm.getSplitTime( ) > SystemState.BURY_TIME ) && VmState.BURIED.equals( vm.getState( ) ) ) {
         VmInstances.getInstance( ).deregister( vm.getName( ) );
       }
     }
     if ( ( float ) Runtime.getRuntime( ).freeMemory( ) / ( float ) Runtime.getRuntime( ).maxMemory( ) < 0.10f ) {
-      for ( VmInstance vm : VmInstances.getInstance( ).listDisabledValues( ) ) {
-        if ( VmState.BURIED.equals( vm.getState( ) ) || vm.getSplitTime( ) > SystemState.BURY_TIME ) {
+      for ( final VmInstance vm : VmInstances.getInstance( ).listDisabledValues( ) ) {
+        if ( VmState.BURIED.equals( vm.getState( ) ) || ( vm.getSplitTime( ) > SystemState.BURY_TIME ) ) {
           VmInstances.getInstance( ).deregister( vm.getInstanceId( ) );
           LOG.info( EventRecord.here( VmInstances.class, EventType.FLUSH_CACHE, LogUtil.dumpObject( vm ) ) );
         }
@@ -325,50 +337,50 @@ public class VmInstances {
                  .format( "%s:%s:%s:%s", instanceId.substring( 2, 4 ), instanceId.substring( 4, 6 ), instanceId.substring( 6, 8 ), instanceId.substring( 8, 10 ) );
   }
   
-  public static VmInstance lookup( String name ) throws NoSuchElementException {
-    EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+  public static VmInstance lookup( final String name ) throws NoSuchElementException {
+    final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
     try {
-      VmInstance vm = db.getUnique( VmInstance.named( null, name ) );
-      if ( vm == null || VmState.TERMINATED.equals( vm.getState( ) ) ) {
+      final VmInstance vm = db.getUnique( VmInstance.named( null, name ) );
+      if ( ( vm == null ) || VmState.TERMINATED.equals( vm.getState( ) ) ) {
         throw new NoSuchElementException( "Failed to lookup vm instance: " + name );
       }
       return vm;
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       throw new NoSuchElementException( "Failed to lookup vm instance: " + name + " because of: " + ex.getMessage( ) );
     }
   }
   
-  public static void register( VmInstance obj ) {
-    EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+  public static void register( final VmInstance obj ) {
+    final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
     try {
       db.persist( obj );
       db.commit( );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       LOG.error( ex, ex );
       db.rollback( );
     }
   }
   
-  public static void deregister( String key ) {
-    EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+  public static void deregister( final String key ) {
+    final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
     try {
-      VmInstance vm = db.getUnique( VmInstance.named( null, key ) );
+      final VmInstance vm = db.getUnique( VmInstance.named( null, key ) );
       db.delete( vm );
       db.commit( );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       db.rollback( );
     }
   }
   
   public static List<VmInstance> listDisabledValues( ) {
-    EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+    final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
     try {
-      List<VmInstance> vms = db.query( VmInstance.namedTerminated( null, null ) );
+      final List<VmInstance> vms = db.query( VmInstance.namedTerminated( null, null ) );
       db.commit( );
       return vms;
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       db.rollback( );
       if ( ex.getCause( ) instanceof NoSuchElementException ) {
         throw ( NoSuchElementException ) ex.getCause( );
@@ -379,20 +391,20 @@ public class VmInstances {
   }
   
   public static List<VmInstance> listValues( ) {
-    EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+    final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
     try {
-      List<VmInstance> vms = db.query( VmInstance.named( null, null ) );
-      Collection<VmInstance> ret = Collections2.filter( vms, new Predicate<VmInstance>( ) {
+      final List<VmInstance> vms = db.query( VmInstance.named( null, null ) );
+      final Collection<VmInstance> ret = Collections2.filter( vms, new Predicate<VmInstance>( ) {
         
         @Override
-        public boolean apply( VmInstance input ) {
+        public boolean apply( final VmInstance input ) {
           input.getNetworkRulesGroups( ).toArray( );//TODO:GRZE:figure out how to trigger the lazy load plox.
           return !VmState.TERMINATED.equals( input.getState( ) );
         }
       } );
       db.commit( );
       return Lists.newArrayList( ret );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       db.rollback( );
       if ( ex.getCause( ) instanceof NoSuchElementException ) {
         throw ( NoSuchElementException ) ex.getCause( );
@@ -402,13 +414,13 @@ public class VmInstances {
     }
   }
   
-  public static VmInstance lookupDisabled( String name ) throws NoSuchElementException {
-    EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+  public static VmInstance lookupDisabled( final String name ) throws NoSuchElementException {
+    final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
     try {
-      VmInstance vm = db.getUnique( VmInstance.namedTerminated( null, name ) );
+      final VmInstance vm = db.getUnique( VmInstance.namedTerminated( null, name ) );
       db.commit( );
       return vm;
-    } catch ( EucalyptusCloudException ex ) {
+    } catch ( final EucalyptusCloudException ex ) {
       db.rollback( );
       if ( ex.getCause( ) instanceof NoSuchElementException ) {
         throw ( NoSuchElementException ) ex.getCause( );
@@ -418,26 +430,26 @@ public class VmInstances {
     }
   }
   
-  public static void disable( VmInstance that ) throws NoSuchElementException {
-    EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+  public static void disable( final VmInstance that ) throws NoSuchElementException {
+    final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
     try {
       if ( VmState.TERMINATED.equals( that.getState( ) ) ) {
         db.mergeAndCommit( that );
       } else {
         throw new NoSuchElementException( "Instance state is invalid: " + that.getState( ) );
       }
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       LOG.error( ex, ex );
     }
   }
   
-  public static boolean contains( String name ) {
-    EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+  public static boolean contains( final String name ) {
+    final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
     try {
-      VmInstance vm = db.getUnique( VmInstance.named( null, name ) );
+      final VmInstance vm = db.getUnique( VmInstance.named( null, name ) );
       db.commit( );
       return true;
-    } catch ( EucalyptusCloudException ex ) {
+    } catch ( final EucalyptusCloudException ex ) {
       db.rollback( );
       return false;
     }

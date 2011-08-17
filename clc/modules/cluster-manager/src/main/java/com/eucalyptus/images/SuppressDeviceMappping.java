@@ -68,7 +68,7 @@ import javax.persistence.PersistenceContext;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.cloud.Image.DeviceMappingType;
+import com.eucalyptus.cloud.ImageMetadata.DeviceMappingType;
 
 @Entity @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )

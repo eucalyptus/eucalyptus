@@ -1,15 +1,22 @@
-package com.eucalyptus.vm;
+package com.eucalyptus.auth.policy.key;
 
 import net.sf.json.JSONException;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.policy.key.KeyUtils;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.PolicyKey;
-import com.eucalyptus.auth.policy.key.QuotaKey;
-import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.CloudMetadata.VirtualMachineInstance;
+import com.eucalyptus.component.id.Euare;
+import com.eucalyptus.util.Types;
 
+/**
+ * GRZE:NOTE: this class is a {@link Euare} specific type and needs to move as well as not
+ * referring to private implementation types. {@link VirtualMachineInstance} should be considered a public
+ * type while {@code VmInstance} is implementation specific and will change as needed by the
+ * implementation.
+ */
 @PolicyKey( Keys.EC2_QUOTA_VM_INSTANCE_NUMBER )
 public class VmInstanceNumberQuotaKey extends QuotaKey {
   
@@ -33,11 +40,11 @@ public class VmInstanceNumberQuotaKey extends QuotaKey {
   public String value( Scope scope, String id, String resource, Long quantity ) throws AuthException {
     switch ( scope ) {
       case ACCOUNT:
-        return Long.toString( SystemState.countByAccount( id ) + 1 );
+        return Long.toString( Types.quantityMetricFunction( VirtualMachineInstance.class ).apply( AccountFullName.getInstance( id ) ) + 1 );
       case GROUP:
         throw new AuthException( "Group level quota not supported" );
       case USER:
-        return Long.toString( SystemState.countByUser( id ) + 1 );
+        return Long.toString( Types.quantityMetricFunction( VirtualMachineInstance.class ).apply( UserFullName.getInstance( id ) ) + 1 );
     }
     throw new AuthException( "Invalid scope" );
   }

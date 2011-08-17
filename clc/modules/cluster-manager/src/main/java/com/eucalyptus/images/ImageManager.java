@@ -81,7 +81,7 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
@@ -203,9 +203,9 @@ public class ImageManager {
       ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
       LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
       List<DeviceMapping> vbr = Lists.transform( request.getBlockDeviceMappings( ), Images.deviceMappingGenerator( imageInfo ) );
-      Image.Architecture arch = ( request.getArchitecture( ) == null
+      ImageMetadata.Architecture arch = ( request.getArchitecture( ) == null
         ? null
-        : Image.Architecture.valueOf( request.getArchitecture( ) ) );
+        : ImageMetadata.Architecture.valueOf( request.getArchitecture( ) ) );
       imageInfo = Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, null, eki, eri,
                                              manifest );
       imageInfo.getDeviceMappings( ).addAll( vbr );

@@ -90,7 +90,7 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -110,7 +110,7 @@ import com.google.common.collect.Lists;
 @Inheritance( strategy = InheritanceType.SINGLE_TABLE )
 @DiscriminatorColumn( name = "metadata_image_discriminator", discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "metadata_kernel_or_ramdisk" )
-public class ImageInfo extends UserMetadata<Image.State> implements Image {
+public class ImageInfo extends UserMetadata<ImageMetadata.State> implements ImageMetadata {
   
   @Transient
   private static Logger         LOG            = Logger.getLogger( ImageInfo.class );
@@ -128,18 +128,18 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   
   @Column( name = "metadata_image_arch", nullable = false )
   @Enumerated( EnumType.STRING )
-  private Image.Architecture    architecture;
+  private ImageMetadata.Architecture    architecture;
   
   @Column( name = "metadata_image_is_public", columnDefinition = "boolean default true" )
   private Boolean               imagePublic;
   
   @Column( name = "metadata_image_platform", nullable = false )
   @Enumerated( EnumType.STRING )
-  private Image.Platform        platform;
+  private ImageMetadata.Platform        platform;
   
   @Column( name = "metadata_image_type" )
   @Enumerated( EnumType.STRING )
-  private Image.Type            imageType;
+  private ImageMetadata.Type            imageType;
   
   @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "parent" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -161,7 +161,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   
   public ImageInfo( ) {}
   
-  public ImageInfo( final Image.Type imageType ) {
+  public ImageInfo( final ImageMetadata.Type imageType ) {
     this.imageType = imageType;
   }
   
@@ -170,21 +170,21 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     this.setDisplayName( imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
   }
   
-  ImageInfo( final Image.Type imageType, final String imageId ) {
+  ImageInfo( final ImageMetadata.Type imageType, final String imageId ) {
     this( imageId );
     this.imageType = imageType;
   }
   
   protected ImageInfo( final OwnerFullName ownerFullName, final String imageId,
-                       final Image.Type imageType, final String imageName, final String imageDescription, final Long imageSizeBytes,
-                       final Image.Architecture arch, final Image.Platform platform ) {
-    super( ownerFullName, imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
+                       final ImageMetadata.Type imageType, final String imageName, final String imageDescription, final Long imageSizeBytes,
+                       final ImageMetadata.Architecture arch, final ImageMetadata.Platform platform ) {
+    this( ownerFullName, imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
     assertThat( imageName, notNullValue( ) );
     assertThat( imageType, notNullValue( ) );
     assertThat( imageSizeBytes, notNullValue( ) );
     assertThat( arch, notNullValue( ) );
     assertThat( platform, notNullValue( ) );
-    this.setState( Image.State.pending );
+    this.setState( ImageMetadata.State.pending );
     this.imageType = imageType;
     this.imageName = imageName;
     this.description = imageDescription;
@@ -192,6 +192,10 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     this.architecture = arch;
     this.platform = platform;
     this.imagePublic = ImageConfiguration.getInstance( ).getDefaultVisibility( );
+  }
+
+  ImageInfo( OwnerFullName ownerFullName, String imageId ) {
+    super( ownerFullName, imageId );
   }
 
   static ImageInfo self( ImageInfo image ) {
@@ -202,15 +206,15 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     return new ImageInfo( imageId );
   }
   
-  public Image.Type getImageType( ) {
+  public ImageMetadata.Type getImageType( ) {
     return this.imageType;
   }
   
-  public Image.Platform getPlatform( ) {
+  public ImageMetadata.Platform getPlatform( ) {
     return this.platform;
   }
   
-  protected void setPlatform( final Image.Platform platform ) {
+  protected void setPlatform( final ImageMetadata.Platform platform ) {
     this.platform = platform;
   }
   
@@ -406,7 +410,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
   }
   
   @Override
-  public int compareTo( final Image o ) {
+  public int compareTo( final ImageMetadata o ) {
     return this.getDisplayName( ).compareTo( o.getName( ) );
   }
   
@@ -551,6 +555,10 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
         LOG.error( e, e );
       }
     }
+  }
+
+  public static ImageInfo named( OwnerFullName input, String imageId ) {
+    return new ImageInfo( input, imageId );
   }
   
 }

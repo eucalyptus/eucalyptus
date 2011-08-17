@@ -69,8 +69,8 @@ import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.cloud.Image;
-import com.eucalyptus.cloud.Image.StaticDiskImage;
+import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
@@ -112,7 +112,7 @@ public class Emis {
     
   }
   //TODO:GRZE: facade here plox.
-  private static final Map<Class<? extends Image>, TypeResolver<? extends Image>> resolvers = new HashMap<Class<? extends Image>, TypeResolver<? extends Image>>( ) {
+  private static final Map<Class<? extends ImageMetadata>, TypeResolver<? extends ImageMetadata>> resolvers = new HashMap<Class<? extends ImageMetadata>, TypeResolver<? extends ImageMetadata>>( ) {
                                                                                                 {
                                                                                                   put( BlockStorageImageInfo.class, LookupBlockStorage.INSTANCE );
                                                                                                   put( MachineImageInfo.class, LookupMachine.INSTANCE );
@@ -193,7 +193,7 @@ public class Emis {
     }
     
     public boolean isLinux( ) {
-      return Image.Platform.linux.equals( this.getMachine( ).getPlatform( ) ) || this.getMachine( ).getPlatform( ) == null;
+      return ImageMetadata.Platform.linux.equals( this.getMachine( ).getPlatform( ) ) || this.getMachine( ).getPlatform( ) == null;
     }
     
     @Override
@@ -322,7 +322,7 @@ public class Emis {
       : "UNKNOWN" ) );
     if ( kernelId == null ) {
       throw new NoSuchMetadataException( "Unable to determine required kernel image for " + disk.getDisplayName( ) );
-    } else if ( !kernelId.startsWith( Image.Type.kernel.getTypePrefix( ) ) ) {
+    } else if ( !kernelId.startsWith( ImageMetadata.Type.kernel.getTypePrefix( ) ) ) {
       throw new InvalidMetadataException( "Image specified is not a kernel: " + kernelId );
     }
     return kernelId;
@@ -362,7 +362,7 @@ public class Emis {
         : "UNKNOWN" ) );
     if ( ramdiskId == null ) {
       throw new InvalidMetadataException( "Unable to determine required ramdisk image for " + bootSet.toString( ) );
-    } else if ( !ramdiskId.startsWith( Image.Type.ramdisk.getTypePrefix( ) ) ) {
+    } else if ( !ramdiskId.startsWith( ImageMetadata.Type.ramdisk.getTypePrefix( ) ) ) {
       throw new InvalidMetadataException( "Image specified is not a ramdisk: " + ramdiskId );
     }
     return ramdiskId;

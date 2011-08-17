@@ -78,8 +78,8 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.cloud.Image;
-import com.eucalyptus.cloud.Image.DeviceMappingType;
+import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.cloud.ImageMetadata.DeviceMappingType;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
@@ -94,7 +94,7 @@ public class DeviceMapping extends AbstractPersistent {
   
   @Column( name = "metadata_device_mapping_type" )
   @Enumerated( EnumType.STRING )
-  private Image.DeviceMappingType deviceMappingType;
+  private ImageMetadata.DeviceMappingType deviceMappingType;
   
   @Column( name = "metadata_device_mapping_device_name" )
   private String                  deviceName;
@@ -132,11 +132,11 @@ public class DeviceMapping extends AbstractPersistent {
     this.parent = parent;
   }
 
-  public Image.DeviceMappingType getDeviceMappingType( ) {
+  public ImageMetadata.DeviceMappingType getDeviceMappingType( ) {
     return this.deviceMappingType;
   }
 
-  protected void setDeviceMappingType( Image.DeviceMappingType deviceMappingType ) {
+  protected void setDeviceMappingType( ImageMetadata.DeviceMappingType deviceMappingType ) {
     this.deviceMappingType = deviceMappingType;
   }
 

@@ -72,7 +72,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
@@ -194,7 +194,7 @@ public class VerifyMetadata {
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
       if ( allocInfo.getRequest( ).getKeyName( ) == null || "".equals( allocInfo.getRequest( ).getKeyName( ) ) ) {
-        if ( Image.Platform.windows.name( ).equals( allocInfo.getBootSet( ).getMachine( ).getPlatform( ) ) ) {
+        if ( ImageMetadata.Platform.windows.name( ).equals( allocInfo.getBootSet( ).getMachine( ).getPlatform( ) ) ) {
           throw new InvalidMetadataException( "You must specify a keypair when running a windows vm: " + allocInfo.getRequest( ).getImageId( ) );
         } else {
           allocInfo.setSshKeyPair( KeyPairs.noKey( ) );
