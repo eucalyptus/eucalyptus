@@ -63,10 +63,9 @@
 
 package com.eucalyptus.network;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cluster.ClusterConfiguration;
@@ -75,11 +74,9 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.async.Callback;
+import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import com.google.gwt.thirdparty.guava.common.collect.Lists;
-import com.google.gwt.thirdparty.guava.common.primitives.Longs;
-import edu.emory.mathcs.backport.java.util.Collections;
-import edu.ucsb.eucalyptus.msgs.NetworkInfoType;
+import com.google.common.primitives.Longs;
 
 @ConfigurableClass( root = "net", description = "Default values used to bootstrap networking state discovery." )
 public class NetworkGroups {
