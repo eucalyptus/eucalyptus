@@ -508,6 +508,10 @@ public class EntityWrapper<TYPE> {
     public void rollback( ) {
       this.eventLog( TxState.BEGIN, TxEvent.ROLLBACK );
       this.guard.apply( TxUnroll.ROLLBACK );
+      
+    }
+
+    void doRollback( ) {
       try {
         if ( ( this.transaction != null ) && this.transaction.isActive( ) ) {
           this.transaction.rollback( );
@@ -661,5 +665,9 @@ public class EntityWrapper<TYPE> {
       }
     }
     
+  }
+
+  void doRollback( ) {
+    this.tx.doRollback( );
   }
 }

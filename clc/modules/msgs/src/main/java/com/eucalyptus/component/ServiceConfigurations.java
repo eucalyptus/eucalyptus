@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.Component.State;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.empyrean.ServiceStatusType;
