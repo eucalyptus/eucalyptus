@@ -230,9 +230,10 @@ public class PolicyParser {
         Class<? extends ConditionOp> typeClass = checkConditionType( type );
         JSONObject paramsObj = JsonUtils.getByType( JSONObject.class, condsObj, type );
         for ( Object k : paramsObj.keySet( ) ) {
-          String key = ( ( String ) k ).toLowerCase( );
+          String key = ( String ) k;
           Set<String> values = Sets.newHashSet( );
           values.addAll( JsonUtils.parseStringOrStringList( paramsObj, key ) );
+          key = key.toLowerCase( );
           checkConditionKeyAndValues( key, values, typeClass, isQuota );
           results.add( new ConditionEntity( type, key, values ) );
         }

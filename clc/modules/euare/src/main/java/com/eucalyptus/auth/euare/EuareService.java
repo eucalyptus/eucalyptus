@@ -421,7 +421,7 @@ public class EuareService {
       }
     }
     // Policy attached to account admin is the account policy. Only system admin can put policy to an account.
-    if ( userFound.isAccountAdmin( ) ){
+    if ( userFound.isAccountAdmin( ) && !requestUser.isSystemAdmin( ) ){
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Only system admin can put policy on an account" );      
     }
     if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
