@@ -6,7 +6,7 @@ import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.Logs;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.concurrent.GenericCheckedListenableFuture;
 
 public class AsyncResponseFuture<R> extends GenericCheckedListenableFuture<R> {

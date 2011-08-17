@@ -71,6 +71,7 @@ import com.eucalyptus.component.ComponentMessages;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -80,7 +81,9 @@ public class RequestQueue {
   private static boolean acceptable;
   
   public BaseMessage handle( BaseMessage msg ) {
-    LOG.info( String.format( "%s:%s:%s:%s:%s", RequestQueue.class, EventType.MSG_RECEIVED, msg.getCorrelationId( ), Contexts.lookup( ).getUserFullName( ), msg.toSimpleString( ) ) );
+    if( Logs.isExtrrreeeme() ) {
+      Logs.extreme( ).info( String.format( "%s:%s:%s:%s:%s", RequestQueue.class, EventType.MSG_RECEIVED, msg.getCorrelationId( ), Contexts.lookup( ).getUserFullName( ), msg.toSimpleString( ) ) );
+    }
     return msg;
   }
   

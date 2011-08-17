@@ -15,9 +15,9 @@ import org.hibernate.ejb.EntityManagerFactoryImpl;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Assertions;
-import com.eucalyptus.util.Logs;
 
 public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   private static Logger                                   LOG         = Logger.getLogger( TxHandle.class );
@@ -210,7 +210,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   
   @Override
   public String toString( ) {
-    return String.format( "TxHandle:txUuid=%s:startTime=%s:splitTime=%s:owner=%s", this.txUuid, this.startTime.getTime( ), this.splitTime, Logs.EXTREME
+    return String.format( "TxHandle:txUuid=%s:startTime=%s:splitTime=%s:owner=%s", this.txUuid, this.startTime.getTime( ), this.splitTime, Logs.isExtrrreeeme()
       ? this.owner
       : "n/a" );
   }

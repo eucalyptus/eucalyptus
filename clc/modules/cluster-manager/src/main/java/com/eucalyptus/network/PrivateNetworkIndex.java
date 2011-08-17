@@ -86,7 +86,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.RecoverablePersistenceException;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.util.Logs;
+import com.eucalyptus.records.Logs;
 
 @Entity
 @javax.persistence.Entity

@@ -11,10 +11,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.Automata.State;
@@ -336,7 +336,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
       this.rule = rule;
       this.transition = transition;
       this.name = AtomicMarkedState.this.getName( ) + "-" + this.rule.getName( ) + "-" + id;
-      if ( Logs.EXTREME ) {
+      if ( Logs.isExtrrreeeme() ) {
         this.startStackTrace = Exceptions.filterStackTrace( new RuntimeException( ), 20 );
       } else {
         this.startStackTrace = null;
@@ -358,7 +358,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     }
     
     public void fireException( Throwable t ) {
-      if( Logs.EXTREME ) {
+      if( Logs.isExtrrreeeme() ) {
         Logs.exhaust( ).trace( Exceptions.string( this.startStackTrace ) );
         Logs.exhaust( ).trace( Exceptions.string( this.endStackTrace ) );
       }

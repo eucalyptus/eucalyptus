@@ -73,8 +73,8 @@ import com.eucalyptus.component.ComponentPart;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.ws.server.DuplicatePipelineException;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.server.NoAcceptingPipelineException;
@@ -127,7 +127,7 @@ public class PipelineRegistry {
       }
     }
     if ( candidate == null ) {
-      if ( Logs.EXTREME ) {
+      if ( Logs.isExtrrreeeme() ) {
         if ( request instanceof MappingHttpMessage ) {
           ( ( MappingHttpMessage ) request ).logMessage( );
           for ( FilteredPipeline p : this.pipelines ) {
@@ -137,7 +137,7 @@ public class PipelineRegistry {
       }
       throw new NoAcceptingPipelineException( );
     }
-    if ( Logs.EXTREME ) {
+    if ( Logs.isExtrrreeeme() ) {
       EventRecord.here( this.getClass( ), EventType.PIPELINE_UNROLL, candidate.toString( ) ).debug( );
     }
     return candidate;

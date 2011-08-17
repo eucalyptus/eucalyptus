@@ -71,7 +71,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Topology.ServiceKey;
-import com.eucalyptus.util.Logs;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.google.common.base.Function;
 

@@ -79,7 +79,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.RecoverablePersistenceException;
-import com.eucalyptus.util.Logs;
+import com.eucalyptus.records.Logs;
 
 @Entity
 @javax.persistence.Entity

@@ -69,7 +69,7 @@ import java.lang.reflect.Modifier;
 import org.apache.log4j.Logger;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.Logs;
+import com.eucalyptus.records.Logs;
 
 public abstract class AbstractConfigurableProperty implements ConfigurableProperty {
   

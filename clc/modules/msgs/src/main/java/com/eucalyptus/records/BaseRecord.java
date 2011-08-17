@@ -26,7 +26,6 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.util.Logs;
 import com.google.common.collect.Lists;
 
 @Entity

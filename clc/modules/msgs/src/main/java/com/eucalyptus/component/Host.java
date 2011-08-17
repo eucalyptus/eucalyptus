@@ -72,8 +72,8 @@ import org.jgroups.Address;
 import org.jgroups.ViewId;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.HostManager;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.Logs;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 

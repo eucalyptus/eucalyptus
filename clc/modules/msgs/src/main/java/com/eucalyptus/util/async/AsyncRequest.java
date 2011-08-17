@@ -14,9 +14,9 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.Callback.TwiceChecked;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -58,7 +58,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       @Override
       public void fire( R r ) {
         try {
-          if ( Logs.EXTREME ) {
+          if ( Logs.isExtrrreeeme() ) {
             Logs.exhaust( ).debug( cb.getClass( ).getCanonicalName( ) + ".fire():\n" + r );
           }
           cb.fire( r );
@@ -82,7 +82,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       
       @Override
       public void initialize( Q request ) throws Exception {
-        if ( Logs.EXTREME ) {
+        if ( Logs.isExtrrreeeme() ) {
           Logs.exhaust( ).debug( cb.getClass( ).getCanonicalName( ) + ".initialize():\n" + request );
         }
         try {

@@ -1,4 +1,4 @@
-package com.eucalyptus.util;
+package com.eucalyptus.records;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -17,9 +17,9 @@ import org.apache.log4j.spi.Configurator;
 import org.apache.log4j.spi.LoggerRepository;
 import org.apache.log4j.spi.LoggingEvent;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
-import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.EucaLayout;
+import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Joiner;
 
 public class Logs {
@@ -120,10 +120,10 @@ public class Logs {
     
   }
   
-  public static boolean       EXTREME    = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
-  public static boolean       TRACE      = EXTREME || "TRACE".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
-  public static boolean       DEBUG      = TRACE || EXTREME || "DEBUG".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
-                                                                                                                               
+  private static boolean      EXTREME    = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
+  private static boolean      TRACE      = isExtrrreeeme( ) || "TRACE".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
+  private static boolean      DEBUG      = isExtrrreeeme( ) || TRACE || "DEBUG".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
+  
   private static final Logger nullLogger = new Logger( "/dev/null" ) {
                                            
                                            @Override
@@ -283,7 +283,7 @@ public class Logs {
                                          };
   
   public static Logger extreme( ) {
-    if ( EXTREME ) {
+    if ( isExtrrreeeme( ) ) {
       return Logger.getLogger( "EXTREME" );
     } else {
       return nullLogger;
@@ -299,7 +299,7 @@ public class Logs {
   }
   
   public static void init( ) {
-    if ( Logs.EXTREME ) {
+    if ( Logs.isExtrrreeeme( ) ) {
       System.setProperty( "euca.log.level", "TRACE" );
       System.setProperty( "euca.exhaust.level", "TRACE" );
       System.setProperty( "euca.log.exhaustive", "TRACE" );
@@ -355,5 +355,13 @@ public class Logs {
       t.printStackTrace( );
       System.exit( 1 );
     }
+  }
+  
+  public static void no( boolean eXTREME ) {
+    EXTREME = eXTREME;
+  }
+  
+  public static boolean isExtrrreeeme( ) {
+    return EXTREME;
   }
 }

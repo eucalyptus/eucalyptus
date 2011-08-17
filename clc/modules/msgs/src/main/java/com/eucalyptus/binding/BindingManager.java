@@ -69,7 +69,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.Logs;
+import com.eucalyptus.records.Logs;
 
 public class BindingManager {
   

@@ -25,9 +25,9 @@ import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
 import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.handlers.ChannelStateMonitor;
 import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
@@ -139,7 +139,7 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( serverBossThreadPool == null ) {
-        if ( !Logs.EXTREME ) {
+        if ( !Logs.isExtrrreeeme() ) {
           LOG.info( "Creating server boss thread pool. (log level EXTREME for details)" );
         } else {
           LOG.trace( LogUtil.subheader( "Creating server boss thread pool." ) );
@@ -161,7 +161,7 @@ public class ChannelUtil {
     canHas.lock( );
     try {
       if ( serverWorkerThreadPool == null ) {
-        if ( !Logs.EXTREME ) {
+        if ( !Logs.isExtrrreeeme() ) {
           LOG.info( "Creating server worker thread pool. (log level EXTREME for details)" );
         } else {
           LOG.trace( LogUtil.subheader( "Creating server worker thread pool." ) );
@@ -193,7 +193,7 @@ public class ChannelUtil {
     ChannelUtil.setupServer( );
     final ServerBootstrap bootstrap = new ServerBootstrap( ChannelUtil.getServerSocketChannelFactory( ) );
     bootstrap.setPipelineFactory( ChannelUtil.getServerPipeline( ) );
-    if ( !Logs.EXTREME ) {
+    if ( !Logs.isExtrrreeeme() ) {
       LOG.info( "Creating server bootstrap. (log level EXTREME for details)" );
     } else {
       LOG.trace( LogUtil.subheader( "Creating server boss thread pool." ) );

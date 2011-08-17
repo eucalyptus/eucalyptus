@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.records.Logs;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -46,7 +47,7 @@ public class Exceptions {
   }
   
   public static <T extends Throwable> String createFaultDetails( T ex ) {
-    return Logs.EXTREME
+    return Logs.isExtrrreeeme()
       ? string( ex )
       : ex.getMessage( );
   }

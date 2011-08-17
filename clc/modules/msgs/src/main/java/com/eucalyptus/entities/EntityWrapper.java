@@ -82,10 +82,10 @@ import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.Logs;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -393,7 +393,7 @@ public class EntityWrapper<TYPE> {
   }
   
   private final void eventLog( TxState txState, TxEvent txAction ) {
-    if ( Logs.EXTREME && this.tx != null ) {
+    if ( Logs.isExtrrreeeme() && this.tx != null ) {
       Logs.exhaust( ).debug( Joiner.on( ":" ).join( EventType.PERSISTENCE, txState.event( txAction ), Long.toString( this.tx.splitOperation( ) ),
                                                     this.tx.getTxUuid( ) ) );
     }
@@ -446,7 +446,7 @@ public class EntityWrapper<TYPE> {
     UNIQUE,
     QUERY;
     public String getMessage( ) {
-      if ( Logs.EXTREME ) {
+      if ( Logs.isExtrrreeeme() ) {
         return EntityWrapper.getMyStackTraceElement( ).toString( );
       } else {
         return "n.a";

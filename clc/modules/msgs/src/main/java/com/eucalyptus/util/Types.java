@@ -80,6 +80,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 

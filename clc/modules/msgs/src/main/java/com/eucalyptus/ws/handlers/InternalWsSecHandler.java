@@ -84,7 +84,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.WSSecurity;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.util.Logs;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.util.CredentialProxy;
 import com.google.common.collect.Lists;

@@ -22,7 +22,7 @@ import com.eucalyptus.config.ModifyClusterAttributeType;
 import com.eucalyptus.config.RegisterClusterType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.Logs;
+import com.eucalyptus.records.Logs;
 
 @DiscoverableServiceBuilder( ClusterController.class )
 @Handles( { RegisterClusterType.class, DeregisterClusterType.class, DescribeClustersType.class, ClusterConfiguration.class, ModifyClusterAttributeType.class } )

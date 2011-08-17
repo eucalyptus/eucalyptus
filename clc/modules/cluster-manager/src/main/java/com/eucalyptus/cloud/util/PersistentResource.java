@@ -71,8 +71,8 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.HasNaturalId;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.OwnerFullName;
 
 @MappedSuperclass

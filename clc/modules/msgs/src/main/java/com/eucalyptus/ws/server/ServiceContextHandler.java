@@ -91,7 +91,7 @@ import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.Logs;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.ws.util.RequestQueue;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -111,7 +111,7 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
   @SuppressWarnings( "unchecked" )
   @Override
   public void handleDownstream( final ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    if ( Logs.EXTREME ) LOG.trace( this.getClass( ).getSimpleName( ) + "[outgoing]: " + e.getClass( ) );
+    if ( Logs.isExtrrreeeme() ) LOG.trace( this.getClass( ).getSimpleName( ) + "[outgoing]: " + e.getClass( ) );
     BaseMessage reply = BaseMessage.extractMessage( e );
     if( reply instanceof BaseMessage ) {
       MessageEvent newEvent = makeDownstreamNewEvent( ctx, e, reply );
@@ -162,7 +162,7 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
   public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
     final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
     final BaseMessage msg = BaseMessage.extractMessage( e );
-    if ( Logs.EXTREME ) LOG.trace( this.getClass( ).getSimpleName( ) + "[incoming]:" + (msg!=null?msg.getClass().getSimpleName( ):"")+ " "  + e );
+    if ( Logs.isExtrrreeeme() ) LOG.trace( this.getClass( ).getSimpleName( ) + "[incoming]:" + (msg!=null?msg.getClass().getSimpleName( ):"")+ " "  + e );
 
     if( e instanceof ChannelStateEvent ) {
       this.channelOpened( ctx, (ChannelStateEvent) e );
