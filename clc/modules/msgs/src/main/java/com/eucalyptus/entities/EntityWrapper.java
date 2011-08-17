@@ -118,7 +118,6 @@ public class EntityWrapper<TYPE> {
    * @see {@link EntityWrapper#get(Class)}
    * @param persistenceContext
    */
-  @Deprecated
   @SuppressWarnings( "unchecked" )
   EntityWrapper( String persistenceContext, Runnable runnable ) {
     try {
