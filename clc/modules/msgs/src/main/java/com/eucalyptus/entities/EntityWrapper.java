@@ -80,6 +80,7 @@ import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasNaturalId;
@@ -125,7 +126,7 @@ public class EntityWrapper<TYPE> {
       this.tx = new TxHandle( persistenceContext, runnable );
     } catch ( Throwable e ) {
       this.eventLog( TxState.FAIL, TxEvent.CREATE );
-      RecoverablePersistenceException ex = PersistenceErrorFilter.exceptionCaught( e );
+      Exception ex = PersistenceExceptions.throwFiltered( e );
       throw new RuntimeException( ex );
     }
     this.eventLog( TxState.END, TxEvent.CREATE );
@@ -217,7 +218,7 @@ public class EntityWrapper<TYPE> {
     } catch ( NoSuchElementException ex ) {
       throw new EucalyptusCloudException( "Get unique failed for " + example.getClass( ).getSimpleName( ) + " using " + ex.getMessage( ), ex );
     } catch ( Exception ex ) {
-      RecoverablePersistenceException newEx = PersistenceErrorFilter.exceptionCaught( ex );
+      Exception newEx = PersistenceExceptions.throwFiltered( ex );
       throw new EucalyptusCloudException( "Get unique failed for " + example.getClass( ).getSimpleName( ) + " because " + newEx.getMessage( ), newEx );
     }
   }
@@ -234,7 +235,7 @@ public class EntityWrapper<TYPE> {
       this.getEntityManager( ).persist( newObject );
       return newObject;
     } catch ( RuntimeException ex ) {
-      PersistenceErrorFilter.exceptionCaught( ex );
+      PersistenceExceptions.throwFiltered( ex );
       throw ex;
     }
   }
@@ -335,7 +336,7 @@ public class EntityWrapper<TYPE> {
     try {
       return this.getEntityManager( ).merge( newObject );
     } catch ( RuntimeException ex ) {
-      PersistenceErrorFilter.exceptionCaught( ex );
+      PersistenceExceptions.throwFiltered( ex );
       throw ex;
     }
   }
@@ -352,7 +353,7 @@ public class EntityWrapper<TYPE> {
       return newObject;
     } catch ( RuntimeException ex ) {
       try {
-        PersistenceErrorFilter.exceptionCaught( ex );
+        PersistenceExceptions.throwFiltered( ex );
         throw ex;
       } finally {
         this.rollback( );
@@ -370,22 +371,22 @@ public class EntityWrapper<TYPE> {
       this.tx.rollback( );
     } catch ( Throwable e ) {
       this.eventLog( TxState.FAIL, TxEvent.ROLLBACK );
-      PersistenceErrorFilter.exceptionCaught( e );
+      PersistenceExceptions.throwFiltered( e );
     }
     this.eventLog( TxState.END, TxEvent.ROLLBACK );
   }
   
-  public void commit( ) {
+  public void commit( ) throws ConstraintViolationException {
     this.eventLog( TxState.BEGIN, TxEvent.COMMIT );
     try {
       this.tx.commit( );
     } catch ( RuntimeException e ) {
       this.eventLog( TxState.FAIL, TxEvent.COMMIT );
-      PersistenceErrorFilter.exceptionCaught( e );
+      PersistenceExceptions.throwFiltered( e );
       throw e;
     } catch ( Throwable e ) {
       this.eventLog( TxState.FAIL, TxEvent.COMMIT );
-      PersistenceErrorFilter.exceptionCaught( e );
+      PersistenceExceptions.throwFiltered( e );
       throw new RuntimeException( e );
     }
     this.eventLog( TxState.END, TxEvent.COMMIT );

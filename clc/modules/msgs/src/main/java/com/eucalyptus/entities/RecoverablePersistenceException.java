@@ -69,7 +69,7 @@ import org.hibernate.HibernateException;
 /**
  * A checked wrapper for an underlying {@link PersistenceException} and {@link HibernateException}
  * which should be handled the application. This exception will always have a non-null
- * {@link #getCause()}. See {@link PersistenceErrorFilter} for classification of the underlying
+ * {@link #getCause()}. See {@link PersistenceExceptions} for classification of the underlying
  * exception types.
  */
 public class RecoverablePersistenceException extends Exception {

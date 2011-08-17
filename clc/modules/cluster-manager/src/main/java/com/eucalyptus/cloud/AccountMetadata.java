@@ -65,6 +65,8 @@ package com.eucalyptus.cloud;
 
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
+import javax.persistence.PostLoad;
+import javax.persistence.PostPersist;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Transient;
@@ -134,31 +136,6 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
     }
   }
   
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = super.hashCode( );
-    result = prime * result + ( ( this.ownerAccountNumber == null )
-      ? 0
-      : this.ownerAccountNumber.hashCode( ) );
-    result = prime * result + ( ( this.displayName == null )
-      ? 0
-      : this.displayName.hashCode( ) );
-    return result;
-  }
-  
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) return true;
-    if ( !super.equals( obj ) ) return false;
-    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
-    AccountMetadata other = ( AccountMetadata ) obj;
-    if ( this.ownerAccountNumber == null ) {
-      if ( other.ownerAccountNumber != null ) return false;
-    } else if ( !this.ownerAccountNumber.equals( other.ownerAccountNumber ) ) return false;
-    return true;
-  }
-  
   /**
    * @see com.eucalyptus.util.HasOwningAccount#getOwnerAccountNumber()
    * @see AccountMetadata#getOwnerAccountNumber()
@@ -196,7 +173,7 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   
   protected String getUniqueName( ) {
     if ( this.uniqueName == null ) {
-      return this.createUniqueName( );
+      return this.uniqueName = this.createUniqueName( );
     } else {
       return this.uniqueName;
     }
@@ -208,11 +185,44 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   
   @PrePersist
   @PreUpdate
+  @PostLoad
   private void generateOnCommit( ) {
     this.uniqueName = createUniqueName( );
   }
   
   private String createUniqueName( ) {
     return this.ownerAccountName + ":" + this.getDisplayName( );
+  }
+  
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( this.uniqueName == null )
+      ? 0
+      : this.uniqueName.hashCode( ) );
+    return result;
+  }
+  
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( !super.equals( obj ) ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    AccountMetadata other = ( AccountMetadata ) obj;
+    if ( this.uniqueName == null ) {
+      if ( other.uniqueName != null ) {
+        return false;
+      }
+    } else if ( !this.uniqueName.equals( other.uniqueName ) ) {
+      return false;
+    }
+    return true;
   }
 }

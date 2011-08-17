@@ -103,13 +103,15 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Logs;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
-public class PersistenceErrorFilter {
-  private static Logger LOG = Logger.getLogger( PersistenceErrorFilter.class );
+public class PersistenceExceptions {
+  private static Logger LOG = Logger.getLogger( PersistenceExceptions.class );
   
   public enum ErrorCategory {
     BUG {
@@ -200,22 +202,31 @@ public class PersistenceErrorFilter {
   }
   
   /**
+   * Filters and classifies exceptions -- all JPA/hibernate exceptions are runtime exceptions. Those
+   * which can be handled by the application, or which give feedback about the underlying cause of
+   * the failure (e.g., constraints violation).
+   * 
    * @param e
    * @see {@link http://docs.jboss.org/hibernate/core/3.5/api/org/hibernate/HibernateException.html}
    */
   @SuppressWarnings( "unchecked" )
-  static RecoverablePersistenceException exceptionCaught( final Throwable e ) {
-    Logs.extreme( ).error( e, e );
-    if ( e instanceof RuntimeException ) {
-      final ErrorCategory category = PersistenceErrorFilter.classify( e );
-      final RuntimeException up = category.handleException( ( RuntimeException ) e );
-      if ( !category.isRecoverable( ) ) {
-        throw up;
-      } else {
-        return new RecoverablePersistenceException( "Error during transaction: " + Joiner.on( '\n' ).join( Exceptions.causes( e ) ), e );
-      }
+  static Exception throwFiltered( final Throwable e ) {
+    ConstraintViolationException cause = Exceptions.causedBy( e, ConstraintViolationException.class );
+    if ( cause != null ) {
+      throw cause;
     } else {
-      throw ErrorCategory.APPLICATION.handleException( new PersistenceException( "Error during transaction: " + e.getMessage( ), e ) );
+      Logs.extreme( ).error( e, e );
+      if ( e instanceof RuntimeException ) {
+        final ErrorCategory category = PersistenceExceptions.classify( e );
+        final RuntimeException up = category.handleException( ( RuntimeException ) e );
+        if ( !category.isRecoverable( ) ) {
+          throw up;
+        } else {
+          return new RecoverablePersistenceException( "Error during transaction: " + Joiner.on( '\n' ).join( Exceptions.causes( e ) ), e );
+        }
+      } else {
+        throw ErrorCategory.APPLICATION.handleException( new PersistenceException( "Error during transaction: " + e.getMessage( ), e ) );
+      }
     }
   }
 }

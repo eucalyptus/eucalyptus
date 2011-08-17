@@ -70,16 +70,15 @@ import java.security.interfaces.RSAPublicKey;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.exception.ConstraintViolationException;
-import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.cloud.util.MetadataCreationException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.crypto.Certs;
-import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 
 public class KeyPairs {
@@ -122,6 +121,7 @@ public class KeyPairs {
     try {
       Transactions.save( newKey );
     } catch ( ConstraintViolationException ex ) {
+      Exceptions.causedBy( ex, ConstraintViolationException.class );
       throw new DuplicateMetadataException( "Keypair already exists: " + keyName + ": " + ex.getMessage( ), ex );
     }
     return newKeys.getPrivate( );

@@ -60,6 +60,7 @@ public class Transactions {
   
   private static TransactionException transformException( Throwable t ) {
     Logs.extreme( ).error( t, t );
+    PersistenceExceptions.throwFiltered( t );
     if ( t instanceof InterruptedException ) {
       Thread.currentThread( ).interrupt( );
       return new TransactionExecutionException( t.getCause( ).getMessage( ), t.getCause( ) );
