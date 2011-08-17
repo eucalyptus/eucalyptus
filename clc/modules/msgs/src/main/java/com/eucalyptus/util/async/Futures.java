@@ -127,6 +127,9 @@ public class Futures {
               }
             }
           } ).get( );
+        } catch ( InterruptedException ex1 ) {
+          Thread.currentThread( ).interrupt( );
+          resultFuture.setException( ex1 );
         } catch ( Exception ex1 ) {
           resultFuture.setException( ex1 );
         }
