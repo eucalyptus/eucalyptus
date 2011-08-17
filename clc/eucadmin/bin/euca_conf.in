@@ -82,6 +82,14 @@ CheckableServicesString = '|'.join(CheckableServices)
 EnableableServices = ['cloud', 'walrus', 'sc', 'vmwarebroker']
 EnableableServicesString = '|'.join(EnableableServices)
 
+# config entries that must be updated when registering vmwarebroker
+ConfigVMwareReg = {'NC_SERVICE' : '/services/VMwareBroker',
+                   'NC_PORT' : '8773'}
+
+# config entries that must be updated when deregistering vmwarebroker
+ConfigVMwareDereg = {'NC_SERVICE' : 'axis2/services/EucalyptusNC',
+                     'NC_PORT' : '8775'}
+
 RegisterHelp = """
 euca_conf provides two alternatives for component registration. The
 first alternative is compatible with the previous version of euca_conf
@@ -693,10 +701,30 @@ class EucaConf(object):
                           use_scp=(not self.options.no_scp))
                 req.sync()
 
+    def _check_host(self):
+        import socket, re
+        cls = boto.utils.find_class('eucadmin.command', 'Command')
+        cmd = cls('ifconfig')
+        ip_addrs = []
+        regex = re.compile('\s*inet\saddr:([0-9]+\.[0-9]+\.[0-9]+\.[0-9]).*')
+        for line in cmd.stdout.split('\n'):
+            m = regex.match(line)
+            if m:
+                ip_addrs.append(m.group(1))
+        host = self.options.host_name
+        host = socket.gethostbyname(host)
+        if host not in ip_addrs:
+            print 'Warning: VMwareBroker registration must be peformed on the'
+            print '         VMwareBroker host.  Make sure you are running this'
+            print '         command on the VMwareBroker host.'
+                                
     def do_register_vmwarebroker(self):
+        self._check_host()
         if hasattr(self.options, 'register_vmwarebroker'):
             self._do_register('eucadmin.registervmwarebroker',
                               'RegisterVMwareBroker', None)
+            # Make some changes in eucalyptus.conf file
+            self.config.update(ConfigVMwareReg)
             if not self.options.no_sync:
                 path = os.path.join(self.config['EUCALYPTUS'],
                                      'var/lib/eucalyptus/keys')
@@ -742,10 +770,13 @@ class EucaConf(object):
                             'eucadmin.deregisterstoragecontroller',
                             'DeregisterStorageController')
 
-    def do_deregister_sc(self):
+    def do_deregister_vmwarebroker(self):
         self._do_deregister('deregister_vmwarebroker',
                             'eucadmin.deregistervmwarebroker',
                             'DeregisterVMwareBroker')
+        # Make some changes in eucalyptus.conf file
+        self.config.update(ConfigVMwareDereg)
+        
 
     def _sync_node(self, node):
         path = os.path.join(self.config['EUCALYPTUS'],
