@@ -91,6 +91,7 @@ import com.eucalyptus.empyrean.StopServiceResponseType;
 import com.eucalyptus.empyrean.StopServiceType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMappers;
@@ -285,7 +286,7 @@ public class ServiceTransitions {
         LOG.debug( "Silentlty accepting remotely inferred state transition for " + parent );
       }
       if ( trans != null ) {
-        LOG.debug( "Executing transition: " + trans.getClass( ) + "." + transitionAction.name( ) + " for " + parent );
+        Logs.extreme( ).debug( "Executing transition: " + trans.getClass( ) + "." + transitionAction.name( ) + " for " + parent );
         trans.fire( parent );
       }
       transitionCallback.fire( );

@@ -100,12 +100,12 @@ public class ComponentBootstrapper {
       EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + bootstrapper.getBootstrapStage( ).toString( ),
                         this.component.getComponentId( ).name( ),
                         bootstrapper.getClass( ).getName( ),
-                        "component=" + this.component.getComponentId( ).name( ) ).info( );
+                        "component=" + this.component.getComponentId( ).name( ) ).exhaust( );
     } else {
       EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ADDED, "stage:" + bootstrapper.getBootstrapStage( ).toString( ),
                         this.component.getComponentId( ).name( ),
                         bootstrapper.getClass( ).getName( ),
-                        "component=" + this.component.getComponentId( ).name( ) ).info( );
+                        "component=" + this.component.getComponentId( ).name( ) ).exhaust( );
       this.bootstrappers.put( bootstrapper.getBootstrapStage( ), bootstrapper );
     }
   }
@@ -131,14 +131,14 @@ public class ComponentBootstrapper {
   
   private void enableBootstrapper( Bootstrap.Stage stage, Bootstrapper bootstrapper ) {
     EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_MARK_ENABLED, "stage:", stage.toString( ), this.component.getComponentId( ).name( ),
-                      bootstrapper.getClass( ).getName( ), "component=" + this.component.getComponentId( ).name( ) ).info( );
+                      bootstrapper.getClass( ).getName( ), "component=" + this.component.getComponentId( ).name( ) ).exhaust( );
     this.disabledBootstrappers.remove( stage, bootstrapper );
     this.bootstrappers.put( stage, bootstrapper );
   }
   
   private void disableBootstrapper( Bootstrap.Stage stage, Bootstrapper bootstrapper ) {
     EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_MARK_DISABLED, "stage:" + stage.toString( ), this.component.getComponentId( ).name( ),
-                      bootstrapper.getClass( ).getName( ), "component=" + this.component.getComponentId( ).name( ) ).info( );
+                      bootstrapper.getClass( ).getName( ), "component=" + this.component.getComponentId( ).name( ) ).exhaust( );
     this.bootstrappers.remove( stage, bootstrapper );
     this.disabledBootstrappers.put( stage, bootstrapper );
   }

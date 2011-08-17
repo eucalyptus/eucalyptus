@@ -109,7 +109,7 @@ public class Automata {
     if ( index >= 0 && index < toStates.length ) {
       actualStates = Arrays.copyOfRange( toStates, index + 1, toStates.length );
     }
-    LOG.debug( "Preparing callback for " + hasFsm.getFullName( ) + " from state " + currentState + " followed by transition sequence: "
+    Logs.exhaust( ).debug( "Preparing callback for " + hasFsm.getFullName( ) + " from state " + currentState + " followed by transition sequence: "
                + Joiner.on( "->" ).join( actualStates ) );
     final List<Callable<CheckedListenableFuture<P>>> callables = makeTransitionCallables( hasFsm, actualStates );
     return Futures.sequence( callables.toArray( new Callable[] {} ) );
