@@ -10,7 +10,7 @@ import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.util.Types;
 
 /**
- * GRZE:NOTE: this class is a {@link EuareService} specific type and needs to move as well as not
+ * GRZE:NOTE: this class is a {@link Euare} specific type and needs to move as well as not
  * referring to private implementation types. {@link ImageMetadata} should be considered a public
  * type while {@code ImageInfo} is implementation specific and will change as needed by the
  * implementation.
