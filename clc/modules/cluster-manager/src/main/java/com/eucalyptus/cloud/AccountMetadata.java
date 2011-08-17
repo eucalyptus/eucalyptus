@@ -136,15 +136,6 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
     }
   }
   
-  /**
-   * @see com.eucalyptus.util.HasOwningAccount#getOwnerAccountNumber()
-   * @see AccountMetadata#getOwnerAccountNumber()
-   */
-  @Deprecated
-  public String getOwnerAccountId( ) {
-    return this.ownerAccountNumber;
-  }
-  
   @Override
   public String getOwnerAccountNumber( ) {
     return this.ownerAccountNumber;

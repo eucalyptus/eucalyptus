@@ -421,7 +421,7 @@ public class EuareService {
       }
     }
     // Policy attached to account admin is the account policy. Only system admin can put policy to an account.
-    if ( userFound.isAccountAdmin( ) ){
+    if ( userFound.isAccountAdmin( ) && !requestUser.isSystemAdmin( ) ){
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Only system admin can put policy on an account" );      
     }
     if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
@@ -546,6 +546,9 @@ public class EuareService {
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
+      if ( userFound.isSystemAdmin( ) && userFound.isAccountAdmin( ) ) {
+        throw new AuthException( "admin@eucalyptus can not be updated" );
+      }
     } catch ( Exception e ) {
       LOG.debug( e, e );
       if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
@@ -1100,6 +1103,9 @@ public class EuareService {
     User userToDelete = null;
     try {
       userToDelete = account.lookupUserByName( request.getUserName( ) );
+      if ( userToDelete.isSystemAdmin( ) && userToDelete.isAccountAdmin( ) ) {
+        throw new AuthException( "admin@eucalyptus can not be deleted" );
+      }
     } catch ( Exception e ) {
       LOG.debug( e, e );
       if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {

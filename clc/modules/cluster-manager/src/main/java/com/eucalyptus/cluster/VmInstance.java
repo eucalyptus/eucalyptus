@@ -180,38 +180,38 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   @Transient
   protected final AtomicMarkableReference<VmState>    runtimeState        = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
   @Column( name = "metadata_vm_reservation_id" )
-  private final String     reservationId;
+  private final String                                reservationId;
   @Column( name = "metadata_vm_launch_index" )
-  private final Integer    launchIndex;
+  private final Integer                               launchIndex;
   @Column( name = "metadata_vm_instance_id" )
-  private final String     instanceId;
+  private final String                                instanceId;
   @Column( name = "metadata_vm_partition_name" )
-  private final String     partitionName;
+  private final String                                partitionName;
   @Lob
   @Column( name = "metadata_vm_user_data" )
-  private final byte[]     userData;
+  private final byte[]                                userData;
   @Column( name = "metadata_vm_launch_time" )
-  private final Date       launchTime;
+  private final Date                                  launchTime;
   @Column( name = "metadata_vm_password_data" )
-  private String           passwordData;
+  private String                                      passwordData;
   @Column( name = "metadata_vm_private_networking" )
-  private final Boolean    privateNetwork;
+  private final Boolean                               privateNetwork;
   @Column( name = "metadata_vm_block_bytes" )
-  private Long             blockBytes;
+  private Long                                        blockBytes;
   @Column( name = "metadata_vm_network_bytes" )
-  private Long             networkBytes;
+  private Long                                        networkBytes;
   @ManyToOne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final SshKeyPair sshKeyPair;
+  private final SshKeyPair                            sshKeyPair;
   @ManyToOne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final VmType     vmType;
+  private final VmType                                vmType;
   @Column( name = "metadata_vm_platform" )
-  private String           platform;
+  private String                                      platform;
   @Column( name = "metadata_vm_vbr" )
-  private String           vbrString;
+  private String                                      vbrString;
   @Transient
-  private VmTypeInfo       vbr;
+  private VmTypeInfo                                  vbr;
   
   @PrePersist
   @PreUpdate
@@ -483,7 +483,8 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   private void store( ) {
     try {
       ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getInstanceUuid( ), this.getDisplayName( ), this.vmType.getName( ),
-                                                                    this.getOwner( ).getUserId( ), this.getOwner( ).getAccountNumber( ),
+                                                                    this.getOwner( ).getUserId( ), this.getOwnerUserName( ),
+                                                                    this.getOwner( ).getAccountNumber( ), this.getOwnerAccountName( ),
                                                                     this.clusterName, this.partitionName, this.networkBytes, this.blockBytes ) );
     } catch ( final EventFailedException ex ) {
       LOG.error( ex, ex );
@@ -607,7 +608,6 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   public BundleTask resetBundleTask( ) {
     final BundleTask oldTask = this.bundleTask.getReference( );
     this.bundleTask.set( null, false );
-    EventRecord.here( BundleCallback.class, EventType.BUNDLE_RESET, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ), this.getInstanceId( ) ).info( );
     return oldTask;
   }
   

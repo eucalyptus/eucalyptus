@@ -139,6 +139,11 @@ public class AccountActivity extends AbstractSearchActivity
       container.setWidget( this.view );
       ( ( AccountView ) this.view ).clear( );
     }
+    // Turn on/off account action buttons based on if the user is system admin
+    boolean isSystemAdmin = this.clientFactory.getSessionData( ).getLoginUser( ).isSystemAdmin( );
+    ( ( AccountView ) this.view ).enableNewButton( isSystemAdmin );
+    ( ( AccountView ) this.view ).enableDelButton( isSystemAdmin );
+    
     ( ( AccountView ) this.view ).showSearchResult( result );    
   }
 
@@ -314,9 +319,14 @@ public class AccountActivity extends AbstractSearchActivity
 
       @Override
       public void onSuccess( ArrayList<String> created ) {
-        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, created.size( ) + " users created", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
-        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "New users " + created + " created for account " + accountId );
-        //reloadCurrentRange( );
+    	if ( created == null || created.size( ) < 1 ) {
+          clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to create users", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+          clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Creating users " + names + "for account " + accountId + " failed: 0 result returned" );    		
+    	} else {
+          clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, created.size( ) + " users created", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+          clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "New users " + created + " created for account " + accountId );
+          //reloadCurrentRange( );
+    	}
       }
       
     } );
@@ -384,9 +394,14 @@ public class AccountActivity extends AbstractSearchActivity
 
       @Override
       public void onSuccess( ArrayList<String> created ) {
-        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, created.size( ) + " groups created", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
-        clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "New groups " + created + " created for account " + accountId );
-        //reloadCurrentRange( );
+    	if ( created == null || created.size( ) < 1 ) {
+          clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to create groups", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+          clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Creating groups " + names + " for account " + accountId + " failed: 0 result returned" );
+    	} else {
+          clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.NONE, created.size( ) + " groups created", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+          clientFactory.getShellView( ).getLogView( ).log( LogType.INFO, "New groups " + created + " created for account " + accountId );
+          //reloadCurrentRange( );
+    	}
       }
       
     } );

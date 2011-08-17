@@ -313,7 +313,8 @@ public class ServiceConfigurations {
     return lookup( example );
   }
   
-  @Deprecated//GRZE:PLS not using.
+  @Deprecated
+  //GRZE:PLS not using.
   public static <T extends ServiceConfiguration, C extends ComponentId> T lookupByHost( final Class<C> type, final String host ) {
     if ( !ComponentId.class.isAssignableFrom( type ) ) {
       throw new PersistenceException( "Unknown configuration type passed: " + type.getCanonicalName( ) );
@@ -322,7 +323,7 @@ public class ServiceConfigurations {
     example.setHostName( host );
     return lookup( example );
   }
-
+  
   public static <T extends ServiceConfiguration> List<T> list( final T type ) {
     return getProvider( ).list( type );
   }
@@ -338,7 +339,7 @@ public class ServiceConfigurations {
   public static <T extends ServiceConfiguration> T lookup( final T type ) {
     return getProvider( ).lookup( type );
   }
-
+  
   public static Predicate<ServiceConfiguration> serviceInPartition( final Partition partition ) {
     return new Predicate<ServiceConfiguration>( ) {
       

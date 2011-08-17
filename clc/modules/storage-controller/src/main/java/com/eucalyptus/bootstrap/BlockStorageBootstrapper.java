@@ -94,8 +94,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 	public boolean load() throws Exception {
 		//privileged context (loads modules if necessary, etc).
 		LogicalStorageManager blockStorageManager = BlockStorageManagerFactory.getBlockStorageManager();
-		if(blockStorageManager != null)
-			blockStorageManager.checkPreconditions();
+		blockStorageManager.checkPreconditions();
 		return true;
 	}
 

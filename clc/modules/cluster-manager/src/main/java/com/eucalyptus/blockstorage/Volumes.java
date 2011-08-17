@@ -128,8 +128,10 @@ public class Volumes {
       public void fire( Volume t ) {
         t.setState( State.GENERATING );
         try {
-          ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, t.getSize( ), t.getOwnerUserId( ),
-                                                                       t.getOwnerAccountNumber( ), t.getScName( ), t.getPartition( ) ) );
+          ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, t.getSize( ),
+                                                                       t.getOwnerUserId( ), t.getOwnerUserName( ),
+                                                                       t.getOwnerAccountNumber( ), t.getOwnerAccountName( ),
+                                                                       t.getScName( ), t.getPartition( ) ) );
           CreateStorageVolumeType req = new CreateStorageVolumeType( t.getDisplayName( ), t.getSize( ), snapId, null ).regardingUserRequest( request );
           ServiceDispatcher.lookup( sc ).send( req );
         } catch ( Exception ex ) {

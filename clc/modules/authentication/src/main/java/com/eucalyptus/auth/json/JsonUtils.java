@@ -30,8 +30,8 @@ public class JsonUtils {
   public static List<String> parseStringOrStringList( JSONObject statement, String key ) throws JSONException {
     List<String> results = Lists.newArrayList( );
     try {
-      String action = getByType( String.class, statement, key );
-      results.add( action );
+      String value = getByType( String.class, statement, key );
+      results.add( value );
       return results;
     } catch ( JSONException e ) {
     }

@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*
 Copyright (c) 2009  Eucalyptus Systems, Inc.	
 
@@ -193,8 +196,8 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         (char *)adb_instanceType_get_keyName(instance, env),
         (char *)adb_instanceType_get_userData(instance, env),
         (char *)adb_instanceType_get_launchIndex(instance, env),
-	(char *)adb_instanceType_get_platform(instance, env),
-	expiryTime,
+        (char *)adb_instanceType_get_platform(instance, env),
+        expiryTime,
         groupNames, groupNamesSize
         );
 
@@ -208,17 +211,15 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         axutil_date_time_free(dt, env);
     }
 
-    outInst->volumesSize = adb_instanceType_sizeof_volumes (instance, env);
-    if (outInst->volumesSize > 0) {
-        for (i=0; i<EUCA_MAX_VOLUMES && i<outInst->volumesSize; i++) {
-            adb_volumeType_t * volume = adb_instanceType_get_volumes_at (instance, env, i);
-            safe_strncpy (outInst->volumes[i].volumeId, adb_volumeType_get_volumeId (volume, env), CHAR_BUFFER_SIZE);
-            safe_strncpy (outInst->volumes[i].remoteDev, adb_volumeType_get_remoteDev (volume, env), CHAR_BUFFER_SIZE);
-            safe_strncpy (outInst->volumes[i].localDev, adb_volumeType_get_localDev (volume, env), CHAR_BUFFER_SIZE);
-            safe_strncpy (outInst->volumes[i].stateName, adb_volumeType_get_state (volume, env), CHAR_BUFFER_SIZE);
-        }
+    bzero (outInst->volumes, sizeof (ncVolume) * EUCA_MAX_VOLUMES);
+    for (i=0; i<EUCA_MAX_VOLUMES && i<adb_instanceType_sizeof_volumes (instance, env); i++) {
+        adb_volumeType_t * volume = adb_instanceType_get_volumes_at (instance, env, i);
+        safe_strncpy (outInst->volumes[i].volumeId, adb_volumeType_get_volumeId (volume, env), CHAR_BUFFER_SIZE);
+        safe_strncpy (outInst->volumes[i].remoteDev, adb_volumeType_get_remoteDev (volume, env), CHAR_BUFFER_SIZE);
+        safe_strncpy (outInst->volumes[i].localDev, adb_volumeType_get_localDev (volume, env), CHAR_BUFFER_SIZE);
+        safe_strncpy (outInst->volumes[i].stateName, adb_volumeType_get_state (volume, env), CHAR_BUFFER_SIZE);
     }
-
+    
     return outInst;
 }
 

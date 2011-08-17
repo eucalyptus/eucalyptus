@@ -93,6 +93,22 @@ public class BasicService extends AbstractService implements Service {
     super( );
     this.serviceConfiguration = serviceConfiguration;
     this.stateMachine = new ServiceState( this.serviceConfiguration );
+    if ( this.serviceConfiguration.isVmLocal( ) ) {
+      Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
+        
+        @Override
+        public void run( ) {
+          try {
+            ServiceTransitions.transitionChain( BasicService.this.serviceConfiguration, Component.State.STOPPED ).get( );
+          } catch ( ExecutionException ex ) {
+            LOG.error( ex , ex );
+          } catch ( InterruptedException ex ) {
+            LOG.error( ex , ex );
+            Thread.currentThread( ).interrupt( );
+          }
+        }
+      } );
+    }
   }
   
   static class Broken extends BasicService {

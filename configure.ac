@@ -44,9 +44,9 @@ java_min_version="1.6.0"
 ant_min_version="1.6.5"
 
 # these are for large files (>2GB)
-LDFLAGS="`getconf LFS64_LDFLAGS` $LDFLAGS"
-LIBS="`getconf LFS64_LIBS` $LIBS"
-CFLAGS="`getconf LFS64_CFLAGS`"
+LDFLAGS="`getconf LFS64_LDFLAGS` `getconf LFS_LDFLAGS` $LDFLAGS"
+LIBS="`getconf LFS64_LIBS` `getconf LFS_LIBS` $LIBS"
+CFLAGS="`getconf LFS64_CFLAGS` `getconf LFS_CFLAGS`"
 
 # compile options
 CFLAGS="${CFLAGS} -Wall -Wno-unused-variable -fPIC -DHAVE_CONFIG_H -std=gnu99"

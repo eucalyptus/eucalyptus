@@ -126,7 +126,9 @@ public class VolumeManager {
       throw new EucalyptusCloudException( "Not authorized to create volume by " + ctx.getUser( ).getName( ) );
     }
     
-    Long volSize = request.getSize( ) != null ? Long.parseLong( request.getSize( ) ) : null;
+    Long volSize = request.getSize( ) != null
+      ? Long.parseLong( request.getSize( ) )
+      : null;
     final String snapId = request.getSnapshotId( );
     String partition = request.getAvailabilityZone( );
     
@@ -165,7 +167,7 @@ public class VolumeManager {
     }
     throw new EucalyptusCloudException( "Failed to create volume after " + VOL_CREATE_RETRIES + " because of: " + lastEx, lastEx );
   }
-
+  
   public DeleteVolumeResponseType DeleteVolume( DeleteVolumeType request ) throws EucalyptusCloudException {
     DeleteVolumeResponseType reply = ( DeleteVolumeResponseType ) request.getReply( );
     Context ctx = Contexts.lookup( );
@@ -198,8 +200,10 @@ public class VolumeManager {
         vol.setState( State.ANNIHILATING );
         db.commit( );
         try {
-          ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, vol.getSize( ), vol.getOwnerUserId( ),
-                                                                       vol.getOwnerAccountNumber( ), vol.getScName( ), vol.getPartition( ) ) );
+          ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, vol.getSize( ),
+                                                                       vol.getOwnerUserId( ), vol.getOwnerUserName( ),
+                                                                       vol.getOwnerAccountNumber( ), vol.getOwnerAccountName( ),
+                                                                       vol.getScName( ), vol.getPartition( ) ) );
         } catch ( EventFailedException ex ) {
           LOG.error( ex, ex );
         }
@@ -246,8 +250,10 @@ public class VolumeManager {
           describeVolumes.add( v );
         } else {
           try {
-            ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, v.getSize( ), v.getOwnerUserId( ),
-                                                                         v.getOwnerAccountNumber( ), v.getScName( ), v.getPartition( ) ) );
+            ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, v.getSize( ),
+                                                                         v.getOwnerUserId( ), v.getOwnerUserName( ),
+                                                                         v.getOwnerAccountNumber( ), v.getOwnerAccountName( ),
+                                                                         v.getScName( ), v.getPartition( ) ) );
           } catch ( EventFailedException ex ) {
             LOG.error( ex, ex );
           }

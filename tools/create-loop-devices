@@ -1,0 +1,135 @@
+#!/usr/bin/python -tt
+
+import grp
+import optparse
+import os
+import os.path
+import platform
+import stat
+import warnings
+
+try:
+    import selinux
+    HAVE_LIBSELINUX = True
+except ImportError:
+    HAVE_LIBSELINUX = False
+
+def get_max_part():
+    """
+    Linux 2.6.26 and later allow loop devices to contain partitions.  When this
+    behavior is enabled by passing a max_part option to the loop driver, loop
+    devices' minor device numbers increase by that value plus 1 instead of just
+    1, so we need to know this value when creating loop devices so we don't
+    break things when max_part is nonzero.
+    """
+
+    if os.path.isfile('/sys/module/loop/parameters/max_part'):
+        max_part_file = open('/sys/module/loop/parameters/max_part')
+        max_part = int(max_part_file.readline().strip())
+        max_part_file.close()
+    else:
+        # Linux 2's loop driver does not export its parameters to sysfs, so
+        # guess the correct value by computing the difference between the
+        # device numbers of /dev/loop0 and /dev/loop1.  Hopefully they exist.
+        loop0_minor = os.minor(os.stat('/dev/loop0').st_rdev)
+        loop1_minor = os.minor(os.stat('/dev/loop1').st_rdev)
+        max_part = loop1_minor - loop0_minor - 1
+    assert max_part >= 0
+    return max_part
+
+def loop_devs_are_limited():
+    """
+    Return whether or not the max_loop option for the driver is nonzero.  When
+    is nonzero, two things happen:
+     - The driver creates a given number of loop devices automatically
+     - The driver sets a hard limit on the number of loop devices
+
+    The hard limit means that when max_loop is nonzero any device nodes we
+    create will be useless.
+
+    On Linux 2.6.22 and later this value defaults to 0.  On earlier versions it
+    has a default value of 8, a minimum of 1, and a maximum of 256.
+    """
+    if os.path.isfile('/sys/module/loop/parameters/max_loop'):
+        # Linux >= 3
+        max_loop_file = open('/sys/module/loop/parameters/max_loop')
+        max_loop = int(max_loop_file.readline().strip())
+        max_loop_file.close()
+    elif (int(platform.release().split('.')[0].split('-')[0]) == 2 and
+          int(platform.release().split('.')[1].split('-')[0]) == 6 and
+          int(platform.release().split('.')[2].split('-')[0]) >= 22):
+        # Linux >= 2.6.22
+        # Since Linux 2's loop driver doesn't export its parameters to sysfs we
+        # have no easy way to query what the value of max_loop is.  It might be
+        # in the kernel parameters...
+        kcmdline_file = open('/proc/cmdline')
+        kcmdline = kcmdline_file.readline().strip()
+        kcmdline_file.close()
+        max_loop_opts = [opt for opt in kcmdline.split() if 'max_loop' in opt]
+        for opt in max_loop_opts:
+            if opt.startswith('max_loop=') or opt.startswith('loop.max_loop='):
+                max_loop = int(opt.split('=')[-1])
+        else:
+            # At this point the only option is to try to find modprobe
+            # configuration.  That is a lot of work, so just assume 0.  If
+            # things don't work the worst that will happen is broken loop
+            # devices, which doesn't break components any more than they
+            # would already be if the devices did not exist.
+            max_loop = 0
+    else:
+        # Linux < 2.6.22
+        # It can't be 0, so the actual value doesn't actually matter.
+        max_loop = 8
+    return max_loop != 0
+
+def create_loop_devices(total, max_part):
+    """
+    Create devices /dev/loop0 through /dev/loopN, where N is total - 1.
+    """
+    try:
+        for i in range(0, total):
+            fname = '/dev/loop{0}'.format(i)
+            major = 7
+            minor = i * (max_part + 1)
+            if minor < 2 ** 20:
+                if not os.path.exists(fname):
+                    os.mknod(fname, stat.S_IFBLK, os.makedev(major, minor))
+                    # Set the permissions to something sane.  These seem to be
+                    # the defaults on pretty much every distro; a better source
+                    # of information would be nice.
+                    try:
+                        gid = grp.getgrnam('disk').gr_gid
+                        os.chown(fname, 0, gid)
+                        os.chmod(fname, 0660)
+                    except KeyError:
+                        os.chown(fname, 0, 0)
+                        os.chmod(fname, 0600)
+                    try:
+                        if HAVE_LIBSELINUX and selinux.is_selinux_enabled():
+                            selinux.restorecon(fname)
+                    except OSError:
+                        warnings.warn('Failed to set SELinux context on ' +
+				      fname, RuntimeWarning)
+            else:
+                warnings.warn(('Minor device numbers too large to create all '
+                               'device nodes'), RuntimeWarning)
+                break
+    except OverflowError:
+        # The native code can barf when given really big numbers for device
+        # nodes. (i.e. when os.makedev(major, minor) > 2 ** 31 - 1)
+        warnings.warn('Device numbers too large to create all device nodes',
+                      RuntimeWarning)
+
+def main():
+    parser = optparse.OptionParser()
+    (options, args) = parser.parse_args()
+    if len(args) > 0:
+        ndevs = int(args[0])
+    else:
+        ndevs = 256
+
+    if not loop_devs_are_limited():
+        create_loop_devices(ndevs, get_max_part())
+
+if __name__ == '__main__':
+    main()
