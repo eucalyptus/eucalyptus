@@ -45,7 +45,7 @@ public class Transactions {
   }
   
   private static void checkTransaction( ) {
-    if ( Entities.hasTransaction( ) && depth.get( ).get( ) == 0 ) {
+    if ( depth.get( ).get( ) == 0 && Entities.hasTransaction( ) ) {
       depth.get( ).incrementAndGet( );
     }
   }

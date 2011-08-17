@@ -66,23 +66,34 @@
  */
 package com.eucalyptus.entities;
 
+import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
+import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
-import org.hibernate.HibernateException;
 import org.hibernate.NonUniqueResultException;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.Event;
+import com.eucalyptus.event.EventListener;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.LogUtil;
@@ -91,8 +102,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 public class EntityWrapper<TYPE> {
-  private static Logger  LOG = Logger.getLogger( EntityWrapper.class );
-  private final TxHandle tx;
+  private static Logger          LOG = Logger.getLogger( EntityWrapper.class );
+  private final TransactionState tx;
   
 /**
    * @see {@link Entities#get(Class)
@@ -120,15 +131,7 @@ public class EntityWrapper<TYPE> {
    */
   @SuppressWarnings( "unchecked" )
   EntityWrapper( String persistenceContext, Runnable runnable ) {
-    try {
-      this.eventLog( TxState.BEGIN, TxEvent.CREATE );
-      this.tx = new TxHandle( persistenceContext, runnable );
-    } catch ( Throwable e ) {
-      this.eventLog( TxState.FAIL, TxEvent.CREATE );
-      Exception ex = PersistenceExceptions.throwFiltered( e );
-      throw new RuntimeException( ex );
-    }
-    this.eventLog( TxState.END, TxEvent.CREATE );
+    this.tx = new TransactionState( persistenceContext, runnable );
   }
   
   @SuppressWarnings( "unchecked" )
@@ -173,7 +176,6 @@ public class EntityWrapper<TYPE> {
   
   @SuppressWarnings( "unchecked" )
   public TYPE getUnique( TYPE example ) throws EucalyptusCloudException {
-    this.eventLog( TxState.BEGIN, TxEvent.UNIQUE );
     try {
       Object id = null;
       try {
@@ -237,18 +239,6 @@ public class EntityWrapper<TYPE> {
       PersistenceExceptions.throwFiltered( ex );
       throw ex;
     }
-  }
-  
-  /**
-   * Performs a save directly on the session with the distinguishing feature that generated IDs are
-   * not forcibly generated (e.g., INSERTS are not performed)
-   * 
-   * @see http://opensource.atlassian.com/projects/hibernate/browse/HHH-1273
-   * @param e
-   */
-  @Deprecated
-  public <T> void save( T e ) {
-    this.getSession( ).save( e );
   }
   
   /**
@@ -365,37 +355,11 @@ public class EntityWrapper<TYPE> {
   }
   
   public void rollback( ) {
-    this.eventLog( TxState.BEGIN, TxEvent.ROLLBACK );
-    try {
-      this.tx.rollback( );
-    } catch ( Throwable e ) {
-      this.eventLog( TxState.FAIL, TxEvent.ROLLBACK );
-      PersistenceExceptions.throwFiltered( e );
-    }
-    this.eventLog( TxState.END, TxEvent.ROLLBACK );
+    this.tx.rollback( );
   }
   
   public void commit( ) throws ConstraintViolationException {
-    this.eventLog( TxState.BEGIN, TxEvent.COMMIT );
-    try {
-      this.tx.commit( );
-    } catch ( RuntimeException e ) {
-      this.eventLog( TxState.FAIL, TxEvent.COMMIT );
-      PersistenceExceptions.throwFiltered( e );
-      throw e;
-    } catch ( Throwable e ) {
-      this.eventLog( TxState.FAIL, TxEvent.COMMIT );
-      PersistenceExceptions.throwFiltered( e );
-      throw new RuntimeException( e );
-    }
-    this.eventLog( TxState.END, TxEvent.COMMIT );
-  }
-  
-  private final void eventLog( TxState txState, TxEvent txAction ) {
-    if ( Logs.isExtrrreeeme() && this.tx != null ) {
-      Logs.exhaust( ).debug( Joiner.on( ":" ).join( EventType.PERSISTENCE, txState.event( txAction ), Long.toString( this.tx.splitOperation( ) ),
-                                                    this.tx.getTxUuid( ) ) );
-    }
+    this.tx.commit( );
   }
   
   public Criteria createCriteria( Class class1 ) {
@@ -404,7 +368,7 @@ public class EntityWrapper<TYPE> {
   
   /** package default on purpose **/
   EntityManager getEntityManager( ) {
-    return this.tx.getEntityManager( );
+    return this.getEntityManager( );
   }
   
   /** :| should also be package default **/
@@ -431,28 +395,6 @@ public class EntityWrapper<TYPE> {
     throw new RuntimeException( "BUG: Reached bottom of stack trace without finding any relevent frames." );
   }
   
-  enum TxState {
-    BEGIN, END, FAIL;
-    public String event( TxEvent e ) {
-      return e.name( ) + ":" + this.name( );
-    }
-  }
-  
-  enum TxEvent {
-    CREATE,
-    COMMIT,
-    ROLLBACK,
-    UNIQUE,
-    QUERY;
-    public String getMessage( ) {
-      if ( Logs.isExtrrreeeme() ) {
-        return EntityWrapper.getMyStackTraceElement( ).toString( );
-      } else {
-        return "n.a";
-      }
-    }
-  }
-  
   public Query createSQLQuery( String sqlQuery ) {
     return this.getSession( ).createSQLQuery( sqlQuery );
   }
@@ -474,4 +416,267 @@ public class EntityWrapper<TYPE> {
     }
   }
   
+  static class TransactionState implements Comparable<TransactionState>, EntityTransaction {
+    enum TxEvent {
+      CREATE,
+      COMMIT,
+      ROLLBACK,
+      UNIQUE,
+      QUERY;
+      public String getMessage( ) {
+        if ( Logs.isExtrrreeeme( ) ) {
+          return EntityWrapper.getMyStackTraceElement( ).toString( );
+        } else {
+          return "n.a";
+        }
+      }
+    }
+    
+    enum TxState {
+      BEGIN, END, FAIL;
+      public String event( TxEvent e ) {
+        return e.name( ) + ":" + this.name( );
+      }
+    }
+    
+    private static Logger                                           LOG         = Logger.getLogger( TransactionState.class );
+    private static ConcurrentNavigableMap<String, TransactionState> outstanding = new ConcurrentSkipListMap<String, TransactionState>( );
+    
+    private EntityManager                                           em;
+    private final WeakReference<Session>                            session;
+    private EntityTransaction                                       transaction;
+    private final String                                            owner;
+    private final Long                                              startTime;
+    private final String                                            txUuid;
+    private final StopWatch                                         stopWatch;
+    
+    private volatile long                                           splitTime   = 0l;
+    private final Runnable                                          runnable;
+    
+    TransactionState( final String ctx, final Runnable runnable ) {
+      this.runnable = runnable;
+      try {
+        this.txUuid = String.format( "%s:%s", ctx, UUID.randomUUID( ).toString( ) );
+        this.eventLog( TxState.BEGIN, TxEvent.CREATE );
+        this.owner = Logs.isExtrrreeeme( )
+          ? Threads.currentStackString( )
+          : "n/a";
+        this.startTime = System.currentTimeMillis( );
+        this.stopWatch = new StopWatch( );
+        this.stopWatch.start( );
+        final EntityManagerFactory anemf = ( EntityManagerFactoryImpl ) PersistenceContexts.getEntityManagerFactory( ctx );
+        assertThat( anemf, notNullValue( ) );
+        this.em = anemf.createEntityManager( );
+        assertThat( this.em, notNullValue( ) );
+        this.transaction = this.em.getTransaction( );
+        this.transaction.begin( );
+        this.session = new WeakReference<Session>( ( Session ) this.em.getDelegate( ) );
+        this.eventLog( TxState.END, TxEvent.CREATE );
+      } catch ( Throwable ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        this.eventLog( TxState.FAIL, TxEvent.CREATE );
+        this.rollback( );
+        throw new RuntimeException( PersistenceExceptions.throwFiltered( ex ) );
+      } finally {
+        this.runnable.run( );
+        outstanding.put( this.txUuid, this );
+      }
+    }
+    
+    private boolean isExpired( ) {
+      final long splitTime = this.split( );
+      return ( splitTime - 30000 ) > this.startTime;
+    }
+    
+    private long split( ) {
+      this.stopWatch.split( );
+      this.splitTime = this.stopWatch.getSplitTime( );
+      this.stopWatch.unsplit( );
+      return this.splitTime;
+    }
+    
+    private final void eventLog( TxState txState, TxEvent txAction ) {
+      if ( Logs.isExtrrreeeme( ) ) {
+        final long oldSplit = this.splitTime;
+        this.stopWatch.split( );
+        this.splitTime = this.stopWatch.getSplitTime( );
+        this.stopWatch.unsplit( );
+        Long split = this.splitTime - oldSplit;
+        Logs.exhaust( ).debug( Joiner.on( ":" ).join( EventType.PERSISTENCE, txState.event( txAction ), Long.toString( split ),
+                                                      this.getTxUuid( ) ) );
+      }
+    }
+    
+    @Override
+    public void rollback( ) {
+      this.eventLog( TxState.BEGIN, TxEvent.ROLLBACK );
+      try {
+        if ( ( this.transaction != null ) && this.transaction.isActive( ) ) {
+          this.transaction.rollback( );
+        }
+        this.eventLog( TxState.END, TxEvent.ROLLBACK );
+      } catch ( final Throwable e ) {
+        this.eventLog( TxState.FAIL, TxEvent.ROLLBACK );
+        PersistenceExceptions.throwFiltered( e );
+      } finally {
+        this.cleanup( );
+      }
+    }
+    
+    private void cleanup( ) {
+      try {
+        this.runnable.run( );
+      } catch ( final Exception ex ) {
+        LOG.error( ex, ex );
+      }
+      try {
+        if ( ( this.session != null ) && ( this.session.get( ) != null ) ) {
+          this.session.clear( );
+        }
+        this.transaction = null;
+        if ( this.em != null ) {
+          this.em.close( );
+        }
+        this.em = null;
+      } finally {
+        outstanding.remove( this.txUuid );
+      }
+    }
+    
+    private void verifyOpen( ) {
+      if ( ( this.transaction == null ) || ( this.em == null ) ) {
+        throw new RuntimeException( "Calling a closed tx handle: " + this.txUuid );
+      }
+    }
+    
+    @Override
+    public void commit( ) {
+      this.eventLog( TxState.BEGIN, TxEvent.COMMIT );
+      try {
+        this.verifyOpen( );
+      } catch ( RuntimeException ex ) {
+        this.cleanup( );
+        this.eventLog( TxState.FAIL, TxEvent.COMMIT );
+        PersistenceExceptions.throwFiltered( ex );
+        throw ex;
+      }
+      try {
+        this.transaction.commit( );
+        this.eventLog( TxState.END, TxEvent.COMMIT );
+      } catch ( final RuntimeException e ) {
+        if ( ( this.transaction != null ) && this.transaction.isActive( ) ) {
+          this.transaction.rollback( );
+          LOG.debug( e, e );
+        }
+        this.eventLog( TxState.FAIL, TxEvent.COMMIT );
+        PersistenceExceptions.throwFiltered( e );
+        throw e;
+      } finally {
+        this.cleanup( );
+      }
+    }
+    
+    public String getTxUuid( ) {
+      this.split( );
+      return this.txUuid;
+    }
+    
+    @Override
+    public boolean getRollbackOnly( ) {
+      return this.transaction.getRollbackOnly( );
+    }
+    
+    @Override
+    public boolean isActive( ) {
+      boolean hasEm = this.em != null && this.em.isOpen( );
+      boolean hasSession = this.session.get( ) != null && this.session.get( ).isOpen( );
+      boolean hasTx = this.transaction != null && this.transaction.isActive( );
+      if ( hasEm && hasSession && hasTx ) {
+        return true;
+      } else {
+        this.cleanup( );
+        return false;
+      }
+    }
+    
+    @Override
+    public void setRollbackOnly( ) {
+      this.transaction.setRollbackOnly( );
+    }
+    
+    public Session getSession( ) {
+      if ( this.session.get( ) == null ) {
+        final RuntimeException e = new RuntimeException( "Someone is calling a closed tx handle: " + this.txUuid );
+        LOG.error( e, e );
+        throw e;
+      }
+      return this.session.get( );
+    }
+    
+    public EntityManager getEntityManager( ) {
+      return this.em;
+    }
+    
+    @Override
+    public void begin( ) {
+      this.transaction.begin( );
+    }
+    
+    @Override
+    public int hashCode( ) {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + ( ( this.owner == null )
+        ? 0
+        : this.owner.hashCode( ) );
+      result = prime * result + ( ( this.startTime == null )
+        ? 0
+        : this.startTime.hashCode( ) );
+      return result;
+    }
+    
+    @Override
+    public boolean equals( final Object obj ) {
+      if ( this == obj ) return true;
+      if ( obj == null ) return false;
+      if ( this.getClass( ) != obj.getClass( ) ) return false;
+      final TransactionState other = ( TransactionState ) obj;
+      if ( this.owner == null ) {
+        if ( other.owner != null ) return false;
+      } else if ( !this.owner.equals( other.owner ) ) return false;
+      if ( this.startTime == null ) {
+        if ( other.startTime != null ) return false;
+      } else if ( !this.startTime.equals( other.startTime ) ) return false;
+      return true;
+    }
+    
+    @Override
+    public int compareTo( final TransactionState that ) {
+      return this.txUuid.compareTo( that.txUuid );
+    }
+    
+    @Override
+    public String toString( ) {
+      return String.format( "TxHandle:txUuid=%s:startTime=%s:splitTime=%s:owner=%s", this.txUuid, this.startTime, this.splitTime, Logs.isExtrrreeeme( )
+        ? this.owner
+        : "n/a" );
+    }
+    
+    public static class TxWatchdog implements EventListener {
+      
+      @Override
+      public void fireEvent( final Event event ) {
+        if ( event instanceof ClockTick ) {
+          for ( final TransactionState tx : TransactionState.outstanding.values( ) ) {
+            if ( tx.isExpired( ) ) {
+              tx.cleanup( );
+              LOG.error( "Found expired TxHandle: " + tx );
+              LOG.error( tx.owner );
+            }
+          }
+        }
+      }
+    }
+    
+  }
 }
