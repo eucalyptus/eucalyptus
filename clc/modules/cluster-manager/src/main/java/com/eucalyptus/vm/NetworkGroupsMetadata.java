@@ -67,8 +67,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
+import org.hibernate.Criteria;
+import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.network.IpRange;
 import com.eucalyptus.network.NetworkPeer;
 import com.eucalyptus.network.NetworkRule;
@@ -98,7 +103,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
           Multimap<String, String> networks = ArrayListMultimap.create( );
           Multimap<String, String> rules = ArrayListMultimap.create( );
           for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
-            if( VmState.RUNNING.ordinal( ) < vm.getState( ).ordinal( ) ) continue;
+            if( VmState.RUNNING.ordinal( ) < vm.getRuntimeState( ).ordinal( ) ) continue;
             for ( NetworkGroup ruleGroup : vm.getNetworkRulesGroups( ) ) {
               networks.put( ruleGroup.getNaturalId( ), vm.getPrivateAddress( ) );
               if ( !rules.containsKey( ruleGroup.getNaturalId( ) ) ) {

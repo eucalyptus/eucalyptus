@@ -145,7 +145,7 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   
   public boolean hasIndexes( ) {
     for ( PrivateNetworkIndex index : this.getIndexes( ) ) {
-      if ( Resource.State.EXTANT.equals( index.getState( ) ) ) {
+      if ( Resource.State.EXTANT.equals( index.getRuntimeState( ) ) ) {
         return true;
       }
     }

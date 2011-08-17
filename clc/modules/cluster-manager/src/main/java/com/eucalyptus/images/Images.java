@@ -70,7 +70,7 @@ public class Images {
       i.setImageId( arg0.getDisplayName( ) );
       i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
-      i.setImageState( arg0.getState( ).toString( ) );
+      i.setImageState( arg0.getRuntimeState( ).toString( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
       i.setIsPublic( arg0.getImagePublic( ) );
       i.setPlatform( Image.Platform.linux.toString( ) );
@@ -96,7 +96,7 @@ public class Images {
       i.setImageId( arg0.getDisplayName( ) );
       i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
-      i.setImageState( arg0.getState( ).toString( ) );
+      i.setImageState( arg0.getRuntimeState( ).toString( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
       i.setIsPublic( arg0.getImagePublic( ) );
       i.setPlatform( Image.Platform.linux.toString( ) );
@@ -124,7 +124,7 @@ public class Images {
       i.setImageId( arg0.getDisplayName( ) );
       i.setImageLocation( arg0.getOwnerAccountNumber( ) + "/" + arg0.getImageName( ) );
       i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
-      i.setImageState( arg0.getState( ).toString( ) );
+      i.setImageState( arg0.getRuntimeState( ).toString( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
       i.setIsPublic( arg0.getImagePublic( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
@@ -159,7 +159,7 @@ public class Images {
       i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
-      i.setImageState( arg0.getState( ).toString( ) );
+      i.setImageState( arg0.getRuntimeState( ).toString( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
       i.setIsPublic( arg0.getImagePublic( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
@@ -262,7 +262,7 @@ public class Images {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo img = db.getUnique( Images.exampleWithImageId( imageId ) );
-      img.setState( Image.State.available );
+      img.setRuntimeState( Image.State.available );
       db.commit( );
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
@@ -274,10 +274,10 @@ public class Images {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo img = db.getUnique( Images.exampleWithImageId( imageId ) );
-      if ( Image.State.deregistered.equals( img.getState( ) ) ) {
+      if ( Image.State.deregistered.equals( img.getRuntimeState( ) ) ) {
         db.delete( img );
       } else {
-        img.setState( Image.State.deregistered );
+        img.setRuntimeState( Image.State.deregistered );
       }
       db.commit( );
       if ( img instanceof Image.StaticDiskImage ) {
@@ -328,7 +328,7 @@ public class Images {
   public static ImageInfo exampleWithImageState( final Image.State state ) {
     ImageInfo img = new ImageInfo( ) {
       {
-        setState( state );
+        setRuntimeState( state );
       }
     };
     
@@ -391,7 +391,7 @@ public class Images {
       try {
         ret = db.merge( ret );
         ret.getDeviceMappings( ).addAll( Lists.transform( blockDeviceMappings, Images.deviceMappingGenerator( ret ) ) );
-        ret.setState( Image.State.available );
+        ret.setRuntimeState( Image.State.available );
         db.commit( );
         LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + userFullName );
       } catch ( Exception e ) {
@@ -452,7 +452,7 @@ public class Images {
       throw new IllegalArgumentException( "Failed to prepare image using the provided image manifest: " + manifest );
     } else {
       ret.setSignature( manifest.getSignature( ) );
-      ret.setState( Image.State.available );
+      ret.setRuntimeState( Image.State.available );
       EntityWrapper<PutGetImageInfo> db = EntityWrapper.get( PutGetImageInfo.class );
       try {
         ret = db.merge( ret );

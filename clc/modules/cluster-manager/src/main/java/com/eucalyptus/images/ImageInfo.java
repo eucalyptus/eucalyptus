@@ -183,7 +183,7 @@ public class ImageInfo extends UserMetadata<Image.State> implements Image {
     assertThat( imageSizeBytes, notNullValue( ) );
     assertThat( arch, notNullValue( ) );
     assertThat( platform, notNullValue( ) );
-    this.setState( Image.State.pending );
+    this.setRuntimeState( Image.State.pending );
     this.imageType = imageType;
     this.imageName = imageName;
     this.description = imageDescription;

@@ -63,14 +63,13 @@
 
 package com.eucalyptus.cloud.util;
 
-import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.util.HasNaturalId;
 
 public interface Resource<T extends HasNaturalId, R extends HasNaturalId> extends Comparable<T> {
   public interface SetReference<T, R> extends Comparable<T> {
     public T set( R referer ) throws ResourceAllocationException;
     
-    public T get( ) throws TransactionException;
+    public T get( );
     
     public T abort( ) throws ResourceAllocationException;
   }

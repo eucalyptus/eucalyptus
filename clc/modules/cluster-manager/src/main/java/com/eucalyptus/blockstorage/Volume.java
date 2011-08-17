@@ -113,7 +113,7 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata<Volume
     this.scName = scName;
     this.partition = partitionName;
     this.parentSnapshot = parentSnapshot;
-    super.setState( State.NIHIL );
+    super.setRuntimeState( State.NIHIL );
     super.setCreationTimestamp( new Date( ) );
   }
   
@@ -151,7 +151,7 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata<Volume
   }
   
   public String mapState( ) {
-    switch ( this.getState( ) ) {
+    switch ( this.getRuntimeState( ) ) {
       case GENERATING:
         return "creating";
       case EXTANT:
@@ -171,14 +171,14 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata<Volume
   
   public void setMappedState( final String state ) {
     if ( StorageProperties.Status.failed.toString( ).equals( state ) )
-      this.setState( State.FAIL );
+      this.setRuntimeState( State.FAIL );
     else if ( StorageProperties.Status.creating.toString( ).equals( state ) )
-      this.setState( State.GENERATING );
+      this.setRuntimeState( State.GENERATING );
     else if ( StorageProperties.Status.available.toString( ).equals( state ) )
-      this.setState( State.EXTANT );
+      this.setRuntimeState( State.EXTANT );
     else if ( "in-use".equals( state ) )
-      this.setState( State.BUSY );
-    else this.setState( State.ANNIHILATED );
+      this.setRuntimeState( State.BUSY );
+    else this.setRuntimeState( State.ANNIHILATED );
   }
   
   public edu.ucsb.eucalyptus.msgs.Volume morph( final edu.ucsb.eucalyptus.msgs.Volume vol ) {
@@ -234,7 +234,7 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata<Volume
   }
   
   public boolean isReady( ) {
-    return this.getState( ).equals( State.EXTANT );
+    return this.getRuntimeState( ).equals( State.EXTANT );
   }
   
   @Override

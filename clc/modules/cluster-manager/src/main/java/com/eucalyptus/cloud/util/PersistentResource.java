@@ -95,11 +95,12 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
    */
   @Override
   public final Resource.State currentState( ) {
-    return this.getState( );
+    return this.getRuntimeState( );
   }
   
   /**
    * Referer may be null!
+   * 
    * @param referer
    */
   protected abstract void setReferer( @Nullable R referer );
@@ -156,13 +157,13 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
     EntityWrapper<T> db = Entities.get( ( Class<T> ) this.getClass( ) );
     try {
       PersistentResource<T, R> thisEntity = db.getUnique( ( T ) this );
-      if ( thisEntity.getState( ) != null  && preconditionState != null && !preconditionState.equals( thisEntity.getState( ) ) ) {
+      if ( thisEntity.getRuntimeState( ) != null && preconditionState != null && !preconditionState.equals( thisEntity.getRuntimeState( ) ) ) {
         throw new RuntimeException( "Error allocating resource " + PersistentResource.this.getClass( ).getSimpleName( ) + " with id "
                                     + this.getDisplayName( ) + " as the state is not " + preconditionState.name( ) + " (currently "
-                                    + this.getState( ) + ")." );
+                                    + this.getRuntimeState( ) + ")." );
       } else {
         this.setReferer( referer );
-        this.setState( finalState );
+        this.setRuntimeState( finalState );
       }
       db.commit( );
       return thisEntity.get( );
@@ -201,12 +202,13 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
         if ( this.finished ) {
           throw new ResourceAllocationException( "Failed to set referer since this reference has already been set: " + PersistentResource.this.getDisplayName( )
                                                  + " to "
-                                                 + PersistentResource.this.getReferer( ) + " and is currently in state " + PersistentResource.this.getState( ) );
+                                                 + PersistentResource.this.getReferer( ) + " and is currently in state "
+                                                 + PersistentResource.this.getRuntimeState( ) );
         }
       }
       
       @Override
-      public T get( ) throws TransactionException {
+      public T get( ) {
         EntityWrapper<T> db = Entities.get( ( Class<T> ) PersistentResource.this.getClass( ) );
         try {
           T ret = db.getUnique( ( T ) PersistentResource.this );
@@ -215,7 +217,7 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
         } catch ( Exception ex ) {
           Logs.extreme( ).error( ex, ex );
           db.rollback( );
-          throw new TransactionExecutionException( ex.getMessage( ), ex );
+          throw new RuntimeException( ex.getMessage( ), ex );
         }
       }
       
@@ -253,7 +255,8 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
         if ( this.finished ) {
           throw new ResourceAllocationException( "Failed to set referer since this reference has already been set: " + PersistentResource.this.getDisplayName( )
                                                  + " to "
-                                                 + PersistentResource.this.getReferer( ) + " and is currently in state " + PersistentResource.this.getState( ) );
+                                                 + PersistentResource.this.getReferer( ) + " and is currently in state "
+                                                 + PersistentResource.this.getRuntimeState( ) );
         }
       }
       

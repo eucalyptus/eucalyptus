@@ -187,7 +187,7 @@ public class VolumeManager {
           /** no such volume attached, move along... **/
         }
       }
-      if ( State.FAIL.equals( vol.getState( ) ) ) {
+      if ( State.FAIL.equals( vol.getRuntimeState( ) ) ) {
         db.delete( vol );
         db.commit( );
         return reply;
@@ -195,7 +195,7 @@ public class VolumeManager {
       ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
       DeleteStorageVolumeResponseType scReply = ServiceDispatcher.lookup( sc ).send( new DeleteStorageVolumeType( vol.getDisplayName( ) ) );
       if ( scReply.get_return( ) ) {
-        vol.setState( State.ANNIHILATING );
+        vol.setRuntimeState( State.ANNIHILATING );
         db.commit( );
         try {
           ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, false, vol.getSize( ), vol.getOwnerUserId( ),
@@ -242,7 +242,7 @@ public class VolumeManager {
         if ( !Types.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VOLUME, v.getDisplayName( ), v.getOwner( ) ) ) {
           continue;
         }
-        if ( !State.ANNIHILATED.equals( v.getState( ) ) ) {
+        if ( !State.ANNIHILATED.equals( v.getRuntimeState( ) ) ) {
           describeVolumes.add( v );
         } else {
           try {
@@ -355,7 +355,7 @@ public class VolumeManager {
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
                .withDetails( volume.getOwner( ).toString( ), volume.getDisplayName( ), "instance", vm.getInstanceId( ) )
                .withDetails( "cluster", vm.getClusterName( ) ).info( );
-    volume.setState( State.BUSY );
+    volume.setRuntimeState( State.BUSY );
     reply.setAttachedVolume( attachVol );
     return reply;
   }

@@ -68,10 +68,8 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.VmRunType.Builder;
 import com.eucalyptus.network.NetworkGroup;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.msgs.CloudClusterMessage;
@@ -102,6 +100,11 @@ public class VmRunType extends CloudClusterMessage {
       return this;
     }
     
+    public VmRunType.Builder networkIndex( Long networkIndex ) {
+      this.buildit.setNetworkIndex( networkIndex );
+      return this;
+    }
+    
     public VmRunType.Builder launchIndex( final Integer launchIndex ) {
       this.buildit.setLaunchIndex( launchIndex );
       return this;
@@ -129,6 +132,10 @@ public class VmRunType extends CloudClusterMessage {
       return this;
     }
     
+    public VmRunType.Builder naturalId( final String naturalId ) {
+      this.buildit.setUuid( naturalId );
+      return this;
+    }
     public VmRunType.Builder instanceId( final String instanceId ) {
       this.buildit.setInstanceId( instanceId );
       this.buildit.setMacAddress( String.format( "d0:0d:%s:%s:%s:%s", instanceId.substring( 2, 4 ), instanceId.substring( 4, 6 ), instanceId.substring( 6, 8 ),
