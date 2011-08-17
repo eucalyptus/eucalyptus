@@ -66,6 +66,8 @@
  */
 package com.eucalyptus.entities;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.NoSuchElementException;
