@@ -66,8 +66,10 @@ package com.eucalyptus.blockstorage;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
+import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
@@ -110,7 +112,7 @@ public class Snapshots {
     }
   }
   
-  static Snapshot startCreateSnapshot( final Volume vol, final Snapshot snap ) throws EucalyptusCloudException {
+  static Snapshot startCreateSnapshot( final Volume vol, final Snapshot snap ) throws EucalyptusCloudException, DuplicateMetadataException {
     final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
     try {
       Snapshot snapState = Transactions.save( snap, new Callback<Snapshot>( ) {
@@ -126,6 +128,8 @@ public class Snapshots {
           }
         }
       } );
+    } catch ( ConstraintViolationException ex ) {
+      throw new DuplicateMetadataException( "Duplicate snapshot creation: " + snap + ": " + ex.getMessage( ), ex );
     } catch ( ExecutionException ex ) {
       LOG.error( ex.getCause( ), ex.getCause( ) );
       throw new EucalyptusCloudException( ex );

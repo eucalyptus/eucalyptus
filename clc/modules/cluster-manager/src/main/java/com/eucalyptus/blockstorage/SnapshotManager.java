@@ -70,6 +70,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.component.NoSuchComponentException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -110,7 +111,7 @@ public class SnapshotManager {
   static Logger LOG       = Logger.getLogger( SnapshotManager.class );
   static String ID_PREFIX = "snap";
   
-  public CreateSnapshotResponseType create( CreateSnapshotType request ) throws EucalyptusCloudException, NoSuchComponentException {
+  public CreateSnapshotResponseType create( CreateSnapshotType request ) throws EucalyptusCloudException, NoSuchComponentException, DuplicateMetadataException {
     Context ctx = Contexts.lookup( );
     String action = PolicySpec.requestToAction( request );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
@@ -143,9 +144,10 @@ public class SnapshotManager {
   }
   
   /**
+   * @throws DuplicateMetadataException 
    * @deprecated Use {@link Snapshots#startCreateSnapshot(Volume,Snapshot)} instead
    */
-  private static Snapshot startCreateSnapshot( final Volume vol, final Snapshot snap ) throws EucalyptusCloudException {
+  private static Snapshot startCreateSnapshot( final Volume vol, final Snapshot snap ) throws EucalyptusCloudException, DuplicateMetadataException {
     return Snapshots.startCreateSnapshot( vol, snap );
   }
   
