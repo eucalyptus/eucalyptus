@@ -121,7 +121,6 @@ public class KeyPairs {
     try {
       Transactions.save( newKey );
     } catch ( ConstraintViolationException ex ) {
-      Exceptions.causedBy( ex, ConstraintViolationException.class );
       throw new DuplicateMetadataException( "Keypair already exists: " + keyName + ": " + ex.getMessage( ), ex );
     }
     return newKeys.getPrivate( );

@@ -234,7 +234,7 @@ public class NetworkGroups {
     return DEFAULT_NETWORK_NAME;
   }
   
-  public static NetworkGroup create( OwnerFullName ownerFullName, String groupName, String groupDescription ) {
+  public static NetworkGroup create( OwnerFullName ownerFullName, String groupName, String groupDescription ) throws DuplicateMetadataException {
     try {
       return Transactions.save( new NetworkGroup( ownerFullName, groupName, groupDescription ) );
     } catch ( ConstraintViolationException ex ) {
