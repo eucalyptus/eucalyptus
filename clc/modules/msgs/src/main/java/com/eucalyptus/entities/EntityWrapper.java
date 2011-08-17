@@ -111,7 +111,7 @@ import com.google.common.collect.Sets;
 
 public class EntityWrapper<TYPE> {
   private static Logger          LOG = Logger.getLogger( EntityWrapper.class );
-  private final TransactionState tx;
+  private TransactionState tx;
   
 /**
    * @see {@link Entities#get(Class)
@@ -348,10 +348,12 @@ public class EntityWrapper<TYPE> {
   
   public void rollback( ) {
     this.tx.rollback( );
+    this.tx = null;
   }
   
   public void commit( ) throws ConstraintViolationException {
     this.tx.commit( );
+    this.tx = null;
   }
   
   public Criteria createCriteria( final Class class1 ) {

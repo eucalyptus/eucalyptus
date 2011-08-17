@@ -144,7 +144,7 @@ public class Entities {
         public boolean apply( TxUnroll forceClose ) {
           if ( TxUnroll.ROLLBACK.equals( forceClose ) ) {
             AtomicStampedReference<EntityWrapper<?>> ref = tl.get( ).remove( persistenceContext.name( ) );
-            if ( ref.getReference( ).isActive( ) ) {
+            if ( ref.getReference( ) != null && ref.getReference( ).isActive( ) ) {
               ref.getReference( ).rollback( );
             }
             return false;
