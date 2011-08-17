@@ -66,7 +66,6 @@ package com.eucalyptus.blockstorage;
 import javax.persistence.Column;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
@@ -93,7 +92,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata<Sn
   @Column( name = "metadata_snapshot_vol_partition", updatable = false )
   private String   volumePartition;
   
-  public Snapshot( ) {
+  private Snapshot( ) {
     super( );
   }
   

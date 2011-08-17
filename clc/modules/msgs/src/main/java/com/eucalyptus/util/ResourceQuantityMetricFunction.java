@@ -61,51 +61,8 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cloud;
+package com.eucalyptus.util;
 
-import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.auth.policy.PolicyVendor;
-import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasOwningAccount;
-
-/**
- * GRZE:WARN: values are intentionally opaque strings and /not/ a symbolic reference. do not change
- * them.
- * NOTE: this class can be safely treated as a public type; as opposed to the implementation
- * specific types which should /not/ be references.
- * 
- * @see PolicyResourceType
- * @see PolicyResourceType#NO_VALUE_SPECIFED
- * @see PolicyVendor
- **/
-@PolicyVendor( "ec2" )
-public interface CloudMetadata<T> extends HasFullName<T>, CloudVendorInfo, HasOwningAccount {
-  
-  @PolicyResourceType( "keypair" )
-  public interface KeyPair<S extends KeyPair<S>> extends CloudMetadata<S> {}
-  
-  @PolicyResourceType( "securitygroup" )
-  public interface NetworkSecurityGroup<S extends NetworkSecurityGroup<S>> extends CloudMetadata<S> {}
-  
-  @PolicyResourceType( "address" )
-  public interface AddressMetadata<S extends AddressMetadata<S>> extends CloudMetadata<S> {}
-  
-  @PolicyResourceType( "volume" )
-  public interface VolumeMetadata<S extends VolumeMetadata<S>> extends CloudMetadata<S> {}
-  
-  @PolicyResourceType( "snapshot" )
-  public interface SnapshotMetadata<S extends SnapshotMetadata<S>> extends CloudMetadata<S> {}
-  
-  @PolicyResourceType( "instance" )
-  public interface VirtualMachineInstance<S extends VirtualMachineInstance<S>> extends CloudMetadata<S> {}
-  
-  @PolicyResourceType( "vmtype" )
-  public interface VirtualMachineType<S extends VirtualMachineType<S>> extends CloudMetadata<S> {
-    public abstract Integer getMemory( );
-    
-    public abstract Integer getCpu( );
-    
-    public abstract Integer getDisk( );
-    
-  }
+public @interface ResourceQuantityMetricFunction {
+  Class<?> value();
 }

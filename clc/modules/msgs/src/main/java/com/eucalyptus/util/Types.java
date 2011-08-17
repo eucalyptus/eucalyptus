@@ -64,6 +64,7 @@
 package com.eucalyptus.util;
 
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
@@ -77,11 +78,14 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.PolicyVendor;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
+import com.google.common.base.Function;
+import com.google.gwt.thirdparty.guava.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Types {
@@ -125,8 +129,8 @@ public class Types {
         PolicyVendor vendor = ats.get( PolicyVendor.class );
         PolicyResourceType type = ats.get( PolicyResourceType.class );
         String action = PolicySpec.requestToAction( ctx.getRequest( ) );
-        if( action == null ) {
-          action = vendor.value( ) + ":" + msgType.getSimpleName( ).replaceAll("(ResponseType|Type)$","").toLowerCase( );
+        if ( action == null ) {
+          action = vendor.value( ) + ":" + msgType.getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
         }
         
         User requestUser = ctx.getUser( );
@@ -205,5 +209,52 @@ public class Types {
       }
     }
     return false;
+  }
+  
+  private static final Map<Class, Function<OwnerFullName, Long>> usageMetricFunctions    = Maps.newHashMap( );
+  private static final Map<Class, Function<OwnerFullName, Long>> quantityMetricFunctions = Maps.newHashMap( );
+  
+  public static Function<OwnerFullName, Long> usageMetricFunction( Class type ) {
+    for ( Class subType : Classes.ancestors( type ) ) {
+      if ( usageMetricFunctions.containsKey( subType ) ) {
+        return usageMetricFunctions.get( subType );
+      }
+    }
+    throw new NoSuchElementException( "Failed to lookup usage metric function for type: " + type );
+  }
+  public static Function<OwnerFullName, Long> quantityMetricFunction( Class type ) {
+    for ( Class subType : Classes.ancestors( type ) ) {
+      if ( quantityMetricFunctions.containsKey( subType ) ) {
+        return quantityMetricFunctions.get( subType );
+      }
+    }
+    throw new NoSuchElementException( "Failed to lookup quantity metric function for type: " + type );
+  }
+  
+  public static class ResourceMetricFunctionDiscovery extends ServiceJarDiscovery {
+    
+    @SuppressWarnings( "synthetic-access" )
+    @Override
+    public boolean processClass( Class candidate ) throws Throwable {
+      if ( Ats.from( candidate ).has( ResourceUsageMetricFunction.class ) && Function.class.isAssignableFrom( candidate ) ) {
+        ResourceUsageMetricFunction measures = Ats.from( candidate ).get( ResourceUsageMetricFunction.class );
+        Class measuredType = measures.value( );
+        Types.usageMetricFunctions.put( measuredType, ( Function<OwnerFullName, Long> ) Classes.newInstance( candidate ) );
+        return true;
+      } else if ( Ats.from( candidate ).has( ResourceQuantityMetricFunction.class ) && Function.class.isAssignableFrom( candidate ) ) {
+        ResourceQuantityMetricFunction measures = Ats.from( candidate ).get( ResourceQuantityMetricFunction.class );
+        Class measuredType = measures.value( );
+        Types.quantityMetricFunctions.put( measuredType, ( Function<OwnerFullName, Long> ) Classes.newInstance( candidate ) );
+        return true;
+      } else {
+        return false;
+      }
+    }
+    
+    @Override
+    public Double getPriority( ) {
+      return 0.3d;
+    }
+    
   }
 }

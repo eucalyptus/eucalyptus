@@ -1,14 +1,23 @@
-package com.eucalyptus.blockstorage;
+package com.eucalyptus.auth.policy.key;
 
 import net.sf.json.JSONException;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.EuareService;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.policy.key.KeyUtils;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.PolicyKey;
-import com.eucalyptus.auth.policy.key.QuotaKey;
-import com.eucalyptus.images.ImageUtil;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
+import com.eucalyptus.util.Types;
 
+/**
+ * GRZE:NOTE: this class is a {@link EuareService} specific type and needs to move as well as not
+ * referring to private implementation types. {@link VolumeMetadata} should be considered a public
+ * type while {@link Volume} is implementation specific and will change as needed by the
+ * implementation.
+ */
 @PolicyKey( Keys.EC2_QUOTA_VOLUME_NUMBER )
 public class VolumeNumberQuotaKey extends QuotaKey {
   
@@ -32,11 +41,11 @@ public class VolumeNumberQuotaKey extends QuotaKey {
   public String value( Scope scope, String id, String resource, Long quantity ) throws AuthException {
     switch ( scope ) {
       case ACCOUNT:
-        return Long.toString( StorageUtil.countVolumeByAccount( id ) + 1 );
+        return Long.toString( Types.quantityMetricFunction( VolumeMetadata.class ).apply( AccountFullName.getInstance( id ) ) + quantity );
       case GROUP:
         throw new AuthException( "Group level quota not supported" );
       case USER:
-        return Long.toString( StorageUtil.countVolumeByUser( id ) + 1 );
+        return Long.toString( Types.quantityMetricFunction( VolumeMetadata.class ).apply( UserFullName.getInstance( id ) ) + quantity );
     }
     throw new AuthException( "Invalid scope" );
   }

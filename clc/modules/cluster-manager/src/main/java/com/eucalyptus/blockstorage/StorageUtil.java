@@ -171,6 +171,7 @@ public class StorageUtil {
     }
     return reply;
   }
+
   public static long countVolumeByAccount( String accountId ) throws AuthException {
     EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
     try {
@@ -195,59 +196,4 @@ public class StorageUtil {
     }
   }
   
-  public static long countSnapshotByAccount( final String accountId ) throws AuthException {
-    EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
-    try {
-      List<Snapshot> vols = db.query( new Snapshot( ) {{this.setOwnerAccountNumber( accountId );}} );
-      db.commit( );
-      return vols.size( );
-    } catch ( Exception e ) {
-      db.rollback( );
-      throw new AuthException( "Failed to search snapshot info", e );
-    }
-  }
-  
-  public static long countSnapshotByUser( String userId ) throws AuthException {
-    EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
-    try {
-      List<Snapshot> vols = db.query( Snapshots.named( UserFullName.getInstance( Accounts.lookupUserById( userId ) ), null/* displayName */ ) );
-      db.commit( );
-      return vols.size( );
-    } catch ( Exception e ) {
-      db.rollback( );
-      throw new AuthException( "Failed to search snapshot info", e );
-    }
-  }
-
-  public static long countVolumeSizeByAccount( String accountId ) throws AuthException {
-    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
-    try {
-      List<Volume> vols = db.query( new Volume( accountId, null/* displayName */ ) );
-      long size = 0;
-      for ( Volume v : vols ) {
-        size += v.getSize( );
-      }
-      db.commit( );
-      return size;
-    } catch ( Exception e ) {
-      db.rollback( );
-      throw new AuthException( "Failed to search volume info", e );
-    }
-  }
-
-  public static long countVolumeSizeByUser( String userId ) throws AuthException {
-    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
-    try {
-      List<Volume> vols = db.query( new Volume( UserFullName.getInstance( Accounts.lookupUserById( userId ) ), null/* displayName */ ) );
-      long size = 0;
-      for ( Volume v : vols ) {
-        size += v.getSize( );
-      }
-      db.commit( );
-      return size;
-    } catch ( Exception e ) {
-      db.rollback( );
-      throw new AuthException( "Failed to search volume info", e );
-    }
-  }
 }

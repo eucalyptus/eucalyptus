@@ -80,15 +80,15 @@ public class Classes {
   }
   
   @SuppressWarnings( "unchecked" )
-  public static <T> List<T> newInstance( final Class<T> type ) {
+  public static <T> T newInstance( final Class<T> type ) {
     if ( !Modifier.isPublic( type.getModifiers( ) ) ) {
       throw new InstantiationError( "Attempt to instantiate a class which is not public: " + type.getCanonicalName( ) );
     } else if ( type.isEnum( ) ) {
-      return Lists.newArrayList( type.getEnumConstants( ) );
+      return type.getEnumConstants( )[0];
     } else {
       try {
         T t = type.newInstance( );
-        return Lists.newArrayList( t );
+        return t;
       } catch ( final InstantiationException ex ) {
         throw new InstantiationError( "Attempt to instantiate a class which is not public: " + type.getCanonicalName( ) + " because of: " + ex.getMessage( ) );
       } catch ( final IllegalAccessException ex ) {

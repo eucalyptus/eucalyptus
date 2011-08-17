@@ -66,16 +66,12 @@ package com.eucalyptus.cloud;
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PostLoad;
-import javax.persistence.PostPersist;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Transient;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.entities.AbstractStatefulPersistent;
-import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasOwningAccount;
 import com.eucalyptus.util.OwnerFullName;
 
@@ -85,7 +81,7 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   private String          ownerAccountNumber;
   @Column( name = "metadata_account_name" )
   private String          ownerAccountName;
-  @Column( name = "metadata_unique_name", unique = true )
+  @Column( name = "metadata_unique_name", unique = true, nullable = false )
   private String          uniqueName;
   @Transient
   protected OwnerFullName ownerFullNameCached = null;
@@ -175,14 +171,14 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   }
   
   @PrePersist
-  @PreUpdate
-  @PostLoad
   private void generateOnCommit( ) {
     this.uniqueName = createUniqueName( );
   }
   
   private String createUniqueName( ) {
-    return this.ownerAccountName + ":" + this.getDisplayName( );
+    return ( this.ownerAccountName != null && this.getDisplayName( ) != null )
+      ? this.ownerAccountName + ":" + this.getDisplayName( )
+      : null;
   }
   
   @Override

@@ -51,7 +51,7 @@ public class TypeMappers {
         //first try default @value
         if ( !types[0].equals( Object.class ) && !types[1].equals( Object.class ) ) {
           try {
-            registerMapper( types[0], types[1], ( Function ) Classes.newInstance( candidate ).get( 0 ) );
+            registerMapper( types[0], types[1], ( Function ) Classes.newInstance( candidate ) );
             return true;
           } catch ( Exception ex1 ) {
             LOG.error( ex1, ex1 );
@@ -60,7 +60,7 @@ public class TypeMappers {
         //try from= and to= in the annotation
         if ( !mapper.from( ).equals( Object.class ) && !mapper.to( ).equals( Object.class ) ) {
           try {
-            registerMapper( mapper.from( ), mapper.to( ), ( Function ) Classes.newInstance( candidate ).get( 0 ) );
+            registerMapper( mapper.from( ), mapper.to( ), ( Function ) Classes.newInstance( candidate ) );
             return true;
           } catch ( Exception ex1 ) {
             LOG.error( ex1, ex1 );
@@ -69,7 +69,7 @@ public class TypeMappers {
         //try generics
         List<Class> generics = Lists.newArrayList( );
         try {
-          generics.addAll( Classes.genericsToClasses( Classes.newInstance( candidate ).get( 0 ) ) );
+          generics.addAll( Classes.genericsToClasses( Classes.newInstance( candidate ) ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -77,7 +77,7 @@ public class TypeMappers {
           return false;
         } else {
           try {
-            registerMapper( generics.get( 0 ), generics.get( 1 ), ( Function ) Classes.newInstance( candidate ).get( 0 ) );
+            registerMapper( generics.get( 0 ), generics.get( 1 ), ( Function ) Classes.newInstance( candidate ) );
             return true;
           } catch ( Exception ex1 ) {
             LOG.error( ex1, ex1 );

@@ -63,15 +63,11 @@
 
 package com.eucalyptus.entities;
 
-import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.MappedSuperclass;
-import javax.persistence.PrePersist;
-import javax.persistence.PreUpdate;
 import javax.persistence.Transient;
-import org.hibernate.annotations.NaturalId;
 
 @MappedSuperclass
 public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> extends AbstractPersistent {

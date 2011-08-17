@@ -64,19 +64,28 @@
 package com.eucalyptus.blockstorage;
 
 import java.lang.reflect.UndeclaredThrowableException;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
+import org.hibernate.criterion.Example;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.ResourceQuantityMetricFunction;
+import com.eucalyptus.util.ResourceUsageMetricFunction;
 import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType;
@@ -86,6 +95,40 @@ import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
 public class Volumes {
   private static Logger LOG       = Logger.getLogger( Volumes.class );
   private static String ID_PREFIX = "vol";
+  
+  @ResourceQuantityMetricFunction( VolumeMetadata.class )
+  public enum CountVolumes implements Function<OwnerFullName, Long> {
+    INSTANCE;
+    
+    @SuppressWarnings( "unchecked" )
+    @Override
+    public Long apply( OwnerFullName input ) {
+      EntityWrapper<Volume> db = Entities.get( Volume.class );
+      int i = db.createCriteria( Volume.class ).add( Example.create( Snapshots.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( ).size( );
+      db.rollback( );
+      return ( long ) i;
+    }
+    
+  }
+
+  @ResourceUsageMetricFunction( VolumeMetadata.class )
+  public enum MeasureVolumes implements Function<OwnerFullName, Long> {
+    INSTANCE;
+    
+    @SuppressWarnings( "unchecked" )
+    @Override
+    public Long apply( OwnerFullName input ) {
+      EntityWrapper<Volume> db = Entities.get( Volume.class );
+      List<Volume> vols = db.createCriteria( Volume.class ).add( Example.create( Snapshots.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( );
+      Long size = 0l;
+      for ( Volume v : vols ) {
+        size += v.getSize( );
+      }
+      db.rollback( );
+      return size;
+    }
+    
+  }
   
   public static Volume checkVolumeReady( final Volume vol ) throws EucalyptusCloudException {
     if ( vol.isReady( ) ) {
