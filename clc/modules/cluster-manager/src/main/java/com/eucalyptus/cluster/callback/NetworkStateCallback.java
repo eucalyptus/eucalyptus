@@ -37,23 +37,8 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
    */
   @Override
   public void fire( final DescribeNetworksResponseType reply ) {
-    try {
-      Transactions.one( this.getSubject( ).getConfiguration( ), new Callback<ClusterConfiguration>( ) {
-        
-        @Override
-        public void fire( ClusterConfiguration input ) {
-          input.setNetworkMode( reply.getMode( ) );
-          input.setUseNetworkTags( reply.getUseVlans( ) == 1 );
-          input.setMinNetworkTag( reply.getVlanMin( ) );
-          input.setMaxNetworkTag( reply.getVlanMax( ) );
-          input.setAddressesPerNetwork( reply.getAddrsPerNet( ) );
-          input.setVnetNetmask( reply.getVnetNetmask( ) );
-          input.setVnetSubnet( reply.getVnetSubnet( ) );
-        }
-      } );
-    } catch ( TransactionException ex ) {
-      LOG.error( ex, ex );
-    }
+    NetworkStateCallback.this.updateClusterConfiguration( reply );
+    NetworkGroups.updateNetworkRangeConfiguration( );
     /** verify network indexes **/
 //    EntityWrapper<ExtantNetwork> db = EntityWrapper.get( ExtantNetwork.class );
 //    List<ExtantNetwork> allNets = db.query( new ExtantNetwork( ) );
@@ -68,6 +53,29 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
 //      
 //    } );
 //    NetworkGroups.update( reply.getUseVlans( ), reply.getAddrsPerNet( ), reply.getAddrIndexMax( ), reply.getAddrIndexMax( ), reply.getActiveNetworks( ) );
+  }
+  
+  private void updateClusterConfiguration( final DescribeNetworksResponseType reply ) {
+    try {
+      Transactions.one( this.getSubject( ).getConfiguration( ), updateCallback( reply ) );
+    } catch ( TransactionException ex ) {
+      LOG.error( ex, ex );
+    }
+  }
+  
+  private Callback<ClusterConfiguration> updateCallback( final DescribeNetworksResponseType reply ) {
+    return new Callback<ClusterConfiguration>( ) {
+      @Override
+      public void fire( ClusterConfiguration input ) {
+        input.setNetworkMode( reply.getMode( ) );
+        input.setUseNetworkTags( reply.getUseVlans( ) == 1 );
+        input.setMinNetworkTag( reply.getVlanMin( ) );
+        input.setMaxNetworkTag( reply.getVlanMax( ) );
+        input.setAddressesPerNetwork( reply.getAddrsPerNet( ) );
+        input.setVnetNetmask( reply.getVnetNetmask( ) );
+        input.setVnetSubnet( reply.getVnetSubnet( ) );
+      }
+    };
   }
   
   /**

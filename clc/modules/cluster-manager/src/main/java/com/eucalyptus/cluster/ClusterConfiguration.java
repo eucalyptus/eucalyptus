@@ -165,12 +165,6 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
     }
   }
   
-  @PostPersist
-  @PostUpdate
-  private void doStateUpdate( ) {
-    NetworkGroups.updateNetworkRangeConfiguration( );
-  }
-  
   public String getInsecureServicePath( ) {
     return INSECURE_SERVICE_PATH;
   }
