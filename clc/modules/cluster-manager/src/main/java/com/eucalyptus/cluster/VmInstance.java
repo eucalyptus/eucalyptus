@@ -108,6 +108,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.PrivateNetworkIndex;
@@ -247,7 +248,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     this.partitionName = p;
     this.userData = userData;
     this.platform = platform;
-    this.sshKeyPair = sshKeyPair;
+    this.sshKeyPair = KeyPairs.noKey( ).equals( sshKeyPair ) || sshKeyPair == null ? null : sshKeyPair;
     this.vmType = vmType;
     this.networkConfig.setMacAddress( "d0:0d:" + VmInstances.asMacAddress( this.instanceId ) );
     this.networkConfig.setIpAddress( DEFAULT_IP );
