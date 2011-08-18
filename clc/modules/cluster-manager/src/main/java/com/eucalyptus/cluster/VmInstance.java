@@ -163,8 +163,6 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   private final String                                instanceId;
   @Column( name = "vm_instance_uuid" )
   private final String                                instanceUuid;
-  @Transient
-  private final FullName                              owner;
   @Column( name = "vm_cluster_name" )
   private final String                                clusterName;
   @Column( name = "vm_partition_name" )
@@ -218,7 +216,6 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     this.launchIndex = launchIndex;
     this.instanceUuid = instanceUuid;
     this.instanceId = instanceId;
-    this.owner = owner;
     this.clusterName = placement;
     this.vbr = vbr;
     String p = null;
@@ -256,7 +253,6 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     this.blockBytes = null;
     this.networkBytes = null;
     this.reservationId = null;
-    this.owner = null;
     this.clusterName = null;
     this.vbr = null;
     this.partitionName = null;
@@ -274,7 +270,6 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     this.blockBytes = null;
     this.networkBytes = null;
     this.reservationId = null;
-    this.owner = null;
     this.clusterName = null;
     this.vbr = null;
     this.partitionName = null;
@@ -426,7 +421,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
         LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getRuntimeState( ) );
       }
       if ( !this.getRuntimeState( ).equals( oldState ) ) {
-        EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.owner, this.runtimeState.getReference( ).name( ), this.launchTime );
+        EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.getOwner( ), this.runtimeState.getReference( ).name( ), this.launchTime );
       }
     }
   }
