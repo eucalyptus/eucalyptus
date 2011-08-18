@@ -235,6 +235,8 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             BaseMessage res = AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback )
                                            .sendSync( parent.getLogServiceConfiguration( ) );
             LOG.error( res );
+          } catch ( InterruptedException t ) {
+            Thread.currentThread( ).interrupt( );
           } catch ( Throwable t ) {
             parent.filterExceptions( t );
           }
