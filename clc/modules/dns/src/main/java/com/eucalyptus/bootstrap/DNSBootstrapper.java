@@ -96,10 +96,10 @@ public class DNSBootstrapper extends Bootstrapper.Simple {
     return true;
   }
   
-  @Provides( Empyrean.class )
+  @Provides( Dns.class )
   @RunDuring( Bootstrap.Stage.CloudServiceInit )
   @DependsLocal( Dns.class )
-  public class DNSRecordsBootstrapper extends Bootstrapper.Simple {
+  public static class DNSRecordsBootstrapper extends Bootstrapper.Simple {
     
     @Override
     public boolean start( ) throws Exception {

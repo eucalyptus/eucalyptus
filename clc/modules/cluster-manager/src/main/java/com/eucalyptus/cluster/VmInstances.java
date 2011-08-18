@@ -358,7 +358,7 @@ public class VmInstances {
       return vm;
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
-      throw new NoSuchElementException( "Failed to lookup vm instance: " + name + " because of: " + ex.getMessage( ) );
+      throw new NoSuchElementException( "Failed to lookup vm instance: " + name );
     }
   }
   
@@ -367,21 +367,23 @@ public class VmInstances {
     try {
       Entities.persist( obj );
       db.commit( );
-    } catch ( final Exception ex ) {
-      LOG.error( ex, ex );
+    } catch ( final RuntimeException ex ) {
+      Logs.extreme( ).error( ex, ex );
       db.rollback( );
+      throw ex;
     }
   }
   
-  public static void deregister( final String key ) {
+  public static void deregister( final String key ) throws NoSuchElementException {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, key ) );
       Entities.delete( vm );
       db.commit( );
     } catch ( final Exception ex ) {
-      Logs.extreme( ).error( ex, ex );
+      Logs.exhaust( ).trace( ex, ex );
       db.rollback( );
+      throw new NoSuchElementException( "Failed to lookup instance: " + key );
     }
   }
   
@@ -393,11 +395,8 @@ public class VmInstances {
       return vms;
     } catch ( final Exception ex ) {
       db.rollback( );
-      if ( ex.getCause( ) instanceof NoSuchElementException ) {
-        throw ( NoSuchElementException ) ex.getCause( );
-      } else {
-        throw new NoSuchElementException( ex.getMessage( ) );
-      }
+      Logs.extreme( ).error( ex, ex );
+      return Lists.newArrayList( );
     }
   }
   
@@ -417,11 +416,8 @@ public class VmInstances {
       return Lists.newArrayList( ret );
     } catch ( final Exception ex ) {
       db.rollback( );
-      if ( ex.getCause( ) instanceof NoSuchElementException ) {
-        throw ( NoSuchElementException ) ex.getCause( );
-      } else {
-        throw new NoSuchElementException( ex.getMessage( ) );
-      }
+      Logs.extreme( ).error( ex, ex );
+      return Lists.newArrayList( );
     }
   }
   
@@ -449,6 +445,7 @@ public class VmInstances {
         db.commit( );
       } catch ( RuntimeException ex ) {
         db.rollback( );
+        throw new NoSuchElementException( "Failed to lookup instance: " + that.getState( ) );
       }
     } else {
       db.rollback( );
@@ -462,7 +459,12 @@ public class VmInstances {
       final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, name ) );
       db.commit( );
       return true;
+    } catch ( RuntimeException ex ) {
+      Logs.exhaust( ).trace( ex, ex );
+      db.rollback( );
+      return false;
     } catch ( TransactionException ex ) {
+      Logs.exhaust( ).trace( ex, ex );
       db.rollback( );
       return false;
     }

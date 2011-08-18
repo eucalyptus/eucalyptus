@@ -318,8 +318,10 @@ public class Entities {
     try {
       return Entities.getUnique( example );
     } catch ( final RuntimeException ex ) {
+      Logs.exhaust( ).trace( ex, ex );
       throw new TransactionInternalException( ex.getMessage( ), ex );
     } catch ( final EucalyptusCloudException ex ) {
+      Logs.exhaust( ).trace( ex, ex );
       throw new TransactionExecutionException( ex.getMessage( ), ex );
     }
   }
