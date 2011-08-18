@@ -121,7 +121,7 @@ public class EntityWrapper<TYPE> {
    */
   @Deprecated
   public static <T> EntityWrapper<T> get( final Class<T> type ) {
-    return EntityWrapper.get( type );
+    return new EntityWrapper( Entities.lookatPersistenceContext( type ) );
   }
   
   /**
