@@ -342,7 +342,7 @@ public class VmInstances {
   public static VmInstance lookup( final String name ) throws NoSuchElementException {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      final VmInstance vm = db.getUnique( VmInstance.named( null, name ) );
+      final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, name ) );
       if ( ( vm == null ) || VmState.TERMINATED.equals( vm.getState( ) ) ) {
         throw new NoSuchElementException( "Failed to lookup vm instance: " + name );
       }
@@ -356,7 +356,7 @@ public class VmInstances {
   public static void register( final VmInstance obj ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      db.persist( obj );
+      Entities.persist( obj );
       db.commit( );
     } catch ( final Exception ex ) {
       LOG.error( ex, ex );
@@ -367,8 +367,8 @@ public class VmInstances {
   public static void deregister( final String key ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      final VmInstance vm = db.getUnique( VmInstance.named( null, key ) );
-      db.delete( vm );
+      final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, key ) );
+      Entities.delete( vm );
       db.commit( );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
@@ -379,7 +379,7 @@ public class VmInstances {
   public static List<VmInstance> listDisabledValues( ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      final List<VmInstance> vms = db.query( VmInstance.namedTerminated( null, null ) );
+      final List<VmInstance> vms = Entities.query( VmInstance.namedTerminated( null, null ) );
       db.commit( );
       return vms;
     } catch ( final Exception ex ) {
