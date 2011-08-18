@@ -70,6 +70,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.zip.Adler32;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import com.eucalyptus.address.Address;
@@ -91,6 +92,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -132,7 +134,7 @@ public class VmInstances {
     
     @Override
     public Long apply( final OwnerFullName input ) {
-      final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
+      final EntityTransaction db = Entities.get( VmInstance.class );
       final int i = db.createCriteria( VmInstance.class ).add( Example.create( VmInstance.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( ).size( );
       db.rollback( );
       return ( long ) i;
@@ -338,7 +340,7 @@ public class VmInstances {
   }
   
   public static VmInstance lookup( final String name ) throws NoSuchElementException {
-    final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance vm = db.getUnique( VmInstance.named( null, name ) );
       if ( ( vm == null ) || VmState.TERMINATED.equals( vm.getState( ) ) ) {
@@ -352,7 +354,7 @@ public class VmInstances {
   }
   
   public static void register( final VmInstance obj ) {
-    final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       db.persist( obj );
       db.commit( );
@@ -363,7 +365,7 @@ public class VmInstances {
   }
   
   public static void deregister( final String key ) {
-    final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance vm = db.getUnique( VmInstance.named( null, key ) );
       db.delete( vm );
@@ -375,7 +377,7 @@ public class VmInstances {
   }
   
   public static List<VmInstance> listDisabledValues( ) {
-    final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final List<VmInstance> vms = db.query( VmInstance.namedTerminated( null, null ) );
       db.commit( );
@@ -391,9 +393,9 @@ public class VmInstances {
   }
   
   public static List<VmInstance> listValues( ) {
-    final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      final List<VmInstance> vms = db.query( VmInstance.named( null, null ) );
+      final List<VmInstance> vms = Entities.query( VmInstance.named( null, null ) );
       final Collection<VmInstance> ret = Collections2.filter( vms, new Predicate<VmInstance>( ) {
         
         @Override
@@ -415,12 +417,12 @@ public class VmInstances {
   }
   
   public static VmInstance lookupDisabled( final String name ) throws NoSuchElementException {
-    final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      final VmInstance vm = db.getUnique( VmInstance.namedTerminated( null, name ) );
+      final VmInstance vm = Entities.uniqueResult( VmInstance.namedTerminated( null, name ) );
       db.commit( );
       return vm;
-    } catch ( final EucalyptusCloudException ex ) {
+    } catch ( TransactionException ex ) {
       db.rollback( );
       if ( ex.getCause( ) instanceof NoSuchElementException ) {
         throw ( NoSuchElementException ) ex.getCause( );
@@ -431,25 +433,27 @@ public class VmInstances {
   }
   
   public static void disable( final VmInstance that ) throws NoSuchElementException {
-    final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
-    try {
-      if ( VmState.TERMINATED.equals( that.getState( ) ) ) {
-        db.mergeAndCommit( that );
-      } else {
-        throw new NoSuchElementException( "Instance state is invalid: " + that.getState( ) );
+    final EntityTransaction db = Entities.get( VmInstance.class );
+    if ( VmState.TERMINATED.equals( that.getState( ) ) ) {
+      try {
+        Entities.merge( that );
+        db.commit( );
+      } catch ( RuntimeException ex ) {
+        db.rollback( );
       }
-    } catch ( final Exception ex ) {
-      LOG.error( ex, ex );
+    } else {
+      db.rollback( );
+      throw new NoSuchElementException( "Instance state is invalid: " + that.getState( ) );
     }
   }
   
   public static boolean contains( final String name ) {
-    final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      final VmInstance vm = db.getUnique( VmInstance.named( null, name ) );
+      final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, name ) );
       db.commit( );
       return true;
-    } catch ( final EucalyptusCloudException ex ) {
+    } catch ( TransactionException ex ) {
       db.rollback( );
       return false;
     }

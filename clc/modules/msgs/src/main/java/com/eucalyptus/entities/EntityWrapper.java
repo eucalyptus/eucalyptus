@@ -112,10 +112,11 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 public class EntityWrapper<TYPE> {
-  private static Logger    LOG = Logger.getLogger( EntityWrapper.class );
+  private static Logger          LOG = Logger.getLogger( EntityWrapper.class );
   private TransactionState tx;
+  private final String           txStart;
   
-  /**
+/**
    * @see {@link Entities#get(Class)
    * @see {@link NestedTx}
    */
@@ -124,7 +125,7 @@ public class EntityWrapper<TYPE> {
     return new EntityWrapper( Entities.lookatPersistenceContext( type ) );
   }
   
-  /**
+/**
    * @see {@link Entities#get(Object)
    * @see {@link NestedTx}
    */
@@ -143,6 +144,7 @@ public class EntityWrapper<TYPE> {
   @SuppressWarnings( "unchecked" )
   private EntityWrapper( final String persistenceContext ) {
     this.tx = new TransactionState( persistenceContext );
+    this.txStart = Threads.currentStackString( );
   }
   
   @SuppressWarnings( { "unchecked", "cast" } )
@@ -350,13 +352,19 @@ public class EntityWrapper<TYPE> {
   }
   
   public void rollback( ) {
-    this.tx.rollback( );
-    this.tx = null;
+    if ( this.tx != null ) {
+      this.tx.rollback( );
+      this.tx = null;
+    }
   }
   
   public void commit( ) throws ConstraintViolationException {
-    this.tx.commit( );
-    this.tx = null;
+    if( this.tx != null ) {
+      this.tx.commit( );
+      this.tx = null;
+    } else {
+      throw new SessionException( "Attempt to commit session which is already closed:  " + this.txStart );
+    }
   }
   
   public Criteria createCriteria( final Class class1 ) {
