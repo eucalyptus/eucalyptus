@@ -131,7 +131,7 @@ public class EntityWrapper<TYPE> {
   @SuppressWarnings( "unchecked" )
   @Deprecated
   public static <T> EntityWrapper<T> get( final T obj ) {
-    return ( EntityWrapper<T> ) EntityWrapper.get( Classes.typeOf( obj ) );
+    return new EntityWrapper( Entities.lookatPersistenceContext( obj ) );
   }
   
   /**

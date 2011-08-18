@@ -247,7 +247,7 @@ public class Entities {
     return txState.get( ).get( ctx );
   }
   
-  private static String lookatPersistenceContext( final Object obj ) throws RuntimeException {
+  static String lookatPersistenceContext( final Object obj ) throws RuntimeException {
     final Class type = Classes.typeOf( obj );
     final Ats ats = Ats.inClassHierarchy( type );
     PersistenceContext persistenceContext = null;
