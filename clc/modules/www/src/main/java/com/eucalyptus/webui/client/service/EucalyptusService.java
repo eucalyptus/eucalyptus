@@ -167,9 +167,10 @@ public interface EucalyptusService extends RemoteService {
    * 
    * @param session
    * @param accountName
+   * @param adminPassword
    * @throws EucalyptusServiceException
    */
-  String createAccount( Session session, String accountName ) throws EucalyptusServiceException;
+  String createAccount( Session session, String accountName, String adminPassword ) throws EucalyptusServiceException;
   
   /**
    * Delete accounts.
