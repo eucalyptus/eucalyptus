@@ -64,6 +64,7 @@
 package com.eucalyptus.cloud.util;
 
 import javax.annotation.Nullable;
+import javax.persistence.EntityTransaction;
 import javax.persistence.MappedSuperclass;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.UserMetadata;
@@ -154,9 +155,9 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
   
   @SuppressWarnings( "unchecked" )
   T doSetReferer( final R referer, final Resource.State preconditionState, final Resource.State finalState ) throws ResourceAllocationException {
-    EntityWrapper<T> db = Entities.get( ( Class<T> ) this.getClass( ) );
+    EntityTransaction db = Entities.get( ( Class<T> ) this.getClass( ) );
     try {
-      PersistentResource<T, R> thisEntity = db.getUnique( ( T ) this );
+      PersistentResource<T, R> thisEntity = Entities.uniqueResult( ( T ) this );
       if ( thisEntity.getState( ) != null && preconditionState != null && !preconditionState.equals( thisEntity.getState( ) ) ) {
         throw new RuntimeException( "Error allocating resource " + PersistentResource.this.getClass( ).getSimpleName( ) + " with id "
                                     + this.getDisplayName( ) + " as the state is not " + preconditionState.name( ) + " (currently "
@@ -209,7 +210,7 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
       
       @Override
       public T get( ) {
-        EntityWrapper<T> db = Entities.get( ( Class<T> ) PersistentResource.this.getClass( ) );
+        EntityWrapper<T> db = EntityWrapper.get( ( Class<T> ) PersistentResource.this.getClass( ) );
         try {
           T ret = db.getUnique( ( T ) PersistentResource.this );
           db.commit( );

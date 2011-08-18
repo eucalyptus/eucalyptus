@@ -89,6 +89,7 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
+import com.eucalyptus.entities.Entities.NestedTx;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -107,6 +108,130 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 public class Entities {
+  private static class TxState implements EntityTransaction {
+    private EntityManager                em;
+    private EntityTransaction            transaction;
+    private final WeakReference<Session> sessionRef;
+    
+    public TxState( final String ctx ) {
+      try {
+        final EntityManagerFactory anemf = ( EntityManagerFactoryImpl ) PersistenceContexts.getEntityManagerFactory( ctx );
+        assertThat( anemf, notNullValue( ) );
+        this.em = anemf.createEntityManager( );
+        assertThat( this.em, notNullValue( ) );
+        this.transaction = this.em.getTransaction( );
+        assertThat( this.transaction, notNullValue( ) );
+        this.sessionRef = new WeakReference<Session>( ( Session ) this.em.getDelegate( ) );
+      } catch ( RuntimeException ex ) {
+        this.doCleanup( );
+        throw ex;
+      }
+    }
+    
+    private boolean isOpen( ) {
+      final boolean hasEm = ( this.em != null ) && this.em.isOpen( );
+      final boolean hasSession = ( this.sessionRef.get( ) != null ) && this.sessionRef.get( ).isOpen( );
+      final boolean hasTx = ( this.transaction != null ) && this.transaction.isActive( );
+      if ( hasEm && hasSession && hasTx ) {
+        return true;
+      } else {
+        this.doCleanup( );
+        return false;
+      }
+    }
+    
+    private void doRollback( ) {
+      try {
+        if ( ( this.transaction != null ) && this.transaction.isActive( ) ) {
+          this.transaction.rollback( );
+        }
+      } catch ( final Throwable e ) {
+        PersistenceExceptions.throwFiltered( e );
+      } finally {
+        this.doCleanup( );
+      }
+    }
+    
+    private void doCleanup( ) {
+      if ( ( this.transaction != null ) && this.transaction.isActive( ) ) {
+        this.transaction.rollback( );
+      }
+      this.transaction = null;
+      if ( ( this.sessionRef != null ) && ( this.sessionRef.get( ) != null ) ) {
+        this.sessionRef.clear( );
+      }
+      if ( ( this.em != null ) && this.em.isOpen( ) ) {
+        this.em.close( );
+      }
+      this.em = null;
+    }
+    
+    private EntityManager getEntityManager( ) {
+      return this.em;
+    }
+    
+    Session getSession( ) {
+      return this.sessionRef.get( );
+    }
+    
+    /**
+     * @delegate Do not change semantics here.
+     * @see javax.persistence.EntityTransaction#begin()
+     */
+    @Override
+    public void begin( ) {
+      this.transaction.begin( );
+    }
+    
+    /**
+     * @delegate Do not change semantics here.
+     * @see javax.persistence.EntityTransaction#commit()
+     */
+    @Override
+    public void commit( ) {
+      this.transaction.commit( );
+    }
+    
+    /**
+     * @delegate Do not change semantics here.
+     * @see javax.persistence.EntityTransaction#getRollbackOnly()
+     * @return
+     */
+    @Override
+    public boolean getRollbackOnly( ) {
+      return this.transaction.getRollbackOnly( );
+    }
+    
+    /**
+     * @delegate Do not change semantics here.
+     * @see javax.persistence.EntityTransaction#isActive()
+     * @return
+     */
+    @Override
+    public boolean isActive( ) {
+      return this.transaction.isActive( );
+    }
+    
+    /**
+     * @delegate Do not change semantics here.
+     * @see javax.persistence.EntityTransaction#rollback()
+     */
+    @Override
+    public void rollback( ) {
+      this.transaction.rollback( );
+    }
+    
+    /**
+     * @delegate Do not change semantics here.
+     * @see javax.persistence.EntityTransaction#setRollbackOnly()
+     */
+    @Override
+    public void setRollbackOnly( ) {
+      this.transaction.setRollbackOnly( );
+    }
+    
+  }
+  
   private static Logger                                       LOG     = Logger.getLogger( Entities.class );
   private static ThreadLocal<ConcurrentMap<String, NestedTx>> txState = new ThreadLocal<ConcurrentMap<String, NestedTx>>( ) {
                                                                         
@@ -118,12 +243,12 @@ public class Entities {
                                                                       };
   
   private static NestedTx lookup( final Object obj ) {
-    String ctx = lookatPersistenceContext( obj );
+    final String ctx = lookatPersistenceContext( obj );
     return txState.get( ).get( ctx );
   }
   
   private static String lookatPersistenceContext( final Object obj ) throws RuntimeException {
-    Class type = Classes.typeOf( obj );
+    final Class type = Classes.typeOf( obj );
     final Ats ats = Ats.inClassHierarchy( type );
     PersistenceContext persistenceContext = null;
     if ( !ats.has( PersistenceContext.class ) ) {
@@ -139,53 +264,59 @@ public class Entities {
     return !txState.get( ).isEmpty( );
   }
   
-  private static boolean hasTransaction( Object obj ) {
-    String ctx = lookatPersistenceContext( obj );
+  private static boolean hasTransaction( final Object obj ) {
+    final String ctx = lookatPersistenceContext( obj );
     return txState.get( ).containsKey( ctx );
   }
   
-  private static NestedTx getTransaction( Object obj ) {
-    String ctx = lookatPersistenceContext( obj );
+  private static NestedTx getTransaction( final Object obj ) {
+    final String ctx = lookatPersistenceContext( obj );
     return txState.get( ).get( ctx );
+  }
+  
+  private static TxState getTransactionState( final Object obj ) {
+    return getTransaction( obj ).getTxState( );
   }
   
   public static EntityTransaction get( final Object obj ) {
     if ( hasTransaction( obj ) ) {
-      return new EntityTransaction( ) {
-      };
+      return getTransaction( obj );
     } else {
-      new NestedTx( lookatPersistenceContext( obj ) );
+      NestedTx ret = new NestedTx( lookatPersistenceContext( obj ) );
+      ret.begin( );
+      return ret;
     }
   }
   
-  @SuppressWarnings( "unchecked" )
-  public <T> List<T> query( final T example ) {
+  @SuppressWarnings( { "unchecked", "cast" } )
+  public static <T> List<T> query( final T example ) {
     final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
-    final List<T> resultList = ( List<T> ) this.getSession( )
-                                               .createCriteria( example.getClass( ) )
-                                               .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
-                                               .setCacheable( true )
-                                               .add( qbe )
-                                               .list( );
+    final List<T> resultList = ( List<T> ) getTransactionState( example ).getSession( )
+                                                                         .createCriteria( example.getClass( ) )
+                                                                         .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
+                                                                         .setCacheable( true )
+                                                                         .add( qbe )
+                                                                         .list( );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
   
-  public <T> T lookupAndClose( final T example ) throws NoSuchElementException {
+  public static <T> T lookupAndClose( final T example ) throws NoSuchElementException {
+    final EntityTransaction tx = getTransaction( example );
     T ret = null;
     try {
-      ret = this.getUnique( example );
-      this.commit( );
+      ret = Entities.getUnique( example );
+      tx.commit( );
     } catch ( final EucalyptusCloudException ex ) {
-      this.rollback( );
+      tx.rollback( );
       throw new NoSuchElementException( ex.getMessage( ) );
     }
     return ret;
   }
   
   @SuppressWarnings( "unchecked" )
-  public <T> T uniqueResult( final T example ) throws TransactionException {
+  public static <T> T uniqueResult( final T example ) throws TransactionException {
     try {
-      return this.getUnique( example );
+      return Entities.getUnique( example );
     } catch ( final RuntimeException ex ) {
       throw new TransactionInternalException( ex.getMessage( ), ex );
     } catch ( final EucalyptusCloudException ex ) {
@@ -193,15 +324,19 @@ public class Entities {
     }
   }
   
+  public static Criteria createCriteria( final Class class1 ) {
+    return getTransaction( class1 ).getTxState( ).getSession( ).createCriteria( class1 );
+  }
+  
   @SuppressWarnings( "unchecked" )
-  public <T> T getUnique( final T example ) throws EucalyptusCloudException {
+  private static <T> T getUnique( final T example ) throws EucalyptusCloudException {
     try {
       Object id = null;
       try {
-        id = this.getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
+        id = getTransaction( example ).getTxState( ).getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
       } catch ( final Exception ex ) {}
       if ( id != null ) {
-        final T res = ( T ) this.getEntityManager( ).find( example.getClass( ), id );
+        final T res = ( T ) getTransactionState( example ).getEntityManager( ).find( example.getClass( ), id );
         if ( res == null ) {
           throw new NoSuchElementException( "@Id: " + id );
         } else {
@@ -209,25 +344,27 @@ public class Entities {
         }
       } else if ( ( example instanceof HasNaturalId ) && ( ( ( HasNaturalId ) example ).getNaturalId( ) != null ) ) {
         final String natId = ( ( HasNaturalId ) example ).getNaturalId( );
-        final T ret = ( T ) this.createCriteria( example.getClass( ) )
-                                .add( Restrictions.naturalId( ).set( "naturalId", natId ) )
-                                .setCacheable( true )
-                                .setMaxResults( 1 )
-                                .setFetchSize( 1 )
-                                .setFirstResult( 0 )
-                                .uniqueResult( );
+        final T ret = ( T ) getTransactionState( example ).getSession( )
+                                                          .createCriteria( example.getClass( ) )
+                                                          .add( Restrictions.naturalId( ).set( "naturalId", natId ) )
+                                                          .setCacheable( true )
+                                                          .setMaxResults( 1 )
+                                                          .setFetchSize( 1 )
+                                                          .setFirstResult( 0 )
+                                                          .uniqueResult( );
         if ( ret == null ) {
           throw new NoSuchElementException( "@NaturalId: " + natId );
         }
         return ret;
       } else {
-        final T ret = ( T ) this.createCriteria( example.getClass( ) )
-                                .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
-                                .setCacheable( true )
-                                .setMaxResults( 1 )
-                                .setFetchSize( 1 )
-                                .setFirstResult( 0 )
-                                .uniqueResult( );
+        final T ret = ( T ) getTransactionState( example ).getSession( )
+                                                          .createCriteria( example.getClass( ) )
+                                                          .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
+                                                          .setCacheable( true )
+                                                          .setMaxResults( 1 )
+                                                          .setFetchSize( 1 )
+                                                          .setFirstResult( 0 )
+                                                          .uniqueResult( );
         if ( ret == null ) {
           throw new NoSuchElementException( "example: " + LogUtil.dumpObject( example ) );
         }
@@ -250,9 +387,9 @@ public class Entities {
    * @param newObject
    * @return
    */
-  public <T> T persist( final T newObject ) {
+  public static <T> T persist( final T newObject ) {
     try {
-      this.getEntityManager( ).persist( newObject );
+      getTransactionState( newObject ).getEntityManager( ).persist( newObject );
       return newObject;
     } catch ( final RuntimeException ex ) {
       PersistenceExceptions.throwFiltered( ex );
@@ -308,24 +445,28 @@ public class Entities {
    * 
    * @param newObject
    */
-  public <T> T merge( final T newObject ) {
+  public static <T> T merge( final T newObject ) {
     try {
-      return this.getEntityManager( ).merge( newObject );
+      return getTransactionState( newObject ).getEntityManager( ).merge( newObject );
     } catch ( final RuntimeException ex ) {
       PersistenceExceptions.throwFiltered( ex );
       throw ex;
     }
   }
   
-  public <T> void delete( final T deleteObject ) {
-    txState.get( ).get( ).getEntityManager( ).remove( deleteObject );
+  /**
+   * @param <T>
+   * @param deleteObject
+   */
+  public static <T> void delete( final T deleteObject ) {
+    getTransactionState( deleteObject ).getEntityManager( ).remove( deleteObject );
   }
   
-  private static class NestedTxThreadLocal extends ThreadLocal<ConcurrentMap<String, AtomicStampedReference<NestedTx>>> {
+  private static class NestedTxThreadLocal extends ThreadLocal<ConcurrentMap<String, NestedTx>> {
     NestedTxThreadLocal( ) {}
     
     @Override
-    protected ConcurrentMap<String, AtomicStampedReference<NestedTx>> initialValue( ) {
+    protected ConcurrentMap<String, NestedTx> initialValue( ) {
       return Maps.newConcurrentMap( );
     }
     
@@ -335,24 +476,24 @@ public class Entities {
     }
     
     private NestedTx add( final PersistenceContext persistenceContext ) {
-      AtomicStampedReference<NestedTx> ref = null;
+      NestedTx tx = null;
       if ( this.get( ).containsKey( persistenceContext.name( ) ) ) {
         if ( this.clearStale( persistenceContext ) ) {
-          ref = this.addNestedTx( persistenceContext );
+          tx = this.addNestedTx( persistenceContext );
         } else {
-          ref = this.get( ).get( persistenceContext.name( ) );
+          tx = this.get( ).get( persistenceContext.name( ) );
         }
       } else {
-        ref = this.addNestedTx( persistenceContext );
+        tx = this.addNestedTx( persistenceContext );
       }
-      return ref.getReference( );
+      return tx;
     }
     
     private boolean clearStale( final PersistenceContext persistenceContext ) {
-      final AtomicStampedReference<NestedTx> stampedWrapper = this.get( ).get( persistenceContext.name( ) );
-      if ( !stampedWrapper.getReference( ).isActive( ) || ( stampedWrapper.getStamp( ) == 0 ) ) {
+      final NestedTx tx = this.get( ).get( persistenceContext.name( ) );
+      if ( !tx.isActive( ) ) {
         try {
-          stampedWrapper.getReference( ).cleanUp( );
+          tx.getTxState( ).doCleanup( );
         } catch ( final Exception ex ) {
           LOG.error( ex, ex );
         } finally {
@@ -364,82 +505,39 @@ public class Entities {
       }
     }
     
-    private AtomicStampedReference<NestedTx> addNestedTx( final PersistenceContext persistenceContext ) {
-      final NestedTx entityWrapper = new NestedTx( persistenceContext, new Predicate<TxUnroll>( ) {
-        
-        /**
-         * Handles nesting of transactions and unrolling nested failures.
-         * 
-         * During normal operations {@link #apply(TxUnroll)} should be called with
-         * {@link TxUnroll#ROLLBACK} as
-         * the argument. The returned {@code boolean} value indicates whether or not it is safe to
-         * modify the transaction state -- i.e. have we unrolled the whole stack.
-         * 
-         * In the case of a failure, {@link #apply(TxUnroll)} should be called with
-         * {@link TxUnroll#SAFELY}.
-         * This will force a rollback and clean up nested transactions state.
-         * 
-         * @param forceClose
-         * @return {@code true} if it is safe to modify the state of any inflight transactions.
-         *         {@code false} otherwise
-         */
-        @Override
-        public boolean apply( final TxUnroll forceClose ) {
-          if ( TxUnroll.ROLLBACK.equals( forceClose ) ) {
-            final AtomicStampedReference<NestedTx> ref = txState.get( ).remove( persistenceContext.name( ) );
-            if ( ( ref.getReference( ) != null ) && ref.getReference( ).isActive( ) ) {
-              ref.getReference( ).doRollback( );
-            }
-            return false;
-          } else {
-            final AtomicStampedReference<NestedTx> ref = txState.get( ).get( persistenceContext.name( ) );
-            final int stamp = ref.getStamp( );
-            ref.set( ref.getReference( ), stamp - 1 );
-            return ref.getStamp( ) <= 0;
-          }
-        }
-        
-      } );
-      final AtomicStampedReference<NestedTx> ref = new AtomicStampedReference<NestedTx>( entityWrapper, 1 );
-      this.get( ).put( persistenceContext.name( ), ref );
-      return ref;
+    private NestedTx addNestedTx( final PersistenceContext persistenceContext ) {
+      final NestedTx tx = new NestedTx( persistenceContext.name( ) );
+      this.get( ).put( persistenceContext.name( ), tx );
+      return tx;
     }
     
   }
   
   public static class NestedTx implements EntityTransaction {
-    private final String                 ctx;
-    private final TxRecord               record;
-    private EntityManager                em;
-    private EntityTransaction            transaction;
-    private final WeakReference<Session> sessionRef;
+    private final String   ctx;
+    private final TxRecord record;
+    private final TxState  txState;
     
     /**
      * Private for a reason.
      * 
      * @see {@link NestedTx#get(Class)}
      * @param persistenceContext
+     * @throws RecoverablePersistenceException
      */
     @SuppressWarnings( "unchecked" )
-    private NestedTx( String ctx ) {
+    NestedTx( final String ctx ) throws RecoverablePersistenceException {
       this.ctx = ctx;
       this.record = new TxRecord( ctx );
-      final EntityManagerFactory anemf = ( EntityManagerFactoryImpl ) PersistenceContexts.getEntityManagerFactory( ctx );
-      assertThat( anemf, notNullValue( ) );
+      this.record.logEvent( TxStep.BEGIN, TxEvent.CREATE );
       try {
-        this.record.logEvent( TxState.BEGIN, TxEvent.CREATE );
-        this.em = anemf.createEntityManager( );
-        assertThat( this.em, notNullValue( ) );
-        this.transaction = this.em.getTransaction( );
-        assertThat( this.transaction, notNullValue( ) );
-        this.transaction.begin( );
-        this.sessionRef = new WeakReference<Session>( ( Session ) this.em.getDelegate( ) );
-        this.record.logEvent( TxState.END, TxEvent.CREATE );
-      } catch ( final Throwable ex ) {
+        this.txState = new TxState( ctx );
+        this.record.logEvent( TxStep.END, TxEvent.CREATE );
+      } catch ( final RuntimeException ex ) {
         Logs.exhaust( ).error( ex, ex );
-        this.record.logEvent( TxState.FAIL, TxEvent.CREATE );
+        this.record.logEvent( TxStep.FAIL, TxEvent.CREATE );
         this.rollback( );
-        throw new RuntimeException( PersistenceExceptions.throwFiltered( ex ) );
+        throw PersistenceExceptions.throwFiltered( ex );
       }
     }
     
@@ -449,8 +547,8 @@ public class Entities {
      * @return
      */
     @Override
-    public boolean getRollbackOnly( ) {
-      return this.transaction.getRollbackOnly( );
+    public boolean getRollbackOnly( ) throws RecoverablePersistenceException {
+      return this.txState.getRollbackOnly( );
     }
     
     /**
@@ -458,8 +556,8 @@ public class Entities {
      * @see javax.persistence.EntityTransaction#setRollbackOnly()
      */
     @Override
-    public void setRollbackOnly( ) {
-      this.transaction.setRollbackOnly( );
+    public void setRollbackOnly( ) throws RecoverablePersistenceException {
+      this.txState.setRollbackOnly( );
     }
     
     /**
@@ -468,8 +566,8 @@ public class Entities {
      * @return
      */
     @Override
-    public boolean isActive( ) {
-      return this.transaction.isActive( );
+    public boolean isActive( ) throws RecoverablePersistenceException {
+      return this.txState.isActive( );
     }
     
     /**
@@ -477,8 +575,8 @@ public class Entities {
      * @see javax.persistence.EntityTransaction#begin()
      */
     @Override
-    public void begin( ) {
-      this.transaction.begin( );
+    public void begin( ) throws RecoverablePersistenceException {
+      this.txState.begin( );
     }
     
     /**
@@ -486,17 +584,13 @@ public class Entities {
      * @see javax.persistence.EntityTransaction#rollback()
      */
     @Override
-    public void rollback( ) {
+    public void rollback( ) throws RecoverablePersistenceException {
       try {
-        if ( ( this.transaction != null ) && this.transaction.isActive( ) ) {
-          this.transaction.rollback( );
-        }
-        this.record.logEvent( TxState.END, TxEvent.ROLLBACK );
-      } catch ( final Throwable e ) {
-        this.record.logEvent( TxState.FAIL, TxEvent.ROLLBACK );
-        PersistenceExceptions.throwFiltered( e );
-      } finally {
-        this.cleanup( );
+        this.txState.rollback( );
+        this.record.logEvent( TxStep.END, TxEvent.ROLLBACK );
+      } catch ( final RuntimeException ex ) {
+        this.record.logEvent( TxStep.FAIL, TxEvent.ROLLBACK );
+        throw PersistenceExceptions.throwFiltered( ex );
       }
     }
     
@@ -505,73 +599,24 @@ public class Entities {
      * @see javax.persistence.EntityTransaction#commit()
      */
     @Override
-    public void commit( ) {
-      this.record.logEvent( TxState.BEGIN, TxEvent.COMMIT );
+    public void commit( ) throws RecoverablePersistenceException {
+      this.record.logEvent( TxStep.BEGIN, TxEvent.COMMIT );
       try {
-        this.transaction.commit( );
-        this.record.logEvent( TxState.END, TxEvent.COMMIT );
-      } catch ( final RuntimeException e ) {
+        this.txState.commit( );
+        this.record.logEvent( TxStep.END, TxEvent.COMMIT );
+      } catch ( final RuntimeException ex ) {
         this.rollback( );
-        this.record.logEvent( TxState.FAIL, TxEvent.COMMIT );
-        PersistenceExceptions.throwFiltered( e );
-        throw e;
-      } finally {
-        this.cleanup( );
+        this.record.logEvent( TxStep.FAIL, TxEvent.COMMIT );
+        throw PersistenceExceptions.throwFiltered( ex );
       }
     }
     
-    private boolean isOpen( ) {
-      final boolean hasEm = ( this.em != null ) && this.em.isOpen( );
-      final boolean hasSession = ( this.sessionRef.get( ) != null ) && this.sessionRef.get( ).isOpen( );
-      final boolean hasTx = ( this.transaction != null ) && this.transaction.isActive( );
-      if ( hasEm && hasSession && hasTx ) {
-        return true;
-      } else {
-        this.cleanup( );
-        return false;
-      }
+    String getCtx( ) {
+      return this.ctx;
     }
     
-    void doRollback( ) {
-      try {
-        if ( ( this.transaction != null ) && this.transaction.isActive( ) ) {
-          this.transaction.rollback( );
-        }
-        this.record.logEvent( TxState.END, TxEvent.ROLLBACK );
-      } catch ( final Throwable e ) {
-        this.record.logEvent( TxState.FAIL, TxEvent.ROLLBACK );
-        PersistenceExceptions.throwFiltered( e );
-      } finally {
-        this.cleanup( );
-      }
-    }
-    
-    private void cleanup( ) {
-      if ( ( this.sessionRef != null ) && ( this.sessionRef.get( ) != null ) ) {
-        this.sessionRef.clear( );
-      }
-      if ( ( this.transaction != null ) && this.transaction.isActive( ) ) {
-        this.transaction.rollback( );
-      }
-      this.transaction = null;
-      if ( ( this.em != null ) && this.em.isOpen( ) ) {
-        this.em.close( );
-      }
-      this.em = null;
-    }
-    
-    public Criteria createCriteria( final Class class1 ) {
-      return this.getSession( ).createCriteria( class1 );
-    }
-    
-    /** package default on purpose **/
-    EntityManager getEntityManager( ) {
-      return this.em;
-    }
-    
-    /** :| should also be package default **/
-    Session getSession( ) {
-      return this.sessionRef.get( );
+    TxState getTxState( ) {
+      return this.txState;
     }
     
   }
@@ -584,7 +629,7 @@ public class Entities {
     private final Long      startTime;
     private volatile long   splitTime = 0l;
     
-    TxRecord( String persistenceContext ) {
+    TxRecord( final String persistenceContext ) {
       this.persistenceContext = persistenceContext;
       this.uuid = String.format( "%s:%s", this.persistenceContext, UUID.randomUUID( ).toString( ) );
       this.startingStackTrace = Logs.isExtrrreeeme( )
@@ -607,7 +652,7 @@ public class Entities {
       return ( splitTime - 30000 ) > this.startTime;
     }
     
-    final void logEvent( final TxState txState, final TxEvent txAction ) {
+    final void logEvent( final TxStep txState, final TxEvent txAction ) {
       if ( Logs.isExtrrreeeme( ) ) {
         final long oldSplit = this.splitTime;
         this.stopWatch.split( );
@@ -659,18 +704,13 @@ public class Entities {
     }
   }
   
-  enum TxState {
+  enum TxStep {
     BEGIN,
     END,
     FAIL;
     public String event( final TxEvent e ) {
       return e.name( ) + ":" + this.name( );
     }
-  }
-  
-  enum TxUnroll {
-    SAFELY,
-    ROLLBACK;
   }
   
   enum TxWatchdog implements EventListener {
@@ -682,4 +722,5 @@ public class Entities {
       }
     }
   }
+  
 }

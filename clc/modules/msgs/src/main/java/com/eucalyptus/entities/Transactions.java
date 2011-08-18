@@ -37,17 +37,11 @@ public class Transactions {
                                                              
                                                            };
   
-  public static <T> EntityWrapper<T> get( T obj ) {
+  private static <T> EntityWrapper<T> get( T obj ) {
     depth.get( ).incrementAndGet( );
-    EntityWrapper<T> db = Entities.get( obj );
+    EntityWrapper<T> db = EntityWrapper.get( obj );
     wrappers.get( ).add( db );
     return db;
-  }
-  
-  private static void checkTransaction( ) {
-    if ( depth.get( ).get( ) == 0 && Entities.hasTransaction( ) ) {
-      depth.get( ).incrementAndGet( );
-    }
   }
   
   private static void pop( ) {
@@ -88,7 +82,6 @@ public class Transactions {
   }
   
   public static <T> List<T> each( T search, Callback<T> c ) throws TransactionException {
-    checkTransaction( );
     assertThat( search, notNullValue( ) );
     assertThat( c, notNullValue( ) );
     EntityWrapper<T> db = Transactions.get( search );
@@ -144,7 +137,6 @@ public class Transactions {
   }
   
   public static <S, T> S one( T search, Function<T, S> f ) throws TransactionException {
-    checkTransaction( );
     assertThat( search, notNullValue( ) );
     assertThat( f, notNullValue( ) );
     EntityWrapper<T> db = Transactions.get( search );
@@ -187,7 +179,6 @@ public class Transactions {
   }
   
   public static <T, O> List<O> filteredTransform( T search, Predicate<T> condition, Function<T, O> transform ) throws TransactionException {
-    checkTransaction( );
     assertThat( search, notNullValue( ) );
     assertThat( condition, notNullValue( ) );
     assertThat( transform, notNullValue( ) );
@@ -226,7 +217,6 @@ public class Transactions {
   }
   
   public static <T> T save( T saveMe, Callback<T> c ) throws TransactionException {
-    checkTransaction( );
     assertThat( saveMe, notNullValue( ) );
     assertThat( c, notNullValue( ) );
     EntityWrapper<T> db = Transactions.get( saveMe );
@@ -261,7 +251,6 @@ public class Transactions {
   }
   
   public static <T> boolean delete( T search, Predicate<T> precondition ) throws TransactionException {
-    checkTransaction( );
     assertThat( search, notNullValue( ) );
     assertThat( precondition, notNullValue( ) );
     EntityWrapper<T> db = Transactions.get( search );

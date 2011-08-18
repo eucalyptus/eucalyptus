@@ -71,6 +71,7 @@ import java.util.List;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
+import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
@@ -278,18 +279,18 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
       return ExtantNetwork.bogus( this );
     } else if ( this.getExtantNetwork( ) == null ) {
       ExtantNetwork exNet = null;
-      final EntityWrapper<NetworkGroup> db = Entities.get( NetworkGroup.class );
+      final EntityTransaction db = Entities.get( NetworkGroup.class );
       try {
-        exNet = db.uniqueResult( ExtantNetwork.named( this ) );
+        exNet = Entities.uniqueResult( ExtantNetwork.named( this ) );
         return exNet;
       } catch ( TransactionException ex2 ) {
         for ( Integer i : NetworkGroups.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
           try {
-            exNet = db.uniqueResult( ExtantNetwork.named( i ) );
+            exNet = Entities.uniqueResult( ExtantNetwork.named( i ) );
           } catch ( TransactionException ex ) {}
           if ( exNet == null ) {
             try {
-              exNet = db.persist( ExtantNetwork.create( this, i ) );
+              exNet = Entities.persist( ExtantNetwork.create( this, i ) );
             } catch ( Exception ex ) {
               LOG.error( ex, ex );
             }

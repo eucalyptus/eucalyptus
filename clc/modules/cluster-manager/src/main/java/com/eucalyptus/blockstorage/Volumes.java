@@ -103,7 +103,7 @@ public class Volumes {
     @SuppressWarnings( "unchecked" )
     @Override
     public Long apply( OwnerFullName input ) {
-      EntityWrapper<Volume> db = Entities.get( Volume.class );
+      EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
       int i = db.createCriteria( Volume.class ).add( Example.create( Volume.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( ).size( );
       db.rollback( );
       return ( long ) i;
@@ -118,7 +118,7 @@ public class Volumes {
     @SuppressWarnings( "unchecked" )
     @Override
     public Long apply( OwnerFullName input ) {
-      EntityWrapper<Volume> db = Entities.get( Volume.class );
+      EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
       List<Volume> vols = db.createCriteria( Volume.class ).add( Example.create( Volume.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( );
       Long size = 0l;
       for ( Volume v : vols ) {

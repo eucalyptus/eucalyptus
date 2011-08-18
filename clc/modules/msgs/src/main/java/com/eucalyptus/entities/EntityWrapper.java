@@ -94,13 +94,15 @@ import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.exception.ConstraintViolationException;
-import com.eucalyptus.entities.Entities.TxUnroll;
+import com.eucalyptus.entities.Entities.TxEvent;
+import com.eucalyptus.entities.Entities.TxStep;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.LogUtil;
@@ -113,7 +115,7 @@ public class EntityWrapper<TYPE> {
   private static Logger    LOG = Logger.getLogger( EntityWrapper.class );
   private TransactionState tx;
   
-/**
+  /**
    * @see {@link Entities#get(Class)
    * @see {@link NestedTx}
    */
@@ -122,14 +124,14 @@ public class EntityWrapper<TYPE> {
     return EntityWrapper.get( type );
   }
   
-/**
+  /**
    * @see {@link Entities#get(Object)
    * @see {@link NestedTx}
    */
   @SuppressWarnings( "unchecked" )
   @Deprecated
   public static <T> EntityWrapper<T> get( final T obj ) {
-    return EntityWrapper.get( ( Class<T> ) obj.getClass( ) );
+    return ( EntityWrapper<T> ) EntityWrapper.get( Classes.typeOf( obj ) );
   }
   
   /**
@@ -139,19 +141,19 @@ public class EntityWrapper<TYPE> {
    * @param persistenceContext
    */
   @SuppressWarnings( "unchecked" )
-  private EntityWrapper( final String persistenceContext, final Predicate<TxUnroll> predicate ) {
-    this.tx = new TransactionState( persistenceContext, predicate );
+  private EntityWrapper( final String persistenceContext ) {
+    this.tx = new TransactionState( persistenceContext );
   }
   
-  @SuppressWarnings( "unchecked" )
+  @SuppressWarnings( { "unchecked", "cast" } )
   public <T> List<T> query( final T example ) {
     final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
-    final List<T> resultList = ( List<T> ) this.getSession( )
-                                               .createCriteria( example.getClass( ) )
-                                               .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
-                                               .setCacheable( true )
-                                               .add( qbe )
-                                               .list( );
+    final List<T> resultList = this.getSession( )
+                                   .createCriteria( example.getClass( ) )
+                                   .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
+                                   .setCacheable( true )
+                                   .add( qbe )
+                                   .list( );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
   
@@ -403,8 +405,8 @@ public class EntityWrapper<TYPE> {
     return this.tx.isActive( );
   }
   
-  public static <TYPE> EntityWrapper<TYPE> create( final PersistenceContext persistenceContext, final Predicate<TxUnroll> predicate ) {
-    return new EntityWrapper<TYPE>( persistenceContext.name( ), predicate );
+  public static <TYPE> EntityWrapper<TYPE> create( final PersistenceContext persistence ) {
+    return new EntityWrapper<TYPE>( persistence.name( ) );
   }
   
   protected void cleanUp( ) {
@@ -416,7 +418,7 @@ public class EntityWrapper<TYPE> {
     }
   }
   
-  static class TransactionState implements Comparable<TransactionState>, EntityTransaction {    
+  static class TransactionState implements Comparable<TransactionState>, EntityTransaction {
     private static Logger                                           LOG         = Logger.getLogger( TransactionState.class );
     private static ConcurrentNavigableMap<String, TransactionState> outstanding = new ConcurrentSkipListMap<String, TransactionState>( );
     
@@ -428,10 +430,8 @@ public class EntityWrapper<TYPE> {
     private final String                                            txUuid;
     private final StopWatch                                         stopWatch;
     private volatile long                                           splitTime   = 0l;
-    private final Predicate<TxUnroll>                               guard;
     
-    TransactionState( final String ctx, final Predicate<TxUnroll> predicate ) {
-      this.guard = predicate;
+    TransactionState( final String ctx ) {
       try {
         this.txUuid = String.format( "%s:%s", ctx, UUID.randomUUID( ).toString( ) );
         this.owner = Logs.isExtrrreeeme( )
@@ -440,7 +440,7 @@ public class EntityWrapper<TYPE> {
         this.startTime = System.currentTimeMillis( );
         this.stopWatch = new StopWatch( );
         this.stopWatch.start( );
-        this.eventLog( TxState.BEGIN, TxEvent.CREATE );
+        this.eventLog( TxStep.BEGIN, TxEvent.CREATE );
         final EntityManagerFactory anemf = ( EntityManagerFactoryImpl ) PersistenceContexts.getEntityManagerFactory( ctx );
         assertThat( anemf, notNullValue( ) );
         this.em = anemf.createEntityManager( );
@@ -448,10 +448,10 @@ public class EntityWrapper<TYPE> {
         this.transaction = this.em.getTransaction( );
         this.transaction.begin( );
         this.session = new WeakReference<Session>( ( Session ) this.em.getDelegate( ) );
-        this.eventLog( TxState.END, TxEvent.CREATE );
+        this.eventLog( TxStep.END, TxEvent.CREATE );
       } catch ( final Throwable ex ) {
         Logs.exhaust( ).error( ex, ex );
-        this.eventLog( TxState.FAIL, TxEvent.CREATE );
+        this.eventLog( TxStep.FAIL, TxEvent.CREATE );
         this.rollback( );
         throw new RuntimeException( PersistenceExceptions.throwFiltered( ex ) );
       } finally {
@@ -471,7 +471,7 @@ public class EntityWrapper<TYPE> {
       return this.splitTime;
     }
     
-    private final void eventLog( final TxState txState, final TxEvent txAction ) {
+    private final void eventLog( final TxStep txState, final TxEvent txAction ) {
       if ( Logs.isExtrrreeeme( ) ) {
         final long oldSplit = this.splitTime;
         this.stopWatch.split( );
@@ -485,19 +485,14 @@ public class EntityWrapper<TYPE> {
     
     @Override
     public void rollback( ) {
-      this.eventLog( TxState.BEGIN, TxEvent.ROLLBACK );
-      this.guard.apply( TxUnroll.ROLLBACK );
-      
-    }
-    
-    void doRollback( ) {
+      this.eventLog( TxStep.BEGIN, TxEvent.ROLLBACK );
       try {
         if ( ( this.transaction != null ) && this.transaction.isActive( ) ) {
           this.transaction.rollback( );
         }
-        this.eventLog( TxState.END, TxEvent.ROLLBACK );
+        this.eventLog( TxStep.END, TxEvent.ROLLBACK );
       } catch ( final Throwable e ) {
-        this.eventLog( TxState.FAIL, TxEvent.ROLLBACK );
+        this.eventLog( TxStep.FAIL, TxEvent.ROLLBACK );
         PersistenceExceptions.throwFiltered( e );
       } finally {
         this.cleanup( );
@@ -506,13 +501,13 @@ public class EntityWrapper<TYPE> {
     
     private void cleanup( ) {
       try {
-        if ( ( this.session != null ) && ( this.session.get( ) != null ) ) {
-          this.session.clear( );
-        }
         if ( ( this.transaction != null ) && this.transaction.isActive( ) ) {
           this.transaction.rollback( );
         }
         this.transaction = null;
+        if ( ( this.session != null ) && ( this.session.get( ) != null ) ) {
+          this.session.clear( );
+        }
         if ( ( this.em != null ) && this.em.isOpen( ) ) {
           this.em.close( );
         }
@@ -524,19 +519,18 @@ public class EntityWrapper<TYPE> {
     
     @Override
     public void commit( ) {
-      this.eventLog( TxState.BEGIN, TxEvent.COMMIT );
-      if ( this.guard.apply( TxUnroll.SAFELY ) )
-        try {
-          this.transaction.commit( );
-          this.eventLog( TxState.END, TxEvent.COMMIT );
-        } catch ( final RuntimeException e ) {
-          this.rollback( );
-          this.eventLog( TxState.FAIL, TxEvent.COMMIT );
-          PersistenceExceptions.throwFiltered( e );
-          throw e;
-        } finally {
-          this.cleanup( );
-        }
+      this.eventLog( TxStep.BEGIN, TxEvent.COMMIT );
+      try {
+        this.transaction.commit( );
+        this.eventLog( TxStep.END, TxEvent.COMMIT );
+      } catch ( final RuntimeException e ) {
+        this.rollback( );
+        this.eventLog( TxStep.FAIL, TxEvent.COMMIT );
+        PersistenceExceptions.throwFiltered( e );
+        throw e;
+      } finally {
+        this.cleanup( );
+      }
     }
     
     public String getTxUuid( ) {
@@ -646,7 +640,4 @@ public class EntityWrapper<TYPE> {
     
   }
   
-  void doRollback( ) {
-    this.tx.doRollback( );
-  }
 }

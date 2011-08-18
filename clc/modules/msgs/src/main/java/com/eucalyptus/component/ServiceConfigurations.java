@@ -43,7 +43,7 @@ public class ServiceConfigurations {
     
     @Override
     public <T extends ServiceConfiguration> List<T> list( final T example ) {
-      final EntityWrapper<T> db = Entities.get( example );
+      final EntityWrapper<T> db = EntityWrapper.get( example );
       List<T> componentList;
       try {
         componentList = db.query( example );
@@ -62,7 +62,7 @@ public class ServiceConfigurations {
     
     @Override
     public <T extends ServiceConfiguration> T lookup( final T example ) {
-      final EntityWrapper<T> db = Entities.get( example );
+      final EntityWrapper<T> db = EntityWrapper.get( example );
       T existingName = null;
       try {
         existingName = db.getUnique( example );
@@ -81,7 +81,7 @@ public class ServiceConfigurations {
     
     @Override
     public <T extends ServiceConfiguration> T store( T config ) {
-      final EntityWrapper<T> db = Entities.get( config );
+      final EntityWrapper<T> db = EntityWrapper.get( config );
       try {
         config = db.persist( config );
         db.commit( );
@@ -102,7 +102,7 @@ public class ServiceConfigurations {
     
     @Override
     public <T extends ServiceConfiguration> T remove( final T config ) {
-      final EntityWrapper<T> db = Entities.get( config );
+      final EntityWrapper<T> db = EntityWrapper.get( config );
       try {
         final T searchConfig = ( T ) config.getClass( ).newInstance( );
         searchConfig.setName( config.getName( ) );

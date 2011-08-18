@@ -105,7 +105,7 @@ public class Snapshots {
     
     @Override
     public Long apply( OwnerFullName input ) {
-      EntityWrapper<Snapshot> db = Entities.get( Snapshot.class );
+      EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
       int ret = db.createCriteria( Snapshot.class ).add( Example.create( Snapshots.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( ).size( );
       db.rollback( );
       return new Long( ret );

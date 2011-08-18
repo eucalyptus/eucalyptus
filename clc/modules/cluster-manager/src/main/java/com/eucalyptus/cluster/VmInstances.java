@@ -132,7 +132,7 @@ public class VmInstances {
     
     @Override
     public Long apply( final OwnerFullName input ) {
-      final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+      final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
       final int i = db.createCriteria( VmInstance.class ).add( Example.create( VmInstance.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( ).size( );
       db.rollback( );
       return ( long ) i;
@@ -338,7 +338,7 @@ public class VmInstances {
   }
   
   public static VmInstance lookup( final String name ) throws NoSuchElementException {
-    final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+    final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
     try {
       final VmInstance vm = db.getUnique( VmInstance.named( null, name ) );
       if ( ( vm == null ) || VmState.TERMINATED.equals( vm.getState( ) ) ) {
@@ -352,7 +352,7 @@ public class VmInstances {
   }
   
   public static void register( final VmInstance obj ) {
-    final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+    final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
     try {
       db.persist( obj );
       db.commit( );
@@ -363,7 +363,7 @@ public class VmInstances {
   }
   
   public static void deregister( final String key ) {
-    final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+    final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
     try {
       final VmInstance vm = db.getUnique( VmInstance.named( null, key ) );
       db.delete( vm );
@@ -375,7 +375,7 @@ public class VmInstances {
   }
   
   public static List<VmInstance> listDisabledValues( ) {
-    final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+    final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
     try {
       final List<VmInstance> vms = db.query( VmInstance.namedTerminated( null, null ) );
       db.commit( );
@@ -391,7 +391,7 @@ public class VmInstances {
   }
   
   public static List<VmInstance> listValues( ) {
-    final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+    final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
     try {
       final List<VmInstance> vms = db.query( VmInstance.named( null, null ) );
       final Collection<VmInstance> ret = Collections2.filter( vms, new Predicate<VmInstance>( ) {
@@ -415,7 +415,7 @@ public class VmInstances {
   }
   
   public static VmInstance lookupDisabled( final String name ) throws NoSuchElementException {
-    final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+    final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
     try {
       final VmInstance vm = db.getUnique( VmInstance.namedTerminated( null, name ) );
       db.commit( );
@@ -431,7 +431,7 @@ public class VmInstances {
   }
   
   public static void disable( final VmInstance that ) throws NoSuchElementException {
-    final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+    final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
     try {
       if ( VmState.TERMINATED.equals( that.getState( ) ) ) {
         db.mergeAndCommit( that );
@@ -444,7 +444,7 @@ public class VmInstances {
   }
   
   public static boolean contains( final String name ) {
-    final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+    final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
     try {
       final VmInstance vm = db.getUnique( VmInstance.named( null, name ) );
       db.commit( );

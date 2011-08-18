@@ -490,7 +490,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     } catch ( final EventFailedException ex ) {
       LOG.error( ex, ex );
     }
-    final EntityWrapper<VmInstance> db = Entities.get( VmInstance.class );
+    final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
     try {
       db.merge( this );
       db.commit( );

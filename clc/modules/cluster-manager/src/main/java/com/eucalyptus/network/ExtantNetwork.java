@@ -169,13 +169,13 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   }
   
   public SetReference<PrivateNetworkIndex, VmInstance> allocateNetworkIndex( ) throws TransactionException {
-    EntityWrapper<ExtantNetwork> db = Entities.get( ExtantNetwork.class );
+    EntityWrapper<ExtantNetwork> db = EntityWrapper.get( ExtantNetwork.class );
     ExtantNetwork exNet = this;
     try {
       exNet = db.getUnique( this );
       if ( exNet.getIndexes( ).isEmpty( ) ) {
         this.initNetworkIndexes( exNet );
-        db = Entities.get( ExtantNetwork.class );
+        db = EntityWrapper.get( ExtantNetwork.class );
       }
       exNet = db.getUnique( this );
       SetReference<PrivateNetworkIndex, VmInstance> next = PrivateNetworkIndex.allocateNext( exNet );
@@ -194,7 +194,7 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   }
   
   private void initNetworkIndexes( ExtantNetwork exNet ) {
-    EntityWrapper<PrivateNetworkIndex> db = Entities.get( PrivateNetworkIndex.class );
+    EntityWrapper<PrivateNetworkIndex> db = EntityWrapper.get( PrivateNetworkIndex.class );
     for ( long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
       PrivateNetworkIndex newIdx = PrivateNetworkIndex.create( exNet, i );
       PrivateNetworkIndex netIdx = db.persist( newIdx );

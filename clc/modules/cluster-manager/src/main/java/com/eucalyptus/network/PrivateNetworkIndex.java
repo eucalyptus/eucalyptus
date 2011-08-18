@@ -65,6 +65,7 @@ package com.eucalyptus.network;
 
 import java.util.List;
 import javax.persistence.Column;
+import javax.persistence.EntityTransaction;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
@@ -265,15 +266,15 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   
   @SuppressWarnings( "unchecked" )
   private static PrivateNetworkIndex getNextIndex( ExtantNetwork exNet ) throws ResourceAllocationException {
-    EntityWrapper<PrivateNetworkIndex> db = Entities.get( PrivateNetworkIndex.class );
+    EntityTransaction db = Entities.get( PrivateNetworkIndex.class );
     try {
       Example ex = Example.create( PrivateNetworkIndex.free( exNet ) ).enableLike( MatchMode.EXACT );
-      PrivateNetworkIndex ret = ( PrivateNetworkIndex ) db.createCriteria( PrivateNetworkIndex.class )
-                                                          .setMaxResults( 1 )
-                                                          .setFetchSize( 1 )
-                                                          .setFirstResult( 0 )
-                                                          .add( ex )
-                                                          .uniqueResult( );
+      PrivateNetworkIndex ret = ( PrivateNetworkIndex ) Entities.createCriteria( PrivateNetworkIndex.class )
+                                                                .setMaxResults( 1 )
+                                                                .setFetchSize( 1 )
+                                                                .setFirstResult( 0 )
+                                                                .add( ex )
+                                                                .uniqueResult( );
       if ( ret == null ) {
         throw new NotEnoughResourcesAvailable( "Failed to find a free network index: " + ret );
       } else {

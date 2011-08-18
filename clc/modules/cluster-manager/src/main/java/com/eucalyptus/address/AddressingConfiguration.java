@@ -115,10 +115,10 @@ public class AddressingConfiguration extends AbstractPersistent {
   public static AddressingConfiguration getInstance( ) {
     AddressingConfiguration ret = null;
     try {
-      ret = Entities.get( AddressingConfiguration.class ).lookupAndClose( new AddressingConfiguration( ) );
+      ret = EntityWrapper.get( AddressingConfiguration.class ).lookupAndClose( new AddressingConfiguration( ) );
     } catch ( final NoSuchElementException ex1 ) {
       try {
-        ret = Entities.get( AddressingConfiguration.class ).mergeAndCommit( new AddressingConfiguration( ) );
+        ret = EntityWrapper.get( AddressingConfiguration.class ).mergeAndCommit( new AddressingConfiguration( ) );
       } catch ( final Exception ex ) {
         Logs.extreme( ).error( ex, ex );
         ret = new AddressingConfiguration( );

@@ -116,10 +116,10 @@ public class ImageConfiguration extends AbstractPersistent {
   public static ImageConfiguration getInstance( ) {
     ImageConfiguration ret = null;
     try {
-      ret = Entities.get( ImageConfiguration.class ).lookupAndClose( new ImageConfiguration( ) );
+      ret = EntityWrapper.get( ImageConfiguration.class ).lookupAndClose( new ImageConfiguration( ) );
     } catch ( NoSuchElementException ex1 ) {
       try {
-        ret = Entities.get( ImageConfiguration.class ).mergeAndCommit( new ImageConfiguration( ) );
+        ret = EntityWrapper.get( ImageConfiguration.class ).mergeAndCommit( new ImageConfiguration( ) );
       } catch ( final Exception ex ) {
         Logs.extreme( ).error( ex, ex );
         ret = new ImageConfiguration( );

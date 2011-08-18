@@ -72,7 +72,7 @@ import org.hibernate.HibernateException;
  * {@link #getCause()}. See {@link PersistenceExceptions} for classification of the underlying
  * exception types.
  */
-public class RecoverablePersistenceException extends Exception {
+public class RecoverablePersistenceException extends RuntimeException {
   
   public RecoverablePersistenceException( String message, Throwable cause ) {
     super( message, cause );

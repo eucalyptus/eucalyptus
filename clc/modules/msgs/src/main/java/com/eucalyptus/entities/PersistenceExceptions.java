@@ -210,7 +210,7 @@ public class PersistenceExceptions {
    * @see {@link http://docs.jboss.org/hibernate/core/3.5/api/org/hibernate/HibernateException.html}
    */
   @SuppressWarnings( "unchecked" )
-  static Exception throwFiltered( final Throwable e ) {
+  static RecoverablePersistenceException throwFiltered( final Throwable e ) {
     ConstraintViolationException cause = Exceptions.causedBy( e, ConstraintViolationException.class );
     if ( cause != null ) {
       throw cause;

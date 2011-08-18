@@ -47,7 +47,7 @@ public class Images {
     
     @Override
     public Long apply( final OwnerFullName input ) {
-      EntityWrapper<ImageInfo> db = Entities.get( ImageInfo.class );
+      EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
       int i = db.createCriteria( ImageInfo.class ).add( Example.create( ImageInfo.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( ).size( );
       db.rollback( );
       return ( long ) i;
