@@ -200,7 +200,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   @Transient
   private final NetworkConfigType                     networkConfig       = new NetworkConfigType( );
   @Transient
-  private final AtomicMarkableReference<VmState>      state               = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
+  private final AtomicMarkableReference<VmState>      runtimeState               = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
   
   public VmInstance( final UserFullName owner,
                      final String instanceId, final String instanceUuid,
@@ -294,7 +294,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   
   public void updateNetworkIndex( Integer newIndex ) {
     if ( this.getNetworkConfig( ).getNetworkIndex( ) > 0 && newIndex > 0
-         && ( VmState.RUNNING.equals( this.getState( ) ) || VmState.PENDING.equals( this.getState( ) ) ) ) {
+         && ( VmState.RUNNING.equals( this.getRuntimeState( ) ) || VmState.PENDING.equals( this.getRuntimeState( ) ) ) ) {
       this.getNetworkConfig( ).setNetworkIndex( newIndex );
     }
   }
@@ -327,21 +327,21 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   }
   
   public boolean clearPending( ) {
-    if ( this.state.isMarked( ) && this.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
-      this.state.set( this.getState( ), false );
+    if ( this.runtimeState.isMarked( ) && this.getRuntimeState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
+      this.runtimeState.set( this.getRuntimeState( ), false );
       VmInstances.cleanUp( this );
       return true;
     } else {
-      this.state.set( this.getState( ), false );
+      this.runtimeState.set( this.getRuntimeState( ), false );
       return false;
     }
   }
   
-  public VmState getState( ) {
-    return this.state.getReference( );
+  public VmState getRuntimeState( ) {
+    return this.runtimeState.getReference( );
   }
   
-  public void setState( final VmState state ) {
+  public void setRuntimeState( final VmState state ) {
     this.setState( state, SystemState.Reason.NORMAL );
   }
   
@@ -369,7 +369,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
       this.updateWatch.unsplit( );
     }
     this.resetStopWatch( );
-    VmState oldState = this.state.getReference( );
+    VmState oldState = this.runtimeState.getReference( );
     if ( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && Reason.USER_TERMINATED.equals( reason ) ) {
       VmInstances.cleanUp( this );
       if ( !this.reasonDetails.contains( SEND_USER_TERMINATE ) ) {
@@ -387,46 +387,46 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
       } catch ( ExecutionException ex ) {
         LOG.error( ex, ex );
       }
-    } else if ( !this.getState( ).equals( newState ) ) {
+    } else if ( !this.getRuntimeState( ).equals( newState ) ) {
       if ( Reason.APPEND.equals( reason ) ) {
         reason = this.reason;
       }
       this.addReasonDetail( extra );
-      LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getState( ), newState ) );
+      LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getRuntimeState( ), newState ) );
       this.reason = reason;
-      if ( this.state.isMarked( ) && VmState.PENDING.equals( this.getState( ) ) ) {
+      if ( this.runtimeState.isMarked( ) && VmState.PENDING.equals( this.getRuntimeState( ) ) ) {
         if ( VmState.SHUTTING_DOWN.equals( newState ) || VmState.PENDING.equals( newState ) ) {
-          this.state.set( newState, true );
+          this.runtimeState.set( newState, true );
         } else {
-          this.state.set( newState, false );
+          this.runtimeState.set( newState, false );
         }
-      } else if ( this.state.isMarked( ) && VmState.SHUTTING_DOWN.equals( this.getState( ) ) ) {
-        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
-      } else if ( !this.state.isMarked( ) ) {
+      } else if ( this.runtimeState.isMarked( ) && VmState.SHUTTING_DOWN.equals( this.getRuntimeState( ) ) ) {
+        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getRuntimeState( ) );
+      } else if ( !this.runtimeState.isMarked( ) ) {
         if ( oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) && newState.ordinal( ) > VmState.RUNNING.ordinal( ) ) {
-          this.state.set( newState, false );
+          this.runtimeState.set( newState, false );
           VmInstances.cleanUp( this );
         } else if ( VmState.PENDING.equals( oldState ) && VmState.RUNNING.equals( newState ) ) {
-          this.state.set( newState, false );
+          this.runtimeState.set( newState, false );
         } else if ( VmState.TERMINATED.equals( newState ) && oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) {
-          this.state.set( newState, false );
+          this.runtimeState.set( newState, false );
           VmInstances.getInstance( ).disable( this.getName( ) );
           VmInstances.cleanUp( this );
         } else if ( VmState.TERMINATED.equals( newState ) && oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) {
-          this.state.set( newState, false );
+          this.runtimeState.set( newState, false );
           VmInstances.getInstance( ).disable( this.getName( ) );
         } else if ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) && newState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) {
-          this.state.set( oldState, false );
+          this.runtimeState.set( oldState, false );
           VmInstances.cleanUp( this );
         } else if ( newState.ordinal( ) > oldState.ordinal( ) ) {
-          this.state.set( newState, false );
+          this.runtimeState.set( newState, false );
         }
         this.store( );
       } else {
-        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
+        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getRuntimeState( ) );
       }
-      if ( !this.getState( ).equals( oldState ) ) {
-        EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.owner, this.state.getReference( ).name( ), this.launchTime );
+      if ( !this.getRuntimeState( ).equals( oldState ) ) {
+        EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.owner, this.runtimeState.getReference( ).name( ), this.launchTime );
       }
     }
   }
@@ -666,13 +666,13 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
       runningInstance.setStateCode( Integer.toString( VmState.TERMINATED.getCode( ) ) );
       runningInstance.setStateName( VmState.TERMINATED.getName( ) );
     } else {
-      runningInstance.setStateCode( Integer.toString( this.state.getReference( ).getCode( ) ) );
-      runningInstance.setStateName( this.state.getReference( ).getName( ) );
+      runningInstance.setStateCode( Integer.toString( this.runtimeState.getReference( ).getCode( ) ) );
+      runningInstance.setStateName( this.runtimeState.getReference( ).getName( ) );
     }
     runningInstance.setPlatform( this.getPlatform( ) );
     
-    runningInstance.setStateCode( Integer.toString( this.state.getReference( ).getCode( ) ) );
-    runningInstance.setStateName( this.state.getReference( ).getName( ) );
+    runningInstance.setStateCode( Integer.toString( this.runtimeState.getReference( ).getCode( ) ) );
+    runningInstance.setStateName( this.runtimeState.getReference( ).getName( ) );
     runningInstance.setInstanceId( this.instanceId );
 //ASAP:FIXME:GRZE: restore.
     runningInstance.setProductCodes( new ArrayList<String>( ) );
@@ -947,7 +947,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
                  .format(
                           "VmInstance [instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
                           this.instanceId, this.sshKeyPair, this.launchIndex, this.launchTime, this.networkConfig, this.networks, this.getOwner( ),
-                          this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch, this.userData, this.vmType,
+                          this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.runtimeState, this.stopWatch, this.userData, this.vmType,
                           this.transientVolumes );
   }
   
