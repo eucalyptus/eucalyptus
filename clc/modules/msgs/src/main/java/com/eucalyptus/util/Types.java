@@ -85,7 +85,7 @@ import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.google.common.base.Function;
-import com.google.gwt.thirdparty.guava.common.collect.Maps;
+import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Types {
