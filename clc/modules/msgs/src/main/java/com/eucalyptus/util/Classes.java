@@ -250,6 +250,11 @@ public class Classes {
     
   }
   
+  @SuppressWarnings( "unchecked" )
+  public static <T> Class<T> typeOf( Object obj ) {
+    return ( Class<T> ) WhateverAsClass.INSTANCE.apply( obj );
+  }
+  
   /**
    * Function for getting a linearized breadth-first list of classes which belong to the
    * transitive-closure of
@@ -319,13 +324,13 @@ public class Classes {
   }
   
   /**
-   * Function for getting a list of the classes corresponding to the actual generic parameters for the given
-   * {@code Object o}.
+   * Function for getting a list of the classes corresponding to the actual generic parameters for
+   * the given {@code Object o}.
    * 
    * @param o
    * @return
    */
-  private static Function<Object,List<Class<?>>> genericsToClasses( ) {
+  private static Function<Object, List<Class<?>>> genericsToClasses( ) {
     return GenericsBreadthFirstTransitiveClosure.INSTANCE;
   }
   

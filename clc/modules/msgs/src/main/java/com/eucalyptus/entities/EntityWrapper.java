@@ -110,25 +110,26 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 public class EntityWrapper<TYPE> {
-  private static Logger          LOG = Logger.getLogger( EntityWrapper.class );
+  private static Logger    LOG = Logger.getLogger( EntityWrapper.class );
   private TransactionState tx;
   
 /**
    * @see {@link Entities#get(Class)
-   * @deprecated {@link Entities#get(Class))
+   * @see {@link NestedTx}
    */
   @Deprecated
   public static <T> EntityWrapper<T> get( final Class<T> type ) {
-    return Entities.get( type );
+    return EntityWrapper.get( type );
   }
   
 /**
    * @see {@link Entities#get(Object)
-   * @deprecated {@link Entities#get(Object)
+   * @see {@link NestedTx}
    */
+  @SuppressWarnings( "unchecked" )
   @Deprecated
   public static <T> EntityWrapper<T> get( final T obj ) {
-    return Entities.get( obj );
+    return EntityWrapper.get( ( Class<T> ) obj.getClass( ) );
   }
   
   /**
@@ -138,7 +139,7 @@ public class EntityWrapper<TYPE> {
    * @param persistenceContext
    */
   @SuppressWarnings( "unchecked" )
-  EntityWrapper( final String persistenceContext, final Predicate<TxUnroll> predicate ) {
+  private EntityWrapper( final String persistenceContext, final Predicate<TxUnroll> predicate ) {
     this.tx = new TransactionState( persistenceContext, predicate );
   }
   
@@ -194,24 +195,24 @@ public class EntityWrapper<TYPE> {
       } else if ( ( example instanceof HasNaturalId ) && ( ( ( HasNaturalId ) example ).getNaturalId( ) != null ) ) {
         final String natId = ( ( HasNaturalId ) example ).getNaturalId( );
         final T ret = ( T ) this.createCriteria( example.getClass( ) )
-                          .add( Restrictions.naturalId( ).set( "naturalId", natId ) )
-                          .setCacheable( true )
-                          .setMaxResults( 1 )
-                          .setFetchSize( 1 )
-                          .setFirstResult( 0 )
-                          .uniqueResult( );
+                                .add( Restrictions.naturalId( ).set( "naturalId", natId ) )
+                                .setCacheable( true )
+                                .setMaxResults( 1 )
+                                .setFetchSize( 1 )
+                                .setFirstResult( 0 )
+                                .uniqueResult( );
         if ( ret == null ) {
           throw new NoSuchElementException( "@NaturalId: " + natId );
         }
         return ret;
       } else {
         final T ret = ( T ) this.createCriteria( example.getClass( ) )
-                          .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
-                          .setCacheable( true )
-                          .setMaxResults( 1 )
-                          .setFetchSize( 1 )
-                          .setFirstResult( 0 )
-                          .uniqueResult( );
+                                .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
+                                .setCacheable( true )
+                                .setMaxResults( 1 )
+                                .setFetchSize( 1 )
+                                .setFirstResult( 0 )
+                                .uniqueResult( );
         if ( ret == null ) {
           throw new NoSuchElementException( "example: " + LogUtil.dumpObject( example ) );
         }
@@ -415,29 +416,7 @@ public class EntityWrapper<TYPE> {
     }
   }
   
-  static class TransactionState implements Comparable<TransactionState>, EntityTransaction {
-    enum TxEvent {
-      CREATE,
-      COMMIT,
-      ROLLBACK,
-      UNIQUE,
-      QUERY;
-      public String getMessage( ) {
-        if ( Logs.isExtrrreeeme( ) ) {
-          return EntityWrapper.getMyStackTraceElement( ).toString( );
-        } else {
-          return "n.a";
-        }
-      }
-    }
-    
-    enum TxState {
-      BEGIN, END, FAIL;
-      public String event( final TxEvent e ) {
-        return e.name( ) + ":" + this.name( );
-      }
-    }
-    
+  static class TransactionState implements Comparable<TransactionState>, EntityTransaction {    
     private static Logger                                           LOG         = Logger.getLogger( TransactionState.class );
     private static ConcurrentNavigableMap<String, TransactionState> outstanding = new ConcurrentSkipListMap<String, TransactionState>( );
     
@@ -510,7 +489,7 @@ public class EntityWrapper<TYPE> {
       this.guard.apply( TxUnroll.ROLLBACK );
       
     }
-
+    
     void doRollback( ) {
       try {
         if ( ( this.transaction != null ) && this.transaction.isActive( ) ) {
@@ -666,7 +645,7 @@ public class EntityWrapper<TYPE> {
     }
     
   }
-
+  
   void doRollback( ) {
     this.tx.doRollback( );
   }
