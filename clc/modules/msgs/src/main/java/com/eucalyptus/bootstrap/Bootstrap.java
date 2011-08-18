@@ -438,6 +438,10 @@ public class Bootstrap {
     return currentStage;
   }
   
+  public static Boolean isOperational( ) {
+    return isFinished( ) && !isShuttingDown( );
+  }
+  
   public static Boolean isFinished( ) {
     return finished;
   }

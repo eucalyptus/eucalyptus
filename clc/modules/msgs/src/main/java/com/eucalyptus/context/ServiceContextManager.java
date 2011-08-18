@@ -125,7 +125,7 @@ public class ServiceContextManager {
     this.canHasWrite = this.canHas.writeLock( );
     executor.submit( new Runnable( ) {
       public void run( ) {
-        while ( ServiceContextManager.this.running.get( ) ) {
+        while ( Bootstrap.isOperational( ) && ServiceContextManager.this.running.get( ) ) {
           ServiceConfiguration event;
           try {
             if ( ( event = ServiceContextManager.this.queue.poll( 2000, TimeUnit.MILLISECONDS ) ) != null ) {
