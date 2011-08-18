@@ -60,9 +60,7 @@
  *******************************************************************************/
 package com.eucalyptus.bootstrap;
 
-
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.component.auth.EucaKeyStore;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
@@ -71,78 +69,54 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.empyrean.Empyrean;
 
-@Provides(Empyrean.class)
-@RunDuring(Bootstrap.Stage.PrivilegedConfiguration)
-@DependsLocal(Dns.class)
-public class DNSBootstrapper extends Bootstrapper {
-	private static Logger LOG = Logger.getLogger( DNSBootstrapper.class );
-	private static DNSBootstrapper singleton;
-
-	public static Bootstrapper getInstance( ) {
-		synchronized ( DNSBootstrapper.class ) {
-			if ( singleton == null ) {
-				singleton = new DNSBootstrapper( );
-				LOG.info( "Creating DNS Bootstrapper instance." );
-			} else {
-				LOG.info( "Returning DNS Bootstrapper instance." );
-			}
-		}
-		return singleton;
-	}
-
-	@Override
-	public boolean load( ) throws Exception {
-		LOG.info("Initializing DNS");
-		//The following call binds DNS ports. Must be in a privileged context.
-		DNSControl.initialize();
-		return true;
-	}
-
-	@Override
-	public boolean start( ) throws Exception {
-		LOG.info("Loading DNS records");
-		//populateRecords must be idempotent.
-		DNSControl.populateRecords();
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-	 */
-	@Override
-	public boolean enable( ) throws Exception {
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-	 */
-	@Override
-	public boolean stop( ) throws Exception {
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-	 */
-	@Override
-	public void destroy( ) throws Exception {}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-	 */
-	@Override
-	public boolean disable( ) throws Exception {
-		//Don't bring down service but don't process requests.
-		return true;
-	}
-
-	/**
-	 * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-	 */
-	@Override
-	public boolean check( ) throws Exception {
-		return true;
-	}
-
+@Provides( Empyrean.class )
+@RunDuring( Bootstrap.Stage.PrivilegedConfiguration )
+@DependsLocal( Dns.class )
+public class DNSBootstrapper extends Bootstrapper.Simple {
+  private static Logger          LOG = Logger.getLogger( DNSBootstrapper.class );
+  private static DNSBootstrapper singleton;
+  
+  public static Bootstrapper getInstance( ) {
+    synchronized ( DNSBootstrapper.class ) {
+      if ( singleton == null ) {
+        singleton = new DNSBootstrapper( );
+        LOG.info( "Creating DNS Bootstrapper instance." );
+      } else {
+        LOG.info( "Returning DNS Bootstrapper instance." );
+      }
+    }
+    return singleton;
+  }
+  
+  @Override
+  public boolean load( ) throws Exception {
+    LOG.info( "Initializing DNS" );
+    //The following call binds DNS ports. Must be in a privileged context.
+    DNSControl.initialize( );
+    return true;
+  }
+  
+  @Provides( Dns.class )
+  @RunDuring( Bootstrap.Stage.CloudServiceInit )
+  @DependsLocal( Dns.class )
+  public static class DNSRecordsBootstrapper extends Bootstrapper.Simple {
+    
+    @Override
+    public boolean start( ) throws Exception {
+      LOG.info( "Loading DNS records" );
+      //populateRecords must be idempotent.
+      DNSControl.populateRecords( );
+      return true;
+    }
+    
+    /**
+     * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
+     */
+    @Override
+    public boolean disable( ) throws Exception {
+      //Don't bring down service but don't process requests.
+      return true;
+    }
+  }
+  
 }
