@@ -134,11 +134,11 @@ public class ConfigurationWebBackend {
   
   private static void serializeSystemConfiguration( SystemConfiguration sysConf, SearchResultRow result ) {
     // First fill in the common fields
-    result.addField( makeConfigId( CLOUD_NAME, CLOUD_TYPE ) ); // id
+    result.addField( makeConfigId( CLOUD_NAME, CLOUD_TYPE ) );// id
     result.addField( CLOUD_NAME );                            // name  
     result.addField( CLOUD_TYPE );                            // type
-    result.addField( Internets.localHostAddress( ) );               // host
-    result.addField( "" );                                    // port
+    result.addField( Internets.localHostAddress( ) );         // host
+    result.addField( "8773" );                                // port, hardcoding for now
     // Then fill in the specific fields
     result.addField( sysConf.getDnsDomain( ) );               // dns domain
     result.addField( sysConf.getNameserver( ) );              // dns nameserver
@@ -258,8 +258,8 @@ public class ConfigurationWebBackend {
     result.addField( clusterConf.getHostName( ) );
     result.addField( clusterConf.getPort( ) == null ? null : clusterConf.getPort( ).toString( ) );
     // Specific
-    result.addField( clusterConf.getMinVlan( ) == null ? null : clusterConf.getMinVlan( ).toString( ) );
-    result.addField( clusterConf.getMaxVlan( ) == null ? null : clusterConf.getMaxVlan( ).toString( ) );
+    result.addField( clusterConf.getMinVlan( ) == null ? "0" : clusterConf.getMinVlan( ).toString( ) );
+    result.addField( clusterConf.getMaxVlan( ) == null ? "0" : clusterConf.getMaxVlan( ).toString( ) );
   }
   
   /**
