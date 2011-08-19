@@ -186,7 +186,7 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
         continue;
       }
     }
-    if( ref != null ) {
+    if ( ref != null ) {
       Entities.merge( this );
       db.commit( );
       return ref;
@@ -203,6 +203,7 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
       PrivateNetworkIndex netIdx = Entities.persist( newIdx );
       this.getIndexes( ).add( netIdx );
     }
+    Entities.merge( this );
     db.commit( );
   }
   
