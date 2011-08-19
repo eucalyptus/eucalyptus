@@ -72,7 +72,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import javax.persistence.Column;
 import javax.persistence.Lob;
@@ -96,16 +95,14 @@ import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.vm.BundleTask;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.reporting.event.InstanceEvent;
-import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.vm.BundleTask;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.vm.VmState;
@@ -114,9 +111,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.Bytes;
 import edu.ucsb.eucalyptus.cloud.Network;
-import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
@@ -379,7 +374,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
       VmInstances.getInstance( ).deregister( this.getName( ) );
       try {
         Transactions.delete( this );
-      } catch ( ExecutionException ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
     } else if ( !this.getRuntimeState( ).equals( newState ) ) {
@@ -444,7 +439,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
           t.setNetworkBytes( VmInstance.this.getNetworkBytes( ) );
         }
       } );
-    } catch ( ExecutionException ex ) {
+    } catch ( Exception ex ) {
       LOG.error( ex, ex );
     }
   }
