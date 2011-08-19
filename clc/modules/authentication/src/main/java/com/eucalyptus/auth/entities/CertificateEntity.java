@@ -73,7 +73,7 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   @PrePersist
   public void generateOnCommit() {
     if( this.certificateId == null ) {
-      this.certificateId = Crypto.getHmacProvider( ).generateQueryId( this.pem );
+      this.certificateId = Crypto.getHmacProvider( ).generateQueryId( this.pem + Double.toHexString( Math.random( ) ) );
     }
   }
   
