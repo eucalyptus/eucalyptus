@@ -190,12 +190,17 @@ public class ServiceContextManager {
       
       if ( !Bootstrap.isShuttingDown( ) && !reloadComponentIds.isEmpty( ) ) {
         if ( this.context != null ) {
-          this.shutdown( );
+          shutdown( );
         }
         this.context = this.createContext( reloadComponentIds );
         Assertions.assertNotNull( this.context, "BUG: failed to build mule context for reasons unknown" );
         try {
           this.context.start( );
+          if ( Bootstrap.isShuttingDown( ) ) {
+            this.running.set( false );
+            shutdown( );
+            return;
+          }
           this.client = new MuleClient( this.context );
           this.endpointToService.clear( );
           this.serviceToEndpoint.clear( );
@@ -214,6 +219,11 @@ public class ServiceContextManager {
       }
     } finally {
       this.canHasWrite.unlock( );
+    }
+    if ( Bootstrap.isShuttingDown( ) ) {
+      this.running.set( false );
+      shutdown( );
+      return;
     }
   }
   
