@@ -439,14 +439,14 @@ public class EntityWrapper<TYPE> {
     private volatile long                                           splitTime   = 0l;
     
     TransactionState( final String ctx ) {
+      this.startTime = System.currentTimeMillis( );
+      this.txUuid = String.format( "%s:%s", ctx, UUID.randomUUID( ).toString( ) );
+      this.stopWatch = new StopWatch( );
+      this.stopWatch.start( );
+      this.owner = Logs.isExtrrreeeme( )
+        ? Threads.currentStackString( )
+        : "n/a";
       try {
-        this.stopWatch = new StopWatch( );
-        this.txUuid = String.format( "%s:%s", ctx, UUID.randomUUID( ).toString( ) );
-        this.owner = Logs.isExtrrreeeme( )
-          ? Threads.currentStackString( )
-          : "n/a";
-        this.startTime = System.currentTimeMillis( );
-        this.stopWatch.start( );
         this.eventLog( TxStep.BEGIN, TxEvent.CREATE );
         final EntityManagerFactory anemf = ( EntityManagerFactoryImpl ) PersistenceContexts.getEntityManagerFactory( ctx );
         assertThat( anemf, notNullValue( ) );
