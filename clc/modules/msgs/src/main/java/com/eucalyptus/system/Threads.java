@@ -91,7 +91,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -100,12 +99,11 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
 import org.jgroups.util.ThreadFactory;
-import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
-import com.google.gwt.thirdparty.guava.common.primitives.Ints;
+import com.google.common.primitives.Ints;
 
 public class Threads {
   private static Logger                                  LOG          = Logger.getLogger( Threads.class );

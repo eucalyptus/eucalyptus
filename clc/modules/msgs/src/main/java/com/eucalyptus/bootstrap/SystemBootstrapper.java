@@ -69,6 +69,7 @@ import java.security.Security;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.context.ServiceContextManager;
@@ -80,6 +81,8 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
 import com.google.common.base.Functions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 
@@ -117,15 +120,34 @@ public class SystemBootstrapper {
   public SystemBootstrapper( ) {}
   
   /**
-   * <b>IMPORTANT NOTE:</b> this is the <b><i>only</i></b> class for which it is acceptable to {@code catch} or {@code throw} the
-   * {@link Throwable} type. See {@link ThreadDeath} for an explanation of the constraints on
+   * <b>IMPORTANT NOTE:</b> this is the <b><i>only</i></b> class for which it is acceptable to
+   * {@code catch} or {@code throw} the {@link Throwable} type. See {@link ThreadDeath} for an
+   * explanation of the constraints on
    * handling {@link Throwable} propagation.
    * 
    * @see java.lang.ThreadDeath
-   * @return
-   * @throws Exception
+   * @param t
+   * @throws Throwable
    */
-  public boolean init( ) throws Exception {
+  private static void handleException( Throwable t ) throws Throwable {
+    if ( t instanceof BootstrapException ) {
+      t.printStackTrace( );
+      LOG.fatal( t, t );
+      throw t;
+    } else {
+      t.printStackTrace( );
+      LOG.fatal( t, t );
+      System.exit( 123 );
+    }
+  }
+  
+  /**
+   * {@inheritDoc #handleException(Throwable)}
+   * 
+   * @return
+   * @throws Throwable
+   */
+  public boolean init( ) throws Throwable {
     Logs.init( );
     BootstrapArgs.init( );
     Security.addProvider( new BouncyCastleProvider( ) );
@@ -136,19 +158,14 @@ public class SystemBootstrapper {
         stage.load( );
       }
       return true;
-    } catch ( BootstrapException e ) {
-      e.printStackTrace( );
-      throw e;
     } catch ( Throwable t ) {
-      t.printStackTrace( );
-      LOG.fatal( t, t );
-      System.exit( 123 );
+      SystemBootstrapper.handleException( t );
       return false;
     }
   }
   
   /**
-   * {@inheritDoc #init()}
+   * {@inheritDoc #handleException(Throwable)}
    * 
    * @return
    * @throws Throwable
@@ -158,30 +175,14 @@ public class SystemBootstrapper {
       try {
         Bootstrap.initializeSystem( );
         System.exit( 0 );
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
-        System.exit( 1 );
-      }
-    } else {
-      try {
-        // TODO: validation-api
-        /** @NotNull */
-        Bootstrap.Stage stage = Bootstrap.transition( );
-        do {
-          stage.load( );
-        } while ( ( stage = Bootstrap.transition( ) ) != null );
-      } catch ( BootstrapException e ) {
-        e.printStackTrace( );
-        throw e;
       } catch ( Throwable t ) {
-        t.printStackTrace( );
-        LOG.fatal( t, t );
-        System.exit( 123 );
+        LOG.error( t, t );
+        System.exit( 1 );
         throw t;
       }
-      for ( Component c : Components.whichCanLoad( ) ) {
-        Bootstrap.applyTransition( c, Component.Transition.LOADING );
-      }
+    } else {
+      SystemBootstrapper.runSystemStages( );
+      SystemBootstrapper.runComponentStages( Component.Transition.LOADING, Components.filterWhichCanLoad( ) );
     }
     return true;
   }
@@ -196,21 +197,7 @@ public class SystemBootstrapper {
    * @throws Throwable
    */
   public boolean start( ) throws Throwable {
-    try {
-      /** @NotNull */
-      Bootstrap.Stage stage = Bootstrap.transition( );
-      do {
-        stage.start( );
-      } while ( ( stage = Bootstrap.transition( ) ) != null );
-    } catch ( BootstrapException t ) {
-      t.printStackTrace( );
-      LOG.fatal( t, t );
-      throw t;
-    } catch ( Throwable t ) {
-      LOG.fatal( t, t );
-      System.exit( 123 );
-      throw t;
-    }
+    SystemBootstrapper.runSystemStages( );
     for ( final Component c : Components.whichCanLoad( ) ) {
       Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
         @Override
@@ -227,6 +214,31 @@ public class SystemBootstrapper {
       LOG.error( ex, ex );
     }
     return true;
+  }
+  
+  private static void runComponentStages( Transition transition, Predicate<Component> filter ) throws Throwable {
+    try {
+      for ( Component c : Iterables.filter( Components.list( ), filter ) ) {
+        Bootstrap.applyTransition( c, transition );
+      }
+    } catch ( Throwable t ) {
+      SystemBootstrapper.handleException( t );
+      throw t;
+    }
+  }
+  
+  private static void runSystemStages( ) throws Throwable {
+    try {
+      // TODO: validation-api
+      /** @NotNull */
+      Bootstrap.Stage stage = Bootstrap.transition( );
+      do {
+        stage.load( );
+      } while ( ( stage = Bootstrap.transition( ) ) != null );
+    } catch ( Throwable t ) {
+      SystemBootstrapper.handleException( t );
+      throw t;
+    }
   }
   
   public String getVersion( ) {

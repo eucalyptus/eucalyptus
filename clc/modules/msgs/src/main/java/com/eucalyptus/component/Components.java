@@ -110,7 +110,11 @@ public class Components {
    * @return
    */
   public static List<Component> whichCanLoad( ) {
-    return Lists.newArrayList( Iterables.filter( Components.list( ), Predicates.BOOTSTRAP_LOCALS ) );
+    return Lists.newArrayList( Iterables.filter( Components.list( ), filterWhichCanLoad( ) ) );
+  }
+
+  public static Predicate<Component> filterWhichCanLoad( ) {
+    return Predicates.BOOTSTRAP_LOCALS;
   }
   
   /**
@@ -119,7 +123,11 @@ public class Components {
    * @return
    */
   public static List<Component> whichAreEnabledLocally( ) {
-    return Lists.newArrayList( Iterables.filter( Components.list( ), Predicates.ARE_ENABLED_LOCAL ) );
+    return Lists.newArrayList( Iterables.filter( Components.list( ), filterWhichAreEnabledLocally( ) ) );
+  }
+
+  public static Predicate<Component> filterWhichAreEnabledLocally( ) {
+    return Predicates.ARE_ENABLED_LOCAL;
   }
   
   /**
@@ -128,7 +136,11 @@ public class Components {
    * @return
    */
   public static List<Component> whichAreEnabled( ) {
-    return Lists.newArrayList( Iterables.filter( Components.list( ), Predicates.ARE_ENABLED ) );
+    return Lists.newArrayList( Iterables.filter( Components.list( ), filterWhichAreEnabled( ) ) );
+  }
+
+  public static Predicate<Component> filterWhichAreEnabled( ) {
+    return Predicates.ARE_ENABLED;
   }
   
   @SuppressWarnings( "unchecked" )

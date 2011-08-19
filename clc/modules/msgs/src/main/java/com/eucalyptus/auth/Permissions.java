@@ -10,7 +10,6 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.google.gwt.thirdparty.guava.common.collect.Maps;
 
 public class Permissions {
   
