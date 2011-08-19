@@ -440,12 +440,12 @@ public class EntityWrapper<TYPE> {
     
     TransactionState( final String ctx ) {
       try {
+        this.stopWatch = new StopWatch( );
         this.txUuid = String.format( "%s:%s", ctx, UUID.randomUUID( ).toString( ) );
         this.owner = Logs.isExtrrreeeme( )
           ? Threads.currentStackString( )
           : "n/a";
         this.startTime = System.currentTimeMillis( );
-        this.stopWatch = new StopWatch( );
         this.stopWatch.start( );
         this.eventLog( TxStep.BEGIN, TxEvent.CREATE );
         final EntityManagerFactory anemf = ( EntityManagerFactoryImpl ) PersistenceContexts.getEntityManagerFactory( ctx );
