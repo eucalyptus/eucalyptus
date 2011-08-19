@@ -254,7 +254,7 @@ public class ResourceToken implements Comparable<ResourceToken> {
       builder.append( this.instanceId ).append( ":" );
     }
     if ( this.address != null ) {
-      builder.append( this.address ).append( ":" );
+      builder.append( this.address.getName( ) ).append( ":" );
     }
     if ( this.extantNetwork != null ) {
       builder.append( "tag=" ).append( this.extantNetwork.getTag( ) ).append( ":" );
