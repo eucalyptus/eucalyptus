@@ -96,6 +96,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
@@ -284,20 +285,18 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
         for ( Integer i : NetworkGroups.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
           try {
             exNet = Entities.uniqueResult( ExtantNetwork.named( i ) );
-          } catch ( Exception ex ) {}
-          if ( exNet == null ) {
+          } catch ( Exception ex ) {
             try {
               exNet = Entities.persist( ExtantNetwork.create( this, i ) );
-            } catch ( Exception ex ) {
-              LOG.error( ex, ex );
+              this.setExtantNetwork( exNet );
+              db.commit( );
+              return exNet;
+            } catch ( Exception ex1 ) {
+              Logs.exhaust( ).trace( ex1, ex1 );
+              continue;
             }
           }
         }
-      }
-      if ( exNet != null ) {
-        db.commit( );
-        return exNet;
-      } else {
         db.rollback( );
         throw new NotEnoughResourcesAvailable( "Failed to add extant network: " + this.extantNetwork + " due to: no network tags are free." );
       }
