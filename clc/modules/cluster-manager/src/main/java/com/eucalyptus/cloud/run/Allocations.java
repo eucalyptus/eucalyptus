@@ -218,7 +218,7 @@ public class Allocations {
           SetReference<PrivateNetworkIndex, VmInstance> addrIndex = extantNetwork.allocateNetworkIndex( );
           rscToken.setNetworkIndex( addrIndex );
         } catch ( Exception ex ) {
-          throw new NotEnoughResourcesAvailable( "Not enough addresses left in the network subnet assigned to requested group: " + net, ex );
+          throw new NotEnoughResourcesAvailable( "Not enough addresses left in the network subnet assigned to requested group: " + rscToken, ex );
         }
       }
     }
