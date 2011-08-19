@@ -176,8 +176,10 @@ public class SystemState {
     for ( String vmId : unreportedVms ) {
       try {
         VmInstance vm = VmInstances.getInstance( ).lookup( vmId );
-        if ( vm.getSplitTime( ) > SHUT_DOWN_TIME && !VmState.STOPPED.equals( vm.getRuntimeState( ) ) && !VmState.STOPPING.equals( vm.getRuntimeState( ) ) ) {
-          vm.setState( VmState.TERMINATED, Reason.EXPIRED );
+        if ( vm.getSplitTime( ) > SHUT_DOWN_TIME ) {
+          if ( VmState.SHUTTING_DOWN.equals( vm.getRuntimeState( ) ) || VmState.STOPPING.equals( vm.getRuntimeState( ) ) ) {
+            vm.setState( VmState.TERMINATED, Reason.EXPIRED );
+          }
         }
       } catch ( NoSuchElementException e ) {}
     }
@@ -211,7 +213,7 @@ public class SystemState {
     if ( VmState.SHUTTING_DOWN.equals( vm.getRuntimeState( ) ) && splitTime > SHUT_DOWN_TIME ) {
       vm.setState( VmState.TERMINATED, Reason.EXPIRED );
     } else if ( VmState.STOPPING.equals( vm.getRuntimeState( ) ) && splitTime > SHUT_DOWN_TIME ) {
-        vm.setState( VmState.STOPPED, Reason.EXPIRED );
+      vm.setState( VmState.STOPPED, Reason.EXPIRED );
     } else if ( VmState.STOPPING.equals( vm.getRuntimeState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
       vm.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
     } else if ( VmState.SHUTTING_DOWN.equals( vm.getRuntimeState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
@@ -349,7 +351,8 @@ public class SystemState {
           }
         }
       }
-      VmInstance vm = new VmInstance( ownerId, instanceId, instanceUuid, reservationId, launchIndex, placement, userData, runVm.getInstanceType( ), key, vmType,
+      VmInstance vm = new VmInstance( ownerId, instanceId, instanceUuid, reservationId, launchIndex, placement, userData, runVm.getInstanceType( ), key,
+                                      vmType,
                                       img.getPlatform( ).toString( ),
                                       networks,
                                       Integer.toString( runVm.getNetParams( ).getNetworkIndex( ) ) );
