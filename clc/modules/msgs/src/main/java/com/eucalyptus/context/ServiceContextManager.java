@@ -123,7 +123,16 @@ public class ServiceContextManager {
   private ServiceContextManager( ) {
     this.canHasRead = this.canHas.readLock( );
     this.canHasWrite = this.canHas.writeLock( );
-    executor.submit( new Runnable( ) {
+    Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
+      
+      @Override
+      public void run( ) {
+        ServiceContextManager.this.running.set( false );
+        ServiceContextManager.shutdown( );
+      }
+      
+    } );
+    this.executor.submit( new Runnable( ) {
       public void run( ) {
         while ( !Bootstrap.isShuttingDown( ) && ServiceContextManager.this.running.get( ) ) {
           ServiceConfiguration event;
@@ -282,13 +291,14 @@ public class ServiceContextManager {
     try {
       if ( this.context != null ) {
         try {
-          for ( int i = 0; i < 10 && Contexts.hasOutstandingRequests( ); i++ ) {
-            try {
-              TimeUnit.SECONDS.sleep( 1 );
-            } catch ( InterruptedException ex ) {
-              Thread.currentThread( ).interrupt( );
-            }
-          }
+//TODO:GRZE: handle draining requests from context -- is it really needed?
+//          for ( int i = 0; i < 10 && Contexts.hasOutstandingRequests( ); i++ ) {
+//            try {
+//              TimeUnit.SECONDS.sleep( 1 );
+//            } catch ( InterruptedException ex ) {
+//              Thread.currentThread( ).interrupt( );
+//            }
+//          }
           this.context.stop( );
           this.context.dispose( );
         } catch ( MuleException ex ) {
