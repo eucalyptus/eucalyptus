@@ -134,7 +134,7 @@ public class ServiceContextManager {
     } );
     this.executor.submit( new Runnable( ) {
       public void run( ) {
-        while ( !Bootstrap.isShuttingDown( ) && ServiceContextManager.this.running.get( ) ) {
+        while ( ServiceContextManager.this.running.get( ) ) {
           ServiceConfiguration event;
           try {
             if ( ( event = ServiceContextManager.this.queue.poll( 2000, TimeUnit.MILLISECONDS ) ) != null ) {
