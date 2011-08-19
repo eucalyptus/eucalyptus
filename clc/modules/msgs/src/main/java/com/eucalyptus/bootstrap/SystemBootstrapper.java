@@ -251,17 +251,6 @@ public class SystemBootstrapper {
         }
       }
     } );
-    
-    for ( final Component c : Components.whichCanLoad( ) ) {
-      Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
-        @Override
-        public void run( ) {
-          Bootstrap.applyTransition( c, Component.Transition.STARTING );
-          Bootstrap.applyTransition( c, Component.Transition.READY_CHECK );
-          Bootstrap.applyTransition( c, Component.Transition.ENABLING );
-        }
-      } );
-    }
     try {
       SystemBootstrapper.printBanner( );
     } catch ( Exception ex ) {

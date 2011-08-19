@@ -80,7 +80,6 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.network.ExtantNetwork;
-import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.PrivateNetworkIndex;
 
 public class ResourceToken implements Comparable<ResourceToken> {
@@ -239,18 +238,31 @@ public class ResourceToken implements Comparable<ResourceToken> {
     this.address = address;
   }
   
-  @Override
-  public String toString( ) {
-    return String.format( "ResourceToken:%s:%s:tag=%s:idx=%s",
-                          this.instanceId, this.address.getName( ), this.extantNetwork.getDisplayName( ), this.networkIndex.get( ).getIndex( ) );
-  }
-  
   public void setExtantNetwork( ExtantNetwork exNet ) {
     this.extantNetwork = exNet;
   }
   
   public ExtantNetwork getExtantNetwork( ) {
     return this.extantNetwork;
+  }
+  
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "ResourceToken:" );
+    if ( this.instanceId != null ) {
+      builder.append( this.instanceId ).append( ":" );
+    }
+    if ( this.address != null ) {
+      builder.append( this.address ).append( ":" );
+    }
+    if ( this.extantNetwork != null ) {
+      builder.append( "tag=" ).append( this.extantNetwork.getTag( ) ).append( ":" );
+    }
+    if ( this.networkIndex != null ) {
+      builder.append( "idx=" ).append( this.networkIndex.get( ).getIndex( ) );
+    }
+    return builder.toString( );
   }
   
 }
