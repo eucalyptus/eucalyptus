@@ -89,7 +89,7 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
-import com.eucalyptus.entities.Entities.NestedTx;
+import com.eucalyptus.entities.Entities.JoinableTx;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -233,16 +233,16 @@ public class Entities {
   }
   
   private static Logger                                       LOG     = Logger.getLogger( Entities.class );
-  private static ThreadLocal<ConcurrentMap<String, NestedTx>> txState = new ThreadLocal<ConcurrentMap<String, NestedTx>>( ) {
+  private static ThreadLocal<ConcurrentMap<String, JoinableTx>> txState = new ThreadLocal<ConcurrentMap<String, JoinableTx>>( ) {
                                                                         
                                                                         @Override
-                                                                        protected ConcurrentMap<String, NestedTx> initialValue( ) {
+                                                                        protected ConcurrentMap<String, JoinableTx> initialValue( ) {
                                                                           return Maps.newConcurrentMap( );
                                                                         }
                                                                         
                                                                       };
   
-  private static NestedTx lookup( final Object obj ) {
+  private static JoinableTx lookup( final Object obj ) {
     final String ctx = lookatPersistenceContext( obj );
     return txState.get( ).get( ctx );
   }
@@ -269,7 +269,7 @@ public class Entities {
     return txState.get( ).containsKey( ctx );
   }
   
-  private static NestedTx getTransaction( final Object obj ) {
+  private static JoinableTx getTransaction( final Object obj ) {
     if ( hasTransaction( obj ) ) {
       return txState.get( ).get( lookatPersistenceContext( obj ) );
     } else {
@@ -277,9 +277,9 @@ public class Entities {
     }
   }
   
-  private static NestedTx createTransaction( final Object obj ) throws RecoverablePersistenceException, RuntimeException {
+  private static JoinableTx createTransaction( final Object obj ) throws RecoverablePersistenceException, RuntimeException {
     String ctx = lookatPersistenceContext( obj );
-    NestedTx ret = new NestedTx( ctx );
+    JoinableTx ret = new JoinableTx( ctx );
     ret.begin( );
     txState.get( ).put( ctx, ret );
     return ret;
@@ -469,21 +469,21 @@ public class Entities {
     getTransactionState( deleteObject ).getEntityManager( ).remove( deleteObject );
   }
   
-  private static class TxStateThreadLocal extends ThreadLocal<ConcurrentMap<String, NestedTx>> {
+  private static class TxStateThreadLocal extends ThreadLocal<ConcurrentMap<String, JoinableTx>> {
     TxStateThreadLocal( ) {}
     
     @Override
-    protected ConcurrentMap<String, NestedTx> initialValue( ) {
+    protected ConcurrentMap<String, JoinableTx> initialValue( ) {
       return Maps.newConcurrentMap( );
     }
     
     @SuppressWarnings( "unchecked" )
-    <T> NestedTx lookup( final PersistenceContext persistenceContext ) {
-      return ( NestedTx ) this.add( persistenceContext );
+    <T> JoinableTx lookup( final PersistenceContext persistenceContext ) {
+      return ( JoinableTx ) this.add( persistenceContext );
     }
     
-    private NestedTx add( final PersistenceContext persistenceContext ) {
-      NestedTx tx = null;
+    private JoinableTx add( final PersistenceContext persistenceContext ) {
+      JoinableTx tx = null;
       if ( this.get( ).containsKey( persistenceContext.name( ) ) ) {
         if ( this.clearStale( persistenceContext ) ) {
           tx = this.addNestedTx( persistenceContext );
@@ -497,7 +497,7 @@ public class Entities {
     }
     
     private boolean clearStale( final PersistenceContext persistenceContext ) {
-      final NestedTx tx = this.get( ).get( persistenceContext.name( ) );
+      final JoinableTx tx = this.get( ).get( persistenceContext.name( ) );
       if ( !tx.isActive( ) ) {
         try {
           tx.getTxState( ).doCleanup( );
@@ -512,15 +512,15 @@ public class Entities {
       }
     }
     
-    private NestedTx addNestedTx( final PersistenceContext persistenceContext ) {
-      final NestedTx tx = new NestedTx( persistenceContext.name( ) );
+    private JoinableTx addNestedTx( final PersistenceContext persistenceContext ) {
+      final JoinableTx tx = new JoinableTx( persistenceContext.name( ) );
       this.get( ).put( persistenceContext.name( ), tx );
       return tx;
     }
     
   }
   
-  public static class NestedTx implements EntityTransaction {
+  public static class JoinableTx implements EntityTransaction {
     private final String   ctx;
     private final TxRecord record;
     private final TxState  txState;
@@ -528,12 +528,12 @@ public class Entities {
     /**
      * Private for a reason.
      * 
-     * @see {@link NestedTx#get(Class)}
+     * @see {@link JoinableTx#get(Class)}
      * @param persistenceContext
      * @throws RecoverablePersistenceException
      */
     @SuppressWarnings( "unchecked" )
-    NestedTx( final String ctx ) throws RecoverablePersistenceException {
+    JoinableTx( final String ctx ) throws RecoverablePersistenceException {
       this.ctx = ctx;
       this.record = new TxRecord( ctx );
       this.record.logEvent( TxStep.BEGIN, TxEvent.CREATE );

@@ -118,7 +118,7 @@ public class EntityWrapper<TYPE> {
   
 /**
    * @see {@link Entities#get(Class)
-   * @see {@link NestedTx}
+   * @see {@link JoinableTx}
    */
   @Deprecated
   public static <T> EntityWrapper<T> get( final Class<T> type ) {
@@ -127,7 +127,7 @@ public class EntityWrapper<TYPE> {
   
 /**
    * @see {@link Entities#get(Object)
-   * @see {@link NestedTx}
+   * @see {@link JoinableTx}
    */
   @SuppressWarnings( "unchecked" )
   @Deprecated
