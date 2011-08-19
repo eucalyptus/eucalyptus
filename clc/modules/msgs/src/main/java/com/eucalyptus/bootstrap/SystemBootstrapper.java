@@ -172,8 +172,8 @@ public class SystemBootstrapper {
             System.out.println( "Exception:   " + e.getClass( ) );
             System.out.println( "Message:     " + e.getMessage( ) );
             System.out.println( "All threads:\n" );
-            for( Map.Entry<Thread,StackTraceElement[]> ent : Thread.getAllStackTraces( ).entrySet( ) ) {
-              
+            for ( Map.Entry<Thread, StackTraceElement[]> ent : Thread.getAllStackTraces( ).entrySet( ) ) {
+
             }
           }
         }
@@ -238,7 +238,7 @@ public class SystemBootstrapper {
     try {
       SystemBootstrapper.runComponentStages( Component.Transition.STARTING, Components.filterWhichCanLoad( ) );
     } catch ( Exception ex1 ) {
-      LOG.error( ex1 , ex1 );
+      LOG.error( ex1, ex1 );
     }
     Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
       @Override
@@ -282,12 +282,12 @@ public class SystemBootstrapper {
   }
   
   private static void runComponentStages( Transition transition, Predicate<Component> filter ) throws Throwable {
-    try {
-      for ( Component c : Iterables.filter( Components.list( ), filter ) ) {
+    for ( Component c : Iterables.filter( Components.list( ), filter ) ) {
+      try {
         Bootstrap.applyTransition( c, transition );
+      } catch ( Throwable t ) {
+        Thread.getDefaultUncaughtExceptionHandler( ).uncaughtException( Thread.currentThread( ), t );
       }
-    } catch ( Throwable t ) {
-      Thread.getDefaultUncaughtExceptionHandler( ).uncaughtException( Thread.currentThread( ), t );
     }
   }
   

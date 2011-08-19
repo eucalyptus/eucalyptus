@@ -548,14 +548,15 @@ public class Bootstrap {
           fsm.transitionByName( transition ).get( );
           break;
         } catch ( ExistingTransitionException ex ) {
-          LOG.error( ex );
+          Logs.extreme( ).error( ex );
         } catch ( Exception ex ) {
-          LOG.error( ex );
+          Logs.extreme( ).error( ex );
         }
         try {
           TimeUnit.MILLISECONDS.sleep( 50 );
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
+          throw new RuntimeException( ex );
         }
       }
     }
