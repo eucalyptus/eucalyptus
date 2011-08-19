@@ -610,7 +610,7 @@ public class Entities {
     }
     
     private void doTxEvent( TxEvent ev, Runnable runnable ) throws RecoverablePersistenceException {
-      if ( !this.txState.isActive( ) ) {
+      if ( this.txState.isActive( ) ) {
         this.record.logEvent( TxStep.BEGIN, ev );
         try {
           runnable.run( );
