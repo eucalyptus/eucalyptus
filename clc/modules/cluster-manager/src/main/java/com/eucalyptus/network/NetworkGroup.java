@@ -277,16 +277,16 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
       return ExtantNetwork.bogus( this );
     } else if ( this.getExtantNetwork( ) == null ) {
       final EntityTransaction db = Entities.get( NetworkGroup.class );
-      ExtantNetwork exNet = null;
       for ( Integer i : Numbers.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
         try {
-          exNet = Entities.uniqueResult( ExtantNetwork.named( i ) );
+          Entities.uniqueResult( ExtantNetwork.named( i ) );
+          continue;
         } catch ( Exception ex ) {
           try {
             this.setExtantNetwork( ExtantNetwork.create( this, i ) );
             Entities.merge( this );
             db.commit( );
-            return exNet;
+            return this.getExtantNetwork( );
           } catch ( Exception ex1 ) {
             Logs.exhaust( ).trace( ex1, ex1 );
             db.rollback( );
