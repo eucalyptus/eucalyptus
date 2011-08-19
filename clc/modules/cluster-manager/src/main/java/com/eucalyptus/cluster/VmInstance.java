@@ -206,6 +206,8 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
                      final String platform,
                      final List<Network> networks, final String networkIndex ) {
     super( owner, instanceId );
+    this.stopWatch.start( );
+    this.updateWatch.start( );
     this.launchTime = new Date( );
     this.blockBytes = 0l;
     this.networkBytes = 0l;
@@ -235,8 +237,6 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     this.networkConfig.setIpAddress( DEFAULT_IP );
     this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
     this.networkConfig.setNetworkIndex( Integer.parseInt( networkIndex ) );
-    this.stopWatch.start( );
-    this.updateWatch.start( );
     this.updateDns( );
     this.store( );
   }
