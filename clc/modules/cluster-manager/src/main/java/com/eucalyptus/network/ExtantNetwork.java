@@ -176,7 +176,12 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
     EntityTransaction db = Entities.get( ExtantNetwork.class );
     SetReference<PrivateNetworkIndex, VmInstance> ref = null;
     if ( this.getIndexes( ).isEmpty( ) ) {
-      this.initNetworkIndexes( );
+      for ( long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
+        PrivateNetworkIndex newIdx = PrivateNetworkIndex.create( this, i );
+        PrivateNetworkIndex netIdx = Entities.persist( newIdx );
+        this.getIndexes( ).add( netIdx );
+      }
+      Entities.merge( this );
     }
     for ( PrivateNetworkIndex idx : Iterables.filter( this.getIndexes( ), PrivateNetworkIndex.filterFree( ) ) ) {
       try {
@@ -194,17 +199,6 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
       db.rollback( );
       throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName );
     }
-  }
-  
-  private void initNetworkIndexes( ) {
-    EntityTransaction db = Entities.get( PrivateNetworkIndex.class );
-    for ( long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
-      PrivateNetworkIndex newIdx = PrivateNetworkIndex.create( this, i );
-      PrivateNetworkIndex netIdx = Entities.persist( newIdx );
-      this.getIndexes( ).add( netIdx );
-    }
-    Entities.merge( this );
-    db.commit( );
   }
   
   public NetworkGroup getNetworkGroup( ) {

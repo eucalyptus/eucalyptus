@@ -130,7 +130,7 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
   
   @Override
   public BroadcastCallback<StartNetworkType, StartNetworkResponseType> newInstance( ) {
-    return new StartNetworkCallback( this.networkGroup );
+    return new StartNetworkCallback( this.extantNet );
   }
   
 }
