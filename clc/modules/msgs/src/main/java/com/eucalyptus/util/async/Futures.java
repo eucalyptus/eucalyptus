@@ -45,6 +45,7 @@ import java.util.Arrays;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
@@ -130,6 +131,8 @@ public class Futures {
         } catch ( InterruptedException ex1 ) {
           Thread.currentThread( ).interrupt( );
           resultFuture.setException( ex1 );
+        } catch ( RejectedExecutionException ex1 ) {
+          resultFuture.cancel( true );
         } catch ( Exception ex1 ) {
           resultFuture.setException( ex1 );
         }
