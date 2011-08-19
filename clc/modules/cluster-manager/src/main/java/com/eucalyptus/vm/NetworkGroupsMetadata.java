@@ -66,6 +66,7 @@ package com.eucalyptus.vm;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Criterion;
@@ -102,38 +103,43 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
           StringBuilder buf = new StringBuilder( );
           Multimap<String, String> networks = ArrayListMultimap.create( );
           Multimap<String, String> rules = ArrayListMultimap.create( );
-          for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
-            if( VmState.RUNNING.ordinal( ) < vm.getState( ).ordinal( ) ) continue;
-            for ( NetworkGroup ruleGroup : vm.getNetworkRulesGroups( ) ) {
-              networks.put( ruleGroup.getNaturalId( ), vm.getPrivateAddress( ) );
-              if ( !rules.containsKey( ruleGroup.getNaturalId( ) ) ) {
-                for ( NetworkRule netRule : ruleGroup.getNetworkRules( ) ) {
-                  String rule = String.format( "-P %s -%s %d%s%d ", netRule.getProtocol( ), ( "icmp".equals( netRule.getProtocol( ) )
-                    ? "t"
-                    : "p" ), netRule.getLowPort( ), ( "icmp".equals( netRule.getProtocol( ) )
-                    ? ":"
-                    : "-" ), netRule.getHighPort( ) );
-                  for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {
-                    rules.put( ruleGroup.getName( ), String.format( "%s -o %s -u %s", rule, peer.getGroupName( ), peer.getUserQueryKey( ) ) );
-                  }
-                  for ( IpRange cidr : netRule.getIpRanges( ) ) {
-                    rules.put( ruleGroup.getName( ), String.format( "%s -s %s", rule, cidr.getValue( ) ) );
+          EntityTransaction tx = Entities.get( VmInstance.class );
+          try {
+            for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
+              if ( VmState.RUNNING.ordinal( ) < vm.getState( ).ordinal( ) ) continue;
+              for ( NetworkGroup ruleGroup : vm.getNetworkRulesGroups( ) ) {
+                networks.put( ruleGroup.getNaturalId( ), vm.getPrivateAddress( ) );
+                if ( !rules.containsKey( ruleGroup.getNaturalId( ) ) ) {
+                  for ( NetworkRule netRule : ruleGroup.getNetworkRules( ) ) {
+                    String rule = String.format( "-P %s -%s %d%s%d ", netRule.getProtocol( ), ( "icmp".equals( netRule.getProtocol( ) )
+                      ? "t"
+                      : "p" ), netRule.getLowPort( ), ( "icmp".equals( netRule.getProtocol( ) )
+                      ? ":"
+                      : "-" ), netRule.getHighPort( ) );
+                    for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {
+                      rules.put( ruleGroup.getName( ), String.format( "%s -o %s -u %s", rule, peer.getGroupName( ), peer.getUserQueryKey( ) ) );
+                    }
+                    for ( IpRange cidr : netRule.getIpRanges( ) ) {
+                      rules.put( ruleGroup.getName( ), String.format( "%s -s %s", rule, cidr.getValue( ) ) );
+                    }
                   }
                 }
               }
             }
-          }
-          for ( String networkName : rules.keySet( ) ) {
-            for ( String rule : rules.get( networkName ) ) {
-              buf.append( "RULE " ).append( networkName ).append( " " ).append( rule ).append( "\n" );
+            for ( String networkName : rules.keySet( ) ) {
+              for ( String rule : rules.get( networkName ) ) {
+                buf.append( "RULE " ).append( networkName ).append( " " ).append( rule ).append( "\n" );
+              }
             }
-          }
-          for ( String networkName : networks.keySet( ) ) {
-            buf.append( "GROUP " ).append( networkName );
-            for ( String ip : networks.get( networkName ) ) {
-              buf.append( " " ).append( ip );
+            for ( String networkName : networks.keySet( ) ) {
+              buf.append( "GROUP " ).append( networkName );
+              for ( String ip : networks.get( networkName ) ) {
+                buf.append( " " ).append( ip );
+              }
+              buf.append( "\n" );
             }
-            buf.append( "\n" );
+          } finally {
+            tx.rollback( );
           }
           topoString.set( buf.toString( ) );
         }
