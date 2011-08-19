@@ -280,7 +280,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
         exNet = Entities.uniqueResult( ExtantNetwork.named( this ) );
         db.rollback( );
         return exNet;
-      } catch ( TransactionException ex2 ) {
+      } catch ( Exception ex2 ) {
         for ( Integer i : NetworkGroups.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
           try {
             exNet = Entities.uniqueResult( ExtantNetwork.named( i ) );
