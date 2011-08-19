@@ -306,7 +306,7 @@ public class Entities {
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
   
-  public static <T> T uniqueResult( final T example ) throws TransactionException {
+  public static <T> T uniqueResult( final T example ) throws TransactionException, NoSuchElementException {
     try {
       Object pk = resolvePrimaryKey( example );
       String natId = resolveNaturalId( example );
@@ -317,6 +317,8 @@ public class Entities {
       } else {
         return maybeDefinitelyExample( example );
       }
+    } catch ( final NoSuchElementException ex ) {
+      throw ex;
     } catch ( final RuntimeException ex ) {
       Logs.exhaust( ).trace( ex, ex );
       final Exception newEx = PersistenceExceptions.throwFiltered( ex );
