@@ -40,8 +40,7 @@ my $labels = "";
  FILE: foreach my $infile (@ARGV) {
      
      if (!open(IN, $infile)) {
-	 warning("can't open $infile: $!\n");
-	 next FILE;
+         die "could not open $infile\n";
      }
      
      # read in the lines of the file
