@@ -149,7 +149,7 @@ public class ServiceContext {
   public static void response( BaseMessage responseMessage ) {
     EventRecord.here( ServiceContext.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ) ).debug( );
     if ( responseMessage instanceof ExceptionResponseType ) {
-      Logs.extreme( ).error( responseMessage );
+      Logs.exhaust( ).trace( responseMessage );
     }
     String corrId = responseMessage.getCorrelationId( );
     try {
