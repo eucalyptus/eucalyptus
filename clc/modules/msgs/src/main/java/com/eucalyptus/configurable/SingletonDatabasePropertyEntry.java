@@ -21,7 +21,6 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
   }
   
   public static class DatabasePropertyBuilder implements ConfigurablePropertyBuilder {
-    private static Logger LOG = Logger.getLogger( SingletonDatabasePropertyEntry.DatabasePropertyBuilder.class );
     
     @Override
     public ConfigurableProperty buildProperty( Class c, Field f ) throws ConfigurablePropertyException {

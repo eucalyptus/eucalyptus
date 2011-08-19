@@ -319,8 +319,8 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
   }
   
   public class ActiveTransition extends Callback.Completion implements HasName<ActiveTransition> {
-    private final Long                       id;
-    private final String                     name;
+    private final Long                       txId;
+    private final String                     txName;
     private final Long                       startTime;
     private Long                             endTime          = 0l;
     private final TransitionAction<P>        transition;
@@ -330,13 +330,13 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     private TransitionRule<S, T>             rule;
     
     public ActiveTransition( Long id, TransitionRule<S, T> rule, TransitionAction<P> transition ) {
-      this.id = id;
+      this.txId = id;
       this.startTime = System.nanoTime( );
       this.endTime = 0l;
       this.rule = rule;
       this.transition = transition;
-      this.name = AtomicMarkedState.this.getName( ) + "-" + this.rule.getName( ) + "-" + id;
-      if ( Logs.isExtrrreeeme() ) {
+      this.txName = AtomicMarkedState.this.getName( ) + "-" + this.rule.getName( ) + "-" + id;
+      if ( Logs.isExtrrreeeme( ) ) {
         this.startStackTrace = Exceptions.filterStackTrace( new RuntimeException( ), 20 );
       } else {
         this.startStackTrace = null;
@@ -358,7 +358,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     }
     
     public void fireException( Throwable t ) {
-      if( Logs.isExtrrreeeme() ) {
+      if ( Logs.isExtrrreeeme( ) ) {
         Logs.exhaust( ).trace( Exceptions.string( this.startStackTrace ) );
         Logs.exhaust( ).trace( Exceptions.string( this.endStackTrace ) );
       }
@@ -366,7 +366,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     }
     
     public final Long getId( ) {
-      return this.id;
+      return this.txId;
     }
     
     public TransitionRule<S, T> getTransitionRule( ) {
@@ -379,18 +379,18 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
     }
     
     public String getName( ) {
-      return this.name;
+      return this.txName;
     }
     
     public int compareTo( ActiveTransition that ) {
-      return this.id.compareTo( that.id );
+      return this.txId.compareTo( that.txId );
     }
     
     public String toString( ) {
       StringBuilder sb = new StringBuilder( );
-      sb.append( EventType.TRANSITION ).append( " " ).append( this.name ).append( " Active" ).append( this.transition != null
+      sb.append( EventType.TRANSITION ).append( " " ).append( this.txName ).append( " Active" ).append( this.transition != null
         ? this.transition.toString( )
-        : "null" ).append( " id=" ).append( this.id ).append( " startTime=" ).append( new Date( this.startTime ) );
+        : "null" ).append( " id=" ).append( this.txId ).append( " startTime=" ).append( new Date( this.startTime ) );
       Logs.exhaust( ).trace( sb.toString( ) );
       return sb.toString( );
     }

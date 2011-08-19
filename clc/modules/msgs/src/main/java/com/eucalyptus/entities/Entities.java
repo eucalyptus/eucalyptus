@@ -89,6 +89,7 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.entities.Entities.JoinableTx;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
@@ -166,7 +167,7 @@ public class Entities {
       this.em = null;
     }
     
-    private EntityManager getEntityManager( ) {
+    EntityManager getEntityManager( ) {
       return this.em;
     }
     
@@ -233,7 +234,7 @@ public class Entities {
   }
   
   private static Logger                                         LOG     = Logger.getLogger( Entities.class );
-  private static ThreadLocal<ConcurrentMap<String, JoinableTx>> txState = new ThreadLocal<ConcurrentMap<String, JoinableTx>>( ) {
+  private static ThreadLocal<ConcurrentMap<String, JoinableTx>> txStateThreadLocal = new ThreadLocal<ConcurrentMap<String, JoinableTx>>( ) {
                                                                           
                                                                           @Override
                                                                           protected ConcurrentMap<String, JoinableTx> initialValue( ) {
@@ -244,7 +245,7 @@ public class Entities {
   
   private static JoinableTx lookup( final Object obj ) {
     final String ctx = lookatPersistenceContext( obj );
-    return txState.get( ).get( ctx );
+    return txStateThreadLocal.get( ).get( ctx );
   }
   
   static String lookatPersistenceContext( final Object obj ) throws RuntimeException {
@@ -261,17 +262,17 @@ public class Entities {
   }
   
   private static boolean hasTransaction( ) {
-    return !txState.get( ).isEmpty( );
+    return !txStateThreadLocal.get( ).isEmpty( );
   }
   
   private static boolean hasTransaction( final Object obj ) {
     final String ctx = lookatPersistenceContext( obj );
-    return txState.get( ).containsKey( ctx );
+    return txStateThreadLocal.get( ).containsKey( ctx );
   }
   
   private static JoinableTx getTransaction( final Object obj ) {
     if ( hasTransaction( obj ) ) {
-      return txState.get( ).get( lookatPersistenceContext( obj ) );
+      return txStateThreadLocal.get( ).get( lookatPersistenceContext( obj ) );
     } else {
       return createTransaction( obj );
     }
@@ -281,16 +282,23 @@ public class Entities {
     String ctx = lookatPersistenceContext( obj );
     JoinableTx ret = new JoinableTx( ctx );
     ret.begin( );
-    txState.get( ).put( ctx, ret );
+    txStateThreadLocal.get( ).put( ctx, ret );
     return ret;
   }
   
   private static TxState getTransactionState( final Object obj ) {
-    return txState.get( ).get( lookatPersistenceContext( obj ) ).getTxState( );
+    if ( Bootstrap.isShuttingDown( ) ) {
+      throw new ThreadDeath( );
+    }
+    return txStateThreadLocal.get( ).get( lookatPersistenceContext( obj ) ).getTxState( );
   }
   
   public static EntityTransaction get( final Object obj ) {
-    return getTransaction( obj );
+    if ( hasTransaction( obj ) ) {
+      return getTransaction( obj ).join( );
+    } else {
+      return createTransaction( obj );
+    }
   }
   
   @SuppressWarnings( { "unchecked", "cast" } )
@@ -305,29 +313,52 @@ public class Entities {
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
   
-  public static <T> T lookupAndClose( final T example ) throws NoSuchElementException {
-    final EntityTransaction tx = getTransaction( example );
-    T ret = null;
-    try {
-      ret = Entities.getUnique( example );
-      tx.commit( );
-    } catch ( final EucalyptusCloudException ex ) {
-      tx.rollback( );
-      throw new NoSuchElementException( ex.getMessage( ) );
-    }
-    return ret;
-  }
-  
   @SuppressWarnings( "unchecked" )
   public static <T> T uniqueResult( final T example ) throws TransactionException {
     try {
-      return Entities.getUnique( example );
+      Object id = null;
+      try {
+        id = Entities.getTransaction( example ).getTxState( ).getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
+      } catch ( final Exception ex ) {}
+      if ( id != null ) {
+        final T res = ( T ) Entities.getTransactionState( example ).getEntityManager( ).find( example.getClass( ), id );
+        if ( res == null ) {
+          throw new NoSuchElementException( "@Id: " + id );
+        } else {
+          return res;
+        }
+      } else if ( ( example instanceof HasNaturalId ) && ( ( ( HasNaturalId ) example ).getNaturalId( ) != null ) ) {
+        final String natId = ( ( HasNaturalId ) example ).getNaturalId( );
+        final T ret = ( T ) Entities.getTransactionState( example ).getSession( )
+                                                          .createCriteria( example.getClass( ) )
+                                                          .add( Restrictions.naturalId( ).set( "naturalId", natId ) )
+                                                          .setCacheable( true )
+                                                          .setMaxResults( 1 )
+                                                          .setFetchSize( 1 )
+                                                          .setFirstResult( 0 )
+                                                          .uniqueResult( );
+        if ( ret == null ) {
+          throw new NoSuchElementException( "@NaturalId: " + natId );
+        }
+        return ret;
+      } else {
+        final T ret = ( T ) Entities.getTransactionState( example ).getSession( )
+                                                          .createCriteria( example.getClass( ) )
+                                                          .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
+                                                          .setCacheable( true )
+                                                          .setMaxResults( 1 )
+                                                          .setFetchSize( 1 )
+                                                          .setFirstResult( 0 )
+                                                          .uniqueResult( );
+        if ( ret == null ) {
+          throw new NoSuchElementException( "example: " + LogUtil.dumpObject( example ) );
+        }
+        return ret;
+      }
     } catch ( final RuntimeException ex ) {
       Logs.exhaust( ).trace( ex, ex );
-      throw new TransactionInternalException( ex.getMessage( ), ex );
-    } catch ( final EucalyptusCloudException ex ) {
-      Logs.exhaust( ).trace( ex, ex );
-      throw new TransactionExecutionException( ex.getMessage( ), ex );
+      final Exception newEx = PersistenceExceptions.throwFiltered( ex );
+      throw new TransactionInternalException( newEx.getMessage( ), newEx );
     }
   }
   
@@ -638,6 +669,41 @@ public class Entities {
     
     TxState getTxState( ) {
       return this.txState;
+    }
+    
+    public EntityTransaction join( ) {
+      return new EntityTransaction( ) {
+        
+        @Override
+        public void setRollbackOnly( ) {}
+        
+        @Override
+        public void rollback( ) {
+          Logs.extreme( ).warn( "Child call to rollback() is ignored: " + Threads.currentStackRange( 0, 3 ) );
+        }
+        
+        @Override
+        public boolean isActive( ) {
+          return JoinableTx.this.isActive( );
+        }
+        
+        @Override
+        public boolean getRollbackOnly( ) {
+          return JoinableTx.this.getRollbackOnly( );
+        }
+        
+        @Override
+        public void commit( ) {
+          Logs.extreme( ).warn( "Child call to rollback() is ignored: " + Threads.currentStackRange( 0, 3 ) );
+        }
+        
+        @Override
+        public void begin( ) {}
+      };
+    }
+
+    private TxRecord getRecord( ) {
+      return this.record;
     }
     
   }

@@ -427,7 +427,6 @@ public class EntityWrapper<TYPE> {
   }
   
   static class TransactionState implements Comparable<TransactionState>, EntityTransaction {
-    private static Logger                                           LOG         = Logger.getLogger( TransactionState.class );
     private static ConcurrentNavigableMap<String, TransactionState> outstanding = new ConcurrentSkipListMap<String, TransactionState>( );
     
     private EntityManager                                           em;

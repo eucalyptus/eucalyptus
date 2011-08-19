@@ -78,6 +78,7 @@
  */
 package com.eucalyptus.system;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -104,6 +105,7 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+import com.google.gwt.thirdparty.guava.common.primitives.Ints;
 
 public class Threads {
   private static Logger                                  LOG          = Logger.getLogger( Threads.class );
@@ -151,12 +153,12 @@ public class Threads {
   }
   
   public static class ThreadPool implements ThreadFactory, ExecutorService {
-    private final ThreadGroup group;
-    private final String      clusterName = "";
-    private final String      prefix      = "Eucalyptus.";
-    private final String      name;
-    private ExecutorService   pool;
-    private Integer           numThreads  = -1;
+    private final ThreadGroup         group;
+    private final String              clusterName = "";
+    private final String              prefix      = "Eucalyptus.";
+    private final String              name;
+    private ExecutorService           pool;
+    private Integer                   numThreads  = -1;
     private final StackTraceElement[] creationPoint;
     
     private ThreadPool( final String groupPrefix, final Integer threadCount ) {
@@ -237,10 +239,10 @@ public class Threads {
         LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Pending task: " + r.getClass( ) + " [" + r.toString( ) + "]" );
       }
       try {
-        for( int i = 0; i < 10 && !this.pool.awaitTermination( 1, TimeUnit.SECONDS ); i++ ) {
+        for ( int i = 0; i < 10 && !this.pool.awaitTermination( 1, TimeUnit.SECONDS ); i++ ) {
           LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Waiting for pool to shutdown." );
-          if( i > 2 ) {
-            LOG.warn( Joiner.on( "\n\t\t" ).join( this.creationPoint ) ); 
+          if ( i > 2 ) {
+            LOG.warn( Joiner.on( "\n\t\t" ).join( this.creationPoint ) );
           }
         }
       } catch ( final InterruptedException e ) {
@@ -473,14 +475,17 @@ public class Threads {
       }
     };
   }
-
-  public static String currentStackString( ) {
-    return Joiner.on( "\t\n" ).join( Thread.currentThread( ).getStackTrace( ) );
+  
+  public static String currentStackRange( int start, int end ) {
+    StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
+    int len = stack.length;
+    start = Ints.max( Ints.min( 1, start ), len - 1 );
+    end = Ints.min( Ints.max( 1, end ), len - 1 );
+    return Joiner.on( "\t\n" ).join( Arrays.copyOfRange( stack, start, end ) );
   }
   
-  public static StackTraceElement currentStack( final int frameOffset ) {
-    return Thread.currentThread( ).getStackTrace( ).length <= frameOffset
-      ? Thread.currentThread( ).getStackTrace( )[1]
-      : Thread.currentThread( ).getStackTrace( )[frameOffset];
+  public static String currentStackString( ) {
+    return currentStackRange( 0, Integer.MAX_VALUE );
   }
+  
 }

@@ -25,10 +25,10 @@ import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
 import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 
 public abstract class AbstractSystemAddressManager {
-  static Logger LOG = Logger.getLogger( AbstractSystemAddressManager.class );
+  private final static Logger LOG = Logger.getLogger( AbstractSystemAddressManager.class );
   
-  public Address allocateNext( OwnerFullName userId ) throws NotEnoughResourcesAvailable {
-    Address addr = Addresses.getInstance( ).enableFirst( ).allocate( userId );
+  public Address allocateNext( final OwnerFullName userId ) throws NotEnoughResourcesAvailable {
+    final Address addr = Addresses.getInstance( ).enableFirst( ).allocate( userId );
     LOG.debug( "Allocated address for public addressing: " + addr.toString( ) );
     if ( addr == null ) {
       LOG.debug( LogUtil.header( Addresses.getInstance( ).toString( ) ) );
@@ -45,86 +45,86 @@ public abstract class AbstractSystemAddressManager {
   
   public abstract List<Address> allocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesAvailable;
   
-  public Address allocateSystemAddress( String partition ) throws NotEnoughResourcesAvailable {
-    return allocateSystemAddresses( Partitions.lookupByName( partition ), 1 ).get( 0 );
+  public Address allocateSystemAddress( final String partition ) throws NotEnoughResourcesAvailable {
+    return this.allocateSystemAddresses( Partitions.lookupByName( partition ), 1 ).get( 0 );
     
   }
   
-  public void update( Cluster cluster, List<ClusterAddressInfo> ccList ) {
+  public void update( final Cluster cluster, final List<ClusterAddressInfo> ccList ) {
     if ( !cluster.getState( ).isAddressingInitialized( ) ) {
       Helper.loadStoredAddresses( cluster );
       cluster.getState( ).setAddressingInitialized( true );
     }
-    for ( ClusterAddressInfo addrInfo : ccList ) {
+    for ( final ClusterAddressInfo addrInfo : ccList ) {
       try {
-        Address address = Helper.lookupOrCreate( cluster, addrInfo );
+        final Address address = Helper.lookupOrCreate( cluster, addrInfo );
         if ( address.isAssigned( ) && !address.isPending( ) ) {
           if ( FakePrincipals.nobodyFullName( ).equals( address.getOwner( ) ) ) {
             Helper.markAsAllocated( cluster, addrInfo, address );
           }
           try {
-            VmInstance vm = VmInstances.lookupByInstanceIp( addrInfo.getInstanceIp( ) );
+            final VmInstance vm = VmInstances.lookupByInstanceIp( addrInfo.getInstanceIp( ) );
             cluster.getState( ).clearOrphan( addrInfo );
-          } catch ( NoSuchElementException e ) {
+          } catch ( final NoSuchElementException e ) {
             InetAddress addr = null;
             try {
               addr = Inet4Address.getByName( addrInfo.getInstanceIp( ) );
-            } catch ( UnknownHostException e1 ) {
+            } catch ( final UnknownHostException e1 ) {
               LOG.debug( e1, e1 );
             }
-            if ( addr == null || !addr.isLoopbackAddress( ) ) {
+            if ( ( addr == null ) || !addr.isLoopbackAddress( ) ) {
               cluster.getState( ).handleOrphan( addrInfo );
             }
           }
         } else if ( address.isAllocated( ) && FakePrincipals.nobodyFullName( ).equals( address.getOwner( ) ) && !address.isPending( ) ) {
           Helper.markAsAllocated( cluster, addrInfo, address );
         }
-      } catch ( Exception e ) {
+      } catch ( final Exception e ) {
         LOG.debug( e, e );
       }
     }
   }
   
   protected static class Helper {
-    protected static Address lookupOrCreate( Cluster cluster, ClusterAddressInfo addrInfo ) {
+    protected static Address lookupOrCreate( final Cluster cluster, final ClusterAddressInfo addrInfo ) {
       Address addr = null;
       VmInstance vm = null;
       try {
         addr = Addresses.getInstance( ).lookupDisabled( addrInfo.getAddress( ) );
         LOG.trace( "Found address in the inactive set cache: " + addr );
-      } catch ( NoSuchElementException e1 ) {
+      } catch ( final NoSuchElementException e1 ) {
         try {
           addr = Addresses.getInstance( ).lookup( addrInfo.getAddress( ) );
           LOG.trace( "Found address in the active set cache: " + addr );
-        } catch ( NoSuchElementException e ) {}
+        } catch ( final NoSuchElementException e ) {}
       }
       Helper.checkUniqueness( addrInfo );
       if ( addrInfo.hasMapping( ) ) {
         vm = Helper.maybeFindVm( addrInfo.getAddress( ), addrInfo.getInstanceIp( ) );
-        if ( addr != null && vm != null ) {
+        if ( ( addr != null ) && ( vm != null ) ) {
           Helper.ensureAllocated( addr, vm );
           cluster.getState( ).clearOrphan( addrInfo );
-        } else if ( addr != null && vm != null && vm.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
+        } else if ( ( addr != null ) && ( vm != null ) && ( vm.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
           cluster.getState( ).handleOrphan( addrInfo );
-        } else if ( addr != null && vm == null ) {
+        } else if ( ( addr != null ) && ( vm == null ) ) {
           cluster.getState( ).handleOrphan( addrInfo );
-        } else if ( addr == null && vm != null ) {
+        } else if ( ( addr == null ) && ( vm != null ) ) {
           addr = new Address( FakePrincipals.systemFullName( ), addrInfo.getAddress( ), cluster.getPartition( ), vm.getInstanceId( ), vm.getPrivateAddress( ) );
           cluster.getState( ).clearOrphan( addrInfo );
-        } else if ( addr == null && vm == null ) {
+        } else if ( ( addr == null ) && ( vm == null ) ) {
           addr = new Address( addrInfo.getAddress( ), cluster.getPartition( ) );
           cluster.getState( ).handleOrphan( addrInfo );
         }
       } else {
-        if ( addr != null && addr.isAssigned( ) && !addr.isPending( ) ) {
+        if ( ( addr != null ) && addr.isAssigned( ) && !addr.isPending( ) ) {
           cluster.getState( ).handleOrphan( addrInfo );
-        } else if ( addr != null && !addr.isAssigned( ) && !addr.isPending( ) && addr.isSystemOwned( ) ) {
+        } else if ( ( addr != null ) && !addr.isAssigned( ) && !addr.isPending( ) && addr.isSystemOwned( ) ) {
           try {
             addr.release( );
-          } catch ( Exception ex ) {
+          } catch ( final Exception ex ) {
             LOG.error( ex );
           }
-        } else if ( addr != null && Address.Transition.system.equals( addr.getTransition( ) ) ) {
+        } else if ( ( addr != null ) && Address.Transition.system.equals( addr.getTransition( ) ) ) {
           cluster.getState( ).handleOrphan( addrInfo );
         } else if ( addr == null ) {
           addr = new Address( addrInfo.getAddress( ), cluster.getPartition( ) );
@@ -134,10 +134,10 @@ public abstract class AbstractSystemAddressManager {
       return addr;
     }
     
-    private static void markAsAllocated( Cluster cluster, ClusterAddressInfo addrInfo, Address address ) {
+    private static void markAsAllocated( final Cluster cluster, final ClusterAddressInfo addrInfo, final Address address ) {
       try {
         if ( !address.isPending( ) ) {
-          for ( VmInstance vm : VmInstances.listValues( ) ) {
+          for ( final VmInstance vm : VmInstances.listValues( ) ) {
             if ( addrInfo.getInstanceIp( ).equals( vm.getPrivateAddress( ) ) && VmState.RUNNING.equals( vm.getState( ) ) ) {
               LOG.warn( "Out of band address state change: " + LogUtil.dumpObject( addrInfo ) + " address=" + address + " vm=" + vm );
               if ( !address.isAllocated( ) ) {
@@ -150,29 +150,29 @@ public abstract class AbstractSystemAddressManager {
             }
           }
         }
-      } catch ( IllegalStateException e ) {
+      } catch ( final IllegalStateException e ) {
         LOG.error( e );
       }
     }
     
-    private static void clearAddressCachedState( Address addr ) {
+    private static void clearAddressCachedState( final Address addr ) {
       try {
         if ( !addr.isPending( ) ) {
           addr.unassign( ).clearPending( );
         }
-      } catch ( Exception t ) {
+      } catch ( final Exception t ) {
         LOG.trace( t, t );
       }
     }
     
-    private static void clearVmState( ClusterAddressInfo addrInfo ) {
+    private static void clearVmState( final ClusterAddressInfo addrInfo ) {
       try {
-        VmInstance vm = VmInstances.lookupByPublicIp( addrInfo.getAddress( ) );
+        final VmInstance vm = VmInstances.lookupByPublicIp( addrInfo.getAddress( ) );
         vm.updatePublicAddress( vm.getPrivateAddress( ) );
-      } catch ( NoSuchElementException e ) {}
+      } catch ( final NoSuchElementException e ) {}
     }
     
-    private static VmInstance maybeFindVm( String publicIp, String privateIp ) {
+    private static VmInstance maybeFindVm( final String publicIp, final String privateIp ) {
       VmInstance vm = null;
       try {
         vm = VmInstances.lookupByInstanceIp( privateIp );
@@ -181,28 +181,28 @@ public abstract class AbstractSystemAddressManager {
           LOG.trace( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
           return vm;
         }
-      } catch ( NoSuchElementException e ) {}
+      } catch ( final NoSuchElementException e ) {}
       return null;
     }
     
-    private static void ensureAllocated( Address addr, VmInstance vm ) {
+    private static void ensureAllocated( final Address addr, final VmInstance vm ) {
       if ( !addr.isAllocated( ) && !addr.isPending( ) ) {
         try {
           if ( !addr.isAssigned( ) && !addr.isPending( ) ) {
             addr.pendingAssignment( );
             try {
               addr.assign( vm ).clearPending( );
-            } catch ( Exception e1 ) {
+            } catch ( final Exception e1 ) {
               LOG.debug( e1, e1 );
             }
           }
-        } catch ( Exception e1 ) {
+        } catch ( final Exception e1 ) {
           LOG.debug( e1, e1 );
         }
       } else if ( !addr.isAssigned( ) ) {
         try {
           addr.assign( vm ).clearPending( );
-        } catch ( Exception e1 ) {
+        } catch ( final Exception e1 ) {
           LOG.debug( e1, e1 );
         }
       } else {
@@ -210,35 +210,35 @@ public abstract class AbstractSystemAddressManager {
       }
     }
     
-    private static void checkUniqueness( ClusterAddressInfo addrInfo ) {
-      Collection<VmInstance> matches = Collections2.filter( VmInstances.listValues( ), VmInstances.withPrivateAddress( addrInfo.getAddress( ) ) );
+    private static void checkUniqueness( final ClusterAddressInfo addrInfo ) {
+      final Collection<VmInstance> matches = Collections2.filter( VmInstances.listValues( ), VmInstances.withPrivateAddress( addrInfo.getAddress( ) ) );
       if ( matches.size( ) > 1 ) {
         LOG.error( "Found " + matches.size( ) + " vms with the same address: " + addrInfo + " -> " + matches );
       }
     }
     
-    protected static void loadStoredAddresses( Cluster cluster ) {
+    protected static void loadStoredAddresses( final Cluster cluster ) {
       try {
-        EntityWrapper<Address> db = EntityWrapper.get( Address.class );
-        Address clusterAddr = new Address( );
+        final EntityWrapper<Address> db = EntityWrapper.get( Address.class );
+        final Address clusterAddr = new Address( );
         clusterAddr.setCluster( cluster.getPartition( ) );
         List<Address> addrList = Lists.newArrayList( );
         try {
           addrList = db.query( clusterAddr );
           db.commit( );
-        } catch ( Exception e1 ) {
+        } catch ( final Exception e1 ) {
           db.rollback( );
         }
-        for ( Address addr : addrList ) {
+        for ( final Address addr : addrList ) {
           try {
             LOG.info( "Restoring persistent address info for: " + addr );
             Addresses.getInstance( ).lookup( addr.getName( ) );
             addr.init( );
-          } catch ( Exception e ) {
+          } catch ( final Exception e ) {
             addr.init( );
           }
         }
-      } catch ( Exception e ) {
+      } catch ( final Exception e ) {
         LOG.debug( e, e );
       }
     }

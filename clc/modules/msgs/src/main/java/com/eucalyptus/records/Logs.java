@@ -48,10 +48,10 @@ public class Logs {
   
   private static final ConsoleAppender console                 = new ConsoleAppender( new EucaLayout( ), "System.out" ) {
                                                                  {
-                                                                   setThreshold( Priority.toPriority( System.getProperty( "euca.log.level" ), Priority.INFO ) );
-                                                                   setName( "console" );
-                                                                   setImmediateFlush( false );
-                                                                   setFollow( false );
+                                                                   this.setThreshold( Priority.toPriority( System.getProperty( "euca.log.level" ), Priority.INFO ) );
+                                                                   this.setName( "console" );
+                                                                   this.setImmediateFlush( false );
+                                                                   this.setFollow( false );
                                                                  }
                                                                };
   private static final String          DEFAULT_LOG_LEVEL       = ( ( System.getProperty( "euca.log.level" ) == null )
@@ -84,7 +84,7 @@ public class Logs {
       this.fileName = BaseDirectory.LOG.getChildPath( this.getAppenderName( ) + ".log" );
     }
     
-    private String getProperty( LogProps p, String defaultValue ) {
+    private String getProperty( final LogProps p, final String defaultValue ) {
       return ( System.getProperty( this.prop + p.name( ) ) == null )
         ? defaultValue
         : System.getProperty( this.prop + p.name( ) );
@@ -99,11 +99,11 @@ public class Logs {
         ? this.appender
         : new RollingFileAppender( new PatternLayout( this.pattern ), this.fileName, true ) {
           {
-            setImmediateFlush( false );
-            setMaxBackupIndex( Appenders.this.backups );
-            setMaxFileSize( Appenders.this.fileSize );
-            setName( Appenders.this.getAppenderName( ) );
-            setThreshold( Priority.toPriority( Appenders.this.threshold ) );
+            this.setImmediateFlush( false );
+            this.setMaxBackupIndex( Appenders.this.backups );
+            this.setMaxFileSize( Appenders.this.fileSize );
+            this.setName( Appenders.this.getAppenderName( ) );
+            this.setThreshold( Priority.toPriority( Appenders.this.threshold ) );
 //            setBufferedIO( true );
 //            setBufferSize( 1024 );
           }
@@ -114,15 +114,15 @@ public class Logs {
   public static class LogConfigurator implements Configurator {
     
     @Override
-    public void doConfigure( URL arg0, LoggerRepository arg1 ) {
+    public void doConfigure( final URL arg0, final LoggerRepository arg1 ) {
       arg1.getRootLogger( ).addAppender( console );
     }
     
   }
   
-  private static boolean      EXTREME    = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
-  private static boolean      TRACE      = isExtrrreeeme( ) || "TRACE".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
-  private static boolean      DEBUG      = isExtrrreeeme( ) || TRACE || "DEBUG".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
+  private static boolean      IS_EXTREME = "EXTREME".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
+  private static boolean      IS_TRACE   = isExtrrreeeme( ) || "TRACE".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
+  private static boolean      IS_DEBUG   = isExtrrreeeme( ) || IS_TRACE || "DEBUG".equals( System.getProperty( "euca.log.level" ).toUpperCase( ) );
   
   private static final Logger nullLogger = new Logger( "/dev/null" ) {
                                            
@@ -132,40 +132,40 @@ public class Logs {
                                            }
                                            
                                            @Override
-                                           public void trace( Object message, Throwable t ) {}
+                                           public void trace( final Object message, final Throwable t ) {}
                                            
                                            @Override
-                                           public void trace( Object message ) {}
+                                           public void trace( final Object message ) {}
                                            
                                            @Override
-                                           public synchronized void addAppender( Appender newAppender ) {}
+                                           public synchronized void addAppender( final Appender newAppender ) {}
                                            
                                            @Override
-                                           public void assertLog( boolean assertion, String msg ) {}
+                                           public void assertLog( final boolean assertion, final String msg ) {}
                                            
                                            @Override
-                                           public void callAppenders( LoggingEvent arg0 ) {}
+                                           public void callAppenders( final LoggingEvent arg0 ) {}
                                            
                                            @Override
-                                           public void debug( Object message, Throwable t ) {}
+                                           public void debug( final Object message, final Throwable t ) {}
                                            
                                            @Override
-                                           public void debug( Object message ) {}
+                                           public void debug( final Object message ) {}
                                            
                                            @Override
-                                           public void error( Object message, Throwable t ) {}
+                                           public void error( final Object message, final Throwable t ) {}
                                            
                                            @Override
-                                           public void error( Object message ) {}
+                                           public void error( final Object message ) {}
                                            
                                            @Override
-                                           public void fatal( Object message, Throwable t ) {}
+                                           public void fatal( final Object message, final Throwable t ) {}
                                            
                                            @Override
-                                           public void fatal( Object message ) {}
+                                           public void fatal( final Object message ) {}
                                            
                                            @Override
-                                           protected void forcedLog( String fqcn, Priority level, Object message, Throwable t ) {}
+                                           protected void forcedLog( final String fqcn, final Priority level, final Object message, final Throwable t ) {}
                                            
                                            @Override
                                            public boolean getAdditivity( ) {
@@ -178,7 +178,7 @@ public class Logs {
                                            }
                                            
                                            @Override
-                                           public synchronized Appender getAppender( String name ) {
+                                           public synchronized Appender getAppender( final String name ) {
                                              return super.getAppender( name );
                                            }
                                            
@@ -208,18 +208,18 @@ public class Logs {
                                            }
                                            
                                            @Override
-                                           protected String getResourceBundleString( String arg0 ) {
+                                           protected String getResourceBundleString( final String arg0 ) {
                                              return super.getResourceBundleString( arg0 );
                                            }
                                            
                                            @Override
-                                           public void info( Object message, Throwable t ) {}
+                                           public void info( final Object message, final Throwable t ) {}
                                            
                                            @Override
-                                           public void info( Object message ) {}
+                                           public void info( final Object message ) {}
                                            
                                            @Override
-                                           public boolean isAttached( Appender appender ) {
+                                           public boolean isAttached( final Appender appender ) {
                                              return super.isAttached( appender );
                                            }
                                            
@@ -229,7 +229,7 @@ public class Logs {
                                            }
                                            
                                            @Override
-                                           public boolean isEnabledFor( Priority level ) {
+                                           public boolean isEnabledFor( final Priority level ) {
                                              return super.isEnabledFor( level );
                                            }
                                            
@@ -239,46 +239,46 @@ public class Logs {
                                            }
                                            
                                            @Override
-                                           public void l7dlog( Priority arg0, String arg1, Object[] arg2, Throwable arg3 ) {}
+                                           public void l7dlog( final Priority arg0, final String arg1, final Object[] arg2, final Throwable arg3 ) {}
                                            
                                            @Override
-                                           public void l7dlog( Priority arg0, String arg1, Throwable arg2 ) {}
+                                           public void l7dlog( final Priority arg0, final String arg1, final Throwable arg2 ) {}
                                            
                                            @Override
-                                           public void log( Priority priority, Object message, Throwable t ) {}
+                                           public void log( final Priority priority, final Object message, final Throwable t ) {}
                                            
                                            @Override
-                                           public void log( Priority priority, Object message ) {}
+                                           public void log( final Priority priority, final Object message ) {}
                                            
                                            @Override
-                                           public void log( String callerFQCN, Priority level, Object message, Throwable t ) {}
+                                           public void log( final String callerFQCN, final Priority level, final Object message, final Throwable t ) {}
                                            
                                            @Override
                                            public synchronized void removeAllAppenders( ) {}
                                            
                                            @Override
-                                           public synchronized void removeAppender( Appender appender ) {}
+                                           public synchronized void removeAppender( final Appender appender ) {}
                                            
                                            @Override
-                                           public synchronized void removeAppender( String name ) {}
+                                           public synchronized void removeAppender( final String name ) {}
                                            
                                            @Override
-                                           public void setAdditivity( boolean additive ) {}
+                                           public void setAdditivity( final boolean additive ) {}
                                            
                                            @Override
-                                           public void setLevel( Level level ) {}
+                                           public void setLevel( final Level level ) {}
                                            
                                            @Override
-                                           public void setPriority( Priority priority ) {}
+                                           public void setPriority( final Priority priority ) {}
                                            
                                            @Override
-                                           public void setResourceBundle( ResourceBundle bundle ) {}
+                                           public void setResourceBundle( final ResourceBundle bundle ) {}
                                            
                                            @Override
-                                           public void warn( Object message, Throwable t ) {}
+                                           public void warn( final Object message, final Throwable t ) {}
                                            
                                            @Override
-                                           public void warn( Object message ) {}
+                                           public void warn( final Object message ) {}
                                            
                                          };
   
@@ -310,7 +310,7 @@ public class Logs {
       System.setProperty( "euca.log.exhaustive.user", "TRACE" );
     }//    System.setProperty( "log4j.configurationClass", "com.eucalyptus.util.Logs.LogConfigurator" );
     try {
-      PrintStream oldOut = System.out;
+      final PrintStream oldOut = System.out;
       final ByteArrayOutputStream bos = new ByteArrayOutputStream( );
       System.setOut( new PrintStream( bos ) {
         @Override
@@ -330,7 +330,7 @@ public class Logs {
 
       );
       
-      PrintStream oldErr = System.err;
+      final PrintStream oldErr = System.err;
       final ByteArrayOutputStream bosErr = new ByteArrayOutputStream( );
       System.setErr( new PrintStream( bosErr ) {
         
@@ -351,17 +351,25 @@ public class Logs {
             );
       
       Logger.getRootLogger( ).info( LogUtil.subheader( "Starting system with debugging set as: " + Joiner.on( "\n" ).join( Logs.class.getDeclaredFields( ) ) ) );
-    } catch ( Exception t ) {
+    } catch ( final Exception t ) {
       t.printStackTrace( );
       System.exit( 1 );
     }
   }
   
-  public static void no( boolean eXTREME ) {
-    EXTREME = eXTREME;
+  public static void no( final boolean eXTREME ) {
+    IS_EXTREME = eXTREME;
   }
   
   public static boolean isExtrrreeeme( ) {
-    return EXTREME;
+    return IS_EXTREME;
+  }
+  
+  public static boolean isDesbug( ) {
+    return IS_DEBUG;
+  }
+  
+  public static boolean isTrace( ) {
+    return IS_TRACE;
   }
 }

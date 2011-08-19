@@ -51,7 +51,6 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
   }
 
   public static class DatabasePropertyBuilder implements ConfigurablePropertyBuilder {
-    private static Logger LOG = Logger.getLogger( MultiDatabasePropertyEntry.DatabasePropertyBuilder.class );
     
     @Override
     public ConfigurableProperty buildProperty( Class c, Field f ) throws ConfigurablePropertyException {

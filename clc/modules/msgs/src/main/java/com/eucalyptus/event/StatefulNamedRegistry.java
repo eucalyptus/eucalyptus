@@ -45,7 +45,7 @@ public class StatefulNamedRegistry<T extends HasName<T>, E extends Enum<E>> {
     
   }
   
-  private class StatefulValue<T, E> {
+  private class StatefulValue {
     private final E state;
     private final T value;
     
@@ -96,7 +96,7 @@ public class StatefulNamedRegistry<T extends HasName<T>, E extends Enum<E>> {
     }
   }
   
-  private final ConcurrentNavigableMap<String, StatefulValue<T, E>> stateMap = new ConcurrentSkipListMap<String, StatefulValue<T, E>>( );
+  private final ConcurrentNavigableMap<String, StatefulValue> stateMap = new ConcurrentSkipListMap<String, StatefulValue>( );
   private E[]                                                       states;
   private ReadWriteLock                                             canHas;
   
@@ -116,7 +116,7 @@ public class StatefulNamedRegistry<T extends HasName<T>, E extends Enum<E>> {
   }
   
   public T deregister( String key ) {
-    StatefulValue<T, E> oldValue = null;
+    StatefulValue oldValue = null;
     this.canHas.writeLock( ).lock( );
     try {
       oldValue = this.stateMap.remove( key );
@@ -139,15 +139,15 @@ public class StatefulNamedRegistry<T extends HasName<T>, E extends Enum<E>> {
    * @return reference to registered version of obj
    */
   public T register( T obj, E nextState ) {
-    StatefulValue<T, E> oldValue = null;
-    StatefulValue<T, E> newValue = null;
+    StatefulValue oldValue = null;
+    StatefulValue newValue = null;
     assertThat( obj, notNullValue( ) );
     this.canHas.writeLock( ).lock( );
     try {
-      newValue = new StatefulValue<T, E>( nextState, obj );
+      newValue = new StatefulValue( nextState, obj );
       oldValue = this.stateMap.putIfAbsent( obj.getName( ), newValue );
       if ( oldValue != null ) {
-        newValue = new StatefulValue<T, E>( nextState, oldValue.getValue( ) );
+        newValue = new StatefulValue( nextState, oldValue.getValue( ) );
         if ( this.stateMap.replace( obj.getName( ), oldValue, newValue ) ) {
           return newValue.getValue( );
         } else {
@@ -237,10 +237,10 @@ public class StatefulNamedRegistry<T extends HasName<T>, E extends Enum<E>> {
    * @return
    * @throws NoSuchElementException
    */
-  public StatefulValue<T, E> lookupEntry( String name ) throws NoSuchElementException {
+  public StatefulValue lookupEntry( String name ) throws NoSuchElementException {
     this.canHas.readLock( ).lock( );
     try {
-      StatefulValue<T, E> currValue = this.stateMap.get( name );
+      StatefulValue currValue = this.stateMap.get( name );
       if ( currValue != null ) {
         return currValue;
       } else {
@@ -252,14 +252,14 @@ public class StatefulNamedRegistry<T extends HasName<T>, E extends Enum<E>> {
   }
   
   public boolean setState( String name, E newState ) throws NoSuchElementException {
-    StatefulValue<T, E> oldValue = null;
+    StatefulValue oldValue = null;
     this.canHas.writeLock( ).lock( );
     try {
       oldValue = this.lookupEntry( name );
       if ( oldValue.getState( ).equals( newState ) ) {
         return true;
       } else {
-        return this.stateMap.replace( name, oldValue, new StatefulValue<T, E>( newState, oldValue.getValue( ) ) );
+        return this.stateMap.replace( name, oldValue, new StatefulValue( newState, oldValue.getValue( ) ) );
       }
     } finally {
       this.canHas.writeLock( ).unlock( );
@@ -269,7 +269,7 @@ public class StatefulNamedRegistry<T extends HasName<T>, E extends Enum<E>> {
     }
   }
   
-  private void fireStateChange( StatefulValue<T, E> oldValue, E newState ) {
+  private void fireStateChange( StatefulValue oldValue, E newState ) {
     try {
       ListenerRegistry.getInstance( ).fireEvent( new StateEvent<T, E>( oldValue.getValue( ), newState, oldValue.getState( ) ) );
     } catch ( EventFailedException e ) {
@@ -297,7 +297,7 @@ public class StatefulNamedRegistry<T extends HasName<T>, E extends Enum<E>> {
   
   public List<T> listValues( ) {
     List<T> valueList = Lists.newArrayList( );
-    for ( StatefulValue<T, E> m : this.stateMap.values( ) ) {
+    for ( StatefulValue m : this.stateMap.values( ) ) {
       valueList.add( m.getValue( ) );
     }
     return ImmutableList.copyOf( valueList );
@@ -309,7 +309,7 @@ public class StatefulNamedRegistry<T extends HasName<T>, E extends Enum<E>> {
   
   public ImmutableList<T> listStateValues( E state ) {
     List<T> valueList = Lists.newArrayList( );
-    for ( StatefulValue<T, E> m : this.stateMap.values( ) ) {
+    for ( StatefulValue m : this.stateMap.values( ) ) {
       if ( m.getState( ).equals( state ) ) {
         valueList.add( m.getValue( ) );
       }

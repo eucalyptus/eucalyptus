@@ -105,8 +105,8 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
    *      ExecutorService)
    */
   @Override
-  public <V> CheckedListenableFuture<V> addListener( Callable<V> listener, ExecutorService executor ) {
-    ExecPair<V> pair = new ExecPair<V>( listener, executor );
+  public <T> CheckedListenableFuture<T> addListener( Callable<T> listener, ExecutorService executor ) {
+    ExecPair<T> pair = new ExecPair<T>( listener, executor );
     this.add( pair );
     return pair.getFuture( );
   }
@@ -122,7 +122,7 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
   @Override
   protected void done( ) {
     this.listeners.add( DONE );
-    if( this.finished.compareAndSet( false, true ) ) {
+    if ( this.finished.compareAndSet( false, true ) ) {
       while ( this.listeners.peek( ) != DONE ) {
         this.listeners.poll( ).run( );
       }
@@ -139,10 +139,10 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
     return super.setException( throwable );
   }
   
-  class ExecPair<V> implements Runnable {
-    private Callable<V>                      callable;
+  class ExecPair<C> implements Runnable {
+    private Callable<C>                      callable;
     private Runnable                         runnable;
-    private final CheckedListenableFuture<V> future = Futures.newGenericeFuture( );
+    private final CheckedListenableFuture<C> future = Futures.newGenericeFuture( );
     private final ExecutorService            executor;
     
     ExecPair( Callable callable, ExecutorService executor ) {
@@ -185,7 +185,7 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
       }
     }
     
-    CheckedListenableFuture<V> getFuture( ) {
+    CheckedListenableFuture<C> getFuture( ) {
       return this.future;
     }
     

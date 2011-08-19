@@ -351,18 +351,18 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
   
   private class ElemItem {
     Elem    name;
-    int     indent;
+    int     indentCount;
     boolean children;
     
     public ElemItem( Elem name, int indent, boolean children ) {
       this.name = name;
-      this.indent = indent;
+      this.indentCount = indent;
       this.children = children;
     }
     
     @Override
     public String toString( ) {
-      return String.format( "ElemItem [name=%s, indent=%s, children=%s]", this.name, this.indent, Boolean.valueOf( this.children ) );
+      return String.format( "ElemItem [name=%s, indent=%s, children=%s]", this.name, this.indentCount, Boolean.valueOf( this.children ) );
     }
     
   }
