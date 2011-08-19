@@ -278,6 +278,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
       final EntityTransaction db = Entities.get( NetworkGroup.class );
       try {
         exNet = Entities.uniqueResult( ExtantNetwork.named( this ) );
+        db.rollback( );
         return exNet;
       } catch ( TransactionException ex2 ) {
         for ( Integer i : NetworkGroups.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
@@ -292,11 +293,12 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
             }
           }
         }
-        db.commit( );
       }
       if ( exNet != null ) {
+        db.commit( );
         return exNet;
       } else {
+        db.rollback( );
         throw new NotEnoughResourcesAvailable( "Failed to add extant network: " + this.extantNetwork + " due to: no network tags are free." );
       }
     } else {

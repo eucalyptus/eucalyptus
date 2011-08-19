@@ -363,8 +363,11 @@ public class VmInstances {
         throw new NoSuchElementException( "Failed to lookup vm instance: " + name );
       }
       return vm;
+    } catch ( NoSuchElementException ex ) {
+      db.rollback( );
+      throw ex;
     } catch ( final Exception ex ) {
-      Logs.extreme( ).error( ex, ex );
+      db.rollback( );
       throw new NoSuchElementException( "Failed to lookup vm instance: " + name );
     }
   }
@@ -434,13 +437,12 @@ public class VmInstances {
       final VmInstance vm = Entities.uniqueResult( VmInstance.namedTerminated( null, name ) );
       db.commit( );
       return vm;
-    } catch ( TransactionException ex ) {
+    } catch ( NoSuchElementException ex ) {
       db.rollback( );
-      if ( ex.getCause( ) instanceof NoSuchElementException ) {
-        throw ( NoSuchElementException ) ex.getCause( );
-      } else {
-        throw new NoSuchElementException( ex.getMessage( ) );
-      }
+      throw ex;
+    } catch ( Exception ex ) {
+      db.rollback( );
+      throw new NoSuchElementException( ex.getMessage( ) );
     }
   }
   

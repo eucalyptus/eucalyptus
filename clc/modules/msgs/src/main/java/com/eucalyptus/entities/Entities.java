@@ -77,6 +77,7 @@ import javax.persistence.PersistenceContext;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
 import org.hibernate.NonUniqueResultException;
 import org.hibernate.Session;
 import org.hibernate.criterion.Example;
@@ -225,15 +226,15 @@ public class Entities {
     
   }
   
-  private static Logger                                         LOG     = Logger.getLogger( Entities.class );
+  private static Logger                                         LOG                = Logger.getLogger( Entities.class );
   private static ThreadLocal<ConcurrentMap<String, JoinableTx>> txStateThreadLocal = new ThreadLocal<ConcurrentMap<String, JoinableTx>>( ) {
-                                                                          
-                                                                          @Override
-                                                                          protected ConcurrentMap<String, JoinableTx> initialValue( ) {
-                                                                            return Maps.newConcurrentMap( );
-                                                                          }
-                                                                          
-                                                                        };
+                                                                                     
+                                                                                     @Override
+                                                                                     protected ConcurrentMap<String, JoinableTx> initialValue( ) {
+                                                                                       return Maps.newConcurrentMap( );
+                                                                                     }
+                                                                                     
+                                                                                   };
   
   private static JoinableTx lookup( final Object obj ) {
     final String ctx = lookatPersistenceContext( obj );
@@ -308,50 +309,69 @@ public class Entities {
   @SuppressWarnings( "unchecked" )
   public static <T> T uniqueResult( final T example ) throws TransactionException {
     try {
-      Object id = null;
-      try {
-        id = Entities.getTransaction( example ).getTxState( ).getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
-      } catch ( final Exception ex ) {}
-      if ( id != null ) {
-        final T res = ( T ) Entities.getTransactionState( example ).getEntityManager( ).find( example.getClass( ), id );
-        if ( res == null ) {
-          throw new NoSuchElementException( "@Id: " + id );
-        } else {
-          return res;
-        }
+      Object pk = resolvePrimaryKey( example );
+      if ( pk != null ) {
+        return maybePrimaryKey( example );
       } else if ( ( example instanceof HasNaturalId ) && ( ( ( HasNaturalId ) example ).getNaturalId( ) != null ) ) {
-        final String natId = ( ( HasNaturalId ) example ).getNaturalId( );
-        final T ret = ( T ) Entities.getTransactionState( example ).getSession( )
-                                                          .createCriteria( example.getClass( ) )
-                                                          .add( Restrictions.naturalId( ).set( "naturalId", natId ) )
-                                                          .setCacheable( true )
-                                                          .setMaxResults( 1 )
-                                                          .setFetchSize( 1 )
-                                                          .setFirstResult( 0 )
-                                                          .uniqueResult( );
-        if ( ret == null ) {
-          throw new NoSuchElementException( "@NaturalId: " + natId );
-        }
-        return ret;
+        return maybeNaturalId( example );
       } else {
-        final T ret = ( T ) Entities.getTransactionState( example ).getSession( )
-                                                          .createCriteria( example.getClass( ) )
-                                                          .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
-                                                          .setCacheable( true )
-                                                          .setMaxResults( 1 )
-                                                          .setFetchSize( 1 )
-                                                          .setFirstResult( 0 )
-                                                          .uniqueResult( );
-        if ( ret == null ) {
-          throw new NoSuchElementException( "example: " + LogUtil.dumpObject( example ) );
-        }
-        return ret;
+        return maybeDefinitelyExample( example );
       }
     } catch ( final RuntimeException ex ) {
       Logs.exhaust( ).trace( ex, ex );
       final Exception newEx = PersistenceExceptions.throwFiltered( ex );
       throw new TransactionInternalException( newEx.getMessage( ), newEx );
     }
+  }
+  
+  public static <T> T maybeDefinitelyExample( final T example ) throws HibernateException, NoSuchElementException {
+    final T ret = ( T ) Entities.getTransactionState( example ).getSession( )
+                                                      .createCriteria( example.getClass( ) )
+                                                      .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
+                                                      .setCacheable( true )
+                                                      .setMaxResults( 1 )
+                                                      .setFetchSize( 1 )
+                                                      .setFirstResult( 0 )
+                                                      .uniqueResult( );
+    if ( ret == null ) {
+      throw new NoSuchElementException( "example: " + LogUtil.dumpObject( example ) );
+    }
+    return ret;
+  }
+  
+  public static <T> T maybeNaturalId( final T example ) throws HibernateException, NoSuchElementException {
+    final String natId = ( ( HasNaturalId ) example ).getNaturalId( );
+    @SuppressWarnings( "unchecked" )
+    final T ret = ( T ) Entities.getTransactionState( example ).getSession( )
+                                                      .createCriteria( example.getClass( ) )
+                                                      .add( Restrictions.naturalId( ).set( "naturalId", natId ) )
+                                                      .setCacheable( true )
+                                                      .setMaxResults( 1 )
+                                                      .setFetchSize( 1 )
+                                                      .setFirstResult( 0 )
+                                                      .uniqueResult( );
+    if ( ret == null ) {
+      throw new NoSuchElementException( "@NaturalId: " + natId );
+    }
+    return ret;
+  }
+  
+  public static <T> T maybePrimaryKey( final T example ) throws NoSuchElementException {
+    Object id = resolvePrimaryKey( example );
+    if ( id == null ) {
+      return null;
+    } else {
+      final T res = ( T ) Entities.getTransactionState( example ).getEntityManager( ).find( example.getClass( ), id );
+      if ( res == null ) {
+        throw new NoSuchElementException( "@Id: " + id );
+      } else {
+        return res;
+      }
+    }
+  }
+
+  public static <T> Object resolvePrimaryKey( final T example ) {
+    return Entities.getTransaction( example ).getTxState( ).getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
   }
   
   public static Criteria createCriteria( final Class class1 ) {
@@ -693,7 +713,7 @@ public class Entities {
         public void begin( ) {}
       };
     }
-
+    
     private TxRecord getRecord( ) {
       return this.record;
     }
