@@ -211,12 +211,10 @@ public class Allocations {
     }
     
     public void requestNetworkIndexes( ) throws NotEnoughResourcesAvailable {
-      NetworkGroup net = this.getPrimaryNetwork( );
-      ExtantNetwork extantNetwork = net.extantNetwork( );
-      assertThat( net, notNullValue( ) );
-      assertThat( extantNetwork, notNullValue( ) );
       for ( ResourceToken rscToken : this.allocationTokens ) {
         try {
+          ExtantNetwork extantNetwork = rscToken.getExtantNetwork( );
+          assertThat( extantNetwork, notNullValue( ) );
           SetReference<PrivateNetworkIndex, VmInstance> addrIndex = extantNetwork.allocateNetworkIndex( );
           rscToken.setNetworkIndex( addrIndex );
         } catch ( Exception ex ) {

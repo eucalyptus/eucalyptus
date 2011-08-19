@@ -249,7 +249,7 @@ public class ResourceToken implements Comparable<ResourceToken> {
     this.extantNetwork = exNet;
   }
   
-  private ExtantNetwork getExtantNetwork( ) {
+  public ExtantNetwork getExtantNetwork( ) {
     return this.extantNetwork;
   }
   
