@@ -67,6 +67,7 @@ import java.util.HashSet;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
+import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
@@ -169,35 +170,36 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   }
   
   public SetReference<PrivateNetworkIndex, VmInstance> allocateNetworkIndex( ) throws TransactionException {
-    EntityWrapper<ExtantNetwork> db = EntityWrapper.get( ExtantNetwork.class );
+    EntityTransaction db = Entities.get( ExtantNetwork.class );
     ExtantNetwork exNet = this;
     try {
-      exNet = db.getUnique( this );
+      exNet = Entities.uniqueResult( this );
       if ( exNet.getIndexes( ).isEmpty( ) ) {
         this.initNetworkIndexes( exNet );
-        db = EntityWrapper.get( ExtantNetwork.class );
       }
-      exNet = db.getUnique( this );
       SetReference<PrivateNetworkIndex, VmInstance> next = PrivateNetworkIndex.allocateNext( exNet );
+      db.commit( );
       return next;
-    } catch ( EucalyptusCloudException ex ) {
-      Logs.extreme( ).error( ex, ex );
-      LOG.debug( ex );
+    } catch ( TransactionException ex ) {
+      LOG.trace( ex, ex );
+      db.rollback( );
+      throw ex;
+    } catch ( ResourceAllocationException ex ) {
+      LOG.trace( ex, ex );
       db.rollback( );
       throw new TransactionExecutionException( ex );
-    } catch ( ResourceAllocationException ex ) {
-      Logs.extreme( ).error( ex, ex );
-      LOG.debug( ex );
+    } catch ( Exception ex ) {
+      LOG.trace( ex, ex );
       db.rollback( );
       throw new TransactionExecutionException( ex );
     }
   }
   
   private void initNetworkIndexes( ExtantNetwork exNet ) {
-    EntityWrapper<PrivateNetworkIndex> db = EntityWrapper.get( PrivateNetworkIndex.class );
+    EntityTransaction db = Entities.get( PrivateNetworkIndex.class );
     for ( long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
       PrivateNetworkIndex newIdx = PrivateNetworkIndex.create( exNet, i );
-      PrivateNetworkIndex netIdx = db.persist( newIdx );
+      PrivateNetworkIndex netIdx = Entities.persist( newIdx );
       this.getIndexes( ).add( netIdx );
     }
     db.commit( );
