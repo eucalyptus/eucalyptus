@@ -744,11 +744,11 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
       privateDnsName = ( privateDnsName == null
         ? VmInstance.DEFAULT_IP
         : privateDnsName );
-      runningInstance.setPrivateDnsName( this.getNetworkConfig( ).getIpAddress( ) );
-      if ( !VmInstance.DEFAULT_IP.equals( this.getPublicAddress( ) ) ) {
-        runningInstance.setDnsName( this.getPublicAddress( ) );
+      runningInstance.setPrivateDnsName( privateDnsName );
+      if ( !VmInstance.DEFAULT_IP.equals( publicDnsName ) ) {
+        runningInstance.setDnsName( publicDnsName );
       } else {
-        runningInstance.setDnsName( this.getNetworkConfig( ).getIpAddress( ) );
+        runningInstance.setDnsName( privateDnsName );
       }
     }
     
