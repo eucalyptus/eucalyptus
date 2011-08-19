@@ -270,22 +270,27 @@ public class Entities {
   }
   
   private static NestedTx getTransaction( final Object obj ) {
-    final String ctx = lookatPersistenceContext( obj );
-    return txState.get( ).get( ctx );
+    if ( hasTransaction( obj ) ) {
+      return txState.get( ).get( lookatPersistenceContext( obj ) );
+    } else {
+      return createTransaction( obj );
+    }
+  }
+  
+  private static NestedTx createTransaction( final Object obj ) throws RecoverablePersistenceException, RuntimeException {
+    String ctx = lookatPersistenceContext( obj );
+    NestedTx ret = new NestedTx( ctx );
+    ret.begin( );
+    txState.get( ).put( ctx, ret );
+    return ret;
   }
   
   private static TxState getTransactionState( final Object obj ) {
-    return getTransaction( obj ).getTxState( );
+    return txState.get( ).get( lookatPersistenceContext( obj ) ).getTxState( );
   }
   
   public static EntityTransaction get( final Object obj ) {
-    if ( hasTransaction( obj ) ) {
-      return getTransaction( obj );
-    } else {
-      NestedTx ret = new NestedTx( lookatPersistenceContext( obj ) );
-      ret.begin( );
-      return ret;
-    }
+    return getTransaction( obj );
   }
   
   @SuppressWarnings( { "unchecked", "cast" } )
