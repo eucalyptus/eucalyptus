@@ -425,8 +425,9 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   private void store( ) {
     try {
     	//TODO: GRZE!!!! 1111oneoneone1111111oneoneone
+      UserFullName ufn = ( UserFullName ) this.getOwner( );
       ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getInstanceUuid( ), this.getDisplayName( ), this.vmType.getName( ),
-                                                                    this.getOwner( ).getNamespace( ), null, this.getOwner( ).getName( ), null,
+                                                                    ufn.getUserId( ), ufn.getUserName( ), ufn.getAccountNumber( ),ufn.getAccountNumber( ), 
                                                                     this.clusterName, this.partitionName, this.networkBytes, this.blockBytes ) );
     } catch ( EventFailedException ex ) {
       LOG.error( ex, ex );
