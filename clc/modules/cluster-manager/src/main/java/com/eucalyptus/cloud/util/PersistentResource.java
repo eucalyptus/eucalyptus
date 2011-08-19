@@ -210,16 +210,7 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
       @SuppressWarnings( "unchecked" )
       @Override
       public T get( ) {
-        final EntityTransaction db = Entities.get( PersistentResource.this.getClass( ) );
-        try {
-          final T ret = Entities.uniqueResult( ( T ) PersistentResource.this );
-          db.commit( );
-          return ret;
-        } catch ( final Exception ex ) {
-          Logs.extreme( ).error( ex, ex );
-          db.rollback( );
-          throw new RuntimeException( ex.getMessage( ), ex );
-        }
+        return ( T ) PersistentResource.this;
       }
       
       @Override

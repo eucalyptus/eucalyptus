@@ -116,7 +116,7 @@ public class Entities {
         this.transaction = this.em.getTransaction( );
         assertThat( this.transaction, notNullValue( ) );
         this.sessionRef = new WeakReference<Session>( ( Session ) this.em.getDelegate( ) );
-      } catch ( RuntimeException ex ) {
+      } catch ( final RuntimeException ex ) {
         this.doCleanup( );
         throw ex;
       }
@@ -272,8 +272,8 @@ public class Entities {
   }
   
   private static JoinableTx createTransaction( final Object obj ) throws RecoverablePersistenceException, RuntimeException {
-    String ctx = lookatPersistenceContext( obj );
-    JoinableTx ret = new JoinableTx( ctx );
+    final String ctx = lookatPersistenceContext( obj );
+    final JoinableTx ret = new JoinableTx( ctx );
     ret.begin( );
     txStateThreadLocal.get( ).put( ctx, ret );
     return ret;
@@ -308,8 +308,8 @@ public class Entities {
   
   public static <T> T uniqueResult( final T example ) throws TransactionException, NoSuchElementException {
     try {
-      Object pk = resolvePrimaryKey( example );
-      String natId = resolveNaturalId( example );
+      final Object pk = resolvePrimaryKey( example );
+      final String natId = resolveNaturalId( example );
       if ( pk != null ) {
         return maybePrimaryKey( example );
       } else if ( natId != null ) {
@@ -336,14 +336,15 @@ public class Entities {
   
   private static <T> T maybeDefinitelyExample( final T example ) throws HibernateException, NoSuchElementException {
     @SuppressWarnings( "unchecked" )
-    final T ret = ( T ) Entities.getTransactionState( example ).getSession( )
-                                                      .createCriteria( example.getClass( ) )
-                                                      .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
-                                                      .setCacheable( true )
-                                                      .setMaxResults( 1 )
-                                                      .setFetchSize( 1 )
-                                                      .setFirstResult( 0 )
-                                                      .uniqueResult( );
+    final T ret = ( T ) Entities.getTransactionState( example )
+                                .getSession( )
+                                .createCriteria( example.getClass( ) )
+                                .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
+                                .setCacheable( true )
+                                .setMaxResults( 1 )
+                                .setFetchSize( 1 )
+                                .setFirstResult( 0 )
+                                .uniqueResult( );
     if ( ret == null ) {
       throw new NoSuchElementException( "example: " + LogUtil.dumpObject( example ) );
     }
@@ -353,14 +354,15 @@ public class Entities {
   private static <T> T maybeNaturalId( final T example ) throws HibernateException, NoSuchElementException {
     final String natId = ( ( HasNaturalId ) example ).getNaturalId( );
     @SuppressWarnings( "unchecked" )
-    final T ret = ( T ) Entities.getTransactionState( example ).getSession( )
-                                                      .createCriteria( example.getClass( ) )
-                                                      .add( Restrictions.naturalId( ).set( "naturalId", natId ) )
-                                                      .setCacheable( true )
-                                                      .setMaxResults( 1 )
-                                                      .setFetchSize( 1 )
-                                                      .setFirstResult( 0 )
-                                                      .uniqueResult( );
+    final T ret = ( T ) Entities.getTransactionState( example )
+                                .getSession( )
+                                .createCriteria( example.getClass( ) )
+                                .add( Restrictions.naturalId( ).set( "naturalId", natId ) )
+                                .setCacheable( true )
+                                .setMaxResults( 1 )
+                                .setFetchSize( 1 )
+                                .setFirstResult( 0 )
+                                .uniqueResult( );
     if ( ret == null ) {
       throw new NoSuchElementException( "@NaturalId: " + natId );
     }
@@ -368,7 +370,7 @@ public class Entities {
   }
   
   private static <T> T maybePrimaryKey( final T example ) throws NoSuchElementException {
-    Object id = resolvePrimaryKey( example );
+    final Object id = resolvePrimaryKey( example );
     if ( id == null ) {
       return null;
     } else {
@@ -640,7 +642,7 @@ public class Entities {
       this.txState.begin( );
     }
     
-    private void doTxEvent( TxEvent ev, Runnable runnable ) throws RecoverablePersistenceException {
+    private void doTxEvent( final TxEvent ev, final Runnable runnable ) throws RecoverablePersistenceException {
       if ( this.txState.isActive( ) ) {
         this.record.logEvent( TxStep.BEGIN, ev );
         try {
