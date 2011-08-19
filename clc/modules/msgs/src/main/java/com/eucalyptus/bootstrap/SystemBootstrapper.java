@@ -84,7 +84,13 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 
 /**
- * Java entry point from eucalyptus-bootstrap
+ * Java entry point from eucalyptus-bootstrap. See {@link Bootstrap} for a detailed explanation of
+ * the system startup procedure.
+ * 
+ * <b>IMPORTANT:</b> See {@link #init()} regarding exceptin handling.
+ * 
+ * @see Bootstrap
+ * @see SystemBootstrapper#init()
  */
 public class SystemBootstrapper {
   private static final String       SEP = " -- ";
@@ -110,6 +116,15 @@ public class SystemBootstrapper {
   
   public SystemBootstrapper( ) {}
   
+  /**
+   * <b>IMPORTANT NOTE:</b> this is the <b><i>only</i></b> class for which it is acceptable to {@code catch} or {@code throw} the
+   * {@link Throwable} type. See {@link ThreadDeath} for an explanation of the constraints on
+   * handling {@link Throwable} propagation.
+   * 
+   * @see java.lang.ThreadDeath
+   * @return
+   * @throws Exception
+   */
   public boolean init( ) throws Exception {
     Logs.init( );
     BootstrapArgs.init( );
@@ -124,7 +139,7 @@ public class SystemBootstrapper {
     } catch ( BootstrapException e ) {
       e.printStackTrace( );
       throw e;
-    } catch ( Exception t ) {
+    } catch ( Throwable t ) {
       t.printStackTrace( );
       LOG.fatal( t, t );
       System.exit( 123 );
@@ -132,7 +147,13 @@ public class SystemBootstrapper {
     }
   }
   
-  public boolean load( ) throws Exception {
+  /**
+   * {@inheritDoc #init()}
+   * 
+   * @return
+   * @throws Throwable
+   */
+  public boolean load( ) throws Throwable {
     if ( BootstrapArgs.isInitializeSystem( ) ) {
       try {
         Bootstrap.initializeSystem( );
@@ -152,7 +173,7 @@ public class SystemBootstrapper {
       } catch ( BootstrapException e ) {
         e.printStackTrace( );
         throw e;
-      } catch ( Exception t ) {
+      } catch ( Throwable t ) {
         t.printStackTrace( );
         LOG.fatal( t, t );
         System.exit( 123 );
@@ -165,7 +186,16 @@ public class SystemBootstrapper {
     return true;
   }
   
-  public boolean start( ) throws Exception {
+  /**
+   * NOTE: this is the /only/ class for which it is acceptable to {@code catch} or {@code throw} the
+   * {@link Throwable} type. See {@link ThreadDeath} for an explanation of the constraints on
+   * handling {@link Throwable} propagation.
+   * 
+   * @see java.lang.ThreadDeath
+   * @return
+   * @throws Throwable
+   */
+  public boolean start( ) throws Throwable {
     try {
       /** @NotNull */
       Bootstrap.Stage stage = Bootstrap.transition( );
@@ -176,7 +206,7 @@ public class SystemBootstrapper {
       t.printStackTrace( );
       LOG.fatal( t, t );
       throw t;
-    } catch ( Exception t ) {
+    } catch ( Throwable t ) {
       LOG.fatal( t, t );
       System.exit( 123 );
       throw t;
