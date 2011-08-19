@@ -237,6 +237,8 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   @PostLoad
   private void deserializeVbr( ) {
     this.runtimeState.set( this.getState( ), false );
+    this.stopWatch.start( );
+    this.updateWatch.start( );
     if ( this.vbrString != null ) {
       try {
         this.vbr = ( VmTypeInfo ) BindingManager.getDefaultBinding( ).fromOM( this.vbrString );
@@ -294,8 +296,6 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     this.networkConfig.setIpAddress( DEFAULT_IP );
     this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
     this.networkConfig.setNetworkIndex( networkIndex.getIndex( ) );
-    this.stopWatch.start( );
-    this.updateWatch.start( );
     this.updateDns( );
     this.store( );
   }
