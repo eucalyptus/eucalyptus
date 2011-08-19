@@ -132,7 +132,7 @@ public class Futures {
           Thread.currentThread( ).interrupt( );
           resultFuture.setException( ex1 );
         } catch ( RejectedExecutionException ex1 ) {
-          resultFuture.cancel( true );
+          resultFuture.setException( ex1 );
         } catch ( Exception ex1 ) {
           resultFuture.setException( ex1 );
         }
