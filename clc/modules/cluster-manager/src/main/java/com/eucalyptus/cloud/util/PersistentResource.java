@@ -69,21 +69,21 @@ import javax.persistence.MappedSuperclass;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.TransactionException;
-import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.OwnerFullName;
 
 @MappedSuperclass
 public abstract class PersistentResource<T extends PersistentResource<T, R>, R extends HasNaturalId> extends UserMetadata<Resource.State> implements Resource<T, R> {
-  private static Logger LOG = Logger.getLogger( PersistentResource.class );
+  private static final long serialVersionUID = 1L;
+  private static Logger     LOG              = Logger.getLogger( PersistentResource.class );
   
-  protected PersistentResource( OwnerFullName owner, String displayName ) {
+  protected PersistentResource( final OwnerFullName owner, final String displayName ) {
     super( owner, displayName );
   }
   
+  @SuppressWarnings( "unchecked" )
   private T get( ) {
     return ( T ) this;
   }
@@ -139,7 +139,9 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
    * @see Resource#teardown()
    */
   @Override
-  public final void teardown( ) {}
+  public final void teardown( ) {
+    Logs.exhaust( ).trace( "teardown( ) called: " + Threads.currentStackString( ) );
+  }
   
   /**
    * {@inheritDoc ResourceAlllocation#reclaim()}
@@ -149,16 +151,16 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
    * @return
    */
   @Override
-  public final T reclaim( R referer ) {
+  public final T reclaim( final R referer ) {
     return null;
   }
   
   @SuppressWarnings( "unchecked" )
   T doSetReferer( final R referer, final Resource.State preconditionState, final Resource.State finalState ) throws ResourceAllocationException {
-    EntityTransaction db = Entities.get( ( Class<T> ) this.getClass( ) );
+    final EntityTransaction db = Entities.get( this.getClass( ) );
     try {
-      PersistentResource<T, R> thisEntity = Entities.uniqueResult( ( T ) this );
-      if ( thisEntity.getState( ) != null && preconditionState != null && !preconditionState.equals( thisEntity.getState( ) ) ) {
+      final PersistentResource<T, R> thisEntity = Entities.uniqueResult( ( T ) this );
+      if ( ( thisEntity.getState( ) != null ) && ( preconditionState != null ) && !preconditionState.equals( thisEntity.getState( ) ) ) {
         throw new RuntimeException( "Error allocating resource " + PersistentResource.this.getClass( ).getSimpleName( ) + " with id "
                                     + this.getDisplayName( ) + " as the state is not " + preconditionState.name( ) + " (currently "
                                     + this.getState( ) + ")." );
@@ -168,7 +170,7 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
       }
       db.commit( );
       return thisEntity.get( );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       LOG.error( ex );
       db.rollback( );
@@ -177,13 +179,13 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
   }
   
   private SetReference<T, R> doCreateSetReference( ) {
-    SetReference<T, R> ref = new SetReference<T, R>( ) {
+    final SetReference<T, R> ref = new SetReference<T, R>( ) {
       private volatile boolean finished = false;
       
       @Override
-      public T set( R referer ) throws ResourceAllocationException {
+      public T set( final R referer ) throws ResourceAllocationException {
         this.checkFinished( );
-        T ret = PersistentResource.this.doSetReferer( referer, Resource.State.PENDING, Resource.State.EXTANT );
+        final T ret = PersistentResource.this.doSetReferer( referer, Resource.State.PENDING, Resource.State.EXTANT );
         this.finished = true;
         return ret;
       }
@@ -191,7 +193,7 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
       @Override
       public T abort( ) throws ResourceAllocationException {
         this.checkFinished( );
-        T ret = PersistentResource.this.doSetReferer( null, null, Resource.State.FREE );
+        final T ret = PersistentResource.this.doSetReferer( null, null, Resource.State.FREE );
         this.finished = true;
         return ret;
       }
@@ -205,14 +207,15 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
         }
       }
       
+      @SuppressWarnings( "unchecked" )
       @Override
       public T get( ) {
-        EntityWrapper<T> db = EntityWrapper.get( ( Class<T> ) PersistentResource.this.getClass( ) );
+        final EntityTransaction db = Entities.get( PersistentResource.this.getClass( ) );
         try {
-          T ret = db.getUnique( ( T ) PersistentResource.this );
+          final T ret = Entities.uniqueResult( ( T ) PersistentResource.this );
           db.commit( );
           return ret;
-        } catch ( Exception ex ) {
+        } catch ( final Exception ex ) {
           Logs.extreme( ).error( ex, ex );
           db.rollback( );
           throw new RuntimeException( ex.getMessage( ), ex );
@@ -220,7 +223,7 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
       }
       
       @Override
-      public int compareTo( T o ) {
+      public int compareTo( final T o ) {
         return PersistentResource.this.compareTo( o );
       }
       
@@ -230,13 +233,13 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
   
   private ClearReference<T> doCreateClearReferer( ) {
     final R referer = this.getReferer( );
-    ClearReference<T> ref = new ClearReference<T>( ) {
+    final ClearReference<T> ref = new ClearReference<T>( ) {
       private volatile boolean finished = false;
       
       @Override
       public T clear( ) throws ResourceAllocationException {
         this.checkFinished( );
-        T ret = PersistentResource.this.doSetReferer( null, Resource.State.RELEASING, Resource.State.FREE );
+        final T ret = PersistentResource.this.doSetReferer( null, Resource.State.RELEASING, Resource.State.FREE );
         this.finished = true;
         return ret;
       }
@@ -244,7 +247,7 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
       @Override
       public T abort( ) throws ResourceAllocationException {
         this.checkFinished( );
-        T ret = PersistentResource.this.doSetReferer( referer, Resource.State.RELEASING, Resource.State.EXTANT );
+        final T ret = PersistentResource.this.doSetReferer( referer, Resource.State.RELEASING, Resource.State.EXTANT );
         this.finished = true;
         return ret;
       }
