@@ -63,9 +63,11 @@
 package com.eucalyptus.bootstrap;
 
 import java.io.PrintStream;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.security.Security;
+import java.util.Map;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.eucalyptus.bootstrap.Bootstrap.Stage;
@@ -82,6 +84,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
 import com.google.common.base.Functions;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -150,6 +153,32 @@ public class SystemBootstrapper {
    */
   public boolean init( ) throws Throwable {
     Logs.init( );
+    Thread.setDefaultUncaughtExceptionHandler( new UncaughtExceptionHandler( ) {
+      
+      @Override
+      public void uncaughtException( Thread t, Throwable e ) {
+        try {
+          String stack = Joiner.on( "\t\n" ).join( Thread.currentThread( ).getStackTrace( ) );
+          LOG.error( stack );
+          LOG.error( e, e );
+        } catch ( Exception ex ) {
+          try {
+            System.out.println( Joiner.on( "\t\n" ).join( Thread.currentThread( ).getStackTrace( ) ) );
+            e.printStackTrace( );
+            ex.printStackTrace( );
+          } catch ( Exception ex1 ) {
+            System.out.println( "Failed because of badness in uncaught exception path." );
+            System.out.println( "Thread:      " + t.toString( ) );
+            System.out.println( "Exception:   " + e.getClass( ) );
+            System.out.println( "Message:     " + e.getMessage( ) );
+            System.out.println( "All threads:\n" );
+            for( Map.Entry<Thread,StackTraceElement[]> ent : Thread.getAllStackTraces( ).entrySet( ) ) {
+              
+            }
+          }
+        }
+      }
+    } );
     BootstrapArgs.init( );
     Security.addProvider( new BouncyCastleProvider( ) );
     try {
@@ -173,14 +202,7 @@ public class SystemBootstrapper {
    */
   public boolean load( ) throws Throwable {
     if ( BootstrapArgs.isInitializeSystem( ) ) {
-      try {
-        Bootstrap.initializeSystem( );
-        System.exit( 0 );
-      } catch ( Throwable t ) {
-        LOG.error( t, t );
-        System.exit( 1 );
-        throw t;
-      }
+      SystemBootstrapper.runSystemInitialize( );
     } else {
       SystemBootstrapper.runSystemStages( new Predicate<Stage>( ) {
         
@@ -213,6 +235,23 @@ public class SystemBootstrapper {
         return true;
       }
     } );
+    try {
+      SystemBootstrapper.runComponentStages( Component.Transition.STARTING, Components.filterWhichCanLoad( ) );
+    } catch ( Exception ex1 ) {
+      LOG.error( ex1 , ex1 );
+    }
+    Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
+      @Override
+      public void run( ) {
+        try {
+          SystemBootstrapper.runComponentStages( Component.Transition.READY_CHECK, Components.filterWhichCanLoad( ) );
+          SystemBootstrapper.runComponentStages( Component.Transition.ENABLING, Components.filterWhichCanLoad( ) );
+        } catch ( Throwable ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+    } );
+    
     for ( final Component c : Components.whichCanLoad( ) ) {
       Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
         @Override
@@ -231,14 +270,24 @@ public class SystemBootstrapper {
     return true;
   }
   
+  private static void runSystemInitialize( ) throws Throwable {
+    try {
+      Bootstrap.initializeSystem( );
+      System.exit( 0 );
+    } catch ( Throwable t ) {
+      LOG.error( t, t );
+      System.exit( 1 );
+      throw t;
+    }
+  }
+  
   private static void runComponentStages( Transition transition, Predicate<Component> filter ) throws Throwable {
     try {
       for ( Component c : Iterables.filter( Components.list( ), filter ) ) {
         Bootstrap.applyTransition( c, transition );
       }
     } catch ( Throwable t ) {
-      SystemBootstrapper.handleException( t );
-      throw t;
+      Thread.getDefaultUncaughtExceptionHandler( ).uncaughtException( Thread.currentThread( ), t );
     }
   }
   
@@ -257,7 +306,7 @@ public class SystemBootstrapper {
   }
   
   public String getVersion( ) {
-    return System.getProperty( "euca.version" );
+    return BillOfMaterials.RequiredFields.VERSION.getValue( );
   }
   
   public boolean check( ) {

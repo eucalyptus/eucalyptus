@@ -139,11 +139,18 @@ public class BillOfMaterials {
   private static Logger LOG = Logger.getLogger( BillOfMaterials.class );
   
   enum RequiredFields {
+    VERSION( "" ) {
+      
+      @Override
+      public String getValue( ) {
+        return System.getProperty( "euca.version", "ERROR: no version information available." );
+      }
+    },
     REVISIONID( "revision-id" ),
     DATE( "date" ),
     BUILD( "build-date" ),
-    REVNO( "revno" ), 
-    BRANCH("branch-nick");
+    REVNO( "revno" ),
+    BRANCH( "branch-nick" );
     private final String key;
     
     private RequiredFields( final String key ) {
@@ -152,7 +159,7 @@ public class BillOfMaterials {
     
     public String getValue( ) {
       if ( !BillOfMaterials.loadProps( ).containsKey( this.key ) ) {
-        return System.getProperty( "euca.version", "unknown" );
+        return VERSION.getValue( );
       } else {
         return BillOfMaterials.loadProps( ).get( this.key );
       }

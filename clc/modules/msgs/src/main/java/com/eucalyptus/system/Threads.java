@@ -477,7 +477,7 @@ public class Threads {
   public static String currentStackRange( int start, int end ) {
     StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
     int len = stack.length;
-    start = Ints.max( Ints.min( 1, start ), len - 1 );
+    start = Ints.min( Ints.max( 1, start ), len - 1 );
     end = Ints.min( Ints.max( 1, end ), len - 1 );
     return Joiner.on( "\t\n" ).join( Arrays.copyOfRange( stack, start, end ) );
   }
