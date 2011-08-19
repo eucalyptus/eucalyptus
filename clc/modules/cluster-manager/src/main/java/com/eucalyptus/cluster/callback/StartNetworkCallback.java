@@ -57,26 +57,17 @@
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author: chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.cluster.callback;
 
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
-import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
-import com.eucalyptus.network.NetworkGroups;
-import com.eucalyptus.network.NetworkToken;
-import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.BroadcastCallback;
 import com.google.common.collect.Lists;
@@ -87,7 +78,7 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
   
   private static Logger      LOG = Logger.getLogger( StartNetworkCallback.class );
   
-  private final ExtantNetwork extantNet;
+  private ExtantNetwork extantNet;
   
   public StartNetworkCallback( final ExtantNetwork extantNet ) {
     this.extantNet = extantNet;
@@ -102,6 +93,7 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
   public void fire( StartNetworkResponseType msg ) {
     EntityTransaction db = Entities.get( ExtantNetwork.class );
     try {
+      this.extantNet = Entities.merge( this.extantNet );
       NetworkGroup net = this.extantNet.getNetworkGroup( );
       net.setState( NetworkGroup.State.ACTIVE );
       Entities.merge( net );

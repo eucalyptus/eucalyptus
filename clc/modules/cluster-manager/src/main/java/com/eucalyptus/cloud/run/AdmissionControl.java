@@ -63,8 +63,11 @@
  */
 package com.eucalyptus.cloud.run;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 import java.util.ArrayList;
 import java.util.List;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -72,9 +75,11 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmTypeAvailability;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
@@ -83,8 +88,11 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
+import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroups;
+import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
@@ -304,7 +312,18 @@ public class AdmissionControl {
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
       if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
-        allocInfo.requestNetworkIndexes( );
+        for ( ResourceToken rscToken : allocInfo.getAllocationTokens( ) ) {
+          EntityTransaction db = Entities.get( ExtantNetwork.class );
+          try {
+            ExtantNetwork exNet = Entities.merge( rscToken.getExtantNetwork( ) );
+            assertThat( exNet, notNullValue( ) );
+            SetReference<PrivateNetworkIndex, VmInstance> addrIndex = exNet.allocateNetworkIndex( );
+            rscToken.setNetworkIndex( addrIndex );
+            rscToken.setExtantNetwork( Entities.merge( exNet ) );
+          } catch ( Exception ex ) {
+            throw new NotEnoughResourcesAvailable( "Not enough addresses left in the network subnet assigned to requested group: " + rscToken, ex );
+          }
+        }
       }
     }
     

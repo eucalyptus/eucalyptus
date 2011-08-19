@@ -109,7 +109,7 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   @OneToMany( fetch = FetchType.EAGER, cascade = { CascadeType.ALL }, mappedBy = "extantNetwork" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<PrivateNetworkIndex> indexes          = new HashSet<PrivateNetworkIndex>( );
-  @OneToOne
+  @OneToOne( cascade = { CascadeType.ALL }, fetch = FetchType.EAGER )
   @JoinColumn( name = "metadata_extant_network_group_id" )
   private NetworkGroup             networkGroup;
   
@@ -174,30 +174,37 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   
   public SetReference<PrivateNetworkIndex, VmInstance> allocateNetworkIndex( ) throws TransactionException {
     EntityTransaction db = Entities.get( ExtantNetwork.class );
-    SetReference<PrivateNetworkIndex, VmInstance> ref = null;
-    if ( this.getIndexes( ).isEmpty( ) ) {
-      for ( long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
-        PrivateNetworkIndex newIdx = PrivateNetworkIndex.create( this, i );
-        PrivateNetworkIndex netIdx = Entities.persist( newIdx );
-        this.getIndexes( ).add( netIdx );
+    SetReference<PrivateNetworkIndex, VmInstance> ref;
+    try {
+      ref = null;
+      if ( this.getIndexes( ).isEmpty( ) ) {
+        for ( long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
+          PrivateNetworkIndex newIdx = PrivateNetworkIndex.create( this, i );
+          PrivateNetworkIndex netIdx = Entities.persist( newIdx );
+          this.getIndexes( ).add( netIdx );
+        }
+        Entities.merge( this );
+      }
+      for ( PrivateNetworkIndex idx : Iterables.filter( this.getIndexes( ), PrivateNetworkIndex.filterFree( ) ) ) {
+        try {
+          ref = idx.allocate( );
+          break;
+        } catch ( Exception ex1 ) {
+          continue;
+        }
       }
       Entities.merge( this );
-    }
-    for ( PrivateNetworkIndex idx : Iterables.filter( this.getIndexes( ), PrivateNetworkIndex.filterFree( ) ) ) {
-      try {
-        ref = idx.allocate( );
-        break;
-      } catch ( Exception ex1 ) {
-        continue;
+      if ( ref != null ) {
+        db.commit( );
+        return ref;
+      } else {
+        db.rollback( );
+        throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName );
       }
-    }
-    if ( ref != null ) {
-      Entities.merge( this );
-      db.commit( );
-      return ref;
-    } else {
-      db.rollback( );
-      throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName );
+    } catch ( TransactionException ex ) {
+      throw ex;
+    } catch ( Exception ex ) {
+      throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName, ex );
     }
   }
   
@@ -248,6 +255,12 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   
   @Override
   public String toString( ) {
-    return String.format( "ExtantNetwork:networkGroup=%s:tag=%s:indexes=%s", this.networkGroup.getFullName( ), this.tag, this.indexes );
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "ExtantNetwork:" );
+    if ( this.networkGroup != null ) builder.append( this.networkGroup.getDisplayName( ) ).append( ":" );
+    if ( this.tag != null ) builder.append( "tag=" ).append( this.tag ).append( ":" );
+    if ( this.indexes != null ) builder.append( "indexes=" ).append( this.indexes ).append( ":" );
+    return builder.toString( );
   }
+  
 }
