@@ -293,7 +293,7 @@ public class ClusterAllocator implements Runnable {
             AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>( ) {
               @Override
               public void fire( final BaseMessage response ) {
-                vm.updatePublicAddress( addr.getName( ) );
+                vm.updateAddresses( addr.getInstanceAddress( ), addr.getName( ) );
               }
             } ).dispatch( addr.getPartition( ) );
           }

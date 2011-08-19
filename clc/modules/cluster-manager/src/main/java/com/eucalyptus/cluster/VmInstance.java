@@ -566,7 +566,9 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   
   public synchronized long getSplitTime( ) {
     final long time = System.currentTimeMillis( );
-    final long split = time - ( this.stopWatch == null ? time : this.stopWatch );
+    final long split = time - ( this.stopWatch == null
+      ? time
+      : this.stopWatch );
     this.stopWatch = time;
     return split;
   }
@@ -723,9 +725,25 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     }
     
     if ( dns ) {
-      runningInstance.setDnsName( this.getNetworkConfig( ).getPublicDnsName( ) );
-      runningInstance.setPrivateDnsName( this.getNetworkConfig( ).getPrivateDnsName( ) );
+      String publicDnsName = this.getPublicDnsName( );
+      String privateDnsName = this.getPrivateDnsName( );
+      publicDnsName = ( publicDnsName == null
+        ? VmInstance.DEFAULT_IP
+        : publicDnsName );
+      privateDnsName = ( privateDnsName == null
+        ? VmInstance.DEFAULT_IP
+        : privateDnsName );
+      runningInstance.setDnsName( publicDnsName );
+      runningInstance.setPrivateDnsName( privateDnsName );
     } else {
+      String publicDnsName = this.getPublicAddress( );
+      String privateDnsName = this.getPrivateAddress( );
+      publicDnsName = ( publicDnsName == null
+        ? VmInstance.DEFAULT_IP
+        : publicDnsName );
+      privateDnsName = ( privateDnsName == null
+        ? VmInstance.DEFAULT_IP
+        : privateDnsName );
       runningInstance.setPrivateDnsName( this.getNetworkConfig( ).getIpAddress( ) );
       if ( !VmInstance.DEFAULT_IP.equals( this.getPublicAddress( ) ) ) {
         runningInstance.setDnsName( this.getPublicAddress( ) );
@@ -1076,7 +1094,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
        * 
        */
       private static final long serialVersionUID = 1L;
-
+      
       {
         this.runtimeState.set( VmState.TERMINATED, false );
       }
