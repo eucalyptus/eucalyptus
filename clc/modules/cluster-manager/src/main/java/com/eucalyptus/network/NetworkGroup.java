@@ -98,6 +98,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.Numbers;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
@@ -275,34 +276,28 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       return ExtantNetwork.bogus( this );
     } else if ( this.getExtantNetwork( ) == null ) {
-      ExtantNetwork exNet = null;
       final EntityTransaction db = Entities.get( NetworkGroup.class );
-      try {
-        exNet = Entities.uniqueResult( ExtantNetwork.named( this ) );
-        db.rollback( );
-        return exNet;
-      } catch ( Exception ex2 ) {
-        for ( Integer i : NetworkGroups.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
+      ExtantNetwork exNet = null;
+      for ( Integer i : Numbers.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
+        try {
+          exNet = Entities.uniqueResult( ExtantNetwork.named( i ) );
+        } catch ( Exception ex ) {
           try {
-            exNet = Entities.uniqueResult( ExtantNetwork.named( i ) );
-          } catch ( Exception ex ) {
-            try {
-              exNet = Entities.persist( ExtantNetwork.create( this, i ) );
-              this.setExtantNetwork( exNet );
-              db.commit( );
-              return exNet;
-            } catch ( Exception ex1 ) {
-              Logs.exhaust( ).trace( ex1, ex1 );
-              continue;
-            }
+            this.setExtantNetwork( exNet );
+            Entities.merge( this );
+            db.commit( );
+            return exNet;
+          } catch ( Exception ex1 ) {
+            Logs.exhaust( ).trace( ex1, ex1 );
+            db.rollback( );
+            throw new NotEnoughResourcesAvailable( "Failed to allocate network tag for network: " + this.getFullName( ), ex1 );
           }
         }
-        db.rollback( );
-        throw new NotEnoughResourcesAvailable( "Failed to add extant network: " + this.extantNetwork + " due to: no network tags are free." );
       }
+      db.rollback( );
+      throw new NotEnoughResourcesAvailable( "Failed to allocate network tag for network: " + this.getFullName( ) + ": no network tags are free." );
     } else {
       return this.getExtantNetwork( );
-
     }
   }
   

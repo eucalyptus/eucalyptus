@@ -63,7 +63,6 @@
 
 package com.eucalyptus.network;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -78,6 +77,7 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Numbers;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
@@ -181,11 +181,6 @@ public class NetworkGroups {
       interval.add( i );
     }
 //    Collections.shuffle( interval );
-    return interval;
-  }
-  
-  public static <T extends Number> List<T> shuffled( List<T> interval ) {
-    Collections.shuffle( interval );
     return interval;
   }
   

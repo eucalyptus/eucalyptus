@@ -88,6 +88,8 @@ import com.eucalyptus.entities.RecoverablePersistenceException;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Numbers;
+import com.google.common.base.Predicate;
 
 @Entity
 @javax.persistence.Entity
@@ -125,7 +127,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   private PrivateNetworkIndex( ExtantNetwork network, Long index ) {
     super( network.getOwner( ), network.getTag( ) + ":" + index );
     this.extantNetwork = network;
-    this.setState( Resource.State.FREE );
+    this.setState( Resource.State.PENDING );
     this.bogusId = network.getTag( ) + ":" + index;
     this.index = index;
   }
@@ -137,12 +139,8 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
     this.index = index;
   }
   
-  public static PrivateNetworkIndex free( ExtantNetwork exNet ) {
-    return new PrivateNetworkIndex( exNet );
-  }
-  
-  public static PrivateNetworkIndex create( ExtantNetwork network, Long index ) {
-    return new PrivateNetworkIndex( network, index );
+  public static PrivateNetworkIndex create( ExtantNetwork exNet, Long index ) {
+    return new PrivateNetworkIndex( exNet, index );
   }
   
   public static PrivateNetworkIndex bogus( ) {
@@ -260,32 +258,14 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
     }
   }
   
-  public static SetReference<PrivateNetworkIndex, VmInstance> allocateNext( ExtantNetwork exNet ) throws ResourceAllocationException {
-    return getNextIndex( exNet ).allocate( );
-  }
-  
-  @SuppressWarnings( "unchecked" )
-  private static PrivateNetworkIndex getNextIndex( ExtantNetwork exNet ) throws ResourceAllocationException {
-    EntityTransaction db = Entities.get( PrivateNetworkIndex.class );
-    try {
-      Example ex = Example.create( PrivateNetworkIndex.free( exNet ) ).enableLike( MatchMode.EXACT );
-      PrivateNetworkIndex ret = ( PrivateNetworkIndex ) Entities.createCriteria( PrivateNetworkIndex.class )
-                                                                .setMaxResults( 1 )
-                                                                .setFetchSize( 1 )
-                                                                .setFirstResult( 0 )
-                                                                .add( ex )
-                                                                .uniqueResult( );
-      if ( ret == null ) {
-        throw new NotEnoughResourcesAvailable( "Failed to find a free network index: " + ret );
-      } else {
-        db.commit( );
-        return ret;
+  public static Predicate<PrivateNetworkIndex> filterFree( ) {
+    return new Predicate<PrivateNetworkIndex>( ) {
+      
+      @Override
+      public boolean apply( PrivateNetworkIndex input ) {
+        return Resource.State.FREE.equals( input.getState( ) );
       }
-    } catch ( Exception ex ) {
-      db.rollback( );
-      Logs.extreme( ).error( ex, ex );
-      throw new ResourceAllocationException( "Failed to allocate network index: " + ex.getMessage( ), ex );
-    }
+    };
   }
   
 }

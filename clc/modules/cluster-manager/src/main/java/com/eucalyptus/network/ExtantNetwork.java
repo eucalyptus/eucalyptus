@@ -64,6 +64,7 @@
 package com.eucalyptus.network;
 
 import java.util.HashSet;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -90,6 +91,8 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Numbers;
+import com.google.common.collect.Iterables;
 
 @Entity
 @javax.persistence.Entity
@@ -171,34 +174,31 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   
   public SetReference<PrivateNetworkIndex, VmInstance> allocateNetworkIndex( ) throws TransactionException {
     EntityTransaction db = Entities.get( ExtantNetwork.class );
-    ExtantNetwork exNet = this;
-    try {
-      exNet = Entities.uniqueResult( this );
-      if ( exNet.getIndexes( ).isEmpty( ) ) {
-        this.initNetworkIndexes( exNet );
+    SetReference<PrivateNetworkIndex, VmInstance> ref = null;
+    if ( this.getIndexes( ).isEmpty( ) ) {
+      this.initNetworkIndexes( );
+    }
+    for ( PrivateNetworkIndex idx : Iterables.filter( this.getIndexes( ), PrivateNetworkIndex.filterFree( ) ) ) {
+      try {
+        ref = idx.allocate( );
+        break;
+      } catch ( Exception ex1 ) {
+        continue;
       }
-      SetReference<PrivateNetworkIndex, VmInstance> next = PrivateNetworkIndex.allocateNext( exNet );
+    }
+    if( ref != null ) {
       db.commit( );
-      return next;
-    } catch ( TransactionException ex ) {
-      LOG.trace( ex, ex );
+      return ref;
+    } else {
       db.rollback( );
-      throw ex;
-    } catch ( ResourceAllocationException ex ) {
-      LOG.trace( ex, ex );
-      db.rollback( );
-      throw new TransactionExecutionException( ex );
-    } catch ( Exception ex ) {
-      LOG.trace( ex, ex );
-      db.rollback( );
-      throw new TransactionExecutionException( ex );
+      throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName );
     }
   }
   
-  private void initNetworkIndexes( ExtantNetwork exNet ) {
+  private void initNetworkIndexes( ) {
     EntityTransaction db = Entities.get( PrivateNetworkIndex.class );
     for ( long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
-      PrivateNetworkIndex newIdx = PrivateNetworkIndex.create( exNet, i );
+      PrivateNetworkIndex newIdx = PrivateNetworkIndex.create( this, i );
       PrivateNetworkIndex netIdx = Entities.persist( newIdx );
       this.getIndexes( ).add( netIdx );
     }
