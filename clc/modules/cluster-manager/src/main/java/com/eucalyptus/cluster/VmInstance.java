@@ -76,6 +76,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -161,10 +162,8 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   
   @Transient
   private final AtomicMarkableReference<BundleTask>   bundleTask          = new AtomicMarkableReference<BundleTask>( null, false );
-  @Transient
-  private final StopWatch                             stopWatch           = new StopWatch( );
-  @Transient
-  private final StopWatch                             updateWatch         = new StopWatch( );
+  @Column( name = "metadata_vm_last_timer" )
+  private Long                                        stopWatch;
   @Transient
   private String                                      serviceTag;
   @Transient
@@ -237,12 +236,10 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   @PostLoad
   private void deserializeVbr( ) {
     this.runtimeState.set( this.getState( ), false );
-    this.stopWatch.start( );
-    this.updateWatch.start( );
     if ( this.vbrString != null ) {
       try {
         this.vbr = ( VmTypeInfo ) BindingManager.getDefaultBinding( ).fromOM( this.vbrString );
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         this.vbr = null;
       }
     }
@@ -268,6 +265,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
                      final String platform,
                      final List<NetworkGroup> networkRulesGroups, final PrivateNetworkIndex networkIndex ) {
     super( owner, instanceId );
+    this.stopWatch = System.currentTimeMillis( );
     this.privateNetwork = Boolean.FALSE;
     this.launchTime = new Date( );
     this.blockBytes = 0l;
@@ -414,14 +412,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   }
   
   public void setState( final VmState newState, Reason reason, final String... extra ) {
-    this.updateWatch.split( );
-    if ( this.updateWatch.getSplitTime( ) > ( 1000 * 60 * 60 ) ) {
-      this.store( );
-      this.updateWatch.unsplit( );
-    } else {
-      this.updateWatch.unsplit( );
-    }
-    this.resetStopWatch( );
+    this.stopWatch = System.currentTimeMillis( );
     final VmState oldState = this.runtimeState.getReference( );
     if ( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && Reason.USER_TERMINATED.equals( reason ) ) {
       VmInstances.cleanUp( this );
@@ -573,19 +564,11 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     return this.getName( ).compareTo( that.getName( ) );
   }
   
-  public synchronized long resetStopWatch( ) {
-    this.stopWatch.stop( );
-    final long ret = this.stopWatch.getTime( );
-    this.stopWatch.reset( );
-    this.stopWatch.start( );
-    return ret;
-  }
-  
   public synchronized long getSplitTime( ) {
-    this.stopWatch.split( );
-    final long ret = this.stopWatch.getSplitTime( );
-    this.stopWatch.unsplit( );
-    return ret;
+    final long time = System.currentTimeMillis( );
+    final long split = time - this.stopWatch;
+    this.stopWatch = time;
+    return split;
   }
   
   public enum BundleState {
@@ -1062,6 +1045,14 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     this.blockBytes = blockBytes;
   }
   
+  private Long getStopWatch( ) {
+    return this.stopWatch;
+  }
+  
+  private void setStopWatch( final Long stopWatch ) {
+    this.stopWatch = stopWatch;
+  }
+  
   @Override
   public String getPartition( ) {
     return this.partitionName;
@@ -1081,6 +1072,11 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   
   public static VmInstance namedTerminated( final OwnerFullName ownerFullName, final String instanceId ) {
     return new VmInstance( ownerFullName, instanceId ) {
+      /**
+       * 
+       */
+      private static final long serialVersionUID = 1L;
+
       {
         this.runtimeState.set( VmState.TERMINATED, false );
       }
@@ -1117,4 +1113,5 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     }
     
   }
+  
 }
