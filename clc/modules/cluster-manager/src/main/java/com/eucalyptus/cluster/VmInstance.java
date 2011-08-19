@@ -175,7 +175,8 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   private Long                                        blockBytes;
   @Column( name = "vm_network_bytes" )
   private Long                                        networkBytes;
-  @Column( name = "vm_ssh_key_pair" )
+  @Transient
+//  @Column( name = "vm_ssh_key_pair" )
   private SshKeyPair                                  sshKeyPair;
   @Column( name = "vm_type" )
   private final VmType                                vmType;
