@@ -66,24 +66,17 @@ package com.eucalyptus.component;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.LifecycleEvents.ServiceErrorEvent;
 import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
-import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.ServiceStatusType;
-import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.GenericEvent;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.concurrent.ListenableFuture;
+import com.eucalyptus.records.Logs;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.Futures;
-import edu.emory.mathcs.backport.java.util.Arrays;
+import java.util.Arrays;
 
 public class LifecycleEvents {
   private static Logger LOG = Logger.getLogger( LifecycleEvents.class );
@@ -226,7 +219,7 @@ public class LifecycleEvents {
   public static void fireExceptionEvent( ServiceConfiguration config, CheckException ex ) {
     fireExceptionEvent( config, ex.getSeverity( ), ex );
   }
-
+  
   public static void fireExceptionEvent( ServiceConfiguration config, ServiceChecks.Severity severity, Throwable t ) {
     LifecycleEvent event = null;
     String correlationId = null;
@@ -261,7 +254,7 @@ public class LifecycleEvents {
     try {
       config.lookupService( ).fireEvent( event );
     } catch ( NoSuchServiceException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     }
   }
   
@@ -271,46 +264,37 @@ public class LifecycleEvents {
     return errorEvent;
   }
   
-  public static Future<Throwable> disable( ServiceConfiguration config ) {
-    return fireLifecycleEvent( new Disable( config ) );
+  public static void disable( ServiceConfiguration config ) {
+    fireLifecycleEvent( new Disable( config ) );
   }
   
-  public static Future<Throwable> enable( ServiceConfiguration config ) {
-    return fireLifecycleEvent( new Enable( config ) );
+  public static void enable( ServiceConfiguration config ) {
+    fireLifecycleEvent( new Enable( config ) );
   }
   
-  public static Future<Throwable> start( ServiceConfiguration config ) {
-    return fireLifecycleEvent( new Start( config ) );
+  public static void start( ServiceConfiguration config ) {
+    fireLifecycleEvent( new Start( config ) );
   }
   
-  public static Future<Throwable> stop( ServiceConfiguration config ) {
-    return fireLifecycleEvent( new Stop( config ) );
+  public static void stop( ServiceConfiguration config ) {
+    fireLifecycleEvent( new Stop( config ) );
   }
   
-  private static Future<Throwable> fireLifecycleEvent( final LifecycleEvent event ) {
+  private static void fireLifecycleEvent( final LifecycleEvent event ) {
     final ServiceConfiguration config = event.getReference( );
     final ComponentId componentId = config.getComponentId( );
-    final Future<Throwable> future = Threads.lookup( Empyrean.class, LifecycleEvents.class ).submit( new Callable<Throwable>( ) {
-      
-      @Override
-      public Throwable call( ) throws Exception {
-        try {
-          ListenerRegistry.getInstance( ).fireEvent( config, event );
-        } catch ( Exception ex1 ) {
-          config.info( ex1 );
-          return ex1;
-        }
-        try {
-          ListenerRegistry.getInstance( ).fireEvent( componentId, event );
-        } catch ( Exception ex1 ) {
-          config.info( ex1 );
-          return ex1;
-        }
-        return null;
-      }
-      
-    } );
-    return future;
+    try {
+      ListenerRegistry.getInstance( ).fireEventAsync( config, event );
+    } catch ( Exception ex1 ) {
+      config.info( ex1 );
+      Logs.exhaust( ).error( ex1, ex1 );
+    }
+    try {
+      ListenerRegistry.getInstance( ).fireEventAsync( componentId, event );
+    } catch ( Exception ex1 ) {
+      config.info( ex1 );
+      Logs.exhaust( ).error( ex1, ex1 );
+    }
   }
   
 }
