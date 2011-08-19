@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
@@ -28,18 +29,18 @@ public class Transactions {
                                                              }
                                                              
                                                            };
-  private static ThreadLocal<List<EntityWrapper>> wrappers = new ThreadLocal<List<EntityWrapper>>( ) {
+  private static ThreadLocal<List<EntityTransaction>> wrappers = new ThreadLocal<List<EntityTransaction>>( ) {
                                                              
                                                              @Override
-                                                             protected List<EntityWrapper> initialValue( ) {
+                                                             protected List<EntityTransaction> initialValue( ) {
                                                                return Lists.newArrayList( );
                                                              }
                                                              
                                                            };
   
-  private static <T> EntityWrapper<T> get( T obj ) {
+  private static <T> EntityTransaction get( T obj ) {
     depth.get( ).incrementAndGet( );
-    EntityWrapper<T> db = EntityWrapper.get( obj );
+    EntityTransaction db = Entities.get( obj );
     wrappers.get( ).add( db );
     return db;
   }
@@ -47,7 +48,7 @@ public class Transactions {
   private static void pop( ) {
     Integer nextLevel = depth.get( ).decrementAndGet( );
     if ( nextLevel <= 0 ) {
-      for ( EntityWrapper db : wrappers.get( ) ) {
+      for ( EntityTransaction db : wrappers.get( ) ) {
         if ( db.isActive( ) ) {
           db.commit( );
         }
@@ -84,9 +85,9 @@ public class Transactions {
   public static <T> List<T> each( T search, Callback<T> c ) throws TransactionException {
     assertThat( search, notNullValue( ) );
     assertThat( c, notNullValue( ) );
-    EntityWrapper<T> db = Transactions.get( search );
+    EntityTransaction db = Transactions.get( search );
     try {
-      List<T> res = db.query( search );
+      List<T> res = Entities.query( search );
       for ( T t : res ) {
         try {
           c.fire( t );
@@ -139,9 +140,9 @@ public class Transactions {
   public static <S, T> S one( T search, Function<T, S> f ) throws TransactionException {
     assertThat( search, notNullValue( ) );
     assertThat( f, notNullValue( ) );
-    EntityWrapper<T> db = Transactions.get( search );
+    EntityTransaction db = Transactions.get( search );
     try {
-      T entity = db.getUnique( search );
+      T entity = Entities.uniqueResult( search );
       try {
         S res = f.apply( entity );
         return res;
@@ -183,9 +184,9 @@ public class Transactions {
     assertThat( condition, notNullValue( ) );
     assertThat( transform, notNullValue( ) );
     List<O> res = Lists.newArrayList( );
-    EntityWrapper<T> db = Transactions.get( search );
+    EntityTransaction db = Transactions.get( search );
     try {
-      List<T> queryResults = db.query( search );
+      List<T> queryResults = Entities.query( search );
       for ( T t : queryResults ) {
         if ( condition.apply( t ) ) {
           try {
@@ -219,9 +220,9 @@ public class Transactions {
   public static <T> T save( T saveMe, Callback<T> c ) throws TransactionException {
     assertThat( saveMe, notNullValue( ) );
     assertThat( c, notNullValue( ) );
-    EntityWrapper<T> db = Transactions.get( saveMe );
+    EntityTransaction db = Transactions.get( saveMe );
     try {
-      T entity = db.merge( saveMe );
+      T entity = Entities.merge( saveMe );
       try {
         c.fire( entity );
       } catch ( Exception ex ) {
@@ -253,12 +254,12 @@ public class Transactions {
   public static <T> boolean delete( T search, Predicate<T> precondition ) throws TransactionException {
     assertThat( search, notNullValue( ) );
     assertThat( precondition, notNullValue( ) );
-    EntityWrapper<T> db = Transactions.get( search );
+    EntityTransaction db = Transactions.get( search );
     try {
-      T entity = db.getUnique( search );
+      T entity = Entities.uniqueResult( search );
       try {
         if ( precondition.apply( entity ) ) {
-          db.delete( entity );
+          Entities.delete( entity );
           return true;
         } else {
           return false;

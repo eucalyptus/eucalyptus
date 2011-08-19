@@ -231,7 +231,7 @@ public class NetworkGroups {
       try {
         return create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
       } catch ( Exception e1 ) {
-        throw new RuntimeException( "Failed to create default group: " + ownerFullName.toString( ) );
+        throw new RuntimeException( "Failed to create default group: " + ownerFullName.toString( ), e1 );
       }
     }
   }
@@ -247,7 +247,7 @@ public class NetworkGroups {
       throw new DuplicateMetadataException( "Group already exists: " + groupName, ex );
     } catch ( ExecutionException ex ) {
       LOG.error( ex, ex );
-      throw new RuntimeException( "Failed to create group: " + groupName + " for user: " + ownerFullName );
+      throw new RuntimeException( "Failed to create group: " + groupName + " for user: " + ownerFullName, ex );
     }
   }
   

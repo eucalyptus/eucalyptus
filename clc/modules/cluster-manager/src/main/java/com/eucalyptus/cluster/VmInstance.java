@@ -757,13 +757,6 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
       }
     }
     
-    runningInstance.setPrivateIpAddress( this.getNetworkConfig( ).getIpAddress( ) );
-    if ( !VmInstance.DEFAULT_IP.equals( this.getPublicAddress( ) ) ) {
-      runningInstance.setIpAddress( this.getPublicAddress( ) );
-    } else {
-      runningInstance.setIpAddress( this.getNetworkConfig( ).getIpAddress( ) );
-    }
-    
     runningInstance.setReason( this.getReason( ) );
     
     if ( this.getSshKeyPair( ) != null )
