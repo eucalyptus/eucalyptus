@@ -284,7 +284,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
         for ( Integer i : NetworkGroups.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
           try {
             exNet = Entities.uniqueResult( ExtantNetwork.named( i ) );
-          } catch ( TransactionException ex ) {}
+          } catch ( Exception ex ) {}
           if ( exNet == null ) {
             try {
               exNet = Entities.persist( ExtantNetwork.create( this, i ) );
