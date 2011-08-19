@@ -118,7 +118,7 @@ public class HmacUtils {
     sb = new StringBuilder( );
     NavigableSet<String> sortedKeys = new TreeSet<String>( );
     sortedKeys.addAll( parameters.keySet( ) );
-    String firstKey = firstKey = sortedKeys.pollFirst( );
+    String firstKey = sortedKeys.pollFirst( );
     if( firstKey != null ) { 
       sb.append( urlEncode( firstKey ) ).append( "=" ).append( urlEncode( parameters.get( firstKey ).replaceAll( "\\+", " " ) ) );
     } 

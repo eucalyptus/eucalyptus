@@ -23,8 +23,8 @@ public class AsyncResponseFuture<R> extends GenericCheckedListenableFuture<R> {
    */
   @Override
   public boolean setException( Throwable exception ) {
-    boolean r = false;
-    if ( r = super.setException( exception ) ) {
+    boolean r = super.setException( exception );
+    if ( r ) {
       EventRecord.caller( this.getClass( ), EventType.FUTURE, "setException(" + exception.getClass( ).getCanonicalName( ) + "): " + exception.getMessage( ) ).trace( );
     } else {
       Logs.exhaust( ).debug( "Duplicate exception: " + exception.getMessage( ) );
@@ -64,8 +64,8 @@ public class AsyncResponseFuture<R> extends GenericCheckedListenableFuture<R> {
    */
   @Override
   public boolean set( R reply ) {
-    boolean r = false;
-    if( r = super.set( reply ) ) {
+    boolean r = super.set( reply );
+    if( r ) {
       EventRecord.caller( this.getClass( ), EventType.FUTURE, "set(" + reply.getClass( ).getCanonicalName( ) + ")" ).trace( );
     } else {
       Logs.exhaust( ).debug( "Duplicate response: " + reply );

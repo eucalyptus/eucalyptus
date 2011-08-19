@@ -180,7 +180,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   }
   
   public void markBootstrapped( ) {
-    this.hasBootstrapped = hasBootstrapped;
+    this.hasBootstrapped = true;
   }
   
   public Integer getEpoch( ) {

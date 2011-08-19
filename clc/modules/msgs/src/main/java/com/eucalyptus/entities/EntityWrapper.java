@@ -112,9 +112,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 public class EntityWrapper<TYPE> {
-  private static Logger          LOG = Logger.getLogger( EntityWrapper.class );
+  private static Logger    LOG = Logger.getLogger( EntityWrapper.class );
   private TransactionState tx;
-  private final String           txStart;
+  private final String     txStart;
   
 /**
    * @see {@link Entities#get(Class)
@@ -359,7 +359,7 @@ public class EntityWrapper<TYPE> {
   }
   
   public void commit( ) throws ConstraintViolationException {
-    if( this.tx != null ) {
+    if ( this.tx != null ) {
       this.tx.commit( );
       this.tx = null;
     } else {

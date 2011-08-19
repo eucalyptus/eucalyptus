@@ -171,11 +171,8 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
     } catch ( Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       LOG.error( ex );
-      try {
-        db.rollback( );
-      } finally {
-        throw new ResourceAllocationException( ex );
-      }
+      db.rollback( );
+      throw new ResourceAllocationException( ex );
     }
   }
   
