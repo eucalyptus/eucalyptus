@@ -4,7 +4,6 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableProperty;
-import com.eucalyptus.configurable.ConfigurationProperties;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.scripting.Groovyness;
@@ -103,7 +102,6 @@ public class Properties {
         } catch ( Exception e ) {
           entry.setValue( oldValue );
         }
-        ConfigurationProperties.store( entry.getEntrySetName( ) );
         reply.setValue( entry.getValue( ) );
         reply.setName( request.getName( ) );
       } catch ( IllegalAccessException e ) {
