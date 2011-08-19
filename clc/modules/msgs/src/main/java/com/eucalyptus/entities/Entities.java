@@ -306,13 +306,13 @@ public class Entities {
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
   
-  @SuppressWarnings( "unchecked" )
   public static <T> T uniqueResult( final T example ) throws TransactionException {
     try {
       Object pk = resolvePrimaryKey( example );
+      String natId = resolveNaturalId( example );
       if ( pk != null ) {
         return maybePrimaryKey( example );
-      } else if ( ( example instanceof HasNaturalId ) && ( ( ( HasNaturalId ) example ).getNaturalId( ) != null ) ) {
+      } else if ( natId != null ) {
         return maybeNaturalId( example );
       } else {
         return maybeDefinitelyExample( example );
@@ -324,7 +324,16 @@ public class Entities {
     }
   }
   
-  public static <T> T maybeDefinitelyExample( final T example ) throws HibernateException, NoSuchElementException {
+  private static <T> String resolveNaturalId( final T example ) {
+    if ( ( example instanceof HasNaturalId ) && ( ( ( HasNaturalId ) example ).getNaturalId( ) != null ) ) {
+      return ( ( HasNaturalId ) example ).getNaturalId( );
+    } else {
+      return null;
+    }
+  }
+  
+  private static <T> T maybeDefinitelyExample( final T example ) throws HibernateException, NoSuchElementException {
+    @SuppressWarnings( "unchecked" )
     final T ret = ( T ) Entities.getTransactionState( example ).getSession( )
                                                       .createCriteria( example.getClass( ) )
                                                       .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
@@ -339,7 +348,7 @@ public class Entities {
     return ret;
   }
   
-  public static <T> T maybeNaturalId( final T example ) throws HibernateException, NoSuchElementException {
+  private static <T> T maybeNaturalId( final T example ) throws HibernateException, NoSuchElementException {
     final String natId = ( ( HasNaturalId ) example ).getNaturalId( );
     @SuppressWarnings( "unchecked" )
     final T ret = ( T ) Entities.getTransactionState( example ).getSession( )
@@ -356,7 +365,7 @@ public class Entities {
     return ret;
   }
   
-  public static <T> T maybePrimaryKey( final T example ) throws NoSuchElementException {
+  private static <T> T maybePrimaryKey( final T example ) throws NoSuchElementException {
     Object id = resolvePrimaryKey( example );
     if ( id == null ) {
       return null;
@@ -369,8 +378,8 @@ public class Entities {
       }
     }
   }
-
-  public static <T> Object resolvePrimaryKey( final T example ) {
+  
+  private static <T> Object resolvePrimaryKey( final T example ) {
     return Entities.getTransaction( example ).getTxState( ).getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
   }
   
