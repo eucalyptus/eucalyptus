@@ -226,5 +226,11 @@ public class UserFullName implements OwnerFullName {
   public String getNamespace( ) {
     return this.accountNumber;
   }
+
+  @Override
+  public String toString( ) {
+    return this.qName;
+  }
+  
   
 }

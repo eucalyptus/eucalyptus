@@ -215,7 +215,7 @@ public class PersistenceExceptions {
     if ( cause != null ) {
       throw cause;
     } else {
-      Logs.extreme( ).error( e, e );
+      Logs.exhaust( ).trace( e, e );
       if ( e instanceof RuntimeException ) {
         final ErrorCategory category = PersistenceExceptions.classify( e );
         final RuntimeException up = category.handleException( ( RuntimeException ) e );
