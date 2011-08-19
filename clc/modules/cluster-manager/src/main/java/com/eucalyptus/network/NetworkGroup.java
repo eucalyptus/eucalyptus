@@ -302,6 +302,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
       }
     } else {
       return this.getExtantNetwork( );
+
     }
   }
   
