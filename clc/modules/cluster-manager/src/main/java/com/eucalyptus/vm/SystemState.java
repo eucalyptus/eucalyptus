@@ -70,6 +70,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import javax.persistence.EntityTransaction;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPath;
@@ -100,6 +101,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
@@ -126,7 +128,8 @@ import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 
 public class SystemState {
   
-  public static Logger  LOG            = Logger.getLogger( SystemState.class );
+  public static Logger LOG = Logger.getLogger( SystemState.class );
+  
   public static void handle( VmDescribeResponseType request ) {
     VmInstances.flushBuried( );
     String originCluster = request.getOriginCluster( );
@@ -317,7 +320,17 @@ public class SystemState {
     String action = PolicySpec.requestToAction( request );
     User requestUser = ctx.getUser( );
     Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     for ( VmInstance v : VmInstances.listValues( ) ) {
+      if ( !VmState.STOPPED.equals( v.getState( ) ) ) {
+        long time = ( System.currentTimeMillis( ) - v.getLastUpdateTimestamp( ).getTime( ) );
+        if ( time > VmInstances.SHUT_DOWN_TIME ) {
+          v.setState( VmState.TERMINATED, Reason.EXPIRED );
+          continue;
+        } else if ( time > VmInstances.SHUT_DOWN_TIME ) {
+          v.setState( VmState.BURIED, Reason.BURIED );
+        }
+      }
       Account instanceAccount = null;
       try {
         instanceAccount = Accounts.lookupUserById( v.getOwner( ).getUniqueId( ) ).getAccount( );

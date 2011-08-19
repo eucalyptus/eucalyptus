@@ -162,8 +162,6 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   
   @Transient
   private final AtomicMarkableReference<BundleTask>   bundleTask          = new AtomicMarkableReference<BundleTask>( null, false );
-  @Column( name = "metadata_vm_last_timer" )
-  private Long                                        stopWatch;
   @Transient
   private String                                      serviceTag;
   @Transient
@@ -265,7 +263,6 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
                      final String platform,
                      final List<NetworkGroup> networkRulesGroups, final PrivateNetworkIndex networkIndex ) {
     super( owner, instanceId );
-    this.stopWatch = System.currentTimeMillis( );
     this.privateNetwork = Boolean.FALSE;
     this.launchTime = new Date( );
     this.blockBytes = 0l;
@@ -293,6 +290,8 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     this.networkConfig.setMacAddress( "d0:0d:" + VmInstances.asMacAddress( this.instanceId ) );
     this.networkConfig.setIpAddress( DEFAULT_IP );
     this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
+    this.networkConfig.setPrivateDnsName( DEFAULT_IP );
+    this.networkConfig.setPublicDnsName( DEFAULT_IP );
     this.networkConfig.setNetworkIndex( networkIndex.getIndex( ) );
     this.updateDns( );
     this.store( );
@@ -361,11 +360,13 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   }
   
   private void updateDns( ) {
-    String dnsDomain = "dns-disabled";
+    String dnsDomain = null;
     try {
       dnsDomain = edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
     } catch ( final Exception e ) {}
-    this.getNetworkConfig( ).updateDns( dnsDomain );
+    this.getNetworkConfig( ).updateDns( dnsDomain == null
+      ? "dns-disabled"
+      : dnsDomain );
   }
   
   public void updatePrivateAddress( final String privateAddr ) {
@@ -412,7 +413,6 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   }
   
   public void setState( final VmState newState, Reason reason, final String... extra ) {
-    this.stopWatch = System.currentTimeMillis( );
     final VmState oldState = this.runtimeState.getReference( );
     if ( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && Reason.USER_TERMINATED.equals( reason ) ) {
       VmInstances.cleanUp( this );
@@ -424,7 +424,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
       if ( !this.reasonDetails.contains( SEND_USER_STOP ) ) {
         this.addReasonDetail( SEND_USER_STOP );
       }
-    } else if ( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) {
+    } else if ( ( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) || VmState.BURIED.equals( newState ) ) {
       VmInstances.deregister( this.getName( ) );
     } else if ( !this.getState( ).equals( newState ) ) {
       if ( Reason.APPEND.equals( reason ) ) {
@@ -566,10 +566,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   
   public synchronized long getSplitTime( ) {
     final long time = System.currentTimeMillis( );
-    final long split = time - ( this.stopWatch == null
-      ? time
-      : this.stopWatch );
-    this.stopWatch = time;
+    final long split = time - this.getLastUpdateTimestamp( ).getTime( );
     return split;
   }
   
@@ -1003,9 +1000,9 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
                  .format(
                           "VmInstance [instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
                           this.instanceId, this.sshKeyPair, this.launchIndex, this.launchTime, this.networkConfig, this.networkGroups, this.getOwner( ),
-                          this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.runtimeState, this.stopWatch, this.userData,
-                          this.vmType,
-                          this.transientVolumes );
+                          this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.runtimeState, 
+                          System.currentTimeMillis( ) - this.getLastUpdateTimestamp( ).getTime( ), 
+                          this.userData, this.vmType, this.transientVolumes );
   }
   
   public Long getNetworkIndex( ) {
@@ -1061,14 +1058,6 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     this.blockBytes = blockBytes;
   }
   
-  private Long getStopWatch( ) {
-    return this.stopWatch;
-  }
-  
-  private void setStopWatch( final Long stopWatch ) {
-    this.stopWatch = stopWatch;
-  }
-  
   @Override
   public String getPartition( ) {
     return this.partitionName;
@@ -1088,9 +1077,6 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   
   public static VmInstance namedTerminated( final OwnerFullName ownerFullName, final String instanceId ) {
     return new VmInstance( ownerFullName, instanceId ) {
-      /**
-       * 
-       */
       private static final long serialVersionUID = 1L;
       
       {

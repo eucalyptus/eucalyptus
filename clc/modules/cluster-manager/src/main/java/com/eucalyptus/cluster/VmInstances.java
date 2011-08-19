@@ -123,9 +123,9 @@ import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 @ConfigurableClass( root = "vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
 public class VmInstances {
   @ConfigurableField( description = "Amount of time (in milliseconds) before a VM which is not reported by a cluster will be marked as terminated.", initial = "" + 10 * 60 * 1000 )
-  public static Integer SHUT_DOWN_TIME = -1;
+  public static Long    SHUT_DOWN_TIME = 10 * 60 * 1000l;
   @ConfigurableField( description = "Amount of time (in milliseconds) that a terminated VM will continue to be reported.", initial = "" + 60 * 60 * 1000 )
-  public static Integer BURY_TIME      = -1;
+  public static Long    BURY_TIME      = 60 * 60 * 1000l;
   private static Logger LOG            = Logger.getLogger( VmInstances.class );
   
   enum VmIsOperational implements Predicate<VmInstance> {
@@ -334,18 +334,10 @@ public class VmInstances {
   
   public static void flushBuried( ) {
     for ( final VmInstance vm : VmInstances.listDisabledValues( ) ) {
-      if ( ( vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) && !VmState.BURIED.equals( vm.getState( ) ) ) {
+      if ( ( vm.getSplitTime( ) > VmInstances.BURY_TIME ) && !VmState.BURIED.equals( vm.getState( ) ) ) {
         vm.setState( VmState.BURIED, Reason.BURIED );
       } else if ( ( vm.getSplitTime( ) > VmInstances.BURY_TIME ) && VmState.BURIED.equals( vm.getState( ) ) ) {
         VmInstances.deregister( vm.getName( ) );
-      }
-    }
-    if ( ( float ) Runtime.getRuntime( ).freeMemory( ) / ( float ) Runtime.getRuntime( ).maxMemory( ) < 0.10f ) {
-      for ( final VmInstance vm : VmInstances.listDisabledValues( ) ) {
-        if ( VmState.BURIED.equals( vm.getState( ) ) || ( vm.getSplitTime( ) > VmInstances.BURY_TIME ) ) {
-          VmInstances.deregister( vm.getInstanceId( ) );
-          LOG.info( EventRecord.here( VmInstances.class, EventType.FLUSH_CACHE, LogUtil.dumpObject( vm ) ) );
-        }
       }
     }
   }
