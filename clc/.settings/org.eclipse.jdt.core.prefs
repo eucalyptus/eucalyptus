@@ -1,4 +1,4 @@
-#Thu Aug 18 23:25:18 PDT 2011
+#Fri Aug 19 02:30:14 PDT 2011
 eclipse.preferences.version=1
 org.eclipse.jdt.core.builder.cleanOutputFolder=clean
 org.eclipse.jdt.core.builder.duplicateResourceTask=warning
@@ -35,7 +35,7 @@ org.eclipse.jdt.core.compiler.problem.indirectStaticAccess=ignore
 org.eclipse.jdt.core.compiler.problem.localVariableHiding=warning
 org.eclipse.jdt.core.compiler.problem.methodWithConstructorName=warning
 org.eclipse.jdt.core.compiler.problem.missingDeprecatedAnnotation=warning
-org.eclipse.jdt.core.compiler.problem.missingHashCodeMethod=error
+org.eclipse.jdt.core.compiler.problem.missingHashCodeMethod=warning
 org.eclipse.jdt.core.compiler.problem.missingOverrideAnnotation=warning
 org.eclipse.jdt.core.compiler.problem.missingOverrideAnnotationForInterfaceMethodImplementation=enabled
 org.eclipse.jdt.core.compiler.problem.missingSerialVersion=warning

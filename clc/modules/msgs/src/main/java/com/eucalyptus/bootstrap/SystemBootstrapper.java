@@ -68,6 +68,7 @@ import java.net.NetworkInterface;
 import java.security.Security;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Component.Transition;
 import com.eucalyptus.component.Components;
@@ -181,7 +182,14 @@ public class SystemBootstrapper {
         throw t;
       }
     } else {
-      SystemBootstrapper.runSystemStages( );
+      SystemBootstrapper.runSystemStages( new Predicate<Stage>( ) {
+        
+        @Override
+        public boolean apply( Stage input ) {
+          input.load( );
+          return true;
+        }
+      } );
       SystemBootstrapper.runComponentStages( Component.Transition.LOADING, Components.filterWhichCanLoad( ) );
     }
     return true;
@@ -197,7 +205,14 @@ public class SystemBootstrapper {
    * @throws Throwable
    */
   public boolean start( ) throws Throwable {
-    SystemBootstrapper.runSystemStages( );
+    SystemBootstrapper.runSystemStages( new Predicate<Stage>( ) {
+      
+      @Override
+      public boolean apply( Stage input ) {
+        input.start( );
+        return true;
+      }
+    } );
     for ( final Component c : Components.whichCanLoad( ) ) {
       Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
         @Override
@@ -227,13 +242,13 @@ public class SystemBootstrapper {
     }
   }
   
-  private static void runSystemStages( ) throws Throwable {
+  private static void runSystemStages( Predicate<Bootstrap.Stage> exec ) throws Throwable {
     try {
       // TODO: validation-api
       /** @NotNull */
       Bootstrap.Stage stage = Bootstrap.transition( );
       do {
-        stage.load( );
+        exec.apply( stage );
       } while ( ( stage = Bootstrap.transition( ) ) != null );
     } catch ( Throwable t ) {
       SystemBootstrapper.handleException( t );
