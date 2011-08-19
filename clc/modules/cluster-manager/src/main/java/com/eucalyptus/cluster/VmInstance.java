@@ -566,7 +566,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   
   public synchronized long getSplitTime( ) {
     final long time = System.currentTimeMillis( );
-    final long split = time - this.stopWatch;
+    final long split = time - ( this.stopWatch == null ? time : this.stopWatch );
     this.stopWatch = time;
     return split;
   }
