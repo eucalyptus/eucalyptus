@@ -671,7 +671,7 @@ public class Entities {
         
         @Override
         public void rollback( ) {
-          Logs.extreme( ).warn( "Child call to rollback() is ignored: " + Threads.currentStackRange( 0, 3 ) );
+          Logs.extreme( ).warn( "Child call to rollback() is ignored: " + Threads.currentStackRange( 2, 8 ) );
         }
         
         @Override
@@ -686,7 +686,7 @@ public class Entities {
         
         @Override
         public void commit( ) {
-          Logs.extreme( ).warn( "Child call to rollback() is ignored: " + Threads.currentStackRange( 0, 3 ) );
+          Logs.extreme( ).warn( "Child call to commit() is ignored: " + Threads.currentStackRange( 2, 8 ) );
         }
         
         @Override

@@ -467,11 +467,9 @@ public class VmInstances {
       db.commit( );
       return true;
     } catch ( RuntimeException ex ) {
-      Logs.exhaust( ).trace( ex, ex );
       db.rollback( );
       return false;
     } catch ( TransactionException ex ) {
-      Logs.exhaust( ).trace( ex, ex );
       db.rollback( );
       return false;
     }
