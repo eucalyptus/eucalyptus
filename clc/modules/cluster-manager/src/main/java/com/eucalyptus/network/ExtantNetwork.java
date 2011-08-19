@@ -187,6 +187,7 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
       }
     }
     if( ref != null ) {
+      Entities.merge( this );
       db.commit( );
       return ref;
     } else {

@@ -283,7 +283,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
           exNet = Entities.uniqueResult( ExtantNetwork.named( i ) );
         } catch ( Exception ex ) {
           try {
-            this.setExtantNetwork( exNet );
+            this.setExtantNetwork( ExtantNetwork.create( this, i ) );
             Entities.merge( this );
             db.commit( );
             return exNet;
