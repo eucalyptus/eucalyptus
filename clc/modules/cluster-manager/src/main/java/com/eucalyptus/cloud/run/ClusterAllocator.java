@@ -150,10 +150,7 @@ public class ClusterAllocator implements Runnable {
       this.cluster = Clusters.lookup( allocInfo.getPartition( ) );
       this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
       this.setupVolumeMessages( );
-      
-      for ( final NetworkGroup network : allocInfo.getNetworkGroups( ) ) {
-        this.setupNetworkMessages( network );
-      }
+      this.setupNetworkMessages( );
       for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
         this.setupVmMessages( token );
       }
@@ -193,11 +190,12 @@ public class ClusterAllocator implements Runnable {
   }
   
   @SuppressWarnings( "unchecked" )
-  private void setupNetworkMessages( final NetworkGroup networkGroup ) {
-    if ( networkGroup != null ) {
-      final Request<StartNetworkType, StartNetworkResponseType> callback = AsyncRequests.newRequest( new StartNetworkCallback( networkGroup ) );
+  private void setupNetworkMessages( ) throws NotEnoughResourcesAvailable {
+    NetworkGroup net = this.allocInfo.getPrimaryNetwork( );
+    if ( net != null ) {
+      final Request<StartNetworkType, StartNetworkResponseType> callback = AsyncRequests.newRequest( new StartNetworkCallback( net.extantNetwork( ) ) );
       this.messages.addRequest( State.CREATE_NETWORK, callback );
-      EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ), networkGroup.toString( ) ).debug( );
+      EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ), net.toString( ) ).debug( );
     }
   }
   

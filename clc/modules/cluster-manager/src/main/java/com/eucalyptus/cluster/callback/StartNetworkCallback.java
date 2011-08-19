@@ -63,11 +63,13 @@
  */
 package com.eucalyptus.cluster.callback;
 
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
@@ -85,37 +87,28 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
   
   private static Logger      LOG = Logger.getLogger( StartNetworkCallback.class );
   
-  private final NetworkGroup networkGroup;
-  private final Integer      tag;
+  private final ExtantNetwork extantNet;
   
-  public StartNetworkCallback( final NetworkGroup networkGroup ) {
-    this.networkGroup = networkGroup;
-    Integer ttag = -1;
-    try {
-      ttag = networkGroup.extantNetwork( ).getTag( );
-    } catch ( NotEnoughResourcesAvailable ex ) {
-      Logs.extreme( ).error( ex, ex );
-    }
-    this.tag = ttag;
-    StartNetworkType msg = new StartNetworkType( networkGroup.getOwnerUserId( ),
-                                                 this.tag,
-                                                 networkGroup.getNaturalId( ),
-                                                 networkGroup.getNaturalId( ) );
+  public StartNetworkCallback( final ExtantNetwork extantNet ) {
+    this.extantNet = extantNet;
+    StartNetworkType msg = new StartNetworkType( extantNet.getOwnerUserId( ),
+                                                 extantNet.getTag( ),
+                                                 extantNet.getNaturalId( ),
+                                                 extantNet.getNaturalId( ) );
     this.setRequest( msg );
   }
   
   @Override
   public void fire( StartNetworkResponseType msg ) {
+    EntityTransaction db = Entities.get( ExtantNetwork.class );
     try {
-      Transactions.one( this.networkGroup, new Callback<NetworkGroup>( ) {
-        
-        @Override
-        public void fire( NetworkGroup input ) {
-          input.setState( NetworkGroup.State.ACTIVE );
-        }
-      } );
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
+      NetworkGroup net = this.extantNet.getNetworkGroup( );
+      net.setState( NetworkGroup.State.ACTIVE );
+      Entities.merge( net );
+      db.commit( );
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+      db.rollback( );
     }
   }
   
