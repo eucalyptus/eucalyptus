@@ -179,7 +179,7 @@ public class ServiceContextManager {
     try {
       List<ComponentId> reloadComponentIds = this.shouldReload( );
       
-      if ( !reloadComponentIds.isEmpty( ) ) {
+      if ( !Bootstrap.isShuttingDown( ) && !reloadComponentIds.isEmpty( ) ) {
         if ( this.context != null ) {
           this.shutdown( );
         }

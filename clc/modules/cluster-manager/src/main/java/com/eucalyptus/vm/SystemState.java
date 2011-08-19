@@ -151,7 +151,7 @@ public class SystemState {
     for ( String vmId : unreportedVms ) {
       try {
         VmInstance vm = VmInstances.lookup( vmId );
-        if ( vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME && !VmState.STOPPED.equals( vm.getState( ) ) && !VmState.STOPPING.equals( vm.getState( ) ) ) {
+        if ( vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
           vm.setState( VmState.TERMINATED, Reason.EXPIRED );
         }
       } catch ( NoSuchElementException e ) {}
