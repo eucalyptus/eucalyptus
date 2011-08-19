@@ -76,7 +76,7 @@ public class CreateVolumeFromSnapshotTest extends TestCase {
 
     static BlockStorage blockStorage;
 
-    public void testCreateVolume() throws Throwable {
+    public void testCreateVolume() throws Exception {
 
         String userId = "admin";
 

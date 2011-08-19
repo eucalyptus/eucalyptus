@@ -109,7 +109,7 @@ public class ServiceTransitions {
   static Logger LOG = Logger.getLogger( ServiceTransitions.class );
   
   interface ServiceTransitionCallback {
-    public void fire( ServiceConfiguration parent ) throws Throwable;
+    public void fire( ServiceConfiguration parent ) throws Exception;
   }
   
   public static CheckedListenableFuture<ServiceConfiguration> transitionChain( final ServiceConfiguration configuration, final State goalState ) {
@@ -236,7 +236,7 @@ public class ServiceTransitions {
     if ( transition != null ) {
       try {
         return transition.call( );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
         return Futures.predestinedFailedFuture( ex );
       }
@@ -245,14 +245,14 @@ public class ServiceTransitions {
     }
   }
   
-  private static <T extends EmpyreanMessage> T sendEmpyreanRequest( final ServiceConfiguration parent, final EmpyreanMessage msg ) throws Throwable {
+  private static <T extends EmpyreanMessage> T sendEmpyreanRequest( final ServiceConfiguration parent, final EmpyreanMessage msg ) throws Exception {
     ServiceConfiguration config = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) );
     LOG.debug( "Sending request " + msg.getClass( ).getSimpleName( ) + " to " + parent.getFullName( ) );
     Throwable lastEx = null;
     try {
       T reply = ( T ) AsyncRequests.sendSync( config, msg );
       return reply;
-    } catch ( Throwable ex ) {
+    } catch ( Exception ex ) {
       LOG.error( ex, ex );
       throw ex;
     }
@@ -290,7 +290,7 @@ public class ServiceTransitions {
         trans.fire( parent );
       }
       transitionCallback.fire( );
-    } catch ( Throwable ex ) {
+    } catch ( Exception ex ) {
       if ( ServiceExceptions.filterExceptions( parent, ex ) ) {
         transitionCallback.fireException( ex );
         throw new UndeclaredThrowableException( ex );
@@ -364,17 +364,17 @@ public class ServiceTransitions {
     LOAD {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {}
+      public void fire( final ServiceConfiguration parent ) throws Exception {}
     },
     DESTROY {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {}
+      public void fire( final ServiceConfiguration parent ) throws Exception {}
     },
     CHECK {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         DescribeServicesResponseType response = ServiceTransitions.sendEmpyreanRequest( parent, new DescribeServicesType( ) );
         ServiceStatusType status = Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>( ) {
           
@@ -401,7 +401,7 @@ public class ServiceTransitions {
     START {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         StartServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new StartServiceType( ) {
           {
             this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
@@ -417,7 +417,7 @@ public class ServiceTransitions {
     ENABLE {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         EnableServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new EnableServiceType( ) {
           {
             this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
@@ -434,7 +434,7 @@ public class ServiceTransitions {
     DISABLE {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         DisableServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new DisableServiceType( ) {
           {
             this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
@@ -450,7 +450,7 @@ public class ServiceTransitions {
     STOP {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         StopServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new StopServiceType( ) {
           {
             this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
@@ -470,7 +470,7 @@ public class ServiceTransitions {
     LOAD {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         parent.lookupComponent( ).getBootstrapper( ).load( );
       }
       
@@ -478,18 +478,18 @@ public class ServiceTransitions {
     DESTROY {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         parent.lookupComponent( ).getBootstrapper( ).destroy( );
       }
     },
     CHECK {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
           parent.lookupComponent( ).getBootstrapper( ).check( );
           parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex, ex );
           throw ex;
         }
@@ -498,7 +498,7 @@ public class ServiceTransitions {
     START {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         parent.lookupComponent( ).getBootstrapper( ).start( );
         parent.lookupComponent( ).getBuilder( ).fireStart( parent );
       }
@@ -506,7 +506,7 @@ public class ServiceTransitions {
     ENABLE {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         CHECK.fire( parent );
         parent.lookupComponent( ).getBootstrapper( ).enable( );
         parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
@@ -515,7 +515,7 @@ public class ServiceTransitions {
     DISABLE {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
 //        if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
 //          parent.lookupComponent( ).getBootstrapper( ).check( );
 //          parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
@@ -527,7 +527,7 @@ public class ServiceTransitions {
     STOP {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         parent.lookupComponent( ).getBootstrapper( ).stop( );
         parent.lookupComponent( ).getBuilder( ).fireStop( parent );
       }
@@ -539,17 +539,17 @@ public class ServiceTransitions {
     LOAD {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {}
+      public void fire( final ServiceConfiguration parent ) throws Exception {}
     },
     DESTROY {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {}
+      public void fire( final ServiceConfiguration parent ) throws Exception {}
     },
     CHECK {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
           parent.lookupBuilder( ).fireCheck( parent );
         } catch ( Exception ex ) {
@@ -561,7 +561,7 @@ public class ServiceTransitions {
     START {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
           parent.lookupComponent( ).getBuilder( ).fireStart( parent );
         } catch ( Exception ex ) {
@@ -572,7 +572,7 @@ public class ServiceTransitions {
     ENABLE {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
           parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
         } catch ( Exception ex ) {
@@ -584,7 +584,7 @@ public class ServiceTransitions {
     DISABLE {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
           parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
         } catch ( Exception ex ) {
@@ -595,7 +595,7 @@ public class ServiceTransitions {
     STOP {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
           parent.lookupComponent( ).getBuilder( ).fireStop( parent );
         } catch ( Exception ex ) {
@@ -701,7 +701,7 @@ public class ServiceTransitions {
             }
             PropertyDirectory.addProperty( addProp );
           }
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
       }
@@ -719,7 +719,7 @@ public class ServiceTransitions {
               PropertyDirectory.removeProperty( prop );
             }
           }
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
       }

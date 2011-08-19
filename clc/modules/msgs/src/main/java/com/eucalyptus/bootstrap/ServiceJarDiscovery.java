@@ -195,9 +195,9 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
    * @param candidate
    * @return true if the candidate is accepted.
    * 
-   * @throws Throwable
+   * @throws Exception
    */
-  public abstract boolean processClass( Class candidate ) throws Throwable;
+  public abstract boolean processClass( Class candidate ) throws Exception;
   
   public Double getDistinctPriority( ) {
     return this.getPriority( ) + ( .1d / this.getClass( ).hashCode( ) );

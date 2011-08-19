@@ -29,7 +29,7 @@ public class Transitions {
       public void leave( P parent ) {
         try {
           p.fire( parent );
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
       }
@@ -115,7 +115,7 @@ public class Transitions {
         try {
           callback.fire( parent );
           transitionCallback.fire( );
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex );
           transitionCallback.fireException( ex );
         }
@@ -142,7 +142,7 @@ public class Transitions {
           } else {
             transitionCallback.fire( );
           }
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex );
           transitionCallback.fireException( ex );
         }

@@ -114,7 +114,7 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
           input.setState( NetworkGroup.State.ACTIVE );
         }
       } );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( e, e );
     }
   }
@@ -124,7 +124,7 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
     try {
       msg.setNameserver( edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getNameserverAddress( ) );
       msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( e, e );
     }
   }

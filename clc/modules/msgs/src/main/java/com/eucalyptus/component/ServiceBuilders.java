@@ -85,7 +85,7 @@ public class ServiceBuilders {
     }
     
     @Override
-    public boolean processClass( Class candidate ) throws Throwable {
+    public boolean processClass( Class candidate ) throws Exception {
       if( ServiceBuilder.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) ) && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
         /** GRZE: this implies that service builder is a singleton **/
         ServiceBuilder b = ( ServiceBuilder ) candidate.newInstance( );
@@ -139,7 +139,7 @@ public class ServiceBuilders {
   public static ServiceBuilder<? extends ServiceConfiguration> lookup( Class<? extends ComponentId> componentIdClass ) {
     try {
       return lookup( componentIdClass.newInstance( ) );
-    } catch ( Throwable ex ) {
+    } catch ( Exception ex ) {
       LOG.error( ex , ex );
       throw new RuntimeException( ex );
     }

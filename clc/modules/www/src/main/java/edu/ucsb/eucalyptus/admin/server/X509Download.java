@@ -147,7 +147,7 @@ public class X509Download extends HttpServlet {
       op.write( x509zip );
       op.flush( );
       
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.error( e, e );
     }
   }

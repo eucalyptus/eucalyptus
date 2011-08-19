@@ -215,7 +215,7 @@ public class AddressManager {
     VmInstance oldVm = null;
     if ( address.isAssigned( ) && !address.isPending( ) ) {
       try {
-        oldVm = VmInstances.getInstance( ).lookup( address.getInstanceId( ) );
+        oldVm = VmInstances.lookup( address.getInstanceId( ) );
       } catch ( Exception e ) {
         LOG.error( e, e );
       }
@@ -239,7 +239,7 @@ public class AddressManager {
           AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
             public void fire( ) {
               try {
-                Addresses.system( VmInstances.getInstance( ).lookup( vmId ) );
+                Addresses.system( VmInstances.lookup( vmId ) );
               } catch ( Exception e ) {
                 LOG.debug( e, e );
               }
@@ -250,14 +250,14 @@ public class AddressManager {
             @Override
             public void fire( ) {
               try {
-                Addresses.system( VmInstances.getInstance( ).lookup( vmId ) );
+                Addresses.system( VmInstances.lookup( vmId ) );
               } catch ( Exception e ) {
                 LOG.debug( e, e );
               }
             }
           } ).dispatch( address.getPartition( ) );
         }
-      } catch ( Throwable e ) {
+      } catch ( Exception e ) {
         LOG.debug( e, e );
       }
     }

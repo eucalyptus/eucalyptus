@@ -104,7 +104,7 @@ public class Transactions {
       db.rollback( );
       Logs.extreme( ).error( e, e );
       throw e;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Logs.extreme( ).error( e, e );
       throw new TransactionInternalException( e );
@@ -160,7 +160,7 @@ public class Transactions {
       } else {
         throw new TransactionCallbackException( e.getCause( ) );
       }
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       db.rollback( );
       throw Transactions.transformException( t );
     } finally {
@@ -200,7 +200,7 @@ public class Transactions {
       db.rollback( );
       Logs.extreme( ).error( e, e );
       throw e;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       throw Transactions.transformException( e );
     } finally {
@@ -232,7 +232,7 @@ public class Transactions {
       db.rollback( );
       Logs.extreme( ).error( e, e );
       throw e;
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       db.rollback( );
       throw Transactions.transformException( t );
     } finally {
@@ -270,7 +270,7 @@ public class Transactions {
       db.rollback( );
       Logs.extreme( ).error( e, e );
       throw e;
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       db.rollback( );
       throw Transactions.transformException( t );
     } finally {

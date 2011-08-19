@@ -117,7 +117,7 @@ public class PolicyAnnotationRegistry extends ServiceJarDiscovery {
   }
   
   @Override
-  public boolean processClass( Class candidate ) throws Throwable {
+  public boolean processClass( Class candidate ) throws Exception {
     if ( Ats.from( candidate ).has( PolicyResourceType.class ) ) {
       PolicyResourceType policyRscType = Ats.from( candidate ).get( PolicyResourceType.class );
       classToPolicyRscType.put( candidate, policyRscType );

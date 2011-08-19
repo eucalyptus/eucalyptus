@@ -44,7 +44,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
         try {
           cb.fireException( t );
           AsyncRequest.this.result.setException( t );
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           AsyncRequest.this.result.setException( t );
           LOG.error( ex, ex );
         }
@@ -65,7 +65,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
           AsyncRequest.this.result.set( r );
           try {
             AsyncRequest.this.callbackSequence.fire( r );
-          } catch ( Throwable ex ) {
+          } catch ( Exception ex ) {
             LOG.error( ex, ex );
             AsyncRequest.this.result.setException( ex );
           }
@@ -168,7 +168,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
           RequestException ex = new RequestException( "Error occured attempting to fire the request.", this.getRequest( ) );
           try {
             this.result.setException( ex );
-          } catch ( Throwable t ) {}
+          } catch ( Exception t ) {}
         }
       } else {
         try {
@@ -194,7 +194,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
     Logs.exhaust( ).trace( "initialize: endpoint " + config );
     try {
       this.wrapperCallback.initialize( this.request );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       Logs.exhaust( ).error( e.getMessage( ), e );
       RequestException ex = ( e instanceof RequestException )
         ? ( RequestException ) e

@@ -125,7 +125,6 @@ import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.vm.BundleTask;
-import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.VmState;
 import com.eucalyptus.vm.VmType;
 import com.google.common.base.Function;
@@ -1098,11 +1097,11 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   
   public enum Reason {
     NORMAL( "" ),
-    EXPIRED( "Instance expired after not being reported for %s ms.", SystemState.SHUT_DOWN_TIME ),
+    EXPIRED( "Instance expired after not being reported for %s ms.", VmInstances.SHUT_DOWN_TIME ),
     FAILED( "The instance failed to start on the NC." ),
     USER_TERMINATED( "User initiated terminate." ),
     USER_STOPPED( "User initiated stop." ),
-    BURIED( "Instance buried after timeout of %s ms.", SystemState.BURY_TIME ),
+    BURIED( "Instance buried after timeout of %s ms.", VmInstances.BURY_TIME ),
     APPEND( "" );
     private String   message;
     private Object[] args;

@@ -10,7 +10,7 @@ public class ConditionOpDiscovery extends ServiceJarDiscovery {
   
   @SuppressWarnings( "unchecked" )
   @Override
-  public boolean processClass( Class candidate ) throws Throwable {
+  public boolean processClass( Class candidate ) throws Exception {
     if ( ConditionOp.class.isAssignableFrom( candidate ) && Ats.from( candidate ).has( PolicyCondition.class ) ) {
       String[] conditionOps = Ats.from( candidate ).get( PolicyCondition.class ).value( );
       for ( String op : conditionOps ) {

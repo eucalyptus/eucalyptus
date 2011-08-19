@@ -97,7 +97,7 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType, Atta
   @Override
   public void initialize( AttachVolumeType msg ) {
     try {
-      VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
+      VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
       vm.updateVolumeAttachment( this.getRequest( ).getVolumeId( ), "attached" );
       LOG.debug( "Volumes marked as attaching " + vm.transformVolumeAttachments( Functions.toStringFunction( ) ) + " to " + vm.getInstanceId( ) );
     } catch ( NoSuchElementException e1 ) {
@@ -111,7 +111,7 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType, Atta
       this.fireException( new FailedRequestException( "Got _return=false", this.getRequest( ) ) );
     } else {
       try {
-        VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
+        VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
         vm.updateVolumeAttachment( this.getRequest( ).getVolumeId( ), "attached" );
 //        LOG.debug( "Volumes marked as attached " + vm.collectVolumeAttachments( Predicates.alwaysTrue( ) ) + " to " + vm.getInstanceId( ) );
       } catch ( NoSuchElementException e1 ) {
@@ -125,7 +125,7 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType, Atta
     LOG.debug( e, e );
     LOG.debug( "Trying to remove invalid volume attachment " + this.getRequest( ).getVolumeId( ) + " from instance " + this.getRequest( ).getInstanceId( ) );
     try {
-      VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
+      VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
       Cluster cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
       ServiceConfiguration sc = Partitions.lookupService( Storage.class, cluster.getConfiguration( ).getPartition( ) );
       /** send a forcible detach to ensure any vol session state is cleaned up **/
@@ -139,7 +139,7 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType, Atta
             this.setForce( true );
           }
         } );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
       /** clean up SC session state **/

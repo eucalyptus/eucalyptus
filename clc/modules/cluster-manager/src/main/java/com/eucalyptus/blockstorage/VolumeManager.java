@@ -180,7 +180,7 @@ public class VolumeManager {
       if ( !Types.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VOLUME, request.getVolumeId( ), vol.getOwner( ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to delete volume by " + ctx.getUser( ).getName( ) );
       }
-      for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
+      for ( VmInstance vm : VmInstances.listValues( ) ) {
         try {
           vm.lookupVolumeAttachment( request.getVolumeId( ) );
           db.rollback( );
@@ -231,7 +231,7 @@ public class VolumeManager {
     try {
       
       final Map<String, AttachedVolume> attachedVolumes = new HashMap<String, AttachedVolume>( );
-      for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
+      for ( VmInstance vm : VmInstances.listValues( ) ) {
         vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
           @Override
           public boolean apply( AttachedVolume arg0 ) {
@@ -268,7 +268,7 @@ public class VolumeManager {
         LOG.debug( e, e );
       }
       db.commit( );
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       db.commit( );
     }
     return reply;
@@ -283,7 +283,7 @@ public class VolumeManager {
     }
     VmInstance vm = null;
     try {
-      vm = VmInstances.getInstance( ).lookup( request.getInstanceId( ) );
+      vm = VmInstances.lookup( request.getInstanceId( ) );
     } catch ( NoSuchElementException e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId( ) );
@@ -311,7 +311,7 @@ public class VolumeManager {
     } catch ( NoSuchElementException ex1 ) {
       /** no attachment **/
     }
-    for ( VmInstance iter : VmInstances.getInstance( ).listValues( ) ) {
+    for ( VmInstance iter : VmInstances.listValues( ) ) {
       try {
         iter.lookupVolumeAttachment( volumeId );
         throw new EucalyptusCloudException( "Volume already attached: " + request.getVolumeId( ) );
@@ -386,7 +386,7 @@ public class VolumeManager {
     
     VmInstance vm = null;
     AttachedVolume volume = null;
-    for ( VmInstance iter : VmInstances.getInstance( ).listValues( ) ) {
+    for ( VmInstance iter : VmInstances.listValues( ) ) {
       try {
         volume = iter.lookupVolumeAttachment( request.getVolumeId( ) );
         vm = iter;

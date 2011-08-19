@@ -96,7 +96,7 @@ public class VmReplyTransform {
                                                                Lists.newArrayList( networkNames ) );
     
     for ( ResourceToken allocToken : allocInfo.getAllocationTokens( ) ) {
-      VmInstance vm = VmInstances.getInstance( ).lookup( allocToken.getInstanceId( ) );
+      VmInstance vm = VmInstances.lookup( allocToken.getInstanceId( ) );
       RunningInstancesItemType runVm = vm.getAsRunningInstanceItemType( );
       reservation.getInstancesSet( ).add( runVm );
     }

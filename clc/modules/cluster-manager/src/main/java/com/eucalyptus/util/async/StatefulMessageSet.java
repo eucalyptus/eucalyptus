@@ -84,7 +84,7 @@ public class StatefulMessageSet<E extends Enum<E>> {
         if ( o != null ) {
           EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), cluster.getName( ), o.getClass( ).getSimpleName( ) ).info( );
         }
-      } catch ( Throwable t ) {
+      } catch ( Exception t ) {
         EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, currentState.name( ), cluster.getName( ), t.getClass( ).getSimpleName( ) ).info( );
         LOG.debug( t, t );
         nextState = this.rollback( );

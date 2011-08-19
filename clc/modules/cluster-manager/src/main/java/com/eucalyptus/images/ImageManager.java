@@ -274,7 +274,7 @@ public class ImageManager {
     reply.set_return( false );
     VmInstance vm = null;
     try {
-      vm = VmInstances.getInstance( ).lookup( request.getInstanceId( ) );
+      vm = VmInstances.lookup( request.getInstanceId( ) );
 //ASAP: FIXME: GRZE: RESTORE!
 //      EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
 //      try {
@@ -435,7 +435,7 @@ public class ImageManager {
     Context ctx = Contexts.lookup( );
     VmInstance vm = null;
     try {
-      vm = VmInstances.getInstance( ).lookup( request.getInstanceId( ) );
+      vm = VmInstances.lookup( request.getInstanceId( ) );
     } catch ( NoSuchElementException e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId( ) );

@@ -91,7 +91,7 @@ public class SystemUtil {
 				throw new EucalyptusCloudException(error.getReturnValue());
 			}
 			return output.getReturnValue();
-		} catch (Throwable t) {
+		} catch (Exception t) {
 			LOG.error(t, t);
 		}
 		return "";
@@ -113,7 +113,7 @@ public class SystemUtil {
 			output.start();
 			int returnValue = proc.waitFor();
 			return returnValue;
-		} catch (Throwable t) {
+		} catch (Exception t) {
 			LOG.error(t, t);
 		}
 		return -1;

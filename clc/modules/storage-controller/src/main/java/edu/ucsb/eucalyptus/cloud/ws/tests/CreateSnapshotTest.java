@@ -85,7 +85,7 @@ public class CreateSnapshotTest extends TestCase {
 
     static BlockStorage blockStorage;
 
-    public void testCreateSnapshot() throws Throwable {
+    public void testCreateSnapshot() throws Exception {
 
         String userId = "admin";
 
@@ -103,7 +103,7 @@ public class CreateSnapshotTest extends TestCase {
         while(true);
     }
 
-    public void testSendDummy() throws Throwable {
+    public void testSendDummy() throws Exception {
         HttpClient httpClient = new HttpClient();
         String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/meh/ttt.wsl?gg=vol&hh=snap";
 
@@ -118,7 +118,7 @@ public class CreateSnapshotTest extends TestCase {
         method.releaseConnection();
     }
 
-    public void testGetSnapshotInfo() throws Throwable {
+    public void testGetSnapshotInfo() throws Exception {
         HttpClient httpClient = new HttpClient();
         String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/snapset-FuXLn1MUHJ66BkK0/snap-zVl2kZJmjhxnEg..";
 

@@ -91,7 +91,7 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
       try {
         EventRecord.here( this.getClass( ), EventType.CALLBACK, "" + cb.getClass( ), "fire(" + response.getClass( ).getCanonicalName( ) + ")" ).debug( );
         cb.fire( response );
-      } catch ( Throwable t ) {
+      } catch ( Exception t ) {
         this.LOG.error( "Exception occurred while trying to call: " + cb.getClass( ) + ".apply( " + t.getMessage( ) + " )" );
         this.LOG.error( t, t );
       }
@@ -110,7 +110,7 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
       try {
         EventRecord.here( this.getClass( ), EventType.CALLBACK, "" + cb.getClass( ), "fireException(" + t.getClass( ).getCanonicalName( ) + ")" ).debug( );
         cb.fireException( t );
-      } catch ( Throwable t2 ) {
+      } catch ( Exception t2 ) {
         this.LOG.error( "Exception occurred while trying to call: " + cb.getClass( ) + ".failure( " + t.getMessage( ) + " )" );
         this.LOG.error( t2, t2 );
       }

@@ -237,7 +237,7 @@ public class LdapSync {
                                   lic.getUserIdAttribute( ),
                                   lic.getGroupsSelection( ) );
       users = loadLdapUsers( ldap, lic );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.error( e, e );
       LOG.error( "Failed to sync with LDAP", e );
       return;
@@ -296,7 +296,7 @@ public class LdapSync {
         // Remaining accounts are obsolete
         removeObsoleteAccounts( oldAccountSet );
       }
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.error( e, e );
       LOG.error( "Error in rebuilding local auth database", e );
     }

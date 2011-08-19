@@ -226,13 +226,13 @@ public class ClusterEndpoint implements Startable {
                                                                                    LOG.info( val );
                                                                                  }
                                                                                  retList.add( new ClusterInfoType( "================== VMs", "" ) );
-                                                                                 for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
+                                                                                 for ( VmInstance vm : VmInstances.listValues( ) ) {
                                                                                    String val = vm.toString( );
                                                                                    retList.add( new ClusterInfoType( val, "" ) );
                                                                                    LOG.info( val );
                                                                                  }
                                                                                  retList.add( new ClusterInfoType( "================== Disabled VMs", "" ) );
-                                                                                 for ( VmInstance vm : VmInstances.getInstance( ).listDisabledValues( ) ) {
+                                                                                 for ( VmInstance vm : VmInstances.listDisabledValues( ) ) {
                                                                                    String val = vm.toString( );
                                                                                    retList.add( new ClusterInfoType( val, "" ) );
                                                                                    LOG.info( val );

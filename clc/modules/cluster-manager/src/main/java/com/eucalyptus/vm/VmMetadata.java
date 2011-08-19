@@ -147,7 +147,7 @@ public class VmMetadata {
       } else {
         return null;
       }
-    } catch ( Throwable ex ) {
+    } catch ( Exception ex ) {
       String errorMsg = "Metadata request failed: " + path + ( Logs.isExtrrreeeme()
         ? " cause: " + ex.getMessage( )
         : "" );

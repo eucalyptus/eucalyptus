@@ -87,6 +87,8 @@ import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
@@ -118,16 +120,13 @@ import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
+@ConfigurableClass( root = "vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
 public class VmInstances {
-  private static Logger      LOG       = Logger.getLogger( VmInstances.class );
-  private static VmInstances singleton = getInstance( );
-  
-  public static VmInstances getInstance( ) {
-    synchronized ( VmInstances.class ) {
-      if ( singleton == null ) singleton = new VmInstances( );
-    }
-    return singleton;
-  }
+  @ConfigurableField( description = "Amount of time (in milliseconds) before a VM which is not reported by a cluster will be marked as terminated.", initial = "" + 10 * 60 * 1000 )
+  public static Integer SHUT_DOWN_TIME = -1;
+  @ConfigurableField( description = "Amount of time (in milliseconds) that a terminated VM will continue to be reported.", initial = "" + 60 * 60 * 1000 )
+  public static Integer BURY_TIME      = -1;
+  private static Logger LOG            = Logger.getLogger( VmInstances.class );
   
   enum VmIsOperational implements Predicate<VmInstance> {
     INSTANCE;
@@ -202,22 +201,21 @@ public class VmInstances {
     return Iterables.find( listValues( ), vmWithPublicAddress( ip ) );
   }
   
-  public VmInstance lookupByBundleId( final String bundleId ) throws NoSuchElementException {
-    for ( final VmInstance vm : this.listValues( ) ) {
-      if ( vm.getBundleTask( ) == null ) {
-        continue;
-      } else if ( bundleId.equals( vm.getBundleTask( ).getBundleId( ) ) ) {
-        return vm;
+  public static Predicate<VmInstance> withBundleId( final String bundleId ) {
+    return new Predicate<VmInstance>( ) {
+      @Override
+      public boolean apply( VmInstance vm ) {
+        return vm.getBundleTask( ) != null && bundleId.equals( vm.getBundleTask( ).getBundleId( ) );
       }
+    };
+  }
+  
+  public static VmInstance lookupByBundleId( final String bundleId ) throws NoSuchElementException {
+    try {
+      return Iterables.find( listValues( ), withBundleId( bundleId ) );
+    } catch ( NoSuchElementException ex ) {
+      return Iterables.find( listDisabledValues( ), withBundleId( bundleId ) );
     }
-    for ( final VmInstance vm : this.listDisabledValues( ) ) {
-      if ( vm.getBundleTask( ) == null ) {
-        continue;
-      } else if ( bundleId.equals( vm.getBundleTask( ).getBundleId( ) ) ) {
-        return vm;
-      }
-    }
-    throw new NoSuchElementException( "Can't find vm with bundle task id:" + bundleId + " in " + this.getClass( ).getSimpleName( ) );
   }
   
   public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final Long networkIndex, final String networkFqName, final Cluster cluster ) {
@@ -319,7 +317,7 @@ public class VmInstances {
   }
   
   public static VmInstance restrictedLookup( final BaseMessage request, final String instanceId ) throws EucalyptusCloudException {
-    final VmInstance vm = VmInstances.getInstance( ).lookup( instanceId ); //TODO: test should throw error.
+    final VmInstance vm = VmInstances.lookup( instanceId ); //TODO: test should throw error.
     final Context ctx = Contexts.lookup( );
     Account addrAccount = null;
     try {
@@ -335,17 +333,17 @@ public class VmInstances {
   }
   
   public static void flushBuried( ) {
-    for ( final VmInstance vm : VmInstances.getInstance( ).listDisabledValues( ) ) {
-      if ( ( vm.getSplitTime( ) > SystemState.SHUT_DOWN_TIME ) && !VmState.BURIED.equals( vm.getState( ) ) ) {
+    for ( final VmInstance vm : VmInstances.listDisabledValues( ) ) {
+      if ( ( vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) && !VmState.BURIED.equals( vm.getState( ) ) ) {
         vm.setState( VmState.BURIED, Reason.BURIED );
-      } else if ( ( vm.getSplitTime( ) > SystemState.BURY_TIME ) && VmState.BURIED.equals( vm.getState( ) ) ) {
-        VmInstances.getInstance( ).deregister( vm.getName( ) );
+      } else if ( ( vm.getSplitTime( ) > VmInstances.BURY_TIME ) && VmState.BURIED.equals( vm.getState( ) ) ) {
+        VmInstances.deregister( vm.getName( ) );
       }
     }
     if ( ( float ) Runtime.getRuntime( ).freeMemory( ) / ( float ) Runtime.getRuntime( ).maxMemory( ) < 0.10f ) {
-      for ( final VmInstance vm : VmInstances.getInstance( ).listDisabledValues( ) ) {
-        if ( VmState.BURIED.equals( vm.getState( ) ) || ( vm.getSplitTime( ) > SystemState.BURY_TIME ) ) {
-          VmInstances.getInstance( ).deregister( vm.getInstanceId( ) );
+      for ( final VmInstance vm : VmInstances.listDisabledValues( ) ) {
+        if ( VmState.BURIED.equals( vm.getState( ) ) || ( vm.getSplitTime( ) > VmInstances.BURY_TIME ) ) {
+          VmInstances.deregister( vm.getInstanceId( ) );
           LOG.info( EventRecord.here( VmInstances.class, EventType.FLUSH_CACHE, LogUtil.dumpObject( vm ) ) );
         }
       }

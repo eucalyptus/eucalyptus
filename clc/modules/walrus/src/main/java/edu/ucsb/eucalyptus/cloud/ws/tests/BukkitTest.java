@@ -74,7 +74,7 @@ import junit.framework.TestCase;
 public class BukkitTest extends TestCase {
 
 	static WalrusControl bukkit;
-	public void testWalrusControl() throws Throwable {
+	public void testWalrusControl() throws Exception {
 
 		String bucketName = "halo" + Hashes.getRandom(6);
 		String userId = "admin";

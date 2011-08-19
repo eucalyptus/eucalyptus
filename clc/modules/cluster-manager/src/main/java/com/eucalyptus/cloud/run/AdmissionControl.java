@@ -131,17 +131,17 @@ public class AdmissionControl {
         } else {
           throw new EucalyptusCloudException( e.getMessage( ), e );
         }
-      } catch ( Throwable e ) {
+      } catch ( Exception e ) {
         LOG.debug( e, e );
         try {
           allocator.fail( allocInfo, e );
-        } catch ( Throwable e1 ) {
+        } catch ( Exception e1 ) {
           LOG.debug( e1, e1 );
         }
         for ( ResourceAllocator rollback : Iterables.reverse( finished ) ) {
           try {
             rollback.fail( allocInfo, e );
-          } catch ( Throwable e1 ) {
+          } catch ( Exception e1 ) {
             LOG.debug( e1, e1 );
           }
         }
@@ -202,7 +202,7 @@ public class AdmissionControl {
                 
                 List<ResourceToken> tokens = allocInfo.requestResourceToken( tryAmount, maxAmount );
                 remaining -= tokens.size( );
-              } catch ( Throwable t ) {
+              } catch ( Exception t ) {
                 if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) || remaining > 0 ) {
                   allocInfo.abort( );
                   throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );

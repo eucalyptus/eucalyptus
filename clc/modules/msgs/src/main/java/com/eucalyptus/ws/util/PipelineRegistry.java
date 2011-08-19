@@ -160,7 +160,7 @@ public class PipelineRegistry {
   public static class PipelineDiscovery extends ServiceJarDiscovery {
     
     @Override
-    public boolean processClass( Class candidate ) throws Throwable {
+    public boolean processClass( Class candidate ) throws Exception {
       if ( FilteredPipeline.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) )
            && !Modifier.isInterface( candidate.getModifiers( ) ) && Ats.from( candidate ).has( ComponentPart.class ) ) {
         try {

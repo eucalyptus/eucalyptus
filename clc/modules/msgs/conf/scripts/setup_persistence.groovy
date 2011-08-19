@@ -143,7 +143,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
   // Register the context
   try {
     PersistenceContexts.registerPersistenceContext("${ctx_simplename}", config)
-  } catch( Throwable t ) {
+  } catch( Exception t ) {
     t.printStackTrace();
     System.exit(1)
   }

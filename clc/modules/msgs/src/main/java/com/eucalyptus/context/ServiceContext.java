@@ -136,7 +136,7 @@ public class ServiceContext {
       } else {
         return ( T ) reply.getPayload( );
       }
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       throw Exceptions.trace( new ServiceDispatchException( "Failed to send message " + msg.getClass( ).getSimpleName( ) + " to service " + dest
                                                                   + " because: " + e.getMessage( ), e ) );
     } finally {

@@ -37,7 +37,7 @@ public class PropertyDirectory {
           prop = b.buildProperty( c, field );
         } catch ( ConfigurablePropertyException e ) {
           throw e;
-        } catch ( Throwable t ) {
+        } catch ( Exception t ) {
           LOG.error( "Failed to prepare configurable field: " + c.getCanonicalName( ) + "." + field.getName( ) );
           System.exit( 1 );
         }

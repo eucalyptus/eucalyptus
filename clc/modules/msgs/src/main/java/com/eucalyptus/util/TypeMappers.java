@@ -44,7 +44,7 @@ public class TypeMappers {
   public static class TypeMapperDiscovery extends ServiceJarDiscovery {
     
     @Override
-    public boolean processClass( Class candidate ) throws Throwable {
+    public boolean processClass( Class candidate ) throws Exception {
       if ( Ats.from( candidate ).has( TypeMapper.class ) && Function.class.isAssignableFrom( candidate ) ) {
         TypeMapper mapper = Ats.from( candidate ).get( TypeMapper.class );
         Class[] types = mapper.value( );

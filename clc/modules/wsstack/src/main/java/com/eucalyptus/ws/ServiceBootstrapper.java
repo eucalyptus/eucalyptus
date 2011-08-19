@@ -163,7 +163,7 @@ public class ServiceBootstrapper extends Bootstrapper {
         } catch ( ServiceRegistrationException ex ) {
           config.error( ex );
           return false;
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           Exceptions.trace( "load(): Building service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );
           config.error( ex );
           return false;
@@ -215,7 +215,7 @@ public class ServiceBootstrapper extends Bootstrapper {
           for ( ServiceConfiguration config : Iterables.filter( builder.list( ), ShouldLoad.INSTANCE ) ) {
             try {
               predicate.apply( config );
-            } catch ( Throwable ex ) {
+            } catch ( Exception ex ) {
               LOG.error( ex, ex );
             }
           }

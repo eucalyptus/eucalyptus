@@ -144,7 +144,7 @@ public class ReplyQueue {
     } else if ( payload instanceof String ) {
       try {
         ret = ( BaseMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( ( String ) payload );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex , ex );
       }
     } else {
@@ -156,7 +156,7 @@ public class ReplyQueue {
       } else if ( payload instanceof String ) {
         try {
           ret = ( BaseMessage ) BindingManager.getBinding( "msgs_eucalyptus_com" ).fromOM( ( String ) payload );
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex , ex );
         }
       }

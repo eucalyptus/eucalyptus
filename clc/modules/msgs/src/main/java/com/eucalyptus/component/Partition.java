@@ -283,7 +283,7 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
       out.write( SystemIds.tunnelPassword( ) );
       out.flush( );
       out.close( );
-    } catch ( Throwable ex ) {
+    } catch ( Exception ex ) {
       LOG.error( ex, ex );
       throw new RuntimeException( "Failed to write partition credentials to disk: " + this, ex );
     } finally {

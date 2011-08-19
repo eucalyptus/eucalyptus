@@ -89,7 +89,7 @@ public class DatabaseUserProxy implements User {
           }
         }
         db.commit( );
-      } catch ( Throwable t ) {
+      } catch ( Exception t ) {
         Debugging.logError( LOG, t, "Failed to setName for " + this.delegate );
         db.rollback( );
         throw new AuthException( t );
@@ -334,7 +334,7 @@ public class DatabaseUserProxy implements User {
       AccessKeyEntity key = db.getUnique( AccessKeyEntity.newInstanceWithAccessKeyId( keyId ) );
       db.commit( );
       return new DatabaseAccessKeyProxy( key );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get access key " + keyId );
       throw new AuthException( e );
@@ -350,7 +350,7 @@ public class DatabaseUserProxy implements User {
       user.getKeys( ).remove( keyEntity );
       db.recast( AccessKeyEntity.class ).delete( keyEntity );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get delete key " + keyId );
       throw new AuthException( e );
@@ -367,7 +367,7 @@ public class DatabaseUserProxy implements User {
       db.recast( AccessKeyEntity.class ).add( keyEntity );
       db.commit( );
       return new DatabaseAccessKeyProxy( keyEntity );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get create new access key: " + e.getMessage( ) );
       throw new AuthException( e );
@@ -401,7 +401,7 @@ public class DatabaseUserProxy implements User {
       CertificateEntity cert = db.getUnique( CertificateEntity.newInstanceWithId( certificateId ) );
       db.commit( );
       return new DatabaseCertificateProxy( cert );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get signing certificate " + certificateId );
       throw new AuthException( e );
@@ -420,7 +420,7 @@ public class DatabaseUserProxy implements User {
       certEntity.setUser( user );
       db.commit( );
       return new DatabaseCertificateProxy( certEntity );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get add certificate " + cert );
       throw new AuthException( e );
@@ -436,7 +436,7 @@ public class DatabaseUserProxy implements User {
       user.getCertificates( ).remove( certificateEntity );
       db.recast( CertificateEntity.class ).delete( certificateEntity );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get delete certificate " + certficateId );
       throw new AuthException( e );
@@ -521,7 +521,7 @@ public class DatabaseUserProxy implements User {
       }
       db.commit( );
       return results;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get policies for " + this.delegate );
       throw new AuthException( "Failed to get policies", e );
@@ -555,7 +555,7 @@ public class DatabaseUserProxy implements User {
       }
       db.commit( );
       return new DatabasePolicyProxy( parsedPolicy );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to attach policy for " + this.delegate.getName( ) );
       throw new AuthException( "Failed to attach policy", e );
@@ -579,7 +579,7 @@ public class DatabaseUserProxy implements User {
         db.recast( PolicyEntity.class ).delete( policy );
       }
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to remove policy " + name + " in " + this.delegate );
       throw new AuthException( "Failed to remove policy", e );
@@ -613,7 +613,7 @@ public class DatabaseUserProxy implements User {
         results.add( new DatabaseAuthorizationProxy( auth ) );
       }
       return results;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to lookup authorization for user with ID " + userId + ", type=" + resourceType);
       throw new AuthException( "Failed to lookup auth", e );
@@ -642,7 +642,7 @@ public class DatabaseUserProxy implements User {
         results.add( new DatabaseAuthorizationProxy( auth ) );
       }
       return results;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to lookup quotas for user with ID " + userId + ", type=" + resourceType);
       throw new AuthException( "Failed to lookup quota", e );

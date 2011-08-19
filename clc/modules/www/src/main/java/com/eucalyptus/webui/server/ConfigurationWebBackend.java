@@ -274,7 +274,7 @@ public class ConfigurationWebBackend {
         serializeClusterConfiguration( c, row );
         results.add( row );
       }
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( "Got an error while trying to retrieving storage controller configuration list", e );
     }    
     return results;
@@ -404,7 +404,7 @@ public class ConfigurationWebBackend {
             LOG.debug( "Expected configuration for SC related to CC: " + LogUtil.dumpObject( c ) );
             LOG.debug( "Received configuration for SC related to CC: " + LogUtil.dumpObject( getStorageConfigResponse ) );
           }
-        } catch ( Throwable e ) {
+        } catch ( Exception e ) {
           LOG.debug( "Got an error while trying to communicate with remote storage controller", e );
         }
         results.add( createStorageConfiguration( STORAGE_TYPE, c.getName( ), c.getHostName( ), c.getPort( ), properties ) );

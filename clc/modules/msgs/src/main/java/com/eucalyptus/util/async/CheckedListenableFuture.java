@@ -31,7 +31,7 @@ public interface CheckedListenableFuture<R> extends ListenableFuture<R> {
    * @throws InterruptedException
    * @throws TimeoutException
    * @throws ExecutionException
-   * @throws Throwable
+   * @throws Exception
    */
   public abstract R get( long timeout, TimeUnit unit ) throws InterruptedException, TimeoutException, ExecutionException;
   
@@ -42,7 +42,7 @@ public interface CheckedListenableFuture<R> extends ListenableFuture<R> {
    * error.
    * 
    * @return R response
-   * @throws Throwable
+   * @throws Exception
    */
   public abstract R get( ) throws InterruptedException, ExecutionException;
   

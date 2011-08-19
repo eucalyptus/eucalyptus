@@ -164,7 +164,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 			final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
 			try {
 				this.incomingMessage( channelHandlerContext, msgEvent );
-			} catch ( Throwable e ) {
+			} catch ( Exception e ) {
 				LOG.error( e, e );
 				Channels.fireExceptionCaught( channelHandlerContext, e );
 				return;

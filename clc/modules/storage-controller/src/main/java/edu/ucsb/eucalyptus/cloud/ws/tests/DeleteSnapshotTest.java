@@ -77,7 +77,7 @@ public class DeleteSnapshotTest extends TestCase {
     static BlockStorage blockStorage;
 
 
-    public void testDeleteSnapshot() throws Throwable {
+    public void testDeleteSnapshot() throws Exception {
 
         String snapshotBucket = "snapset";
         String snapshotId = "snap-C7fyA7Tuj9ecmg..";
@@ -90,7 +90,7 @@ public class DeleteSnapshotTest extends TestCase {
         while(true);
     }
 
-    public void testWalrusDeleteSnapshot() throws Throwable {
+    public void testWalrusDeleteSnapshot() throws Exception {
 
         String snapshotId = "snap-zVl2kZJmjhxnEg..";
         blockStorage.DeleteWalrusSnapshot(snapshotId);

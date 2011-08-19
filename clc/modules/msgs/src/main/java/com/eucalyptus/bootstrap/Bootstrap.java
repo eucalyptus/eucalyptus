@@ -270,7 +270,7 @@ public class Bootstrap {
           if ( !result ) {
             throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " returned 'false' from load( ): terminating bootstrap." );
           }
-        } catch ( Throwable e ) {
+        } catch ( Exception e ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.name( ), b.getClass( ).getCanonicalName( ) ).info( );
           throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " threw an error in load( ): " + e.getMessage( ), e );
         }
@@ -287,7 +287,7 @@ public class Bootstrap {
           if ( !result ) {
             throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " returned 'false' from start( ): terminating bootstrap." );
           }
-        } catch ( Throwable e ) {
+        } catch ( Exception e ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.name( ), b.getClass( ).getCanonicalName( ) ).info( );
           throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " threw an error in start( ): " + e.getMessage( ), e );
         }
@@ -363,7 +363,7 @@ public class Bootstrap {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, stage.name( ), bc, "component=" + compType.getSimpleName( ),
                             "localDepends=" + bootstrap.checkLocal( ), "remoteDepends=" + bootstrap.checkRemote( ) ).info( );
         }
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
     }
@@ -481,9 +481,9 @@ public class Bootstrap {
    * @see Bootstrap#loadConfigs
    * @see Bootstrap#doDiscovery()
    * 
-   * @throws Throwable
+   * @throws Exception
    */
-  public static void init( ) throws Throwable {
+  public static void init( ) throws Exception {
     
     Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
       
@@ -518,7 +518,7 @@ public class Bootstrap {
         comp.initService( );
       } catch ( ServiceRegistrationException ex ) {
         LOG.info( ex.getMessage( ) );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
     }
@@ -549,7 +549,7 @@ public class Bootstrap {
           break;
         } catch ( ExistingTransitionException ex ) {
           LOG.error( ex );
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex );
         }
         try {
@@ -562,7 +562,7 @@ public class Bootstrap {
     
   }
   
-  static void initializeSystem( ) throws Throwable {
+  static void initializeSystem( ) throws Exception {
     Groovyness.run( "initialize_cloud.groovy" );
   }
 }

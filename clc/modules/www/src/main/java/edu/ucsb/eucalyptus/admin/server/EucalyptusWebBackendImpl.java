@@ -1236,7 +1236,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
         ReportCache reportCache = Reports.getReportManager( reportName, false );
         reports.add( new ReportInfo( reportCache.getReportGroup( ), reportCache.getReportName( ), reportName, 1 ) );
       }
-      catch ( Throwable e ) {
+      catch ( Exception e ) {
         LOG.error( e, e );
         LOG.error( "Failed to read report file: " + reportName + " because of: " + e.getMessage( ) );
       }
@@ -1248,7 +1248,7 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
   public String processCall( String payload ) throws SerializationException {
     try {
       return super.processCall( payload );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.error( e, e );
       throw new SerializationException( e );
     }

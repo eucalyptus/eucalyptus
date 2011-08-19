@@ -253,7 +253,7 @@ public class ImageUtil {
       LOG.error( e, e );
       db.commit( );
       throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId, e );
-      } catch ( Throwable t ) {
+      } catch ( Exception t ) {
       LOG.error( t, t );
       db.commit( );
       }
@@ -396,10 +396,10 @@ public class ImageUtil {
       for ( ImageInfo deregImg : imgList ) {
         try {
           db.delete( deregImg );
-        } catch ( Throwable e1 ) {}
+        } catch ( Exception e1 ) {}
       }
       db.commit( );
-    } catch ( Throwable e1 ) {
+    } catch ( Exception e1 ) {
       db.rollback( );
     }
   }

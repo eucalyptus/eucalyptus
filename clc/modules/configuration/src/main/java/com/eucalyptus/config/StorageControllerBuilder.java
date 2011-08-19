@@ -82,7 +82,7 @@ public class StorageControllerBuilder extends AbstractServiceBuilder<StorageCont
     } catch ( ServiceRegistrationException ex ) {
       Partitions.maybeRemove( config.getPartition( ) );
       throw ex;
-    } catch ( Throwable ex ) {
+    } catch ( Exception ex ) {
       Partitions.maybeRemove( config.getPartition( ) );
       LOG.error( ex, ex );
       throw new ServiceRegistrationException( String.format( "Unexpected error caused cluster registration to fail for: partition=%s name=%s host=%s port=%d",

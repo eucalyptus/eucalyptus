@@ -84,7 +84,7 @@ public class Properties {
         reply.setName( INTERNAL_OP );
         reply.setValue( "" + Groovyness.eval( request.getValue( ) ) );
         reply.setOldValue( "executed successfully." );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex , ex );
         reply.setName( INTERNAL_OP );
         reply.setOldValue( "euca operation failed because of: " + ex.getMessage( ) );

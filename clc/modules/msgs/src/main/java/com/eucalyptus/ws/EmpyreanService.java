@@ -92,6 +92,7 @@ import com.eucalyptus.empyrean.StartServiceResponseType;
 import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.empyrean.StopServiceResponseType;
 import com.eucalyptus.empyrean.StopServiceType;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
@@ -205,7 +206,7 @@ public class EmpyreanService {
     return reply;
   }
   
-  public StartServiceResponseType startService( StartServiceType request ) throws Throwable {
+  public StartServiceResponseType startService( StartServiceType request ) throws Exception {
     StartServiceResponseType reply = request.getReply( );
     for ( ServiceId serviceInfo : request.getServices( ) ) {
       try {
@@ -220,7 +221,7 @@ public class EmpyreanService {
             throw ex;
           } catch ( ExecutionException ex ) {
             LOG.error( ex, ex );
-            throw ex.getCause( );
+            throw Exceptions.toCatchable( ex.getCause( ) );
           } catch ( InterruptedException ex ) {
             LOG.error( ex, ex );
             Thread.currentThread( ).interrupt( );
@@ -235,7 +236,7 @@ public class EmpyreanService {
     return reply;
   }
   
-  public StopServiceResponseType stopService( StopServiceType request ) throws Throwable {
+  public StopServiceResponseType stopService( StopServiceType request ) throws Exception {
     StopServiceResponseType reply = request.getReply( );
     for ( ServiceId serviceInfo : request.getServices( ) ) {
       try {
@@ -250,7 +251,7 @@ public class EmpyreanService {
             throw ex;
           } catch ( ExecutionException ex ) {
             LOG.error( ex, ex );
-            throw ex.getCause( );
+            throw Exceptions.toCatchable( ex.getCause( ) );
           } catch ( InterruptedException ex ) {
             LOG.error( ex, ex );
             Thread.currentThread( ).interrupt( );
@@ -265,7 +266,7 @@ public class EmpyreanService {
     return reply;
   }
   
-  public EnableServiceResponseType enableService( EnableServiceType request ) throws Throwable {
+  public EnableServiceResponseType enableService( EnableServiceType request ) throws Exception {
     EnableServiceResponseType reply = request.getReply( );
     for ( ServiceId serviceInfo : request.getServices( ) ) {
       try {
@@ -283,7 +284,7 @@ public class EmpyreanService {
             throw ex;
           } catch ( ExecutionException ex ) {
             LOG.error( ex, ex );
-            throw ex.getCause( );
+            throw Exceptions.toCatchable( ex.getCause( ) );
           } catch ( InterruptedException ex ) {
             LOG.error( ex, ex );
             Thread.currentThread( ).interrupt( );
@@ -298,7 +299,7 @@ public class EmpyreanService {
     return reply;
   }
   
-  public DisableServiceResponseType disableService( DisableServiceType request ) throws Throwable {
+  public DisableServiceResponseType disableService( DisableServiceType request ) throws Exception {
     DisableServiceResponseType reply = request.getReply( );
     for ( ServiceId serviceInfo : request.getServices( ) ) {
       try {
@@ -313,7 +314,7 @@ public class EmpyreanService {
             throw ex;
           } catch ( ExecutionException ex ) {
             LOG.error( ex, ex );
-            throw ex.getCause( );
+            throw Exceptions.toCatchable( ex.getCause( ) );
           } catch ( InterruptedException ex ) {
             LOG.error( ex, ex );
             Thread.currentThread( ).interrupt( );

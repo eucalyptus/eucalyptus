@@ -77,7 +77,7 @@ public class TestHarness
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-		} catch (Throwable e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		System.exit(0);  //This is necessary now; some shutdown process is hanging
@@ -277,7 +277,7 @@ public class TestHarness
 						}
 					}
 					jar.close();
-				} catch (Throwable e) {
+				} catch (Exception e) {
 					System.out.println(e.getMessage());
 					continue;
 				}

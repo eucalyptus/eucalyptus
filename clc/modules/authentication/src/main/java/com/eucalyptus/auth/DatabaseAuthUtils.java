@@ -191,7 +191,7 @@ public class DatabaseAuthUtils {
           .list( );
       db.commit( );
       return users.size( ) > 0;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       throw new AuthException( "Failed to find user", e );
     }
@@ -217,7 +217,7 @@ public class DatabaseAuthUtils {
           .list( );
       db.commit( );
       return accounts.size( ) > 0;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       throw new AuthException( "Failed to find account", e );
     }
@@ -249,7 +249,7 @@ public class DatabaseAuthUtils {
           .list( );
       db.commit( );
       return groups.size( ) > 0;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       throw new AuthException( "Failed to find group", e );
     }
@@ -273,7 +273,7 @@ public class DatabaseAuthUtils {
           .list( );
       db.commit( );
       return groups.size( ) == 0;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       throw new AuthException( "Failed to check groups for account", e );
     }

@@ -298,7 +298,7 @@ public class ChannelUtil {
         LOG.debug( channelFuture.getCause( ), channelFuture.getCause( ) );
         try {
           callback.operationComplete( channelFuture );
-        } catch ( Throwable e ) {
+        } catch ( Exception e ) {
           LOG.debug( e, e );
         }
       }

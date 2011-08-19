@@ -133,7 +133,7 @@ public class ServiceContextManager {
                 if ( ServiceContextManager.this.canHasWrite.tryLock( ) ) {
                   try {
                     ServiceContextManager.this.update( );
-                  } catch ( Throwable ex ) {
+                  } catch ( Exception ex ) {
                     LOG.error( Exceptions.causeString( ex ) );
                     LOG.error( ex, ex );
                   } finally {
@@ -198,7 +198,7 @@ public class ServiceContextManager {
               this.serviceToEndpoint.put( s.getName( ), in.getEndpointURI( ).toString( ) );
             }
           }
-        } catch ( Throwable e ) {
+        } catch ( Exception e ) {
           LOG.error( e, e );
           throw new ServiceInitializationException( "Failed to start service this.context.", e );
         }

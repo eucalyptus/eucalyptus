@@ -321,7 +321,7 @@ public class Component implements HasName<Component> {
                                                                                           Component.State.LOADED ).call( );//.get( );
         ret.get( );
         return ret;
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         throw Exceptions.debug( new ServiceRegistrationException( "Failed to initialize service state: " + config + " because of: " + ex.getMessage( ), ex ) );
       }
     }
@@ -353,7 +353,7 @@ public class Component implements HasName<Component> {
         EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_DESTROY, this.getName( ), configuration.getFullName( ),
                             configuration.getUri( ).toString( ) ).info( );
         this.serviceRegistry.deregister( configuration );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         throw new ServiceRegistrationException( "Failed to destroy service: " + configuration + " because of: " + ex.getMessage( ), ex );
       }
     } catch ( NoSuchElementException ex ) {

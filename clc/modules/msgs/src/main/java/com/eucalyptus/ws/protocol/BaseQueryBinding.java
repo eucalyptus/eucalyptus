@@ -175,7 +175,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       LOG.debug( "Failed to construct message of type: " + operationName, e );
       LOG.error( e, e );
       throw e;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       throw new BindingException( "Failed to construct message of type " + operationName, e );
     }
     

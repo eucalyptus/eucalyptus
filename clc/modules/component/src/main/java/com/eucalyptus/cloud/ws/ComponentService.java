@@ -63,7 +63,7 @@ public class ComponentService {
         reply = AsyncRequests.sendSync(service,request);
    		}
       return reply;
-    } catch (Throwable e) {
+    } catch (Exception e) {
       LOG.error(e);
       throw new EucalyptusCloudException("Unable to dispatch message to: "+service.getName());
     }

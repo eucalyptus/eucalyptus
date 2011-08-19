@@ -108,7 +108,7 @@ public class AOEManager implements StorageExportManager {
 			output.start();
 			proc.waitFor();
 			output.join();
-		} catch (Throwable t) {
+		} catch (Exception t) {
 			LOG.error(t);
 		}
 	}
@@ -124,7 +124,7 @@ public class AOEManager implements StorageExportManager {
 			output.start();
 			proc.waitFor();
 			output.join();
-		} catch (Throwable t) {
+		} catch (Exception t) {
 			LOG.error(t);
 		}
 	}

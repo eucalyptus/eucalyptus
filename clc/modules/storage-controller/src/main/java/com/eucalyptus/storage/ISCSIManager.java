@@ -168,7 +168,7 @@ public class ISCSIManager implements StorageExportManager {
 			errorValue = error.getReturnValue();
 			if(errorValue.length() > 0)
 				throw new EucalyptusCloudException(errorValue);
-		} catch (Throwable t) {
+		} catch (Exception t) {
 			throw new EucalyptusCloudException(t);
 		}
 	}
@@ -190,7 +190,7 @@ public class ISCSIManager implements StorageExportManager {
 				LOG.error("Unable to delete target: " + tid);
 				return;
 			}			
-		} catch (Throwable t) {
+		} catch (Exception t) {
 			LOG.error(t);
 		}
 	}

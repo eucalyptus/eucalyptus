@@ -90,7 +90,7 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
                                                                           annote.displayName( ), annote.type( ), alias, null );
               return prop;
             }
-          } catch ( Throwable e ) {
+          } catch ( Exception e ) {
             LOG.debug( e, e );
             return null;
           }

@@ -63,7 +63,7 @@ public abstract class AbstractSystemAddressManager {
             Helper.markAsAllocated( cluster, addrInfo, address );
           }
           try {
-            VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( addrInfo.getInstanceIp( ) );
+            VmInstance vm = VmInstances.lookupByInstanceIp( addrInfo.getInstanceIp( ) );
             cluster.getState( ).clearOrphan( addrInfo );
           } catch ( NoSuchElementException e ) {
             InetAddress addr = null;
@@ -79,7 +79,7 @@ public abstract class AbstractSystemAddressManager {
         } else if ( address.isAllocated( ) && FakePrincipals.nobodyFullName( ).equals( address.getOwner( ) ) && !address.isPending( ) ) {
           Helper.markAsAllocated( cluster, addrInfo, address );
         }
-      } catch ( Throwable e ) {
+      } catch ( Exception e ) {
         LOG.debug( e, e );
       }
     }
@@ -137,7 +137,7 @@ public abstract class AbstractSystemAddressManager {
     private static void markAsAllocated( Cluster cluster, ClusterAddressInfo addrInfo, Address address ) {
       try {
         if ( !address.isPending( ) ) {
-          for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
+          for ( VmInstance vm : VmInstances.listValues( ) ) {
             if ( addrInfo.getInstanceIp( ).equals( vm.getPrivateAddress( ) ) && VmState.RUNNING.equals( vm.getState( ) ) ) {
               LOG.warn( "Out of band address state change: " + LogUtil.dumpObject( addrInfo ) + " address=" + address + " vm=" + vm );
               if ( !address.isAllocated( ) ) {
@@ -160,14 +160,14 @@ public abstract class AbstractSystemAddressManager {
         if ( !addr.isPending( ) ) {
           addr.unassign( ).clearPending( );
         }
-      } catch ( Throwable t ) {
+      } catch ( Exception t ) {
         LOG.trace( t, t );
       }
     }
     
     private static void clearVmState( ClusterAddressInfo addrInfo ) {
       try {
-        VmInstance vm = VmInstances.getInstance( ).lookupByPublicIp( addrInfo.getAddress( ) );
+        VmInstance vm = VmInstances.lookupByPublicIp( addrInfo.getAddress( ) );
         vm.updatePublicAddress( vm.getPrivateAddress( ) );
       } catch ( NoSuchElementException e ) {}
     }
@@ -175,7 +175,7 @@ public abstract class AbstractSystemAddressManager {
     private static VmInstance maybeFindVm( String publicIp, String privateIp ) {
       VmInstance vm = null;
       try {
-        vm = VmInstances.getInstance( ).lookupByInstanceIp( privateIp );
+        vm = VmInstances.lookupByInstanceIp( privateIp );
         LOG.trace( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
         if ( publicIp.equals( vm.getPublicAddress( ) ) ) {
           LOG.trace( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
@@ -192,17 +192,17 @@ public abstract class AbstractSystemAddressManager {
             addr.pendingAssignment( );
             try {
               addr.assign( vm ).clearPending( );
-            } catch ( Throwable e1 ) {
+            } catch ( Exception e1 ) {
               LOG.debug( e1, e1 );
             }
           }
-        } catch ( Throwable e1 ) {
+        } catch ( Exception e1 ) {
           LOG.debug( e1, e1 );
         }
       } else if ( !addr.isAssigned( ) ) {
         try {
           addr.assign( vm ).clearPending( );
-        } catch ( Throwable e1 ) {
+        } catch ( Exception e1 ) {
           LOG.debug( e1, e1 );
         }
       } else {
@@ -234,11 +234,11 @@ public abstract class AbstractSystemAddressManager {
             LOG.info( "Restoring persistent address info for: " + addr );
             Addresses.getInstance( ).lookup( addr.getName( ) );
             addr.init( );
-          } catch ( Throwable e ) {
+          } catch ( Exception e ) {
             addr.init( );
           }
         }
-      } catch ( Throwable e ) {
+      } catch ( Exception e ) {
         LOG.debug( e, e );
       }
     }

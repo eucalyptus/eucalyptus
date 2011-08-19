@@ -148,7 +148,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
 //          try {
 //            ServiceContext.shutdown( );
 //            ServiceContext.startup( );
-//          } catch ( Throwable ex ) {
+//          } catch ( Exception ex ) {
 //            LOG.error( ex , ex );
 //          }
 //        }
@@ -286,7 +286,7 @@ public class ServiceSinkHandler extends SimpleChannelHandler {
   public void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
     try {
       Contexts.clear( Contexts.lookup( ctx.getChannel( ) ) );
-    } catch ( Throwable e1 ) {
+    } catch ( Exception e1 ) {
       LOG.warn( "Failed to remove the channel context on connection close.", e1 );
     }
     super.channelClosed( ctx, e );

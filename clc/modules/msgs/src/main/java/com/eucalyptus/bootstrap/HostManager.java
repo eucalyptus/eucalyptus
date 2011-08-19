@@ -293,7 +293,7 @@ public class HostManager {
         try {
           Bootstrap.initializeSystem( );
           System.exit( 123 );
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex, ex );
           System.exit( 123 );
         }

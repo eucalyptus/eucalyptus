@@ -105,7 +105,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
           Multimap<String, String> rules = ArrayListMultimap.create( );
           EntityTransaction tx = Entities.get( VmInstance.class );
           try {
-            for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
+            for ( VmInstance vm : VmInstances.listValues( ) ) {
               if ( VmState.RUNNING.ordinal( ) < vm.getState( ).ordinal( ) ) continue;
               for ( NetworkGroup ruleGroup : vm.getNetworkRulesGroups( ) ) {
                 networks.put( ruleGroup.getNaturalId( ), vm.getPrivateAddress( ) );

@@ -26,7 +26,7 @@ public class NetworkGroupUtil {
     try {
       networkGroups = db.query( new NetworkGroup( userFullName ) );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
     }
     return networkGroups;
@@ -57,7 +57,7 @@ public class NetworkGroupUtil {
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
       throw e;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       throw new EucalyptusCloudException( e );
     }

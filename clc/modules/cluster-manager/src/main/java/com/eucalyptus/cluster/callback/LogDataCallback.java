@@ -42,14 +42,14 @@ public class LogDataCallback extends SubjectMessageCallback<Cluster, GetLogsType
         this.getSubject( ).setLastLog( msg.getLogs( ) );
         try {
           log = new String( Base64.decode( msg.getLogs( ).getCcLog( ) ) ).replaceFirst( ".*\b", "" ).substring( 0, 1000 );
-        } catch ( Throwable e ) {
+        } catch ( Exception e ) {
           LOG.debug( e, e );
         }
       } else {
         node.setLogs( msg.getLogs( ) );
         try {
           log = new String( Base64.decode( msg.getLogs( ).getNcLog( ) ) ).replaceFirst( ".*\b", "" ).substring( 0, 1000 );
-        } catch ( Throwable e ) {
+        } catch ( Exception e ) {
           LOG.debug( e, e );
         }
       }

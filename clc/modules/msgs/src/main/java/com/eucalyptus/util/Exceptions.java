@@ -47,7 +47,7 @@ public class Exceptions {
   }
   
   public static <T extends Throwable> String createFaultDetails( T ex ) {
-    return Logs.isExtrrreeeme()
+    return Logs.isExtrrreeeme( )
       ? string( ex )
       : ex.getMessage( );
   }
@@ -74,8 +74,58 @@ public class Exceptions {
     return Joiner.on( "\nCaused by: " ).join( Exceptions.causes( ex ) );
   }
   
-  public static <T extends Throwable> UndeclaredThrowableException undeclared( String message, T ex ) {
-    return new UndeclaredThrowableException( ex, message );
+  /**
+   * Convert the argument {@link Throwable} into a suitable {@link RuntimeException} either by type
+   * casting or wrapping in an {@link UndeclaredThrowableException}.
+   * 
+   * @param <T>
+   * @param message
+   * @param ex
+   * @return
+   */
+  public static <T extends Throwable> RuntimeException toUndeclared( String message, T ex ) {
+    if ( ex instanceof RuntimeException ) {
+      return ( RuntimeException ) ex;
+    } else {
+      return new UndeclaredThrowableException( ex, message );
+    }
+  }
+  
+  /**
+   * {@inheritDoc #toUndeclared(String, Throwable)}
+   * 
+   * @param cause
+   * @return
+   */
+  public static RuntimeException toUndeclared( Throwable cause ) {
+    return toUndeclared( cause.getMessage( ), cause );
+  }
+
+  /**
+   * Convert the argument {@link Throwable} into a suitable {@link Exception} (possibly a checked
+   * type) either by type casting or wrapping in an {@link UndeclaredThrowableException}.
+   * 
+   * @param <T>
+   * @param message
+   * @param ex
+   * @return
+   */
+  public static <T extends Throwable> Exception toCatchable( String message, T ex ) {
+    if ( ex instanceof Exception ) {
+      return ( Exception ) ex;
+    } else {
+      return new UndeclaredThrowableException( ex, message );
+    }
+  }
+  
+  /**
+   * {@inheritDoc #toCatchable(String, Throwable)}
+   * 
+   * @param cause
+   * @return
+   */
+  public static Exception toCatchable( Throwable cause ) {
+    return toCatchable( cause.getMessage( ), cause );
   }
   
   public static <T extends Throwable> T filterStackTrace( T ex, int maxDepth, List<String> fqClassPrefixes, List<String> matchPatterns ) {
@@ -253,4 +303,5 @@ public class Exceptions {
       return null;
     }
   }
+  
 }

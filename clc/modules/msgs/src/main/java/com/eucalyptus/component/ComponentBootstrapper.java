@@ -156,7 +156,7 @@ public class ComponentBootstrapper {
             throw Exceptions.error( new TransitionException( b.getClass( ).getSimpleName( ) + " returned 'false' from " + name
                                                              + "( ): terminating bootstrap for component: " + this.component.getName( ) ) );
           }
-        } catch ( Throwable e ) {
+        } catch ( Exception e ) {
           throw Exceptions.error( new TransitionException( b.getClass( ).getSimpleName( ) + " returned '" + e.getMessage( ) + "' from " + name
                                                            + "( ): terminating bootstrap for component: " + this.component.getName( ), e ) );
         }

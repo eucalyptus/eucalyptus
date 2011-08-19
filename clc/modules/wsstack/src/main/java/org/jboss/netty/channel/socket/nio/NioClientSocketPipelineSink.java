@@ -114,7 +114,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
       channel.boundManually = true;
       future.setSuccess( );
       fireChannelBound( channel, channel.getLocalAddress( ) );
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       future.setFailure( t );
       fireExceptionCaught( channel, t );
     }
@@ -130,7 +130,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         boss.register( channel );
       }
 
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       future.setFailure( t );
       fireExceptionCaught( channel, t );
     }
@@ -161,7 +161,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
           // Open a selector if this worker didn't start yet.
           try {
             this.selector = selector = Selector.open( );
-          } catch ( Throwable t ) {
+          } catch ( Exception t ) {
             throw new ChannelException( "Failed to create a selector.", t );
           }
 
@@ -175,7 +175,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
               // Release the Selector if the execution fails.
               try {
                 selector.close( );
-              } catch ( Throwable t ) {
+              } catch ( Exception t ) {
                 logger.warn( "Failed to close a selector.", t );
               }
               this.selector = selector = null;
@@ -284,7 +284,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
           } else {
             shutdown = false;
           }
-        } catch ( Throwable t ) {
+        } catch ( Exception t ) {
           logger.warn( "Unexpected exception in the selector loop.", t );
 
           // Prevent possible consecutive immediate failures.
@@ -352,7 +352,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
           k.cancel( );
           ch.worker.register( ch, ch.connectFuture );
         }
-      } catch ( Throwable t ) {
+      } catch ( Exception t ) {
         ch.connectFuture.setFailure( t );
         fireExceptionCaught( ch, t );
         close( k );

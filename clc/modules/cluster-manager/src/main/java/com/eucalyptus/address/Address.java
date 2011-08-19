@@ -314,7 +314,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       Address dbAddr = db.getUnique( new Address( ipAddress ) );
       db.delete( dbAddr );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
     }
   }
@@ -323,7 +323,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     SplitTransition unassign = new SplitTransition( Transition.unassigning ) {
       public void top( ) {
         try {
-          VmInstance vm = VmInstances.getInstance( ).lookup( Address.this.getInstanceId( ) );
+          VmInstance vm = VmInstances.lookup( Address.this.getInstanceId( ) );
           EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_UNASSIGNING )
                      .withDetails( vm.getOwner( ).toString( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
                      .withDetails( "type", Address.this.isSystemOwned( )
@@ -475,7 +475,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       try {
         db.add( addr );
         db.commit( );
-      } catch ( Throwable e1 ) {
+      } catch ( Exception e1 ) {
         db.rollback( );
       }
     }

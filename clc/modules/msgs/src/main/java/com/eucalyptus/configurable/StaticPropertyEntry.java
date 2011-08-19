@@ -104,7 +104,7 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
       this.fireChange( s );
       this.field.set( null, o );
       LOG.info( "--> Set property value:  " + super.getQualifiedName( ) + " to " + s );
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       LOG.warn( "Failed to set property: " + super.getQualifiedName( ) + " because of " + t.getMessage( ) );
       LOG.debug( t, t );
     }
@@ -134,7 +134,7 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
         if ( !changeListenerClass.equals( NoopEventListener.class ) ) {
           try {
             changeListener = changeListenerClass.newInstance( );
-          } catch ( Throwable e ) {
+          } catch ( Exception e ) {
             changeListener = NoopEventListener.NOOP;
           }
         } else {

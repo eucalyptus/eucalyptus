@@ -76,7 +76,7 @@ import com.eucalyptus.auth.util.Hashes;
 public class ObjectTest extends TestCase {
 
 	static WalrusControl bukkit;
-	public void testObject() throws Throwable {
+	public void testObject() throws Exception {
 
 		String bucketName = "halo" + Hashes.getRandom(6);
 		String objectName = "key" + Hashes.getRandom(6);

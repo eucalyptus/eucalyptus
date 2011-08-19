@@ -98,7 +98,6 @@ import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Transactions;
@@ -125,22 +124,16 @@ import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.GetObjectType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 
-@ConfigurableClass( root = "vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
 public class SystemState {
   
   public static Logger  LOG            = Logger.getLogger( SystemState.class );
-  @ConfigurableField( description = "Amount of time (in milliseconds) that a terminated VM will continue to be reported.", initial = "" + 60 * 60 * 1000 )
-  public static Integer BURY_TIME      = -1;
-  @ConfigurableField( description = "Amount of time (in milliseconds) before a VM which is not reported by a cluster will be marked as terminated.", initial = "" + 10 * 60 * 1000 )
-  public static Integer SHUT_DOWN_TIME = -1;
-  
   public static void handle( VmDescribeResponseType request ) {
     VmInstances.flushBuried( );
     String originCluster = request.getOriginCluster( );
     for ( VmInfo runVm : request.getVms( ) ) {
       SystemState.updateVmInstance( originCluster, runVm );
     }
-    final List<String> unreportedVms = Lists.transform( VmInstances.getInstance( ).listValues( ), new Function<VmInstance, String>( ) {
+    final List<String> unreportedVms = Lists.transform( VmInstances.listValues( ), new Function<VmInstance, String>( ) {
       
       @Override
       public String apply( VmInstance input ) {
@@ -157,8 +150,8 @@ public class SystemState {
     } );
     for ( String vmId : unreportedVms ) {
       try {
-        VmInstance vm = VmInstances.getInstance( ).lookup( vmId );
-        if ( vm.getSplitTime( ) > SHUT_DOWN_TIME && !VmState.STOPPED.equals( vm.getState( ) ) && !VmState.STOPPING.equals( vm.getState( ) ) ) {
+        VmInstance vm = VmInstances.lookup( vmId );
+        if ( vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME && !VmState.STOPPED.equals( vm.getState( ) ) && !VmState.STOPPING.equals( vm.getState( ) ) ) {
           vm.setState( VmState.TERMINATED, Reason.EXPIRED );
         }
       } catch ( NoSuchElementException e ) {}
@@ -169,11 +162,11 @@ public class SystemState {
     VmState state = VmState.Mapper.get( runVm.getStateName( ) );
     VmInstance vm = null;
     try {
-      vm = VmInstances.getInstance( ).lookup( runVm.getInstanceId( ) );
+      vm = VmInstances.lookup( runVm.getInstanceId( ) );
     } catch ( NoSuchElementException e ) {
       try {
-        vm = VmInstances.getInstance( ).lookupDisabled( runVm.getInstanceId( ) );
-        if ( !VmState.BURIED.equals( vm.getState( ) ) && vm.getSplitTime( ) > BURY_TIME ) {
+        vm = VmInstances.lookupDisabled( runVm.getInstanceId( ) );
+        if ( !VmState.BURIED.equals( vm.getState( ) ) && vm.getSplitTime( ) > VmInstances.BURY_TIME ) {
           vm.setState( VmState.BURIED, Reason.BURIED );
         }
         return;
@@ -190,9 +183,9 @@ public class SystemState {
     vm.setPlatform( runVm.getPlatform( ) );
     vm.setBundleTaskState( runVm.getBundleTaskStateName( ) );
     
-    if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && splitTime > SHUT_DOWN_TIME ) {
+    if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && splitTime > VmInstances.SHUT_DOWN_TIME ) {
       vm.setState( VmState.TERMINATED, Reason.EXPIRED );
-    } else if ( VmState.STOPPING.equals( vm.getState( ) ) && splitTime > SHUT_DOWN_TIME ) {
+    } else if ( VmState.STOPPING.equals( vm.getState( ) ) && splitTime > VmInstances.SHUT_DOWN_TIME ) {
       vm.setState( VmState.STOPPED, Reason.EXPIRED );
     } else if ( VmState.STOPPING.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
       vm.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
@@ -312,7 +305,7 @@ public class SystemState {
     } catch ( NoSuchElementException e ) {
       ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
       AsyncRequests.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       LOG.error( t, t );
     }
   }
@@ -324,7 +317,7 @@ public class SystemState {
     String action = PolicySpec.requestToAction( request );
     User requestUser = ctx.getUser( );
     Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
-    for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
+    for ( VmInstance v : VmInstances.listValues( ) ) {
       Account instanceAccount = null;
       try {
         instanceAccount = Accounts.lookupUserById( v.getOwner( ).getUniqueId( ) ).getAccount( );
@@ -343,7 +336,7 @@ public class SystemState {
       rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( v.getAsRunningInstanceItemType( ) );
     }
     if ( isAdmin ) {
-      for ( VmInstance v : VmInstances.getInstance( ).listDisabledValues( ) ) {
+      for ( VmInstance v : VmInstances.listDisabledValues( ) ) {
         if ( VmState.BURIED.equals( v.getState( ) ) ) continue;
         if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) continue;
         if ( rsvMap.get( v.getReservationId( ) ) == null ) {

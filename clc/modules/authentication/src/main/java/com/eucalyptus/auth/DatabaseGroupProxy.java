@@ -126,7 +126,7 @@ public class DatabaseGroupProxy implements Group {
       groupEntity.getUsers( ).add( userEntity );
       //userEntity.addGroup( groupEntity );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to add user " + userName + " to group " + this.delegate );
       throw new AuthException( e );
@@ -142,7 +142,7 @@ public class DatabaseGroupProxy implements Group {
       groupEntity.getUsers( ).remove( userEntity );
       //userEntity.getGroups( ).remove( groupEntity );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to remove user " + userName + " from group " + this.delegate );
       throw new AuthException( e );
@@ -161,7 +161,7 @@ public class DatabaseGroupProxy implements Group {
           .list( );
       db.commit( );
       return users.size( ) > 0;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to check membership for group " + this.delegate );
       throw new AuthException( e );
@@ -208,7 +208,7 @@ public class DatabaseGroupProxy implements Group {
       }
       db.commit( );
       return new DatabasePolicyProxy( parsedPolicy );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to attach policy for " + this.delegate.getName( ) );
       throw new AuthException( "Failed to attach policy", e );
@@ -228,7 +228,7 @@ public class DatabaseGroupProxy implements Group {
         db.recast( PolicyEntity.class ).delete( policy );
       }
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to remove policy " + name + " in " + this.delegate );
       throw new AuthException( "Failed to remove policy", e );

@@ -133,7 +133,7 @@ public class Tracker extends Thread {
 				if(!errValue.contains("already in use"))
 					LOG.warn(errValue);
 			}
-		} catch (Throwable t) {
+		} catch (Exception t) {
 			t.printStackTrace();
 		}
 	}

@@ -144,7 +144,7 @@ public class SnapshotManager {
   }
   
   /**
-   * @throws DuplicateMetadataException 
+   * @throws DuplicateMetadataException
    * @deprecated Use {@link Snapshots#startCreateSnapshot(Volume,Snapshot)} instead
    */
   private static Snapshot startCreateSnapshot( final Volume vol, final Snapshot snap ) throws EucalyptusCloudException, DuplicateMetadataException {
@@ -163,8 +163,8 @@ public class SnapshotManager {
           if ( !State.EXTANT.equals( snap.getState( ) ) ) {
             return false;
           } else if ( !Types.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, request.getSnapshotId( ), snap.getOwner( ) ) ) {
-            throw Exceptions.undeclared( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ),
-                                         new EucalyptusCloudException( ) );
+            throw Exceptions.toUndeclared( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ),
+                                           new EucalyptusCloudException( ) );
           } else {
             ServiceConfiguration sc = Partitions.lookupService( Storage.class, snap.getVolumePartition( ) );
             try {
@@ -173,17 +173,17 @@ public class SnapshotManager {
                 StorageUtil.dispatchAll( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
                 try {
                   ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, false, snap.getVolumeSize( ),
-                                                                               snap.getOwnerUserId( ), snap.getOwnerUserName(),
-                                                                               snap.getOwnerAccountNumber( ), snap.getOwnerAccountName( ), 
+                                                                               snap.getOwnerUserId( ), snap.getOwnerUserName( ),
+                                                                               snap.getOwnerAccountNumber( ), snap.getOwnerAccountName( ),
                                                                                snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
                 } catch ( EventFailedException ex ) {
                   LOG.error( ex, ex );
                 }
               } else {
-                throw Exceptions.undeclared( "Unable to delete snapshot: " + snap, new EucalyptusCloudException( ) );
+                throw Exceptions.toUndeclared( "Unable to delete snapshot: " + snap, new EucalyptusCloudException( ) );
               }
             } catch ( EucalyptusCloudException ex1 ) {
-              throw Exceptions.undeclared( ex1.getMessage( ), ex1 );
+              throw Exceptions.toUndeclared( ex1.getMessage( ), ex1 );
             }
             return true;
           }
@@ -232,7 +232,7 @@ public class SnapshotManager {
         }
       }
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
     }
     return reply;

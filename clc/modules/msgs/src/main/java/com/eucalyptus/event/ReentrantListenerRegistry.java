@@ -91,7 +91,7 @@ public class ReentrantListenerRegistry<T> {
       }
       try {
         ce.fireEvent( e );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         ex = new EventFailedException( "Failed to fire event: listener=" + ce.getClass( ).getCanonicalName( ) + " event=" + e.toString( ) + " because of: "
                                        + ex.getMessage( ), Exceptions.filterStackTrace( ex ) );
         errors.add( ex );

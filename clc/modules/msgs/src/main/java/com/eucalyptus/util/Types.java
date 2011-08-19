@@ -235,7 +235,7 @@ public class Types {
     
     @SuppressWarnings( "synthetic-access" )
     @Override
-    public boolean processClass( Class candidate ) throws Throwable {
+    public boolean processClass( Class candidate ) throws Exception {
       if ( Ats.from( candidate ).has( ResourceUsageMetricFunction.class ) && Function.class.isAssignableFrom( candidate ) ) {
         ResourceUsageMetricFunction measures = Ats.from( candidate ).get( ResourceUsageMetricFunction.class );
         Class measuredType = measures.value( );

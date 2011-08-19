@@ -63,7 +63,7 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     } catch ( ServiceRegistrationException ex ) {
 //      Partitions.maybeRemove( config.getPartition( ) );//TODO:GRZE:restore
       throw ex;
-    } catch ( Throwable ex ) {
+    } catch ( Exception ex ) {
 //      Partitions.maybeRemove( config.getPartition( ) );//TODO:GRZE:restore
       LOG.error( ex, ex );
       throw new ServiceRegistrationException( String.format( "Unexpected error caused cluster registration to fail for: partition=%s name=%s host=%s port=%d",
@@ -153,7 +153,7 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
       cluster.stop( );
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex, ex );
-    } catch ( Throwable ex ) {
+    } catch ( Exception ex ) {
       LOG.error( ex, ex );
     }
   }
@@ -167,7 +167,7 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     } catch ( IllegalStateException ex ) {
       Logs.exhaust( ).error( ex, ex );
       throw ServiceChecks.Severity.ERROR.transform( config, ex );
-    } catch ( Throwable ex ) {
+    } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       throw ServiceChecks.Severity.FATAL.transform( config, ex );
     }

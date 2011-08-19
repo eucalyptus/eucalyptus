@@ -94,7 +94,7 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
         }
       }
       ctx.sendDownstream( channelEvent );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.error( e, e );
       throw new WebServicesException( e.getMessage( ), HttpResponseStatus.BAD_REQUEST );
     }

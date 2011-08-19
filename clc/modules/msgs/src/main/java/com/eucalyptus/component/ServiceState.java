@@ -140,7 +140,7 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
       throw Exceptions.trace( ex );
     } catch ( ExistingTransitionException ex ) {
       throw ex;
-    } catch ( Throwable ex ) {
+    } catch ( Exception ex ) {
       throw Exceptions.trace( new RuntimeException( "Failed to perform service transition " + transition + " for " + this.parent.getName( ) + ".\nCAUSE: "
                                                     + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex ) );
     }
@@ -156,7 +156,7 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
       throw Exceptions.trace( ex );
     } catch ( ExistingTransitionException ex ) {
       throw ex;
-    } catch ( Throwable ex ) {
+    } catch ( Exception ex ) {
       throw Exceptions.trace( new RuntimeException( "Failed to perform transition from " + this.getState( ) + " to " + state + " for " + this.parent.getName( )
                                                     + ".\nCAUSE: " + ex.getMessage( ) + "\nSTATE: " + this.stateMachine.toString( ), ex ) );
     }

@@ -582,7 +582,7 @@ public class Topology implements EventListener<Event> {
           } catch ( InterruptedException ex ) {
             LOG.error( ex, ex );
             Thread.currentThread( ).interrupt( );
-          } catch ( Throwable ex ) {
+          } catch ( Exception ex ) {
             LOG.debug( "Error while inspecting result of CHECK for: \n\t" + result.getKey( ) + ": \n\t" + ex.getMessage( ) );
             try {
               disabledServices.add( result.getKey( ) );

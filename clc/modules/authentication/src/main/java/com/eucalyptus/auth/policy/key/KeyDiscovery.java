@@ -10,7 +10,7 @@ public class KeyDiscovery extends ServiceJarDiscovery {
   private static Logger LOG = Logger.getLogger( KeyDiscovery.class );
   
   @Override
-  public boolean processClass( Class candidate ) throws Throwable {
+  public boolean processClass( Class candidate ) throws Exception {
     if ( Key.class.isAssignableFrom( candidate ) && Ats.from( candidate ).has( PolicyKey.class ) ) {
       String key = Ats.from( candidate ).get( PolicyKey.class ).value( );
       if ( key != null && !"".equals( key ) ) {

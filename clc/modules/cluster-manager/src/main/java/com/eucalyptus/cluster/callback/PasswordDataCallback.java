@@ -30,7 +30,7 @@ public class PasswordDataCallback extends MessageCallback<GetConsoleOutputType,G
   
   @Override
   public void fire( GetConsoleOutputResponseType reply )  {
-    VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest( ).getInstanceId( ) );
+    VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
     String output = null;
     try {
       output = new String( Base64.decode( reply.getOutput( ).getBytes( ) ) );

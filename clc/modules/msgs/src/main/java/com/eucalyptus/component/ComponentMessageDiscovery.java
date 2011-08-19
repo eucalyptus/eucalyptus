@@ -74,12 +74,12 @@ public class ComponentMessageDiscovery extends ServiceJarDiscovery {
   private static Logger LOG = Logger.getLogger( ComponentDiscovery.class );
   
   @Override
-  public boolean processClass( Class candidate ) throws Throwable {
+  public boolean processClass( Class candidate ) throws Exception {
     if ( BaseMessage.class.isAssignableFrom( candidate ) && Ats.from( candidate ).has( ComponentMessage.class ) && !Modifier.isAbstract( candidate.getModifiers( ) )
          && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
       try {
         ComponentMessages.register( candidate );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
       return true;

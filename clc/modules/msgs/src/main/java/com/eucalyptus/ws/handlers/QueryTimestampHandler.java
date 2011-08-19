@@ -123,7 +123,7 @@ public class QueryTimestampHandler extends MessageStackHandler {
           if( expires.after(cacheExpire) )
 	      LOG.warn("[security] Message expiration date " + expires + " is further in the future that replay cache expiration");
         }
-      } catch ( Throwable t ) {
+      } catch ( Exception t ) {
         LOG.debug( t, t );
         throw new AuthenticationException( "Failure to parse timestamp: Timestamp=" + timestamp + " Expires=" + exp );
       }

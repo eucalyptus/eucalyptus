@@ -200,7 +200,7 @@ public class DirectStorageInfo extends AbstractPersistent {
 			storageDb.add(conf);
 			storageDb.commit();
 		}
-		catch (Throwable t) {
+		catch (Exception t) {
 			LOG.error("Unable to get storage info for: " + StorageProperties.NAME);
 			storageDb.rollback();
 			return new DirectStorageInfo(StorageProperties.NAME, 

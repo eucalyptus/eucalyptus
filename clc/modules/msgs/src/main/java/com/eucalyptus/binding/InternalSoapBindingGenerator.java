@@ -107,7 +107,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
       this.out.write( "</binding>" );
       this.out.flush( );
       this.out.close( );
-    } catch ( Throwable ex ) {
+    } catch ( Exception ex ) {
       ex.printStackTrace( );
     }
   }

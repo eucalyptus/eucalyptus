@@ -70,7 +70,7 @@ public class Groovyness {
       fileReader = new FileReader( fileName );
       T ret = ( T ) getGroovyEngine( ).eval( fileReader );
       return ret;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new RuntimeException( "Executing the requested script failed: " + fileName, e );
     } finally {
@@ -95,7 +95,7 @@ public class Groovyness {
                                                       setAttribute( "hi", code, ENGINE_SCOPE );
                                                     }
                                                   } );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new ScriptExecutionFailedException( "Executing the requested script failed: " + code, e );
     }
@@ -107,7 +107,7 @@ public class Groovyness {
       SimpleScriptContext scriptContext = new SimpleScriptContext( );
       scriptContext.setBindings( bindings, SimpleScriptContext.ENGINE_SCOPE );
       return getGroovyEngine( ).eval( code, scriptContext );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new ScriptExecutionFailedException( "Executing the requested script failed: " + code, e );
     }
@@ -116,7 +116,7 @@ public class Groovyness {
   public static Object eval( String code ) throws ScriptExecutionFailedException {
     try {
       return getGroovyEngine( ).eval( code );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new ScriptExecutionFailedException( "Executing the requested script failed: " + code, e );
     }
@@ -148,7 +148,7 @@ public class Groovyness {
       } catch ( FileNotFoundException e ) {
         LOG.info( "-> No config file found." );
       }
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( e, e );
     }
   }

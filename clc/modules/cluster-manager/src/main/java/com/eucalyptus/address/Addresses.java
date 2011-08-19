@@ -161,7 +161,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         Addresses.systemAddressManager.inheritReservedAddresses( oldMgr.getReservedAddresses( ) );
         LOG.info( "Setting the address manager to be: " + systemAddressManager.getClass( ).getSimpleName( ) );
       }
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( e, e );
     }
     return Addresses.systemAddressManager;
@@ -254,7 +254,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
           @Override
           public void fire( ) {
             try {
-              final VmInstance vm = VmInstances.getInstance( ).lookup( instanceId );
+              final VmInstance vm = VmInstances.lookup( instanceId );
               Addresses.system( vm );
             } catch ( NoSuchElementException ex ) {}
           }

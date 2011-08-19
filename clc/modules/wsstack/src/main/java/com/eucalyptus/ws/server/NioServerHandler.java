@@ -154,7 +154,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
       if ( ch != null ) {
         Contexts.clear( Contexts.lookup( ch ) );
       }
-    } catch ( Throwable ex ) {
+    } catch ( Exception ex ) {
       LOG.error( ex, ex );
     }
     if ( cause instanceof ReadTimeoutException ) {//TODO:ASAP:GRZE: wth are all these exception types?!?! ONLY WebServicesException caught; else wrap.

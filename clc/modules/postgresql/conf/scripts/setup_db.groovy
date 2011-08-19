@@ -513,7 +513,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 			} else {
 				return true;
 			}
-		} catch (Throwable t) {
+		} catch (Exception t) {
 			LOG.error("Unable to execute cmd : " + cmd, t);
 		}
 

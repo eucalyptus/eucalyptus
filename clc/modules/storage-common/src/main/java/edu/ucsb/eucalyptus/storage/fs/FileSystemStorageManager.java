@@ -394,7 +394,7 @@ public class FileSystemStorageManager implements StorageManager {
 			LOG.info(output.getReturnValue());
 			LOG.info(error.getReturnValue());
 			return errorCode;
-		} catch (Throwable t) {
+		} catch (Exception t) {
 			LOG.error(t);
 		}
 		return -1;

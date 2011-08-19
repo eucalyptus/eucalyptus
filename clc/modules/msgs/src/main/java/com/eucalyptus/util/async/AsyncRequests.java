@@ -66,12 +66,13 @@ package com.eucalyptus.util.async;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.util.Exceptions;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class AsyncRequests {
   
   private static Logger LOG = Logger.getLogger( AsyncRequests.class );
-  public static <A extends BaseMessage, B extends BaseMessage> B sendSync( ServiceConfiguration config, final A msg ) throws Throwable {
+  public static <A extends BaseMessage, B extends BaseMessage> B sendSync( ServiceConfiguration config, final A msg ) throws Exception {
     try {
       return newRequest( new MessageCallback<A, B>( ) {
         {
@@ -86,7 +87,7 @@ public class AsyncRequests {
     } catch ( ExecutionException ex ) {
       LOG.error( ex.getMessage( ) );
       LOG.error( ex.getCause( ), ex.getCause( ) );
-      throw ex.getCause( );
+      throw Exceptions.toCatchable( ex.getCause( ) );
     } catch ( InterruptedException ex ) {
       Thread.currentThread( ).interrupt( );
       throw ex;

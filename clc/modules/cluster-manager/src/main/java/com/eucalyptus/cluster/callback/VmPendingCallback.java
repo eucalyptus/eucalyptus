@@ -8,7 +8,6 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstance.Reason;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.async.FailedRequestException;
-import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
@@ -24,7 +23,7 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
     super.setRequest( new VmDescribeType( ) {
       {
         regarding( );
-        for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
+        for ( VmInstance vm : VmInstances.listValues( ) ) {
           if ( vm.getPartition( ).equals( VmPendingCallback.this.getSubject( ).getConfiguration( ).getPartition( ) ) ) {
             if ( VmState.PENDING.equals( vm.getState( ) )
                         || vm.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
@@ -52,9 +51,9 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
       runVm.setPlacement( this.getSubject( ).getConfiguration( ).getName( ) );
       VmState state = VmState.Mapper.get( runVm.getStateName( ) );
       try {
-        final VmInstance vm = VmInstances.getInstance( ).lookup( runVm.getInstanceId( ) );
+        final VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
         vm.setServiceTag( runVm.getServiceTag( ) );
-        if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && vm.getSplitTime( ) > SystemState.SHUT_DOWN_TIME ) {
+        if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
           vm.setState( VmState.TERMINATED, Reason.EXPIRED );
         } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( state ) ) {
           vm.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );

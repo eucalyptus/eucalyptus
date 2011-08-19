@@ -175,7 +175,7 @@ public class VmTypes {
         } catch ( EucalyptusCloudException e ) {
           db.rollback( );
           throw e;
-        } catch ( Throwable t ) {
+        } catch ( Exception t ) {
           db.rollback( );
           throw new EucalyptusCloudException( t );
         }
@@ -202,7 +202,7 @@ public class VmTypes {
         db.add( new VmType( "c1.xlarge", 4, 10, 2048 ) );
       }
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
     }
   }

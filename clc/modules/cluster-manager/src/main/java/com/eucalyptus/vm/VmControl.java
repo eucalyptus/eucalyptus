@@ -172,7 +172,7 @@ public class VmControl {
         @Override
         public boolean apply( final String instanceId ) {
           try {
-            final VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
+            final VmInstance v = VmInstances.lookup( instanceId );
             if ( Types.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
               final int oldCode = v.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
               final String oldState = v.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
@@ -184,7 +184,7 @@ public class VmControl {
             return true;
           } catch ( final NoSuchElementException e ) {
             try {
-              VmInstances.getInstance( ).lookupDisabled( instanceId ).setState( VmState.BURIED, Reason.BURIED );
+              VmInstances.lookupDisabled( instanceId ).setState( VmState.BURIED, Reason.BURIED );
               return true;
             } catch ( final NoSuchElementException e1 ) {
               return false;
@@ -209,7 +209,7 @@ public class VmControl {
         @Override
         public boolean apply( final String instanceId ) {
           try {
-            final VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
+            final VmInstance v = VmInstances.lookup( instanceId );
             if ( Types.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
               final Request<RebootInstancesType, RebootInstancesResponseType> req = AsyncRequests.newRequest( new RebootCallback( v.getInstanceId( ) ) );
               req.getRequest( ).regarding( request );
@@ -235,10 +235,10 @@ public class VmControl {
   public void getConsoleOutput( final GetConsoleOutputType request ) throws EucalyptusCloudException {
     VmInstance v = null;
     try {
-      v = VmInstances.getInstance( ).lookup( request.getInstanceId( ) );
+      v = VmInstances.lookup( request.getInstanceId( ) );
     } catch ( final NoSuchElementException e2 ) {
       try {
-        v = VmInstances.getInstance( ).lookupDisabled( request.getInstanceId( ) );
+        v = VmInstances.lookupDisabled( request.getInstanceId( ) );
         final GetConsoleOutputResponseType reply = request.getReply( );
         reply.setInstanceId( request.getInstanceId( ) );
         reply.setTimestamp( new Date( ) );
@@ -272,13 +272,13 @@ public class VmControl {
     final Context ctx = Contexts.lookup( );
     final DescribeBundleTasksResponseType reply = request.getReply( );
     if ( request.getBundleIds( ).isEmpty( ) ) {
-      for ( final VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
+      for ( final VmInstance v : VmInstances.listValues( ) ) {
         if ( v.isBundling( )
              && ( Types.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), v.getOwner( ) ) ) ) {
           reply.getBundleTasks( ).add( v.getBundleTask( ) );
         }
       }
-      for ( final VmInstance v : VmInstances.getInstance( ).listDisabledValues( ) ) {
+      for ( final VmInstance v : VmInstances.listDisabledValues( ) ) {
         if ( v.isBundling( )
              && ( Types.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), v.getOwner( ) ) ) ) {
           reply.getBundleTasks( ).add( v.getBundleTask( ) );
@@ -287,7 +287,7 @@ public class VmControl {
     } else {
       for ( final String bundleId : request.getBundleIds( ) ) {
         try {
-          final VmInstance v = VmInstances.getInstance( ).lookupByBundleId( bundleId );
+          final VmInstance v = VmInstances.lookupByBundleId( bundleId );
           if ( v.isBundling( )
                && ( Types.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), v.getOwner( ) ) ) ) {
             reply.getBundleTasks( ).add( v.getBundleTask( ) );
@@ -309,11 +309,11 @@ public class VmControl {
     for ( String instanceId : request.getInstancesSet( ) ) {
       VmInstance vm = null;
       try {
-        vm = VmInstances.getInstance( ).lookup( instanceId );
+        vm = VmInstances.lookup( instanceId );
       } catch ( NoSuchElementException ex ) {
         try {
           vm = Transactions.find( VmInstance.named( ctx.getUserFullName( ), instanceId ) );
-        } catch ( Throwable ex1 ) {
+        } catch ( Exception ex1 ) {
           throw new EucalyptusCloudException( "Failed to locate instance information for instance id: " + instanceId );
         }
         final VmInstance v = vm;
@@ -350,7 +350,7 @@ public class VmControl {
         @Override
         public boolean apply( final String instanceId ) {
           try {
-            final VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
+            final VmInstance v = VmInstances.lookup( instanceId );
             if ( Types.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
               final int oldCode = v.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
               final String oldState = v.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
@@ -362,7 +362,7 @@ public class VmControl {
             return true;
           } catch ( final NoSuchElementException e ) {
             try {
-              VmInstances.getInstance( ).lookupDisabled( instanceId ).setState( VmState.BURIED, Reason.BURIED );
+              VmInstances.lookupDisabled( instanceId ).setState( VmState.BURIED, Reason.BURIED );
               return true;
             } catch ( final NoSuchElementException e1 ) {
               return false;
@@ -434,7 +434,7 @@ public class VmControl {
     reply.set_return( true );
     final Context ctx = Contexts.lookup( );
     try {
-      final VmInstance v = VmInstances.getInstance( ).lookupByBundleId( request.getBundleId( ) );
+      final VmInstance v = VmInstances.lookupByBundleId( request.getBundleId( ) );
       if ( Types.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), v.getOwner( ) ) ) {
         v.getBundleTask( ).setState( "canceling" );
         LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, ctx.getUserFullName( ).toString( ), v.getBundleTask( ).getBundleId( ),
@@ -468,7 +468,7 @@ public class VmControl {
     final User user = ctx.getUser( );
     
     try {
-      final VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
+      final VmInstance v = VmInstances.lookup( instanceId );
       if ( v.isBundling( ) ) {
         reply.setTask( v.getBundleTask( ) );
         return reply;
@@ -511,7 +511,7 @@ public class VmControl {
     try {
       final Context ctx = Contexts.lookup( );
       Cluster cluster = null;
-      final VmInstance v = VmInstances.getInstance( ).lookup( request.getInstanceId( ) );
+      final VmInstance v = VmInstances.lookup( request.getInstanceId( ) );
       if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
         throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
       }

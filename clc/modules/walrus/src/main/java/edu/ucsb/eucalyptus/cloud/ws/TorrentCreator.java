@@ -108,7 +108,7 @@ public class TorrentCreator {
                 LOG.warn(errValue);
             if(outValue.length() > 0)
                 LOG.warn(outValue);
-        } catch (Throwable t) {
+        } catch (Exception t) {
             LOG.error(t);
         }
     }

@@ -174,7 +174,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         try {
           AsyncRequests.newRequest( new StartServiceCallback( input ) ).sendSync( input.configuration );
           return true;
-        } catch ( Throwable t ) {
+        } catch ( Exception t ) {
           return input.filterExceptions( t );
         }
       }
@@ -188,7 +188,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
           }
           Clusters.getInstance( ).register( input );
           return true;
-        } catch ( Throwable t ) {
+        } catch ( Exception t ) {
           if ( !input.filterExceptions( t ) ) {
             return false;
           } else {
@@ -206,7 +206,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             AsyncRequests.newRequest( new DisableServiceCallback( input ) ).sendSync( input.configuration );
           }
           return true;
-        } catch ( Throwable t ) {
+        } catch ( Exception t ) {
           return input.filterExceptions( t );
         } finally {
           Clusters.getInstance( ).registerDisabled( input );
@@ -237,7 +237,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             LOG.error( res );
           } catch ( InterruptedException t ) {
             Thread.currentThread( ).interrupt( );
-          } catch ( Throwable t ) {
+          } catch ( Exception t ) {
             parent.filterExceptions( t );
           }
         }

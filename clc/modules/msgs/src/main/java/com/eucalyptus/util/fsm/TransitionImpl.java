@@ -114,7 +114,7 @@ public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T ex
         if ( !pred.apply( entry.getValue( ) ) ) {
           throw new TransitionListenerException( entry.getValue( ).getClass( ).getSimpleName( ) + "." + phase + "( ) returned false." );
         }
-      } catch ( Throwable t ) {
+      } catch ( Exception t ) {
         Logs.exhaust( ).error( t, t );
         return false;
       }
@@ -137,7 +137,7 @@ public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T ex
       }, parent );
       try {
         return this.action.before( parent );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
         return false;
       }
@@ -161,7 +161,7 @@ public class TransitionImpl<P extends HasName<P>, S extends Automata.State, T ex
             return true;
           }
         }, parent );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         Logs.exhaust( ).error( ex , ex );
         transitionCallback.fireException( new TransitionException( ex ) );
       }

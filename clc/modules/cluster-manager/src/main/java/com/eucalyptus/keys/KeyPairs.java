@@ -93,7 +93,7 @@ public class KeyPairs {
   public static SshKeyPair lookup( OwnerFullName ownerFullName, String keyName ) throws NoSuchMetadataException {
     try {
       return Transactions.find( new SshKeyPair( ownerFullName, keyName ) );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       throw new NoSuchMetadataException( "Failed to find key pair: " + keyName + " for " + ownerFullName, e );
     }
   }
@@ -101,7 +101,7 @@ public class KeyPairs {
   public static SshKeyPair fromPublicKey( OwnerFullName ownerFullName, String keyValue ) throws NoSuchMetadataException {
     try {
       return Transactions.find( new SshKeyPair( ownerFullName, keyValue ) );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       throw new NoSuchMetadataException( "Failed to find key pair with public key: " + keyValue + " for " + ownerFullName, e );
     }
     

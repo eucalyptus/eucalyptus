@@ -124,7 +124,7 @@ public class SystemBootstrapper {
     } catch ( BootstrapException e ) {
       e.printStackTrace( );
       throw e;
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       t.printStackTrace( );
       LOG.fatal( t, t );
       System.exit( 123 );
@@ -132,12 +132,12 @@ public class SystemBootstrapper {
     }
   }
   
-  public boolean load( ) throws Throwable {
+  public boolean load( ) throws Exception {
     if ( BootstrapArgs.isInitializeSystem( ) ) {
       try {
         Bootstrap.initializeSystem( );
         System.exit( 0 );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
         System.exit( 1 );
       }
@@ -152,7 +152,7 @@ public class SystemBootstrapper {
       } catch ( BootstrapException e ) {
         e.printStackTrace( );
         throw e;
-      } catch ( Throwable t ) {
+      } catch ( Exception t ) {
         t.printStackTrace( );
         LOG.fatal( t, t );
         System.exit( 123 );
@@ -165,7 +165,7 @@ public class SystemBootstrapper {
     return true;
   }
   
-  public boolean start( ) throws Throwable {
+  public boolean start( ) throws Exception {
     try {
       /** @NotNull */
       Bootstrap.Stage stage = Bootstrap.transition( );
@@ -176,7 +176,7 @@ public class SystemBootstrapper {
       t.printStackTrace( );
       LOG.fatal( t, t );
       throw t;
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       LOG.fatal( t, t );
       System.exit( 123 );
       throw t;
@@ -193,7 +193,7 @@ public class SystemBootstrapper {
     }
     try {
       SystemBootstrapper.printBanner( );
-    } catch ( Throwable ex ) {
+    } catch ( Exception ex ) {
       LOG.error( ex, ex );
     }
     return true;

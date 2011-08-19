@@ -92,7 +92,7 @@ public class DatabaseAccountProxy implements Account {
         results.add( new DatabaseUserProxy( u ) );
       }
       return results;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get users for " + this.delegate.getName( ) );
       throw new AuthException( "Failed to get users for account", e );
@@ -116,7 +116,7 @@ public class DatabaseAccountProxy implements Account {
         results.add( new DatabaseGroupProxy( g ) );
       }
       return results;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get groups for " + this.delegate.getName( ) );
       throw new AuthException( "Failed to get groups", e );
@@ -156,7 +156,7 @@ public class DatabaseAccountProxy implements Account {
       newUser.getGroups( ).add( newGroup );
       db.commit( );
       return new DatabaseUserProxy( newUser );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to add user: " + userName + " in " + this.delegate.getName( ) );
       db.rollback( );
       throw new AuthException( AuthException.USER_CREATE_FAILURE, e );
@@ -174,7 +174,7 @@ public class DatabaseAccountProxy implements Account {
           || userGroup.getPolicies( ).size( ) > 0 );
       db.commit( );
       return result;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to check user " + userName + " in " + accountName );
       throw new AuthException( AuthException.NO_SUCH_USER, e );
@@ -205,7 +205,7 @@ public class DatabaseAccountProxy implements Account {
       }
       db.delete( user );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to delete user: " + userName + " in " + accountName );
       throw new AuthException( AuthException.NO_SUCH_USER, e );
@@ -231,7 +231,7 @@ public class DatabaseAccountProxy implements Account {
       db.recast( GroupEntity.class ).add( group );
       db.commit( );
       return new DatabaseGroupProxy( group );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to add group " + groupName + " in " + this.delegate.getName( ) );
       throw new AuthException( AuthException.GROUP_CREATE_FAILURE, e );
@@ -245,7 +245,7 @@ public class DatabaseAccountProxy implements Account {
       boolean hasResAttached = group.getUsers( ).size( ) > 0 || group.getPolicies( ).size( ) > 0;
       db.commit( );
       return hasResAttached;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to check group " + groupName + " in " + accountName );
       throw new AuthException( AuthException.NO_SUCH_GROUP, e );
@@ -270,7 +270,7 @@ public class DatabaseAccountProxy implements Account {
       GroupEntity group = DatabaseAuthUtils.getUniqueGroup( db, groupName, accountName );
       db.delete( group );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to delete group " + groupName + " in " + accountName );
       throw new AuthException( AuthException.NO_SUCH_GROUP, e );
@@ -288,7 +288,7 @@ public class DatabaseAccountProxy implements Account {
       GroupEntity group = DatabaseAuthUtils.getUniqueGroup( db, groupName, accountName );
       db.commit( );
       return new DatabaseGroupProxy( group );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get group " + groupName + " for " + accountName );
       throw new AuthException( "Failed to get group", e );
@@ -306,7 +306,7 @@ public class DatabaseAccountProxy implements Account {
       UserEntity user = DatabaseAuthUtils.getUniqueUser( db, userName, accountName );
       db.commit( );
       return new DatabaseUserProxy( user );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to find user: " + userName + " in " + accountName );
       throw new AuthException( AuthException.NO_SUCH_USER, e );
@@ -342,7 +342,7 @@ public class DatabaseAccountProxy implements Account {
         results.add( new DatabaseAuthorizationProxy( auth ) );
       }
       return results;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to lookup global authorization for account " + accountId + ", type=" + resourceType);
       throw new AuthException( "Failed to lookup account global auth", e );
@@ -376,7 +376,7 @@ public class DatabaseAccountProxy implements Account {
         results.add( new DatabaseAuthorizationProxy( auth ) );
       }
       return results;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to lookup global quota for account " + accountId + ", type=" + resourceType);
       throw new AuthException( "Failed to lookup account global quota", e );

@@ -42,7 +42,7 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
                                                                             annote.displayName( ), annote.type( ), alias );
             return prop;
           }
-        } catch ( Throwable e ) {
+        } catch ( Exception e ) {
           LOG.debug( e, e );
           return null;
         }

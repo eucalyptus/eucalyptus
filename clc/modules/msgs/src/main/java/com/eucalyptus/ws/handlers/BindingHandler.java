@@ -109,7 +109,7 @@ public class BindingHandler extends MessageStackHandler {
         namespace = omNs.getNamespaceURI( );
         this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
         msgType = this.binding.getElementClass( httpMessage.getOmMessage( ).getLocalName( ) );
-      } catch ( Throwable e1 ) {
+      } catch ( Exception e1 ) {
         LOG.error( httpMessage.getSoapEnvelope( ).toString( ), e1 );
         if ( this.binding == null ) {
           throw new WebServicesException( e1 );

@@ -95,7 +95,7 @@ public class TorrentClient extends Thread {
             String errValue = error.getReturnValue();
             if(errValue.length() > 0)
                 LOG.warn(errValue);
-        } catch (Throwable t) {
+        } catch (Exception t) {
             t.printStackTrace();
         }
     }

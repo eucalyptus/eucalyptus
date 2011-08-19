@@ -351,7 +351,7 @@ public class Logs {
             );
       
       Logger.getRootLogger( ).info( LogUtil.subheader( "Starting system with debugging set as: " + Joiner.on( "\n" ).join( Logs.class.getDeclaredFields( ) ) ) );
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       t.printStackTrace( );
       System.exit( 1 );
     }

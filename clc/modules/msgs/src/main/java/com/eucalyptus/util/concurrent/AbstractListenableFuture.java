@@ -179,7 +179,7 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
       } catch ( ExecutionException ex ) {
         LOG.error( ex, ex );
         this.future.setException( ex.getCause( ) );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
         this.future.setException( ex.getCause( ) );
       }

@@ -78,7 +78,7 @@ public class VolumeTest extends TestCase {
 
     static BlockStorage blockStorage;
 
-    public void testVolume() throws Throwable {
+    public void testVolume() throws Exception {
 
 
         String userId = "admin";

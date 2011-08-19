@@ -289,7 +289,7 @@ public class ClusterAllocator implements Runnable {
         public void fire( final VmRunResponseType response ) {
           final Address addr = childToken.getAddress( );
           for ( final VmInfo vmInfo : response.getVms( ) ) {//TODO: this will have some funny failure characteristics
-            final VmInstance vm = VmInstances.getInstance( ).lookup( vmInfo.getInstanceId( ) );
+            final VmInstance vm = VmInstances.lookup( vmInfo.getInstanceId( ) );
             AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>( ) {
               @Override
               public void fire( final BaseMessage response ) {

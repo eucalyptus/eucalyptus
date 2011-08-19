@@ -650,7 +650,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 }
                 dbBucket.add(b);
                 dbBucket.commit();
-            } catch (Throwable t) {
+            } catch (Exception t) {
                 t.printStackTrace();
                 dbBucket.rollback();
                 throw t;
@@ -704,7 +704,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 }
                 dbObject.add(objectInfo);
                 dbObject.commit();
-            } catch (Throwable t) {
+            } catch (Exception t) {
                 t.printStackTrace();
                 dbObject.rollback();
                 throw t;
@@ -770,7 +770,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 LOG.debug("adding rules group: " + rulesGroup);
                 dbGen.add(rulesGroup);
                 dbGen.commit();
-            } catch (Throwable t) {
+            } catch (Exception t) {
                 t.printStackTrace();
                 dbGen.rollback();
                 throw t;

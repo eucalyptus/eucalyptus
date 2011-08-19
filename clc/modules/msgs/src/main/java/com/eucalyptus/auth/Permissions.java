@@ -39,7 +39,7 @@ public class Permissions {
       return true;
     } catch ( AuthException e ) {
       LOG.error( "Denied resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount.getName( ) + " for " + requestUser.getName( ), e );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( "Exception in resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount.getName( ) + " for " + requestUser.getName( ), e );      
     }
     return false;
@@ -58,7 +58,7 @@ public class Permissions {
   public static User getUserById( String userId ) throws EucalyptusCloudException {
     try {
       return Accounts.lookupUserById( userId );
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       throw new EucalyptusCloudException( t );
     }
   }
@@ -66,7 +66,7 @@ public class Permissions {
   public static Account getAccountByUserId( String userId ) throws EucalyptusCloudException {
     try {
       return Accounts.lookupUserById( userId ).getAccount( );
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       throw new EucalyptusCloudException( t );
     }
   }
@@ -74,7 +74,7 @@ public class Permissions {
   public static Account getUserAccount( User user ) throws EucalyptusCloudException {
     try {
       return user.getAccount( );
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       throw new EucalyptusCloudException( t );
     }
   }

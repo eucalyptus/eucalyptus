@@ -18,7 +18,7 @@ public class Crypto {
     try {
       Class provClass = ClassLoader.getSystemClassLoader().loadClass( "com.eucalyptus.auth.crypto.DefaultCryptoProvider" );
       provider = ( BaseSecurityProvider ) provClass.newInstance( );
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       LOG.debug( t, t );
       provider = DUMMY;
     }

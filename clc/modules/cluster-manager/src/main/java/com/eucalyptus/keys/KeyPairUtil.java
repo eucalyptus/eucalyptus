@@ -18,7 +18,7 @@ public class KeyPairUtil {
     try {
       keys = db.query( new SshKeyPair( userFullName ) );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
     }
     return keys;
@@ -31,7 +31,7 @@ public class KeyPairUtil {
       key = db.getUnique( new SshKeyPair( userFullName, keyName ) );
       db.delete( key );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       throw new EucalyptusCloudException( "Failed to find key pair: " + keyName, e );
     }

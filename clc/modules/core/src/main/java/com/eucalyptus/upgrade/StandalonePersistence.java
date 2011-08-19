@@ -41,7 +41,7 @@ public class StandalonePersistence {
   private static DatabaseSource             source;
   private static DatabaseDestination        dest;
   
-  public static void main( String[] args ) throws Throwable {
+  public static void main( String[] args ) throws Exception {
     if ( ( eucaHome = System.getProperty( "euca.upgrade.new.dir" ) ) == null ) {
       throw new RuntimeException( "Failed to find required 'euca.upgrade.new.dir' property: " + eucaHome );
     } else if ( ( eucaOld = System.getProperty( "euca.upgrade.old.dir" ) ) == null ) {
@@ -70,7 +70,7 @@ public class StandalonePersistence {
       StandalonePersistence.setupOldDatabase( );
       StandalonePersistence.runUpgrade( );
       System.exit(0);
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.error( e, e );
       e.printStackTrace( );
       System.exit( -1 );
@@ -119,7 +119,7 @@ public class StandalonePersistence {
         for ( Sql s : StandalonePersistence.sqlConnections.values( ) ) {
           try {
             s.close( );
-          } catch ( Throwable e ) {
+          } catch ( Exception e ) {
             LOG.debug( e, e );
           }
         }
@@ -220,7 +220,7 @@ public class StandalonePersistence {
       for ( Class c : classList ) {
         try {
           d.processClass( c );
-        } catch ( Throwable t ) {
+        } catch ( Exception t ) {
           if( t instanceof ClassNotFoundException ) {
           } else {
             t.printStackTrace( );

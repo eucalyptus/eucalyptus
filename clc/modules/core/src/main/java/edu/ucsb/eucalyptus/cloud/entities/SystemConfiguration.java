@@ -180,7 +180,7 @@ public class SystemConfiguration extends AbstractPersistent {
   		confDb.add(conf);
   		confDb.commit();
   	}
-  	catch (Throwable t) {
+  	catch (Exception t) {
   		LOG.error("Unable to get system configuration.");
   		confDb.rollback();
   		return validateSystemConfiguration(null);

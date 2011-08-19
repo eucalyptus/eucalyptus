@@ -194,7 +194,7 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
     } else if (evt.getState().equals(ChannelState.CONNECTED) && Boolean.FALSE.equals(evt.getValue())) {
       try {
         Contexts.clear( Contexts.lookup( ctx.getChannel( ) ) );
-      } catch ( Throwable e1 ) {
+      } catch ( Exception e1 ) {
         LOG.warn( "Failed to remove the channel context on connection close.", e1 );
       }
     }
