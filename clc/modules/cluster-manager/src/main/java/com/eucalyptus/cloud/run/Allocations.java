@@ -63,6 +63,8 @@
 
 package com.eucalyptus.cloud.run;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -208,6 +210,8 @@ public class Allocations {
     public void requestNetworkIndexes( ) throws NotEnoughResourcesAvailable {
       NetworkGroup net = this.getPrimaryNetwork( );
       ExtantNetwork extantNetwork = net.extantNetwork( );
+      assertThat( net, notNullValue( ) );
+      assertThat( extantNetwork, notNullValue( ) );
       for ( ResourceToken rscToken : this.allocationTokens ) {
         try {
           SetReference<PrivateNetworkIndex, VmInstance> addrIndex = extantNetwork.allocateNetworkIndex( );

@@ -111,9 +111,9 @@ import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements NetworkSecurityGroup<NetworkGroup> {
   @Transient
-  private static final long serialVersionUID = 1L;
-  
-  private static Logger     LOG              = Logger.getLogger( NetworkGroup.class );
+  private static final long   serialVersionUID = 1L;
+  @Transient
+  private static final Logger LOG              = Logger.getLogger( NetworkGroup.class );
   
   public enum State {
     DISABLED,
@@ -301,12 +301,16 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     }
   }
   
-  private ExtantNetwork getExtantNetwork( ) {
+  ExtantNetwork getExtantNetwork( ) {
     return this.extantNetwork;
   }
   
   private void setExtantNetwork( final ExtantNetwork extantNetwork ) {
     this.extantNetwork = extantNetwork;
+  }
+  
+  private Set<VmInstance> getRunningInstances( ) {
+    return this.runningInstances;
   }
   
 }

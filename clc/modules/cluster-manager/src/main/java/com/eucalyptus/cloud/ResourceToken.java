@@ -80,7 +80,6 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.network.NetworkGroup;
-import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.PrivateNetworkIndex;
 
 public class ResourceToken implements Comparable<ResourceToken> {
@@ -237,6 +236,12 @@ public class ResourceToken implements Comparable<ResourceToken> {
 
   public void setAddress( Address address ) {
     this.address = address;
+  }
+
+  @Override
+  public String toString( ) {
+    return String.format( "ResourceToken:%s:%s:tag=%s:idx=%s",
+                          this.instanceId, this.address, this.networkGroup, this.networkIndex );
   }
 
 }
