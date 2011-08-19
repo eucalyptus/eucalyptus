@@ -110,6 +110,7 @@ import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -126,6 +127,16 @@ public class VmInstances {
       if ( singleton == null ) singleton = new VmInstances( );
     }
     return singleton;
+  }
+  
+  enum VmIsOperational implements Predicate<VmInstance> {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( VmInstance vm ) {
+      return VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) );
+    }
+    
   }
   
   @ResourceQuantityMetricFunction( VirtualMachineInstance.class )
@@ -165,32 +176,30 @@ public class VmInstances {
     return vmId;
   }
   
-  public VmInstance lookupByInstanceIp( final String ip ) throws NoSuchElementException {
-    for ( final VmInstance vm : this.listValues( ) ) {
-      if ( ip.equals( vm.getPrivateAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
-        return vm;
+  public static Predicate<VmInstance> withPrivateAddress( final String ip ) {
+    return new Predicate<VmInstance>( ) {
+      @Override
+      public boolean apply( VmInstance vm ) {
+        return ip.equals( vm.getPrivateAddress( ) ) && VmIsOperational.INSTANCE.apply( vm );
       }
-    }
-    throw new NoSuchElementException( "Can't find registered object with ip:" + ip + " in " + this.getClass( ).getSimpleName( ) );
+    };
   }
   
-  public int countByPublicIp( final String ip ) throws NoSuchElementException {
-    int count = 0;
-    for ( final VmInstance vm : this.listValues( ) ) {
-      if ( ip.equals( vm.getPublicAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
-        count++;
-      }
-    }
-    return count;
+  public static VmInstance lookupByInstanceIp( final String ip ) throws NoSuchElementException {
+    return Iterables.find( listValues( ), vmWithPublicAddress( ip ) );
   }
   
-  public VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
-    for ( final VmInstance vm : this.listValues( ) ) {
-      if ( ip.equals( vm.getPublicAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
-        return vm;
+  public static Predicate<VmInstance> vmWithPublicAddress( final String ip ) {
+    return new Predicate<VmInstance>( ) {
+      @Override
+      public boolean apply( VmInstance vm ) {
+        return ip.equals( vm.getPublicAddress( ) ) && VmIsOperational.INSTANCE.apply( vm );
       }
-    }
-    throw new NoSuchElementException( "Can't find registered object with public ip:" + ip + " in " + this.getClass( ).getSimpleName( ) );
+    };
+  }
+  
+  public static VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
+    return Iterables.find( listValues( ), vmWithPublicAddress( ip ) );
   }
   
   public VmInstance lookupByBundleId( final String bundleId ) throws NoSuchElementException {

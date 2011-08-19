@@ -93,10 +93,10 @@ public class MetadataRequest {
       }
       VmInstance findVm = null;
       try {
-        findVm = VmInstances.getInstance( ).lookupByPublicIp( requestIp );
+        findVm = VmInstances.lookupByPublicIp( requestIp );
       } catch ( NoSuchElementException ex ) {
         try {
-          findVm = VmInstances.getInstance( ).lookupByInstanceIp( requestIp );
+          findVm = VmInstances.lookupByInstanceIp( requestIp );
         } catch ( NoSuchElementException ex1 ) {
         }
       }

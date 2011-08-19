@@ -3,6 +3,7 @@ package com.eucalyptus.address;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
@@ -17,6 +18,8 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.vm.VmState;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
 import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
@@ -208,16 +211,9 @@ public abstract class AbstractSystemAddressManager {
     }
     
     private static void checkUniqueness( ClusterAddressInfo addrInfo ) {
-      int vmCount = VmInstances.getInstance( ).countByPublicIp( addrInfo.getAddress( ) );
-      if ( vmCount > 1 ) {
-        String vmList = "";
-        for ( VmInstance v : VmInstances.getInstance( ).listValues( ) ) {
-          if ( addrInfo.getAddress( ).equals( v.getPublicAddress( ) ) && ( VmState.PENDING.equals( v.getState( ) ) || VmState.RUNNING.equals( v.getState( ) ) ) ) {
-            vmList += " " + v.getInstanceId( ) + "(" + v.getState( ) + ")";
-          }
-        }
-        LOG.error( "Found " + vmCount + " vms with the same address: " + addrInfo + " -> " + vmList );
-        //TODO: handle reconciling state.
+      Collection<VmInstance> matches = Collections2.filter( VmInstances.listValues( ), VmInstances.withPrivateAddress( addrInfo.getAddress( ) ) );
+      if ( matches.size( ) > 1 ) {
+        LOG.error( "Found " + matches.size( ) + " vms with the same address: " + addrInfo + " -> " + matches );
       }
     }
     

@@ -232,15 +232,15 @@ public class Entities {
     
   }
   
-  private static Logger                                       LOG     = Logger.getLogger( Entities.class );
+  private static Logger                                         LOG     = Logger.getLogger( Entities.class );
   private static ThreadLocal<ConcurrentMap<String, JoinableTx>> txState = new ThreadLocal<ConcurrentMap<String, JoinableTx>>( ) {
-                                                                        
-                                                                        @Override
-                                                                        protected ConcurrentMap<String, JoinableTx> initialValue( ) {
-                                                                          return Maps.newConcurrentMap( );
-                                                                        }
-                                                                        
-                                                                      };
+                                                                          
+                                                                          @Override
+                                                                          protected ConcurrentMap<String, JoinableTx> initialValue( ) {
+                                                                            return Maps.newConcurrentMap( );
+                                                                          }
+                                                                          
+                                                                        };
   
   private static JoinableTx lookup( final Object obj ) {
     final String ctx = lookatPersistenceContext( obj );
@@ -586,19 +586,35 @@ public class Entities {
       this.txState.begin( );
     }
     
+    private void doTxEvent( TxEvent ev, Runnable runnable ) throws RecoverablePersistenceException {
+      if ( !this.txState.isActive( ) ) {
+        this.record.logEvent( TxStep.BEGIN, ev );
+        try {
+          runnable.run( );
+          this.record.logEvent( TxStep.END, ev );
+        } catch ( final RuntimeException ex ) {
+          this.record.logEvent( TxStep.FAIL, ev );
+          throw PersistenceExceptions.throwFiltered( ex );
+        }
+      } else {
+        this.record.logEvent( TxStep.FAIL, ev );
+        Logs.extreme( ).error( "Duplicate call to " + ev.name( ).toLowerCase( ) + "( ): " + Threads.currentStackString( ) );
+      }
+    }
+    
     /**
      * @delegate Do not change semantics here.
      * @see javax.persistence.EntityTransaction#rollback()
      */
     @Override
     public void rollback( ) throws RecoverablePersistenceException {
-      try {
-        this.txState.rollback( );
-        this.record.logEvent( TxStep.END, TxEvent.ROLLBACK );
-      } catch ( final RuntimeException ex ) {
-        this.record.logEvent( TxStep.FAIL, TxEvent.ROLLBACK );
-        throw PersistenceExceptions.throwFiltered( ex );
-      }
+      this.doTxEvent( TxEvent.ROLLBACK, new Runnable( ) {
+        
+        @Override
+        public void run( ) {
+          JoinableTx.this.rollback( );
+        }
+      } );
     }
     
     /**
@@ -607,15 +623,13 @@ public class Entities {
      */
     @Override
     public void commit( ) throws RecoverablePersistenceException {
-      this.record.logEvent( TxStep.BEGIN, TxEvent.COMMIT );
-      try {
-        this.txState.commit( );
-        this.record.logEvent( TxStep.END, TxEvent.COMMIT );
-      } catch ( final RuntimeException ex ) {
-        this.rollback( );
-        this.record.logEvent( TxStep.FAIL, TxEvent.COMMIT );
-        throw PersistenceExceptions.throwFiltered( ex );
-      }
+      this.doTxEvent( TxEvent.COMMIT, new Runnable( ) {
+        
+        @Override
+        public void run( ) {
+          JoinableTx.this.commit( );
+        }
+      } );
     }
     
     String getCtx( ) {
