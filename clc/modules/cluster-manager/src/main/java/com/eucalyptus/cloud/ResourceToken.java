@@ -79,6 +79,7 @@ import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.PrivateNetworkIndex;
 
@@ -91,7 +92,7 @@ public class ResourceToken implements Comparable<ResourceToken> {
   @Nullable
   private Address                                       address;
   @Nullable
-  private NetworkGroup                                  networkGroup;
+  private ExtantNetwork                                 extantNetwork;
   @Nullable
   private SetReference<PrivateNetworkIndex, VmInstance> networkIndex;
   private final Date                                    creationTime;
@@ -150,10 +151,6 @@ public class ResourceToken implements Comparable<ResourceToken> {
     return this.launchIndex;
   }
   
-  NetworkGroup getNetworkGroup( ) {
-    return this.networkGroup;
-  }
-  
   public void abort( ) {
     try {
       final ServiceConfiguration config = Partitions.lookupService( ClusterController.class, this.getAllocationInfo( ).getPartition( ) );
@@ -162,15 +159,19 @@ public class ResourceToken implements Comparable<ResourceToken> {
     } catch ( final Exception ex ) {
       LOG.error( ex, ex );
     }
-    try {
-      this.networkIndex.abort( );
-    } catch ( Exception ex ) {
-      LOG.error( ex, ex );
+    if ( this.networkIndex != null ) {
+      try {
+        this.networkIndex.abort( );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+      }
     }
-    try {
-      this.address.release( );
-    } catch ( Exception ex ) {
-      LOG.error( ex, ex );
+    if ( this.address != null ) {
+      try {
+        this.address.release( );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+      }
     }
   }
   
@@ -229,19 +230,27 @@ public class ResourceToken implements Comparable<ResourceToken> {
   public void release( ) throws NoSuchTokenException {
     Clusters.lookup( this.getAllocationInfo( ).getPartition( ) ).getNodeState( ).releaseToken( this );
   }
-
+  
   public void setNetworkIndex( SetReference<PrivateNetworkIndex, VmInstance> networkIndex ) {
     this.networkIndex = networkIndex;
   }
-
+  
   public void setAddress( Address address ) {
     this.address = address;
   }
-
+  
   @Override
   public String toString( ) {
     return String.format( "ResourceToken:%s:%s:tag=%s:idx=%s",
-                          this.instanceId, this.address, this.networkGroup, this.networkIndex );
+                          this.instanceId, this.address.getName( ), this.extantNetwork.getDisplayName( ), this.networkIndex.get( ).getIndex( ) );
   }
-
+  
+  public void setExtantNetwork( ExtantNetwork exNet ) {
+    this.extantNetwork = exNet;
+  }
+  
+  private ExtantNetwork getExtantNetwork( ) {
+    return this.extantNetwork;
+  }
+  
 }

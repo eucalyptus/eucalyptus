@@ -204,7 +204,10 @@ public class Allocations {
     
     public void requestNetworkTokens( ) throws NotEnoughResourcesAvailable {
       NetworkGroup net = this.getPrimaryNetwork( );
-      net.extantNetwork( );
+      ExtantNetwork exNet = net.extantNetwork( );
+      for ( ResourceToken rscToken : this.allocationTokens ) {
+        rscToken.setExtantNetwork( exNet );
+      }
     }
     
     public void requestNetworkIndexes( ) throws NotEnoughResourcesAvailable {
