@@ -66,6 +66,7 @@ package com.eucalyptus.network;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
@@ -89,13 +90,13 @@ public class NetworkGroups {
   private static String       NETWORK_DEFAULT_NAME      = "default";
   
   @ConfigurableField( initial = "" + 2048l, description = "Default max network index." )
-  public static Long    DEFAULT_MAX_NETWORK_INDEX = 128l;
+  public static Long          DEFAULT_MAX_NETWORK_INDEX = 128l;
   @ConfigurableField( initial = "" + 9, description = "Default min network index." )
-  public static Long    DEFAULT_MIN_NETWORK_INDEX = 9l;
+  public static Long          DEFAULT_MIN_NETWORK_INDEX = 9l;
   @ConfigurableField( initial = "" + 4096, description = "Default max vlan tag." )
-  public static Integer DEFAULT_MAX_NETWORK_TAG   = 4096;
+  public static Integer       DEFAULT_MAX_NETWORK_TAG   = 4096;
   @ConfigurableField( initial = "" + 9, description = "Default min vlan tag." )
-  public static Integer DEFAULT_MIN_NETWORK_TAG   = 9;
+  public static Integer       DEFAULT_MIN_NETWORK_TAG   = 9;
   
   public static class NetworkRangeConfiguration {
     private Boolean useNetworkTags  = Boolean.TRUE;
@@ -152,13 +153,14 @@ public class NetworkGroups {
   
   static final NetworkRangeConfiguration netConfig = new NetworkRangeConfiguration( );
   
-  public static void updateNetworkRangeConfiguration( ) {
+  public static synchronized void updateNetworkRangeConfiguration( ) {
+    final AtomicBoolean netTagging = new AtomicBoolean( true );
     try {
       Transactions.each( new ClusterConfiguration( ), new Callback<ClusterConfiguration>( ) {
         
         @Override
         public void fire( ClusterConfiguration input ) {
-          netConfig.setUseNetworkTags( netConfig.getUseNetworkTags( ) && !input.getUseNetworkTags( ) );
+          netConfig.setUseNetworkTags( netTagging.compareAndSet( true, input.getUseNetworkTags( ) ) );
           
           netConfig.setMinNetworkTag( Ints.max( netConfig.getMinNetworkTag( ), input.getMinNetworkTag( ) ) );
           netConfig.setMaxNetworkTag( Ints.min( netConfig.getMaxNetworkTag( ), input.getMaxNetworkTag( ) ) );
