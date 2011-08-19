@@ -635,7 +635,7 @@ public class Entities {
         
         @Override
         public void run( ) {
-          JoinableTx.this.rollback( );
+          JoinableTx.this.txState.rollback( );
         }
       } );
     }
@@ -650,7 +650,7 @@ public class Entities {
         
         @Override
         public void run( ) {
-          JoinableTx.this.commit( );
+          JoinableTx.this.txState.commit( );
         }
       } );
     }
