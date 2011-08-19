@@ -734,7 +734,9 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
         ? VmInstance.DEFAULT_IP
         : privateDnsName );
       runningInstance.setDnsName( publicDnsName );
+      runningInstance.setIpAddress( publicDnsName );
       runningInstance.setPrivateDnsName( privateDnsName );
+      runningInstance.setPrivateIpAddress( privateDnsName );
     } else {
       String publicDnsName = this.getPublicAddress( );
       String privateDnsName = this.getPrivateAddress( );
@@ -745,10 +747,13 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
         ? VmInstance.DEFAULT_IP
         : privateDnsName );
       runningInstance.setPrivateDnsName( privateDnsName );
+      runningInstance.setPrivateIpAddress( privateDnsName );
       if ( !VmInstance.DEFAULT_IP.equals( publicDnsName ) ) {
         runningInstance.setDnsName( publicDnsName );
+        runningInstance.setIpAddress( publicDnsName );
       } else {
         runningInstance.setDnsName( privateDnsName );
+        runningInstance.setIpAddress( privateDnsName );
       }
     }
     
