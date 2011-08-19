@@ -469,8 +469,8 @@ public class Entities {
     getTransactionState( deleteObject ).getEntityManager( ).remove( deleteObject );
   }
   
-  private static class NestedTxThreadLocal extends ThreadLocal<ConcurrentMap<String, NestedTx>> {
-    NestedTxThreadLocal( ) {}
+  private static class TxStateThreadLocal extends ThreadLocal<ConcurrentMap<String, NestedTx>> {
+    TxStateThreadLocal( ) {}
     
     @Override
     protected ConcurrentMap<String, NestedTx> initialValue( ) {
