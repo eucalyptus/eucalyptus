@@ -136,7 +136,7 @@ public class EuareService {
       User admin = newAccount.addUser( User.ACCOUNT_ADMIN, "/", true/*skipRegistration*/, true/*enabled*/, null/*info*/ );
       admin.createToken( );
       admin.createConfirmationCode( );
-      admin.createPassword( );
+      //admin.createPassword( );
       AccountType account = reply.getCreateAccountResult( ).getAccount( );
       account.setAccountName( newAccount.getName( ) );
       account.setAccountId( newAccount.getAccountNumber( ) );

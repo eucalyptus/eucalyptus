@@ -134,11 +134,11 @@ public class ConfigurationWebBackend {
   
   private static void serializeSystemConfiguration( SystemConfiguration sysConf, SearchResultRow result ) {
     // First fill in the common fields
-    result.addField( makeConfigId( CLOUD_NAME, CLOUD_TYPE ) ); // id
+    result.addField( makeConfigId( CLOUD_NAME, CLOUD_TYPE ) );// id
     result.addField( CLOUD_NAME );                            // name  
     result.addField( CLOUD_TYPE );                            // type
-    result.addField( Internets.localHostAddress( ) );               // host
-    result.addField( "" );                                    // port
+    result.addField( Internets.localHostAddress( ) );         // host
+    result.addField( "8773" );                                // port, hardcoding for now
     // Then fill in the specific fields
     result.addField( sysConf.getDnsDomain( ) );               // dns domain
     result.addField( sysConf.getNameserver( ) );              // dns nameserver
@@ -258,8 +258,8 @@ public class ConfigurationWebBackend {
     result.addField( clusterConf.getHostName( ) );
     result.addField( clusterConf.getPort( ) == null ? null : clusterConf.getPort( ).toString( ) );
     // Specific
-    result.addField( clusterConf.getMinNetworkTag( ) == null ? null : clusterConf.getMinNetworkTag( ).toString( ) );
-    result.addField( clusterConf.getMaxNetworkTag( ) == null ? null : clusterConf.getMaxNetworkTag( ).toString( ) );
+    result.addField( clusterConf.getMinNetworkTag( ) == null ? "0" : clusterConf.getMinNetworkTag( ).toString( ) );
+    result.addField( clusterConf.getMaxNetworkTag( ) == null ? "0" : clusterConf.getMaxNetworkTag( ).toString( ) );
   }
   
   /**

@@ -50,25 +50,25 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
   
   private static void invalidateSession( String userName, String accountName ) {
-	WebSession ws = WebSessionManager.getInstance( ).getSession( userName, accountName );
-	if ( ws != null ) {
-	  WebSessionManager.getInstance( ).removeSession( ws.getId( ) );
-	}
+  	WebSession ws = WebSessionManager.getInstance( ).getSession( userName, accountName );
+  	if ( ws != null ) {
+  	  WebSessionManager.getInstance( ).removeSession( ws.getId( ) );
+  	}
   }
   
   private static void invalidateSession( User user ) throws EucalyptusServiceException {
-	if ( user == null ) {
-	  LOG.error( "Empty user for invalidating web session" );
-	  return;
-	}
-	try {
-	  String userName = user.getName( );
-      String accountName = user.getAccount( ).getName( );
-      invalidateSession( userName, accountName );
-    } catch ( AuthException e ) {
-	  LOG.error( e, e );
-	  throw new EucalyptusServiceException( "Invalid user to lookup in web sessions", e );
-	}
+  	if ( user == null ) {
+  	  LOG.error( "Empty user for invalidating web session" );
+  	  return;
+  	}
+  	try {
+  	  String userName = user.getName( );
+        String accountName = user.getAccount( ).getName( );
+        invalidateSession( userName, accountName );
+      } catch ( AuthException e ) {
+  	  LOG.error( e, e );
+  	  throw new EucalyptusServiceException( "Invalid user to lookup in web sessions", e );
+  	}
   }
   
   private static SearchQuery parseQuery( QueryType type, String query ) throws EucalyptusServiceException {
@@ -271,9 +271,9 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
 
   @Override
-  public String createAccount( Session session, String accountName ) throws EucalyptusServiceException {
+  public String createAccount( Session session, String accountName, String password ) throws EucalyptusServiceException {
     User user = verifySession( session );
-    return EuareWebBackend.createAccount( user, accountName );
+    return EuareWebBackend.createAccount( user, accountName, password );
   }
 
   @Override
