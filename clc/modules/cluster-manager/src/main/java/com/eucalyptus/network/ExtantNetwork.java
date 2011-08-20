@@ -106,10 +106,15 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   private static Logger            LOG              = Logger.getLogger( ExtantNetwork.class );
   @Column( name = "metadata_extant_network_tag", unique = true )
   private Integer                  tag;
-  @OneToMany( fetch = FetchType.EAGER, cascade = { CascadeType.ALL }, mappedBy = "extantNetwork" )
+  
+  @OneToMany( orphanRemoval = true,
+      fetch = FetchType.EAGER,
+      cascade = { CascadeType.ALL },
+      mappedBy = "extantNetwork" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<PrivateNetworkIndex> indexes          = new HashSet<PrivateNetworkIndex>( );
-  @OneToOne( cascade = { CascadeType.ALL }, fetch = FetchType.EAGER )
+  
+  @OneToOne
   @JoinColumn( name = "metadata_extant_network_group_id" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private NetworkGroup             networkGroup;
