@@ -118,6 +118,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroup;
@@ -140,7 +141,6 @@ import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 @Entity
 @javax.persistence.Entity
@@ -210,48 +210,26 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   @Column( name = "metadata_vm_vbr" )
   private String                                      vbrString;
   @Transient
-  private VmTypeInfo                                  vbr;
+  private final BootableSet                                 bootSet;
   
   @PrePersist
   @PreUpdate
-  private void serializeVbr( ) {
+  private void preLoad( ) {
     super.setState( this.runtimeState.getReference( ) );
-    final StringWriter sw = new StringWriter( );
-    if ( this.vbr != null ) {
-      try {
-        final IBindingFactory bindingFactory = BindingDirectory.getFactory( BindingManager.defaultBindingNamespace( ), this.vbr.getClass( ) );
-        final IMarshallingContext mctx = bindingFactory.createMarshallingContext( );
-        mctx.setIndent( 2 );
-        mctx.marshalDocument( this, "UTF-8", null, sw );
-        this.vbrString = sw.toString( );
-      } catch ( final JiBXException ex ) {
-        LOG.error( ex, ex );
-        this.vbrString = null;
-      }
-    } else {
-      this.vbrString = null;
-    }
   }
   
   @PostLoad
-  private void deserializeVbr( ) {
+  private void postLoad( ) {
     this.runtimeState.set( this.getState( ), false );
-    if ( this.vbrString != null ) {
-      try {
-        this.vbr = ( VmTypeInfo ) BindingManager.getDefaultBinding( ).fromOM( this.vbrString );
-      } catch ( final Exception ex ) {
-        this.vbr = null;
-      }
-    }
   }
   
-  @ManyToMany( cascade = { CascadeType.PERSIST, CascadeType.MERGE } )
+  @ManyToMany
   @JoinTable( name = "metadata_metadata_vm_has_network_groups", joinColumns = { @JoinColumn( name = "metadata_vm_id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_group_id" ) } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final Set<NetworkGroup>                     networkGroups     = Sets.newHashSet( );
   
   @NotFound( action = NotFoundAction.IGNORE )
-  @OneToOne( cascade = { CascadeType.PERSIST, CascadeType.MERGE } )
+  @OneToOne
   @JoinColumn( name = "vm_network_index", nullable = true, insertable = false, updatable = false )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex                         networkIndex;
@@ -265,10 +243,13 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
                      final String reservationId, final int launchIndex,
                      final String placement,
                      final byte[] userData,
-                     final VmTypeInfo vbr, final SshKeyPair sshKeyPair, final VmType vmType,
+                     final BootableSet bootSet,
+                     final SshKeyPair sshKeyPair, final VmType vmType,
                      final String platform,
-                     final List<NetworkGroup> networkRulesGroups, final PrivateNetworkIndex networkIndex ) {
+                     final List<NetworkGroup> networkRulesGroups,
+                     final PrivateNetworkIndex networkIndex ) {
     super( owner, instanceId );
+    this.bootSet = bootSet;
     this.privateNetwork = Boolean.FALSE;
     this.launchTime = new Date( );
     this.blockBytes = 0l;
@@ -277,7 +258,6 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     this.launchIndex = launchIndex;
     this.instanceId = instanceId;
     this.clusterName = placement;
-    this.vbr = vbr;
     String p = null;
     try {
       p = ServiceConfigurations.lookupByName( ClusterController.class, this.clusterName ).getPartition( );
@@ -311,13 +291,13 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     this.networkBytes = null;
     this.reservationId = null;
     this.clusterName = null;
-    this.vbr = null;
     this.partitionName = null;
     this.userData = null;
     this.platform = null;
     this.sshKeyPair = null;
     this.vmType = null;
     this.privateNetwork = null;
+    this.bootSet = null;
   }
   
   protected VmInstance( ) {
@@ -328,13 +308,13 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     this.networkBytes = null;
     this.reservationId = null;
     this.clusterName = null;
-    this.vbr = null;
     this.partitionName = null;
     this.userData = null;
     this.platform = null;
     this.sshKeyPair = null;
     this.vmType = null;
     this.privateNetwork = null;
+    this.bootSet = null;
   }
   
   public void updateBlockBytes( final long blkbytes ) {
@@ -683,7 +663,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   }
   
   public String getImageId( ) {
-    return this.vbr.lookupRoot( ).getId( );
+    return this.bootSet.getMachine( ).getDisplayName( );
   }
   
   public RunningInstancesItemType getAsRunningInstanceItemType( ) {
@@ -705,25 +685,9 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     runningInstance.setInstanceId( this.instanceId );
 //ASAP:FIXME:GRZE: restore.
     runningInstance.setProductCodes( new ArrayList<String>( ) );
-    try {
-      runningInstance.setImageId( this.vbr.lookupRoot( ).getId( ) );
-    } catch ( final Exception ex ) {
-      LOG.error( ex, ex );
-      runningInstance.setImageId( "unknown" );
-    }
-    try {
-      runningInstance.setKernel( this.vbr.lookupKernel( ).getId( ) );
-    } catch ( final Exception ex ) {
-      LOG.error( ex, ex );
-      runningInstance.setKernel( "unknown" );
-    }
-    try {
-      runningInstance.setRamdisk( this.vbr.lookupRamdisk( ).getId( ) );
-    } catch ( final Exception ex ) {
-      LOG.error( ex, ex );
-      runningInstance.setRamdisk( "unknown" );
-    }
-    
+    runningInstance.setImageId( this.bootSet.getMachine( ).getDisplayName( ) );
+    runningInstance.setKernel( this.bootSet.getKernel( ).getDisplayName( ) );
+    runningInstance.setRamdisk( this.bootSet.getRamdisk( ).getDisplayName( ) );
     if ( dns ) {
       String publicDnsName = this.getPublicDnsName( );
       String privateDnsName = this.getPrivateDnsName( );
@@ -1118,11 +1082,11 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   private void setNetworkIndex( PrivateNetworkIndex networkIndex ) {
     this.networkIndex = networkIndex;
   }
-
+  
   private PrivateNetworkIndex getNetworkIndex( ) {
     return this.networkIndex;
   }
-
+  
   public void releaseNetworkIndex( ) {
     try {
       this.networkIndex.release( );

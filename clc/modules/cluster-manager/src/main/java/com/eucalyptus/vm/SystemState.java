@@ -297,9 +297,10 @@ public class SystemState {
           }
         }
       } );
-      VmInstance vm = new VmInstance( ownerId, instanceId, instanceUuid, reservationId, launchIndex, placement, userData, runVm.getInstanceType( ), key,
+      VmInstance vm = new VmInstance( ownerId, instanceId, instanceUuid, 
+                                      reservationId, launchIndex, placement, 
+                                      userData, runVm.getInstanceType( ), key,
                                       vmType,
-                                      img.getPlatform( ).toString( ),
                                       networks,
                                       new PrivateNetworkIndex( runVm.getNetParams( ).getVlan( ), runVm.getNetParams( ).getNetworkIndex( ) ) );
       vm.clearPending( );

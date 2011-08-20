@@ -719,6 +719,7 @@ public class Entities {
         
         @Override
         public void commit( ) {
+          JoinableTx.this.getTxState( ).getEntityManager( ).flush( );
           JoinableTx.this.getTxState( ).getSession( ).flush( );
 //          Logs.exhaust( ).trace( "Child call to commit() is ignored: " + Threads.currentStackRange( 2, 8 ) );
         }

@@ -64,6 +64,7 @@
 package com.eucalyptus.cloud.run;
 
 import java.util.concurrent.ExecutionException;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -78,6 +79,7 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.network.NetworkGroups;
@@ -119,12 +121,7 @@ public class CreateVmInstances {
   
   private VmInstance makeVmInstance( ResourceToken token ) throws TransactionException {
     Allocation allocInfo = token.getAllocationInfo( );
-    VmTypeInfo vbr = null;//TODO:GRZE:this is crap.
-    try {
-      vbr = VmTypes.asVmTypeInfo( allocInfo.getVmType( ), allocInfo.getBootSet( ).getMachine( ) );
-    } catch ( MetadataException ex ) {
-      LOG.error( ex, ex );
-    }
+    EntityTransaction db = Entities.get( VmInstance.class );
     VmInstance vmInst = new VmInstance( allocInfo.getOwnerFullName( ),
                                         token.getInstanceId( ),
                                         token.getInstanceUuid( ),
@@ -132,12 +129,12 @@ public class CreateVmInstances {
                                         token.getLaunchIndex( ),
                                         allocInfo.getRequest( ).getAvailabilityZone( ),
                                         allocInfo.getUserData( ),
-                                        vbr,
+                                        allocInfo.getBootSet( ),
                                         allocInfo.getSshKeyPair( ),
                                         allocInfo.getVmType( ),
-                                        allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ),
                                         allocInfo.getNetworkGroups( ),
-                                        token.getNetworkIndex( ).get( ) );
+                                        token.getNetworkIndex( ) );
+    vmInst = Entities.persist( vmInst );
     vmInst = VmInstances.register( vmInst );
     try {
       token.getNetworkIndex( ).set( vmInst );
