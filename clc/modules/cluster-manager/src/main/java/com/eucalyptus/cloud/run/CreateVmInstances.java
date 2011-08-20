@@ -63,7 +63,6 @@
  */
 package com.eucalyptus.cloud.run;
 
-import java.util.concurrent.ExecutionException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Permissions;
@@ -73,20 +72,13 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
-import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
-import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.network.NetworkGroups;
-import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.vm.VmTypes;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class CreateVmInstances {
   private static Logger LOG = Logger.getLogger( CreateVmInstances.class );

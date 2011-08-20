@@ -64,7 +64,6 @@
 
 package com.eucalyptus.cluster;
 
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -77,7 +76,6 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicMarkableReference;
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
 import javax.persistence.JoinColumn;
@@ -100,14 +98,10 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
-import org.jibx.runtime.BindingDirectory;
-import org.jibx.runtime.IBindingFactory;
-import org.jibx.runtime.IMarshallingContext;
-import org.jibx.runtime.JiBXException;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.cloud.CloudMetadata.VirtualMachineInstance;
 import com.eucalyptus.cloud.UserMetadata;
+import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.component.ComponentIds;
@@ -210,7 +204,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   @Column( name = "metadata_vm_vbr" )
   private String                                      vbrString;
   @Transient
-  private final BootableSet                                 bootSet;
+  private final BootableSet                           bootSet;
   
   @PrePersist
   @PreUpdate
@@ -239,15 +233,17 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   private final ConcurrentMap<String, AttachedVolume> persistentVolumes = new ConcurrentSkipListMap<String, AttachedVolume>( );
   
   public VmInstance( final UserFullName owner,
-                     final String instanceId, final String instanceUuid,
-                     final String reservationId, final int launchIndex,
+                     final String instanceId,
+                     final String instanceUuid,
+                     final String reservationId,
+                     final int launchIndex,
                      final String placement,
                      final byte[] userData,
                      final BootableSet bootSet,
-                     final SshKeyPair sshKeyPair, final VmType vmType,
-                     final String platform,
+                     final SshKeyPair sshKeyPair,
+                     final VmType vmType,
                      final List<NetworkGroup> networkRulesGroups,
-                     final PrivateNetworkIndex networkIndex ) {
+                     final SetReference<PrivateNetworkIndex, VmInstance> networkIndex ) {
     super( owner, instanceId );
     this.bootSet = bootSet;
     this.privateNetwork = Boolean.FALSE;
@@ -268,7 +264,6 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     }
     this.partitionName = p;
     this.userData = userData;
-    this.platform = platform;
     this.sshKeyPair = KeyPairs.noKey( ).equals( sshKeyPair ) || ( sshKeyPair == null )
       ? null
       : sshKeyPair;
@@ -1079,7 +1074,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     
   }
   
-  private void setNetworkIndex( PrivateNetworkIndex networkIndex ) {
+  private void setNetworkIndex( final PrivateNetworkIndex networkIndex ) {
     this.networkIndex = networkIndex;
   }
   
@@ -1090,7 +1085,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   public void releaseNetworkIndex( ) {
     try {
       this.networkIndex.release( );
-    } catch ( ResourceAllocationException ex ) {
+    } catch ( final ResourceAllocationException ex ) {
       LOG.trace( ex, ex );
       LOG.error( ex );
     }

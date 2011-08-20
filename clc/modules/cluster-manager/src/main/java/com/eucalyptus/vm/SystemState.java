@@ -297,15 +297,15 @@ public class SystemState {
           }
         }
       } );
-      VmInstance vm = new VmInstance( ownerId, instanceId, instanceUuid, 
-                                      reservationId, launchIndex, placement, 
-                                      userData, runVm.getInstanceType( ), key,
-                                      vmType,
-                                      networks,
-                                      new PrivateNetworkIndex( runVm.getNetParams( ).getVlan( ), runVm.getNetParams( ).getNetworkIndex( ) ) );
-      vm.clearPending( );
-      vm.updatePublicAddress( VmInstance.DEFAULT_IP );
-      VmInstances.register( vm );
+//      VmInstance vm = new VmInstance( ownerId, instanceId, instanceUuid, 
+//                                      reservationId, launchIndex, placement, 
+//                                      userData, runVm.getInstanceType( ), key,
+//                                      vmType,
+//                                      networks,
+//                                      new PrivateNetworkIndex( runVm.getNetParams( ).getVlan( ), runVm.getNetParams( ).getNetworkIndex( ) ) );
+//      vm.clearPending( );
+//      vm.updatePublicAddress( VmInstance.DEFAULT_IP );
+//      VmInstances.register( vm );
 //TODO:GRZE: this is the case in restore where we either need to report the failed instance restore, terminate the instance, or handle partial reporting of the instance info.
 //    } catch ( NoSuchElementException e ) {
 //      ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
