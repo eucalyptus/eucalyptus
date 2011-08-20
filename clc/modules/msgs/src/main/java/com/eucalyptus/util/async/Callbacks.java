@@ -73,23 +73,24 @@ public class Callbacks {
           Exceptions.eat( "Callback marked as done has null valued response: " + reply );
         }
         try {
-          this.log.trace( EventRecord.here( this.getClass( ), EventType.CALLBACK, "fire(" + reply.getClass( ).getSimpleName( ) + ")" ).toString( ) );
+          EventRecord.here( this.getClass( ), EventType.CALLBACK, "fire(" + reply.getClass( ).getSimpleName( ) + ")" ).exhaust( );
           this.callback.fire( reply );
         } catch ( final Throwable ex ) {
-          this.log.error( EventRecord.here( this.getClass( ), EventType.CALLBACK, "FAILED", "fire(" + reply.getClass( ).getSimpleName( ) + ")", ex.getMessage( ) ).toString( ) );
+          EventRecord.here( this.getClass( ), EventType.CALLBACK, "FAILED", "fire(" + reply.getClass( ).getSimpleName( ) + ")", ex.getMessage( ) ).exhaust( );
           this.doFail( ex );
         }
       } catch ( final Throwable e ) {
-        this.log.error( EventRecord.here( this.getClass( ), EventType.FUTURE, "FAILED", "get()", e.getMessage( ) ).toString( ) );
+        EventRecord.here( this.getClass( ), EventType.FUTURE, "FAILED", "get()", e.getMessage( ) ).exhaust( );
         this.doFail( e );
       }
     }
     
     private final void doFail( Throwable failure ) {
-      this.log.trace( EventRecord.here( BasicCallbackProcessor.class, EventType.CALLBACK, this.callback.getClass( ).toString( ), "fireException(" + failure.getClass( ).getSimpleName( ) + ")" ) );
+      EventRecord.here( BasicCallbackProcessor.class, EventType.CALLBACK, this.callback.getClass( ).toString( ),
+                        "fireException(" + failure.getClass( ).getSimpleName( ) + ")" ).exhaust( );
       this.log.trace( failure.getMessage( ), failure );
       if ( this.callback instanceof Callback.Checked ) {
-          ( ( Checked ) this.callback ).fireException( failure );
+        ( ( Checked ) this.callback ).fireException( failure );
       } else if ( this.callback instanceof Callback.Completion ) {
         ( ( Callback.Completion ) this.callback ).fireException( failure );
       }

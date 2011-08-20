@@ -27,7 +27,7 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    * @return <tt>this</tt>
    */
   public CallbackListenerSequence<R> addCallback( final UnconditionalCallback c ) {
-    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, UnconditionalCallback.class.getSimpleName( ), c.getClass( ) ).debug( );
+    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, UnconditionalCallback.class.getSimpleName( ), c.getClass( ) ).exhaust( );
     this.successCallbacks.add( c );
     this.failureCallbacks.add( new Callback.Failure() {
       @Override
@@ -46,7 +46,7 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    * @return <tt>this</tt>
    */
   public CallbackListenerSequence<R> addCallback( Callback.Checked c ) {
-    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, Callback.Checked.class.getSimpleName( ), c.getClass( ) ).debug( );
+    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, Callback.Checked.class.getSimpleName( ), c.getClass( ) ).exhaust( );
     this.successCallbacks.add( c );
     this.failureCallbacks.add( c );
     return this;
@@ -61,7 +61,7 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    */
   @SuppressWarnings( "unchecked" )
   public CallbackListenerSequence<R> addSuccessCallback( Callback.Success<R> c ) {
-    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, Callback.Success.class.getSimpleName( ), c.getClass( ) ).debug( );
+    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, Callback.Success.class.getSimpleName( ), c.getClass( ) ).exhaust( );
     this.successCallbacks.add( c );
     return this;
   }
@@ -74,7 +74,7 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    * @return <tt>this</tt>
    */
   public CallbackListenerSequence<R> addFailureCallback( Callback.Failure c ) {
-    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, Callback.Failure.class.getSimpleName( ), c.getClass( ) ).debug( );
+    EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, Callback.Failure.class.getSimpleName( ), c.getClass( ) ).exhaust( );
     this.failureCallbacks.add( c );
     return this;
   }
@@ -86,10 +86,10 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    */
   @Override
   public void fire( R response ) {
-    EventRecord.here( CallbackListenerSequence.class, EventType.CALLBACK, "fire(" + response.getClass( ).getName( ) + ")" ).debug( );
+    EventRecord.here( CallbackListenerSequence.class, EventType.CALLBACK, "fire(" + response.getClass( ).getName( ) + ")" ).exhaust( );
     for ( Callback<R> cb : this.successCallbacks ) {
       try {
-        EventRecord.here( this.getClass( ), EventType.CALLBACK, "" + cb.getClass( ), "fire(" + response.getClass( ).getCanonicalName( ) + ")" ).debug( );
+        EventRecord.here( this.getClass( ), EventType.CALLBACK, "" + cb.getClass( ), "fire(" + response.getClass( ).getCanonicalName( ) + ")" ).exhaust( );
         cb.fire( response );
       } catch ( Exception t ) {
         this.LOG.error( "Exception occurred while trying to call: " + cb.getClass( ) + ".apply( " + t.getMessage( ) + " )" );
