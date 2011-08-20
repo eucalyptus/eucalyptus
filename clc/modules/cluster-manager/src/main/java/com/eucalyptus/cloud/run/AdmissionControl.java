@@ -91,6 +91,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.network.ExtantNetwork;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.EventRecord;
@@ -107,7 +108,7 @@ import com.google.common.collect.TreeMultimap;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class AdmissionControl {
-  private static Logger LOG = Logger.getLogger( AdmissionControl.class );
+  static Logger LOG = Logger.getLogger( AdmissionControl.class );
   
   public interface ResourceAllocator {
     public void allocate( Allocation allocInfo ) throws Exception;
@@ -296,7 +297,20 @@ public class AdmissionControl {
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
       if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
-        allocInfo.requestNetworkTokens( );
+        EntityTransaction db = Entities.get( ExtantNetwork.class );
+        try {
+          NetworkGroup net = Entities.merge( allocInfo.getPrimaryNetwork( ) );
+          ExtantNetwork exNet = net.extantNetwork( );
+          for ( ResourceToken rscToken : allocInfo.getAllocationTokens( ) ) {
+            
+          }
+          Entities.merge( net );
+          db.commit( );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+          db.rollback( );
+          throw ex;
+        }
       }
     }
     
