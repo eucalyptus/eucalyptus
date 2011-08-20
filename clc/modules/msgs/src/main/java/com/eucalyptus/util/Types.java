@@ -72,7 +72,6 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicyAction;
-import com.eucalyptus.auth.policy.PolicyAnnotationRegistry;
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.PolicyVendor;
@@ -85,11 +84,41 @@ import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Types {
   static Logger LOG = Logger.getLogger( Types.class );
+  
+  public interface PrivilegedResource<T> extends HasFullName<T>, HasOwningAccount {
+    @Override
+    public abstract String getName( );
+  }
+  
+  enum UserAuthFilter implements Predicate<PrivilegedResource<?>> {
+    INSTANCE;
+    @Override
+    public boolean apply( PrivilegedResource<?> arg0 ) {
+      final Context ctx = Contexts.lookup( );
+      final String resourceName = arg0.getName( );
+      final Ats ats = Ats.inClassHierarchy( arg0 );
+      final PolicyVendor vendor = ats.get( PolicyVendor.class );
+      final PolicyResourceType resourceType = ats.get( PolicyResourceType.class );
+      final String policyAction = Types.findPolicyAction( arg0 );
+      return Permissions.isAuthorized( vendor.value( ),
+                                       resourceType.value( ),
+                                       resourceName,
+                                       ctx.getAccount( ),
+                                       policyAction,
+                                       ctx.getUser( ) );
+    }
+  }
+  
+  @SuppressWarnings( "unchecked" )
+  public static <T extends PrivilegedResource<T>> Predicate<T> filterUserAuthorization( ) {
+    return ( Predicate<T> ) UserAuthFilter.INSTANCE;
+  }
   
   /**
    * Uses the provided {@code lookupFunction} to resolve the {@code identifier} to the underlying
@@ -130,7 +159,7 @@ public class Types {
         PolicyResourceType type = ats.get( PolicyResourceType.class );
         String action = PolicySpec.requestToAction( ctx.getRequest( ) );
         if ( action == null ) {
-          action = vendor.value( ) + ":" + msgType.getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
+          action = vendor.value( ) + ":" + ctx.getRequest( ).getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
         }
         
         User requestUser = ctx.getUser( );
@@ -211,6 +240,22 @@ public class Types {
     return false;
   }
   
+  public static String findPolicyAction( Object rscType ) {
+    return findPolicyAction( Classes.typeOf( rscType ) );
+  }
+  
+  public static String findPolicyAction( Class<PrivilegedResource<?>> rscType ) {
+    Context ctx = Contexts.lookup( );
+    Ats ats = Ats.inClassHierarchy( rscType );
+    PolicyVendor vendor = ats.get( PolicyVendor.class );
+    PolicyResourceType type = ats.get( PolicyResourceType.class );
+    String action = PolicySpec.requestToAction( ctx.getRequest( ) );
+    if ( action == null ) {
+      action = vendor.value( ) + ":" + ctx.getRequest( ).getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
+    }
+    return action;
+  }
+  
   private static final Map<Class, Function<OwnerFullName, Long>> usageMetricFunctions    = Maps.newHashMap( );
   private static final Map<Class, Function<OwnerFullName, Long>> quantityMetricFunctions = Maps.newHashMap( );
   
@@ -222,6 +267,7 @@ public class Types {
     }
     throw new NoSuchElementException( "Failed to lookup usage metric function for type: " + type );
   }
+  
   public static Function<OwnerFullName, Long> quantityMetricFunction( Class type ) {
     for ( Class subType : Classes.ancestors( type ) ) {
       if ( quantityMetricFunctions.containsKey( subType ) ) {

@@ -277,10 +277,11 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   }
   
   public ExtantNetwork extantNetwork( ) throws NotEnoughResourcesAvailable {
+    final EntityTransaction db = Entities.get( NetworkGroup.class );
+    Entities.merge( this );
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       return ExtantNetwork.bogus( this );
     } else if ( this.getExtantNetwork( ) == null ) {
-      final EntityTransaction db = Entities.get( NetworkGroup.class );
       for ( Integer i : Numbers.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
         try {
           Entities.uniqueResult( ExtantNetwork.named( i ) );

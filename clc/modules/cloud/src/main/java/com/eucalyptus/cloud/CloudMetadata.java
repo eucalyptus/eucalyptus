@@ -67,6 +67,7 @@ import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicyVendor;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasOwningAccount;
+import com.eucalyptus.util.Types.PrivilegedResource;
 
 /**
  * GRZE:WARN: values are intentionally opaque strings and /not/ a symbolic reference. do not change
@@ -79,7 +80,7 @@ import com.eucalyptus.util.HasOwningAccount;
  * @see PolicyVendor
  **/
 @PolicyVendor( "ec2" )
-public interface CloudMetadata<T> extends HasFullName<T>, CloudVendorInfo, HasOwningAccount {
+public interface CloudMetadata<T> extends PrivilegedResource<T> {
   
   @PolicyResourceType( "keypair" )
   public interface KeyPair<S extends KeyPair<S>> extends CloudMetadata<S> {}
