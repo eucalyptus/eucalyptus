@@ -61,136 +61,52 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.bootstrap;
+package com.eucalyptus.configurable;
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.scripting.Groovyness;
-import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.google.common.collect.Constraint;
 
-public class Databases {
-  private static final ScriptedDbBootstrapper singleton   = new ScriptedDbBootstrapper( );
-  private static Logger                       LOG         = Logger.getLogger( Databases.class );
-  private static final String                 DB_NAME     = "eucalyptus";
-  public static final String                  DB_USERNAME = DB_NAME;
-
-  public static String getUserName( ) {
-    return DB_USERNAME;
-  }
+public class PropertyChangeListeners {
   
-  public static String getDatabaseName( ) { 
-    return DB_NAME;
-  }
-  
-  public static String getPassword( ) {
-    return SystemIds.databasePassword( );
-  }
-  
-  public static String getDriverName( ) {
-    return singleton.getDriverName( );
-  }
-  
-  public static String getJdbcDialect( ) {
-    return singleton.getJdbcDialect( );
-  }
-  
-  public static String getHibernateDialect( ) {
-    return singleton.getHibernateDialect( );
-  }
-  
-  public static DatabaseBootstrapper getBootstrapper( ) {
-    return singleton;
-  }
-  
-  public static void initialize( ) {
-    singleton.init( );
-  }
-  
-  @RunDuring( Bootstrap.Stage.DatabaseInit )
-  @Provides( Empyrean.class )
-  @DependsLocal( Eucalyptus.class )
-  public static class ScriptedDbBootstrapper extends Bootstrapper.Simple implements DatabaseBootstrapper {
-    DatabaseBootstrapper db;
-    
-    public ScriptedDbBootstrapper( ) {
-      super( );
+  public static void applyConstraint( final Object newValue, final Constraint<Object>... constraints ) throws ConfigurablePropertyException {
+    for ( final Constraint<Object> testNewValue : constraints ) {
       try {
-        this.db = Groovyness.newInstance( "setup_db" );
-      } catch ( ScriptExecutionFailedException ex ) {
-        LOG.error( ex, ex );
+        final Object constraintedValue = testNewValue.checkElement( newValue );
+      } catch ( final Exception ex ) {
+        throw new ConfigurablePropertyException( "Failed to evaluate constraint " + testNewValue + " for new value: " + newValue + " because of: "
+                                                 + ex.getMessage( ) );
       }
     }
-    
-    public boolean load( ) throws Exception {
-      return this.db.load( );
-    }
-    
-    public boolean start( ) throws Exception {
-      return this.db.start( );
-    }
-    
-    public boolean stop( ) throws Exception {
-      return this.db.stop( );
-    }
-    
-    public void destroy( ) throws Exception {
-      this.db.destroy( );
-    }
-    
-    public boolean isRunning( ) {
-      return this.db.isRunning( );
-    }
-    
-    public void hup( ) {
-      this.db.hup( );
-    }
-    
-    public String getDriverName( ) {
-      return this.db.getDriverName( );
-    }
-    
-    @Override
-    public String getJdbcDialect( ) {
-      return this.db.getJdbcDialect( );
-    }
-    
-    @Override
-    public String getHibernateDialect( ) {
-      return this.db.getHibernateDialect( );
-    }
-    
-    @Override
-    public void init( ) {
-      this.db.init( );
-    }
-    
-    public static DatabaseBootstrapper getInstance( ) {
-      return singleton;
-    }
-    
-    @Override
-    public String getUriPattern( ) {
-      return this.db.getUriPattern( );
-    }
-
-    @Override
-    public boolean check( ) throws Exception {
-      return this.db.isRunning( );
-    }
   }
   
-  public static String getUriPattern( ) {
-    return singleton.getUriPattern( );
+  public static PropertyChangeListener withConstraint( final Constraint<Object> testNewValue ) {
+    return new PropertyChangeListener( ) {
+      
+      @Override
+      public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {}
+      
+    };
   }
-
-  public static boolean isRunning( ) {
-    try {
-      return singleton.check( );
-    } catch ( Exception ex ) {
-      LOG.error( ex , ex );
-      return false;
+  
+  public enum IsPositiveInteger implements PropertyChangeListener {
+    INSTANCE;
+    
+    @SuppressWarnings( "unchecked" )
+    @Override
+    public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
+      applyConstraint( newValue, new Constraint<Object>( ) {
+        @Override
+        public Object checkElement( final Object element ) {
+          if ( Number.class.isAssignableFrom( element.getClass( ) ) ) {
+            final Number numElem = ( Number ) element;
+            if ( numElem.doubleValue( ) < 0d ) {
+              throw new IllegalArgumentException( "Value must be greater than zero" );
+            }
+          }
+          return element;
+        }
+      } );
     }
+    
   }
   
 }

@@ -565,7 +565,7 @@ char * fp2str (FILE * fp)
         memset(new_buf+buf_current, 0, INCREMENT * sizeof(char));
 
         buf = new_buf;
-        logprintfl (EUCADEBUG2, "fp2str: enlarged buf to %d\n", buf_max);
+        logprintfl (EUCADEBUG3, "fp2str: enlarged buf to %d\n", buf_max);
         
         do { // read in until EOF or buffer is full
             last_read = fgets (buf+buf_current, buf_max-buf_current, fp);
@@ -578,7 +578,7 @@ char * fp2str (FILE * fp)
                     return NULL;
                 }
             }
-            logprintfl (EUCADEBUG2, "fp2str: read %d characters so far (max=%d, last=%s)\n", buf_current, buf_max, last_read?"no":"yes");
+            logprintfl (EUCADEBUG3, "fp2str: read %d characters so far (max=%d, last=%s)\n", buf_current, buf_max, last_read?"no":"yes");
         } while ( last_read && buf_max > buf_current+1 ); // +1 is needed for fgets() to put \0
         
         buf_max += INCREMENT; // in case it is full

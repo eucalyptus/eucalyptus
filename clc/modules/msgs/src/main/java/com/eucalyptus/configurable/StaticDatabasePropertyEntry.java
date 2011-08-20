@@ -61,136 +61,102 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.bootstrap;
+package com.eucalyptus.configurable;
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.scripting.Groovyness;
-import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import javax.persistence.Column;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.records.Logs;
 
-public class Databases {
-  private static final ScriptedDbBootstrapper singleton   = new ScriptedDbBootstrapper( );
-  private static Logger                       LOG         = Logger.getLogger( Databases.class );
-  private static final String                 DB_NAME     = "eucalyptus";
-  public static final String                  DB_USERNAME = DB_NAME;
+@Entity
+@javax.persistence.Entity
+@PersistenceContext( name = "eucalyptus_config" )
+@Table( name = "config_static_property" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class StaticDatabasePropertyEntry extends AbstractPersistent {
+  @Column( name = "config_static_field_name", nullable = false, unique = true )
+  private final String fieldName;
+  @Column( name = "config_static_field_value" )
+  private String       value;
+  @Column( name = "config_static_prop_name", nullable = false, unique = true )
+  private String       propName;
+  
+  
+  private StaticDatabasePropertyEntry( ) {
+    super( );
+    this.fieldName = null;
+  }
 
-  public static String getUserName( ) {
-    return DB_USERNAME;
+  private StaticDatabasePropertyEntry( String fieldName, String propName, String value ) {
+    super( );
+    this.propName = propName;
+    this.fieldName = fieldName;
+    this.value = value;
   }
   
-  public static String getDatabaseName( ) { 
-    return DB_NAME;
-  }
-  
-  public static String getPassword( ) {
-    return SystemIds.databasePassword( );
-  }
-  
-  public static String getDriverName( ) {
-    return singleton.getDriverName( );
-  }
-  
-  public static String getJdbcDialect( ) {
-    return singleton.getJdbcDialect( );
-  }
-  
-  public static String getHibernateDialect( ) {
-    return singleton.getHibernateDialect( );
-  }
-  
-  public static DatabaseBootstrapper getBootstrapper( ) {
-    return singleton;
-  }
-  
-  public static void initialize( ) {
-    singleton.init( );
-  }
-  
-  @RunDuring( Bootstrap.Stage.DatabaseInit )
-  @Provides( Empyrean.class )
-  @DependsLocal( Eucalyptus.class )
-  public static class ScriptedDbBootstrapper extends Bootstrapper.Simple implements DatabaseBootstrapper {
-    DatabaseBootstrapper db;
-    
-    public ScriptedDbBootstrapper( ) {
-      super( );
+  static StaticDatabasePropertyEntry update( String fieldName, String propName, String newFieldValue ) throws Exception {
+    EntityWrapper<StaticDatabasePropertyEntry> db = EntityWrapper.get( StaticDatabasePropertyEntry.class );
+    try {
+      StaticDatabasePropertyEntry dbEntry = db.getUnique( new StaticDatabasePropertyEntry( fieldName, propName, null ) );
+      dbEntry.setValue( newFieldValue );
+      db.commit( );
+      return dbEntry;
+    } catch ( Exception ex ) {
+      StaticDatabasePropertyEntry dbEntry;
       try {
-        this.db = Groovyness.newInstance( "setup_db" );
-      } catch ( ScriptExecutionFailedException ex ) {
-        LOG.error( ex, ex );
+        dbEntry = new StaticDatabasePropertyEntry( fieldName, propName, newFieldValue );
+        db.persist( dbEntry );
+        db.commit( );
+      } catch ( Exception ex1 ) {
+        throw ex1;
+      }
+      return dbEntry;
+    }
+  }
+  
+  static StaticDatabasePropertyEntry lookup( String fieldName, String propName, String defaultFieldValue ) throws Exception {
+    EntityWrapper<StaticDatabasePropertyEntry> db = EntityWrapper.get( StaticDatabasePropertyEntry.class );
+    try {
+      StaticDatabasePropertyEntry dbEntry = db.getUnique( new StaticDatabasePropertyEntry( fieldName, propName, null ) );
+      db.commit( );
+      return dbEntry;
+    } catch ( Exception ex ) {
+      StaticDatabasePropertyEntry dbEntry;
+      try {
+        dbEntry = new StaticDatabasePropertyEntry( fieldName, propName, defaultFieldValue );
+        db.persist( dbEntry );
+        db.commit( );
+        return dbEntry;
+      } catch ( Exception ex1 ) {
+        Logs.extreme( ).error( "Failed to lookup static configuration property for: " + fieldName + " with property name: " + propName ); 
+        db.rollback( );
+        throw ex1;
       }
     }
-    
-    public boolean load( ) throws Exception {
-      return this.db.load( );
-    }
-    
-    public boolean start( ) throws Exception {
-      return this.db.start( );
-    }
-    
-    public boolean stop( ) throws Exception {
-      return this.db.stop( );
-    }
-    
-    public void destroy( ) throws Exception {
-      this.db.destroy( );
-    }
-    
-    public boolean isRunning( ) {
-      return this.db.isRunning( );
-    }
-    
-    public void hup( ) {
-      this.db.hup( );
-    }
-    
-    public String getDriverName( ) {
-      return this.db.getDriverName( );
-    }
-    
-    @Override
-    public String getJdbcDialect( ) {
-      return this.db.getJdbcDialect( );
-    }
-    
-    @Override
-    public String getHibernateDialect( ) {
-      return this.db.getHibernateDialect( );
-    }
-    
-    @Override
-    public void init( ) {
-      this.db.init( );
-    }
-    
-    public static DatabaseBootstrapper getInstance( ) {
-      return singleton;
-    }
-    
-    @Override
-    public String getUriPattern( ) {
-      return this.db.getUriPattern( );
-    }
-
-    @Override
-    public boolean check( ) throws Exception {
-      return this.db.isRunning( );
-    }
   }
   
-  public static String getUriPattern( ) {
-    return singleton.getUriPattern( );
-  }
-
-  public static boolean isRunning( ) {
-    try {
-      return singleton.check( );
-    } catch ( Exception ex ) {
-      LOG.error( ex , ex );
-      return false;
-    }
+  private void setValue( String value ) {
+    this.value = value;
   }
   
+  public String getFieldName( ) {
+    return this.fieldName;
+  }
+  
+  public String getValue( ) {
+    return this.value;
+  }
+  
+  public String getPropName( ) {
+    return this.propName;
+  }
+  
+  private void setPropName( String propName ) {
+    this.propName = propName;
+  }
 }

@@ -174,10 +174,10 @@ public class VmControl {
           try {
             final VmInstance v = VmInstances.lookup( instanceId );
             if ( Types.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
-              final int oldCode = v.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
-              final String oldState = v.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
+              final int oldCode = v.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
+              final String oldState = v.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
               results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
-              if ( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
+              if ( VmState.RUNNING.equals( v.getRuntimeState( ) ) || VmState.PENDING.equals( v.getRuntimeState( ) ) ) {
                 v.setState( VmState.SHUTTING_DOWN, Reason.USER_TERMINATED );
               }
             }
@@ -352,8 +352,8 @@ public class VmControl {
           try {
             final VmInstance v = VmInstances.lookup( instanceId );
             if ( Types.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
-              final int oldCode = v.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
-              final String oldState = v.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
+              final int oldCode = v.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
+              final String oldState = v.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
               results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
               if ( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
                 v.setState( VmState.STOPPING, Reason.USER_STOPPED );
@@ -512,7 +512,7 @@ public class VmControl {
       final Context ctx = Contexts.lookup( );
       Cluster cluster = null;
       final VmInstance v = VmInstances.lookup( request.getInstanceId( ) );
-      if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
+      if ( !VmState.RUNNING.equals( v.getRuntimeState( ) ) ) {
         throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
       }
       if ( Types.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, request.getInstanceId( ), v.getOwner( ) ) ) {
