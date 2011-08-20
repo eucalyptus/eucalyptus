@@ -218,7 +218,7 @@ public class VmInstances {
     }
   }
   
-  public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final Long networkIndex, final String networkFqName, final Cluster cluster ) {
+  public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final String networkFqName, final Cluster cluster ) {
     final UnconditionalCallback cleanup = new UnconditionalCallback( ) {
       @Override
       public void fire( ) {
@@ -258,7 +258,7 @@ public class VmInstances {
           LOG.debug( e1, e1 );
         }
       }
-      req.then( VmInstances.getCleanUpCallback( address, vm, networkIndex, networkFqName, cluster ) );
+      req.then( VmInstances.getCleanUpCallback( address, vm, networkFqName, cluster ) );
       req.dispatch( cluster.getConfiguration( ) );
     } catch ( final Throwable e ) {
       LOG.error( e, e );
