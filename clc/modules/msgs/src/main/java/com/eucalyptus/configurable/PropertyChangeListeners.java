@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,70 +53,60 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-package com.eucalyptus.bootstrap;
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
+ */
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.component.auth.EucaKeyStore;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
-import com.eucalyptus.cloud.ws.DNSControl;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.id.Dns;
-import com.eucalyptus.empyrean.Empyrean;
+package com.eucalyptus.configurable;
 
-@Provides( Empyrean.class )
-@RunDuring( Bootstrap.Stage.PrivilegedConfiguration )
-@DependsLocal( Dns.class )
-public class DNSBootstrapper extends Bootstrapper.Simple {
-  private static Logger          LOG = Logger.getLogger( DNSBootstrapper.class );
-  private static DNSBootstrapper singleton;
+import com.google.common.collect.Constraint;
+
+public class PropertyChangeListeners {
   
-  public static Bootstrapper getInstance( ) {
-    synchronized ( DNSBootstrapper.class ) {
-      if ( singleton == null ) {
-        singleton = new DNSBootstrapper( );
-        LOG.info( "Creating DNS Bootstrapper instance." );
-      } else {
-        LOG.info( "Returning DNS Bootstrapper instance." );
+  public static void applyConstraint( final Object newValue, final Constraint<Object>... constraints ) throws ConfigurablePropertyException {
+    for ( final Constraint<Object> testNewValue : constraints ) {
+      try {
+        final Object constraintedValue = testNewValue.checkElement( newValue );
+      } catch ( final Exception ex ) {
+        throw new ConfigurablePropertyException( "Failed to evaluate constraint " + testNewValue + " for new value: " + newValue + " because of: "
+                                                 + ex.getMessage( ) );
       }
     }
-    return singleton;
   }
   
-  @Override
-  public boolean load( ) throws Exception {
-    LOG.info( "Initializing DNS" );
-    //The following call binds DNS ports. Must be in a privileged context.
-    DNSControl.initialize( );
-    return true;
+  public static PropertyChangeListener withConstraint( final Constraint<Object> testNewValue ) {
+    return new PropertyChangeListener( ) {
+      
+      @Override
+      public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {}
+      
+    };
   }
   
-  @Provides( Dns.class )
-  @RunDuring( Bootstrap.Stage.CloudServiceInit )
-  @DependsLocal( Dns.class )
-  public static class DNSRecordsBootstrapper extends Bootstrapper.Simple {
+  public enum IsPositiveInteger implements PropertyChangeListener {
+    INSTANCE;
     
+    @SuppressWarnings( "unchecked" )
     @Override
-    public boolean start( ) throws Exception {
-      LOG.info( "Loading DNS records" );
-      //populateRecords must be idempotent.
-      DNSControl.populateRecords( );
-      return true;
+    public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
+      applyConstraint( newValue, new Constraint<Object>( ) {
+        @Override
+        public Object checkElement( final Object element ) {
+          if ( Number.class.isAssignableFrom( element.getClass( ) ) ) {
+            final Number numElem = ( Number ) element;
+            if ( numElem.doubleValue( ) < 0d ) {
+              throw new IllegalArgumentException( "Value must be greater than zero" );
+            }
+          }
+          return element;
+        }
+      } );
     }
     
-    /**
-     * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-     */
-    @Override
-    public boolean disable( ) throws Exception {
-      //Don't bring down service but don't process requests.
-      return true;
-    }
   }
   
 }
