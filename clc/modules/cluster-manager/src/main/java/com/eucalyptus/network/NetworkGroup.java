@@ -282,20 +282,25 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       return ExtantNetwork.bogus( this );
     } else if ( net.getExtantNetwork( ) == null ) {
-      for ( Integer i : Numbers.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
-        try {
-          Entities.uniqueResult( ExtantNetwork.named( i ) );
-          continue;
-        } catch ( Exception ex ) {
+      ExtantNetwork exNet = Entities.uniqueResult( new ExtantNetwork( this, null ) );
+      if ( exNet != null ) {
+        this.setExtantNetwork( exNet );
+      } else {
+        for ( Integer i : Numbers.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
           try {
-            this.setExtantNetwork( Entities.persist( ExtantNetwork.create( this, i ) ) );
-            Entities.merge( this );
-            db.commit( );
-            return this.getExtantNetwork( );
-          } catch ( Exception ex1 ) {
-            Logs.exhaust( ).trace( ex1, ex1 );
-            db.rollback( );
-            throw new NotEnoughResourcesAvailable( "Failed to allocate network tag for network: " + this.getFullName( ), ex1 );
+            Entities.uniqueResult( ExtantNetwork.named( i ) );
+            continue;
+          } catch ( Exception ex ) {
+            try {
+              this.setExtantNetwork( Entities.persist( ExtantNetwork.create( this, i ) ) );
+              Entities.merge( this );
+              db.commit( );
+              return this.getExtantNetwork( );
+            } catch ( Exception ex1 ) {
+              Logs.exhaust( ).trace( ex1, ex1 );
+              db.rollback( );
+              throw new NotEnoughResourcesAvailable( "Failed to allocate network tag for network: " + this.getFullName( ), ex1 );
+            }
           }
         }
       }
