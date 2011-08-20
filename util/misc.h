@@ -93,7 +93,7 @@ typedef unsigned char boolean;
 #define SP(a) a ? a : "UNSET"
 #define RANDALPHANUM rand()%2 ? rand()%26+97 : rand()%2 ? rand()%26+65 : rand()%10+48
 
-enum {EUCADEBUG2, EUCADEBUG, EUCAINFO, EUCAWARN, EUCAERROR, EUCAFATAL};
+enum {EUCADEBUG3, EUCADEBUG2, EUCADEBUG, EUCAINFO, EUCAWARN, EUCAERROR, EUCAFATAL};
 
 char * replace_string (char ** stringp, char * source, char * destination );
 int sscanf_lines (char * lines, char * format, void * varp);
