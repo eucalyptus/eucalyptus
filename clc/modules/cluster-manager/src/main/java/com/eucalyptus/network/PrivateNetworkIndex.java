@@ -105,6 +105,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   private final String                     bogusId;
   @ManyToOne
   @JoinColumn( name = "metadata_network_index_extant_network" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final ExtantNetwork              extantNetwork;
   @Column( name = "metadata_network_index_vm_perm_uuid" )
   private String                           instanceNaturalId;
@@ -267,7 +268,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
       }
     };
   }
-
+  
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );

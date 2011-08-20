@@ -111,6 +111,7 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   private Set<PrivateNetworkIndex> indexes          = new HashSet<PrivateNetworkIndex>( );
   @OneToOne( cascade = { CascadeType.ALL }, fetch = FetchType.EAGER )
   @JoinColumn( name = "metadata_extant_network_group_id" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private NetworkGroup             networkGroup;
   
   private ExtantNetwork( ) {
