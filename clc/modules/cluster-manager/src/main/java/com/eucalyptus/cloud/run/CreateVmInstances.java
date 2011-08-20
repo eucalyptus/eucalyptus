@@ -137,7 +137,6 @@ public class CreateVmInstances {
                                         allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ),
                                         allocInfo.getNetworkGroups( ),
                                         token.getNetworkIndex( ).get( ) );
-    VmInstances.register( vmInst );
-    return vmInst;
+    return VmInstances.register( vmInst );
   }
 }

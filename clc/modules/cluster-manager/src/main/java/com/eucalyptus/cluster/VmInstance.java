@@ -108,6 +108,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.cloud.CloudMetadata.VirtualMachineInstance;
 import com.eucalyptus.cloud.UserMetadata;
+import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfigurations;
@@ -251,7 +252,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   
   @NotFound( action = NotFoundAction.IGNORE )
   @OneToOne( cascade = { CascadeType.PERSIST, CascadeType.MERGE } )
-  @JoinColumn( name = "ColumnInA", nullable = true, insertable = false, updatable = false )
+  @JoinColumn( name = "vm_network_index", nullable = true, insertable = false, updatable = false )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex                         networkIndex;
   
@@ -1008,10 +1009,6 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
                           this.userData, this.vmType, this.transientVolumes );
   }
   
-  public Long getNetworkIndex( ) {
-    return this.getNetworkConfig( ).getNetworkIndex( );
-  }
-  
   /**
    * @return the platform
    */
@@ -1117,6 +1114,23 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
       return String.format( this.message.toString( ), this.args );
     }
     
+  }
+  
+  private void setNetworkIndex( PrivateNetworkIndex networkIndex ) {
+    this.networkIndex = networkIndex;
+  }
+
+  private PrivateNetworkIndex getNetworkIndex( ) {
+    return this.networkIndex;
+  }
+
+  public void releaseNetworkIndex( ) {
+    try {
+      this.networkIndex.release( );
+    } catch ( ResourceAllocationException ex ) {
+      LOG.trace( ex, ex );
+      LOG.error( ex );
+    }
   }
   
 }

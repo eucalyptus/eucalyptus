@@ -135,7 +135,6 @@ public class Allocations {
     private SshKeyPair                sshKeyPair;
     private BootableSet               bootSet;
     private VmType                    vmType;
-    private NetworkGroup              primaryNetwork;
     private Map<String, NetworkGroup> networkGroups;
     
     /** intermediate allocation state **/

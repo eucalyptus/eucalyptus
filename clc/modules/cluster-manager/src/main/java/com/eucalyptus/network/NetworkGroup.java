@@ -304,7 +304,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
       try {
         exNet = ngNet.lookupExtantNetwork( );
       } catch ( Exception ex ) {
-        Logs.extreme( ).error( ex, ex );
+        Logs.exhaust( ).trace( ex, ex );
       }
       if ( exNet == null ) {
         int tag = ngNet.attemptNetworkTagging( );

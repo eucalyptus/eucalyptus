@@ -148,11 +148,11 @@ public class VmInstances {
       final int i;
       try {
         i = Entities.createCriteria( VmInstance.class )
-                            .add( Example.create( VmInstance.named( input, null ) ) )
-                            .setReadOnly( true )
-                            .setCacheable( false )
-                            .list( )
-                            .size( );
+                    .add( Example.create( VmInstance.named( input, null ) ) )
+                    .setReadOnly( true )
+                    .setCacheable( false )
+                    .list( )
+                    .size( );
       } finally {
         db.rollback( );
       }
@@ -235,27 +235,8 @@ public class VmInstances {
             LOG.debug( e, e );
           }
         }
-        vm.updateNetworkIndex( -1l );
-        try {
-          if ( networkFqName != null ) {
-                                          //GRZE:NET
-//            Network net = Networks.getInstance( ).lookup( networkFqName );
-//            if ( networkIndex > 0 && vm.getNetworkNames( ).size( ) > 0 ) {
-//              net.returnNetworkIndex( networkIndex );
-//              EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ).debug( );
-//            }
-//            if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
-//              StopNetworkCallback stopNet = Networks.stop(  new StopNetworkCallback( new NetworkToken( cluster.getPartition( ), net.getOwner( ), net.getNetworkName( ), net.getUuid( ),
-//                                                                                       net.getVlan( ) ) );
-//              for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-//                AsyncRequests.newRequest( stopNet.newInstance( ) ).dispatch( c.getConfiguration( ) );
-//              }
-//            }
-                                        }
-                                      } catch ( final NoSuchElementException e1 ) {} catch ( final Throwable e1 ) {
-                                        LOG.debug( e1, e1 );
-                                      }
-                                    }
+        vm.releaseNetworkIndex( );
+      }
     };
     return cleanup;
   }
@@ -266,7 +247,6 @@ public class VmInstances {
         ? vm.getOwner( ).getAccountNumber( ) + "-" + vm.getNetworkNames( ).first( )
         : null;
       final Cluster cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
-      final Long networkIndex = vm.getNetworkIndex( );
       VmInstances.cleanUpAttachedVolumes( vm );
       
       Address address = null;
@@ -364,11 +344,12 @@ public class VmInstances {
     }
   }
   
-  public static void register( final VmInstance obj ) {
+  public static VmInstance register( final VmInstance obj ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      Entities.persist( obj );
+      VmInstance entityObj = Entities.merge( obj );
       db.commit( );
+      return entityObj;
     } catch ( final RuntimeException ex ) {
       Logs.extreme( ).error( ex, ex );
       db.rollback( );

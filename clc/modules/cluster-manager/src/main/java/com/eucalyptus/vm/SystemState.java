@@ -305,9 +305,10 @@ public class SystemState {
       vm.clearPending( );
       vm.updatePublicAddress( VmInstance.DEFAULT_IP );
       VmInstances.register( vm );
-    } catch ( NoSuchElementException e ) {
-      ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
-      AsyncRequests.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
+//TODO:GRZE: this is the case in restore where we either need to report the failed instance restore, terminate the instance, or handle partial reporting of the instance info.
+//    } catch ( NoSuchElementException e ) {
+//      ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
+//      AsyncRequests.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
     } catch ( Exception t ) {
       LOG.error( t, t );
     }
@@ -338,7 +339,7 @@ public class SystemState {
         throw new EucalyptusCloudException( e );
       }
       if ( ( !isAdmin &&
-             !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), instanceAccount, action, requestUser ) )
+           !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), instanceAccount, action, requestUser ) )
            || ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) ) {
         continue;
       }
