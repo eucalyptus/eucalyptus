@@ -706,7 +706,7 @@ class EucaConf(object):
         cls = boto.utils.find_class('eucadmin.command', 'Command')
         cmd = cls('ifconfig')
         ip_addrs = []
-        regex = re.compile('\s*inet\saddr:([0-9]+\.[0-9]+\.[0-9]+\.[0-9]).*')
+        regex = re.compile('\s*inet\saddr:([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+).*')
         for line in cmd.stdout.split('\n'):
             m = regex.match(line)
             if m:

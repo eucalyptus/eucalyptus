@@ -104,7 +104,7 @@ public abstract class AbstractSystemAddressManager {
         if ( ( addr != null ) && ( vm != null ) ) {
           Helper.ensureAllocated( addr, vm );
           cluster.getState( ).clearOrphan( addrInfo );
-        } else if ( ( addr != null ) && ( vm != null ) && ( vm.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
+        } else if ( addr != null && vm != null && vm.getRuntimeState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
           cluster.getState( ).handleOrphan( addrInfo );
         } else if ( ( addr != null ) && ( vm == null ) ) {
           cluster.getState( ).handleOrphan( addrInfo );
@@ -138,7 +138,7 @@ public abstract class AbstractSystemAddressManager {
       try {
         if ( !address.isPending( ) ) {
           for ( final VmInstance vm : VmInstances.listValues( ) ) {
-            if ( addrInfo.getInstanceIp( ).equals( vm.getPrivateAddress( ) ) && VmState.RUNNING.equals( vm.getState( ) ) ) {
+            if ( addrInfo.getInstanceIp( ).equals( vm.getPrivateAddress( ) ) && VmState.RUNNING.equals( vm.getRuntimeState( ) ) ) {
               LOG.warn( "Out of band address state change: " + LogUtil.dumpObject( addrInfo ) + " address=" + address + " vm=" + vm );
               if ( !address.isAllocated( ) ) {
                 address.pendingAssignment( ).assign( vm ).clearPending( );
@@ -176,7 +176,7 @@ public abstract class AbstractSystemAddressManager {
       VmInstance vm = null;
       try {
         vm = VmInstances.lookupByInstanceIp( privateIp );
-        LOG.trace( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
+        LOG.trace( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getRuntimeState( ) + " " + publicIp );
         if ( publicIp.equals( vm.getPublicAddress( ) ) ) {
           LOG.trace( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
           return vm;

@@ -53,12 +53,12 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
       try {
         final VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
         vm.setServiceTag( runVm.getServiceTag( ) );
-        if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
+        if ( VmState.SHUTTING_DOWN.equals( vm.getRuntimeState( ) ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
           vm.setState( VmState.TERMINATED, Reason.EXPIRED );
-        } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( state ) ) {
+        } else if ( VmState.SHUTTING_DOWN.equals( vm.getRuntimeState( ) ) && VmState.SHUTTING_DOWN.equals( state ) ) {
           vm.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
         } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
-                    && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
+                    && ( VmState.PENDING.equals( vm.getRuntimeState( ) ) || VmState.RUNNING.equals( vm.getRuntimeState( ) ) ) ) {
           if ( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
             vm.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
           }

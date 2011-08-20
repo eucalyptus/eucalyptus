@@ -169,7 +169,7 @@ public class SystemState {
     } catch ( NoSuchElementException e ) {
       try {
         vm = VmInstances.lookupDisabled( runVm.getInstanceId( ) );
-        if ( !VmState.BURIED.equals( vm.getState( ) ) && vm.getSplitTime( ) > VmInstances.BURY_TIME ) {
+        if ( !VmState.BURIED.equals( vm.getRuntimeState( ) ) && vm.getSplitTime( ) > VmInstances.BURY_TIME ) {
           vm.setState( VmState.BURIED, Reason.BURIED );
         }
         return;
@@ -181,21 +181,21 @@ public class SystemState {
       }
     }
     long splitTime = vm.getSplitTime( );
-    VmState oldState = vm.getState( );
+    VmState oldState = vm.getRuntimeState( );
     vm.setServiceTag( runVm.getServiceTag( ) );
     vm.setPlatform( runVm.getPlatform( ) );
     vm.setBundleTaskState( runVm.getBundleTaskStateName( ) );
     
-    if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && splitTime > VmInstances.SHUT_DOWN_TIME ) {
+    if ( VmState.SHUTTING_DOWN.equals( vm.getRuntimeState( ) ) && splitTime > VmInstances.SHUT_DOWN_TIME ) {
       vm.setState( VmState.TERMINATED, Reason.EXPIRED );
-    } else if ( VmState.STOPPING.equals( vm.getState( ) ) && splitTime > VmInstances.SHUT_DOWN_TIME ) {
+    } else if ( VmState.STOPPING.equals( vm.getRuntimeState( ) ) && splitTime > VmInstances.SHUT_DOWN_TIME ) {
       vm.setState( VmState.STOPPED, Reason.EXPIRED );
-    } else if ( VmState.STOPPING.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
+    } else if ( VmState.STOPPING.equals( vm.getRuntimeState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
       vm.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
-    } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
+    } else if ( VmState.SHUTTING_DOWN.equals( vm.getRuntimeState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
       vm.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
     } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
-                && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
+                && ( VmState.PENDING.equals( vm.getRuntimeState( ) ) || VmState.RUNNING.equals( vm.getRuntimeState( ) ) ) ) {
       if ( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
         vm.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
       }

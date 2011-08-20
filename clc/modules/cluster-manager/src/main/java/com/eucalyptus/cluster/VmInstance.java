@@ -80,6 +80,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
+import javax.persistence.EntityTransaction;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.Lob;
@@ -157,8 +158,6 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   private static String                               SEND_USER_TERMINATE = "SIGTERM";
   @Transient
   private static String                               SEND_USER_STOP      = "SIGSTOP";
-  @Transient
-  private final String                                clusterName;
   
   @Transient
   private final AtomicMarkableReference<BundleTask>   bundleTask          = new AtomicMarkableReference<BundleTask>( null, false );
@@ -182,6 +181,8 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   private final Integer                               launchIndex;
   @Column( name = "metadata_vm_instance_id" )
   private final String                                instanceId;
+  @Column( name = "vm_cluster_name" )
+  private final String                                clusterName;
   @Column( name = "metadata_vm_partition_name" )
   private final String                                partitionName;
   @Lob
@@ -342,7 +343,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   
   public void updateNetworkIndex( final Long newIndex ) {
     if ( ( this.getNetworkConfig( ).getNetworkIndex( ) > 0 ) && ( newIndex > 0 )
-         && ( VmState.RUNNING.equals( this.getState( ) ) || VmState.PENDING.equals( this.getState( ) ) ) ) {
+         && ( VmState.RUNNING.equals( this.getRuntimeState( ) ) || VmState.PENDING.equals( this.getRuntimeState( ) ) ) ) {
       this.getNetworkConfig( ).setNetworkIndex( newIndex );
     }
   }
@@ -377,23 +378,23 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   }
   
   public boolean clearPending( ) {
-    if ( this.runtimeState.isMarked( ) && ( this.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
-      this.runtimeState.set( this.getState( ), false );
+    if ( this.runtimeState.isMarked( ) && ( this.getRuntimeState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
+      this.runtimeState.set( this.getRuntimeState( ), false );
       VmInstances.cleanUp( this );
       return true;
     } else {
-      this.runtimeState.set( this.getState( ), false );
+      this.runtimeState.set( this.getRuntimeState( ), false );
       return false;
     }
   }
   
   @Override
-  public VmState getState( ) {
+  public VmState getRuntimeState( ) {
     return this.runtimeState.getReference( );
   }
   
   @Override
-  public void setState( final VmState state ) {
+  public void setRuntimeState( final VmState state ) {
     this.setState( state, Reason.NORMAL );
   }
   
@@ -426,14 +427,14 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
       }
     } else if ( ( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) || VmState.BURIED.equals( newState ) ) {
       VmInstances.deregister( this.getName( ) );
-    } else if ( !this.getState( ).equals( newState ) ) {
+    } else if ( !this.getRuntimeState( ).equals( newState ) ) {
       if ( Reason.APPEND.equals( reason ) ) {
         reason = this.reason;
       }
       this.addReasonDetail( extra );
       LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getState( ), newState ) );
       this.reason = reason;
-      if ( this.runtimeState.isMarked( ) && VmState.PENDING.equals( this.getState( ) ) ) {
+      if ( this.runtimeState.isMarked( ) && VmState.PENDING.equals( this.getRuntimeState( ) ) ) {
         if ( VmState.SHUTTING_DOWN.equals( newState ) || VmState.PENDING.equals( newState ) ) {
           this.runtimeState.set( newState, true );
         } else {
@@ -480,9 +481,9 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     } catch ( final EventFailedException ex ) {
       LOG.error( ex, ex );
     }
-    final EntityWrapper<VmInstance> db = EntityWrapper.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      db.merge( this );
+      Entities.merge( this );
       db.commit( );
     } catch ( final Exception ex ) {
       db.rollback( );
@@ -566,7 +567,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   
   public synchronized long getSplitTime( ) {
     final long time = System.currentTimeMillis( );
-    final long split = time - this.getLastUpdateTimestamp( ).getTime( );
+    final long split = time - super.getLastUpdateTimestamp( ).getTime( );
     return split;
   }
   
@@ -1000,8 +1001,8 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
                  .format(
                           "VmInstance [instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
                           this.instanceId, this.sshKeyPair, this.launchIndex, this.launchTime, this.networkConfig, this.networkGroups, this.getOwner( ),
-                          this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.runtimeState, 
-                          System.currentTimeMillis( ) - this.getLastUpdateTimestamp( ).getTime( ), 
+                          this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.runtimeState,
+                          System.currentTimeMillis( ) - this.getLastUpdateTimestamp( ).getTime( ),
                           this.userData, this.vmType, this.transientVolumes );
   }
   
