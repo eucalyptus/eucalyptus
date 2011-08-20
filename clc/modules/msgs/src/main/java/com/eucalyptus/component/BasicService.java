@@ -101,9 +101,9 @@ public class BasicService extends AbstractService implements Service {
           try {
             ServiceTransitions.transitionChain( BasicService.this.serviceConfiguration, Component.State.STOPPED ).get( );
           } catch ( ExecutionException ex ) {
-            LOG.error( ex , ex );
+            Logs.exhaust( ).error( ex , ex );
           } catch ( InterruptedException ex ) {
-            LOG.error( ex , ex );
+            Logs.exhaust( ).error( ex , ex );
             Thread.currentThread( ).interrupt( );
           }
         }
