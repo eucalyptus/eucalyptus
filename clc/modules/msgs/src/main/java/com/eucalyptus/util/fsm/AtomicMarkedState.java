@@ -144,7 +144,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
    * @see com.eucalyptus.util.fsm.State#commit()
    */
   private void commit( ) {
-    LOG.debug( "Transition commit(): " + this.currentTransition.get( ) );
+    Logs.exhaust( ).trace( "Transition commit(): " + this.currentTransition.get( ) );
     if ( !this.state.isMarked( ) ) {
       IllegalStateException ex = Exceptions.trace( new IllegalStateException( "commit() called when there is no currently pending transition: "
                                                                               + this.toString( ) ) );
@@ -166,7 +166,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
   }
   
   private void error( Throwable t ) {
-    LOG.debug( "Transition error(): " + this.toString( ) );
+    Logs.exhaust( ).error( "Transition error(): " + this.toString( ) );
     if ( !this.state.isMarked( ) ) {
       IllegalStateException ex = Exceptions.debug( new IllegalStateException( "error() called when there is no currently pending transition: "
                                                                               + this.toString( ), t ) );

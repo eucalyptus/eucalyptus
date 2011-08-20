@@ -132,7 +132,7 @@ public class NetworkGroupManager {
     final DescribeSecurityGroupsResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     NetworkGroups.createDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
-
+    
     final List<String> groupNames = request.getSecurityGroupSet( );
     final Predicate<NetworkGroup> argListFilter = new Predicate<NetworkGroup>( ) {
       @Override
@@ -153,8 +153,8 @@ public class NetworkGroupManager {
       final Iterable<NetworkGroup> matches = Iterables.filter( Entities.query( NetworkGroup.named( ownerFn, null ) ), netFilter );
       final Iterable<SecurityGroupItemType> transformed = Iterables.transform( matches, TypeMappers.lookup( NetworkGroup.class, SecurityGroupItemType.class ) );
       Iterables.addAll( reply.getSecurityGroupInfo( ), transformed );
-    } catch ( final Exception e ) {
-      LOG.debug( e, e );
+    } finally {
+      db.rollback( );
     }
     return reply;
   }
