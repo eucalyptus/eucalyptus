@@ -298,7 +298,6 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
     this.networkConfig.setPrivateDnsName( DEFAULT_IP );
     this.networkConfig.setPublicDnsName( DEFAULT_IP );
-    this.networkConfig.setNetworkIndex( networkIndex.getIndex( ) );
     this.updateDns( );
     this.store( );
   }

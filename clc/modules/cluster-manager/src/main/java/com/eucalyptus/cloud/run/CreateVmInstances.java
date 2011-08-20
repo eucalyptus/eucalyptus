@@ -73,6 +73,7 @@ import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.Resource.SetReference;
+import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
@@ -137,6 +138,12 @@ public class CreateVmInstances {
                                         allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ),
                                         allocInfo.getNetworkGroups( ),
                                         token.getNetworkIndex( ).get( ) );
-    return VmInstances.register( vmInst );
+    vmInst = VmInstances.register( vmInst );
+    try {
+      token.getNetworkIndex( ).set( vmInst );
+    } catch ( ResourceAllocationException ex ) {
+      LOG.error( ex , ex );
+    }
+    return vmInst;
   }
 }

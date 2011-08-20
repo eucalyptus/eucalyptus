@@ -149,6 +149,7 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
     final EntityTransaction db = Entities.get( this.getClass( ) );
     try {
       final PersistentResource<T, R> thisEntity = Entities.merge( this );
+      final R refererEntity = Entities.merge( referer );
       if ( ( thisEntity.getState( ) != null ) && ( preconditionState != null ) && !preconditionState.equals( thisEntity.getState( ) ) ) {
         throw new RuntimeException( "Error allocating resource " + PersistentResource.this.getClass( ).getSimpleName( ) + " with id "
                                     + this.getDisplayName( ) + " as the state is not " + preconditionState.name( ) + " (currently "
