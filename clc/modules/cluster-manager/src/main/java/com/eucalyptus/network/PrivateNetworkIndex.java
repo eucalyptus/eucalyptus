@@ -106,7 +106,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   @ManyToOne
   @JoinColumn( name = "metadata_network_index_extant_network" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final ExtantNetwork              extantNetwork;
+  private ExtantNetwork              extantNetwork;
   @Column( name = "metadata_network_index_vm_perm_uuid" )
   private String                           instanceNaturalId;
   
@@ -175,6 +175,10 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   
   public Long getIndex( ) {
     return this.index;
+  }
+  
+  public void setExtantNetwork( ExtantNetwork exNet ) {
+    this.extantNetwork = exNet;
   }
   
   public ExtantNetwork getExtantNetwork( ) {

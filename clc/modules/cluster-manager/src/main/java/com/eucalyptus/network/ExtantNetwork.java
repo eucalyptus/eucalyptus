@@ -218,8 +218,13 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
     return this.networkGroup;
   }
   
-  private void setNetworkGroup( NetworkGroup networkGroup ) {
+  void setNetworkGroup( NetworkGroup networkGroup ) {
     this.networkGroup = networkGroup;
+  }
+  
+  void addPrivateNetworkIndex( PrivateNetworkIndex idx ) {
+    idx.setExtantNetwork( this );
+    this.getIndexes( ).add( idx );
   }
   
   @Override

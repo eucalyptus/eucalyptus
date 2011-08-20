@@ -353,6 +353,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   }
   
   private void setExtantNetwork( final ExtantNetwork extantNetwork ) {
+    extantNetwork.setNetworkGroup( this );
     this.extantNetwork = extantNetwork;
   }
   
