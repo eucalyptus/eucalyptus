@@ -107,10 +107,6 @@ import org.jibx.runtime.JiBXException;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.cloud.CloudMetadata.VirtualMachineInstance;
-import com.eucalyptus.cloud.util.PersistentResource;
-import com.eucalyptus.cloud.util.Resource;
-import com.eucalyptus.cloud.util.ResourceAllocationException;
-import com.eucalyptus.cloud.util.ResourceReference;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.component.ComponentIds;
@@ -143,6 +139,7 @@ import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
+import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 @Entity
 @javax.persistence.Entity
