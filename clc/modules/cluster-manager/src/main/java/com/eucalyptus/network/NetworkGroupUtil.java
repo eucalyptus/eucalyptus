@@ -12,6 +12,7 @@ import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.TypeMappers;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
@@ -109,7 +110,8 @@ public class NetworkGroupUtil {
       }
     }
     for ( NetworkGroup group : NetworkGroupUtil.getUserNetworkRulesGroup( ownerFullName ) ) {
-      groupInfoList.add( getAsSecurityGroupItemType( ownerFullName, group ) );
+      SecurityGroupItemType groupItem = TypeMappers.transform( group, SecurityGroupItemType.class );
+      groupInfoList.add( groupItem );
     }
     return groupInfoList;
   }

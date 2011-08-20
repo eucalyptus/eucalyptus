@@ -133,6 +133,15 @@ public class SecurityGroupItemType extends EucalyptusData {
   String groupName;
   String groupDescription;
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
+  public SecurityGroupItemType( ) {
+    super( );
+  }
+  public SecurityGroupItemType( String accountId, String groupName, String groupDescription ) {
+    super( );
+    this.accountId = accountId;
+    this.groupName = groupName;
+    this.groupDescription = groupDescription;
+  }
 }
 
 public class IpPermissionType extends EucalyptusData {

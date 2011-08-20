@@ -1,22 +1,30 @@
 package com.eucalyptus.network;
 
 import java.util.List;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.CloudMetadata;
+import com.eucalyptus.cloud.CloudMetadata.NetworkSecurityGroup;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.Types;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
@@ -35,8 +43,8 @@ import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 public class NetworkGroupManager {
   private static Logger LOG = Logger.getLogger( NetworkGroupManager.class );
   
-  public CreateSecurityGroupResponseType create( CreateSecurityGroupType request ) throws EucalyptusCloudException, DuplicateMetadataException {
-    Context ctx = Contexts.lookup( );
+  public CreateSecurityGroupResponseType create( final CreateSecurityGroupType request ) throws EucalyptusCloudException, DuplicateMetadataException {
+    final Context ctx = Contexts.lookup( );
     NetworkGroups.createDefault( ctx.getUserFullName( ) );
     /**
      * GRZE:WARN: do this /first/, ensure the default group exists to cover some old broken installs
@@ -44,7 +52,7 @@ public class NetworkGroupManager {
     if ( !Types.isContextAuthorized( null ) ) {
 
     }
-    String action = PolicySpec.requestToAction( request );
+    final String action = PolicySpec.requestToAction( request );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to create network group for " + ctx.getUser( ) );
@@ -53,8 +61,8 @@ public class NetworkGroupManager {
         throw new EucalyptusCloudException( "Quota exceeded to create network group for " + ctx.getUser( ) );
       }
     }
-    CreateSecurityGroupResponseType reply = ( CreateSecurityGroupResponseType ) request.getReply( );
-    NetworkGroup newGroup = NetworkGroups.create( ctx.getUserFullName( ), request.getGroupName( ), request.getGroupDescription( ) );
+    final CreateSecurityGroupResponseType reply = ( CreateSecurityGroupResponseType ) request.getReply( );
+    final NetworkGroup newGroup = NetworkGroups.create( ctx.getUserFullName( ), request.getGroupName( ), request.getGroupDescription( ) );
     try {
       EntityWrapper.get( NetworkGroup.class ).mergeAndCommit( newGroup );
       return reply;
@@ -68,29 +76,29 @@ public class NetworkGroupManager {
     }
   }
   
-  public DeleteSecurityGroupResponseType delete( DeleteSecurityGroupType request ) throws EucalyptusCloudException {
-    Context ctx = Contexts.lookup( );
+  public DeleteSecurityGroupResponseType delete( final DeleteSecurityGroupType request ) throws EucalyptusCloudException {
+    final Context ctx = Contexts.lookup( );
     NetworkGroups.createDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
-    DeleteSecurityGroupResponseType reply = ( DeleteSecurityGroupResponseType ) request.getReply( );
-    if ( Contexts.lookup( ).hasAdministrativePrivileges( ) && request.getGroupName( ).indexOf( "::" ) != -1 ) {
-      String[] nameParts = request.getGroupName( ).split( "::" );
+    final DeleteSecurityGroupResponseType reply = ( DeleteSecurityGroupResponseType ) request.getReply( );
+    if ( Contexts.lookup( ).hasAdministrativePrivileges( ) && ( request.getGroupName( ).indexOf( "::" ) != -1 ) ) {
+      final String[] nameParts = request.getGroupName( ).split( "::" );
       if ( nameParts.length != 2 ) {
         throw new EucalyptusCloudException( "Request to delete group named: " + request.getGroupName( ) + " is malformed." );
       } else {
-        String accountId = nameParts[0];
-        String groupName = nameParts[1];
+        final String accountId = nameParts[0];
+        final String groupName = nameParts[1];
         try {
-          Account account = Accounts.lookupAccountById( accountId );
-          for ( User user : account.getUsers( ) ) {
-            UserFullName userFullName = UserFullName.getInstance( user );
+          final Account account = Accounts.lookupAccountById( accountId );
+          for ( final User user : account.getUsers( ) ) {
+            final UserFullName userFullName = UserFullName.getInstance( user );
             try {
               NetworkGroupUtil.getUserNetworkRulesGroup( userFullName, groupName );
               NetworkGroupUtil.deleteUserNetworkRulesGroup( userFullName, groupName );
-            } catch ( EucalyptusCloudException ex ) {
+            } catch ( final EucalyptusCloudException ex ) {
               //need to iterate over all users in the account and check each of their security groups
             }
           }
-        } catch ( AuthException ex ) {
+        } catch ( final AuthException ex ) {
           LOG.error( ex.getMessage( ) );
           throw new EucalyptusCloudException( "Deleting security failed because of: " + ex.getMessage( ) + " for request " + request.toSimpleString( ) );
         }
@@ -106,53 +114,55 @@ public class NetworkGroupManager {
     return reply;
   }
   
+  enum UserAuthGroupFilter implements Predicate<NetworkGroup> {
+    INSTANCE;
+    @Override
+    public boolean apply( NetworkGroup arg0 ) {
+      final Context ctx = Contexts.lookup( );
+      return Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, arg0.getName( ), ctx.getAccount( ),
+                                       PolicySpec.requestToAction( ctx.getRequest( ) ), ctx.getUser( ) );
+    }
+  }
+  
+  public static Predicate<NetworkGroup> userAuthFilter( ) {
+    return UserAuthGroupFilter.INSTANCE;
+  }
+  
   public DescribeSecurityGroupsResponseType describe( final DescribeSecurityGroupsType request ) throws EucalyptusCloudException {
+    final DescribeSecurityGroupsResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     NetworkGroups.createDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
+
     final List<String> groupNames = request.getSecurityGroupSet( );
-    DescribeSecurityGroupsResponseType reply = ( DescribeSecurityGroupsResponseType ) request.getReply( );
-    final List<SecurityGroupItemType> replyList = reply.getSecurityGroupInfo( );
+    final Predicate<NetworkGroup> argListFilter = new Predicate<NetworkGroup>( ) {
+      @Override
+      public boolean apply( final NetworkGroup arg0 ) {
+        return groupNames.isEmpty( ) || groupNames.contains( arg0.getName( ) );
+      }
+    };
+    
+    Predicate<NetworkGroup> netFilter = Predicates.and( argListFilter, userAuthFilter( ) );
+    OwnerFullName ownerFn = AccountFullName.getInstance( ctx.getAccount( ) );
     if ( Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
-      try {
-        for ( SecurityGroupItemType group : Iterables.filter( NetworkGroupUtil.getUserNetworksAdmin( ctx.getUserFullName( ), request.getSecurityGroupSet( ) ),
-                                                              new Predicate<SecurityGroupItemType>( ) {
-                                                                @Override
-                                                                public boolean apply( SecurityGroupItemType arg0 ) {
-                                                                  return groupNames.isEmpty( ) || groupNames.contains( arg0.getGroupName( ) );
-                                                                }
-                                                              } ) ) {
-          replyList.add( group );
-        }
-      } catch ( Exception e ) {
-        LOG.debug( e, e );
-      }
-    } else {
-      try {
-        for ( SecurityGroupItemType group : Iterables.filter( NetworkGroupUtil.getUserNetworks( ctx.getUserFullName( ), request.getSecurityGroupSet( ) ),
-                                                              new Predicate<SecurityGroupItemType>( ) {
-                                                                @Override
-                                                                public boolean apply( SecurityGroupItemType arg0 ) {
-                                                                  if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP,
-                                                                                                  arg0.getGroupName( ), ctx.getAccount( ),
-                                                                                                  PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
-                                                                    return false;
-                                                                  }
-                                                                  return groupNames.isEmpty( ) || groupNames.contains( arg0.getGroupName( ) );
-                                                                }
-                                                              } ) ) {
-          replyList.add( group );
-        }
-      } catch ( Exception e ) {
-        LOG.debug( e, e );
-      }
+      ownerFn = null;
+      netFilter = argListFilter;
+    }
+    
+    final EntityTransaction db = Entities.get( NetworkGroup.class );
+    try {
+      final Iterable<NetworkGroup> matches = Iterables.filter( Entities.query( NetworkGroup.named( ownerFn, null ) ), netFilter );
+      final Iterable<SecurityGroupItemType> transformed = Iterables.transform( matches, TypeMappers.lookup( NetworkGroup.class, SecurityGroupItemType.class ) );
+      Iterables.addAll( reply.getSecurityGroupInfo( ), transformed );
+    } catch ( final Exception e ) {
+      LOG.debug( e, e );
     }
     return reply;
   }
   
-  public RevokeSecurityGroupIngressResponseType revoke( RevokeSecurityGroupIngressType request ) throws EucalyptusCloudException {
-    Context ctx = Contexts.lookup( );
+  public RevokeSecurityGroupIngressResponseType revoke( final RevokeSecurityGroupIngressType request ) throws EucalyptusCloudException {
+    final Context ctx = Contexts.lookup( );
     NetworkGroups.createDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
-    RevokeSecurityGroupIngressResponseType reply = ( RevokeSecurityGroupIngressResponseType ) request.getReply( );
+    final RevokeSecurityGroupIngressResponseType reply = ( RevokeSecurityGroupIngressResponseType ) request.getReply( );
     NetworkGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ) );
     if ( !ctx.hasAdministrativePrivileges( )
          && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, request.getGroupName( ), ctx.getAccount( ),
@@ -160,13 +170,13 @@ public class NetworkGroupManager {
       throw new EucalyptusCloudException( "Not authorized to revoke network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
     }
     final List<NetworkRule> ruleList = Lists.newArrayList( );
-    for ( IpPermissionType ipPerm : request.getIpPermissions( ) ) {
+    for ( final IpPermissionType ipPerm : request.getIpPermissions( ) ) {
       ruleList.addAll( NetworkGroupUtil.getNetworkRules( ipPerm ) );
     }
-    List<NetworkRule> filtered = Lists.newArrayList( Iterables.filter( ruleGroup.getNetworkRules( ), new Predicate<NetworkRule>( ) {
+    final List<NetworkRule> filtered = Lists.newArrayList( Iterables.filter( ruleGroup.getNetworkRules( ), new Predicate<NetworkRule>( ) {
       @Override
-      public boolean apply( NetworkRule rule ) {
-        for ( NetworkRule r : ruleList ) {
+      public boolean apply( final NetworkRule rule ) {
+        for ( final NetworkRule r : ruleList ) {
           if ( r.equals( rule ) && r.getNetworkPeers( ).equals( rule.getNetworkPeers( ) ) && r.getIpRanges( ).equals( rule.getIpRanges( ) ) ) {
             return true;
           }
@@ -176,18 +186,18 @@ public class NetworkGroupManager {
     } ) );
     if ( filtered.size( ) == ruleList.size( ) ) {
       try {
-        for ( NetworkRule r : filtered ) {
+        for ( final NetworkRule r : filtered ) {
           ruleGroup.getNetworkRules( ).remove( r );
         }
         ruleGroup = EntityWrapper.get( NetworkGroup.class ).mergeAndCommit( ruleGroup );
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         Logs.extreme( ).error( ex, ex );
         throw new EucalyptusCloudException( "RevokeSecurityGroupIngress failed because: " + ex.getMessage( ), ex );
       }
       return reply;
-    } else if ( request.getIpPermissions( ).size( ) == 1 && request.getIpPermissions( ).get( 0 ).getIpProtocol( ) == null ) {
+    } else if ( ( request.getIpPermissions( ).size( ) == 1 ) && ( request.getIpPermissions( ).get( 0 ).getIpProtocol( ) == null ) ) {
       //LAME: this is for the query-based clients which send incomplete named-network requests.
-      for ( NetworkRule rule : ruleList ) {
+      for ( final NetworkRule rule : ruleList ) {
         if ( ruleGroup.getNetworkRules( ).remove( rule ) ) {
           reply.set_return( true );
         }
@@ -195,7 +205,7 @@ public class NetworkGroupManager {
       if ( reply.get_return( ) ) {
         try {
           ruleGroup = EntityWrapper.get( ruleGroup ).mergeAndCommit( ruleGroup );
-        } catch ( Exception ex ) {
+        } catch ( final Exception ex ) {
           Logs.extreme( ).error( ex, ex );
           throw new EucalyptusCloudException( "RevokeSecurityGroupIngress failed because: " + ex.getMessage( ), ex );
         }
@@ -206,21 +216,21 @@ public class NetworkGroupManager {
     }
   }
   
-  public AuthorizeSecurityGroupIngressResponseType authorize( AuthorizeSecurityGroupIngressType request ) throws Exception {
-    Context ctx = Contexts.lookup( );
+  public AuthorizeSecurityGroupIngressResponseType authorize( final AuthorizeSecurityGroupIngressType request ) throws Exception {
+    final Context ctx = Contexts.lookup( );
     NetworkGroups.createDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
-    AuthorizeSecurityGroupIngressResponseType reply = ( AuthorizeSecurityGroupIngressResponseType ) request.getReply( );
-    NetworkGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ) );
+    final AuthorizeSecurityGroupIngressResponseType reply = ( AuthorizeSecurityGroupIngressResponseType ) request.getReply( );
+    final NetworkGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ) );
     if ( !ctx.hasAdministrativePrivileges( )
          && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, request.getGroupName( ), ctx.getAccount( ),
                                        PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to authorize network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
     }
     final List<NetworkRule> ruleList = Lists.newArrayList( );
-    for ( IpPermissionType ipPerm : request.getIpPermissions( ) ) {
+    for ( final IpPermissionType ipPerm : request.getIpPermissions( ) ) {
       try {
         ruleList.addAll( NetworkGroupUtil.getNetworkRules( ipPerm ) );
-      } catch ( IllegalArgumentException ex ) {
+      } catch ( final IllegalArgumentException ex ) {
         LOG.error( ex.getMessage( ) );
         reply.set_return( false );
         return reply;
@@ -228,8 +238,8 @@ public class NetworkGroupManager {
     }
     if ( Iterables.any( ruleGroup.getNetworkRules( ), new Predicate<NetworkRule>( ) {
       @Override
-      public boolean apply( NetworkRule rule ) {
-        for ( NetworkRule r : ruleList ) {
+      public boolean apply( final NetworkRule rule ) {
+        for ( final NetworkRule r : ruleList ) {
           if ( r.equals( rule ) && r.getNetworkPeers( ).equals( rule.getNetworkPeers( ) ) && r.getIpRanges( ).equals( rule.getIpRanges( ) ) ) {
             return true || !r.isValid( );
           }
