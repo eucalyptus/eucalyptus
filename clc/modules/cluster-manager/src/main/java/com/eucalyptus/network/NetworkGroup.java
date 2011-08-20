@@ -278,10 +278,10 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   
   public ExtantNetwork extantNetwork( ) throws NotEnoughResourcesAvailable {
     final EntityTransaction db = Entities.get( NetworkGroup.class );
-    Entities.merge( this );
+    NetworkGroup net = Entities.merge( this );
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       return ExtantNetwork.bogus( this );
-    } else if ( this.getExtantNetwork( ) == null ) {
+    } else if ( net.getExtantNetwork( ) == null ) {
       for ( Integer i : Numbers.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
         try {
           Entities.uniqueResult( ExtantNetwork.named( i ) );
@@ -302,7 +302,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
       db.rollback( );
       throw new NotEnoughResourcesAvailable( "Failed to allocate network tag for network: " + this.getFullName( ) + ": no network tags are free." );
     } else {
-      return this.getExtantNetwork( );
+      return net.getExtantNetwork( );
     }
   }
   
