@@ -302,15 +302,23 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   }
   
   private ExtantNetwork findOrCreateExtantNetwork( ) throws TransactionException, NoSuchElementException, NotEnoughResourcesException {
-    ExtantNetwork exNet;
-    exNet = this.lookupExtantNetwork( );
+    ExtantNetwork exNet = null;
+    try {
+      exNet = this.lookupExtantNetwork( );
+    } catch ( Exception ex ) {
+      Logs.extreme( ).error( ex , ex );
+    }
     if ( exNet == null ) {
       exNet = this.attemptNetworkTagging( );
     }
-    this.setExtantNetwork( exNet );
-    Entities.merge( exNet );
-    Entities.merge( this );
-    return exNet;
+    if ( exNet != null ) { 
+      Entities.merge( exNet );
+      this.setExtantNetwork( exNet );
+      Entities.merge( this );
+      return exNet;
+    } else {
+      throw new NotEnoughResourcesException( "Cannot has." );
+    }
   }
   
   private ExtantNetwork attemptNetworkTagging( ) throws NotEnoughResourcesException {
