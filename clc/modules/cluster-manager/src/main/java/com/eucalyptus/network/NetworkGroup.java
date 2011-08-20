@@ -306,12 +306,12 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     try {
       exNet = this.lookupExtantNetwork( );
     } catch ( Exception ex ) {
-      Logs.extreme( ).error( ex , ex );
+      Logs.extreme( ).error( ex, ex );
     }
     if ( exNet == null ) {
       exNet = this.attemptNetworkTagging( );
     }
-    if ( exNet != null ) { 
+    if ( exNet != null ) {
       Entities.merge( exNet );
       this.setExtantNetwork( exNet );
       Entities.merge( this );
@@ -328,9 +328,11 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
         continue;
       } catch ( Exception ex ) {
         try {
-          this.setExtantNetwork( Entities.persist( ExtantNetwork.create( this, i ) ) );
-          Entities.merge( this );
-          return this.getExtantNetwork( );
+          ExtantNetwork exNet = ExtantNetwork.create( this, i );
+          exNet.setNetworkGroup( this );
+          this.setExtantNetwork( exNet );
+          Entities.persist( exNet );
+          return Entities.merge( this ).extantNetwork;
         } catch ( Exception ex1 ) {
           Logs.exhaust( ).trace( ex1, ex1 );
           throw new NotEnoughResourcesException( "Failed to allocate network tag for network: " + this.getFullName( ), ex1 );

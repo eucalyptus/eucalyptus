@@ -180,18 +180,18 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   
   public SetReference<PrivateNetworkIndex, VmInstance> allocateNetworkIndex( ) throws TransactionException {
     EntityTransaction db = Entities.get( ExtantNetwork.class );
-    SetReference<PrivateNetworkIndex, VmInstance> ref;
+    SetReference<PrivateNetworkIndex, VmInstance> ref = null;
     try {
-      ref = null;
-      if ( this.getIndexes( ).isEmpty( ) ) {
+      ExtantNetwork exNet = Entities.merge( this );
+      if ( exNet.getIndexes( ).isEmpty( ) ) {
         for ( long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
-          PrivateNetworkIndex newIdx = PrivateNetworkIndex.create( this, i );
+          PrivateNetworkIndex newIdx = PrivateNetworkIndex.create( exNet, i );
+          exNet.getIndexes( ).add( newIdx );
           PrivateNetworkIndex netIdx = Entities.persist( newIdx );
-          this.getIndexes( ).add( netIdx );
         }
-        Entities.merge( this );
+        Entities.merge( exNet );
       }
-      for ( PrivateNetworkIndex idx : Iterables.filter( this.getIndexes( ), PrivateNetworkIndex.filterFree( ) ) ) {
+      for ( PrivateNetworkIndex idx : Iterables.filter( exNet.getIndexes( ), PrivateNetworkIndex.filterFree( ) ) ) {
         try {
           ref = idx.allocate( );
           break;
