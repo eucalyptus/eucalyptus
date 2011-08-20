@@ -120,7 +120,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 	}
 
 	@Override
-	public void init() throws Exception {
+	public void init() {
 
 		try {
 			if (!initdbPG()) {
@@ -384,7 +384,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 	}
 
 	@Override
-	public boolean isRunning() throws Exception {
+	public boolean isRunning() {
 
 		for ( int x = 0 ; x < PG_MAX_RETRY; x++) {
 			try {

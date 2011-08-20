@@ -144,7 +144,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
     final SetReference<PrivateNetworkIndex, VmInstance> networkIndex = this.token.getNetworkIndex( );
     try {
       LOG.debug( "-> Release network index allocation: " + networkIndex.get( ) );
-      networkIndex.abort( );
+      networkIndex.clear( );
     } catch ( final Exception ex ) {
       LOG.error( ex.getMessage( ) );
       Logs.extreme( ).error( ex, ex );

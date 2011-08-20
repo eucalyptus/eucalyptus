@@ -133,10 +133,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkRule>      networkRules     = new HashSet<NetworkRule>( );
   
-  @ManyToMany( cascade = { CascadeType.PERSIST, CascadeType.MERGE }, mappedBy = "networkGroups" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final Set<VmInstance> runningInstances = new HashSet<VmInstance>( );
-  
   @OneToOne( cascade = { CascadeType.ALL }, mappedBy = "networkGroup", fetch = FetchType.EAGER )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private ExtantNetwork         extantNetwork;
@@ -290,11 +286,10 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
         if ( net.getExtantNetwork( ) == null ) {
           exNet = this.findOrCreateExtantNetwork( );
         }
+        db.commit( );
         return exNet;
-      } catch ( TransactionException ex ) {
-        Logs.extreme( ).trace( ex, ex );
-        throw new NotEnoughResourcesException( ex );
-      } catch ( NoSuchElementException ex ) {
+      } catch ( Exception ex ) {
+        db.rollback( );
         Logs.exhaust( ).trace( ex, ex );
         throw new NotEnoughResourcesException( ex );
       }
@@ -303,42 +298,39 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   
   private ExtantNetwork findOrCreateExtantNetwork( ) throws TransactionException, NoSuchElementException, NotEnoughResourcesException {
     EntityTransaction db = Entities.get( NetworkGroup.class );
-    NetworkGroup ngNet = Entities.merge( this );
-    ExtantNetwork exNet = null;
     try {
-      exNet = ngNet.lookupExtantNetwork( );
+      NetworkGroup ngNet = Entities.merge( this );
+      ExtantNetwork exNet = null;
+      try {
+        exNet = ngNet.lookupExtantNetwork( );
+      } catch ( Exception ex ) {
+        Logs.extreme( ).error( ex, ex );
+      }
+      if ( exNet == null ) {
+        int tag = ngNet.attemptNetworkTagging( );
+        exNet = ExtantNetwork.create( ngNet, tag );
+        ngNet.setExtantNetwork( exNet );
+        Entities.persist( exNet );
+        Entities.merge( ngNet );
+        db.commit( );
+        return exNet;
+      } else {
+        db.commit( );
+        return exNet;
+      }
     } catch ( Exception ex ) {
-      Logs.extreme( ).error( ex, ex );
-    }
-    if ( exNet == null ) {
-      exNet = ngNet.attemptNetworkTagging( );
-    }
-    if ( exNet != null ) {
-      Entities.persist( exNet );
-      this.setExtantNetwork( exNet );
-      Entities.merge( ngNet );
-      return exNet;
-    } else {
-      throw new NotEnoughResourcesException( "Cannot has." );
+      db.rollback( );
+      throw new NotEnoughResourcesException( "Cannot has: " + ex.getMessage( ), ex );
     }
   }
   
-  private ExtantNetwork attemptNetworkTagging( ) throws NotEnoughResourcesException {
+  private Integer attemptNetworkTagging( ) throws NotEnoughResourcesException {
     for ( Integer i : Numbers.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
       try {
         Entities.uniqueResult( ExtantNetwork.named( i ) );
         continue;
       } catch ( Exception ex ) {
-        try {
-          ExtantNetwork exNet = ExtantNetwork.create( this, i );
-          exNet.setNetworkGroup( this );
-          this.setExtantNetwork( exNet );
-          Entities.persist( exNet );
-          return Entities.merge( this ).extantNetwork;
-        } catch ( Exception ex1 ) {
-          Logs.exhaust( ).trace( ex1, ex1 );
-          throw new NotEnoughResourcesException( "Failed to allocate network tag for network: " + this.getFullName( ), ex1 );
-        }
+        return i;
       }
     }
     throw new NotEnoughResourcesException( "Failed to allocate network tag for network: " + this.getFullName( ) + ": no network tags are free." );
@@ -357,12 +349,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   }
   
   private void setExtantNetwork( final ExtantNetwork extantNetwork ) {
-    extantNetwork.setNetworkGroup( this );
     this.extantNetwork = extantNetwork;
-  }
-  
-  private Set<VmInstance> getRunningInstances( ) {
-    return this.runningInstances;
   }
   
 }

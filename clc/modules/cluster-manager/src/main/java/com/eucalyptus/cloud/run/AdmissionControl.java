@@ -96,6 +96,7 @@ import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
@@ -129,35 +130,50 @@ public class AdmissionControl {
   public static Allocation handle( Allocation allocInfo ) throws EucalyptusCloudException {
     EventRecord.here( AdmissionControl.class, EventType.VM_RESERVED, LogUtil.dumpObject( allocInfo ) ).trace( );
     List<ResourceAllocator> finished = Lists.newArrayList( );
-    
-    for ( ResourceAllocator allocator : pending ) {
-      try {
-        allocator.allocate( allocInfo );
+    EntityTransaction db = Entities.get( NetworkGroup.class );
+    try {
+      for ( ResourceAllocator allocator : pending ) {
+        runAllocatorSafely( allocInfo, allocator );
         finished.add( allocator );
-      } catch ( ScriptExecutionFailedException e ) {
-        if ( e.getCause( ) != null ) {
-          throw new EucalyptusCloudException( e.getCause( ).getMessage( ), e.getCause( ) );
-        } else {
-          throw new EucalyptusCloudException( e.getMessage( ), e );
-        }
-      } catch ( Exception e ) {
-        LOG.debug( e, e );
-        try {
-          allocator.fail( allocInfo, e );
-        } catch ( Exception e1 ) {
-          LOG.debug( e1, e1 );
-        }
-        for ( ResourceAllocator rollback : Iterables.reverse( finished ) ) {
-          try {
-            rollback.fail( allocInfo, e );
-          } catch ( Exception e1 ) {
-            LOG.debug( e1, e1 );
-          }
-        }
-        throw new EucalyptusCloudException( e.getMessage( ), e );
       }
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      rollbackAllocations( allocInfo, finished, ex );
+      db.rollback( );
+      throw new EucalyptusCloudException( ex.getMessage( ), ex );
     }
     return allocInfo;
+  }
+
+  public static void rollbackAllocations( Allocation allocInfo, List<ResourceAllocator> finished, Exception e ) {
+    for ( ResourceAllocator rollback : Iterables.reverse( finished ) ) {
+      try {
+        rollback.fail( allocInfo, e );
+      } catch ( Exception e1 ) {
+        LOG.debug( e1, e1 );
+      }
+    }
+  }
+
+  public static void runAllocatorSafely( Allocation allocInfo, ResourceAllocator allocator ) throws Exception {
+    try {
+      allocator.allocate( allocInfo );
+    } catch ( ScriptExecutionFailedException e ) {
+      if ( e.getCause( ) != null ) {
+        throw new EucalyptusCloudException( e.getCause( ).getMessage( ), e.getCause( ) );
+      } else {
+        throw new EucalyptusCloudException( e.getMessage( ), e );
+      }
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
+      try {
+        allocator.fail( allocInfo, e );
+      } catch ( Exception e1 ) {
+        LOG.debug( e1, e1 );
+      }
+      throw e;
+    }
   }
   
   enum NodeResourceAllocator implements ResourceAllocator {
@@ -334,7 +350,9 @@ public class AdmissionControl {
             SetReference<PrivateNetworkIndex, VmInstance> addrIndex = exNet.allocateNetworkIndex( );
             rscToken.setNetworkIndex( addrIndex );
             rscToken.setExtantNetwork( Entities.merge( exNet ) );
+            db.commit( );
           } catch ( Exception ex ) {
+            db.rollback( );
             throw new NotEnoughResourcesException( "Not enough addresses left in the network subnet assigned to requested group: " + rscToken, ex );
           }
         }

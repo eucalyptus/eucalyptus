@@ -75,7 +75,7 @@ import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.OwnerFullName;
 
 @MappedSuperclass
-public abstract class PersistentResource<T extends PersistentResource<T, R>, R extends HasNaturalId> extends UserMetadata<Resource.State> implements Resource<T, R> {
+public abstract class PersistentResource<T extends PersistentResource<T, R>, R extends HasNaturalId> extends UserMetadata<Resource.State> implements Resource<T,R> {
   private static final long serialVersionUID = 1L;
   private static Logger     LOG              = Logger.getLogger( PersistentResource.class );
   
@@ -86,17 +86,6 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
   @SuppressWarnings( "unchecked" )
   private T get( ) {
     return ( T ) this;
-  }
-  
-  /**
-   * {@inheritDoc ResourceAllocation#currentState()}
-   * 
-   * @see Resource#currentState()
-   * @return
-   */
-  @Override
-  public final Resource.State currentState( ) {
-    return this.getState( );
   }
   
   /**
@@ -159,7 +148,7 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
   T doSetReferer( final R referer, final Resource.State preconditionState, final Resource.State finalState ) throws ResourceAllocationException {
     final EntityTransaction db = Entities.get( this.getClass( ) );
     try {
-      final PersistentResource<T, R> thisEntity = Entities.uniqueResult( ( T ) this );
+      final PersistentResource<T, R> thisEntity = Entities.merge( this );
       if ( ( thisEntity.getState( ) != null ) && ( preconditionState != null ) && !preconditionState.equals( thisEntity.getState( ) ) ) {
         throw new RuntimeException( "Error allocating resource " + PersistentResource.this.getClass( ).getSimpleName( ) + " with id "
                                     + this.getDisplayName( ) + " as the state is not " + preconditionState.name( ) + " (currently "
@@ -190,7 +179,6 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
         return ret;
       }
       
-      @Override
       public T abort( ) throws ResourceAllocationException {
         this.checkFinished( );
         final T ret = PersistentResource.this.doSetReferer( null, null, Resource.State.FREE );
@@ -213,9 +201,13 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
         return ( T ) PersistentResource.this;
       }
       
-      @Override
       public int compareTo( final T o ) {
         return PersistentResource.this.compareTo( o );
+      }
+
+      @Override
+      public T clear( ) throws ResourceAllocationException {
+        return PersistentResource.this.doSetReferer( null, null, Resource.State.FREE );
       }
       
     };

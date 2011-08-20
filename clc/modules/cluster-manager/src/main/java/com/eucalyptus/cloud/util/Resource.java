@@ -65,13 +65,13 @@ package com.eucalyptus.cloud.util;
 
 import com.eucalyptus.util.HasNaturalId;
 
-public interface Resource<T extends HasNaturalId, R extends HasNaturalId> extends Comparable<T> {
-  public interface SetReference<T, R> extends Comparable<T> {
+public interface Resource<T extends Resource<T, R>, R extends HasNaturalId> extends Comparable<T> {
+  public interface SetReference<T, R> {
     public T set( R referer ) throws ResourceAllocationException;
     
     public T get( );
     
-    public T abort( ) throws ResourceAllocationException;
+    public T clear( ) throws ResourceAllocationException;
   }
   
   public interface ClearReference<T> {
@@ -84,14 +84,12 @@ public interface Resource<T extends HasNaturalId, R extends HasNaturalId> extend
     UNKNOWN, FREE, PENDING, EXTANT, RELEASING
   }
   
-  public State currentState( );
-  
   /**
    * Request is in-flight on the network (not just in memory) and state updates should be
    * disregarded until the in-flight request completes.
    * 
    * Calling {@link SetReference#set(Object)} completes the allocation, while calling
-   * {@link SetReference#abort()} resets the state to that before the reference change.
+   * {@link SetReference#clear()} resets the state to that before the reference change.
    */
   public SetReference<T, R> allocate( ) throws ResourceAllocationException;
   
@@ -101,7 +99,7 @@ public interface Resource<T extends HasNaturalId, R extends HasNaturalId> extend
    * requests complete.
    * 
    * Calling {@link SetReference#set(Object)} completes releasing the allocation, while calling
-   * {@link SetReference#abort()} resets the state to that before the reference change.
+   * {@link SetReference#clear()} resets the state to that before the reference change.
    */
   public ClearReference<T> release( ) throws ResourceAllocationException;
   

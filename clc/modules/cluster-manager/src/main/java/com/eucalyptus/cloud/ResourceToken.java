@@ -160,7 +160,7 @@ public class ResourceToken implements Comparable<ResourceToken> {
     }
     if ( this.networkIndex != null ) {
       try {
-        this.networkIndex.abort( );
+        this.networkIndex.clear( );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }

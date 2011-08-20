@@ -316,7 +316,7 @@ public class NetworkGroups {
         Iterables.addAll( groupInfo.getIpPermissions( ), ipPerms );
         return groupInfo;
       } finally {
-        db.commit( );
+        db.rollback( );
       }
     }
     

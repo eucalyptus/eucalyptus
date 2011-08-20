@@ -76,7 +76,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -86,6 +85,7 @@ import javax.persistence.JoinTable;
 import javax.persistence.Lob;
 import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
 import javax.persistence.PostLoad;
@@ -93,12 +93,13 @@ import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import org.jibx.runtime.BindingDirectory;
 import org.jibx.runtime.IBindingFactory;
 import org.jibx.runtime.IMarshallingContext;
@@ -106,6 +107,10 @@ import org.jibx.runtime.JiBXException;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.cloud.CloudMetadata.VirtualMachineInstance;
+import com.eucalyptus.cloud.util.PersistentResource;
+import com.eucalyptus.cloud.util.Resource;
+import com.eucalyptus.cloud.util.ResourceAllocationException;
+import com.eucalyptus.cloud.util.ResourceReference;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.component.ComponentIds;
@@ -114,7 +119,6 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.keys.KeyPairs;
@@ -139,7 +143,6 @@ import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 @Entity
 @javax.persistence.Entity
@@ -248,9 +251,13 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   @JoinTable( name = "metadata_metadata_vm_has_network_groups", joinColumns = { @JoinColumn( name = "metadata_vm_id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_group_id" ) } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final Set<NetworkGroup>                     networkGroups     = Sets.newHashSet( );
-  @ManyToOne( cascade = { CascadeType.PERSIST, CascadeType.MERGE } )
+  
+  @NotFound( action = NotFoundAction.IGNORE )
+  @OneToOne( cascade = { CascadeType.PERSIST, CascadeType.MERGE } )
+  @JoinColumn( name = "ColumnInA", nullable = true, insertable = false, updatable = false )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex                         networkIndex;
+  
   @Transient
   //TODO:GRZE:NOW
   private final ConcurrentMap<String, AttachedVolume> persistentVolumes = new ConcurrentSkipListMap<String, AttachedVolume>( );
