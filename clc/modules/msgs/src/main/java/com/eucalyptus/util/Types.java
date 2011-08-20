@@ -116,8 +116,8 @@ public class Types {
   }
   
   @SuppressWarnings( "unchecked" )
-  public static <T extends PrivilegedResource<T>> Predicate<T> filterUserAuthorization( ) {
-    return ( Predicate<T> ) UserAuthFilter.INSTANCE;
+  public static Predicate<?> filterUserAuthorization( ) {
+    return ( Predicate<?> ) UserAuthFilter.INSTANCE;
   }
   
   /**
