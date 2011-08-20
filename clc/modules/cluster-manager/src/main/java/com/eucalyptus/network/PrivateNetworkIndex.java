@@ -76,7 +76,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
-import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cloud.util.PersistentResource;
 import com.eucalyptus.cloud.util.Resource;
 import com.eucalyptus.cloud.util.ResourceAllocationException;

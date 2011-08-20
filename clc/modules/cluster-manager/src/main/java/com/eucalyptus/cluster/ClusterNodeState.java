@@ -78,7 +78,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.network.NetworkToken;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -110,7 +110,7 @@ public class ClusterNodeState {
     this.redeemedTokens = new ConcurrentSkipListSet<ResourceToken>( );
   }
   
-  public synchronized List<ResourceToken> requestResourceAllocation( Allocation allocInfo, int minAmount, int maxAmount ) throws NotEnoughResourcesAvailable {
+  public synchronized List<ResourceToken> requestResourceAllocation( Allocation allocInfo, int minAmount, int maxAmount ) throws NotEnoughResourcesException {
     VmTypeAvailability vmType = this.typeMap.get( allocInfo.getVmType( ).getName( ) );
     Integer available = vmType.getAvailable( );
     NavigableSet<VmTypeAvailability> sorted = this.sorted( );
@@ -119,7 +119,7 @@ public class ClusterNodeState {
     //:: if not enough, then bail out :://
     Integer quantity = minAmount;
     if ( vmType.getAvailable( ) < minAmount ) {
-      throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " < " + minAmount + ": vm instances." );
+      throw new NotEnoughResourcesException( "Not enough resources (" + available + " < " + minAmount + ": vm instances." );
     } else {
       quantity = ( maxAmount < available
         ? maxAmount

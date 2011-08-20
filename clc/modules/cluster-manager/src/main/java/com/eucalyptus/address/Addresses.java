@@ -78,7 +78,7 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata;
-import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
@@ -139,7 +139,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
                                                  }
                                                };
   
-  public static Address allocateSystemAddress( Partition partition ) throws NotEnoughResourcesAvailable {
+  public static Address allocateSystemAddress( Partition partition ) throws NotEnoughResourcesException {
     return getAddressManager( ).allocateSystemAddresses( partition, 1 ).get( 0 );
   }
   
@@ -216,7 +216,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     return address;
   }
   
-  public static Address allocate( BaseMessage request ) throws EucalyptusCloudException, NotEnoughResourcesAvailable {
+  public static Address allocate( BaseMessage request ) throws EucalyptusCloudException, NotEnoughResourcesException {
     //GRZE:WARN: not here.
     Context ctx = Contexts.lookup( );
     String action = PolicySpec.requestToAction( request );
@@ -240,7 +240,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       if( VmState.PENDING.equals( vm.getState() ) || VmState.RUNNING.equals( vm.getState() ) ) {
         Addresses.getInstance( ).getAddressManager( ).assignSystemAddress( vm );
       } 
-    } catch ( NotEnoughResourcesAvailable e ) {
+    } catch ( NotEnoughResourcesException e ) {
       LOG.warn( "No addresses are available to provide a system address for: " + LogUtil.dumpObject( vm ) );
       LOG.debug( e, e );
     }

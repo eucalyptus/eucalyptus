@@ -74,7 +74,7 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ResourceToken;
-import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;

@@ -2,7 +2,7 @@ package com.eucalyptus.address;
 
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.util.Callback;
@@ -16,9 +16,9 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   private static Logger LOG = Logger.getLogger( DynamicSystemAddressManager.class );
   
   @Override
-  public List<Address> allocateSystemAddresses( final Partition partition, int count ) throws NotEnoughResourcesAvailable {
+  public List<Address> allocateSystemAddresses( final Partition partition, int count ) throws NotEnoughResourcesException {
     if ( Addresses.getInstance( ).listDisabledValues( ).size( ) < count ) {
-      throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
+      throw new NotEnoughResourcesException( "Not enough resources available: addresses (try --addressing private)" );
     } else {
       final List<Address> addressList = Lists.newArrayList( );
       for ( final Address addr : Addresses.getInstance( ).listDisabledValues( ) ) {
@@ -40,14 +40,14 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
             LOG.error( e, e );
           }
         }
-        throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
+        throw new NotEnoughResourcesException( "Not enough resources available: addresses (try --addressing private)" );
       }
       return addressList;
     }
   }
   
   @Override
-  public void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesAvailable {
+  public void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesException {
     final Address addr = this.allocateSystemAddress( vm.getPartition( ) );
     AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>( ) {
       @Override

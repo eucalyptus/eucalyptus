@@ -67,6 +67,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -90,12 +91,13 @@ import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import com.eucalyptus.cloud.CloudMetadata.NetworkSecurityGroup;
 import com.eucalyptus.cloud.UserMetadata;
-import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Numbers;
@@ -276,43 +278,70 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     return this.getOwnerUserId( ) + "-" + this.getNaturalId( );
   }
   
-  public ExtantNetwork extantNetwork( ) throws NotEnoughResourcesAvailable {
-    final EntityTransaction db = Entities.get( NetworkGroup.class );
-    NetworkGroup net = Entities.merge( this );
+  public ExtantNetwork extantNetwork( ) throws NotEnoughResourcesException {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       return ExtantNetwork.bogus( this );
-    } else if ( net.getExtantNetwork( ) == null ) {
-      ExtantNetwork exNet = Entities.uniqueResult( new ExtantNetwork( this, null ) );
-      if ( exNet != null ) {
-        this.setExtantNetwork( exNet );
-      } else {
-        for ( Integer i : Numbers.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
-          try {
-            Entities.uniqueResult( ExtantNetwork.named( i ) );
-            continue;
-          } catch ( Exception ex ) {
-            try {
-              this.setExtantNetwork( Entities.persist( ExtantNetwork.create( this, i ) ) );
-              Entities.merge( this );
-              db.commit( );
-              return this.getExtantNetwork( );
-            } catch ( Exception ex1 ) {
-              Logs.exhaust( ).trace( ex1, ex1 );
-              db.rollback( );
-              throw new NotEnoughResourcesAvailable( "Failed to allocate network tag for network: " + this.getFullName( ), ex1 );
-            }
-          }
+    } else {
+      final EntityTransaction db = Entities.get( NetworkGroup.class );
+      
+      try {
+        NetworkGroup net = Entities.merge( this );
+        ExtantNetwork exNet = net.getExtantNetwork( );
+        if ( net.getExtantNetwork( ) == null ) {
+          exNet = this.findOrCreateExtantNetwork( );
+        }
+        return exNet;
+      } catch ( TransactionException ex ) {
+        Logs.extreme( ).trace( ex, ex );
+        throw new NotEnoughResourcesException( ex );
+      } catch ( NoSuchElementException ex ) {
+        Logs.exhaust( ).trace( ex, ex );
+        throw new NotEnoughResourcesException( ex );
+      }
+    }
+  }
+  
+  private ExtantNetwork findOrCreateExtantNetwork( ) throws TransactionException, NoSuchElementException, NotEnoughResourcesException {
+    ExtantNetwork exNet;
+    exNet = this.lookupExtantNetwork( );
+    if ( exNet == null ) {
+      exNet = this.attemptNetworkTagging( );
+    }
+    this.setExtantNetwork( exNet );
+    Entities.merge( exNet );
+    Entities.merge( this );
+    return exNet;
+  }
+  
+  private ExtantNetwork attemptNetworkTagging( ) throws NotEnoughResourcesException {
+    for ( Integer i : Numbers.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
+      try {
+        Entities.uniqueResult( ExtantNetwork.named( i ) );
+        continue;
+      } catch ( Exception ex ) {
+        try {
+          this.setExtantNetwork( Entities.persist( ExtantNetwork.create( this, i ) ) );
+          Entities.merge( this );
+          return this.getExtantNetwork( );
+        } catch ( Exception ex1 ) {
+          Logs.exhaust( ).trace( ex1, ex1 );
+          throw new NotEnoughResourcesException( "Failed to allocate network tag for network: " + this.getFullName( ), ex1 );
         }
       }
-      db.rollback( );
-      throw new NotEnoughResourcesAvailable( "Failed to allocate network tag for network: " + this.getFullName( ) + ": no network tags are free." );
-    } else {
-      return net.getExtantNetwork( );
     }
+    throw new NotEnoughResourcesException( "Failed to allocate network tag for network: " + this.getFullName( ) + ": no network tags are free." );
   }
   
   ExtantNetwork getExtantNetwork( ) {
     return this.extantNetwork;
+  }
+  
+  private ExtantNetwork lookupExtantNetwork( ) throws TransactionException, NoSuchElementException {
+    try {
+      return Entities.uniqueResult( new ExtantNetwork( this, null ) );
+    } catch ( Exception ex ) {
+      throw new TransactionExecutionException( "Error occurred while attempting to lookup extant network for: " + this, ex );
+    }
   }
   
   private void setExtantNetwork( final ExtantNetwork extantNetwork ) {

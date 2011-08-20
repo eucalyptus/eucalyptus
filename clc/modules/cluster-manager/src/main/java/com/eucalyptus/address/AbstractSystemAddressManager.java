@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.FakePrincipals;
-import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
@@ -27,25 +27,25 @@ import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 public abstract class AbstractSystemAddressManager {
   private final static Logger LOG = Logger.getLogger( AbstractSystemAddressManager.class );
   
-  public Address allocateNext( final OwnerFullName userId ) throws NotEnoughResourcesAvailable {
+  public Address allocateNext( final OwnerFullName userId ) throws NotEnoughResourcesException {
     final Address addr = Addresses.getInstance( ).enableFirst( ).allocate( userId );
     LOG.debug( "Allocated address for public addressing: " + addr.toString( ) );
     if ( addr == null ) {
       LOG.debug( LogUtil.header( Addresses.getInstance( ).toString( ) ) );
-      throw new NotEnoughResourcesAvailable( ExceptionList.ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
+      throw new NotEnoughResourcesException( ExceptionList.ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
     }
     return addr;
   }
   
-  public abstract void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesAvailable;
+  public abstract void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesException;
   
   public abstract List<Address> getReservedAddresses( );
   
   public abstract void inheritReservedAddresses( List<Address> previouslyReservedAddresses );
   
-  public abstract List<Address> allocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesAvailable;
+  public abstract List<Address> allocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesException;
   
-  public Address allocateSystemAddress( final String partition ) throws NotEnoughResourcesAvailable {
+  public Address allocateSystemAddress( final String partition ) throws NotEnoughResourcesException {
     return this.allocateSystemAddresses( Partitions.lookupByName( partition ), 1 ).get( 0 );
     
   }

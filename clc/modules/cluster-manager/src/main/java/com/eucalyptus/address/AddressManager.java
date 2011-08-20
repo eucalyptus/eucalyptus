@@ -72,7 +72,7 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
@@ -103,7 +103,7 @@ public class AddressManager {
     Address address;
     try {
       address = Addresses.allocate( request );
-    } catch ( NotEnoughResourcesAvailable e ) {
+    } catch ( NotEnoughResourcesException e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e );
     }

@@ -67,7 +67,7 @@ import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.component.Partition;
@@ -79,7 +79,7 @@ public class NetworkToken implements Comparable {
   private NavigableSet<SetReference<PrivateNetworkIndex, VmInstance>> indexes = new ConcurrentSkipListSet<SetReference<PrivateNetworkIndex, VmInstance>>( );
   private final NetworkGroup                                          ruleGroup;
   
-  public NetworkToken( final Partition partition, final NetworkGroup ruleGroup ) throws NotEnoughResourcesAvailable {
+  public NetworkToken( final Partition partition, final NetworkGroup ruleGroup ) throws NotEnoughResourcesException {
     this.ruleGroup = ruleGroup;
     this.extantNetwork = ruleGroup.extantNetwork( );
   }

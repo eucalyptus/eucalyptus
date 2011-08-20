@@ -77,7 +77,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.Cluster;
@@ -193,7 +193,7 @@ public class Allocations {
       return Lists.newArrayList( this.networkGroups.values( ) );
     }
     
-    public List<ResourceToken> requestResourceToken( int tryAmount, int maxAmount ) throws NotEnoughResourcesAvailable {
+    public List<ResourceToken> requestResourceToken( int tryAmount, int maxAmount ) throws NotEnoughResourcesException {
       ServiceConfiguration config = Partitions.lookupService( ClusterController.class, this.getPartition( ) );
       Cluster cluster = Clusters.lookup( config );
       ClusterNodeState state = cluster.getNodeState( );
@@ -202,7 +202,7 @@ public class Allocations {
       return rscToken;
     }
     
-    public void requestNetworkTokens( ) throws NotEnoughResourcesAvailable {
+    public void requestNetworkTokens( ) throws NotEnoughResourcesException {
       NetworkGroup net = this.getPrimaryNetwork( );
       ExtantNetwork exNet = net.extantNetwork( );
       for ( ResourceToken rscToken : this.allocationTokens ) {
@@ -210,7 +210,7 @@ public class Allocations {
       }
     }
     
-    public void requestNetworkIndexes( ) throws NotEnoughResourcesAvailable {
+    public void requestNetworkIndexes( ) throws NotEnoughResourcesException {
       for ( ResourceToken rscToken : this.allocationTokens ) {
         try {
           ExtantNetwork extantNetwork = rscToken.getExtantNetwork( );
@@ -218,12 +218,12 @@ public class Allocations {
           SetReference<PrivateNetworkIndex, VmInstance> addrIndex = extantNetwork.allocateNetworkIndex( );
           rscToken.setNetworkIndex( addrIndex );
         } catch ( Exception ex ) {
-          throw new NotEnoughResourcesAvailable( "Not enough addresses left in the network subnet assigned to requested group: " + rscToken, ex );
+          throw new NotEnoughResourcesException( "Not enough addresses left in the network subnet assigned to requested group: " + rscToken, ex );
         }
       }
     }
     
-    public void requestAddressTokens( ) throws NotEnoughResourcesAvailable {
+    public void requestAddressTokens( ) throws NotEnoughResourcesException {
       for ( ResourceToken token : this.allocationTokens ) {
         token.setAddress( Addresses.allocateSystemAddress( token.getAllocationInfo( ).getPartition( ) ) );
       }

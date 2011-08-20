@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.FakePrincipals;
-import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Partition;
@@ -23,7 +23,7 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
     this.inheritReservedAddresses( new ArrayList<Address>( ) );
   }
   
-  public List<Address> allocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesAvailable {
+  public List<Address> allocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesException {
     List<Address> addressList = Lists.newArrayList( );
     for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
       if ( addr.isSystemOwned( ) && !addr.isAssigned( ) ) {
@@ -38,13 +38,13 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
       for ( Address putBackAddr : addressList ) {
         putBackAddr.clearPending( );
       }
-      throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
+      throw new NotEnoughResourcesException( "Not enough resources available: addresses (try --addressing private)" );
     }
     return addressList;
   }
   
   @Override
-  public void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesAvailable {
+  public void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesException {
     final Address addr = this.allocateSystemAddress( vm.getClusterName( ) );
     AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>( ) {
       public void fire( BaseMessage response ) {
@@ -53,13 +53,13 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
     } ).dispatch( addr.getPartition( ) );
   }
   
-  private Address getNext( ) throws NotEnoughResourcesAvailable {
+  private Address getNext( ) throws NotEnoughResourcesException {
     for ( Address a : Addresses.getInstance( ).listValues( ) ) {
       if ( a.isSystemOwned( ) && !a.isAssigned( ) ) {
         return a.pendingAssignment( );
       }
     }
-    throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
+    throw new NotEnoughResourcesException( "Not enough resources available: addresses (try --addressing private)" );
   }
   
   @Override
@@ -83,7 +83,7 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
       for ( int i = 0; i < allocCount; i++ ) {
         try {
           this.allocateNext( FakePrincipals.systemFullName( ) );
-        } catch ( NotEnoughResourcesAvailable e ) {
+        } catch ( NotEnoughResourcesException e ) {
           break;
         }
       }

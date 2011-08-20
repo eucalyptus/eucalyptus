@@ -64,7 +64,7 @@
 package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
@@ -86,7 +86,7 @@ public class StopNetworkCallback extends BroadcastCallback<StopNetworkType, Stop
     this.networkGroup = networkGroup;
     try {
       this.tag = this.networkGroup.extantNetwork( ).getTag( );
-    } catch ( NotEnoughResourcesAvailable ex ) {
+    } catch ( NotEnoughResourcesException ex ) {
       this.tag = -1;
     }
     StopNetworkType msg = new StopNetworkType( this.networkGroup.getOwnerUserId( ), this.networkGroup.getNaturalId( ),

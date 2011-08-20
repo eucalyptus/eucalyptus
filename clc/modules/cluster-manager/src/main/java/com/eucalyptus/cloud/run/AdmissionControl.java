@@ -74,7 +74,7 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterNodeState;
@@ -171,7 +171,7 @@ public class AdmissionControl {
       Context ctx = Contexts.lookup( );
       //if ( ctx.getGroups( ).isEmpty( ) ) {
       if ( false ) {
-        throw new NotEnoughResourcesAvailable( "Not authorized: you do not have sufficient permission to use " + clusterName );
+        throw new NotEnoughResourcesException( "Not authorized: you do not have sufficient permission to use " + clusterName );
       } else {
         String zoneName = ( clusterName != null )
           ? clusterName
@@ -188,7 +188,7 @@ public class AdmissionControl {
           }
         } ) );
         if ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < minAmount ) {
-          throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
+          throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
         } else {
           for ( Cluster cluster : authorizedClusters ) {
             if ( remaining <= 0 ) {
@@ -200,7 +200,7 @@ public class AdmissionControl {
                 try {
                   ServiceConfiguration sc = Partitions.lookupService( Storage.class, partition );
                 } catch ( Exception ex ) {
-                  throw new NotEnoughResourcesAvailable( "Not enough resources: " + ex.getMessage( ), ex );
+                  throw new NotEnoughResourcesException( "Not enough resources: " + ex.getMessage( ), ex );
                 }
               }
               try {
@@ -213,10 +213,10 @@ public class AdmissionControl {
               } catch ( Exception t ) {
                 if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) || remaining > 0 ) {
                   allocInfo.abort( );
-                  throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
+                  throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
                 } else {
                   LOG.error( t, t );
-                  throw new NotEnoughResourcesAvailable( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
+                  throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
                 }
               }
             }
@@ -225,7 +225,7 @@ public class AdmissionControl {
       }
     }
     
-    private int checkAvailability( String vmTypeName, List<Cluster> authorizedClusters ) throws NotEnoughResourcesAvailable {
+    private int checkAvailability( String vmTypeName, List<Cluster> authorizedClusters ) throws NotEnoughResourcesException {
       int available = 0;
       for ( Cluster authorizedCluster : authorizedClusters ) {
         VmTypeAvailability vmAvailability = authorizedCluster.getNodeState( ).getAvailability( vmTypeName );
@@ -235,7 +235,7 @@ public class AdmissionControl {
       return available;
     }
     
-    private List<Cluster> doPrivilegedLookup( String partitionName, String vmTypeName, final String action, final User requestUser ) throws NotEnoughResourcesAvailable {
+    private List<Cluster> doPrivilegedLookup( String partitionName, String vmTypeName, final String action, final User requestUser ) throws NotEnoughResourcesException {
       if ( "default".equals( partitionName ) ) {
         Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
           @Override
@@ -251,17 +251,17 @@ public class AdmissionControl {
           sorted.put( c.getNodeState( ).getAvailability( vmTypeName ), c );
         }
         if ( sorted.isEmpty( ) ) {
-          throw new NotEnoughResourcesAvailable( "Not enough resources: no availability zone is available in which you have permissions to run instances." );
+          throw new NotEnoughResourcesException( "Not enough resources: no availability zone is available in which you have permissions to run instances." );
         } else {
           return Lists.newArrayList( sorted.values( ) );
         }
       } else {
         Cluster cluster = Clusters.getInstance( ).lookup( Partitions.lookupService( ClusterController.class, partitionName ) );
         if ( cluster == null ) {
-          throw new NotEnoughResourcesAvailable( "Can't find cluster " + partitionName );
+          throw new NotEnoughResourcesException( "Can't find cluster " + partitionName );
         }
         if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_AVAILABILITYZONE, partitionName, null, action, requestUser ) ) {
-          throw new NotEnoughResourcesAvailable( "Not authorized to use cluster " + partitionName + " for " + requestUser.getName( ) );
+          throw new NotEnoughResourcesException( "Not authorized to use cluster " + partitionName + " for " + requestUser.getName( ) );
         }
         return Lists.newArrayList( cluster );
       }
@@ -321,7 +321,7 @@ public class AdmissionControl {
             rscToken.setNetworkIndex( addrIndex );
             rscToken.setExtantNetwork( Entities.merge( exNet ) );
           } catch ( Exception ex ) {
-            throw new NotEnoughResourcesAvailable( "Not enough addresses left in the network subnet assigned to requested group: " + rscToken, ex );
+            throw new NotEnoughResourcesException( "Not enough addresses left in the network subnet assigned to requested group: " + rscToken, ex );
           }
         }
       }

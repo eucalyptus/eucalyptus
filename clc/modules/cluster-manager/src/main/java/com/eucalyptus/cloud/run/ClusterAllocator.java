@@ -79,7 +79,7 @@ import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmRunType;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.cloud.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
@@ -190,7 +190,7 @@ public class ClusterAllocator implements Runnable {
   }
   
   @SuppressWarnings( "unchecked" )
-  private void setupNetworkMessages( ) throws NotEnoughResourcesAvailable {
+  private void setupNetworkMessages( ) throws NotEnoughResourcesException {
     NetworkGroup net = this.allocInfo.getPrimaryNetwork( );
     if ( net != null ) {
       final Request<StartNetworkType, StartNetworkResponseType> callback = AsyncRequests.newRequest( new StartNetworkCallback( net.extantNetwork( ) ) );
@@ -262,7 +262,7 @@ public class ClusterAllocator implements Runnable {
     ExtantNetwork exNet;
     try {
       exNet = this.allocInfo.getPrimaryNetwork( ).extantNetwork( );
-    } catch ( NotEnoughResourcesAvailable ex ) {
+    } catch ( NotEnoughResourcesException ex ) {
       Logs.extreme( ).error( ex, ex );
       exNet = ExtantNetwork.bogus( this.allocInfo.getPrimaryNetwork( ) );
     }
