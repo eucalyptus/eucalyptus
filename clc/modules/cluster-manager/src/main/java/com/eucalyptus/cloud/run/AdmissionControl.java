@@ -302,7 +302,7 @@ public class AdmissionControl {
           NetworkGroup net = Entities.merge( allocInfo.getPrimaryNetwork( ) );
           ExtantNetwork exNet = net.extantNetwork( );
           for ( ResourceToken rscToken : allocInfo.getAllocationTokens( ) ) {
-            
+            rscToken.setExtantNetwork( exNet );
           }
           Entities.merge( net );
           db.commit( );

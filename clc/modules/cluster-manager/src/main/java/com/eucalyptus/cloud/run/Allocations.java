@@ -67,6 +67,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
@@ -134,6 +135,7 @@ public class Allocations {
     private SshKeyPair                sshKeyPair;
     private BootableSet               bootSet;
     private VmType                    vmType;
+    private NetworkGroup              primaryNetwork;
     private Map<String, NetworkGroup> networkGroups;
     
     /** intermediate allocation state **/
@@ -294,6 +296,8 @@ public class Allocations {
     }
     
     public void setNetworkRules( Map<String, NetworkGroup> networkRuleGroups ) {
+      Entry<String, NetworkGroup> ent = networkRuleGroups.entrySet( ).iterator( ).next( );
+      this.primaryNetwork = ent.getValue( );
       this.networkGroups = networkRuleGroups;
     }
     

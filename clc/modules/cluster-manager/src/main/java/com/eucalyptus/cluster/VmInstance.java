@@ -342,7 +342,7 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
   
   public void updateNetworkIndex( final Long newIndex ) {
     if ( ( this.getNetworkConfig( ).getNetworkIndex( ) > 0 ) && ( newIndex > 0 )
-         && ( VmState.RUNNING.equals( this.getState( ) ) || VmState.PENDING.equals( this.getState( ) ) ) ) {
+         && ( VmState.RUNNING.equals( this.getRuntimeState( ) ) || VmState.PENDING.equals( this.getRuntimeState( ) ) ) ) {
       this.getNetworkConfig( ).setNetworkIndex( newIndex );
     }
   }
@@ -387,13 +387,11 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
     }
   }
   
-  @Override
-  public VmState getState( ) {
+  public VmState getRuntimeState( ) {
     return this.runtimeState.getReference( );
   }
   
-  @Override
-  public void setState( final VmState state ) {
+  public void setRuntimeState( final VmState state ) {
     this.setState( state, Reason.NORMAL );
   }
   
@@ -1000,8 +998,8 @@ public class VmInstance extends UserMetadata<VmState> implements VirtualMachineI
                  .format(
                           "VmInstance [instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
                           this.instanceId, this.sshKeyPair, this.launchIndex, this.launchTime, this.networkConfig, this.networkGroups, this.getOwner( ),
-                          this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.runtimeState, 
-                          System.currentTimeMillis( ) - this.getLastUpdateTimestamp( ).getTime( ), 
+                          this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.runtimeState,
+                          System.currentTimeMillis( ) - this.getLastUpdateTimestamp( ).getTime( ),
                           this.userData, this.vmType, this.transientVolumes );
   }
   
