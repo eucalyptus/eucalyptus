@@ -302,19 +302,21 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   }
   
   private ExtantNetwork findOrCreateExtantNetwork( ) throws TransactionException, NoSuchElementException, NotEnoughResourcesException {
+    EntityTransaction db = Entities.get( NetworkGroup.class );
+    NetworkGroup ngNet = Entities.merge( this );
     ExtantNetwork exNet = null;
     try {
-      exNet = this.lookupExtantNetwork( );
+      exNet = ngNet.lookupExtantNetwork( );
     } catch ( Exception ex ) {
       Logs.extreme( ).error( ex, ex );
     }
     if ( exNet == null ) {
-      exNet = this.attemptNetworkTagging( );
+      exNet = ngNet.attemptNetworkTagging( );
     }
     if ( exNet != null ) {
-      Entities.merge( exNet );
+      Entities.persist( exNet );
       this.setExtantNetwork( exNet );
-      Entities.merge( this );
+      Entities.merge( ngNet );
       return exNet;
     } else {
       throw new NotEnoughResourcesException( "Cannot has." );
