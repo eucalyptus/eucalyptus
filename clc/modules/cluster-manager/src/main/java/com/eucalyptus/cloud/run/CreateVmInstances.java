@@ -78,6 +78,7 @@ import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 public class CreateVmInstances {
@@ -111,28 +112,36 @@ public class CreateVmInstances {
     return allocInfo;
   }
   
-  private VmInstance makeVmInstance( ResourceToken token ) throws TransactionException {
+  private VmInstance makeVmInstance( ResourceToken token ) throws TransactionException, ResourceAllocationException {
     Allocation allocInfo = token.getAllocationInfo( );
     EntityTransaction db = Entities.get( VmInstance.class );
-    VmInstance vmInst = new VmInstance( allocInfo.getOwnerFullName( ),
-                                        token.getInstanceId( ),
-                                        token.getInstanceUuid( ),
-                                        allocInfo.getReservationId( ),
-                                        token.getLaunchIndex( ),
-                                        allocInfo.getRequest( ).getAvailabilityZone( ),
-                                        allocInfo.getUserData( ),
-                                        allocInfo.getBootSet( ),
-                                        allocInfo.getSshKeyPair( ),
-                                        allocInfo.getVmType( ),
-                                        allocInfo.getNetworkGroups( ),
-                                        token.getNetworkIndex( ) );
-    vmInst = Entities.persist( vmInst );
-    vmInst = VmInstances.register( vmInst );
+    VmInstance vmInst;
     try {
+      vmInst = new VmInstance( allocInfo.getOwnerFullName( ),
+                                          token.getInstanceId( ),
+                                          token.getInstanceUuid( ),
+                                          allocInfo.getReservationId( ),
+                                          token.getLaunchIndex( ),
+                                          allocInfo.getRequest( ).getAvailabilityZone( ),
+                                          allocInfo.getUserData( ),
+                                          allocInfo.getBootSet( ),
+                                          allocInfo.getSshKeyPair( ),
+                                          allocInfo.getVmType( ),
+                                          allocInfo.getNetworkGroups( ),
+                                          token.getNetworkIndex( ) );
+      vmInst = Entities.persist( vmInst );
       token.getNetworkIndex( ).set( vmInst );
+      vmInst = VmInstances.register( vmInst );
+      db.commit( );
+      return vmInst;
     } catch ( ResourceAllocationException ex ) {
+      db.rollback( );
       LOG.error( ex , ex );
+      throw ex;
+    } catch ( Exception ex ) {
+      db.rollback( );
+      LOG.error( ex , ex );
+      throw new TransactionExecutionException( ex );
     }
-    return vmInst;
   }
 }
