@@ -90,6 +90,7 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.cluster.Clusters;
@@ -290,7 +291,7 @@ public class SystemState {
         public NetworkGroup apply( String arg0 ) {
           try {
             return NetworkGroups.lookup( ownerId, arg0 );
-          } catch ( NoSuchMetadataException ex ) {
+          } catch ( MetadataException ex ) {
             LOG.error( ex );
             Logs.extreme( ).error( ex, ex );
             throw new RuntimeException( "Failed to find information for group owned by: " + ownerId + " which is called " + arg0 );
