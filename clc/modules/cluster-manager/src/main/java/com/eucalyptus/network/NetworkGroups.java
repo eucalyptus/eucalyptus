@@ -246,7 +246,7 @@ public class NetworkGroups {
       } catch ( Exception ex ) {
         Logs.exhaust( ).error( ex, ex );
         db.rollback( );
-        throw ex;
+        throw new NoSuchMetadataException( "Failed to find security group: " + groupNamePattern + " for " + ownerFullName, ex );
       }
     }
     try {

@@ -77,11 +77,6 @@ public class NetworkGroupUtil {
   }
   
   @Deprecated
-  public static NetworkGroup createUserNetworkRulesGroup( OwnerFullName ownerFullName, String groupName, String groupDescription ) throws DuplicateMetadataException {
-    return NetworkGroups.create( ownerFullName, groupName, groupDescription );
-  }
-  
-  @Deprecated
   public static List<SecurityGroupItemType> getUserNetworksAdmin( OwnerFullName ownerFullName, List<String> groupNames ) throws EucalyptusCloudException {
     List<SecurityGroupItemType> groupInfoList = Lists.newArrayList( );
     if ( groupNames.isEmpty( ) ) {
