@@ -84,7 +84,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 public class CreateVmInstances {
   private static Logger LOG = Logger.getLogger( CreateVmInstances.class );
   
-  public Allocation allocate( final Allocation allocInfo ) throws EucalyptusCloudException, MetadataException, TransactionException {
+  public Allocation allocate( final Allocation allocInfo ) throws Exception {
     long quantity = allocInfo.getAllocationTokens( ).size( );
     Context ctx = allocInfo.getContext( );
     User requestUser = ctx.getUser( );
@@ -104,7 +104,7 @@ public class CreateVmInstances {
     for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
       try {
         VmInstance vmInst = makeVmInstance( token );
-      } catch ( TransactionException ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
         throw ex;
       }
