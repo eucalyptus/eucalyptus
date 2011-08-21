@@ -15,6 +15,7 @@ CLIENT=CCclient
 CLIENTKILLALL=euca_killall
 #WSDL2C=${AXIS2C_HOME}/bin/tools/wsdl2c/WSDL2C.sh
 NCLIBS=../util/data.o ../node/client-marshal-adb.o ../util/ipc.o
+NC_FAKE_LIBS=../util/data.o ../node/client-marshal-fake.o ../util/ipc.o
 SCLIBS=../storage/storage.o ../storage/storage-windows.o ../storage/walrus.o ../storage/http.o
 VNLIBS=../net/vnetwork.o ../util/misc.o ../storage/diskutil.o
 WSSECLIBS=../util/euca_axis.o ../util/euca_auth.o
@@ -54,6 +55,7 @@ server: $(SERVICE_SO)
 
 $(SERVICE_SO): generated/stubs ../storage/storage.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o ../util/windows-bundle.o
 	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o ../util/windows-bundle.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
+	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o ../util/windows-bundle.o $(SCLIBS) $(NC_FAKE_LIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o libEucalyptusCCFake.so
 
 client: $(CLIENT)_full $(CLIENTKILLALL)
 
