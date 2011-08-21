@@ -167,11 +167,11 @@ public class Entities {
   public static <T> List<T> query( final T example ) {
     final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
     final List<T> resultList = ( List<T> ) getTransaction( example ).getTxState( ).getSession( )
-                                                                         .createCriteria( example.getClass( ) )
-                                                                         .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
-                                                                         .setCacheable( true )
-                                                                         .add( qbe )
-                                                                         .list( );
+                                                                    .createCriteria( example.getClass( ) )
+                                                                    .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
+                                                                    .setCacheable( true )
+                                                                    .add( qbe )
+                                                                    .list( );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
   
@@ -325,7 +325,7 @@ public class Entities {
    * </tbody>
    * </table>
    * 
-   * @throws ConstraintViolationException 
+   * @throws ConstraintViolationException
    * @param newObject
    */
   public static <T> T merge( final T newObject ) throws ConstraintViolationException {
@@ -601,7 +601,8 @@ public class Entities {
         try {
           this.transaction.begin( );
         } catch ( final RuntimeException ex ) {
-          LOG.error( ex, ex );
+          LOG.warn( ex );
+          Logs.exhaust( ).warn( ex, ex );
           throw ex;
         }
       }
@@ -615,7 +616,8 @@ public class Entities {
         try {
           this.transaction.commit( );
         } catch ( final RuntimeException ex ) {
-          LOG.error( ex, ex );
+          LOG.warn( ex );
+          Logs.exhaust( ).warn( ex, ex );
           throw ex;
         }
       }
@@ -650,7 +652,8 @@ public class Entities {
           this.transaction.rollback( );
           CascadingTx.this.endStes.put( CascadingTx.this.record.getUuid( ), Threads.currentStackFrame( 1 ) );
         } catch ( final RuntimeException ex ) {
-          LOG.error( ex, ex );
+          LOG.warn( ex );
+          Logs.exhaust( ).warn( ex, ex );
           throw ex;
         }
       }
