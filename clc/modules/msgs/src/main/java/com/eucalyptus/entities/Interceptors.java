@@ -92,31 +92,31 @@ public class Interceptors {
       
       @Override
       public void onDelete( Object entity, Serializable id, Object[] state, String[] propertyNames, Type[] types ) {
-        LOG.debug( String.format( "%s(): %s %s %s", Threads.currentStackFrame( ).getMethodName( ), entity.getClass( ).getSimpleName( ), id, Logs.dump( entity ) ) );
+        LOG.debug( String.format( "%s(): %s %s", Threads.currentStackFrame( ).getMethodName( ), entity.getClass( ).getSimpleName( ), id ) );
         super.onDelete( entity, id, state, propertyNames, types );
       }
       
       @Override
       public boolean onFlushDirty( Object entity, Serializable id, Object[] currentState, Object[] previousState, String[] propertyNames, Type[] types ) {
-        LOG.debug( String.format( "%s(): %s %s %s", Threads.currentStackFrame( ).getMethodName( ), entity.getClass( ).getSimpleName( ), id, Logs.dump( entity ) ) );
+        LOG.debug( String.format( "%s(): %s %s", Threads.currentStackFrame( ).getMethodName( ), entity.getClass( ).getSimpleName( ), id ) );
         return super.onFlushDirty( entity, id, currentState, previousState, propertyNames, types );
       }
       
       @Override
       public boolean onLoad( Object entity, Serializable id, Object[] state, String[] propertyNames, Type[] types ) {
-        LOG.debug( String.format( "%s(): %s %s %s", Threads.currentStackFrame( ).getMethodName( ), entity.getClass( ).getSimpleName( ), id, Logs.dump( entity ) ) );
+        LOG.debug( String.format( "%s(): %s %s", Threads.currentStackFrame( ).getMethodName( ), entity.getClass( ).getSimpleName( ), id ) );
         return super.onLoad( entity, id, state, propertyNames, types );
       }
       
       @Override
       public boolean onSave( Object entity, Serializable id, Object[] state, String[] propertyNames, Type[] types ) {
-        LOG.debug( String.format( "%s(): %s %s %s", Threads.currentStackFrame( ).getMethodName( ), entity.getClass( ).getSimpleName( ), id, Logs.dump( entity ) ) );
+        LOG.debug( String.format( "%s(): %s %s", Threads.currentStackFrame( ).getMethodName( ), entity.getClass( ).getSimpleName( ), id ) );
         return super.onSave( entity, id, state, propertyNames, types );
       }
       
       @Override
       public void postFlush( Iterator entities ) {
-        LOG.debug( String.format( "%s(): %s", Threads.currentStackFrame( ).getMethodName( ), Iterators.toString( entities, "\n" ) ) ); 
+        LOG.debug( String.format( "%s()", Threads.currentStackFrame( ).getMethodName( ) ) ); 
         super.postFlush( entities );
       }
       
