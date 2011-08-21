@@ -465,6 +465,7 @@ public class Entities {
      */
     @Override
     public void commit( ) throws RecoverablePersistenceException {
+      txStateThreadLocal.get( ).remove( this.record.getUuid( ) );
       if ( ( this.txState != null ) && this.txState.isActive( ) ) {
         try {
           this.txState.commit( );
