@@ -210,7 +210,7 @@ public class Interceptors {
           ? ( Iterable ) collection
           : Lists.newArrayList( collection ) );
         String summary = Iterables.toString( Iterables.transform( iter, Classes.canonicalNameFunction( ) ) );
-        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
+        LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
       } catch ( Exception ex ) {
         LOG.error( ex );
       }
@@ -224,7 +224,7 @@ public class Interceptors {
           ? ( Iterable ) collection
           : Lists.newArrayList( collection ) );
         String summary = Iterables.toString( Iterables.transform( iter, Classes.canonicalNameFunction( ) ) );
-        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
+        LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
       } catch ( Exception ex ) {
         LOG.error( ex );
       }
@@ -238,7 +238,7 @@ public class Interceptors {
           ? ( Iterable ) collection
           : Lists.newArrayList( collection ) );
         String summary = Iterables.toString( Iterables.transform( iter, Classes.canonicalNameFunction( ) ) );
-        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
+        LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
       } catch ( Exception ex ) {
         LOG.error( ex );
       }
