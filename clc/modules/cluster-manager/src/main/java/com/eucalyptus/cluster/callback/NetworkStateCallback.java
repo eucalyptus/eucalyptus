@@ -1,15 +1,11 @@
 package com.eucalyptus.cluster.callback;
 
-import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterConfiguration;
-import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Internets;

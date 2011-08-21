@@ -268,7 +268,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
     StringBuilder builder = new StringBuilder( );
     builder.append( "PrivateNetworkIndex:" );
     if ( this.extantNetwork != null ) builder.append( this.extantNetwork.getName( ) ).append( " tag=" ).append( this.extantNetwork.getTag( ) );
-    if ( this.index != null ) builder.append( "idx=" ).append( this.index );
+    if ( this.index != null ) builder.append( " idx=" ).append( this.index );
     return builder.toString( );
   }
   
