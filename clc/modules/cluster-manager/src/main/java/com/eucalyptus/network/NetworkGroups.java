@@ -262,7 +262,14 @@ public class NetworkGroups {
   
   static void createDefault( final OwnerFullName ownerFullName ) throws MetadataException {
     try {
-      create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
+      try {
+        NetworkGroup net = Transactions.find( new NetworkGroup( ownerFullName, NETWORK_DEFAULT_NAME  ) );
+        if( net == null ) {
+          create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
+        }
+      } catch ( TransactionException ex ) {
+        create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
+      }
     } catch ( DuplicateMetadataException ex ) {
     }
   }

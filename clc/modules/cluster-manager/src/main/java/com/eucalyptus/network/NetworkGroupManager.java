@@ -42,7 +42,7 @@ public class NetworkGroupManager {
   
   public CreateSecurityGroupResponseType create( final CreateSecurityGroupType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
-    NetworkGroups.createDefault( ctx.getUserFullName( ) );
+    
     /**
      * GRZE:WARN: do this /first/, ensure the default group exists to cover some old broken installs
      **/
@@ -66,7 +66,6 @@ public class NetworkGroupManager {
   
   public DeleteSecurityGroupResponseType delete( final DeleteSecurityGroupType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
-    NetworkGroups.createDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
     final DeleteSecurityGroupResponseType reply = ( DeleteSecurityGroupResponseType ) request.getReply( );
     if ( Contexts.lookup( ).hasAdministrativePrivileges( ) && ( request.getGroupName( ).indexOf( "::" ) != -1 ) ) {
       final String[] nameParts = request.getGroupName( ).split( "::" );
@@ -149,7 +148,6 @@ public class NetworkGroupManager {
   
   public RevokeSecurityGroupIngressResponseType revoke( final RevokeSecurityGroupIngressType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
-    NetworkGroups.createDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
     final RevokeSecurityGroupIngressResponseType reply = ( RevokeSecurityGroupIngressResponseType ) request.getReply( );
     NetworkGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ) );
     if ( !ctx.hasAdministrativePrivileges( )
@@ -206,7 +204,6 @@ public class NetworkGroupManager {
   
   public AuthorizeSecurityGroupIngressResponseType authorize( final AuthorizeSecurityGroupIngressType request ) throws Exception {
     final Context ctx = Contexts.lookup( );
-    NetworkGroups.createDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
     final AuthorizeSecurityGroupIngressResponseType reply = ( AuthorizeSecurityGroupIngressResponseType ) request.getReply( );
     final NetworkGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ) );
     if ( !ctx.hasAdministrativePrivileges( )
