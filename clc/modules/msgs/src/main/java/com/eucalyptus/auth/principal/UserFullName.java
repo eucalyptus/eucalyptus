@@ -72,25 +72,27 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 
 public class UserFullName implements OwnerFullName {
-  private static ConcurrentMap<String, UserFullName> userIdMap = Maps.newConcurrentMap( );
+  private static final long serialVersionUID = 1L;
+  private static ConcurrentMap<String, UserFullName> userIdMap = new MapMaker( ).softValues( ).makeMap( );
   private static Logger                              LOG       = Logger.getLogger( UserFullName.class );
   private static final String                        VENDOR    = "euare";
   private final String                               userId;
   private final String                               userName;
   private final String                               accountNumber;
   private final String                               accountName;
-  private String                                     authority;
-  private String                                     relativeId;
+  private final String                                     authority;
+  private final String                                     relativeId;
   String                                             qName;
   
-  private UserFullName( User user ) throws AuthException {
+  private UserFullName( final User user ) throws AuthException {
     this.userId = user.getUserId( );
     assertThat( this.userId, notNullValue( ) );
     this.userName = user.getName( );
-    Account account = user.getAccount( );
+    final Account account = user.getAccount( );
     this.accountNumber = account.getAccountNumber( );
     assertThat( this.accountNumber, notNullValue( ) );
     this.accountName = account.getName( );
@@ -99,22 +101,22 @@ public class UserFullName implements OwnerFullName {
     this.qName = this.authority + this.relativeId;
   }
   
-  public static UserFullName getInstance( String userId, String... relativePath ) {
+  public static UserFullName getInstance( final String userId, final String... relativePath ) {
     if ( userIdMap.containsKey( userId ) ) {
       return userIdMap.get( userId );
     } else {
       try {
         userIdMap.put( userId, getInstance( Accounts.lookupUserById( userId ), relativePath ) );
         return userIdMap.get( userId );
-      } catch ( AuthException ex ) {
+      } catch ( final AuthException ex ) {
         throw new UndeclaredThrowableException( ex );
       }
     }
   }
   
-  public static UserFullName getInstance( User user, String... relativePath ) {
+  public static UserFullName getInstance( final User user, final String... relativePath ) {
     try {
-      if ( user != null && !Principals.isFakeIdentify( user.getUserId( ) )) {
+      if ( ( user != null ) && !Principals.isFakeIdentify( user.getUserId( ) ) ) {
         if ( !userIdMap.containsKey( user.getUserId( ) ) ) {
           userIdMap.put( user.getUserId( ), new UserFullName( user ) );
         }
@@ -124,15 +126,15 @@ public class UserFullName implements OwnerFullName {
       } else {
         return new UserFullName( Principals.nobodyUser( ) );
       }
-    } catch ( AuthException ex ) {
+    } catch ( final AuthException ex ) {
       LOG.error( ex.getMessage( ) );
       try {
         return new UserFullName( Principals.nobodyUser( ) );
-      } catch ( AuthException ex1 ) {
+      } catch ( final AuthException ex1 ) {
         LOG.error( ex1, ex1 );
         throw new UndeclaredThrowableException( ex );
       }
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       throw new UndeclaredThrowableException( ex );
     }
   }
@@ -163,17 +165,17 @@ public class UserFullName implements OwnerFullName {
   }
   
   @Override
-  public boolean equals( Object obj ) {
+  public boolean equals( final Object obj ) {
     if ( this == obj ) return true;
     if ( !super.equals( obj ) ) return false;
-    if ( getClass( ) != obj.getClass( ) ) return false;
+    if ( this.getClass( ) != obj.getClass( ) ) return false;
     if ( obj instanceof UserFullName ) {
-      UserFullName other = ( UserFullName ) obj;
+      final UserFullName other = ( UserFullName ) obj;
       if ( this.userId == null ) {
         if ( other.userId != null ) return false;
       } else if ( !this.userId.equals( other.userId ) ) return false;
     } else if ( obj instanceof OwnerFullName ) {
-      OwnerFullName that = ( OwnerFullName ) obj;
+      final OwnerFullName that = ( OwnerFullName ) obj;
       if ( this.getAccountNumber( ) != null ) {
         if ( this.getUserId( ) != null ) {
           return this.getAccountNumber( ).equals( that.getAccountNumber( ) ) && this.getUserId( ).equals( that.getUserId( ) );
@@ -240,7 +242,7 @@ public class UserFullName implements OwnerFullName {
    * @see com.eucalyptus.util.OwnerFullName#isOwner(java.lang.String)
    */
   @Override
-  public boolean isOwner( String ownerId ) {
+  public boolean isOwner( final String ownerId ) {
     return this.userId.equals( ownerId ) || this.accountNumber.equals( ownerId );
   }
   
@@ -248,7 +250,7 @@ public class UserFullName implements OwnerFullName {
    * @see com.eucalyptus.util.OwnerFullName#isOwner(com.eucalyptus.util.OwnerFullName)
    */
   @Override
-  public boolean isOwner( OwnerFullName ownerFullName ) {
+  public boolean isOwner( final OwnerFullName ownerFullName ) {
     return this.userId.equals( ownerFullName.getAccountNumber( ) ) || this.accountNumber.equals( ownerFullName.getAccountNumber( ) );
   }
   
