@@ -95,10 +95,12 @@ import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
@@ -385,19 +387,24 @@ public class VmInstances {
   
   public static List<VmInstance> listValues( ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
+    Logs.extreme( ).info( Threads.currentStackFrame( ) + " has tx: " + db );
     try {
       final List<VmInstance> vms = Entities.query( VmInstance.named( null, null ) );
       final Collection<VmInstance> ret = Collections2.filter( vms, new Predicate<VmInstance>( ) {
         
         @Override
         public boolean apply( final VmInstance input ) {
-          input.getNetworkRulesGroups( ).toArray( );//TODO:GRZE:figure out how to trigger the lazy load plox.
+          for ( NetworkGroup i : input.getNetworkRulesGroups( ) ) {
+            Logs.extreme( ).trace( "Found network group: " + i.toString( ) );
+          }
           return !VmState.TERMINATED.equals( input.getState( ) );
         }
       } );
+      Logs.extreme( ).info( Threads.currentStackFrame( ) + " has tx: " + db );
       db.commit( );
       return Lists.newArrayList( ret );
     } catch ( final Exception ex ) {
+      Logs.extreme( ).info( Threads.currentStackFrame( ) + " has tx: " + db );
       db.rollback( );
       Logs.extreme( ).error( ex, ex );
       return Lists.newArrayList( );
