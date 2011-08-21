@@ -121,7 +121,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   @Column( name = "config_component_partition" )
   private String            partition;
   @NaturalId
-  @Column( name = "config_component_name", updatable = false, unique = true )
+  @Column( name = "config_component_name", updatable = false, unique = true, nullable = false )
   private String            name;
   @Column( name = "config_component_hostname" )
   private String            hostName;

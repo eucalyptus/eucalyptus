@@ -224,7 +224,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   @NotFound( action = NotFoundAction.IGNORE )
   @OneToOne
-  @JoinColumn( name = "vm_network_index", nullable = true, insertable = false, updatable = false )
+  @JoinColumn( name = "vm_network_index", nullable = true, insertable = true, updatable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex                         networkIndex;
   

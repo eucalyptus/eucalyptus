@@ -136,9 +136,9 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkRule> networkRules = new HashSet<NetworkRule>( );
   
-  @NotFound( action = NotFoundAction.IGNORE )
   @OneToOne( cascade = { CascadeType.ALL }, fetch = FetchType.EAGER, optional = true )
-  @PrimaryKeyJoinColumn
+  @NotFound( action = NotFoundAction.IGNORE )
+  @JoinColumn( name = "vm_network_index", nullable = true, insertable = true, updatable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private ExtantNetwork    extantNetwork;
   
@@ -288,7 +288,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
       try {
         NetworkGroup net = Entities.merge( this );
         ExtantNetwork exNet = net.getExtantNetwork( );
-        if ( net.getExtantNetwork( ) == null ) {
+        if ( net.getExtantNetwork( ) == null) {
           exNet = this.findOrCreateExtantNetwork( );
         }
         db.commit( );
