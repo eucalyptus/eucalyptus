@@ -64,7 +64,7 @@
 package com.eucalyptus.cloud.util;
 
 //TODO:GRZE:RUNTIME!
-public abstract class MetadataException extends Exception {
+public class MetadataException extends Exception {
 
   public MetadataException( ) {
     super( );

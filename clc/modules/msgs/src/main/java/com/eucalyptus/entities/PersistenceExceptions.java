@@ -210,7 +210,7 @@ public class PersistenceExceptions {
    * @see {@link http://docs.jboss.org/hibernate/core/3.5/api/org/hibernate/HibernateException.html}
    */
   @SuppressWarnings( "unchecked" )
-  static RecoverablePersistenceException throwFiltered( final Throwable e ) {
+  public static RecoverablePersistenceException throwFiltered( final Throwable e ) {
     ConstraintViolationException cause = Exceptions.causedBy( e, ConstraintViolationException.class );
     if ( cause != null ) {
       throw cause;
@@ -227,6 +227,14 @@ public class PersistenceExceptions {
       } else {
         throw ErrorCategory.APPLICATION.handleException( new PersistenceException( "Error during transaction: " + e.getMessage( ), e ) );
       }
+    }
+  }
+  
+  public static Exception transform( final Throwable e ) {
+    try {
+      return throwFiltered( e );
+    } catch ( Exception ex ) {
+      return ex;
     }
   }
 }

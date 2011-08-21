@@ -70,11 +70,13 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
+import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.PersistenceExceptions;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
@@ -233,7 +235,20 @@ public class NetworkGroups {
   public static List<NetworkGroup> lookupAll( OwnerFullName ownerFullName, String groupNamePattern ) throws NoSuchMetadataException {
     if ( defaultNetworkName( ).equals( groupNamePattern ) ) {
       createDefault( ownerFullName );
-    } 
+    } else {
+      
+      EntityTransaction db = Entities.get( NetworkGroups.class );
+      try {
+        List<NetworkGroup> results = Entities.query( new NetworkGroup( ownerFullName, groupNamePattern ) );
+        List<NetworkGroup> ret = Lists.newArrayList( results );
+        db.commit( );
+        return ret;
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        db.rollback( );
+        throw ex;
+      }
+    }
     try {
       return Transactions.findAll( new NetworkGroup( ownerFullName, groupNamePattern ) );
     } catch ( Exception ex ) {
@@ -242,10 +257,9 @@ public class NetworkGroups {
   }
   
   static NetworkGroup createDefault( OwnerFullName ownerFullName ) {
-    
     EntityTransaction db = Entities.get( NetworkGroup.class );
-    NetworkGroup defaultNet = new NetworkGroup( ownerFullName, NETWORK_DEFAULT_NAME );
     try {
+      NetworkGroup defaultNet = new NetworkGroup( ownerFullName, NETWORK_DEFAULT_NAME );
       NetworkGroup entity = Entities.merge( defaultNet );
       db.commit( );
       return entity;
@@ -260,14 +274,16 @@ public class NetworkGroups {
     return DEFAULT_NETWORK_NAME;
   }
   
-  public static NetworkGroup create( OwnerFullName ownerFullName, String groupName, String groupDescription ) throws DuplicateMetadataException {
+  public static NetworkGroup create( OwnerFullName ownerFullName, String groupName, String groupDescription ) throws MetadataException {
+    EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
-      return Transactions.save( new NetworkGroup( ownerFullName, groupName, groupDescription ) );
-    } catch ( ConstraintViolationException ex ) {
-      throw new DuplicateMetadataException( "Group already exists: " + groupName, ex );
-    } catch ( ExecutionException ex ) {
-      LOG.error( ex, ex );
-      throw new RuntimeException( "Failed to create group: " + groupName + " for user: " + ownerFullName, ex );
+      NetworkGroup entity = Entities.merge( new NetworkGroup( ownerFullName, NETWORK_DEFAULT_NAME ) );
+      db.commit( );
+      return entity;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new MetadataException( "Failed to create default group: " + ownerFullName.toString( ), PersistenceExceptions.transform( ex ) );
     }
   }
   
