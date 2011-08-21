@@ -22,7 +22,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.RestrictedTypes;
-import com.eucalyptus.util.RestrictedTypes.RestrictedResource;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;

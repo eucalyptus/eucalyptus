@@ -107,6 +107,7 @@ import com.eucalyptus.util.Tx;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 @Entity
 @javax.persistence.Entity
@@ -203,15 +204,15 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
     this.imagePublic = ImageConfiguration.getInstance( ).getDefaultVisibility( );
   }
   
-  ImageInfo( OwnerFullName ownerFullName, String imageId ) {
+  ImageInfo( final OwnerFullName ownerFullName, final String imageId ) {
     super( ownerFullName, imageId );
   }
   
-  static ImageInfo self( ImageInfo image ) {
+  static ImageInfo self( final ImageInfo image ) {
     return new ImageInfo( image.getDisplayName( ) );
   }
   
-  public static ImageInfo named( String imageId ) {
+  public static ImageInfo named( final String imageId ) {
     return new ImageInfo( imageId );
   }
   
@@ -253,46 +254,36 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   
   @SuppressWarnings( "unchecked" )
   public ImageInfo grantPermission( final Account account ) {
+    EntityTransaction db = Entities.get( ImageInfo.class );
     try {
-      Transactions.one( new ImageInfo( this.displayName ), new Callback<ImageInfo>( ) {
-        @Override
-        public void fire( final ImageInfo t ) {
-          if ( !t.getPermissions( ).contains( account.getAccountNumber( ) ) ) {
-            t.getPermissions( ).add( account.getAccountNumber( ) );
-          }
-        }
-      } );
-    } catch ( ExecutionException e ) {
-      LOG.debug( e, e );
+      ImageInfo entity = Entities.merge( this );
+      entity.getPermissions( ).add( account.getAccountNumber( ) );
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
     }
     return this;
   }
   
-  public boolean checkPermission( final Account account ) {
-    return true;
-  }
-  
-  /** GRZE:REMOVE:  /not/ OK.  cross-module reference to private component data type. **/
+  /** GRZE:REMOVE: /not/ OK. cross-module reference to private component data type. **/
   public boolean checkPermission( final String accountId ) {
-    final boolean[] result = { false };
+    EntityTransaction db = Entities.get( ImageInfo.class );
     try {
-      Transactions.each( new ImageInfo( this.displayName ), new Callback<ImageInfo>( ) {
-        
-        @Override
-        public void fire( ImageInfo t ) {
-          result[0] = t.hasPermissionForOne( accountId );
-        }
-        
-      } );
-    } catch ( TransactionException ex ) {
-      LOG.error( ex, ex );
+      ImageInfo entity = Entities.merge( this );
+      boolean ret = this.getPermissions( ).contains( accountId ) || this.getOwner( ).isOwner( accountId );
+      db.commit( );
+      return ret;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      return false;
     }
-    return result[0];
   }
   
   public ImageInfo resetPermission( ) {
     try {
-      Transactions.one( new ImageInfo( this.displayName ), new Tx<ImageInfo>( ) {
+      Transactions.one( new ImageInfo( this.displayName ), new Callback<ImageInfo>( ) {
         @Override
         public void fire( final ImageInfo t ) {
           t.getPermissions( ).clear( );
@@ -300,7 +291,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
           t.setImagePublic( ImageConfiguration.getInstance( ).getDefaultVisibility( ) );
         }
       } );
-    } catch ( ExecutionException e ) {
+    } catch ( final ExecutionException e ) {
       LOG.debug( e, e );
     }
     return this;
@@ -309,15 +300,13 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   public List<String> listProductCodes( ) {
     final List<String> prods = Lists.newArrayList( );
     try {
-      Transactions.one( ImageInfo.self( this ), new Tx<ImageInfo>( ) {
+      Transactions.one( ImageInfo.self( this ), new Callback<ImageInfo>( ) {
         @Override
         public void fire( final ImageInfo t ) {
-          for ( ProductCode p : t.getProductCodes( ) ) {
-            prods.add( p.getValue( ) );
-          }
+          prods.addAll( t.getProductCodes( ) );
         }
       } );
-    } catch ( ExecutionException e ) {
+    } catch ( final ExecutionException e ) {
       LOG.debug( e, e );
     }
     return prods;
@@ -326,15 +315,13 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   public List<String> listLaunchPermissions( ) {
     final List<String> perms = Lists.newArrayList( );
     try {
-      Transactions.one( ImageInfo.self( this ), new Tx<ImageInfo>( ) {
+      Transactions.one( ImageInfo.self( this ), new Callback<ImageInfo>( ) {
         @Override
         public void fire( final ImageInfo t ) {
-          for ( LaunchPermission p : t.getPermissions( ) ) {
-            perms.add( p.getAccountId( ) );
-          }
+          perms.addAll( t.getPermissions( ) );
         }
       } );
-    } catch ( ExecutionException e ) {
+    } catch ( final ExecutionException e ) {
       LOG.debug( e, e );
     }
     return perms;
@@ -342,13 +329,13 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   
   public ImageInfo resetProductCodes( ) {
     try {
-      Transactions.one( ImageInfo.self( this ), new Tx<ImageInfo>( ) {
+      Transactions.one( ImageInfo.self( this ), new Callback<ImageInfo>( ) {
         @Override
         public void fire( final ImageInfo t ) {
           t.getProductCodes( ).clear( );
         }
       } );
-    } catch ( ExecutionException e ) {
+    } catch ( final ExecutionException e ) {
       LOG.debug( e, e );
     }
     return this;
@@ -359,21 +346,21 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
       Transactions.one( ImageInfo.self( this ), new Callback<ImageInfo>( ) {
         @Override
         public void fire( final ImageInfo t ) {
-          LaunchPermission imgAuth;
+          final LaunchPermission imgAuth;
           t.getPermissions( ).remove( new LaunchPermission( t, account.getAccountNumber( ) ) );
         }
       } );
-    } catch ( ExecutionException e ) {
+    } catch ( final ExecutionException e ) {
       LOG.debug( e, e );
     }
     return this;
   }
   
-  private Set<ProductCode> getProductCodes( ) {
+  private Set<String> getProductCodes( ) {
     return this.productCodes;
   }
   
-  private void setProductCodes( final Set<ProductCode> productCodes ) {
+  private void setProductCodes( final Set<String> productCodes ) {
     this.productCodes = productCodes;
   }
   
@@ -386,9 +373,9 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
-    if ( o == null || getClass( ) != o.getClass( ) ) return false;
+    if ( ( o == null ) || ( this.getClass( ) != o.getClass( ) ) ) return false;
     
-    ImageInfo imageInfo = ( ImageInfo ) o;
+    final ImageInfo imageInfo = ( ImageInfo ) o;
     
     if ( !this.getDisplayName( ).equals( imageInfo.getDisplayName( ) ) ) return false;
     
@@ -403,10 +390,6 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   @Override
   public int hashCode( ) {
     return this.getDisplayName( ).hashCode( );
-  }
-  
-  public boolean isAllowed( final Account account ) {
-    return this.getImagePublic( ) || this.checkPermission( account );
   }
   
   /**
@@ -449,18 +432,18 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   }
   
   public boolean addProductCode( final String prodCode ) {
+    
+    EntityTransaction db = Entities.get( ImageInfo.class );
     try {
-      Transactions.one( ImageInfo.self( this ), new Callback<ImageInfo>( ) {
-        @Override
-        public void fire( final ImageInfo t ) {
-          t.getProductCodes( ).add( new ProductCode( t, prodCode ) );
-        }
-      }
-                  );
-    } catch ( ExecutionException e ) {
+      ImageInfo entity = Entities.merge( this );
+      entity.getProductCodes( ).add( prodCode );
+      db.commit( );
+      return true;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
       return false;
     }
-    return true;
   }
   
   public String getDescription( ) {
@@ -488,40 +471,11 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   }
   
   /**
-   * Can only be used within the scope of a db transaction.
-   * 
-   * @param accountIds
-   * @return true if image has launch permission for any of the account in accountIds
-   */
-  public boolean hasExplicitPermissionForAny( Set<String> accountIds ) {
-    final Set<LaunchPermission> permissions = getPermissions( );
-    for ( String aid : accountIds ) {
-      if ( permissions.contains( new LaunchPermission( this, aid ) ) ) {
-        return true;
-      }
-    }
-    return false;
-  }
-  
-  /**
-   * Can only be used within the scope of a db transaction.
-   * 
    * @param accountId
-   * @return true if image has launch permission including public, explicit and implicit
+   * @return true if the accountId has an explicit launch permission.
    */
-  public boolean hasPermissionForOne( String accountId ) {
-    return getImagePublic( ) || hasExplicitOrImplicitPermissionForOne( accountId );
-  }
-  
-  /**
-   * Can only be used within the scope of a db transaction.
-   * 
-   * @param accountId
-   * @return true if image has explicit or implicit launch permission
-   */
-  public boolean hasExplicitOrImplicitPermissionForOne( String accountId ) {
-    return getOwnerAccountNumber( ).equals( accountId ) ||
-           getPermissions( ).contains( new LaunchPermission( this, accountId ) );
+  public boolean hasPermission( final String... accountIds ) {
+    return !Sets.intersection( this.getPermissions( ), Sets.newHashSet( accountIds ) ).isEmpty( );
   }
   
   /**
@@ -529,25 +483,25 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
    * 
    * @param accountIds
    */
-  public void addPermissions( List<String> accountIds ) {
-    EntityTransaction db = Entities.get( ImageInfo.class );
+  public void addPermissions( final List<String> accountIds ) {
+    final EntityTransaction db = Entities.get( ImageInfo.class );
     try {
-      ImageInfo entity = Entities.merge( this );
+      final ImageInfo entity = Entities.merge( this );
       Iterables.all( accountIds, new Predicate<String>( ) {
         
         @Override
-        public boolean apply( String input ) {
+        public boolean apply( final String input ) {
           try {
-            Account account = Accounts.lookupAccountById( input );
+            final Account account = Accounts.lookupAccountById( input );
             ImageInfo.this.getPermissions( ).add( input );
-          } catch ( Exception e ) {
+          } catch ( final Exception e ) {
             LOG.error( e, e );
           }
           return true;
         }
       } );
       db.commit( );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
     }
@@ -558,19 +512,19 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
    * 
    * @param accountIds
    */
-  public void removePermissions( List<String> accountIds ) {
+  public void removePermissions( final List<String> accountIds ) {
     
-    EntityTransaction db = Entities.get( ImageInfo.class );
+    final EntityTransaction db = Entities.get( ImageInfo.class );
     try {
-      ImageInfo entity = Entities.merge( this );
+      final ImageInfo entity = Entities.merge( this );
       Iterables.all( accountIds, new Predicate<String>( ) {
         
         @Override
-        public boolean apply( String input ) {
+        public boolean apply( final String input ) {
           try {
-            Account account = Accounts.lookupAccountById( input );
+            final Account account = Accounts.lookupAccountById( input );
             ImageInfo.this.getPermissions( ).remove( input );
-          } catch ( Exception e ) {
+          } catch ( final Exception e ) {
             LOG.error( e, e );
           }
           return true;
@@ -578,14 +532,18 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
       } );
       
       db.commit( );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
     }
   }
   
-  public static ImageInfo named( OwnerFullName input, String imageId ) {
+  public static ImageInfo named( final OwnerFullName input, final String imageId ) {
     return new ImageInfo( input, imageId );
+  }
+  
+  public boolean isAllowed( String accountId ) {
+    return this.getImagePublic( ) || this.getOwnerAccountNumber( ).equals( accountId ) || this.getPermissions( ).contains( accountId );
   }
   
 }

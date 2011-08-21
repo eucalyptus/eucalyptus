@@ -63,6 +63,19 @@
 
 package com.eucalyptus.util;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+/**
+ * Implementations <strong>measure</strong> the quantity of {@code T}, the <i>resource type</i>,
+ * currently ascribed to a user, via {@link OwnerFullName}. In other words, types annotated with
+ * this encapsulate a service and resource-specific method for computing the current
+ * {@code quantity} of {@code resource type} ascribed to {@code ownerFullName}.
+ */
+@Target( { ElementType.TYPE } )
+@Retention( RetentionPolicy.RUNTIME )
 public @interface ResourceUsageMetricFunction {
-  Class<?> value();
+  Class<?> value( );
 }

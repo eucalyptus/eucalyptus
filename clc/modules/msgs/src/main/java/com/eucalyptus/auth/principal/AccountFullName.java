@@ -63,6 +63,8 @@
 
 package com.eucalyptus.auth.principal;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -80,7 +82,9 @@ public class AccountFullName implements OwnerFullName {
   private final String        qName;
   
   protected AccountFullName( OwnerFullName ownerFn, String... relativePath ) {
+    assertThat( ownerFn, notNullValue( ) );
     this.accountNumber = ownerFn.getAccountNumber( );
+    assertThat( this.accountNumber, notNullValue( ) );
     this.accountName = ownerFn.getAccountName( );
     this.authority = ownerFn.getAuthority( );
     this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( relativePath );
@@ -88,9 +92,9 @@ public class AccountFullName implements OwnerFullName {
   }
   
   protected AccountFullName( Account account, String... relativePath ) {
-    Assertions.assertNotNull( account );
-    this.accountName = account.getName( );
     this.accountNumber = account.getAccountNumber( );
+    assertThat( this.accountNumber, notNullValue( ) );
+    this.accountName = account.getName( );
     this.authority = new StringBuilder( ).append( FullName.PREFIX ).append( FullName.SEP ).append( VENDOR ).append( FullName.SEP ).append( FullName.SEP ).append( this.accountNumber ).append( FullName.SEP ).toString( );
     this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( relativePath );
     this.qName = this.authority + this.relativeId;
@@ -199,10 +203,26 @@ public class AccountFullName implements OwnerFullName {
   public String getUserName( ) {
     return null;
   }
-
+  
   @Override
   public String getAccountName( ) {
     return this.accountName;
+  }
+  
+  /**
+   * @see com.eucalyptus.util.OwnerFullName#isOwner(java.lang.String)
+   */
+  @Override
+  public boolean isOwner( String ownerId ) {
+    return this.getAccountNumber( ) != null && this.getAccountNumber( ).equals( ownerId );
+  }
+  
+  /**
+   * @see com.eucalyptus.util.OwnerFullName#isOwner(com.eucalyptus.util.OwnerFullName)
+   */
+  @Override
+  public boolean isOwner( OwnerFullName ownerFullName ) {
+    return false;
   }
   
 }

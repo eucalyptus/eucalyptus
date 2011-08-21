@@ -78,6 +78,7 @@ import com.eucalyptus.auth.policy.PolicyVendor;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
@@ -89,11 +90,10 @@ import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class RestrictedTypes {
-  static Logger LOG = Logger.getLogger( RestrictedTypes.class );
-  
-  public interface RestrictedResource<T> extends HasFullName<T>, HasOwningAccount {
-    public abstract String getDisplayName( );
-  }
+  static Logger                                                            LOG                     = Logger.getLogger( RestrictedTypes.class );
+  private static final Map<Class, Function<OwnerFullName, Long>>           usageMetricFunctions    = Maps.newHashMap( );
+  private static final Map<Class, Function<OwnerFullName, Long>>           quantityMetricFunctions = Maps.newHashMap( );
+  private static final Map<Class, Function<String, RestrictedResource<?>>> resourceResolvers       = Maps.newHashMap( );
   
   enum UserAuthFilter implements Predicate<RestrictedResource<?>> {
     INSTANCE;
@@ -255,9 +255,6 @@ public class RestrictedTypes {
     return action;
   }
   
-  private static final Map<Class, Function<OwnerFullName, Long>> usageMetricFunctions    = Maps.newHashMap( );
-  private static final Map<Class, Function<OwnerFullName, Long>> quantityMetricFunctions = Maps.newHashMap( );
-  
   public static Function<OwnerFullName, Long> usageMetricFunction( Class type ) {
     for ( Class subType : Classes.ancestors( type ) ) {
       if ( usageMetricFunctions.containsKey( subType ) ) {
@@ -291,6 +288,7 @@ public class RestrictedTypes {
         Class measuredType = measures.value( );
         RestrictedTypes.quantityMetricFunctions.put( measuredType, ( Function<OwnerFullName, Long> ) Classes.newInstance( candidate ) );
         return true;
+//      } else if ( Ats.from( candidate ).has( ResourceResolver.class ) && Function.class.isAssignableFrom( candidate ) ) {
       } else {
         return false;
       }
@@ -301,5 +299,15 @@ public class RestrictedTypes {
       return 0.3d;
     }
     
+  }
+  
+  public static <T> Function<String, T> listAll( Class<T> type ) {
+    for ( Class subType : Classes.ancestors( type ) ) {
+      if ( quantityMetricFunctions.containsKey( subType ) ) {
+        Function<String, T> ret = ( Function<String, T> ) resourceResolvers.get( subType );
+        //TODO:GRZE:WTF FINISH THIS SHIT.
+      }
+    }
+    throw new NoSuchElementException( "Failed to lookup quantity metric function for type: " + type );
   }
 }

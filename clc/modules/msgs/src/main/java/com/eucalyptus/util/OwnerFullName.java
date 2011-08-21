@@ -68,4 +68,6 @@ public interface OwnerFullName extends FullName {
   public String getAccountName( );
   public String getUserId( );
   public String getUserName( );
+  public boolean isOwner( String ownerId );
+  public boolean isOwner( OwnerFullName ownerFullName );
 }

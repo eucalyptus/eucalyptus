@@ -94,8 +94,6 @@ import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.exception.ConstraintViolationException;
-import com.eucalyptus.entities.Entities.TxEvent;
-import com.eucalyptus.entities.Entities.TxStep;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -116,9 +114,43 @@ public class EntityWrapper<TYPE> {
   private TransactionState tx;
   private final String     txStart;
   
+  enum TxEvent {
+    CREATE,
+    COMMIT,
+    ROLLBACK,
+    UNIQUE,
+    QUERY;
+    public String getMessage( ) {
+      if ( Logs.isExtrrreeeme( ) ) {
+        return Threads.currentStackString( );
+      } else {
+        return "n.a";
+      }
+    }
+  }
+  
+  enum TxWatchdog implements EventListener {
+    INSTANCE;
+    @Override
+    public void fireEvent( final Event event ) {
+      if ( event instanceof ClockTick ) {
+        //TODO:GRZE:tx monitoring here.
+      }
+    }
+  }
+  
+  enum TxStep {
+    BEGIN,
+    END,
+    FAIL;
+    public String event( final TxEvent e ) {
+      return e.name( ) + ":" + this.name( );
+    }
+  }
+  
 /**
    * @see {@link Entities#get(Class)
-   * @see {@link JoinableTx}
+   * @see {@link CascadingTx}
    */
   @Deprecated
   public static <T> EntityWrapper<T> get( final Class<T> type ) {
@@ -127,7 +159,7 @@ public class EntityWrapper<TYPE> {
   
 /**
    * @see {@link Entities#get(Object)
-   * @see {@link JoinableTx}
+   * @see {@link CascadingTx}
    */
   @SuppressWarnings( "unchecked" )
   @Deprecated

@@ -151,7 +151,7 @@ public class ImageManager {
           return false;
         }
         // Make sure the request account can access the image
-        if ( !ctx.hasAdministrativePrivileges( ) && !image.hasPermissionForOne( requestAccountId ) ) {
+        if ( !ctx.hasAdministrativePrivileges( ) && !image.isAllowed( requestAccountId ) ) {
           return false;
         }
         // Check if selected by specified owner account ID
@@ -161,8 +161,8 @@ public class ImageManager {
         // Check if selected by explicit account permissions
         if ( exeByNonEmpty ) {
           if ( !( ( exeByHasAll && image.getImagePublic( ) ) ||   // public
-                  ( exeByHasSelf && image.hasExplicitOrImplicitPermissionForOne( requestAccountId ) ) || // implicit or explicit, but no public
-                  ( exeBySelectionSet.size( ) > 0 && image.getOwnerAccountNumber( ).equals( requestAccountId ) && image.hasExplicitPermissionForAny( exeBySelectionSet ) ) // owned by self and executable by someone 
+                  ( exeByHasSelf && ( image.getOwner( ).isOwner( requestAccountId ) || image.hasPermission( requestAccountId ) ) ) || // implicit or explicit, but no public
+                  ( !exeBySelectionSet.isEmpty( ) && ( image.getOwner( ).isOwner( requestAccountId ) && image.hasPermission( ( String[] ) exeBySelectionSet.toArray( ) ) ) ) 
                 ) ) {
             return false;
           }
