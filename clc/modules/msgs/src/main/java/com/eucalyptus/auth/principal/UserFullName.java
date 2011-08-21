@@ -114,7 +114,7 @@ public class UserFullName implements OwnerFullName {
   
   public static UserFullName getInstance( User user, String... relativePath ) {
     try {
-      if ( user != null ) {
+      if ( user != null && !Principals.isFakeIdentify( user.getUserId( ) )) {
         if ( !userIdMap.containsKey( user.getUserId( ) ) ) {
           userIdMap.put( user.getUserId( ), new UserFullName( user ) );
         }
