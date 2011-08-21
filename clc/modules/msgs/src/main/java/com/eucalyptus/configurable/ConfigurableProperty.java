@@ -1,9 +1,7 @@
 package com.eucalyptus.configurable;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 
-public interface ConfigurableProperty {
+public interface ConfigurableProperty extends Comparable<ConfigurableProperty> {
   
   public abstract String getFieldName( );
   

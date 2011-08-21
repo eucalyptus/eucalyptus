@@ -164,4 +164,16 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
   protected Object getQueryObject( ) throws Exception {
     return null;
   }
+  
+  /**
+   * @see java.lang.Comparable#compareTo(java.lang.Object)
+   */
+  @Override
+  public int compareTo( ConfigurableProperty that ) {
+    return this.getQualifiedName( ) != null
+      ? this.getQualifiedName( ).compareTo( that.getQualifiedName( ) )
+      : ( that.getQualifiedName( ) == null
+        ? 0
+        : -1 );
+  }
 }

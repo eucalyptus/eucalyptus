@@ -8,12 +8,13 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.TreeMultimap;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 
 public class PropertyDirectory {
   private static Logger                                 LOG                = Logger.getLogger( PropertyDirectory.class );
   private static Map<String, ConfigurableProperty>      fqMap              = Maps.newHashMap( );
-  private static Multimap<String, ConfigurableProperty> fqPrefixMap        = HashMultimap.create( );
+  private static Multimap<String, ConfigurableProperty> fqPrefixMap        = TreeMultimap.create( );
   private static Map<String, ConfigurableProperty>      fqPendingMap       = Maps.newHashMap( );
   private static Multimap<String, ConfigurableProperty> fqPendingPrefixMap = HashMultimap.create( );
   

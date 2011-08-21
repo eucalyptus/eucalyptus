@@ -10,10 +10,10 @@ import org.hibernate.annotations.NaturalId;
 
 public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty implements ConfigurableProperty {
   private static Logger LOG = Logger.getLogger( MultiDatabasePropertyEntry.class );
-  private Method      setIdentifier;
-  private Field       identifierField;
-  private String      identifierValue;
-  private String identifiedMethodName;
+  private Method        setIdentifier;
+  private Field         identifierField;
+  private String        identifierValue;
+  private String        identifiedMethodName;
   
   public MultiDatabasePropertyEntry( Class definingClass, String entrySetName, Field field, Field identifierField, String description, String defaultValue,
                                      PropertyTypeParser typeParser,
@@ -23,33 +23,36 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
     this.identifiedMethodName = identifierField.getName( ).substring( 0, 1 ).toUpperCase( ) + identifierField.getName( ).substring( 1 );
     this.identifierValue = identifierValue;
   }
-
+  
   private Method lookupSetIdentifierMethod( ) {
     try {
       Method setMethod = this.getDefiningClass( ).getMethod( "set" + this.identifiedMethodName, this.identifierField.getType( ) );
       setMethod.setAccessible( true );
       return setMethod;
     } catch ( Exception ex ) {
-      throw new RuntimeException( "Failed to obtain reference to method for setting the identifier field: " + this.identifierField.getName( ) + "/" + this.identifiedMethodName + " in type " + this.getDefiningClass( ).getSimpleName( ) );
+      throw new RuntimeException( "Failed to obtain reference to method for setting the identifier field: " + this.identifierField.getName( ) + "/"
+                                  + this.identifiedMethodName + " in type " + this.getDefiningClass( ).getSimpleName( ) );
     }
   }
   
   protected Object getQueryObject( ) throws Exception {
     Object queryObject = super.getDefiningClass( ).newInstance( );
     try {
-      setIdentifier = ( setIdentifier != null ) ? setIdentifier : this.lookupSetIdentifierMethod( );
+      setIdentifier = ( setIdentifier != null )
+        ? setIdentifier
+        : this.lookupSetIdentifierMethod( );
       setIdentifier.invoke( queryObject, identifierValue );
     } catch ( Exception e1 ) {
       try {
         this.lookupSetIdentifierMethod( ).invoke( queryObject, identifierValue );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
         return ex.getMessage( );
       }
     }
     return queryObject;
   }
-
+  
   public static class DatabasePropertyBuilder implements ConfigurablePropertyBuilder {
     
     @Override
@@ -105,11 +108,11 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
   public String getIdentifiedMethodName( ) {
     return this.identifiedMethodName;
   }
-
+  
   public void setIdentifiedMethodName( String identifiedMethodName ) {
     this.identifiedMethodName = identifiedMethodName;
   }
-
+  
   public void setIdentifierValue( String value ) {
     identifierValue = value;
   }
@@ -129,7 +132,20 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
   }
   
   public MultiDatabasePropertyEntry getClone( String identifierValue ) {
-    return new MultiDatabasePropertyEntry( this.getDefiningClass( ), this.getEntrySetName( ), this.getField( ), identifierField, this.getDescription( ), this.getDefaultValue( ), this.getTypeParser( ), this.getReadOnly( ), 
+    return new MultiDatabasePropertyEntry( this.getDefiningClass( ), this.getEntrySetName( ), this.getField( ), identifierField, this.getDescription( ),
+                                           this.getDefaultValue( ), this.getTypeParser( ), this.getReadOnly( ),
                                            this.getDisplayName( ), this.getWidgetType( ), this.getAlias( ), identifierValue );
+  }
+  
+  /**
+   * @see java.lang.Comparable#compareTo(java.lang.Object)
+   */
+  @Override
+  public int compareTo( ConfigurableProperty that ) {
+    return this.getQualifiedName( ) != null
+      ? this.getQualifiedName( ).compareTo( that.getQualifiedName( ) )
+      : ( that.getQualifiedName( ) == null
+        ? 0
+        : -1 );
   }
 }

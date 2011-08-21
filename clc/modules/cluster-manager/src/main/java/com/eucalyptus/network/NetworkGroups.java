@@ -220,7 +220,7 @@ public class NetworkGroups {
     }
   }
   
-  public static NetworkGroup lookup( OwnerFullName ownerFullName, String groupName ) throws NoSuchMetadataException {
+  public static NetworkGroup lookup( OwnerFullName ownerFullName, String groupName ) throws MetadataException {
     if ( defaultNetworkName( ).equals( groupName ) ) {
       return createDefault( ownerFullName );
     } else {
@@ -349,7 +349,7 @@ public class NetworkGroups {
     
   }
   
-  public static List<NetworkGroup> userNetworkGroups( OwnerFullName owner ) throws NoSuchMetadataException {
+  public static List<NetworkGroup> userNetworkGroups( OwnerFullName owner ) throws MetadataException {
     return lookupAll( owner, null );
   }
 }
