@@ -474,6 +474,10 @@ public class Threads {
     };
   }
   
+  public static StackTraceElement currentStackFrame( ) {
+    return Thread.currentThread( ).getStackTrace( )[1];
+  }
+  
   public static String currentStackRange( int start, int end ) {
     StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
     int len = stack.length;
