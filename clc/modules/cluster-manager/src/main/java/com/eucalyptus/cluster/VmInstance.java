@@ -99,7 +99,7 @@ import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.CloudMetadata.VirtualMachineInstance;
+import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
@@ -141,7 +141,7 @@ import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_instances" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class VmInstance extends UserMetadata<VmState> implements VirtualMachineInstance<VmInstance> {
+public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetadata<VmInstance> {
   private static final long                           serialVersionUID    = 1L;
   @Transient
   private static Logger                               LOG                 = Logger.getLogger( VmInstance.class );

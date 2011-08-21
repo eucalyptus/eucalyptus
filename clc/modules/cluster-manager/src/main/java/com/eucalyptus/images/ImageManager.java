@@ -93,7 +93,7 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Types;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -440,7 +440,7 @@ public class ImageManager {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId( ) );
     }
-    if ( !Types.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, request.getInstanceId( ), vm.getOwner( ) ) ) {
+    if ( !RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, request.getInstanceId( ), vm.getOwner( ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to create an image from instance " + request.getInstanceId( ) + " as " + ctx.getUser( ).getName( ) );
     }
     if ( !VmState.RUNNING.equals( vm.getRuntimeState( ) ) && !VmState.STOPPED.equals( vm.getRuntimeState( ) ) ) {

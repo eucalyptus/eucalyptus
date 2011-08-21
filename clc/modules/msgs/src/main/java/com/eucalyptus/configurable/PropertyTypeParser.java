@@ -2,44 +2,45 @@ package com.eucalyptus.configurable;
 
 import java.util.Map;
 import org.apache.log4j.Logger;
+import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 
-public abstract class PropertyTypeParser<T> {
+public abstract class PropertyTypeParser<T> implements Function<String,T> {
   private static Logger                         LOG           = Logger.getLogger( PropertyTypeParser.class );
   private static Map<Class, PropertyTypeParser> typeParsers   = Maps.newHashMap( );
   private static PropertyTypeParser<Float>      floatParser   = new PropertyTypeParser<Float>( ) {
                                                                 @Override
-                                                                public Float parse( String property ) {
+                                                                public Float apply( String property ) {
                                                                   return Float.parseFloat( property );
                                                                 }
                                                               };
   private static PropertyTypeParser<Double>     doubleParser  = new PropertyTypeParser<Double>( ) {
                                                                 @Override
-                                                                public Double parse( String property ) {
+                                                                public Double apply( String property ) {
                                                                   return Double.parseDouble( property );
                                                                 }
                                                               };
   private static PropertyTypeParser<Integer>    integerParser = new PropertyTypeParser<Integer>( ) {
                                                                 @Override
-                                                                public Integer parse( String property ) {
+                                                                public Integer apply( String property ) {
                                                                   return Integer.parseInt( property );
                                                                 }
                                                               };
   private static PropertyTypeParser<Long>       longParser    = new PropertyTypeParser<Long>( ) {
                                                                 @Override
-                                                                public Long parse( String property ) {
+                                                                public Long apply( String property ) {
                                                                   return Long.parseLong( property );
                                                                 }
                                                               };
   private static PropertyTypeParser<Boolean>    booleanParser = new PropertyTypeParser<Boolean>( ) {
                                                                 @Override
-                                                                public Boolean parse( String property ) {
+                                                                public Boolean apply( String property ) {
                                                                   return Boolean.parseBoolean( property );
                                                                 }
                                                               };
   private static PropertyTypeParser<String>     stringParser  = new PropertyTypeParser<String>( ) {
                                                                 @Override
-                                                                public String parse( String property ) {
+                                                                public String apply( String property ) {
                                                                   return property;
                                                                 }
                                                               };
@@ -71,5 +72,5 @@ public abstract class PropertyTypeParser<T> {
     }
   }
   
-  public abstract T parse( String property );
+  public abstract T apply( String property );
 }

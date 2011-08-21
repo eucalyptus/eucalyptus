@@ -78,7 +78,7 @@ import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.collect.Lists;
 
-public class FakePrincipals {
+public class Principals {
   public static boolean isFakeIdentify( String userId ) {
     return Account.NOBODY_ACCOUNT.equals( userId ) || Account.SYSTEM_ACCOUNT.equals( userId );
   }
@@ -125,7 +125,7 @@ public class FakePrincipals {
                                                       
                                                       @Override
                                                       public List<User> getUsers( ) throws AuthException {
-                                                        return Lists.newArrayList( FakePrincipals.nobodyUser( ) );
+                                                        return Lists.newArrayList( Principals.nobodyUser( ) );
                                                       }
                                                       
                                                       @Override
@@ -156,8 +156,8 @@ public class FakePrincipals {
                                                       
                                                       @Override
                                                       public User lookupUserByName( String userName ) throws AuthException {
-                                                        if ( FakePrincipals.nobodyUser( ).getName( ).equals( userName ) ) {
-                                                          return FakePrincipals.nobodyUser( );
+                                                        if ( Principals.nobodyUser( ).getName( ).equals( userName ) ) {
+                                                          return Principals.nobodyUser( );
                                                         } else {
                                                           throw new AuthException( AuthException.SYSTEM_MODIFICATION );
                                                         }
@@ -190,7 +190,7 @@ public class FakePrincipals {
                                                       
                                                       @Override
                                                       public List<User> getUsers( ) throws AuthException {
-                                                        return Lists.newArrayList( FakePrincipals.systemUser( ) );
+                                                        return Lists.newArrayList( Principals.systemUser( ) );
                                                       }
                                                       
                                                       @Override
@@ -221,8 +221,8 @@ public class FakePrincipals {
                                                       
                                                       @Override
                                                       public User lookupUserByName( String userName ) throws AuthException {
-                                                        if ( FakePrincipals.systemUser( ).getName( ).equals( userName ) ) {
-                                                          return FakePrincipals.systemUser( );
+                                                        if ( Principals.systemUser( ).getName( ).equals( userName ) ) {
+                                                          return Principals.systemUser( );
                                                         } else {
                                                           throw new AuthException( AuthException.SYSTEM_MODIFICATION );
                                                         }
@@ -280,7 +280,7 @@ public class FakePrincipals {
                                                                                               
                                                                                               @Override
                                                                                               public User getUser( ) throws AuthException {
-                                                                                                return FakePrincipals.systemUser( );
+                                                                                                return Principals.systemUser( );
                                                                                               }
                                                                                               
                                                                                               @Override
@@ -515,12 +515,12 @@ public class FakePrincipals {
                                                                                               
                                                                                               @Override
                                                                                               public User getUser( ) throws AuthException {
-                                                                                                return FakePrincipals.nobodyUser( );
+                                                                                                return Principals.nobodyUser( );
                                                                                               }
                                                                                               
                                                                                               @Override
                                                                                               public String getCertificateId( ) {
-                                                                                                return FakePrincipals.NOBODY_ID;
+                                                                                                return Principals.NOBODY_ID;
                                                                                               }
                                                                                             };
                                                       private final List<Certificate> certs = new ArrayList<Certificate>( ) {

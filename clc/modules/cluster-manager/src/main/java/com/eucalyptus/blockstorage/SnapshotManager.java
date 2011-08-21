@@ -84,7 +84,7 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.Types;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
@@ -162,7 +162,7 @@ public class SnapshotManager {
         public boolean apply( Snapshot snap ) {
           if ( !State.EXTANT.equals( snap.getState( ) ) ) {
             return false;
-          } else if ( !Types.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, request.getSnapshotId( ), snap.getOwner( ) ) ) {
+          } else if ( !RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, request.getSnapshotId( ), snap.getOwner( ) ) ) {
             throw Exceptions.toUndeclared( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ),
                                            new EucalyptusCloudException( ) );
           } else {
@@ -205,7 +205,7 @@ public class SnapshotManager {
       List<Snapshot> snapshots = db.query( Snapshots.named( ctx.getUserFullName( ), null ) );
       
       for ( Snapshot snap : snapshots ) {
-        if ( !Types.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, snap.getDisplayName( ), snap.getOwner( ) ) ) {
+        if ( !RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, snap.getDisplayName( ), snap.getOwner( ) ) ) {
           LOG.debug( "Skip snapshot " + snap.getDisplayName( ) + " due to access right" );
           continue;
         }

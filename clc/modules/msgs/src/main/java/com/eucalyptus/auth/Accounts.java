@@ -8,7 +8,7 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;

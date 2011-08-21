@@ -80,7 +80,7 @@ public class Lookups {
     try {
       account = Accounts.lookupAccountById( resourceOwnerAccountId );
     } catch ( AuthException e ) {
-      Types.LOG.error( e, e );
+      RestrictedTypes.LOG.error( e, e );
       return false;
     }
     return Permissions.isAuthorized( vendor, resourceType, resourceId, account, action, requestUser );

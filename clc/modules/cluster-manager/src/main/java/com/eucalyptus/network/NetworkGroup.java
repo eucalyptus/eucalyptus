@@ -89,7 +89,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
-import com.eucalyptus.cloud.CloudMetadata.NetworkSecurityGroup;
+import com.eucalyptus.cloud.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.VmInstance;
@@ -111,7 +111,7 @@ import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements NetworkSecurityGroup<NetworkGroup> {
+public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements NetworkGroupMetadata<NetworkGroup> {
   @Transient
   private static final long   serialVersionUID = 1L;
   @Transient

@@ -7,7 +7,7 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.component.id.Euare;
-import com.eucalyptus.util.Types;
+import com.eucalyptus.util.RestrictedTypes;
 
 /**
  * GRZE:NOTE: this class is a {@link Euare} specific type and needs to move as well as not
@@ -38,11 +38,11 @@ public class VolumeTotalSizeQuotaKey extends QuotaKey {
   public String value( Scope scope, String id, String resource, Long quantity ) throws AuthException {
     switch ( scope ) {
       case ACCOUNT:
-        return Long.toString( Types.quantityMetricFunction( VolumeMetadata.class ).apply( AccountFullName.getInstance( id ) ) + quantity );
+        return Long.toString( RestrictedTypes.quantityMetricFunction( VolumeMetadata.class ).apply( AccountFullName.getInstance( id ) ) + quantity );
       case GROUP:
         throw new AuthException( "Group level quota not supported" );
       case USER:
-        return Long.toString( Types.quantityMetricFunction( VolumeMetadata.class ).apply( UserFullName.getInstance( id ) ) + quantity );
+        return Long.toString( RestrictedTypes.quantityMetricFunction( VolumeMetadata.class ).apply( UserFullName.getInstance( id ) ) + quantity );
     }
     throw new AuthException( "Invalid scope" );
   }

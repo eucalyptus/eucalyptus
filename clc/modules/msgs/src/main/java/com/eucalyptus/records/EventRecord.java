@@ -3,7 +3,7 @@ package com.eucalyptus.records;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
-import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;

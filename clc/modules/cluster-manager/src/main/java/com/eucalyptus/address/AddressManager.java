@@ -70,7 +70,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.VmInstance;
@@ -131,7 +131,7 @@ public class AddressManager {
     for ( Address address : Addresses.getInstance( ).listValues( ) ) {
       //TODO:GRZE:FIXME this is not going to last this way.
       Account addrAccount = null;
-      if ( !FakePrincipals.nobodyAccount().getAccountNumber( ).equals( address.getOwnerAccountNumber( ) ) ) {
+      if ( !Principals.nobodyAccount().getAccountNumber( ).equals( address.getOwnerAccountNumber( ) ) ) {
         try {
         addrAccount = Accounts.lookupAccountById( address.getOwnerAccountNumber( ) );
         } catch ( AuthException e ) {}
@@ -149,7 +149,7 @@ public class AddressManager {
     }
     if ( isAdmin ) {
       for ( Address address : Addresses.getInstance( ).listDisabledValues( ) ) {
-        reply.getAddressesSet( ).add( new AddressInfoType( address.getName( ), FakePrincipals.nobodyFullName().getUserName( ) ) );
+        reply.getAddressesSet( ).add( new AddressInfoType( address.getName( ), Principals.nobodyFullName().getUserName( ) ) );
       }
     }
     return reply;

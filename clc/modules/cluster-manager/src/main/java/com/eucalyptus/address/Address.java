@@ -75,7 +75,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata.AddressMetadata;
 import com.eucalyptus.cloud.UserMetadata;
@@ -178,7 +178,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   public Address( ) {}
   
   public Address( final String ipAddress ) {
-    super( FakePrincipals.nobodyFullName(), ipAddress );
+    super( Principals.nobodyFullName(), ipAddress );
   }
   
   public Address( String ipAddress, String partition ) {
@@ -210,7 +210,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
       this.instanceId = UNASSIGNED_INSTANCEID;
     }
-    if ( FakePrincipals.nobodyFullName().equals( super.getOwner( ) ) ) {
+    if ( Principals.nobodyFullName().equals( super.getOwner( ) ) ) {
       this.atomicState.set( State.unallocated, true );
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
       this.instanceId = UNASSIGNED_INSTANCEID;
@@ -224,7 +224,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       this.atomicState.set( State.allocated, true );
       if ( this.isSystemOwned( ) ) {
         Addresses.getInstance( ).registerDisabled( this );
-        this.setOwner( FakePrincipals.nobodyFullName() );
+        this.setOwner( Principals.nobodyFullName() );
         this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         this.instanceId = UNASSIGNED_INSTANCEID;
         Address.removeAddress( this.getDisplayName( ) );
@@ -287,7 +287,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
                                                                                                         : "USER" ).info( );
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
-        Address.this.setOwner( FakePrincipals.nobodyFullName() );
+        Address.this.setOwner( Principals.nobodyFullName() );
         Address.removeAddress( Address.this.getDisplayName( ) );
         Address.this.stateUuid = UUID.randomUUID( ).toString( );
         Address.this.atomicState.attemptMark( State.unallocated, false );
@@ -358,7 +358,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
                        public void top( ) {
                          Address.this.instanceId = PENDING_ASSIGNMENT;
                          Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
-                         Address.this.setOwner( FakePrincipals.systemFullName() );
+                         Address.this.setOwner( Principals.systemFullName() );
                          Address.this.stateUuid = UUID.randomUUID( ).toString( );
                          try {
                            Addresses.getInstance( ).register( Address.this );
@@ -446,7 +446,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   public boolean isSystemOwned( ) {
-    return FakePrincipals.systemFullName().equals( ( UserFullName ) this.getOwner( ) );
+    return Principals.systemFullName().equals( ( UserFullName ) this.getOwner( ) );
   }
   
   public boolean isAssigned( ) {

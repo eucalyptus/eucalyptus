@@ -70,7 +70,7 @@ import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Transient;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.entities.AbstractStatefulPersistent;
 import com.eucalyptus.util.HasOwningAccount;
 import com.eucalyptus.util.OwnerFullName;
@@ -119,10 +119,10 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
       return this.ownerFullNameCached;
     } else if ( this.getOwnerAccountNumber( ) != null ) {
       OwnerFullName tempOwner;
-      if ( FakePrincipals.nobodyFullName( ).getAccountNumber( ).equals( this.getOwnerAccountNumber( ) ) ) {
-        tempOwner = FakePrincipals.nobodyFullName( );
-      } else if ( FakePrincipals.systemFullName( ).getAccountNumber( ).equals( this.getOwnerAccountNumber( ) ) ) {
-        tempOwner = FakePrincipals.systemFullName( );
+      if ( Principals.nobodyFullName( ).getAccountNumber( ).equals( this.getOwnerAccountNumber( ) ) ) {
+        tempOwner = Principals.nobodyFullName( );
+      } else if ( Principals.systemFullName( ).getAccountNumber( ).equals( this.getOwnerAccountNumber( ) ) ) {
+        tempOwner = Principals.systemFullName( );
       } else {
         tempOwner = AccountFullName.getInstance( this.getOwnerAccountNumber( ) );
       }

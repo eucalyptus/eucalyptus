@@ -7,7 +7,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.VmInstance;
@@ -59,7 +59,7 @@ public abstract class AbstractSystemAddressManager {
       try {
         final Address address = Helper.lookupOrCreate( cluster, addrInfo );
         if ( address.isAssigned( ) && !address.isPending( ) ) {
-          if ( FakePrincipals.nobodyFullName( ).equals( address.getOwner( ) ) ) {
+          if ( Principals.nobodyFullName( ).equals( address.getOwner( ) ) ) {
             Helper.markAsAllocated( cluster, addrInfo, address );
           }
           try {
@@ -76,7 +76,7 @@ public abstract class AbstractSystemAddressManager {
               cluster.getState( ).handleOrphan( addrInfo );
             }
           }
-        } else if ( address.isAllocated( ) && FakePrincipals.nobodyFullName( ).equals( address.getOwner( ) ) && !address.isPending( ) ) {
+        } else if ( address.isAllocated( ) && Principals.nobodyFullName( ).equals( address.getOwner( ) ) && !address.isPending( ) ) {
           Helper.markAsAllocated( cluster, addrInfo, address );
         }
       } catch ( final Exception e ) {
@@ -109,7 +109,7 @@ public abstract class AbstractSystemAddressManager {
         } else if ( ( addr != null ) && ( vm == null ) ) {
           cluster.getState( ).handleOrphan( addrInfo );
         } else if ( ( addr == null ) && ( vm != null ) ) {
-          addr = new Address( FakePrincipals.systemFullName( ), addrInfo.getAddress( ), cluster.getPartition( ), vm.getInstanceId( ), vm.getPrivateAddress( ) );
+          addr = new Address( Principals.systemFullName( ), addrInfo.getAddress( ), cluster.getPartition( ), vm.getInstanceId( ), vm.getPrivateAddress( ) );
           cluster.getState( ).clearOrphan( addrInfo );
         } else if ( ( addr == null ) && ( vm == null ) ) {
           addr = new Address( addrInfo.getAddress( ), cluster.getPartition( ) );

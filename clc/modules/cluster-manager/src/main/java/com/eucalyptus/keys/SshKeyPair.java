@@ -70,7 +70,7 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
@@ -83,7 +83,7 @@ import com.eucalyptus.util.OwnerFullName;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_keypairs" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudMetadata.KeyPair<SshKeyPair> {
+public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudMetadata.KeyPairMetadata<SshKeyPair> {
   enum State {
     available, removing
   }
@@ -150,7 +150,7 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudM
   }
   
   static SshKeyPair noKey( ) {
-    return new SshKeyPair( FakePrincipals.nobodyFullName( ), "nokey", "", "" );
+    return new SshKeyPair( Principals.nobodyFullName( ), "nokey", "", "" );
   }
   
 }

@@ -15,7 +15,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.http.MappingHttpRequest;
@@ -45,7 +45,7 @@ public class Context {
       this.message = msg;
     }};
     this.channel = new DefaultLocalClientChannelFactory( ).newChannel( Channels.pipeline( ) );
-    this.user = FakePrincipals.systemUser();
+    this.user = Principals.systemUser();
     EventRecord.caller( Context.class, EventType.CONTEXT_CREATE, this.correlationId, this.channel.toString( ) ).debug( );
   }
   
@@ -101,11 +101,11 @@ public class Context {
   
   public OwnerFullName getEffectiveUserFullName( ) {
     String effectiveUserId = this.getRequest( ).getEffectiveUserId( );
-    if ( this.getRequest( ) != null && FakePrincipals.systemFullName().getUserName( ).equals( effectiveUserId ) ) {
-      return FakePrincipals.systemFullName();
+    if ( this.getRequest( ) != null && Principals.systemFullName().getUserName( ).equals( effectiveUserId ) ) {
+      return Principals.systemFullName();
       /** system **/
     } else if ( this.getRequest( ) == null || effectiveUserId == null ) {
-      return FakePrincipals.nobodyFullName();
+      return Principals.nobodyFullName();
       /** unset **/
     } else if ( !effectiveUserId.equals( this.getUserFullName( ).getUserName( ) ) ) {
       try {
@@ -123,7 +123,7 @@ public class Context {
   }
   
   public boolean hasAdministrativePrivileges( ) {
-    return this.getUser( ).isSystemInternal( ) || FakePrincipals.systemFullName().equals( this.getEffectiveUserFullName( ) ) || this.getUser( ).isSystemAdmin( );
+    return this.getUser( ).isSystemInternal( ) || Principals.systemFullName().equals( this.getEffectiveUserFullName( ) ) || this.getUser( ).isSystemAdmin( );
   }
   
   public User getUser( ) {

@@ -73,7 +73,7 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
-import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ResourceToken;

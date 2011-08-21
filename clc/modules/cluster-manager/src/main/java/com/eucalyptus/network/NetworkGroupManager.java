@@ -12,7 +12,7 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata;
-import com.eucalyptus.cloud.CloudMetadata.NetworkSecurityGroup;
+import com.eucalyptus.cloud.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -22,7 +22,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMappers;
-import com.eucalyptus.util.Types;
+import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
@@ -49,7 +49,7 @@ public class NetworkGroupManager {
     /**
      * GRZE:WARN: do this /first/, ensure the default group exists to cover some old broken installs
      **/
-    if ( !Types.isContextAuthorized( null ) ) {
+    if ( !RestrictedTypes.isContextAuthorized( null ) ) {
 
     }
     final String action = PolicySpec.requestToAction( request );

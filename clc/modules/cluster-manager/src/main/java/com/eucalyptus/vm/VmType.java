@@ -69,8 +69,8 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.auth.principal.FakePrincipals;
-import com.eucalyptus.cloud.CloudMetadata.VirtualMachineType;
+import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.cloud.CloudMetadata.VmTypeMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.AbstractPersistent;
@@ -83,7 +83,7 @@ import com.eucalyptus.util.OwnerFullName;
 @Table( name = "cloud_vm_types" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 //@ConfigurableClass(root="eucalyptus",alias="vmtypes",deferred=true,singleton=false,description="Virtual Machine type definitions")
-public class VmType extends AbstractPersistent implements VirtualMachineType<VmType> {
+public class VmType extends AbstractPersistent implements VmTypeMetadata<VmType> {
 //  @ConfigurableIdentifier
   @Column( name = "metadata_vm_type_name" )
   private String  name;
@@ -108,6 +108,11 @@ public class VmType extends AbstractPersistent implements VirtualMachineType<VmT
     this.cpu = cpu;
     this.disk = disk;
     this.memory = memory;
+  }
+  
+  @Override
+  public String getDisplayName( ) {
+    return this.name;
   }
   
   public String getName( ) {
@@ -188,18 +193,18 @@ public class VmType extends AbstractPersistent implements VirtualMachineType<VmT
   public FullName getFullName( ) {
     return FullName.create.vendor( "euca" )
                           .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
-                          .namespace( FakePrincipals.systemFullName().getAccountNumber( ) )
+                          .namespace( Principals.systemFullName().getAccountNumber( ) )
                           .relativeId( "vm-type", this.getName( ) );
   }
   
   @Override
   public String getOwnerAccountNumber( ) {
-    return FakePrincipals.systemAccount().getAccountNumber( );
+    return Principals.systemAccount().getAccountNumber( );
   }
   
   @Override
   public OwnerFullName getOwner( ) {
-    return FakePrincipals.systemFullName();
+    return Principals.systemFullName();
   }
   
 }

@@ -12,7 +12,7 @@ import org.jibx.runtime.IBindingFactory;
 import org.jibx.runtime.IMarshallingContext;
 import org.jibx.runtime.JiBXException;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.context.Context;
@@ -88,7 +88,7 @@ public class BaseMessage {
   }
   
   public <TYPE extends BaseMessage> TYPE markPrivileged( ) {
-    this.effectiveUserId = FakePrincipals.systemUser( ).getName( );
+    this.effectiveUserId = Principals.systemUser( ).getName( );
     return ( TYPE ) this;
   }
   
@@ -147,8 +147,8 @@ public class BaseMessage {
     if ( subCorrelationId == null ) {
       subCorrelationId = String.format( "%f", Math.random( ) ).substring( 2 );
     }
-    this.userId = FakePrincipals.systemFullName( ).getUserName( );
-    this.effectiveUserId = FakePrincipals.systemFullName( ).getUserName( );
+    this.userId = Principals.systemFullName( ).getUserName( );
+    this.effectiveUserId = Principals.systemFullName( ).getUserName( );
     this.correlationId = corrId + "-" + subCorrelationId;
     return ( TYPE ) this;
   }
@@ -298,11 +298,11 @@ public class BaseMessage {
   
   public BaseMessage setUser( User user ) {
     if ( user == null ) {
-      this.setUser( FakePrincipals.nobodyUser( ) );
+      this.setUser( Principals.nobodyUser( ) );
     } else {
       this.userId = user.getName( );
       this.effectiveUserId = ( user.isSystemAdmin( ) || user.isSystemInternal( ) )
-        ? FakePrincipals.systemUser( ).getName( )
+        ? Principals.systemUser( ).getName( )
         : user.getName( );
     }
     return this;

@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,113 +61,23 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cloud;
+package com.eucalyptus.configurable;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.notNullValue;
-import javax.persistence.Column;
-import javax.persistence.MappedSuperclass;
-import javax.persistence.PrePersist;
-import javax.persistence.PreUpdate;
-import javax.persistence.Transient;
-import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.util.HasOwningUser;
-import com.eucalyptus.util.OwnerFullName;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.lang.reflect.Method;
 
-@MappedSuperclass
-public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMetadata<STATE> implements HasOwningUser {
-  @Transient
-  private static final long serialVersionUID = 1L;
-  
-  @Column( name = "metadata_user_id" )
-  protected String          ownerUserId;
-  @Column( name = "metadata_user_name" )
-  protected String          ownerUserName;
-  
+/**
+ * {@inheritDoc Configurables}
+ * @see Configurables
+ */
+@Target( { ElementType.TYPE, ElementType.FIELD, ElementType.METHOD } )
+@Retention( RetentionPolicy.RUNTIME )
+public @interface Configurable {
   /**
-   * GRZE:NOTE: Should only /ever/ be used by sub classes.
+   * Human readable name of this configurable.
    */
-  protected UserMetadata( ) {}
-  
-  /**
-   * GRZE:NOTE: Should only /ever/ be used by sub classes.
-   */
-  protected UserMetadata( final OwnerFullName owner ) {
-    super( owner );
-    this.setOwner( owner );
-  }
-  
-  /**
-   * GRZE:NOTE: Should only /ever/ be used by sub classes.
-   */
-  protected UserMetadata( final OwnerFullName owner, final String displayName ) {
-    super( owner, displayName );
-    this.setOwner( owner );
-  }
-  
-  @Override
-  public void setOwner( final OwnerFullName owner ) {
-    this.setOwnerUserId( owner != null
-      ? owner.getUniqueId( )
-      : null );
-    this.setOwnerUserName( owner != null
-      ? owner.getUserName( )
-      : null );
-    super.setOwner( owner );
-  }
-  
-  @Override
-  public OwnerFullName getOwner( ) {
-    if ( super.ownerFullNameCached != null ) {
-      return super.ownerFullNameCached;
-    } else if ( this.getOwnerUserId( ) != null ) {
-      OwnerFullName tempOwner = null;
-      if ( Principals.nobodyFullName( ).getUserId( ).equals( this.getOwnerUserId( ) ) ) {
-        tempOwner = Principals.nobodyFullName( );
-      } else if ( Principals.systemFullName( ).getUserId( ).equals( this.getOwnerUserId( ) ) ) {
-        tempOwner = Principals.systemFullName( );
-      } else {
-        tempOwner = UserFullName.getInstance( this.getOwnerUserId( ) );
-      }
-      return ( super.ownerFullNameCached = tempOwner );
-    } else {
-      return super.getOwner( );
-    }
-  }
-  
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = super.hashCode( );
-    result = ( prime * result ) + ( ( this.ownerUserId == null )
-      ? 0
-      : this.ownerUserId.hashCode( ) );
-    return result;
-  }
-  
-  @Override
-  public String getOwnerUserId( ) {
-    return this.ownerUserId;
-  }
-  
-  public void setOwnerUserId( final String ownerUserId ) {
-    this.ownerUserId = ownerUserId;
-  }
-  
-  @Override
-  public String getOwnerUserName( ) {
-    return this.ownerUserName;
-  }
-  
-  public void setOwnerUserName( final String ownerUserName ) {
-    this.ownerUserName = ownerUserName;
-  }
-  
-  @PrePersist
-  @PreUpdate
-  public void verifyComplete( ) {
-    assertThat( this.ownerUserId, notNullValue( ) );
-    assertThat( this.ownerUserName, notNullValue( ) );
-  }
+  String value( );
 }

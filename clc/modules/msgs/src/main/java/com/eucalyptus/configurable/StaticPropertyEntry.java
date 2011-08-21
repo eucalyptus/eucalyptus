@@ -100,7 +100,7 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
   @Override
   public String setValue( String s ) {
     try {
-      Object o = super.getTypeParser( ).parse( s );
+      Object o = super.getTypeParser( ).apply( s );
       this.fireChange( s );
       this.field.set( null, o );
       LOG.info( "--> Set property value:  " + super.getQualifiedName( ) + " to " + s );

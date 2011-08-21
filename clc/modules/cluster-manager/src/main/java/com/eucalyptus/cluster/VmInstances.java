@@ -80,7 +80,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.cloud.CloudMetadata.VirtualMachineInstance;
+import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cluster.VmInstance.Reason;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Dispatcher;
@@ -140,7 +140,7 @@ public class VmInstances {
     
   }
   
-  @ResourceQuantityMetricFunction( VirtualMachineInstance.class )
+  @ResourceQuantityMetricFunction( VmInstanceMetadata.class )
   public enum CountVmInstances implements Function<OwnerFullName, Long> {
     INSTANCE;
     

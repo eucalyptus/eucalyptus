@@ -146,11 +146,11 @@ public class UserFullName implements OwnerFullName {
   public static UserFullName getInstance( User user, String... relativePath ) {
     try {
       if ( user == null ) {
-        return new UserFullName( FakePrincipals.nobodyAccount( ), FakePrincipals.nobodyUser( ) );
-      } else if ( FakePrincipals.systemUser( ).equals( user ) ) {
-        return new UserFullName( FakePrincipals.systemAccount( ), FakePrincipals.systemUser( ) );
-      } else if ( FakePrincipals.nobodyUser( ).equals( user ) ) {
-        return new UserFullName( FakePrincipals.nobodyAccount( ), FakePrincipals.nobodyUser( ) );
+        return new UserFullName( Principals.nobodyAccount( ), Principals.nobodyUser( ) );
+      } else if ( Principals.systemUser( ).equals( user ) ) {
+        return new UserFullName( Principals.systemAccount( ), Principals.systemUser( ) );
+      } else if ( Principals.nobodyUser( ).equals( user ) ) {
+        return new UserFullName( Principals.nobodyAccount( ), Principals.nobodyUser( ) );
       } else {
         Account account = user.getAccount( );
         return new UserFullName( account, user );
@@ -158,7 +158,7 @@ public class UserFullName implements OwnerFullName {
     } catch ( AuthException ex ) {
       LOG.error( ex.getMessage( ) );
       try {
-        return new UserFullName( FakePrincipals.nobodyAccount( ), FakePrincipals.nobodyUser( ) );
+        return new UserFullName( Principals.nobodyAccount( ), Principals.nobodyUser( ) );
       } catch ( AuthException ex1 ) {
         LOG.error( ex1, ex1 );
         throw new UndeclaredThrowableException( ex );

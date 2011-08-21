@@ -82,7 +82,7 @@ import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.TypeResolver;
-import com.eucalyptus.util.Types;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Preconditions;
@@ -253,10 +253,10 @@ public class Emis {
   public static BootableSet newBootableSet( VmType vmType, Partition partition, String imageId ) throws MetadataException, AuthException {
     BootableSet bootSet = null;
     try {
-      bootSet = new BootableSet( Types.doPrivileged( imageId, LookupMachine.INSTANCE ) );
+      bootSet = new BootableSet( RestrictedTypes.doPrivileged( imageId, LookupMachine.INSTANCE ) );
     } catch ( Exception e ) {
       try {
-        bootSet = new BootableSet( Types.doPrivileged( imageId, LookupBlockStorage.INSTANCE ) );
+        bootSet = new BootableSet( RestrictedTypes.doPrivileged( imageId, LookupBlockStorage.INSTANCE ) );
       } catch ( IllegalContextAccessException ex ) {
         throw new VerificationException( ex );
       } catch ( NoSuchElementException ex ) {
@@ -277,7 +277,7 @@ public class Emis {
     String kernelId = determineKernelId( bootSet );
     LOG.debug( "Determined the appropriate kernelId to be " + kernelId + " for " + bootSet.toString( ) );
     try {
-      KernelImageInfo kernel = Types.doPrivileged( kernelId, LookupKernel.INSTANCE );
+      KernelImageInfo kernel = RestrictedTypes.doPrivileged( kernelId, LookupKernel.INSTANCE );
       return new NoRamdiskBootableSet( bootSet.getMachine( ), kernel );
     } catch ( Exception ex ) {
       throw new NoSuchMetadataException( "Failed to lookup kernel image information: " + kernelId + " because of: " + ex.getMessage( ), ex );
@@ -291,7 +291,7 @@ public class Emis {
       return bootSet;
     } else {
       try {
-        RamdiskImageInfo ramdisk = Types.doPrivileged( ramdiskId, LookupRamdisk.INSTANCE );
+        RamdiskImageInfo ramdisk = RestrictedTypes.doPrivileged( ramdiskId, LookupRamdisk.INSTANCE );
         return new TrifectaBootableSet( bootSet.getMachine( ), bootSet.getKernel( ), ramdisk );
       } catch ( Exception ex ) {
         throw new NoSuchMetadataException( "Failed to lookup ramdisk image information: " + ramdiskId + " because of: " + ex.getMessage( ), ex );

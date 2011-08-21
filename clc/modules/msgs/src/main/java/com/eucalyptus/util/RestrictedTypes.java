@@ -88,24 +88,23 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-public class Types {
-  static Logger LOG = Logger.getLogger( Types.class );
+public class RestrictedTypes {
+  static Logger LOG = Logger.getLogger( RestrictedTypes.class );
   
-  public interface PrivilegedResource<T> extends HasFullName<T>, HasOwningAccount {
-    @Override
-    public abstract String getName( );
+  public interface RestrictedResource<T> extends HasFullName<T>, HasOwningAccount {
+    public abstract String getDisplayName( );
   }
   
-  enum UserAuthFilter implements Predicate<PrivilegedResource<?>> {
+  enum UserAuthFilter implements Predicate<RestrictedResource<?>> {
     INSTANCE;
     @Override
-    public boolean apply( PrivilegedResource<?> arg0 ) {
+    public boolean apply( RestrictedResource<?> arg0 ) {
       final Context ctx = Contexts.lookup( );
-      final String resourceName = arg0.getName( );
+      final String resourceName = arg0.getDisplayName( );
       final Ats ats = Ats.inClassHierarchy( arg0 );
       final PolicyVendor vendor = ats.get( PolicyVendor.class );
       final PolicyResourceType resourceType = ats.get( PolicyResourceType.class );
-      final String policyAction = Types.findPolicyAction( arg0 );
+      final String policyAction = RestrictedTypes.findPolicyAction( arg0 );
       return Permissions.isAuthorized( vendor.value( ),
                                        resourceType.value( ),
                                        resourceName,
@@ -244,7 +243,7 @@ public class Types {
     return findPolicyAction( Classes.typeOf( rscType ) );
   }
   
-  public static String findPolicyAction( Class<PrivilegedResource<?>> rscType ) {
+  public static String findPolicyAction( Class<RestrictedResource<?>> rscType ) {
     Context ctx = Contexts.lookup( );
     Ats ats = Ats.inClassHierarchy( rscType );
     PolicyVendor vendor = ats.get( PolicyVendor.class );
@@ -285,12 +284,12 @@ public class Types {
       if ( Ats.from( candidate ).has( ResourceUsageMetricFunction.class ) && Function.class.isAssignableFrom( candidate ) ) {
         ResourceUsageMetricFunction measures = Ats.from( candidate ).get( ResourceUsageMetricFunction.class );
         Class measuredType = measures.value( );
-        Types.usageMetricFunctions.put( measuredType, ( Function<OwnerFullName, Long> ) Classes.newInstance( candidate ) );
+        RestrictedTypes.usageMetricFunctions.put( measuredType, ( Function<OwnerFullName, Long> ) Classes.newInstance( candidate ) );
         return true;
       } else if ( Ats.from( candidate ).has( ResourceQuantityMetricFunction.class ) && Function.class.isAssignableFrom( candidate ) ) {
         ResourceQuantityMetricFunction measures = Ats.from( candidate ).get( ResourceQuantityMetricFunction.class );
         Class measuredType = measures.value( );
-        Types.quantityMetricFunctions.put( measuredType, ( Function<OwnerFullName, Long> ) Classes.newInstance( candidate ) );
+        RestrictedTypes.quantityMetricFunctions.put( measuredType, ( Function<OwnerFullName, Long> ) Classes.newInstance( candidate ) );
         return true;
       } else {
         return false;
