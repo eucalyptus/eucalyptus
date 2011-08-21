@@ -274,7 +274,7 @@ public class NetworkGroups {
   public static NetworkGroup create( final OwnerFullName ownerFullName, final String groupName, final String groupDescription ) throws MetadataException {
     final EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
-      final NetworkGroup entity = Entities.merge( new NetworkGroup( ownerFullName, groupName, groupDescription ) );
+      final NetworkGroup entity = Entities.persist( new NetworkGroup( ownerFullName, groupName, groupDescription ) );
       db.commit( );
       return entity;
     } catch ( final ConstraintViolationException ex ) {
