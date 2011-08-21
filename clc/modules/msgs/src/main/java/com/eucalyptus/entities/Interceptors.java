@@ -77,105 +77,111 @@ import com.eucalyptus.system.Threads;
 import com.google.common.collect.Collections2;
 
 public class Interceptors {
+  private static final class LogMonitorInterceptor extends EmptyInterceptor {
+    private static final long serialVersionUID = 1L;
+    private int               operations       = 0;
+    
+    @Override
+    public void onDelete( final Object entity, final Serializable id, final Object[] state, final String[] propertyNames, final Type[] types ) {
+      LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id ) );
+      super.onDelete( entity, id, state, propertyNames, types );
+    }
+    
+    @Override
+    public boolean onFlushDirty( final Object entity, final Serializable id, final Object[] currentState, final Object[] previousState, final String[] propertyNames, final Type[] types ) {
+      LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id ) );
+      return super.onFlushDirty( entity, id, currentState, previousState, propertyNames, types );
+    }
+    
+    @Override
+    public boolean onLoad( final Object entity, final Serializable id, final Object[] state, final String[] propertyNames, final Type[] types ) {
+      LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id ) );
+      return super.onLoad( entity, id, state, propertyNames, types );
+    }
+    
+    @Override
+    public boolean onSave( final Object entity, final Serializable id, final Object[] state, final String[] propertyNames, final Type[] types ) {
+      LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id ) );
+      return super.onSave( entity, id, state, propertyNames, types );
+    }
+    
+    @Override
+    public void postFlush( final Iterator entities ) {
+      LOG.debug( String.format( "%s()", Threads.currentStackFrame( ).getMethodName( ) ) );
+      super.postFlush( entities );
+    }
+    
+    @Override
+    public void preFlush( final Iterator entities ) {
+      LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ) ) );
+      super.preFlush( entities );
+    }
+    
+    @Override
+    public Boolean isTransient( final Object entity ) {
+      return super.isTransient( entity );
+    }
+    
+    @Override
+    public void afterTransactionBegin( final Transaction tx ) {
+      LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations = 0, tx.toString( ) ) );
+      super.afterTransactionBegin( tx );
+    }
+    
+    @Override
+    public void afterTransactionCompletion( final Transaction tx ) {
+      LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations, tx.toString( ) ) );
+      super.afterTransactionCompletion( tx );
+    }
+    
+    @Override
+    public void beforeTransactionCompletion( final Transaction tx ) {
+      LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations, tx.toString( ) ) );
+      super.beforeTransactionCompletion( tx );
+    }
+    
+    @Override
+    public void onCollectionRemove( final Object collection, final Serializable key ) throws CallbackException {
+      super.onCollectionRemove( collection, key );
+    }
+    
+    @Override
+    public void onCollectionRecreate( final Object collection, final Serializable key ) throws CallbackException {
+      LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, collection ) );
+      super.onCollectionRecreate( collection, key );
+    }
+    
+    @Override
+    public void onCollectionUpdate( final Object collection, final Serializable key ) throws CallbackException {
+      LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, collection ) );
+      super.onCollectionUpdate( collection, key );
+    }
+  }
+  
   private static Logger LOG = Logger.getLogger( Interceptors.class );
   
   static Interceptor empty( ) {
-    Interceptor i = new EmptyInterceptor( ) {
+    final Interceptor i = new EmptyInterceptor( ) {
       private static final long serialVersionUID = 1L;
     };
     return interceptor = i;
   }
   
+  @SuppressWarnings( "synthetic-access" )
   static Interceptor logger( ) {
-    Interceptor i = new EmptyInterceptor( ) {
-      private static final long serialVersionUID = 1L;
-      
-      @Override
-      public void onDelete( Object entity, Serializable id, Object[] state, String[] propertyNames, Type[] types ) {
-        LOG.debug( String.format( "%s(): %s %s", Threads.currentStackFrame( ).getMethodName( ), entity.getClass( ).getSimpleName( ), id ) );
-        super.onDelete( entity, id, state, propertyNames, types );
-      }
-      
-      @Override
-      public boolean onFlushDirty( Object entity, Serializable id, Object[] currentState, Object[] previousState, String[] propertyNames, Type[] types ) {
-        LOG.debug( String.format( "%s(): %s %s", Threads.currentStackFrame( ).getMethodName( ), entity.getClass( ).getSimpleName( ), id ) );
-        return super.onFlushDirty( entity, id, currentState, previousState, propertyNames, types );
-      }
-      
-      @Override
-      public boolean onLoad( Object entity, Serializable id, Object[] state, String[] propertyNames, Type[] types ) {
-        LOG.debug( String.format( "%s(): %s %s", Threads.currentStackFrame( ).getMethodName( ), entity.getClass( ).getSimpleName( ), id ) );
-        return super.onLoad( entity, id, state, propertyNames, types );
-      }
-      
-      @Override
-      public boolean onSave( Object entity, Serializable id, Object[] state, String[] propertyNames, Type[] types ) {
-        LOG.debug( String.format( "%s(): %s %s", Threads.currentStackFrame( ).getMethodName( ), entity.getClass( ).getSimpleName( ), id ) );
-        return super.onSave( entity, id, state, propertyNames, types );
-      }
-      
-      @Override
-      public void postFlush( Iterator entities ) {
-        LOG.debug( String.format( "%s()", Threads.currentStackFrame( ).getMethodName( ) ) ); 
-        super.postFlush( entities );
-      }
-      
-      @Override
-      public void preFlush( Iterator entities ) {
-        LOG.debug( String.format( "%s(): %s", Threads.currentStackFrame( ).getMethodName( ), Iterators.toString( entities, "\n" ) ) ); 
-        super.preFlush( entities );
-      }
-      
-      @Override
-      public Boolean isTransient( Object entity ) {
-        return super.isTransient( entity );
-      }
-      
-      @Override
-      public void afterTransactionBegin( Transaction tx ) {
-        LOG.debug( String.format( "%s(): %s", Threads.currentStackFrame( ).getMethodName( ), tx.toString( ) ) );
-        super.afterTransactionBegin( tx );
-      }
-      
-      @Override
-      public void afterTransactionCompletion( Transaction tx ) {
-        LOG.debug( String.format( "%s(): %s", Threads.currentStackFrame( ).getMethodName( ), tx.toString( ) ) );
-        super.afterTransactionCompletion( tx );
-      }
-      
-      @Override
-      public void beforeTransactionCompletion( Transaction tx ) {
-        LOG.debug( String.format( "%s(): %s", Threads.currentStackFrame( ).getMethodName( ), tx.toString( ) ) );
-        super.beforeTransactionCompletion( tx );
-      }
-      
-      @Override
-      public void onCollectionRemove( Object collection, Serializable key ) throws CallbackException {
-        super.onCollectionRemove( collection, key );
-      }
-      
-      @Override
-      public void onCollectionRecreate( Object collection, Serializable key ) throws CallbackException {
-        LOG.debug( String.format( "%s(): %s %s", Threads.currentStackFrame( ).getMethodName( ), key, collection ) );
-        super.onCollectionRecreate( collection, key );
-      }
-      
-      @Override
-      public void onCollectionUpdate( Object collection, Serializable key ) throws CallbackException {
-        LOG.debug( String.format( "%s(): %s %s", Threads.currentStackFrame( ).getMethodName( ), key, collection ) );
-        super.onCollectionUpdate( collection, key );
-      }
-    };
+    final Interceptor i = new LogMonitorInterceptor( );
     return interceptor = i;
   }
   
-  private static Interceptor interceptor = Logs.isExtrrreeeme( ) ? logger( ) : empty( );
+  private static Interceptor interceptor = Logs.isExtrrreeeme( )
+                                           ? logger( )
+                                           : empty( );
   
   static Interceptor get( ) {
     return interceptor;
   }
   
-  private static void set( Interceptor interceptor ) {
+  private static void set( final Interceptor interceptor ) {
     Interceptors.interceptor = interceptor;
   }
   
