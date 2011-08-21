@@ -63,8 +63,6 @@
 
 package com.eucalyptus.images;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
@@ -81,14 +79,11 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.TypeResolver;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ClassToInstanceMap;
-import com.google.common.collect.ImmutableClassToInstanceMap;
-import com.google.common.collect.MutableClassToInstanceMap;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
@@ -111,44 +106,35 @@ public class Emis {
     }
     
   }
-  //TODO:GRZE: facade here plox.
-  private static final Map<Class<? extends ImageMetadata>, TypeResolver<? extends ImageMetadata>> resolvers = new HashMap<Class<? extends ImageMetadata>, TypeResolver<? extends ImageMetadata>>( ) {
-                                                                                                {
-                                                                                                  put( BlockStorageImageInfo.class, LookupBlockStorage.INSTANCE );
-                                                                                                  put( MachineImageInfo.class, LookupMachine.INSTANCE );
-                                                                                                  put( RamdiskImageInfo.class, LookupRamdisk.INSTANCE );
-                                                                                                  put( KernelImageInfo.class, LookupKernel.INSTANCE );
-                                                                                                }
-                                                                                              };
   
-  public enum LookupBlockStorage implements TypeResolver<BlockStorageImageInfo> {
+  public enum LookupBlockStorage implements Function<String, BlockStorageImageInfo> {
     INSTANCE;
     @Override
-    public BlockStorageImageInfo lookup( String identifier ) {
+    public BlockStorageImageInfo apply( String identifier ) {
       return EntityWrapper.get( BlockStorageImageInfo.class ).lookupAndClose( Images.exampleBlockStorageWithImageId( identifier ) );
     }
   }
   
-  public enum LookupMachine implements TypeResolver<MachineImageInfo> {
+  public enum LookupMachine implements Function<String, MachineImageInfo> {
     INSTANCE;
     @Override
-    public MachineImageInfo lookup( String identifier ) {
+    public MachineImageInfo apply( String identifier ) {
       return EntityWrapper.get( MachineImageInfo.class ).lookupAndClose( Images.exampleMachineWithImageId( identifier ) );
     }
   }
   
-  public enum LookupKernel implements TypeResolver<KernelImageInfo> {
+  public enum LookupKernel implements Function<String, KernelImageInfo> {
     INSTANCE;
     @Override
-    public KernelImageInfo lookup( String identifier ) {
+    public KernelImageInfo apply( String identifier ) {
       return EntityWrapper.get( KernelImageInfo.class ).lookupAndClose( Images.exampleKernelWithImageId( identifier ) );
     }
   }
   
-  public enum LookupRamdisk implements TypeResolver<RamdiskImageInfo> {
+  public enum LookupRamdisk implements Function<String, RamdiskImageInfo> {
     INSTANCE;
     @Override
-    public RamdiskImageInfo lookup( String identifier ) {
+    public RamdiskImageInfo apply( String identifier ) {
       return EntityWrapper.get( RamdiskImageInfo.class ).lookupAndClose( Images.exampleRamdiskWithImageId( identifier ) );
     }
   }

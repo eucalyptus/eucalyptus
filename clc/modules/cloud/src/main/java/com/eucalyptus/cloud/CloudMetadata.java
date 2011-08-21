@@ -65,7 +65,7 @@ package com.eucalyptus.cloud;
 
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicyVendor;
-import com.eucalyptus.util.RestrictedResource;
+import com.eucalyptus.util.RestrictedType;
 
 /**
  * GRZE:WARN: values are intentionally opaque strings and /not/ a symbolic reference. do not change
@@ -78,7 +78,7 @@ import com.eucalyptus.util.RestrictedResource;
  * @see PolicyVendor
  **/
 @PolicyVendor( "ec2" )
-public interface CloudMetadata<T> extends RestrictedResource<T> {
+public interface CloudMetadata<T> extends RestrictedType<T> {
   
   @PolicyResourceType( "keypair" )
   public interface KeyPairMetadata<S extends KeyPairMetadata<S>> extends CloudMetadata<S> {}

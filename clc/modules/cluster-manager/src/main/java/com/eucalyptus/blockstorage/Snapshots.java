@@ -64,21 +64,17 @@
 package com.eucalyptus.blockstorage;
 
 import java.lang.reflect.UndeclaredThrowableException;
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import org.hibernate.exception.ConstraintViolationException;
-import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
-import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.crypto.Crypto;
-import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
@@ -87,19 +83,16 @@ import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.ResourceQuantityMetricFunction;
-import com.eucalyptus.util.ResourceUsageMetricFunction;
+import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
 
 public class Snapshots {
   private static Logger LOG = Logger.getLogger( Snapshots.class );
   
-  @ResourceQuantityMetricFunction( SnapshotMetadata.class )
+  @QuantityMetricFunction( SnapshotMetadata.class )
   public enum CountSnapshots implements Function<OwnerFullName, Long> {
     INSTANCE;
     

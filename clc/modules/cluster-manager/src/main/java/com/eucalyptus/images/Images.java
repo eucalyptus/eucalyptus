@@ -15,17 +15,15 @@ import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.ResourceQuantityMetricFunction;
+import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
-import com.eucalyptus.util.TypeMapping;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
@@ -41,7 +39,7 @@ import edu.ucsb.eucalyptus.msgs.ImageDetails;
 public class Images {
   private static Logger LOG = Logger.getLogger( Images.class );
   
-  @ResourceQuantityMetricFunction( ImageMetadata.class )
+  @QuantityMetricFunction( ImageMetadata.class )
   public enum CountImages implements Function<OwnerFullName, Long> {
     INSTANCE;
     
@@ -74,7 +72,7 @@ public class Images {
   }
   
   @TypeMapper
-  public enum KernelImageDetails implements TypeMapping<KernelImageInfo, ImageDetails> {
+  public enum KernelImageDetails implements Function<KernelImageInfo, ImageDetails> {
     INSTANCE;
     
     @Override
@@ -100,7 +98,7 @@ public class Images {
   }
   
   @TypeMapper
-  public enum RamdiskImageDetails implements TypeMapping<RamdiskImageInfo, ImageDetails> {
+  public enum RamdiskImageDetails implements Function<RamdiskImageInfo, ImageDetails> {
     INSTANCE;
     
     @Override
@@ -126,7 +124,7 @@ public class Images {
   }
   
   @TypeMapper
-  public enum BlockStorageImageDetails implements TypeMapping<BlockStorageImageInfo, ImageDetails> {
+  public enum BlockStorageImageDetails implements Function<BlockStorageImageInfo, ImageDetails> {
     INSTANCE;
     
     @Override
@@ -159,7 +157,7 @@ public class Images {
   }
   
   @TypeMapper
-  public enum MachineImageDetails implements TypeMapping<MachineImageInfo, ImageDetails> {
+  public enum MachineImageDetails implements Function<MachineImageInfo, ImageDetails> {
     INSTANCE;
     
     @Override

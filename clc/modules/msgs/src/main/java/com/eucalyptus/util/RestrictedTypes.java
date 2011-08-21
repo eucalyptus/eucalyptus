@@ -63,10 +63,15 @@
 
 package com.eucalyptus.util;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
+import org.apache.commons.lang.ClassUtils;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -84,21 +89,86 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
+import com.eucalyptus.system.Threads;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class RestrictedTypes {
-  static Logger                                                            LOG                     = Logger.getLogger( RestrictedTypes.class );
-  private static final Map<Class, Function<OwnerFullName, Long>>           usageMetricFunctions    = Maps.newHashMap( );
-  private static final Map<Class, Function<OwnerFullName, Long>>           quantityMetricFunctions = Maps.newHashMap( );
-  private static final Map<Class, Function<String, RestrictedResource<?>>> resourceResolvers       = Maps.newHashMap( );
+  static Logger LOG = Logger.getLogger( RestrictedTypes.class );
   
-  enum UserAuthFilter implements Predicate<RestrictedResource<?>> {
+  /**
+   * Class implementing {@link Function<String,T extends RestrictedResource>}, that is, one which
+   * converts a string reference into a type reference for the object {@code T} referenced by
+   * {@code identifier}.
+   * 
+   * {@code public abstract T apply( String identifier );}
+   * 
+   * @param identifier
+   * @return T the object referenced by the given {@code identifier}
+   * @throws PersistenceException if an error occurred in the underlying retrieval mechanism
+   * @throws NoSuchElementException if the requested {@code identifier} does not exist and the user
+   *           is authorized.
+   */
+  @Target( { ElementType.TYPE } )
+  @Retention( RetentionPolicy.RUNTIME )
+  public @interface Resolver {
+    Class<?> value( );
+  }
+  
+  private static final Map<Class, Function<?, ?>> resourceResolvers = Maps.newHashMap( );
+  
+  public static final <T extends RestrictedType<T>> Function<String, T> resolver( Class<?> type ) {
+    return ( Function<String, T> ) checkMapByType( type, resourceResolvers );
+  }
+  
+  /**
+   * Implementations <strong>measure</strong> the quantity of {@code T}, the <i>resource type</i>,
+   * currently ascribed to a user, via {@link OwnerFullName}. In other words, types annotated with
+   * this encapsulate a service and resource-specific method for computing the current
+   * {@code quantity} of {@code resource type} ascribed to {@code ownerFullName}.
+   */
+  @Target( { ElementType.TYPE } )
+  @Retention( RetentionPolicy.RUNTIME )
+  public @interface UsageMetricFunction {
+    Class<?> value( );
+  }
+  
+  private static final Map<Class, Function<?, ?>> usageMetricFunctions = Maps.newHashMap( );
+  
+  @SuppressWarnings( "unchecked" )
+  public static Function<OwnerFullName, Long> usageMetricFunction( Class type ) {
+    return ( Function<OwnerFullName, Long> ) checkMapByType( type, usageMetricFunctions );
+  }
+  
+  @Target( { ElementType.TYPE } )
+  @Retention( RetentionPolicy.RUNTIME )
+  public @interface QuantityMetricFunction {
+    Class<?> value( );
+  }
+  
+  private static final Map<Class, Function<?, ?>> quantityMetricFunctions = Maps.newHashMap( );
+  
+  @SuppressWarnings( "unchecked" )
+  public static Function<OwnerFullName, Long> quantityMetricFunction( Class type ) {
+    return ( Function<OwnerFullName, Long> ) checkMapByType( type, quantityMetricFunctions );
+  }
+  
+  private static Function<?, ?> checkMapByType( Class type, Map<Class, Function<?, ?>> map ) {
+    for ( Class subType : Classes.ancestors( type ) ) {
+      if ( map.containsKey( subType ) ) {
+        return map.get( subType );
+      }
+    }
+    throw new NoSuchElementException( "Failed to lookup function (@" + Threads.currentStackFrame( 1 ).getMethodName( ) + ") for type: " + type );
+  }
+  
+  enum UserAuthFilter implements Predicate<RestrictedType<?>> {
     INSTANCE;
     @Override
-    public boolean apply( RestrictedResource<?> arg0 ) {
+    public boolean apply( RestrictedType<?> arg0 ) {
       final Context ctx = Contexts.lookup( );
       final String resourceName = arg0.getDisplayName( );
       final Ats ats = Ats.inClassHierarchy( arg0 );
@@ -133,7 +203,7 @@ public class RestrictedTypes {
    *           is authorized.
    * @throws IllegalContextAccessException if the current request context cannot be determined.
    */
-  public static <T extends HasOwningAccount> T doPrivileged( String identifier, TypeResolver<T> lookupFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends HasOwningAccount> T doPrivileged( String identifier, Function<String, T> lookupFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     Context ctx = Contexts.lookup( );
     Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
     LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + lookupFunction + " typed as " + Classes.genericsToClasses( lookupFunction ) );
@@ -164,7 +234,7 @@ public class RestrictedTypes {
         User requestUser = ctx.getUser( );
         T requestedObject;
         try {
-          requestedObject = lookupFunction.lookup( identifier );
+          requestedObject = lookupFunction.apply( identifier );
           if ( requestedObject == null ) {
             throw new NoSuchElementException( "Failed to lookup requested " + rscType.getCanonicalName( ) + " with id " + identifier + " using "
                                               + lookupFunction.getClass( ) );
@@ -243,7 +313,7 @@ public class RestrictedTypes {
     return findPolicyAction( Classes.typeOf( rscType ) );
   }
   
-  public static String findPolicyAction( Class<RestrictedResource<?>> rscType ) {
+  public static String findPolicyAction( Class<RestrictedType<?>> rscType ) {
     Context ctx = Contexts.lookup( );
     Ats ats = Ats.inClassHierarchy( rscType );
     PolicyVendor vendor = ats.get( PolicyVendor.class );
@@ -255,40 +325,26 @@ public class RestrictedTypes {
     return action;
   }
   
-  public static Function<OwnerFullName, Long> usageMetricFunction( Class type ) {
-    for ( Class subType : Classes.ancestors( type ) ) {
-      if ( usageMetricFunctions.containsKey( subType ) ) {
-        return usageMetricFunctions.get( subType );
-      }
-    }
-    throw new NoSuchElementException( "Failed to lookup usage metric function for type: " + type );
-  }
-  
-  public static Function<OwnerFullName, Long> quantityMetricFunction( Class type ) {
-    for ( Class subType : Classes.ancestors( type ) ) {
-      if ( quantityMetricFunctions.containsKey( subType ) ) {
-        return quantityMetricFunctions.get( subType );
-      }
-    }
-    throw new NoSuchElementException( "Failed to lookup quantity metric function for type: " + type );
-  }
-  
   public static class ResourceMetricFunctionDiscovery extends ServiceJarDiscovery {
     
     @SuppressWarnings( "synthetic-access" )
     @Override
     public boolean processClass( Class candidate ) throws Exception {
-      if ( Ats.from( candidate ).has( ResourceUsageMetricFunction.class ) && Function.class.isAssignableFrom( candidate ) ) {
-        ResourceUsageMetricFunction measures = Ats.from( candidate ).get( ResourceUsageMetricFunction.class );
+      if ( Ats.from( candidate ).has( UsageMetricFunction.class ) && Function.class.isAssignableFrom( candidate ) ) {
+        UsageMetricFunction measures = Ats.from( candidate ).get( UsageMetricFunction.class );
         Class measuredType = measures.value( );
         RestrictedTypes.usageMetricFunctions.put( measuredType, ( Function<OwnerFullName, Long> ) Classes.newInstance( candidate ) );
         return true;
-      } else if ( Ats.from( candidate ).has( ResourceQuantityMetricFunction.class ) && Function.class.isAssignableFrom( candidate ) ) {
-        ResourceQuantityMetricFunction measures = Ats.from( candidate ).get( ResourceQuantityMetricFunction.class );
+      } else if ( Ats.from( candidate ).has( QuantityMetricFunction.class ) && Function.class.isAssignableFrom( candidate ) ) {
+        QuantityMetricFunction measures = Ats.from( candidate ).get( QuantityMetricFunction.class );
         Class measuredType = measures.value( );
         RestrictedTypes.quantityMetricFunctions.put( measuredType, ( Function<OwnerFullName, Long> ) Classes.newInstance( candidate ) );
         return true;
-//      } else if ( Ats.from( candidate ).has( ResourceResolver.class ) && Function.class.isAssignableFrom( candidate ) ) {
+      } else if ( Ats.from( candidate ).has( Resolver.class ) && Function.class.isAssignableFrom( candidate ) ) {
+        QuantityMetricFunction measures = Ats.from( candidate ).get( QuantityMetricFunction.class );
+        Class measuredType = measures.value( );
+        RestrictedTypes.resourceResolvers.put( measuredType, ( Function<String, RestrictedType<?>> ) Classes.newInstance( candidate ) );
+        return true;
       } else {
         return false;
       }
@@ -302,12 +358,7 @@ public class RestrictedTypes {
   }
   
   public static <T> Function<String, T> listAll( Class<T> type ) {
-    for ( Class subType : Classes.ancestors( type ) ) {
-      if ( quantityMetricFunctions.containsKey( subType ) ) {
-        Function<String, T> ret = ( Function<String, T> ) resourceResolvers.get( subType );
-        //TODO:GRZE:WTF FINISH THIS SHIT.
-      }
-    }
-    throw new NoSuchElementException( "Failed to lookup quantity metric function for type: " + type );
+    //TODO:GRZE:WTF FINISH THIS SHIT.
+    return null;
   }
 }

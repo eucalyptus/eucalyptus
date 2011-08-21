@@ -102,6 +102,7 @@ import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.Tx;
 import com.google.common.base.Predicate;

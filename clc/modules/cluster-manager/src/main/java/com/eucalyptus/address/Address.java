@@ -92,7 +92,6 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.TypeMapping;
 import com.eucalyptus.util.async.NOOP;
 import com.eucalyptus.util.async.RemoteCallback;
 import edu.ucsb.eucalyptus.msgs.AddressInfoType;
@@ -178,7 +177,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   public Address( ) {}
   
   public Address( final String ipAddress ) {
-    super( Principals.nobodyFullName(), ipAddress );
+    super( Principals.nobodyFullName( ), ipAddress );
   }
   
   public Address( String ipAddress, String partition ) {
@@ -210,7 +209,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
       this.instanceId = UNASSIGNED_INSTANCEID;
     }
-    if ( Principals.nobodyFullName().equals( super.getOwner( ) ) ) {
+    if ( Principals.nobodyFullName( ).equals( super.getOwner( ) ) ) {
       this.atomicState.set( State.unallocated, true );
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
       this.instanceId = UNASSIGNED_INSTANCEID;
@@ -224,7 +223,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       this.atomicState.set( State.allocated, true );
       if ( this.isSystemOwned( ) ) {
         Addresses.getInstance( ).registerDisabled( this );
-        this.setOwner( Principals.nobodyFullName() );
+        this.setOwner( Principals.nobodyFullName( ) );
         this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         this.instanceId = UNASSIGNED_INSTANCEID;
         Address.removeAddress( this.getDisplayName( ) );
@@ -287,7 +286,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
                                                                                                         : "USER" ).info( );
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
-        Address.this.setOwner( Principals.nobodyFullName() );
+        Address.this.setOwner( Principals.nobodyFullName( ) );
         Address.removeAddress( Address.this.getDisplayName( ) );
         Address.this.stateUuid = UUID.randomUUID( ).toString( );
         Address.this.atomicState.attemptMark( State.unallocated, false );
@@ -358,7 +357,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
                        public void top( ) {
                          Address.this.instanceId = PENDING_ASSIGNMENT;
                          Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
-                         Address.this.setOwner( Principals.systemFullName() );
+                         Address.this.setOwner( Principals.systemFullName( ) );
                          Address.this.stateUuid = UUID.randomUUID( ).toString( );
                          try {
                            Addresses.getInstance( ).register( Address.this );
@@ -446,7 +445,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   public boolean isSystemOwned( ) {
-    return Principals.systemFullName().equals( ( UserFullName ) this.getOwner( ) );
+    return Principals.systemFullName( ).equals( ( UserFullName ) this.getOwner( ) );
   }
   
   public boolean isAssigned( ) {
@@ -546,19 +545,6 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     String desc = String.format( "%s (%s)", this.getInstanceId( ), this.getOwner( ) );
     return new AddressInfoType( name, desc );
   }
-  
-  public static final TypeMapping<Address, AddressInfoType> //
-                                                            describeAddressTypeMapping =
-                                                                                         new TypeMapping<Address, AddressInfoType>( ) {
-                                                                                           @Override
-                                                                                           public AddressInfoType apply( Address from ) {
-                                                                                             return new AddressInfoType(
-                                                                                                                         from.getDisplayName( ),
-                                                                                                                         UNASSIGNED_INSTANCEID.equals( from.getInstanceId( ) )
-                                                                                                                           ? null
-                                                                                                                           : from.getInstanceId( ) );
-                                                                                           }
-                                                                                         };
   
   public AddressInfoType getDescription( ) {
     String name = this.getName( );
