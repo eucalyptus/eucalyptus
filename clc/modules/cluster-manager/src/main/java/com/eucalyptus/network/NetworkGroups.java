@@ -67,6 +67,8 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.persistence.EntityTransaction;
+import javax.persistence.PersistenceException;
+import javax.persistence.RollbackException;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
@@ -124,7 +126,7 @@ public class NetworkGroups {
       return this.useNetworkTags;
     }
     
-    public void setUseNetworkTags( Boolean useNetworkTags ) {
+    public void setUseNetworkTags( final Boolean useNetworkTags ) {
       this.useNetworkTags = useNetworkTags;
     }
     
@@ -132,7 +134,7 @@ public class NetworkGroups {
       return this.minNetworkTag;
     }
     
-    public void setMinNetworkTag( Integer minNetworkTag ) {
+    public void setMinNetworkTag( final Integer minNetworkTag ) {
       this.minNetworkTag = minNetworkTag;
     }
     
@@ -140,7 +142,7 @@ public class NetworkGroups {
       return this.maxNetworkTag;
     }
     
-    public void setMaxNetworkTag( Integer maxNetworkTag ) {
+    public void setMaxNetworkTag( final Integer maxNetworkTag ) {
       this.maxNetworkTag = maxNetworkTag;
     }
     
@@ -148,7 +150,7 @@ public class NetworkGroups {
       return this.maxNetworkIndex;
     }
     
-    public void setMaxNetworkIndex( Long maxNetworkIndex ) {
+    public void setMaxNetworkIndex( final Long maxNetworkIndex ) {
       this.maxNetworkIndex = maxNetworkIndex;
     }
     
@@ -156,7 +158,7 @@ public class NetworkGroups {
       return this.minNetworkIndex;
     }
     
-    public void setMinNetworkIndex( Long minNetworkIndex ) {
+    public void setMinNetworkIndex( final Long minNetworkIndex ) {
       this.minNetworkIndex = minNetworkIndex;
     }
     
@@ -170,7 +172,7 @@ public class NetworkGroups {
       Transactions.each( new ClusterConfiguration( ), new Callback<ClusterConfiguration>( ) {
         
         @Override
-        public void fire( ClusterConfiguration input ) {
+        public void fire( final ClusterConfiguration input ) {
           netConfig.setUseNetworkTags( netTagging.compareAndSet( true, input.getUseNetworkTags( ) ) );
           
           netConfig.setMinNetworkTag( Ints.max( netConfig.getMinNetworkTag( ), input.getMinNetworkTag( ) ) );
@@ -181,13 +183,13 @@ public class NetworkGroups {
           
         }
       } );
-    } catch ( TransactionException ex ) {
+    } catch ( final TransactionException ex ) {
       Logs.extreme( ).error( ex, ex );
     }
   }
   
   public static List<Long> networkIndexInterval( ) {
-    List<Long> interval = Lists.newArrayList( );
+    final List<Long> interval = Lists.newArrayList( );
     for ( Long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
       interval.add( i );
     }
@@ -196,7 +198,7 @@ public class NetworkGroups {
   }
   
   public static List<Integer> networkTagInterval( ) {
-    List<Integer> interval = Lists.newArrayList( );
+    final List<Integer> interval = Lists.newArrayList( );
     for ( int i = NetworkGroups.networkingConfiguration( ).getMinNetworkTag( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkTag( ); i++ ) {
       interval.add( i );
     }
@@ -211,61 +213,57 @@ public class NetworkGroups {
   public static NetworkGroup lookup( final String uuid ) throws NoSuchMetadataException {
     try {
       return Transactions.find( new NetworkGroup( ) {
+        /**
+         * 
+         */
+        private static final long serialVersionUID = 1L;
+
         {
           this.setNaturalId( uuid );
         }
       } );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       throw new NoSuchMetadataException( "Failed to find security group: " + uuid, ex );
     }
   }
   
-  public static NetworkGroup lookup( OwnerFullName ownerFullName, String groupName ) throws MetadataException {
+  public static NetworkGroup lookup( final OwnerFullName ownerFullName, final String groupName ) throws MetadataException {
     if ( defaultNetworkName( ).equals( groupName ) ) {
       createDefault( ownerFullName );
     }
-    EntityTransaction db = Entities.get( NetworkGroups.class );
+    final EntityTransaction db = Entities.get( NetworkGroups.class );
     try {
-      NetworkGroup ret = Entities.uniqueResult( new NetworkGroup( ownerFullName, groupName ) );
+      final NetworkGroup ret = Entities.uniqueResult( new NetworkGroup( ownerFullName, groupName ) );
       db.commit( );
       return ret;
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
       throw new NoSuchMetadataException( "Failed to find security group: " + groupName + " for " + ownerFullName, ex );
     }
   }
   
-  public static List<NetworkGroup> lookupAll( OwnerFullName ownerFullName, String groupNamePattern ) throws MetadataException {
+  public static List<NetworkGroup> lookupAll( final OwnerFullName ownerFullName, final String groupNamePattern ) throws MetadataException {
     if ( defaultNetworkName( ).equals( groupNamePattern ) ) {
       createDefault( ownerFullName );
     }
-    EntityTransaction db = Entities.get( NetworkGroups.class );
+    final EntityTransaction db = Entities.get( NetworkGroups.class );
     try {
-      List<NetworkGroup> results = Entities.query( new NetworkGroup( ownerFullName, groupNamePattern ) );
-      List<NetworkGroup> ret = Lists.newArrayList( results );
+      final List<NetworkGroup> results = Entities.query( new NetworkGroup( ownerFullName, groupNamePattern ) );
+      final List<NetworkGroup> ret = Lists.newArrayList( results );
       db.commit( );
       return ret;
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
       throw new NoSuchMetadataException( "Failed to find security group: " + groupNamePattern + " for " + ownerFullName, ex );
     }
   }
   
-  static void createDefault( OwnerFullName ownerFullName ) throws MetadataException {
-    EntityTransaction db = Entities.get( NetworkGroup.class );
+  static void createDefault( final OwnerFullName ownerFullName ) throws MetadataException {
     try {
-      NetworkGroup defaultNet = new NetworkGroup( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
-      NetworkGroup entity = Entities.merge( defaultNet );
-      db.commit( );
-    } catch ( ConstraintViolationException ex ) {
-      Logs.exhaust( ).error( ex );
-      db.rollback( );
-    } catch ( Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
-      db.rollback( );
-      throw new RuntimeException( "Failed to create default group: " + ownerFullName.toString( ), ex );
+      create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
+    } catch ( DuplicateMetadataException ex ) {
     }
   }
   
@@ -273,17 +271,17 @@ public class NetworkGroups {
     return DEFAULT_NETWORK_NAME;
   }
   
-  public static NetworkGroup create( OwnerFullName ownerFullName, String groupName, String groupDescription ) throws MetadataException {
-    EntityTransaction db = Entities.get( NetworkGroup.class );
+  public static NetworkGroup create( final OwnerFullName ownerFullName, final String groupName, final String groupDescription ) throws MetadataException {
+    final EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
-      NetworkGroup entity = Entities.merge( new NetworkGroup( ownerFullName, groupName, groupDescription ) );
+      final NetworkGroup entity = Entities.merge( new NetworkGroup( ownerFullName, groupName, groupDescription ) );
       db.commit( );
       return entity;
-    } catch ( ConstraintViolationException ex ) {
+    } catch ( final ConstraintViolationException ex ) {
       Logs.exhaust( ).error( ex );
       db.rollback( );
       throw new DuplicateMetadataException( "Failed to create default group: " + ownerFullName.toString( ), ex );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
       throw new MetadataException( "Failed to create default group: " + ownerFullName.toString( ), PersistenceExceptions.transform( ex ) );
@@ -295,7 +293,7 @@ public class NetworkGroups {
     INSTANCE;
     
     @Override
-    public UserIdGroupPairType apply( NetworkPeer peer ) {
+    public UserIdGroupPairType apply( final NetworkPeer peer ) {
       return new UserIdGroupPairType( peer.getUserQueryKey( ), peer.getGroupName( ) );
     }
   }
@@ -305,7 +303,7 @@ public class NetworkGroups {
     INSTANCE;
     
     @Override
-    public String apply( IpRange range ) {
+    public String apply( final IpRange range ) {
       return range.getValue( );
     }
   }
@@ -315,11 +313,11 @@ public class NetworkGroups {
     INSTANCE;
     
     @Override
-    public IpPermissionType apply( NetworkRule rule ) {
-      IpPermissionType ipPerm = new IpPermissionType( rule.getProtocol( ), rule.getLowPort( ), rule.getHighPort( ) );
-      Iterable<UserIdGroupPairType> peers = Iterables.transform( rule.getNetworkPeers( ), TypeMappers.lookup( NetworkPeer.class, UserIdGroupPairType.class ) );
+    public IpPermissionType apply( final NetworkRule rule ) {
+      final IpPermissionType ipPerm = new IpPermissionType( rule.getProtocol( ), rule.getLowPort( ), rule.getHighPort( ) );
+      final Iterable<UserIdGroupPairType> peers = Iterables.transform( rule.getNetworkPeers( ), TypeMappers.lookup( NetworkPeer.class, UserIdGroupPairType.class ) );
       Iterables.addAll( ipPerm.getGroups( ), peers );
-      Iterable<String> ipRanges = Iterables.transform( rule.getIpRanges( ), TypeMappers.lookup( IpRange.class, String.class ) );
+      final Iterable<String> ipRanges = Iterables.transform( rule.getIpRanges( ), TypeMappers.lookup( IpRange.class, String.class ) );
       Iterables.addAll( ipPerm.getIpRanges( ), ipRanges );
       return ipPerm;
     }
@@ -329,12 +327,12 @@ public class NetworkGroups {
   public enum NetworkGroupAsSecurityGroupItem implements Function<NetworkGroup, SecurityGroupItemType> {
     INSTANCE;
     @Override
-    public SecurityGroupItemType apply( NetworkGroup input ) {
-      EntityTransaction db = Entities.get( NetworkGroup.class );
+    public SecurityGroupItemType apply( final NetworkGroup input ) {
+      final EntityTransaction db = Entities.get( NetworkGroup.class );
       try {
-        NetworkGroup netGroup = Entities.merge( input );
-        SecurityGroupItemType groupInfo = new SecurityGroupItemType( netGroup.getOwnerAccountNumber( ), netGroup.getDisplayName( ), netGroup.getDescription( ) );
-        Iterable<IpPermissionType> ipPerms = Iterables.transform( netGroup.getNetworkRules( ), TypeMappers.lookup( NetworkRule.class, IpPermissionType.class ) );
+        final NetworkGroup netGroup = Entities.merge( input );
+        final SecurityGroupItemType groupInfo = new SecurityGroupItemType( netGroup.getOwnerAccountNumber( ), netGroup.getDisplayName( ), netGroup.getDescription( ) );
+        final Iterable<IpPermissionType> ipPerms = Iterables.transform( netGroup.getNetworkRules( ), TypeMappers.lookup( NetworkRule.class, IpPermissionType.class ) );
         Iterables.addAll( groupInfo.getIpPermissions( ), ipPerms );
         return groupInfo;
       } finally {
@@ -344,7 +342,7 @@ public class NetworkGroups {
     
   }
   
-  public static List<NetworkGroup> userNetworkGroups( OwnerFullName owner ) throws MetadataException {
+  public static List<NetworkGroup> userNetworkGroups( final OwnerFullName owner ) throws MetadataException {
     return lookupAll( owner, null );
   }
 }
