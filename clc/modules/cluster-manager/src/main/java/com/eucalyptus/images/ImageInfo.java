@@ -75,10 +75,13 @@ import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
 import javax.persistence.DiscriminatorType;
 import javax.persistence.DiscriminatorValue;
+import javax.persistence.ElementCollection;
+import javax.persistence.EntityTransaction;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
+import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -89,17 +92,20 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.Tx;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 @Entity
@@ -111,9 +117,11 @@ import com.google.common.collect.Lists;
 @DiscriminatorColumn( name = "metadata_image_discriminator", discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "metadata_kernel_or_ramdisk" )
 public class ImageInfo extends UserMetadata<ImageMetadata.State> implements ImageMetadata {
+  @Transient
+  private static final long          serialVersionUID = 1L;
   
   @Transient
-  private static Logger         LOG            = Logger.getLogger( ImageInfo.class );
+  private static Logger              LOG              = Logger.getLogger( ImageInfo.class );
   
   /**
    * Name of the registered image info:
@@ -121,43 +129,44 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
    * (-), or underscores(_)
    */
   @Column( name = "metadata_image_name", nullable = false )
-  private String                imageName;
+  private String                     imageName;
   
   @Column( name = "metadata_image_description" )
-  private String                description;
+  private String                     description;
   
   @Column( name = "metadata_image_arch", nullable = false )
   @Enumerated( EnumType.STRING )
-  private ImageMetadata.Architecture    architecture;
+  private ImageMetadata.Architecture architecture;
   
   @Column( name = "metadata_image_is_public", columnDefinition = "boolean default true" )
-  private Boolean               imagePublic;
+  private Boolean                    imagePublic;
   
   @Column( name = "metadata_image_platform", nullable = false )
   @Enumerated( EnumType.STRING )
-  private ImageMetadata.Platform        platform;
+  private ImageMetadata.Platform     platform;
   
   @Column( name = "metadata_image_type" )
   @Enumerated( EnumType.STRING )
-  private ImageMetadata.Type            imageType;
+  private ImageMetadata.Type         imageType;
   
-  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "parent" )
+  @ElementCollection
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<LaunchPermission> permissions    = new HashSet<LaunchPermission>( );
+  private Set<String>                permissions      = new HashSet<String>( );
   
-  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "parent" )
+  @ElementCollection
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<ProductCode>      productCodes   = new HashSet<ProductCode>( );
+  private Set<String>                productCodes     = new HashSet<String>( );
   
-  @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "parent" )
+  @OneToMany( cascade = { CascadeType.MERGE, CascadeType.PERSIST, CascadeType.REFRESH }, orphanRemoval = true )
+  @JoinColumn( name = "metadata_image_dev_map_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<DeviceMapping>    deviceMappings = new HashSet<DeviceMapping>( );
+  private Set<DeviceMapping>         deviceMappings   = new HashSet<DeviceMapping>( );
   
   @Column( name = "metadata_image_size_bytes", nullable = false )
-  private Long                  imageSizeBytes;
+  private Long                       imageSizeBytes;
   
   @Transient
-  private FullName              fullName;
+  private FullName                   fullName;
   
   public ImageInfo( ) {}
   
@@ -193,11 +202,11 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
     this.platform = platform;
     this.imagePublic = ImageConfiguration.getInstance( ).getDefaultVisibility( );
   }
-
+  
   ImageInfo( OwnerFullName ownerFullName, String imageId ) {
     super( ownerFullName, imageId );
   }
-
+  
   static ImageInfo self( ImageInfo image ) {
     return new ImageInfo( image.getDisplayName( ) );
   }
@@ -234,11 +243,11 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
     this.imagePublic = aPublic;
   }
   
-  private Set<LaunchPermission> getPermissions( ) {
-    return permissions;
+  private Set<String> getPermissions( ) {
+    return this.permissions;
   }
   
-  private void setPermissions( final Set<LaunchPermission> permissions ) {
+  private void setPermissions( final Set<String> permissions ) {
     this.permissions = permissions;
   }
   
@@ -248,9 +257,8 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
       Transactions.one( new ImageInfo( this.displayName ), new Callback<ImageInfo>( ) {
         @Override
         public void fire( final ImageInfo t ) {
-          LaunchPermission imgAuth = new LaunchPermission( t, account.getAccountNumber( ) );
-          if ( !t.getPermissions( ).contains( imgAuth ) ) {
-            t.getPermissions( ).add( imgAuth );
+          if ( !t.getPermissions( ).contains( account.getAccountNumber( ) ) ) {
+            t.getPermissions( ).add( account.getAccountNumber( ) );
           }
         }
       } );
@@ -264,6 +272,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
     return true;
   }
   
+  /** GRZE:REMOVE:  /not/ OK.  cross-module reference to private component data type. **/
   public boolean checkPermission( final String accountId ) {
     final boolean[] result = { false };
     try {
@@ -287,7 +296,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
         @Override
         public void fire( final ImageInfo t ) {
           t.getPermissions( ).clear( );
-          t.getPermissions( ).add( new LaunchPermission( t, t.getOwnerAccountNumber( ) ) );
+          t.getPermissions( ).add( t.getOwnerAccountNumber( ) );
           t.setImagePublic( ImageConfiguration.getInstance( ).getDefaultVisibility( ) );
         }
       } );
@@ -518,45 +527,63 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   /**
    * Add launch permissions.
    * 
-   * Can only be used within the scope of a db transaction.
-   * 
    * @param accountIds
    */
   public void addPermissions( List<String> accountIds ) {
-    for ( String aid : accountIds ) {
-      try {
-        // Verify account ID
-        Account account = Accounts.lookupAccountById( aid );
-        LaunchPermission perm = new LaunchPermission( this, account.getAccountNumber( ) );
-        if ( !getPermissions( ).contains( perm ) ) {
-          getPermissions( ).add( perm );
+    EntityTransaction db = Entities.get( ImageInfo.class );
+    try {
+      ImageInfo entity = Entities.merge( this );
+      Iterables.all( accountIds, new Predicate<String>( ) {
+        
+        @Override
+        public boolean apply( String input ) {
+          try {
+            Account account = Accounts.lookupAccountById( input );
+            ImageInfo.this.getPermissions( ).add( input );
+          } catch ( Exception e ) {
+            LOG.error( e, e );
+          }
+          return true;
         }
-      } catch ( Exception e ) {
-        LOG.error( e, e );
-      }
+      } );
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
     }
   }
   
   /**
    * Remove launch permissions.
    * 
-   * Can only be used within the scope of a db transaction.
-   * 
    * @param accountIds
    */
   public void removePermissions( List<String> accountIds ) {
-    for ( String aid : accountIds ) {
-      try {
-        // Verify account ID
-        Account account = Accounts.lookupAccountById( aid );
-        LaunchPermission perm = new LaunchPermission( this, account.getAccountNumber( ) );
-        getPermissions( ).remove( perm );
-      } catch ( Exception e ) {
-        LOG.error( e, e );
-      }
+    
+    EntityTransaction db = Entities.get( ImageInfo.class );
+    try {
+      ImageInfo entity = Entities.merge( this );
+      Iterables.all( accountIds, new Predicate<String>( ) {
+        
+        @Override
+        public boolean apply( String input ) {
+          try {
+            Account account = Accounts.lookupAccountById( input );
+            ImageInfo.this.getPermissions( ).remove( input );
+          } catch ( Exception e ) {
+            LOG.error( e, e );
+          }
+          return true;
+        }
+      } );
+      
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
     }
   }
-
+  
   public static ImageInfo named( OwnerFullName input, String imageId ) {
     return new ImageInfo( input, imageId );
   }

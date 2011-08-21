@@ -103,7 +103,7 @@ public class DeviceMapping extends AbstractPersistent {
   private String                  virtualName;
 
   @ManyToOne
-  @JoinColumn( name = "metadata_device_mapping_for_image_id" )
+  @JoinColumn( name = "metadata_image_dev_map_fk", insertable = false, updatable = false )
   private ImageInfo               parent;
   
   protected DeviceMapping( ) {

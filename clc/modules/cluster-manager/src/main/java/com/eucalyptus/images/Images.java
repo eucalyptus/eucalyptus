@@ -256,11 +256,6 @@ public class Images {
                                                                    };
   public static ImageInfo                         ALL              = new ImageInfo( );
   
-  /**
-   * TODO: DOCUMENT Images.java
-   * 
-   * @return
-   */
   public static List<ImageInfo> listAllImages( ) {
     List<ImageInfo> images = Lists.newArrayList( );
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );

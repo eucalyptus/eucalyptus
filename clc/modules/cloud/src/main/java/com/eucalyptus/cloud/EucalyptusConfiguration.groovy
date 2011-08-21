@@ -70,6 +70,7 @@ import java.io.Serializable
 import javax.persistence.PersistenceContext
 import javax.persistence.Table
 import javax.persistence.Transient
+import javax.persistence.DiscriminatorValue
 import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.hibernate.annotations.Entity
@@ -83,6 +84,7 @@ import com.eucalyptus.config.ComponentConfiguration
 @Table( name = "config_eucalyptus" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart(Eucalyptus.class)
+@DiscriminatorValue( "EucalyptusConfiguration" )
 public class EucalyptusConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/services/Eucalyptus";

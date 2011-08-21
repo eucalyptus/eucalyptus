@@ -64,6 +64,7 @@
 package com.eucalyptus.config
 
 import java.io.Serializable
+import javax.persistence.DiscriminatorValue;
 import javax.persistence.PersistenceContext
 import javax.persistence.Table
 import javax.persistence.Transient
@@ -78,6 +79,7 @@ import com.eucalyptus.component.id.Storage
 @Table( name = "config_sc" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart(Storage.class)
+@DiscriminatorValue( "StorageControllerConfiguration" )
 public class StorageControllerConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/services/Storage";

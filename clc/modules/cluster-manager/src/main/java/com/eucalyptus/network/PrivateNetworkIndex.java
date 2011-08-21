@@ -169,7 +169,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
       public PrivateNetworkIndex abort( ) throws ResourceAllocationException {
         return bogusIndex;
       }
-
+      
       @Override
       public PrivateNetworkIndex clear( ) throws ResourceAllocationException {
         return bogusIndex;
@@ -267,15 +267,15 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
     builder.append( "PrivateNetworkIndex:" );
-    if ( this.index != null ) builder.append( "index=" ).append( this.index ).append( ":" );
-    if ( this.extantNetwork != null ) builder.append( "extantNetwork=" ).append( this.extantNetwork );
+    if ( this.extantNetwork != null ) builder.append( this.extantNetwork.getName( ) ).append( " tag=" ).append( this.extantNetwork.getTag( ) );
+    if ( this.index != null ) builder.append( "idx=" ).append( this.index );
     return builder.toString( );
   }
-
+  
   private VmInstance getInstance( ) {
     return this.instance;
   }
-
+  
   private void setInstance( VmInstance instance ) {
     this.instance = instance;
   }

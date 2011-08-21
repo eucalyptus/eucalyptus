@@ -81,6 +81,7 @@ import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
+import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
@@ -125,17 +126,18 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   }
   
   @Column( name = "metadata_network_group_description" )
-  private String                description;
+  private String           description;
   
-  @OneToMany( cascade = { CascadeType.ALL } )
   @Fetch( FetchMode.JOIN )
+  @OneToMany( cascade = { CascadeType.MERGE, CascadeType.PERSIST, CascadeType.REFRESH } )
   @JoinTable( name = "metadata_network_group_has_rules", joinColumns = { @JoinColumn( name = "id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_rule_id" ) } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<NetworkRule>      networkRules     = new HashSet<NetworkRule>( );
+  private Set<NetworkRule> networkRules = new HashSet<NetworkRule>( );
   
-  @OneToOne( cascade = { CascadeType.ALL }, mappedBy = "networkGroup", fetch = FetchType.EAGER )
+  @OneToOne( cascade = { CascadeType.ALL}, fetch = FetchType.EAGER )
+  @PrimaryKeyJoinColumn
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private ExtantNetwork         extantNetwork;
+  private ExtantNetwork    extantNetwork;
   
   NetworkGroup( ) {}
   

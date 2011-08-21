@@ -65,6 +65,7 @@ package com.eucalyptus.cluster;
 
 import java.io.Serializable;
 import javax.persistence.Column;
+import javax.persistence.DiscriminatorValue;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostPersist;
 import javax.persistence.PostUpdate;
@@ -88,6 +89,7 @@ import com.eucalyptus.network.NetworkGroups;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart( ClusterController.class )
 @ConfigurableClass( root = "cluster", alias = "cc", description = "Basic cluster controller configuration.", singleton = false, deferred = true )
+@DiscriminatorValue( "ClusterConfiguration" )
 public class ClusterConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String         DEFAULT_SERVICE_PATH  = "/axis2/services/EucalyptusCC";

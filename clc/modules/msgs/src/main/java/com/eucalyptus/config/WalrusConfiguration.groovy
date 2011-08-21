@@ -67,6 +67,7 @@ import java.io.Serializable;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Entity;
 import java.io.Serializable
+import javax.persistence.DiscriminatorValue;
 import javax.persistence.PersistenceContext
 import javax.persistence.Table
 import javax.persistence.Transient
@@ -81,6 +82,7 @@ import com.eucalyptus.component.id.Walrus
 @Table( name = "config_walrus" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart(Walrus.class)
+@DiscriminatorValue( "WalrusConfiguration" )
 public class WalrusConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/services/Walrus";
