@@ -85,7 +85,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 public class StackConfiguration extends AbstractPersistent {
   
   public static final Integer CHANNEL_CONNECT_TIMEOUT           = 500;
-  @ConfigurableField( initial = "3", changeListener = TimeChangeListener.class,       
+  @ConfigurableField( initial = "3", changeListener = TimeChangeListener.class,
                       description = "Time interval duration (in seconds) during which duplicate signatures will be accepted to accomodate collisions for legitimate requests inherent in Query/REST signing protocol." )
   public static Integer       REPLAY_SKEW_WINDOW_SEC            = 3;
   @ConfigurableField( initial = "300",
@@ -112,7 +112,7 @@ public class StackConfiguration extends AbstractPersistent {
   public static Long          SERVER_BOSS_POOL_TOTAL_MEM        = 100 * 1024 * 1024l;
   public static Long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500l;
   @ConfigurableField( initial = "" + 8773, description = "Web services port." )
-  public static final Integer       PORT                              = 8773;
+  public static final Integer PORT                              = 8773;
   public static Long          CLIENT_IDLE_TIMEOUT_SECS          = 4 * 60l;
   public static Long          CLUSTER_IDLE_TIMEOUT_SECS         = 4 * 60l;
   public static Long          CLUSTER_CONNECT_TIMEOUT_MILLIS    = 2000l;

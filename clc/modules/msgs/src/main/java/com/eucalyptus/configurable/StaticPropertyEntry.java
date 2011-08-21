@@ -66,6 +66,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.charset.CoderMalfunctionError;
 import javax.activation.UnsupportedDataTypeException;
+import org.apache.commons.lang.ClassUtils;
 import org.apache.log4j.Logger;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 
@@ -99,16 +100,20 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
   
   @Override
   public String setValue( String s ) {
-    try {
-      Object o = super.getTypeParser( ).apply( s );
-      this.fireChange( s );
-      this.field.set( null, o );
-      LOG.info( "--> Set property value:  " + super.getQualifiedName( ) + " to " + s );
-    } catch ( Exception t ) {
-      LOG.warn( "Failed to set property: " + super.getQualifiedName( ) + " because of " + t.getMessage( ) );
-      LOG.debug( t, t );
+    if ( Modifier.isFinal( this.field.getModifiers( ) ) ) {
+      return "failed to assign final field: " + super.getQualifiedName( );
+    } else {
+      try {
+        Object o = super.getTypeParser( ).apply( s );
+        this.fireChange( s );
+        this.field.set( null, o );
+        LOG.info( "--> Set property value:  " + super.getQualifiedName( ) + " to " + s );
+      } catch ( Exception t ) {
+        LOG.warn( "Failed to set property: " + super.getQualifiedName( ) + " because of " + t.getMessage( ) );
+        LOG.debug( t, t );
+      }
+      return this.getValue( );
     }
-    return this.getValue( );
   }
   
   public static class StaticPropertyBuilder implements ConfigurablePropertyBuilder {
