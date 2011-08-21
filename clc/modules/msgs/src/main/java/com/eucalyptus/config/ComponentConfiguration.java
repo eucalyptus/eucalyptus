@@ -118,12 +118,12 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   private static final long serialVersionUID = 1L;
   @Transient
   private static Logger     LOG              = Logger.getLogger( ComponentConfiguration.class );
-  @Column( name = "config_component_partition", nullable = false )
+  @Column( name = "config_component_partition" )
   private String            partition;
   @NaturalId
-  @Column( name = "config_component_name", nullable = false )
+  @Column( name = "config_component_name", updatable = false, unique = true )
   private String            name;
-  @Column( name = "config_component_hostname", nullable = false )
+  @Column( name = "config_component_hostname" )
   private String            hostName;
   @Column( name = "config_component_port" )
   private Integer           port;
