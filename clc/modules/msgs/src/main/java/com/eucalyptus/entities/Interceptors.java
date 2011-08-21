@@ -105,7 +105,7 @@ public class Interceptors {
       try {
         LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex );
       }
       super.onDelete( entity, id, state, propertyNames, types );
     }
@@ -115,7 +115,7 @@ public class Interceptors {
       try {
         LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex );
       }
       return super.onFlushDirty( entity, id, currentState, previousState, propertyNames, types );
     }
@@ -128,7 +128,7 @@ public class Interceptors {
       try {
         LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex );
       }
       return super.onLoad( entity, id, state, propertyNames, types );
     }
@@ -138,7 +138,7 @@ public class Interceptors {
       try {
         LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex );
       }
       return super.onSave( entity, id, state, propertyNames, types );
     }
@@ -149,7 +149,7 @@ public class Interceptors {
         LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations,
                                   Iterators.transform( entities, Classes.simpleNameFunction( ) ) ) );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex );
       }
       super.postFlush( entities );
     }
@@ -160,7 +160,7 @@ public class Interceptors {
         LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations,
                                   Iterators.transform( entities, Classes.simpleNameFunction( ) ) ) );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex );
       }
       super.preFlush( entities );
     }
@@ -175,7 +175,7 @@ public class Interceptors {
       try {
         LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations = 0, tx.toString( ) ) );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex );
       }
       super.afterTransactionBegin( tx );
     }
@@ -185,7 +185,7 @@ public class Interceptors {
       try {
         LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations, tx.toString( ) ) );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex );
       }
       super.afterTransactionCompletion( tx );
     }
@@ -198,7 +198,7 @@ public class Interceptors {
       try {
         LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations, tx.toString( ) ) );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex );
       }
       super.beforeTransactionCompletion( tx );
     }
@@ -212,7 +212,7 @@ public class Interceptors {
         String summary = Iterables.toString( Iterables.transform( iter, Classes.canonicalNameFunction( ) ) );
         LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex );
       }
       super.onCollectionRemove( collection, key );
     }
@@ -226,7 +226,7 @@ public class Interceptors {
         String summary = Iterables.toString( Iterables.transform( iter, Classes.canonicalNameFunction( ) ) );
         LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex );
       }
       super.onCollectionRecreate( collection, key );
     }
@@ -240,7 +240,7 @@ public class Interceptors {
         String summary = Iterables.toString( Iterables.transform( iter, Classes.canonicalNameFunction( ) ) );
         LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex );
       }
       super.onCollectionUpdate( collection, key );
     }
@@ -250,7 +250,7 @@ public class Interceptors {
       try {
         LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entityName, id ) );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex );
       }
       return super.instantiate( entityName, entityMode, id );
     }
@@ -260,7 +260,7 @@ public class Interceptors {
       try {
         LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, object.getClass( ).getSimpleName( ), toStringNullably( object ) ) );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex );
       }
       return super.getEntityName( object );
     }
@@ -270,7 +270,7 @@ public class Interceptors {
       try {
         LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entityName, id ) );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex );
       }
       return super.getEntity( entityName, id );
     }
