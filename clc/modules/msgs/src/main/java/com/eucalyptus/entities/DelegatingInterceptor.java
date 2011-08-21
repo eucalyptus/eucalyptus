@@ -71,7 +71,7 @@ import org.hibernate.Interceptor;
 import org.hibernate.Transaction;
 import org.hibernate.type.Type;
 
-public class DelegatingInterceptor {
+public class DelegatingInterceptor implements Interceptor {
   private final Interceptor interceptor;
   
   public DelegatingInterceptor( ) {
