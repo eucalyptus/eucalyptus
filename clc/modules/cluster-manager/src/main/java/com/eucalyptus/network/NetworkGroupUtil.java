@@ -77,51 +77,6 @@ public class NetworkGroupUtil {
   }
   
   @Deprecated
-  public static List<SecurityGroupItemType> getUserNetworksAdmin( OwnerFullName ownerFullName, List<String> groupNames ) throws EucalyptusCloudException {
-    List<SecurityGroupItemType> groupInfoList = Lists.newArrayList( );
-    if ( groupNames.isEmpty( ) ) {
-      try {
-        for ( User u : Accounts.listAllUsers( ) ) {
-          groupInfoList.addAll( NetworkGroupUtil.getUserNetworks( UserFullName.getInstance( u.getUserId( ) ), groupNames ) );
-        }
-      } catch ( AuthException ex ) {
-        throw new EucalyptusCloudException( "Fail to get all users", ex );
-      }
-    } else {
-      for ( String groupName : groupNames ) {
-        groupInfoList.addAll( NetworkGroupUtil.getUserNetworks( ownerFullName, Lists.newArrayList( groupName ) ) );
-      }
-    }
-    return groupInfoList;
-  }
-  
-  @Deprecated
-  public static List<SecurityGroupItemType> getUserNetworksAdmin( String adminGroupName ) throws EucalyptusCloudException {
-    return getUserNetworks( UserFullName.getInstance( adminGroupName.replaceAll( "::\\w*", "" ) ),
-                            Lists.newArrayList( adminGroupName.replaceFirst( "\\w*::", "" ) ) );
-  }
-  
-  @Deprecated
-  public static List<SecurityGroupItemType> getUserNetworks( OwnerFullName ownerFullName, List<String> groupNames ) throws EucalyptusCloudException {
-    List<SecurityGroupItemType> groupInfoList = Lists.newArrayList( );
-    List<NetworkGroup> userGroups = Lists.newArrayList( );
-    if ( groupNames.isEmpty( ) ) {
-      userGroups.addAll( NetworkGroupUtil.getUserNetworkRulesGroup( ownerFullName ) );
-    } else {
-      for ( String groupName : groupNames ) {
-        try {
-          userGroups.add( NetworkGroupUtil.getUserNetworkRulesGroup( ownerFullName, groupName ) );
-        } catch ( Exception e ) {}
-      }
-    }
-    for ( NetworkGroup group : NetworkGroupUtil.getUserNetworkRulesGroup( ownerFullName ) ) {
-      SecurityGroupItemType groupItem = TypeMappers.transform( group, SecurityGroupItemType.class );
-      groupInfoList.add( groupItem );
-    }
-    return groupInfoList;
-  }
-  
-  @Deprecated
   public static SecurityGroupItemType getAsSecurityGroupItemType( OwnerFullName ownerFullName, NetworkGroup group ) {
     SecurityGroupItemType groupInfo = new SecurityGroupItemType( );
     groupInfo.setGroupName( group.getDisplayName( ) );

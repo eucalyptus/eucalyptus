@@ -232,7 +232,7 @@ public class NetworkGroups {
     }
   }
   
-  public static List<NetworkGroup> lookupAll( OwnerFullName ownerFullName, String groupNamePattern ) throws NoSuchMetadataException {
+  public static List<NetworkGroup> lookupAll( OwnerFullName ownerFullName, String groupNamePattern ) throws MetadataException {
     if ( defaultNetworkName( ).equals( groupNamePattern ) ) {
       createDefault( ownerFullName );
     } else {
@@ -256,13 +256,17 @@ public class NetworkGroups {
     }
   }
   
-  static NetworkGroup createDefault( OwnerFullName ownerFullName ) {
+  static NetworkGroup createDefault( OwnerFullName ownerFullName ) throws MetadataException {
     EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
       NetworkGroup defaultNet = new NetworkGroup( ownerFullName, NETWORK_DEFAULT_NAME );
       NetworkGroup entity = Entities.merge( defaultNet );
       db.commit( );
       return entity;
+    } catch ( ConstraintViolationException ex ) {
+      Logs.exhaust( ).error( ex );
+      db.rollback( );
+      throw new DuplicateMetadataException( "Failed to create default group: " + ownerFullName.toString( ), ex );
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
@@ -280,6 +284,10 @@ public class NetworkGroups {
       NetworkGroup entity = Entities.merge( new NetworkGroup( ownerFullName, NETWORK_DEFAULT_NAME ) );
       db.commit( );
       return entity;
+    } catch ( ConstraintViolationException ex ) {
+      Logs.exhaust( ).error( ex );
+      db.rollback( );
+      throw new DuplicateMetadataException( "Failed to create default group: " + ownerFullName.toString( ), ex );
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );

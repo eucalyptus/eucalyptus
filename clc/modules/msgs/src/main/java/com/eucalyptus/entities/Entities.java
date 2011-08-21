@@ -83,6 +83,7 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
+import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
@@ -263,11 +264,12 @@ public class Entities {
   /**
    * Invokes underlying persist implementation per jsr-220
    * 
+   * @throws ConstraintViolationException
    * @see http://opensource.atlassian.com/projects/hibernate/browse/HHH-1273
    * @param newObject
    * @return
    */
-  public static <T> T persist( final T newObject ) {
+  public static <T> T persist( final T newObject ) throws ConstraintViolationException {
     try {
       getTransaction( newObject ).getTxState( ).getEntityManager( ).persist( newObject );
       return newObject;
@@ -323,9 +325,10 @@ public class Entities {
    * </tbody>
    * </table>
    * 
+   * @throws ConstraintViolationException 
    * @param newObject
    */
-  public static <T> T merge( final T newObject ) {
+  public static <T> T merge( final T newObject ) throws ConstraintViolationException {
     try {
       return getTransaction( newObject ).getTxState( ).getEntityManager( ).merge( newObject );
     } catch ( final RuntimeException ex ) {
