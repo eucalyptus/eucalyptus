@@ -474,6 +474,10 @@ public class Threads {
     };
   }
   
+  public static StackTraceElement currentStackFrame( int offset ) {
+    return Thread.currentThread( ).getStackTrace( )[2+offset];
+  }
+
   public static StackTraceElement currentStackFrame( ) {
     return Thread.currentThread( ).getStackTrace( )[2];
   }

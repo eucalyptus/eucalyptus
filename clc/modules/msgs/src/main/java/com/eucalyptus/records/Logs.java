@@ -19,12 +19,16 @@ import org.apache.log4j.spi.LoggerRepository;
 import org.apache.log4j.spi.LoggingEvent;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.EucaLayout;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Joiner;
+import com.google.common.base.Objects;
 
 public class Logs {
+  private static Logger                LOG                     = Logger.getLogger( Logs.class );
   /**
    * <pre>
    *   <appender name="cloud-cluster" class="org.apache.log4j.RollingFileAppender">
@@ -376,18 +380,50 @@ public class Logs {
     return IS_TRACE;
   }
   
-  public static String dump( Object o ) {
-    return "" + Groovyness.eval( "    try {\n"
-                                +
-                                "      return o.dump().replaceAll(\"<\",\"[\").replaceAll(\">\",\"]\").replaceAll(\"[\\\\w\\\\.]+\\\\.(\\\\w+)@\\\\w*\", { Object[] it -> it[1] }).replaceAll(\"class:class [\\\\w\\\\.]+\\\\.(\\\\w+),\", { Object[] it -> it[1] });\n"
-                                +
-                                "    } catch( Exception e ) {\n" +
-                                "      return \"\"+o;\n" +
-                                "    }\n" +
-                                "", new HashMap( ) {
-                              {
-                                put( "o", o );
-                              }
-                            } );
+  public static String dump( final Object o ) {
+    String ret = null;
+    if ( ( ret = groovyDump( o ) ) != null ) {
+      return ret;
+    } else if ( ( ret = groovyInspect( o ) ) != null ) {
+      return ret;
+    } else {
+      return ( o == null
+        ? Threads.currentStackFrame( 1 ) + ": null"
+        : "" + o );
+    }
+  }
+  
+  public static String groovyDump( final Object o ) {
+    HashMap ctx = new HashMap( ) {
+      {
+        put( "o", o );
+      }
+    };
+    try {
+      return ""
+             + Groovyness.eval( "try {return o.dump()" +
+                                ".replaceAll(\"<\",\"[\")" +
+                                ".replaceAll(\">\",\"]\")" +
+                                ".replaceAll(\"[\\\\w\\\\.]+\\\\.(\\\\w+)@\\\\w*\", { Object[] it -> it[1] })" +
+                                ".replaceAll(\"class:class [\\\\w\\\\.]+\\\\.(\\\\w+),\", { Object[] it -> it[1] });" +
+                                "} catch( Exception e ) {return \"\"+o;}", ctx );
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
+      return null;
+    }
+  }
+  
+  public static String groovyInspect( final Object o ) {
+    HashMap ctx = new HashMap( ) {
+      {
+        put( "o", o );
+      }
+    };
+    try {
+      return "" + Groovyness.eval( "try{return o.inspect();}catch(Exception e){return \"\"+o;}", ctx );
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
+      return null;
+    }
   }
 }
