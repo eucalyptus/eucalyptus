@@ -252,7 +252,7 @@ public class NetworkGroups {
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
-      throw new RuntimeException( "Failed to create default group: " + ownerFullName.toString( ), e1 );
+      throw new RuntimeException( "Failed to create default group: " + ownerFullName.toString( ), ex );
     }
   }
   
