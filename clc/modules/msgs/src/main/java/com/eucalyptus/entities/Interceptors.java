@@ -68,6 +68,7 @@ import java.util.Iterator;
 import org.apache.log4j.Logger;
 import org.hibernate.CallbackException;
 import org.hibernate.EmptyInterceptor;
+import org.hibernate.EntityMode;
 import org.hibernate.Interceptor;
 import org.hibernate.Transaction;
 import org.hibernate.type.Type;
@@ -147,24 +148,21 @@ public class Interceptors {
     
     @Override
     public void afterTransactionBegin( final Transaction tx ) {
-      if( this.operations == 0 ) {
-        LOG.error( Threads.currentStackString( ) );
-      }
       LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations = 0, tx.toString( ) ) );
       super.afterTransactionBegin( tx );
     }
     
     @Override
     public void afterTransactionCompletion( final Transaction tx ) {
-      if( this.operations == 0 ) {
-        LOG.error( Threads.currentStackString( ) );
-      }
       LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations, tx.toString( ) ) );
       super.afterTransactionCompletion( tx );
     }
     
     @Override
     public void beforeTransactionCompletion( final Transaction tx ) {
+      if( this.operations == 0 ) {
+        LOG.error( Threads.currentStackString( ) );
+      }
       LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations, tx.toString( ) ) );
       super.beforeTransactionCompletion( tx );
     }
@@ -197,6 +195,24 @@ public class Interceptors {
       String summary = Iterables.toString( Iterables.transform( iter, Classes.canonicalNameFunction( ) ) );
       LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
       super.onCollectionUpdate( collection, key );
+    }
+
+    @Override
+    public Object instantiate( String entityName, EntityMode entityMode, Serializable id ) {
+      LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entityName, id ) );
+      return super.instantiate( entityName, entityMode, id );
+    }
+
+    @Override
+    public String getEntityName( Object object ) {
+      LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, object.getClass( ).getSimpleName( ), toStringNullably( object ) ) );
+      return super.getEntityName( object );
+    }
+
+    @Override
+    public Object getEntity( String entityName, Serializable id ) {
+      LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entityName, id ) );
+      return super.getEntity( entityName, id );
     }
   }
   

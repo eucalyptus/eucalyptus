@@ -98,8 +98,8 @@ public class VmMetadata {
                                                                                                            put( "",
                                                                                                                 new Function<MetadataRequest, ByteArray>( ) {
                                                                                                                   public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                                                    return ByteArray.newInstance( Joiner.on( "\n" ).join( 
-                                                                                                                                                             keySet( ) ) );
+                                                                                                                    return ByteArray.newInstance( Joiner.on( "\n" ).join(
+                                                                                                                                                                          keySet( ) ) );
                                                                                                                   }
                                                                                                                 } );
                                                                                                          }
@@ -109,8 +109,8 @@ public class VmMetadata {
                                                                                                            put( "",
                                                                                                                 new Function<MetadataRequest, ByteArray>( ) {
                                                                                                                   public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                                                    return ByteArray.newInstance( Joiner.on( "\n" ).join( 
-                                                                                                                                                             keySet( ) ) );
+                                                                                                                    return ByteArray.newInstance( Joiner.on( "\n" ).join(
+                                                                                                                                                                          keySet( ) ) );
                                                                                                                   }
                                                                                                                 } );
                                                                                                            put( "dynamic", dynamicFunc );
@@ -124,8 +124,8 @@ public class VmMetadata {
                                                                                                            put( "",
                                                                                                                 new Function<MetadataRequest, ByteArray>( ) {
                                                                                                                   public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                                                    return ByteArray.newInstance( Joiner.on( "\n" ).join( 
-                                                                                                                                                             keySet( ) ) );
+                                                                                                                    return ByteArray.newInstance( Joiner.on( "\n" ).join(
+                                                                                                                                                                          keySet( ) ) );
                                                                                                                   }
                                                                                                                 } );
                                                                                                            put( "network-topology", new NetworkGroupsMetadata( ) );
@@ -148,11 +148,11 @@ public class VmMetadata {
         return null;
       }
     } catch ( Exception ex ) {
-      String errorMsg = "Metadata request failed: " + path + ( Logs.isExtrrreeeme()
+      String errorMsg = "Metadata request failed: " + path + ( Logs.isExtrrreeeme( )
         ? " cause: " + ex.getMessage( )
         : "" );
       LOG.error( errorMsg, ex );
-      return Logs.isExtrrreeeme()
+      return Logs.isExtrrreeeme( )
         ? Exceptions.string( errorMsg, ex ).getBytes( )
         : errorMsg.getBytes( );
     }
