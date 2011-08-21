@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URL;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.ResourceBundle;
 import org.apache.log4j.Appender;
 import org.apache.log4j.ConsoleAppender;
@@ -375,8 +376,8 @@ public class Logs {
     return IS_TRACE;
   }
   
-  public String dump( Object o ) {
-    return Groovyness.eval( "    try {\n"
+  public static String dump( Object o ) {
+    return "" + Groovyness.eval( "    try {\n"
                                 +
                                 "      return o.dump().replaceAll(\"<\",\"[\").replaceAll(\">\",\"]\").replaceAll(\"[\\\\w\\\\.]+\\\\.(\\\\w+)@\\\\w*\", { Object[] it -> it[1] }).replaceAll(\"class:class [\\\\w\\\\.]+\\\\.(\\\\w+),\", { Object[] it -> it[1] });\n"
                                 +
