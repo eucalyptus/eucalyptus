@@ -110,9 +110,9 @@ import com.google.common.collect.Lists;
 @Entity
 @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_images" )
+@Table( name = "config_component_base" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@Inheritance( strategy = InheritanceType.TABLE_PER_CLASS )
+@Inheritance( strategy = InheritanceType.SINGLE_TABLE )
 public class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration {
   @Transient
   private static final long serialVersionUID = 1L;
