@@ -79,12 +79,14 @@ import com.eucalyptus.component.id.Storage
 @Table( name = "config_sc" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart(Storage.class)
-@DiscriminatorValue( "StorageControllerConfiguration" )
 public class StorageControllerConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/services/Storage";
   public StorageControllerConfiguration( ) {
     
+  }
+  public StorageControllerConfiguration( String name ) {
+    super.setName(name);
   }
   public StorageControllerConfiguration( String partition, String name, String hostName, Integer port ) {
     super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );

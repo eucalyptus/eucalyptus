@@ -393,7 +393,7 @@ public class ConfigurationWebBackend {
       }
       StorageControllerConfiguration c;
       try {
-        c = ServiceConfigurations.lookup( new StorageControllerConfiguration() {{ this.setName( cc.getName( ) ); }} );
+        c = ServiceConfigurations.lookup( new StorageControllerConfiguration( cc.getName( ) ) );
         List<ComponentProperty> properties = Lists.newArrayList( );
         try {
           GetStorageConfigurationResponseType getStorageConfigResponse = sendForStorageInfo( cc, c );

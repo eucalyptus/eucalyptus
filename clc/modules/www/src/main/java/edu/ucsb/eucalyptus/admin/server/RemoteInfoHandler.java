@@ -193,11 +193,7 @@ public class RemoteInfoHandler {
       }
       StorageControllerConfiguration c;
       try {
-        c = ServiceConfigurations.lookup( new StorageControllerConfiguration( ) {
-          {
-            this.setName( cc.getName( ) );
-          }
-        } );
+        c = ServiceConfigurations.lookup( new StorageControllerConfiguration( cc.getName( ) ) );
         StorageInfoWeb scInfo = new StorageInfoWeb( c.getName( ), c.getHostName( ), c.getPort( ) );
         try {
           GetStorageConfigurationResponseType getStorageConfigResponse = RemoteInfoHandler.sendForStorageInfo( cc, c );

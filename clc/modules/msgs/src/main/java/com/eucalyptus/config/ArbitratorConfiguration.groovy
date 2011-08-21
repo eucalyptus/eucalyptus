@@ -79,7 +79,6 @@ import com.eucalyptus.component.id.Arbitrator
 @Table( name = "config_arbitrator" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart(Arbitrator.class)
-@DiscriminatorValue( "ArbitratorConfiguration" )
 public class ArbitratorConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/services/Arbitrator";

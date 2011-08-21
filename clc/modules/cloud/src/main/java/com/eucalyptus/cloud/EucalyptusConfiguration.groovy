@@ -84,7 +84,6 @@ import com.eucalyptus.config.ComponentConfiguration
 @Table( name = "config_eucalyptus" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart(Eucalyptus.class)
-@DiscriminatorValue( "EucalyptusConfiguration" )
 public class EucalyptusConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/services/Eucalyptus";

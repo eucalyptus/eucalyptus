@@ -82,7 +82,6 @@ import com.eucalyptus.component.id.Walrus
 @Table( name = "config_walrus" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart(Walrus.class)
-@DiscriminatorValue( "WalrusConfiguration" )
 public class WalrusConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String DEFAULT_SERVICE_PATH = "/services/Walrus";
