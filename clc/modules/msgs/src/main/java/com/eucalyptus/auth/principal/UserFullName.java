@@ -114,14 +114,15 @@ public class UserFullName implements OwnerFullName {
   
   public static UserFullName getInstance( User user, String... relativePath ) {
     try {
-      if ( user == null ) {
-        return new UserFullName( Principals.nobodyUser( ) );
+      if ( user != null ) {
+        if ( !userIdMap.containsKey( user.getUserId( ) ) ) {
+          userIdMap.put( user.getUserId( ), new UserFullName( user ) );
+        }
+        return userIdMap.get( user.getUserId( ) );
       } else if ( Principals.systemUser( ).equals( user ) ) {
         return new UserFullName( Principals.systemUser( ) );
-      } else if ( Principals.nobodyUser( ).equals( user ) ) {
-        return new UserFullName( Principals.nobodyUser( ) );
       } else {
-        return new UserFullName( user );
+        return new UserFullName( Principals.nobodyUser( ) );
       }
     } catch ( AuthException ex ) {
       LOG.error( ex.getMessage( ) );
