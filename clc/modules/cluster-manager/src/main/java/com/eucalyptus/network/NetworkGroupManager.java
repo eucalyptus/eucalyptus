@@ -14,6 +14,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.cloud.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
+import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
@@ -43,15 +44,12 @@ import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 public class NetworkGroupManager {
   private static Logger LOG = Logger.getLogger( NetworkGroupManager.class );
   
-  public CreateSecurityGroupResponseType create( final CreateSecurityGroupType request ) throws EucalyptusCloudException, DuplicateMetadataException {
+  public CreateSecurityGroupResponseType create( final CreateSecurityGroupType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
     NetworkGroups.createDefault( ctx.getUserFullName( ) );
     /**
      * GRZE:WARN: do this /first/, ensure the default group exists to cover some old broken installs
      **/
-    if ( !RestrictedTypes.isContextAuthorized( null ) ) {
-
-    }
     final String action = PolicySpec.requestToAction( request );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
@@ -62,17 +60,11 @@ public class NetworkGroupManager {
       }
     }
     final CreateSecurityGroupResponseType reply = ( CreateSecurityGroupResponseType ) request.getReply( );
-    final NetworkGroup newGroup = NetworkGroups.create( ctx.getUserFullName( ), request.getGroupName( ), request.getGroupDescription( ) );
     try {
-      EntityWrapper.get( NetworkGroup.class ).mergeAndCommit( newGroup );
+      NetworkGroups.create( ctx.getUserFullName( ), request.getGroupName( ), request.getGroupDescription( ) );
       return reply;
-    } catch ( final Exception ex ) {
-      Logs.extreme( ).error( ex, ex );
-//      if( ex.getCause( ) instanceof  ) {
-//        return reply.markFailed( );
-//      } else {
+    } catch ( Exception ex ) {
       throw new EucalyptusCloudException( "CreatSecurityGroup failed because: " + ex.getMessage( ), ex );
-//      }
     }
   }
   

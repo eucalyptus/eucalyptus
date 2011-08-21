@@ -385,7 +385,6 @@ public class VmInstances {
   
   public static List<VmInstance> listValues( ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
-    Logs.extreme( ).info( Threads.currentStackFrame( ) + " has tx: " + db );
     try {
       final List<VmInstance> vms = Entities.query( VmInstance.named( null, null ) );
       final Collection<VmInstance> ret = Collections2.filter( vms, new Predicate<VmInstance>( ) {
@@ -398,13 +397,11 @@ public class VmInstances {
           return !VmState.TERMINATED.equals( input.getState( ) );
         }
       } );
-      Logs.extreme( ).info( Threads.currentStackFrame( ) + " has tx: " + db );
       db.commit( );
       return Lists.newArrayList( ret );
     } catch ( final Exception ex ) {
-      Logs.extreme( ).info( Threads.currentStackFrame( ) + " has tx: " + db );
-      db.rollback( );
       Logs.extreme( ).error( ex, ex );
+      db.rollback( );
       return Lists.newArrayList( );
     }
   }
