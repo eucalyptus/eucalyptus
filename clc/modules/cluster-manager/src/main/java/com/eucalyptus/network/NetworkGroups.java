@@ -222,51 +222,46 @@ public class NetworkGroups {
   
   public static NetworkGroup lookup( OwnerFullName ownerFullName, String groupName ) throws MetadataException {
     if ( defaultNetworkName( ).equals( groupName ) ) {
-      return createDefault( ownerFullName );
-    } else {
-      try {
-        return Transactions.find( new NetworkGroup( ownerFullName, groupName ) );
-      } catch ( Exception ex ) {
-        throw new NoSuchMetadataException( "Failed to find security group: " + groupName + " for " + ownerFullName, ex );
-      }
+      createDefault( ownerFullName );
+    }
+    EntityTransaction db = Entities.get( NetworkGroups.class );
+    try {
+      NetworkGroup ret = Entities.uniqueResult( new NetworkGroup( ownerFullName, groupName ) );
+      db.commit( );
+      return ret;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new NoSuchMetadataException( "Failed to find security group: " + groupName + " for " + ownerFullName, ex );
     }
   }
   
   public static List<NetworkGroup> lookupAll( OwnerFullName ownerFullName, String groupNamePattern ) throws MetadataException {
     if ( defaultNetworkName( ).equals( groupNamePattern ) ) {
       createDefault( ownerFullName );
-    } else {
-      
-      EntityTransaction db = Entities.get( NetworkGroups.class );
-      try {
-        List<NetworkGroup> results = Entities.query( new NetworkGroup( ownerFullName, groupNamePattern ) );
-        List<NetworkGroup> ret = Lists.newArrayList( results );
-        db.commit( );
-        return ret;
-      } catch ( Exception ex ) {
-        Logs.exhaust( ).error( ex, ex );
-        db.rollback( );
-        throw new NoSuchMetadataException( "Failed to find security group: " + groupNamePattern + " for " + ownerFullName, ex );
-      }
     }
+    EntityTransaction db = Entities.get( NetworkGroups.class );
     try {
-      return Transactions.findAll( new NetworkGroup( ownerFullName, groupNamePattern ) );
+      List<NetworkGroup> results = Entities.query( new NetworkGroup( ownerFullName, groupNamePattern ) );
+      List<NetworkGroup> ret = Lists.newArrayList( results );
+      db.commit( );
+      return ret;
     } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
       throw new NoSuchMetadataException( "Failed to find security group: " + groupNamePattern + " for " + ownerFullName, ex );
     }
   }
   
-  static NetworkGroup createDefault( OwnerFullName ownerFullName ) throws MetadataException {
+  static void createDefault( OwnerFullName ownerFullName ) throws MetadataException {
     EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
       NetworkGroup defaultNet = new NetworkGroup( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
       NetworkGroup entity = Entities.merge( defaultNet );
       db.commit( );
-      return entity;
     } catch ( ConstraintViolationException ex ) {
       Logs.exhaust( ).error( ex );
       db.rollback( );
-      throw new DuplicateMetadataException( "Failed to create default group: " + ownerFullName.toString( ), ex );
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
