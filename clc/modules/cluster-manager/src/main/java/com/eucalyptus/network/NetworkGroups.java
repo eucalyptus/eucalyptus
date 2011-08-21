@@ -231,7 +231,7 @@ public class NetworkGroups {
     if ( defaultNetworkName( ).equals( groupName ) ) {
       createDefault( ownerFullName );
     }
-    final EntityTransaction db = Entities.get( NetworkGroups.class );
+    final EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
       final NetworkGroup ret = Entities.uniqueResult( new NetworkGroup( ownerFullName, groupName ) );
       db.commit( );
@@ -247,7 +247,7 @@ public class NetworkGroups {
     if ( defaultNetworkName( ).equals( groupNamePattern ) ) {
       createDefault( ownerFullName );
     }
-    final EntityTransaction db = Entities.get( NetworkGroups.class );
+    final EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
       final List<NetworkGroup> results = Entities.query( new NetworkGroup( ownerFullName, groupNamePattern ) );
       final List<NetworkGroup> ret = Lists.newArrayList( results );
