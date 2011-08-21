@@ -71,49 +71,72 @@ import org.hibernate.EmptyInterceptor;
 import org.hibernate.Interceptor;
 import org.hibernate.Transaction;
 import org.hibernate.type.Type;
-import org.jboss.util.collection.Iterators;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
-import com.google.common.collect.Collections2;
+import com.eucalyptus.util.Classes;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Table;
 
 public class Interceptors {
+  private static final Table stringify( Object[] state, final String[] propertyNames, final Type[] types ) {
+    return HashBasedTable.create( );
+  }
+  
   private static final class LogMonitorInterceptor extends EmptyInterceptor {
     private static final long serialVersionUID = 1L;
     private int               operations       = 0;
     
+    private String toStringNullably( Object o ) {
+      try {
+        return o != null
+          ? "" + o.toString( )
+          : "null";
+      } catch ( Exception ex ) {
+        return o.getClass( ).getCanonicalName( ) + ".toString(): " + ex.getMessage( );
+      }
+    }
+    
     @Override
     public void onDelete( final Object entity, final Serializable id, final Object[] state, final String[] propertyNames, final Type[] types ) {
-      LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id ) );
+      LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
       super.onDelete( entity, id, state, propertyNames, types );
     }
     
     @Override
     public boolean onFlushDirty( final Object entity, final Serializable id, final Object[] currentState, final Object[] previousState, final String[] propertyNames, final Type[] types ) {
-      LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id ) );
+      LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
       return super.onFlushDirty( entity, id, currentState, previousState, propertyNames, types );
     }
     
+    /**
+     * NOTE: <b>MUST</b> remember that the {@code entity} is {@code null} at this time!
+     */
     @Override
     public boolean onLoad( final Object entity, final Serializable id, final Object[] state, final String[] propertyNames, final Type[] types ) {
-      LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id ) );
+      LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
       return super.onLoad( entity, id, state, propertyNames, types );
     }
     
     @Override
     public boolean onSave( final Object entity, final Serializable id, final Object[] state, final String[] propertyNames, final Type[] types ) {
-      LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id ) );
+      LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
       return super.onSave( entity, id, state, propertyNames, types );
     }
     
     @Override
     public void postFlush( final Iterator entities ) {
-      LOG.debug( String.format( "%s()", Threads.currentStackFrame( ).getMethodName( ) ) );
+      LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations,
+                                Iterators.transform( entities, Classes.simpleNameFunction( ) ) ) );
       super.postFlush( entities );
     }
     
     @Override
     public void preFlush( final Iterator entities ) {
-      LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ) ) );
+      LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations,
+                                Iterators.transform( entities, Classes.simpleNameFunction( ) ) ) );
       super.preFlush( entities );
     }
     
@@ -142,25 +165,38 @@ public class Interceptors {
     
     @Override
     public void onCollectionRemove( final Object collection, final Serializable key ) throws CallbackException {
+      Iterable<Object> iter = ( collection instanceof Iterable
+        ? ( Iterable ) collection
+        : Lists.newArrayList( collection ) );
+      String summary = Iterables.toString( Iterables.transform( iter, Classes.canonicalNameFunction( ) ) );
+      LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
       super.onCollectionRemove( collection, key );
     }
     
     @Override
     public void onCollectionRecreate( final Object collection, final Serializable key ) throws CallbackException {
-      LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, collection ) );
+      Iterable<Object> iter = ( collection instanceof Iterable
+        ? ( Iterable ) collection
+        : Lists.newArrayList( collection ) );
+      String summary = Iterables.toString( Iterables.transform( iter, Classes.canonicalNameFunction( ) ) );
+      LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
       super.onCollectionRecreate( collection, key );
     }
     
     @Override
     public void onCollectionUpdate( final Object collection, final Serializable key ) throws CallbackException {
-      LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, collection ) );
+      Iterable<Object> iter = ( collection instanceof Iterable
+        ? ( Iterable ) collection
+        : Lists.newArrayList( collection ) );
+      String summary = Iterables.toString( Iterables.transform( iter, Classes.canonicalNameFunction( ) ) );
+      LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
       super.onCollectionUpdate( collection, key );
     }
   }
   
   private static Logger LOG = Logger.getLogger( Interceptors.class );
   
-  static Interceptor empty( ) {
+  private static Interceptor empty( ) {
     final Interceptor i = new EmptyInterceptor( ) {
       private static final long serialVersionUID = 1L;
     };
@@ -168,21 +204,17 @@ public class Interceptors {
   }
   
   @SuppressWarnings( "synthetic-access" )
-  static Interceptor logger( ) {
+  private static Interceptor logger( ) {
     final Interceptor i = new LogMonitorInterceptor( );
     return interceptor = i;
   }
   
-  private static Interceptor interceptor = Logs.isExtrrreeeme( )
-                                           ? logger( )
-                                           : empty( );
+  private static Interceptor interceptor = get( );
   
   static Interceptor get( ) {
-    return interceptor;
-  }
-  
-  private static void set( final Interceptor interceptor ) {
-    Interceptors.interceptor = interceptor;
+    return Logs.isExtrrreeeme( )
+      ? logger( )
+      : empty( );
   }
   
 }

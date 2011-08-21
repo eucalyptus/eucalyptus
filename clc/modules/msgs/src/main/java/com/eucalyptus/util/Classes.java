@@ -75,6 +75,30 @@ import com.google.common.collect.Lists;
 
 public class Classes {
   
+  enum ClassNameToSimpleName implements Function<Object, String> {
+    INSTANCE;
+    @Override
+    public String apply( Object arg0 ) {
+      return WhateverAsClass.INSTANCE.apply( arg0 ).getSimpleName( );
+    }    
+  }
+  
+  enum ClassNameToCanonicalName implements Function<Object, String> {
+    INSTANCE;
+    @Override
+    public String apply( Object arg0 ) {
+      return WhateverAsClass.INSTANCE.apply( arg0 ).getCanonicalName( );
+    }    
+  }
+  
+  public static Function<Object, String> simpleNameFunction( ) {
+    return ClassNameToSimpleName.INSTANCE;
+  }
+  
+  public static Function<Object, String> canonicalNameFunction( ) {
+    return ClassNameToCanonicalName.INSTANCE;
+  }
+
   public static Class<?> findAncestor( final Object o, final Predicate<Class<?>> condition ) {
     return Iterables.find( ancestors( o ), condition );
   }
