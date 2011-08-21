@@ -205,11 +205,11 @@ public class RestrictedTypes {
     Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
     LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + lookupFunction + " typed as " + Classes.genericsToClasses( lookupFunction ) );
     List<Class<?>> lookupTypes = Classes.genericsToClasses( lookupFunction );
-    if ( lookupTypes.isEmpty( ) ) {
+    if ( lookupTypes.isEmpty( ) || lookupTypes.size( ) != 2 ) {
       throw new IllegalArgumentException( "Failed to find required generic type for lookup " + lookupFunction.getClass( )
                                           + " so the policy type for looking up " + identifier + " cannot be determined." );
     } else {
-      Class<?> rscType = lookupTypes.get( 0 );
+      Class<?> rscType = lookupTypes.get( 1 );
       Ats ats = Ats.inClassHierarchy( rscType );
       Ats msgAts = Ats.inClassHierarchy( msgType );
       if ( !ats.has( PolicyVendor.class ) && !msgAts.has( PolicyVendor.class ) ) {

@@ -68,8 +68,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.component.auth.SystemCredentials;
@@ -596,7 +594,7 @@ public class Principals {
                                                 
                                                 @Override
                                                 public Account getAccount( ) throws AuthException {
-                                                  return Accounts.lookupAccountByName( Account.NOBODY_ACCOUNT );
+                                                  return NOBODY_ACCOUNT;
                                                 }
                                                 
                                                 @Override

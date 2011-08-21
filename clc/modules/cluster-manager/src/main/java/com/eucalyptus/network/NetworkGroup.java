@@ -90,6 +90,8 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.cloud.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
@@ -134,7 +136,8 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkRule> networkRules = new HashSet<NetworkRule>( );
   
-  @OneToOne( cascade = { CascadeType.ALL}, fetch = FetchType.EAGER )
+  @NotFound( action = NotFoundAction.IGNORE )
+  @OneToOne( cascade = { CascadeType.ALL }, fetch = FetchType.EAGER, optional = true )
   @PrimaryKeyJoinColumn
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private ExtantNetwork    extantNetwork;

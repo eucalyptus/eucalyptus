@@ -102,13 +102,21 @@ public class Interceptors {
     
     @Override
     public void onDelete( final Object entity, final Serializable id, final Object[] state, final String[] propertyNames, final Type[] types ) {
-      LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
+      try {
+        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
       super.onDelete( entity, id, state, propertyNames, types );
     }
     
     @Override
     public boolean onFlushDirty( final Object entity, final Serializable id, final Object[] currentState, final Object[] previousState, final String[] propertyNames, final Type[] types ) {
-      LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
+      try {
+        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
       return super.onFlushDirty( entity, id, currentState, previousState, propertyNames, types );
     }
     
@@ -117,27 +125,43 @@ public class Interceptors {
      */
     @Override
     public boolean onLoad( final Object entity, final Serializable id, final Object[] state, final String[] propertyNames, final Type[] types ) {
-      LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
+      try {
+        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
       return super.onLoad( entity, id, state, propertyNames, types );
     }
     
     @Override
     public boolean onSave( final Object entity, final Serializable id, final Object[] state, final String[] propertyNames, final Type[] types ) {
-      LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
+      try {
+        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
       return super.onSave( entity, id, state, propertyNames, types );
     }
     
     @Override
     public void postFlush( final Iterator entities ) {
-      LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations,
-                                Iterators.transform( entities, Classes.simpleNameFunction( ) ) ) );
+      try {
+        LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations,
+                                  Iterators.transform( entities, Classes.simpleNameFunction( ) ) ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
       super.postFlush( entities );
     }
     
     @Override
     public void preFlush( final Iterator entities ) {
-      LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations,
-                                Iterators.transform( entities, Classes.simpleNameFunction( ) ) ) );
+      try {
+        LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations,
+                                  Iterators.transform( entities, Classes.simpleNameFunction( ) ) ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
       super.preFlush( entities );
     }
     
@@ -148,13 +172,21 @@ public class Interceptors {
     
     @Override
     public void afterTransactionBegin( final Transaction tx ) {
-      LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations = 0, tx.toString( ) ) );
+      try {
+        LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations = 0, tx.toString( ) ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
       super.afterTransactionBegin( tx );
     }
     
     @Override
     public void afterTransactionCompletion( final Transaction tx ) {
-      LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations, tx.toString( ) ) );
+      try {
+        LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations, tx.toString( ) ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
       super.afterTransactionCompletion( tx );
     }
     
@@ -163,55 +195,83 @@ public class Interceptors {
       if( this.operations == 0 ) {
         LOG.error( Threads.currentStackString( ) );
       }
-      LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations, tx.toString( ) ) );
+      try {
+        LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations, tx.toString( ) ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
       super.beforeTransactionCompletion( tx );
     }
     
     @Override
     public void onCollectionRemove( final Object collection, final Serializable key ) throws CallbackException {
-      Iterable<Object> iter = ( collection instanceof Iterable
-        ? ( Iterable ) collection
-        : Lists.newArrayList( collection ) );
-      String summary = Iterables.toString( Iterables.transform( iter, Classes.canonicalNameFunction( ) ) );
-      LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
+      try {
+        Iterable<Object> iter = ( collection instanceof Iterable
+          ? ( Iterable ) collection
+          : Lists.newArrayList( collection ) );
+        String summary = Iterables.toString( Iterables.transform( iter, Classes.canonicalNameFunction( ) ) );
+        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
       super.onCollectionRemove( collection, key );
     }
     
     @Override
     public void onCollectionRecreate( final Object collection, final Serializable key ) throws CallbackException {
-      Iterable<Object> iter = ( collection instanceof Iterable
-        ? ( Iterable ) collection
-        : Lists.newArrayList( collection ) );
-      String summary = Iterables.toString( Iterables.transform( iter, Classes.canonicalNameFunction( ) ) );
-      LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
+      try {
+        Iterable<Object> iter = ( collection instanceof Iterable
+          ? ( Iterable ) collection
+          : Lists.newArrayList( collection ) );
+        String summary = Iterables.toString( Iterables.transform( iter, Classes.canonicalNameFunction( ) ) );
+        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
       super.onCollectionRecreate( collection, key );
     }
     
     @Override
     public void onCollectionUpdate( final Object collection, final Serializable key ) throws CallbackException {
-      Iterable<Object> iter = ( collection instanceof Iterable
-        ? ( Iterable ) collection
-        : Lists.newArrayList( collection ) );
-      String summary = Iterables.toString( Iterables.transform( iter, Classes.canonicalNameFunction( ) ) );
-      LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
+      try {
+        Iterable<Object> iter = ( collection instanceof Iterable
+          ? ( Iterable ) collection
+          : Lists.newArrayList( collection ) );
+        String summary = Iterables.toString( Iterables.transform( iter, Classes.canonicalNameFunction( ) ) );
+        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
       super.onCollectionUpdate( collection, key );
     }
 
     @Override
     public Object instantiate( String entityName, EntityMode entityMode, Serializable id ) {
-      LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entityName, id ) );
+      try {
+        LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entityName, id ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
       return super.instantiate( entityName, entityMode, id );
     }
 
     @Override
     public String getEntityName( Object object ) {
-      LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, object.getClass( ).getSimpleName( ), toStringNullably( object ) ) );
+      try {
+        LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, object.getClass( ).getSimpleName( ), toStringNullably( object ) ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
       return super.getEntityName( object );
     }
 
     @Override
     public Object getEntity( String entityName, Serializable id ) {
-      LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entityName, id ) );
+      try {
+        LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entityName, id ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
       return super.getEntity( entityName, id );
     }
   }
