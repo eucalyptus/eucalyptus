@@ -145,6 +145,10 @@ public class Entities {
     }
   }
   
+  public static void removeTransaction( String uuid ) {
+    txStateThreadLocal.get( ).remove( uuid );
+  }
+  
   private static CascadingTx createTransaction( final Object obj ) throws RecoverablePersistenceException, RuntimeException {
     final String ctx = lookatPersistenceContext( obj );
     final CascadingTx ret = new CascadingTx( ctx );
@@ -332,6 +336,7 @@ public class Entities {
     try {
       return getTransaction( newObject ).getTxState( ).getEntityManager( ).merge( newObject );
     } catch ( final RuntimeException ex ) {
+      
       PersistenceExceptions.throwFiltered( ex );
       throw ex;
     }
@@ -437,7 +442,14 @@ public class Entities {
      */
     @Override
     public void begin( ) throws RecoverablePersistenceException {
-      this.txState.begin( );
+      try {
+        this.txState.begin( );
+      } catch ( RecoverablePersistenceException ex ) {
+        removeTransaction( this.record.getUuid( ) );
+      } catch ( RuntimeException ex ) {
+        removeTransaction( this.record.getUuid( ) );
+        throw ex;
+      }
     }
     
     /**
@@ -446,7 +458,7 @@ public class Entities {
      */
     @Override
     public void rollback( ) throws RecoverablePersistenceException {
-      txStateThreadLocal.get( ).remove( this.record.getUuid( ) );
+      removeTransaction( this.record.getUuid( ) );
       if ( ( this.txState != null ) && this.txState.isActive( ) ) {
         try {
           this.txState.rollback( );
@@ -466,7 +478,7 @@ public class Entities {
      */
     @Override
     public void commit( ) throws RecoverablePersistenceException {
-      txStateThreadLocal.get( ).remove( this.record.getUuid( ) );
+      removeTransaction( this.record.getUuid( ) );
       if ( ( this.txState != null ) && this.txState.isActive( ) ) {
         try {
           this.txState.commit( );
@@ -478,7 +490,7 @@ public class Entities {
         Logs.extreme( ).error( "Duplicate call to commit( ): " + Threads.currentStackString( ) );
       }
     }
-    
+
     TxState getTxState( ) {
       return this.txState;
     }
