@@ -475,7 +475,7 @@ public class Threads {
   }
   
   public static StackTraceElement currentStackFrame( ) {
-    return Thread.currentThread( ).getStackTrace( )[1];
+    return Thread.currentThread( ).getStackTrace( )[2];
   }
   
   public static String currentStackRange( int start, int end ) {
