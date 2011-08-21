@@ -17,6 +17,7 @@ import org.apache.log4j.spi.Configurator;
 import org.apache.log4j.spi.LoggerRepository;
 import org.apache.log4j.spi.LoggingEvent;
 import com.eucalyptus.bootstrap.SystemBootstrapper;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.EucaLayout;
 import com.eucalyptus.util.LogUtil;
@@ -48,7 +49,8 @@ public class Logs {
   
   private static final ConsoleAppender console                 = new ConsoleAppender( new EucaLayout( ), "System.out" ) {
                                                                  {
-                                                                   this.setThreshold( Priority.toPriority( System.getProperty( "euca.log.level" ), Priority.INFO ) );
+                                                                   this.setThreshold( Priority.toPriority( System.getProperty( "euca.log.level" ),
+                                                                                                           Priority.INFO ) );
                                                                    this.setName( "console" );
                                                                    this.setImmediateFlush( false );
                                                                    this.setFollow( false );
@@ -371,5 +373,20 @@ public class Logs {
   
   public static boolean isTrace( ) {
     return IS_TRACE;
+  }
+  
+  public String dump( Object o ) {
+    return Groovyness.eval( "    try {\n"
+                                +
+                                "      return o.dump().replaceAll(\"<\",\"[\").replaceAll(\">\",\"]\").replaceAll(\"[\\\\w\\\\.]+\\\\.(\\\\w+)@\\\\w*\", { Object[] it -> it[1] }).replaceAll(\"class:class [\\\\w\\\\.]+\\\\.(\\\\w+),\", { Object[] it -> it[1] });\n"
+                                +
+                                "    } catch( Exception e ) {\n" +
+                                "      return \"\"+o;\n" +
+                                "    }\n" +
+                                "", new HashMap( ) {
+                              {
+                                put( "o", o );
+                              }
+                            } );
   }
 }
