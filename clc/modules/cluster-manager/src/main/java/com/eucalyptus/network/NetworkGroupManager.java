@@ -140,9 +140,11 @@ public class NetworkGroupManager {
       final Iterable<NetworkGroup> matches = Iterables.filter( Entities.query( NetworkGroup.named( ownerFn, null ) ), netFilter );
       final Iterable<SecurityGroupItemType> transformed = Iterables.transform( matches, TypeMappers.lookup( NetworkGroup.class, SecurityGroupItemType.class ) );
       Iterables.addAll( reply.getSecurityGroupInfo( ), transformed );
-    } finally {
+      db.commit( );
+    } catch ( Exception ex ) {
       db.rollback( );
     }
+  
     return reply;
   }
   
