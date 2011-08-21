@@ -242,14 +242,17 @@ public class NetworkGroups {
   }
   
   static NetworkGroup createDefault( OwnerFullName ownerFullName ) {
+    
+    EntityTransaction db = Entities.get( NetworkGroup.class );
+    NetworkGroup defaultNet = new NetworkGroup( ownerFullName, NETWORK_DEFAULT_NAME );
     try {
-      return Transactions.find( new NetworkGroup( ownerFullName, NETWORK_DEFAULT_NAME ) );
-    } catch ( Exception e ) {
-      try {
-        return create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
-      } catch ( Exception e1 ) {
-        throw new RuntimeException( "Failed to create default group: " + ownerFullName.toString( ), e1 );
-      }
+      NetworkGroup entity = Entities.merge( defaultNet );
+      db.commit( );
+      return entity;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new RuntimeException( "Failed to create default group: " + ownerFullName.toString( ), e1 );
     }
   }
   
