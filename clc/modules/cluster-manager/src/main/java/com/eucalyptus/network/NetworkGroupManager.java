@@ -137,9 +137,8 @@ public class NetworkGroupManager {
     
     final EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
-      List<NetworkGroup> networks = Entities.query( NetworkGroup.named( ownerFn, null) );
-      
-      final Iterable<NetworkGroup> matches = Iterables.filter( , netFilter );
+      List<NetworkGroup> networks = Entities.query( NetworkGroup.named( ownerFn, null) );      
+      final Iterable<NetworkGroup> matches = Iterables.filter( networks , netFilter );
       final Iterable<SecurityGroupItemType> transformed = Iterables.transform( matches, TypeMappers.lookup( NetworkGroup.class, SecurityGroupItemType.class ) );
       Iterables.addAll( reply.getSecurityGroupInfo( ), transformed );
       db.commit( );
