@@ -147,6 +147,9 @@ public class Interceptors {
     
     @Override
     public void afterTransactionBegin( final Transaction tx ) {
+      if( this.operations == 0 ) {
+        LOG.error( Threads.currentStackString( ) );
+      }
       LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations = 0, tx.toString( ) ) );
       super.afterTransactionBegin( tx );
     }
