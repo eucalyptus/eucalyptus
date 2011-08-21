@@ -259,7 +259,7 @@ public class NetworkGroups {
   static NetworkGroup createDefault( OwnerFullName ownerFullName ) throws MetadataException {
     EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
-      NetworkGroup defaultNet = new NetworkGroup( ownerFullName, NETWORK_DEFAULT_NAME );
+      NetworkGroup defaultNet = new NetworkGroup( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
       NetworkGroup entity = Entities.merge( defaultNet );
       db.commit( );
       return entity;
