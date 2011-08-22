@@ -110,6 +110,7 @@
     <collection field="clusterControllers" factory="org.jibx.runtime.Utility.arrayListFactory">
       <value name="clusterControllers" type="java.lang.String" />
     </collection>
+    <value name="accoundId" field="accoundId" usage="optional" />
   </mapping>
   <mapping name="StartNetworkResponse" class="edu.ucsb.eucalyptus.msgs.StartNetworkResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
@@ -118,6 +119,7 @@
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="vlan" field="vlan" usage="required" />
     <value name="netName" field="netName" usage="required" />
+    <value name="accoundId" field="accoundId" usage="required" />
   </mapping>
   <mapping name="StopNetworkResponse" class="edu.ucsb.eucalyptus.msgs.StopNetworkResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />

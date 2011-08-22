@@ -84,12 +84,13 @@ public class StartNetworkType extends CloudClusterMessage {
   String netName;
   String nameserver;
   ArrayList<String> clusterControllers = new ArrayList<String>();
+  String accountId;
   
   
   public StartNetworkType(){
   }
   
-  public StartNetworkType(final String userId, final Integer vlan, final String netName, final String networkUuid) {
+  public StartNetworkType(final String accountId, final String userId, final Integer vlan, final String netName, final String networkUuid) {
     super( userId );
     this.networkUuid = networkUuid;
     this.vlan = vlan;
@@ -102,14 +103,16 @@ public class StartNetworkResponseType extends CloudClusterMessage {
 public class StopNetworkType extends CloudClusterMessage {
   Integer vlan;
   String netName;
+  String accountId;
   
   public StopNetworkType(){
   }
   
-  public StopNetworkType(final String userId, final String netName, final Integer vlan) {
+  public StopNetworkType(final String accountId, final String userId, final String netName, final Integer vlan) {
     super( userId );
     this.vlan = vlan;
     this.netName = netName;
+    this.accountId = accountId;
   }
   
   public StopNetworkType(final StartNetworkType msg) {

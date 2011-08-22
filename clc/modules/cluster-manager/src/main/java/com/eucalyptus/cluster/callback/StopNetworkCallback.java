@@ -89,9 +89,12 @@ public class StopNetworkCallback extends BroadcastCallback<StopNetworkType, Stop
     } catch ( NotEnoughResourcesException ex ) {
       this.tag = -1;
     }
-    StopNetworkType msg = new StopNetworkType( this.networkGroup.getOwnerUserId( ), this.networkGroup.getNaturalId( ),
+    StopNetworkType msg = new StopNetworkType( this.networkGroup.getOwnerAccountNumber( ), 
+                                               this.networkGroup.getOwnerUserId( ), 
+                                               this.networkGroup.getNaturalId( ),
                                                this.tag ).regarding( );
     msg.setUserId( this.networkGroup.getOwnerUserId( ) );
+    msg.setAccountId( this.networkGroup.getOwnerAccountNumber( ) );
     this.setRequest( msg );
   }
   

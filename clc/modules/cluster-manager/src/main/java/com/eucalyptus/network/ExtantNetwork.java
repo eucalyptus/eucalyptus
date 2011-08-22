@@ -177,6 +177,15 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
     SetReference<PrivateNetworkIndex, VmInstance> ref = null;
     try {
       ExtantNetwork exNet = Entities.merge( this );
+      for ( PrivateNetworkIndex idx : Iterables.filter( exNet.getIndexes( ), PrivateNetworkIndex.filterFree( ) ) ) {
+        try {
+          ref = idx.allocate( );
+          break;
+        } catch ( Exception ex1 ) {
+          continue;
+        }
+      }
+      
       if ( exNet.getIndexes( ).isEmpty( ) ) {
         for ( long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
           PrivateNetworkIndex newIdx = PrivateNetworkIndex.create( exNet, i );

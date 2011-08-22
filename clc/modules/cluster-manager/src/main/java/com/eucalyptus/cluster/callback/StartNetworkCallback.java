@@ -82,10 +82,13 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
   
   public StartNetworkCallback( final ExtantNetwork extantNet ) {
     this.extantNet = extantNet;
-    StartNetworkType msg = new StartNetworkType( extantNet.getOwnerUserId( ),
+    StartNetworkType msg = new StartNetworkType( extantNet.getOwnerAccountNumber( ),
+                                                 extantNet.getOwnerUserId( ),
                                                  extantNet.getTag( ),
                                                  extantNet.getNaturalId( ),
                                                  extantNet.getNaturalId( ) );
+    msg.setUserId( this.extantNet.getOwnerUserId( ) );
+    msg.setAccountId( this.extantNet.getOwnerAccountNumber( ) );
     this.setRequest( msg );
   }
   
