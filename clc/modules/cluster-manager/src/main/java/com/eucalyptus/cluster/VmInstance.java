@@ -1120,20 +1120,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.kernelId;
   }
   
-  public void setKernelId( String kernelId ) {
-    this.kernelId = kernelId;
-  }
-  
   public String getRamdiskId( ) {
     return this.ramdiskId;
-  }
-  
-  public void setRamdiskId( String ramdiskId ) {
-    this.ramdiskId = ramdiskId;
-  }
-  
-  public void setImageId( String imageId ) {
-    this.imageId = imageId;
   }
   
 }
