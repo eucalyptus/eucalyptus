@@ -97,6 +97,8 @@ public class ResourceToken implements Comparable<ResourceToken> {
   private final Date                                    creationTime;
   private final Integer                                 resourceAllocationSequenceNumber;
   private final Integer                                 amount = 1;
+  @Nullable
+  private VmInstance                                    vmInst;
   
   public ResourceToken( final Allocation allocInfo, final int resourceAllocationSequenceNumber, final int launchIndex ) {
     this.allocation = allocInfo;
@@ -263,6 +265,14 @@ public class ResourceToken implements Comparable<ResourceToken> {
       builder.append( "idx=" ).append( this.networkIndex.get( ).getIndex( ) );
     }
     return builder.toString( );
+  }
+  
+  public void setVmInstance( VmInstance vmInst ) {
+    this.vmInst = vmInst;
+  }
+
+  public VmInstance getVmInstance( ) {
+    return this.vmInst;
   }
   
 }

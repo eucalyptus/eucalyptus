@@ -98,7 +98,7 @@ public class VmReplyTransform {
     for ( ResourceToken allocToken : allocInfo.getAllocationTokens( ) ) {
       VmInstance vm = VmInstances.lookup( allocToken.getInstanceId( ) );
       RunningInstancesItemType runVm = vm.getAsRunningInstanceItemType( );
-      reservation.getInstancesSet( ).add( runVm );
+      reservation.getInstancesSet( ).add( allocToken.getVmInstance( ).getAsRunningInstanceItemType( ) );
     }
     reply.setRsvInfo( reservation );
     return reply;

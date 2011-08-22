@@ -137,6 +137,7 @@ public class CreateVmInstances {
     vmInst = Entities.persist( vmInst );
     token.getNetworkIndex( ).set( vmInst );
     vmInst = VmInstances.register( vmInst );
+    token.setVmInstance( vmInst ) ;
     return vmInst;
   }
 }
