@@ -294,7 +294,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
         Entities.merge( net );
         db.commit( );
         return exNet;
-      } catch ( Exception ex ) {
+      } catch ( Exception ex ) { 
         db.rollback( );
         Logs.exhaust( ).trace( ex, ex );
         throw new NotEnoughResourcesException( ex );
