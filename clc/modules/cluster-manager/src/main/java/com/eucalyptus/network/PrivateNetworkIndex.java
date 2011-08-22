@@ -63,9 +63,7 @@
 
 package com.eucalyptus.network;
 
-import java.util.List;
 import javax.persistence.Column;
-import javax.persistence.EntityTransaction;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
@@ -75,21 +73,10 @@ import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import org.hibernate.criterion.Example;
-import org.hibernate.criterion.MatchMode;
-import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cloud.util.PersistentResource;
 import com.eucalyptus.cloud.util.Resource;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
-import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.RecoverablePersistenceException;
-import com.eucalyptus.entities.TransactionException;
-import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.Numbers;
 import com.google.common.base.Predicate;
 
 @Entity
@@ -134,13 +121,17 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
     this.index = index;
   }
   
-  public PrivateNetworkIndex( Integer tag, Long index ) {
+  private PrivateNetworkIndex( Integer tag, Long index ) {
     super( null, null );
     this.bogusId = tag + ":" + index;
     this.extantNetwork = null;
     this.index = index;
   }
   
+  public static PrivateNetworkIndex named( ExtantNetwork exNet, Long index ) {
+    return new PrivateNetworkIndex( exNet.getTag( ), index );
+  }
+
   public static PrivateNetworkIndex create( ExtantNetwork exNet, Long index ) {
     return new PrivateNetworkIndex( exNet, index );
   }

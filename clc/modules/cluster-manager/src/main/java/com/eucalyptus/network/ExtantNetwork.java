@@ -80,12 +80,14 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.cloud.UserMetadata;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cloud.util.Resource;
 import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
+import com.eucalyptus.util.Numbers;
 import com.google.common.collect.Iterables;
 
 @Entity
@@ -217,6 +219,18 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
     }
   }
   
+  private Integer attemptNetworkIndex( ) throws NotEnoughResourcesException {
+    for ( Long i : Numbers.shuffled( NetworkGroups.networkIndexInterval( ) ) ) {
+      try {
+        Entities.uniqueResult( PrivateNetworkIndex.create( this, i ) );
+        continue;
+      } catch ( Exception ex ) {
+        return i;
+      }
+    }
+    throw new NotEnoughResourcesException( "Failed to allocate network tag for network: " + this.getFullName( ) + ": no network tags are free." );
+  }
+
   public NetworkGroup getNetworkGroup( ) {
     return this.networkGroup;
   }
