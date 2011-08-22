@@ -8,7 +8,6 @@ import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 
 @Target( { ElementType.FIELD } )
 @Retention( RetentionPolicy.RUNTIME )
-@Deprecated
 public @interface ConfigurableField {
   String description( ) default "None available.";
   

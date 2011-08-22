@@ -69,16 +69,8 @@ import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
-import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.ws.Handlers;
-import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.ClusterWsSecHandler;
-import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
-import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
-import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
-import com.eucalyptus.ws.protocol.AddressingHandler;
-import com.eucalyptus.ws.protocol.SoapHandler;
 
 public final class ClusterClientPipelineFactory implements ChannelPipelineFactory {
   private static ChannelHandler bindingHandler;

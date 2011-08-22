@@ -84,9 +84,10 @@ import com.eucalyptus.entities.AbstractPersistent;
 @ConfigurableClass( root = "ws", description = "Parameters controlling the web services endpoint." )
 public class StackConfiguration extends AbstractPersistent {
   
+  @ConfigurableField( initial = "500", description = "Channel connect timeout (ms)." )
   public static final Integer CHANNEL_CONNECT_TIMEOUT           = 500;
   @ConfigurableField( initial = "3", changeListener = TimeChangeListener.class,
-                      description = "Time interval duration (in seconds) during which duplicate signatures will be accepted to accomodate collisions for legitimate requests inherent in Query/REST signing protocol." )
+      description = "Time interval duration (in seconds) during which duplicate signatures will be accepted to accomodate collisions for legitimate requests inherent in Query/REST signing protocol." )
   public static Integer       REPLAY_SKEW_WINDOW_SEC            = 3;
   @ConfigurableField( initial = "300",
       description = "A max clock skew value (in seconds) between client and server accepted when validating timestamps in Query/REST protocol.",
@@ -97,32 +98,59 @@ public class StackConfiguration extends AbstractPersistent {
   public static final Boolean CHANNEL_REUSE_ADDRESS             = true;
   public static final Boolean CHANNEL_KEEP_ALIVE                = true;
   public static final Boolean CHANNEL_NODELAY                   = true;
-  @ConfigurableField( initial = "" + 17, description = "Server worker thread pool max." )
-  public static Integer       SERVER_POOL_MAX_THREADS           = Runtime.getRuntime( ).availableProcessors( ) * 2 + 1;
-  @ConfigurableField( initial = "" + 1048576l, description = "Server max worker memory per connection." )
-  public static Long          SERVER_POOL_MAX_MEM_PER_CONN      = 1048576l;
-  @ConfigurableField( initial = "" + 100 * 1024 * 1024l, description = "Server max worker memory total." )
-  public static Long          SERVER_POOL_TOTAL_MEM             = 100 * 1024 * 1024l;
+  @ConfigurableField( initial = "128", description = "Server worker thread pool max." )
+  public static Integer       SERVER_POOL_MAX_THREADS           = 128;
+  @ConfigurableField( initial = "104857600", description = "Server max worker memory per connection." )
+  public static Long          SERVER_POOL_MAX_MEM_PER_CONN      = 104857600l;
+  @ConfigurableField( initial = "1073741824", description = "Server max worker memory total." )
+  public static Long          SERVER_POOL_TOTAL_MEM             = 1073741824l;
+  
+  @ConfigurableField( initial = "500", description = "Service socket select timeout (ms)." )
   public static Long          SERVER_POOL_TIMEOUT_MILLIS        = 500l;
-  @ConfigurableField( initial = "" + 17, description = "Server selector thread pool max." )
+  
+  @ConfigurableField( initial = "17", description = "Server selector thread pool max." )
   public static Integer       SERVER_BOSS_POOL_MAX_THREADS      = Runtime.getRuntime( ).availableProcessors( ) + 1;
-  @ConfigurableField( initial = "" + 1048576l, description = "Server max selector memory per connection." )
+  
+  @ConfigurableField( initial = "1048576l", description = "Server max selector memory per connection." )
   public static Long          SERVER_BOSS_POOL_MAX_MEM_PER_CONN = 1048576l;
-  @ConfigurableField( initial = "" + 17, description = "Server max selector memory total." )
-  public static Long          SERVER_BOSS_POOL_TOTAL_MEM        = 100 * 1024 * 1024l;
+  
+  @ConfigurableField( initial = "1073741824l", description = "Server worker thread pool max." )
+  public static Long          SERVER_BOSS_POOL_TOTAL_MEM        = 1073741824l;
+  
+  @ConfigurableField( initial = "500", description = "Service socket select timeout (ms)." )
   public static Long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500l;
-  @ConfigurableField( initial = "" + 8773, description = "Web services port." )
+  
+  @ConfigurableField( initial = "8773", description = "Web services port." )
   public static final Integer PORT                              = 8773;
-  public static Long          CLIENT_IDLE_TIMEOUT_SECS          = 4 * 60l;
-  public static Long          CLUSTER_IDLE_TIMEOUT_SECS         = 4 * 60l;
+  
+  @ConfigurableField( initial = "240", description = "Client idle timeout (secs)." )
+  public static Long          CLIENT_IDLE_TIMEOUT_SECS          = 240l;
+  
+  @ConfigurableField( initial = "240", description = "Cluster client idle timeout (secs)." )
+  public static Long          CLUSTER_IDLE_TIMEOUT_SECS         = 240l;
+  
+  @ConfigurableField( initial = "2000", description = "Cluster connect timeout (ms)." )
   public static Long          CLUSTER_CONNECT_TIMEOUT_MILLIS    = 2000l;
-  @ConfigurableField( initial = "" + 20, description = "Server socket read time-out." )
+  
+  @ConfigurableField( initial = "20", description = "Server socket read time-out." )
   public static Long          PIPELINE_READ_TIMEOUT_SECONDS     = 20l;
-  @ConfigurableField( initial = "" + 20, description = "Server socket write time-out." )
+  
+  @ConfigurableField( initial = "20", description = "Server socket write time-out." )
   public static Long          PIPELINE_WRITE_TIMEOUT_SECONDS    = 20l;
+  
+  @ConfigurableField( initial = "10485760l", description = "Server worker thread pool max." )
+  public static Long          CLIENT_HTTP_CHUNK_BUFFER_MAX      = 10485760l;
+  
+  @ConfigurableField( initial = "40", description = "Server worker thread pool max." )
   public static Integer       CLIENT_POOL_MAX_THREADS           = 40;
+  
+  @ConfigurableField( initial = "10485760l", description = "Server worker thread pool max." )
   public static Long          CLIENT_POOL_MAX_MEM_PER_CONN      = 10485760l;
-  public static Long          CLIENT_POOL_TOTAL_MEM             = 200 * 1024 * 1024l;
+  
+  @ConfigurableField( initial = "1073741824l", description = "Server worker thread pool max." )
+  public static Long          CLIENT_POOL_TOTAL_MEM             = 1073741824l;
+  
+  @ConfigurableField( initial = "500", description = "Client socket select timeout (ms)." )
   public static Long          CLIENT_POOL_TIMEOUT_MILLIS        = 500l;
   
   private static Logger       LOG                               = Logger.getLogger( StackConfiguration.class );
