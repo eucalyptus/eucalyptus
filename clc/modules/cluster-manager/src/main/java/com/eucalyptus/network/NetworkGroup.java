@@ -317,6 +317,9 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
         db.commit( );
         return exNet;
       }
+    } catch ( NotEnoughResourcesException ex ) {
+      db.rollback( );
+      throw ex;
     } catch ( Exception ex ) {
       db.rollback( );
       throw new NotEnoughResourcesException( "Cannot has: " + ex.getMessage( ), ex );
