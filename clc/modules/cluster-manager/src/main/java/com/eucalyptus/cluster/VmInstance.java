@@ -113,6 +113,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.Emis.BootableSet;
+import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroup;
@@ -203,8 +204,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private String                                      platform;
   @Column( name = "metadata_vm_vbr" )
   private String                                      vbrString;
-  @Transient
-  private final BootableSet                           bootSet;
+  @Column( name = "metadata_vm_image_id" )
+  private String                                      imageId;
+  @Column( name = "metadata_vm_kernel_id" )
+  private String                                      kernelId;
+  @Column( name = "metadata_vm_ramdisk_id" )
+  private String                                      ramdiskId;
   
   @PrePersist
   @PreUpdate
@@ -245,7 +250,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                      final List<NetworkGroup> networkRulesGroups,
                      final SetReference<PrivateNetworkIndex, VmInstance> networkIndex ) {
     super( owner, instanceId );
-    this.bootSet = bootSet;
     this.privateNetwork = Boolean.FALSE;
     this.launchTime = new Date( );
     this.blockBytes = 0l;
@@ -293,7 +297,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.sshKeyPair = null;
     this.vmType = null;
     this.privateNetwork = null;
-    this.bootSet = null;
   }
   
   protected VmInstance( ) {
@@ -310,7 +313,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.sshKeyPair = null;
     this.vmType = null;
     this.privateNetwork = null;
-    this.bootSet = null;
   }
   
   public void updateBlockBytes( final long blkbytes ) {
@@ -509,10 +511,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     m.put( "public-ipv4", this.getPublicAddress( ) );
     m.put( "reservation-id", this.getReservationId( ) );
-//    m.put( "kernel-id", this.getImageInfo( ).getKernelId( ) );
-//    if ( this.getImageInfo( ).getRamdiskId( ) != null ) {
-//      m.put( "ramdisk-id", this.getImageInfo( ).getRamdiskId( ) );
-//    }
+    m.put( "kernel-id", this.getKernelId( ) );
+    if ( this.getRamdiskId( ) != null ) {
+      m.put( "ramdisk-id", this.getRamdiskId( ) );
+    }
     m.put( "security-groups", this.getNetworkNames( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
     
     m.put( "block-device-mapping/", "emi\nephemeral\nephemeral0\nroot\nswap" );
@@ -663,7 +665,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public String getImageId( ) {
-    return this.bootSet.getMachine( ).getDisplayName( );
+    return this.imageId;
   }
   
   public RunningInstancesItemType getAsRunningInstanceItemType( ) {
@@ -685,9 +687,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     runningInstance.setInstanceId( this.instanceId );
 //ASAP:FIXME:GRZE: restore.
     runningInstance.setProductCodes( new ArrayList<String>( ) );
-    runningInstance.setImageId( this.bootSet.getMachine( ).getDisplayName( ) );
-    runningInstance.setKernel( this.bootSet.getKernel( ).getDisplayName( ) );
-    runningInstance.setRamdisk( this.bootSet.getRamdisk( ).getDisplayName( ) );
+    runningInstance.setImageId( this.getImageId( ) );
+    runningInstance.setKernel( this.getKernelId( ) );
+    runningInstance.setRamdisk( this.getRamdiskId( ) );
     if ( dns ) {
       String publicDnsName = this.getPublicDnsName( );
       String privateDnsName = this.getPrivateDnsName( );
@@ -1078,7 +1080,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       LOG.error( ex );
     }
   }
-
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -1088,7 +1090,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       : this.instanceId.hashCode( ) );
     return result;
   }
-
+  
   @Override
   public boolean equals( Object obj ) {
     if ( this == obj ) {
@@ -1109,6 +1111,26 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return false;
     }
     return true;
+  }
+  
+  public String getKernelId( ) {
+    return this.kernelId;
+  }
+  
+  public void setKernelId( String kernelId ) {
+    this.kernelId = kernelId;
+  }
+  
+  public String getRamdiskId( ) {
+    return this.ramdiskId;
+  }
+  
+  public void setRamdiskId( String ramdiskId ) {
+    this.ramdiskId = ramdiskId;
+  }
+  
+  public void setImageId( String imageId ) {
+    this.imageId = imageId;
   }
   
 }
