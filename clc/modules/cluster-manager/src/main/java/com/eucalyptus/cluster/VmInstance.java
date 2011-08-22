@@ -954,7 +954,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return String
                  .format(
                           "VmInstance [instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerAccountNumber=%s, ownerUserId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
-                          this.instanceId, this.sshKeyPair, this.launchIndex, this.launchTime, this.networkConfig, this.networkGroups, this.getOwnerAccountNumber( ), this.getOwnerUserId( )
+                          this.instanceId, this.sshKeyPair, this.launchIndex, this.launchTime, this.networkConfig, this.networkGroups, this.getOwnerAccountNumber( ), this.getOwnerUserId( ),
                           this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.runtimeState,
                           System.currentTimeMillis( ) - this.getLastUpdateTimestamp( ).getTime( ),
                           this.userData, this.vmType, this.transientVolumes );
