@@ -74,6 +74,7 @@ import java.util.concurrent.ConcurrentMap;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
+import javax.persistence.LockModeType;
 import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
@@ -85,6 +86,7 @@ import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.entities.Entities.CascadingTx;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -134,7 +136,15 @@ public class Entities {
   
   private static boolean hasTransaction( final Object obj ) {
     final String ctx = lookatPersistenceContext( obj );
-    return txStateThreadLocal.get( ).containsKey( ctx );
+    CascadingTx tx = txStateThreadLocal.get( ).get( ctx );
+    if ( tx == null ) {
+      return false;
+    } else if ( tx.isActive( ) ) {
+      return true;
+    } else {
+      txStateThreadLocal.get( ).remove( ctx );
+      return false;
+    }
   }
   
   private static CascadingTx getTransaction( final Object obj ) {
@@ -334,8 +344,10 @@ public class Entities {
    */
   public static <T> T merge( final T newObject ) throws ConstraintViolationException {
     try {
-      T persistedObject = getTransaction( newObject ).getTxState( ).getEntityManager( ).merge( newObject );      
-      return persistedObject == newObject ? newObject : persistedObject; 
+      T persistedObject = getTransaction( newObject ).getTxState( ).getEntityManager( ).merge( newObject );
+      return persistedObject == newObject
+        ? newObject
+        : persistedObject;
     } catch ( final RuntimeException ex ) {
       
       PersistenceExceptions.throwFiltered( ex );
@@ -343,17 +355,18 @@ public class Entities {
     }
   }
   
-  public static <T> void refresh( final T newObject ) throws ConstraintViolationException {
+  public static <T> void refresh( final T newObject, final LockModeType lockMode ) throws ConstraintViolationException {
     try {
-      getTransaction( newObject ).getTxState( ).getEntityManager( ).refresh( newObject );      
+      getTransaction( newObject ).getTxState( ).getEntityManager( ).refresh( newObject, lockMode );
     } catch ( final RuntimeException ex ) {
       PersistenceExceptions.throwFiltered( ex );
       throw ex;
     }
   }
-
+  
   /**
    * {@inheritDoc Session}
+   * 
    * @param obj
    * @return
    */
@@ -509,7 +522,7 @@ public class Entities {
         Logs.extreme( ).error( "Duplicate call to commit( ): " + Threads.currentStackString( ) );
       }
     }
-
+    
     TxState getTxState( ) {
       return this.txState;
     }
@@ -543,7 +556,7 @@ public class Entities {
         public void commit( ) {
           try {
             CascadingTx.this.endStes.put( CascadingTx.this.getRecord( ).getUuid( ) + ":" + this.uuid, Threads.currentStackFrame( 1 ) );
-            CascadingTx.this.getTxState( ).getEntityManager( ).flush( );
+//            CascadingTx.this.getTxState( ).getEntityManager( ).flush( );
 //          Logs.exhaust( ).trace( "Child call to commit() is ignored: " + Threads.currentStackRange( 2, 8 ) );
           } catch ( final HibernateException ex ) {
             LOG.error( ex, ex );
