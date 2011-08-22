@@ -125,7 +125,7 @@ public class CreateVmInstances {
                                           allocInfo.getNetworkGroups( ),
                                           token.getNetworkIndex( ) );
       vmInst = Entities.persist( vmInst );
-//      token.getNetworkIndex( ).set( vmInst );
+      token.getNetworkIndex( ).set( vmInst );
 //      vmInst = VmInstances.register( vmInst );
       token.setVmInstance( vmInst );
       db.commit( );

@@ -268,6 +268,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       ? null
       : sshKeyPair;
     this.vmType = vmType;
+    this.networkIndex = networkIndex.get( );
     this.networkConfig.setMacAddress( "d0:0d:" + VmInstances.asMacAddress( this.instanceId ) );
     this.networkConfig.setIpAddress( DEFAULT_IP );
     this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
