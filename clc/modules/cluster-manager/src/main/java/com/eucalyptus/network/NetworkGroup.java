@@ -75,13 +75,11 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
-import javax.persistence.ManyToMany;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
-import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
@@ -95,12 +93,11 @@ import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.cloud.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
-import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
-import com.eucalyptus.entities.TransactionExecutionException;
+import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Numbers;
@@ -282,48 +279,18 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   public ExtantNetwork extantNetwork( ) throws NotEnoughResourcesException {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       return ExtantNetwork.bogus( this );
+    } else if ( !Entities.isPersistent( this ) ) {
+      throw new TransientEntityException( this.toString( ) );
     } else {
-      final EntityTransaction db = Entities.get( NetworkGroup.class );
-      
-      try {
-        NetworkGroup net = Entities.merge( this );
-        ExtantNetwork exNet = net.getExtantNetwork( );
-        if ( net.getExtantNetwork( ) == null) {
-          exNet = net.findOrCreateExtantNetwork( );
-        }
-        Entities.merge( net );
-        db.commit( );
-        return exNet;
-      } catch ( Exception ex ) { 
-        db.rollback( );
-        Logs.exhaust( ).trace( ex, ex );
-        throw new NotEnoughResourcesException( ex );
-      }
-    }
-  }
-  
-  private ExtantNetwork findOrCreateExtantNetwork( ) throws TransactionException, NoSuchElementException, NotEnoughResourcesException {
-    EntityTransaction db = Entities.get( NetworkGroup.class );
-    try {
-      NetworkGroup ngNet = Entities.merge( this );
-      ExtantNetwork exNet = ngNet.getExtantNetwork( );
+      ExtantNetwork exNet = this.getExtantNetwork( );
       if ( exNet == null ) {
-        int tag = ngNet.attemptNetworkTagging( );
-        exNet = ExtantNetwork.create( ngNet, tag );
-        ngNet.setExtantNetwork( exNet );
+        int tag = this.attemptNetworkTagging( );
+        exNet = ExtantNetwork.create( this, tag );
         Entities.persist( exNet );
-        db.commit( );
-        return exNet;
-      } else {
-        db.commit( );
-        return exNet;
+        this.setExtantNetwork( exNet );
       }
-    } catch ( NotEnoughResourcesException ex ) {
-      db.rollback( );
-      throw ex;
-    } catch ( Exception ex ) {
-      db.rollback( );
-      throw new NotEnoughResourcesException( "Cannot has: " + ex.getMessage( ), ex );
+      Entities.merge( this );
+      return this.getExtantNetwork( );
     }
   }
   
