@@ -187,8 +187,8 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
         } catch ( Exception ex ) {
           try {
             netIdx = PrivateNetworkIndex.create( exNet, i );
-            exNet.getIndexes( ).add( netIdx );
             netIdx = Entities.persist( netIdx );
+            exNet.getIndexes( ).add( netIdx );
             exNet = Entities.merge( exNet );
             break;
           } catch ( Exception ex1 ) {

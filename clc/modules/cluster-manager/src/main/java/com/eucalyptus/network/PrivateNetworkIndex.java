@@ -132,7 +132,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
     return new PrivateNetworkIndex( exNet.getTag( ), index );
   }
 
-  public static PrivateNetworkIndex create( ExtantNetwork exNet, Long index ) {
+  public static PrivateNetworkIndex create( ExtantNetwork exNet, Long index ) {//TODO:GRZE: fix for sanity.
     return new PrivateNetworkIndex( exNet, index );
   }
   
