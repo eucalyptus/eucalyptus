@@ -69,6 +69,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
@@ -94,6 +95,7 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.keys.SshKeyPair;
@@ -146,6 +148,7 @@ public class ClusterAllocator implements Runnable {
   
   private ClusterAllocator( final Allocation allocInfo ) {
     this.allocInfo = allocInfo;
+    EntityTransaction db = Entities.get( VmInstance.class );
     try {
       this.cluster = Clusters.lookup( allocInfo.getPartition( ) );
       this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
@@ -154,7 +157,9 @@ public class ClusterAllocator implements Runnable {
       for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
         this.setupVmMessages( token );
       }
+      db.commit( );
     } catch ( final Exception e ) {
+      db.rollback( );
       LOG.debug( e, e );
       this.allocInfo.abort( );
       for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
