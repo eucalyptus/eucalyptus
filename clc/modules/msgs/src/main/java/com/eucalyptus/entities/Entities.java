@@ -534,7 +534,7 @@ public class Entities {
         public void commit( ) {
           try {
             CascadingTx.this.endStes.put( CascadingTx.this.getRecord( ).getUuid( ) + ":" + this.uuid, Threads.currentStackFrame( 1 ) );
-//            CascadingTx.this.getTxState( ).getSession( ).flush( );
+            CascadingTx.this.getTxState( ).getEntityManager( ).flush( );
 //          Logs.exhaust( ).trace( "Child call to commit() is ignored: " + Threads.currentStackRange( 2, 8 ) );
           } catch ( final HibernateException ex ) {
             LOG.error( ex, ex );

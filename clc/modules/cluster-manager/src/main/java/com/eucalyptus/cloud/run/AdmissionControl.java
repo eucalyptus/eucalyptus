@@ -327,7 +327,7 @@ public class AdmissionControl {
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
       if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
-        EntityTransaction db = Entities.get( ExtantNetwork.class );
+        EntityTransaction db = Entities.get( NetworkGroup.class );
         try {
           NetworkGroup net = Entities.merge( allocInfo.getPrimaryNetwork( ) );
           ExtantNetwork exNet = net.extantNetwork( );
