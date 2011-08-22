@@ -102,12 +102,34 @@ public class CreateVmInstances {
     }
     String reservationId = VmInstances.getId( allocInfo.getReservationIndex( ), -1 ).replaceAll( "i-", "r-" );
     int vmIndex = 0; /*<--- this corresponds to the first instance id CANT COLLIDE WITH RSVID             */
+    for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+      VmInstance vmInst = makeVmInstance( token );
+    }
+    return allocInfo;
+  }
+  
+  private VmInstance makeVmInstance( ResourceToken token ) throws TransactionException, ResourceAllocationException {
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-        VmInstance vmInst = makeVmInstance( token );
-      }
+      Allocation allocInfo = token.getAllocationInfo( );
+      VmInstance vmInst = new VmInstance( allocInfo.getOwnerFullName( ),
+                                          token.getInstanceId( ),
+                                          token.getInstanceUuid( ),
+                                          allocInfo.getReservationId( ),
+                                          token.getLaunchIndex( ),
+                                          allocInfo.getRequest( ).getAvailabilityZone( ),
+                                          allocInfo.getUserData( ),
+                                          allocInfo.getBootSet( ),
+                                          allocInfo.getSshKeyPair( ),
+                                          allocInfo.getVmType( ),
+                                          allocInfo.getNetworkGroups( ),
+                                          token.getNetworkIndex( ) );
+      vmInst = Entities.persist( vmInst );
+//      token.getNetworkIndex( ).set( vmInst );
+//      vmInst = VmInstances.register( vmInst );
+      token.setVmInstance( vmInst );
       db.commit( );
+      return vmInst;
     } catch ( ResourceAllocationException ex ) {
       db.rollback( );
       Logs.extreme( ).error( ex, ex );
@@ -117,27 +139,5 @@ public class CreateVmInstances {
       Logs.extreme( ).error( ex, ex );
       throw new TransactionExecutionException( ex );
     }
-    return allocInfo;
-  }
-  
-  private VmInstance makeVmInstance( ResourceToken token ) throws TransactionException, ResourceAllocationException {
-    Allocation allocInfo = token.getAllocationInfo( );
-    VmInstance vmInst = new VmInstance( allocInfo.getOwnerFullName( ),
-                                        token.getInstanceId( ),
-                                        token.getInstanceUuid( ),
-                                        allocInfo.getReservationId( ),
-                                        token.getLaunchIndex( ),
-                                        allocInfo.getRequest( ).getAvailabilityZone( ),
-                                        allocInfo.getUserData( ),
-                                        allocInfo.getBootSet( ),
-                                        allocInfo.getSshKeyPair( ),
-                                        allocInfo.getVmType( ),
-                                        allocInfo.getNetworkGroups( ),
-                                        token.getNetworkIndex( ) );
-    vmInst = Entities.persist( vmInst );
-    token.getNetworkIndex( ).set( vmInst );
-    vmInst = VmInstances.register( vmInst );
-    token.setVmInstance( vmInst ) ;
-    return vmInst;
   }
 }
