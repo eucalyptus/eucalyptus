@@ -92,6 +92,7 @@ import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.ExtantNetwork;
@@ -168,18 +169,19 @@ public class Allocations {
     }
     
     public NetworkGroup getPrimaryNetwork( ) {
-      if ( this.networkGroups.size( ) < 1 ) {
-        throw new IllegalArgumentException( "At least one network group must be specified." );
-      } else {
-        try {
-          return Transactions.find( this.networkGroups.values( ).iterator( ).next( ) );
-        } catch ( TransactionException ex ) {
-          LOG.error( ex, ex );
-          throw new RuntimeException( ex );
-        }
+      return this.primaryNetwork;
+    }
+
+    public ExtantNetwork getExtantNetwork( ) {
+      try {
+        return this.primaryNetwork.extantNetwork( );
+      } catch ( TransientEntityException ex ) {
+        LOG.error( ex , ex );
+        throw new RuntimeException( ex );
+      } catch ( NotEnoughResourcesException ex ) {
+        return ExtantNetwork.bogus( this.getPrimaryNetwork( ) );
       }
     }
-    
     public void abort( ) {
       for ( ResourceToken token : this.allocationTokens ) {
         token.abort( );
@@ -188,42 +190,6 @@ public class Allocations {
     
     public List<NetworkGroup> getNetworkGroups( ) {
       return Lists.newArrayList( this.networkGroups.values( ) );
-    }
-    
-    public List<ResourceToken> requestResourceToken( int tryAmount, int maxAmount ) throws NotEnoughResourcesException {
-      ServiceConfiguration config = Partitions.lookupService( ClusterController.class, this.getPartition( ) );
-      Cluster cluster = Clusters.lookup( config );
-      ClusterNodeState state = cluster.getNodeState( );
-      List<ResourceToken> rscToken = state.requestResourceAllocation( this, tryAmount, maxAmount );
-      this.allocationTokens.addAll( rscToken );
-      return rscToken;
-    }
-    
-    public void requestNetworkTokens( ) throws NotEnoughResourcesException {
-      NetworkGroup net = this.getPrimaryNetwork( );
-      ExtantNetwork exNet = net.extantNetwork( );
-      for ( ResourceToken rscToken : this.allocationTokens ) {
-        rscToken.setExtantNetwork( exNet );
-      }
-    }
-    
-    public void requestNetworkIndexes( ) throws NotEnoughResourcesException {
-      for ( ResourceToken rscToken : this.allocationTokens ) {
-        try {
-          ExtantNetwork extantNetwork = rscToken.getExtantNetwork( );
-          assertThat( extantNetwork, notNullValue( ) );
-          SetReference<PrivateNetworkIndex, VmInstance> addrIndex = extantNetwork.allocateNetworkIndex( );
-          rscToken.setNetworkIndex( addrIndex );
-        } catch ( Exception ex ) {
-          throw new NotEnoughResourcesException( "Not enough addresses left in the network subnet assigned to requested group: " + rscToken, ex );
-        }
-      }
-    }
-    
-    public void requestAddressTokens( ) throws NotEnoughResourcesException {
-      for ( ResourceToken token : this.allocationTokens ) {
-        token.setAddress( Addresses.allocateSystemAddress( token.getAllocationInfo( ).getPartition( ) ) );
-      }
     }
     
     public VmType getVmType( ) {

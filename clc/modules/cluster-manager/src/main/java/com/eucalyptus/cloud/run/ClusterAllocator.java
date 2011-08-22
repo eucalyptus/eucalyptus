@@ -193,7 +193,7 @@ public class ClusterAllocator implements Runnable {
   private void setupNetworkMessages( ) throws NotEnoughResourcesException {
     NetworkGroup net = this.allocInfo.getPrimaryNetwork( );
     if ( net != null ) {
-      final Request<StartNetworkType, StartNetworkResponseType> callback = AsyncRequests.newRequest( new StartNetworkCallback( net.extantNetwork( ) ) );
+      final Request<StartNetworkType, StartNetworkResponseType> callback = AsyncRequests.newRequest( new StartNetworkCallback( this.allocInfo.getExtantNetwork( ) ) );
       this.messages.addRequest( State.CREATE_NETWORK, callback );
       EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ), net.toString( ) ).debug( );
     }
@@ -203,8 +203,6 @@ public class ClusterAllocator implements Runnable {
     final String networkName = NetworkGroups.networkingConfiguration( ).hasNetworking( )
       ? this.allocInfo.getPrimaryNetwork( ).getNaturalId( )
       : NetworkGroups.lookup( this.allocInfo.getOwnerFullName( ), NetworkGroups.defaultNetworkName( ) ).getNaturalId( );
-    
-    final Integer vlan = token.getAllocationInfo( ).getPrimaryNetwork( ).extantNetwork( ).getTag( );
     
     final SshKeyPair keyInfo = this.allocInfo.getSshKeyPair( );
     final VmTypeInfo vmInfo = this.allocInfo.getVmTypeInfo( );
@@ -261,8 +259,8 @@ public class ClusterAllocator implements Runnable {
       : "linux"; // ASAP:FIXME:GRZE
     ExtantNetwork exNet;
     try {
-      exNet = this.allocInfo.getPrimaryNetwork( ).extantNetwork( );
-    } catch ( NotEnoughResourcesException ex ) {
+      exNet = this.allocInfo.getExtantNetwork( );
+    } catch ( Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       exNet = ExtantNetwork.bogus( this.allocInfo.getPrimaryNetwork( ) );
     }

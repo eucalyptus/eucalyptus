@@ -64,12 +64,8 @@
 package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.cloud.util.NotEnoughResourcesException;
-import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
-import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.BroadcastCallback;
@@ -86,7 +82,7 @@ public class StopNetworkCallback extends BroadcastCallback<StopNetworkType, Stop
     this.networkGroup = networkGroup;
     try {
       this.tag = this.networkGroup.extantNetwork( ).getTag( );
-    } catch ( NotEnoughResourcesException ex ) {
+    } catch ( Exception ex ) {
       this.tag = -1;
     }
     StopNetworkType msg = new StopNetworkType( this.networkGroup.getOwnerAccountNumber( ), 
@@ -103,18 +99,18 @@ public class StopNetworkCallback extends BroadcastCallback<StopNetworkType, Stop
   
   @Override
   public void initialize( StopNetworkType msg ) throws Exception {
-    try {
-      NetworkGroup net = NetworkGroups.lookup( this.networkGroup.getNaturalId( ) );
-      ExtantNetwork exNet = net.extantNetwork( );
-      if ( !net.extantNetwork( ).hasIndexes( ) ) {
-        LOG.debug( "Aborting stop network for network with live instances: " + net.extantNetwork( ) );
-        throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
-      } else {
-        LOG.debug( "Releasing network token back to cluster: " + net.extantNetwork( ) );
-      }
-    } catch ( Exception e ) {
-      LOG.debug( e );
-    }
+//    try {
+//      NetworkGroup net = NetworkGroups.lookup( this.networkGroup.getNaturalId( ) );
+//      ExtantNetwork exNet = net.getExtantNetwork( );
+//      if ( !net.extantNetwork( ).hasIndexes( ) ) {
+//        LOG.debug( "Aborting stop network for network with live instances: " + net.extantNetwork( ) );
+//        throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
+//      } else {
+//        LOG.debug( "Releasing network token back to cluster: " + net.extantNetwork( ) );
+//      }
+//    } catch ( Exception e ) {
+//      LOG.debug( e );
+//    }
   }
   
   @Override

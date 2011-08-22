@@ -63,30 +63,17 @@
  */
 package com.eucalyptus.cluster;
 
-import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ConcurrentSkipListSet;
-import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.ResourceToken;
-import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.network.NetworkGroup;
-import com.eucalyptus.network.NetworkToken;
-import com.eucalyptus.network.Networks;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 
 public class ClusterState {

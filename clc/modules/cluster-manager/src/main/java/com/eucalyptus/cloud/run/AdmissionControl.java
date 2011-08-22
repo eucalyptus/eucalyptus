@@ -69,6 +69,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
+import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
@@ -89,6 +90,7 @@ import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
@@ -178,6 +180,16 @@ public class AdmissionControl {
   
   enum NodeResourceAllocator implements ResourceAllocator {
     INSTANCE;
+    private List<ResourceToken> requestResourceToken( Allocation allocInfo, int tryAmount, int maxAmount ) throws NotEnoughResourcesException {
+      ServiceConfiguration config = Partitions.lookupService( ClusterController.class, allocInfo.getPartition( ) );
+      Cluster cluster = Clusters.lookup( config );
+      ClusterNodeState state = cluster.getNodeState( );
+      List<ResourceToken> rscToken = state.requestResourceAllocation( allocInfo, tryAmount, maxAmount );
+      allocInfo.getAllocationTokens( ).addAll( rscToken );
+      return rscToken;
+    }
+    
+
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
       RunInstancesType request = allocInfo.getRequest( );
@@ -225,7 +237,7 @@ public class AdmissionControl {
                   ? state.getAvailability( vmTypeName ).getAvailable( )
                   : remaining;
                 
-                List<ResourceToken> tokens = allocInfo.requestResourceToken( tryAmount, maxAmount );
+                List<ResourceToken> tokens = this.requestResourceToken( allocInfo, tryAmount, maxAmount );
                 remaining -= tokens.size( );
               } catch ( Exception t ) {
                 if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) || remaining > 0 ) {
@@ -297,7 +309,9 @@ public class AdmissionControl {
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
       if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
-        allocInfo.requestAddressTokens( );
+        for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+          token.setAddress( Addresses.allocateSystemAddress( token.getAllocationInfo( ).getPartition( ) ) );
+        }
       }
     }
     
@@ -322,6 +336,10 @@ public class AdmissionControl {
           }
           Entities.merge( net );//GRZE:TODO: update allocInfo w/ persisted version.
           db.commit( );
+        } catch ( TransientEntityException ex ) {
+          LOG.error( ex, ex );
+          db.rollback( );
+          throw ex;
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
           db.rollback( );
