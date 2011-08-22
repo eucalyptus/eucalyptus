@@ -334,12 +334,22 @@ public class Entities {
    */
   public static <T> T merge( final T newObject ) throws ConstraintViolationException {
     try {
-      return getTransaction( newObject ).getTxState( ).getEntityManager( ).merge( newObject );
+      T persistedObject = getTransaction( newObject ).getTxState( ).getEntityManager( ).merge( newObject );
+      return persistedObject == newObject ? newObject : persistedObject; 
     } catch ( final RuntimeException ex ) {
       
       PersistenceExceptions.throwFiltered( ex );
       throw ex;
     }
+  }
+  
+  /**
+   * {@inheritDoc Session}
+   * @param obj
+   * @return
+   */
+  public static boolean isPersistent( Object obj ) {
+    return getTransaction( obj ).getTxState( ).getSession( ).contains( obj );
   }
   
   /**

@@ -289,8 +289,9 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
         NetworkGroup net = Entities.merge( this );
         ExtantNetwork exNet = net.getExtantNetwork( );
         if ( net.getExtantNetwork( ) == null) {
-          exNet = this.findOrCreateExtantNetwork( );
+          exNet = net.findOrCreateExtantNetwork( );
         }
+        Entities.merge( net );
         db.commit( );
         return exNet;
       } catch ( Exception ex ) {

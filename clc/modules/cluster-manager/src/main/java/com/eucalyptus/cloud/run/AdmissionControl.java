@@ -320,7 +320,7 @@ public class AdmissionControl {
           for ( ResourceToken rscToken : allocInfo.getAllocationTokens( ) ) {
             rscToken.setExtantNetwork( exNet );
           }
-          Entities.merge( net );
+          Entities.merge( net );//GRZE:TODO: update allocInfo w/ persisted version.
           db.commit( );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
