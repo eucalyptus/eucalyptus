@@ -103,7 +103,8 @@ public class Interceptors {
     @Override
     public void onDelete( final Object entity, final Serializable id, final Object[] state, final String[] propertyNames, final Type[] types ) {
       try {
-        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
+        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ),
+                                  id, toStringNullably( entity ) ) );
       } catch ( Exception ex ) {
         LOG.error( ex );
       }
@@ -113,7 +114,8 @@ public class Interceptors {
     @Override
     public boolean onFlushDirty( final Object entity, final Serializable id, final Object[] currentState, final Object[] previousState, final String[] propertyNames, final Type[] types ) {
       try {
-        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
+        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ),
+                                  id, toStringNullably( entity ) ) );
       } catch ( Exception ex ) {
         LOG.error( ex );
       }
@@ -126,7 +128,8 @@ public class Interceptors {
     @Override
     public boolean onLoad( final Object entity, final Serializable id, final Object[] state, final String[] propertyNames, final Type[] types ) {
       try {
-        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
+        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ),
+                                  id, toStringNullably( entity ) ) );
       } catch ( Exception ex ) {
         LOG.error( ex );
       }
@@ -136,7 +139,8 @@ public class Interceptors {
     @Override
     public boolean onSave( final Object entity, final Serializable id, final Object[] state, final String[] propertyNames, final Type[] types ) {
       try {
-        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ), id, toStringNullably( entity ) ) );
+        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ),
+                                  id, toStringNullably( entity ) ) );
       } catch ( Exception ex ) {
         LOG.error( ex );
       }
@@ -146,8 +150,8 @@ public class Interceptors {
     @Override
     public void postFlush( final Iterator entities ) {
       try {
-        LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations,
-                                  Iterators.transform( entities, Classes.simpleNameFunction( ) ) ) );
+        if ( Logs.isExtrrreeeme( ) ) Logs.exhaust( ).debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations,
+                                                                           Iterators.transform( entities, Classes.simpleNameFunction( ) ) ) );
       } catch ( Exception ex ) {
         LOG.error( ex );
       }
@@ -157,8 +161,8 @@ public class Interceptors {
     @Override
     public void preFlush( final Iterator entities ) {
       try {
-        LOG.debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations,
-                                  Iterators.transform( entities, Classes.simpleNameFunction( ) ) ) );
+        if ( Logs.isExtrrreeeme( ) ) Logs.exhaust( ).debug( String.format( "%s():%d %s", Threads.currentStackFrame( ).getMethodName( ), this.operations,
+                                                                           Iterators.transform( entities, Classes.simpleNameFunction( ) ) ) );
       } catch ( Exception ex ) {
         LOG.error( ex );
       }
@@ -192,7 +196,7 @@ public class Interceptors {
     
     @Override
     public void beforeTransactionCompletion( final Transaction tx ) {
-      if( this.operations == 0 ) {
+      if ( this.operations == 0 ) {
         LOG.error( Threads.currentStackString( ) );
       }
       try {
@@ -210,7 +214,8 @@ public class Interceptors {
           ? ( Iterable ) collection
           : Lists.newArrayList( collection ) );
         String summary = Iterables.toString( Iterables.transform( iter, Classes.canonicalNameFunction( ) ) );
-        LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
+        if ( Logs.isExtrrreeeme( ) ) Logs.exhaust( ).debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations,
+                                                                           key, summary ) );
       } catch ( Exception ex ) {
         LOG.error( ex );
       }
@@ -224,7 +229,8 @@ public class Interceptors {
           ? ( Iterable ) collection
           : Lists.newArrayList( collection ) );
         String summary = Iterables.toString( Iterables.transform( iter, Classes.canonicalNameFunction( ) ) );
-        LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, key, summary ) );
+        if ( Logs.isExtrrreeeme( ) ) Logs.exhaust( ).debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations,
+                                                                           key, summary ) );
       } catch ( Exception ex ) {
         LOG.error( ex );
       }
@@ -244,7 +250,7 @@ public class Interceptors {
       }
       super.onCollectionUpdate( collection, key );
     }
-
+    
     @Override
     public Object instantiate( String entityName, EntityMode entityMode, Serializable id ) {
       try {
@@ -254,17 +260,18 @@ public class Interceptors {
       }
       return super.instantiate( entityName, entityMode, id );
     }
-
+    
     @Override
     public String getEntityName( Object object ) {
       try {
-        LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, object.getClass( ).getSimpleName( ), toStringNullably( object ) ) );
+        LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, object.getClass( ).getSimpleName( ),
+                                  toStringNullably( object ) ) );
       } catch ( Exception ex ) {
         LOG.error( ex );
       }
       return super.getEntityName( object );
     }
-
+    
     @Override
     public Object getEntity( String entityName, Serializable id ) {
       try {
