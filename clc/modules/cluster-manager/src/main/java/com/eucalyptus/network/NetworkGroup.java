@@ -276,7 +276,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     return this.getOwnerUserId( ) + "-" + this.getNaturalId( );
   }
   
-  public ExtantNetwork extantNetwork( ) throws NotEnoughResourcesException {
+  public ExtantNetwork extantNetwork( ) throws NotEnoughResourcesException, TransientEntityException {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       return ExtantNetwork.bogus( this );
     } else if ( !Entities.isPersistent( this ) ) {
