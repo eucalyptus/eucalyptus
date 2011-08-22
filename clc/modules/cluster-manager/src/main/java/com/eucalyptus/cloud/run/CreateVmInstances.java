@@ -124,11 +124,10 @@ public class CreateVmInstances {
                                           allocInfo.getVmType( ),
                                           allocInfo.getNetworkGroups( ),
                                           token.getNetworkIndex( ) );
-//      vmInst = Entities.persist( vmInst );
+      vmInst = Entities.persist( vmInst );
       token.getNetworkIndex( ).set( vmInst );
-//      vmInst = VmInstances.register( vmInst );
-      token.setVmInstance( vmInst );
       db.commit( );
+      token.setVmInstance( vmInst );
       return vmInst;
     } catch ( ResourceAllocationException ex ) {
       db.rollback( );

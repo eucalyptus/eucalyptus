@@ -460,12 +460,16 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       LOG.error( ex, ex );
     }
     final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      Entities.merge( this );
-      db.commit( );
-    } catch ( final Exception ex ) {
+    if ( !Entities.isPersistent( this ) ) {
       db.rollback( );
-      LOG.debug( ex );
+    } else {
+      try {
+        Entities.merge( this );
+        db.commit( );
+      } catch ( final Exception ex ) {
+        db.rollback( );
+        LOG.debug( ex );
+      }
     }
   }
   
