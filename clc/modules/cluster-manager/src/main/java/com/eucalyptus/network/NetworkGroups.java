@@ -64,6 +64,7 @@
 package com.eucalyptus.network;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.persistence.EntityTransaction;
@@ -267,6 +268,8 @@ public class NetworkGroups {
         if( net == null ) {
           create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
         }
+      } catch ( NoSuchElementException ex ) {
+        create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
       } catch ( TransactionException ex ) {
         create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
       }

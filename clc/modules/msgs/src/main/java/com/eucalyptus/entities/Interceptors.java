@@ -254,7 +254,7 @@ public class Interceptors {
     @Override
     public Object instantiate( String entityName, EntityMode entityMode, Serializable id ) {
       try {
-        LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entityName, id ) );
+        LOG.debug( String.format( "%s():%d", Threads.currentStackFrame( ).getMethodName( ), ++this.operations ) );
       } catch ( Exception ex ) {
         LOG.error( ex );
       }
