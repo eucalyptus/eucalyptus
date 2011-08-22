@@ -124,9 +124,10 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
     this.tag = tag;
   }
   
-  ExtantNetwork( final NetworkGroup networkGroup, final Integer tag ) {
+  private ExtantNetwork( final NetworkGroup networkGroup, final Integer tag ) {
     super( networkGroup.getOwner( ), networkGroup.getDisplayName( ) );
     this.tag = tag;
+    this.networkGroup = networkGroup;
   }
   
   private ExtantNetwork( NetworkGroup networkGroup ) {
