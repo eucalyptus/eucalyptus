@@ -83,6 +83,7 @@ import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cloud.util.Resource;
 import com.eucalyptus.cloud.util.Resource.SetReference;
+import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -104,7 +105,8 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   @Column( name = "metadata_extant_network_tag", unique = true )
   private Integer                  tag;
   
-  @OneToMany( cascade = { CascadeType.MERGE, CascadeType.PERSIST/** GRZE:WTF, CascadeType.REFRESH*/ },
+  @OneToMany( cascade = { CascadeType.MERGE, CascadeType.PERSIST /** GRZE:WTF, CascadeType.REFRESH */
+  },
       orphanRemoval = true,
       fetch = FetchType.EAGER )
   @JoinColumn( name = "metadata_extant_network_index_fk" )
@@ -178,34 +180,33 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   
   public SetReference<PrivateNetworkIndex, VmInstance> allocateNetworkIndex( ) throws TransactionException {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
-      return PrivateNetworkIndex.bogus( ).allocate( );
+      try {
+        return PrivateNetworkIndex.bogus( ).allocate( );
+      } catch ( ResourceAllocationException ex ) {
+        throw new RuntimeException( "BUG BUG BUG: failed to call PrivateNetworkIndex.allocate() on the .bogus() index." );
+      }
     } else if ( !Entities.isPersistent( this ) ) {
       throw new TransientEntityException( this.toString( ) );
     } else {
-      EntityTransaction db = Entities.get( ExtantNetwork.class );
       SetReference<PrivateNetworkIndex, VmInstance> ref = null;
       try {
-//        Entities.refresh( this );
         PrivateNetworkIndex netIdx = null;
         for ( Long i : Numbers.shuffled( NetworkGroups.networkIndexInterval( ) ) ) {
           try {
-            Entities.uniqueResult( PrivateNetworkIndex.create( this, i ) );
+            Entities.uniqueResult( PrivateNetworkIndex.named( this, i ) );
             continue;
           } catch ( Exception ex ) {
             try {
               netIdx = PrivateNetworkIndex.create( this, i );
+              Entities.persist( netIdx );
               this.getIndexes( ).add( netIdx );
-              break;
+              return netIdx.allocate( );
             } catch ( Exception ex1 ) {
               continue;
             }
           }
         }
-        if ( netIdx != null ) {
-          return netIdx.allocate( );
-        } else {
-          throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName );
-        }
+        throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName );
       } catch ( TransactionException ex ) {
         throw ex;
       } catch ( Exception ex ) {
@@ -276,7 +277,6 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
     return this.getTag( ).compareTo( that.getTag( ) );
   }
   
-  @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
     builder.append( "ExtantNetwork:" );
