@@ -103,7 +103,7 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   @Column( name = "metadata_extant_network_tag", unique = true )
   private Integer                  tag;
   
-  @OneToMany( cascade = { CascadeType.MERGE, CascadeType.PERSIST, CascadeType.REFRESH },
+  @OneToMany( cascade = { CascadeType.MERGE, CascadeType.PERSIST/** GRZE:WTF, CascadeType.REFRESH*/ },
       orphanRemoval = true,
       fetch = FetchType.EAGER )
   @JoinColumn( name = "metadata_extant_network_index_fk" )

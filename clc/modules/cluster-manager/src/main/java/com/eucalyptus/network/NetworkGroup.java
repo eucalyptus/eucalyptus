@@ -131,12 +131,12 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   private String           description;
   
   @Fetch( FetchMode.JOIN )
-  @OneToMany( cascade = { CascadeType.MERGE, CascadeType.PERSIST, CascadeType.REFRESH } )
+  @OneToMany( cascade = { CascadeType.MERGE, CascadeType.PERSIST/** GRZE:WTF , CascadeType.REFRESH **/ } )
   @JoinTable( name = "metadata_network_group_has_rules", joinColumns = { @JoinColumn( name = "id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_rule_id" ) } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkRule> networkRules = new HashSet<NetworkRule>( );
   
-  @OneToOne( cascade = { CascadeType.ALL }, fetch = FetchType.EAGER, optional = true )
+  @OneToOne( cascade = { CascadeType.MERGE, CascadeType.PERSIST }, fetch = FetchType.EAGER, optional = true, orphanRemoval = true )
   @NotFound( action = NotFoundAction.IGNORE )
   @JoinColumn( name = "vm_network_index", nullable = true, insertable = true, updatable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -305,18 +305,12 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
       NetworkGroup ngNet = Entities.merge( this );
-      ExtantNetwork exNet = null;
-      try {
-        exNet = ngNet.lookupExtantNetwork( );
-      } catch ( Exception ex ) {
-        Logs.exhaust( ).trace( ex, ex );
-      }
+      ExtantNetwork exNet = ngNet.getExtantNetwork( );
       if ( exNet == null ) {
         int tag = ngNet.attemptNetworkTagging( );
         exNet = ExtantNetwork.create( ngNet, tag );
         ngNet.setExtantNetwork( exNet );
         Entities.persist( exNet );
-        Entities.merge( ngNet );
         db.commit( );
         return exNet;
       } else {
@@ -343,14 +337,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   
   ExtantNetwork getExtantNetwork( ) {
     return this.extantNetwork;
-  }
-  
-  private ExtantNetwork lookupExtantNetwork( ) throws TransactionException, NoSuchElementException {
-    try {
-      return Entities.uniqueResult( new ExtantNetwork( this, null ) );
-    } catch ( Exception ex ) {
-      throw new TransactionExecutionException( "Error occurred while attempting to lookup extant network for: " + this, ex );
-    }
   }
   
   private void setExtantNetwork( final ExtantNetwork extantNetwork ) {
