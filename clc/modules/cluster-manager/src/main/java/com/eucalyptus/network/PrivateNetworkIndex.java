@@ -200,12 +200,7 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   
   @Override
   protected VmInstance getReferer( ) {
-    try {
-      return Transactions.find( this.getInstance( ) );
-    } catch ( TransactionException ex ) {
-      Logs.extreme( ).error( ex, ex );
-      return null;
-    }
+    return this.getInstance( );
   }
   
   @Override
