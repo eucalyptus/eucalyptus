@@ -128,7 +128,8 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   private String           description;
   
   @Fetch( FetchMode.JOIN )
-  @OneToMany( cascade = { CascadeType.MERGE, CascadeType.PERSIST/** GRZE:WTF , CascadeType.REFRESH **/ } )
+  @OneToMany( cascade = { CascadeType.MERGE, CascadeType.PERSIST /** GRZE:WTF , CascadeType.REFRESH **/
+  } )
   @JoinTable( name = "metadata_network_group_has_rules", joinColumns = { @JoinColumn( name = "id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_rule_id" ) } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkRule> networkRules = new HashSet<NetworkRule>( );
@@ -284,14 +285,23 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     } else {
       ExtantNetwork exNet = this.getExtantNetwork( );
       if ( exNet == null ) {
-        int tag = this.attemptNetworkTagging( );
-        exNet = ExtantNetwork.create( this, tag );
-        Entities.persist( exNet );
-        this.setExtantNetwork( exNet );
+        for ( Integer i : Numbers.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
+          try {
+            Entities.uniqueResult( ExtantNetwork.named( i ) );
+            continue;
+          } catch ( Exception ex ) {
+            exNet = ExtantNetwork.create( this, i );
+            Entities.persist( exNet );
+            this.setExtantNetwork( exNet );
+            Entities.merge( this );
+            return this.getExtantNetwork( );
+          }
+        }
+        throw new NotEnoughResourcesException( "Failed to allocate network tag for network: " + this.getFullName( ) + ": no network tags are free." );
+      } else {
+        return this.getExtantNetwork( );
       }
-      Entities.merge( this );
-      return this.getExtantNetwork( );
-    }
+    } 
   }
   
   private Integer attemptNetworkTagging( ) throws NotEnoughResourcesException {
