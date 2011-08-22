@@ -203,13 +203,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Column( name = "metadata_vm_platform" )
   private String                                      platform;
   @Column( name = "metadata_vm_vbr" )
-  private String                                      vbrString;
+  private final String                                vbrString;
   @Column( name = "metadata_vm_image_id" )
-  private String                                      imageId;
+  private final String                                imageId;
   @Column( name = "metadata_vm_kernel_id" )
-  private String                                      kernelId;
+  private final String                                kernelId;
   @Column( name = "metadata_vm_ramdisk_id" )
-  private String                                      ramdiskId;
+  private final String                                ramdiskId;
   
   @PrePersist
   @PreUpdate
@@ -250,6 +250,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                      final List<NetworkGroup> networkRulesGroups,
                      final SetReference<PrivateNetworkIndex, VmInstance> networkIndex ) {
     super( owner, instanceId );
+    this.imageId = bootSet.getMachine( ).getDisplayName( );
+    this.kernelId = bootSet.getKernel( ).getDisplayName( );
+    this.ramdiskId = bootSet.getRamdisk( ).getDisplayName( );
     this.privateNetwork = Boolean.FALSE;
     this.launchTime = new Date( );
     this.blockBytes = 0l;
@@ -950,8 +953,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public String toString( ) {
     return String
                  .format(
-                          "VmInstance [instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
-                          this.instanceId, this.sshKeyPair, this.launchIndex, this.launchTime, this.networkConfig, this.networkGroups, this.getOwner( ),
+                          "VmInstance [instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerAccountNumber=%s, ownerUserId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
+                          this.instanceId, this.sshKeyPair, this.launchIndex, this.launchTime, this.networkConfig, this.networkGroups, this.getOwnerAccountNumber( ), this.getOwnerUserId( )
                           this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.runtimeState,
                           System.currentTimeMillis( ) - this.getLastUpdateTimestamp( ).getTime( ),
                           this.userData, this.vmType, this.transientVolumes );
