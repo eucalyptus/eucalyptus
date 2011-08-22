@@ -291,9 +291,8 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
             continue;
           } catch ( Exception ex ) {
             exNet = ExtantNetwork.create( this, i );
-            Entities.persist( exNet );
+//            Entities.persist( exNet );
             this.setExtantNetwork( exNet );
-            Entities.merge( this );
             return this.getExtantNetwork( );
           }
         }
