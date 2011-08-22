@@ -217,7 +217,11 @@ public class VmRunType extends CloudClusterMessage {
   }
   
   void setUserData( final String userData ) {
-    this.userData = userData;
+    if( userDate == null ) {
+      this.userData = new String( Base64.encode( userData ) );
+    } else {
+      this.userData = userData;
+    }
   }
   
   void setPlatform( final String platform ) {

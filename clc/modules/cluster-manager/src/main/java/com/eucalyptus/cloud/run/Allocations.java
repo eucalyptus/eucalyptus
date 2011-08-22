@@ -154,6 +154,12 @@ public class Allocations {
           this.userData = Base64.decode( this.request.getUserData( ) );
           this.request.setUserData( new String( Base64.encode( tmpData ) ) );
         } catch ( Exception e ) {}
+      } else {
+        try {
+          this.request.setUserData( new String( Base64.encode( tmpData ) ) );
+        } catch ( Exception ex ) {
+          LOG.error( ex , ex );
+        }
       }
     }
     
