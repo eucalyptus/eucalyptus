@@ -69,6 +69,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nullable;
+import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.network.NetworkGroup;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
