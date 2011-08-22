@@ -219,7 +219,7 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
     }
   }
   
-  private Integer attemptNetworkIndex( ) throws NotEnoughResourcesException {
+  private Long attemptNetworkIndex( ) throws NotEnoughResourcesException {
     for ( Long i : Numbers.shuffled( NetworkGroups.networkIndexInterval( ) ) ) {
       try {
         Entities.uniqueResult( PrivateNetworkIndex.create( this, i ) );
@@ -228,7 +228,7 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
         return i;
       }
     }
-    throw new NotEnoughResourcesException( "Failed to allocate network tag for network: " + this.getFullName( ) + ": no network tags are free." );
+    throw new NotEnoughResourcesException( "Failed to allocate network tag for network: " + this.toString( ) + ": no network tags are free." );
   }
 
   public NetworkGroup getNetworkGroup( ) {
