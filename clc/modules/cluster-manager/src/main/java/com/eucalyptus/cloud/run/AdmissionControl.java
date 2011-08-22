@@ -239,6 +239,7 @@ public class AdmissionControl {
                 
                 List<ResourceToken> tokens = this.requestResourceToken( allocInfo, tryAmount, maxAmount );
                 remaining -= tokens.size( );
+                allocInfo.setPartition( partition );
               } catch ( Exception t ) {
                 if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) || remaining > 0 ) {
                   allocInfo.abort( );
