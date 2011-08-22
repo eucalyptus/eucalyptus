@@ -350,6 +350,15 @@ public class Entities {
     }
   }
   
+  public static <T> void refresh( final T newObject ) throws ConstraintViolationException {
+    try {
+      getTransaction( newObject ).getTxState( ).getEntityManager( ).refresh( newObject, (LockModeType) null );
+    } catch ( final RuntimeException ex ) {
+      PersistenceExceptions.throwFiltered( ex );
+      throw ex;
+    }
+  }
+
   public static <T> void refresh( final T newObject, final LockModeType lockMode ) throws ConstraintViolationException {
     try {
       getTransaction( newObject ).getTxState( ).getEntityManager( ).refresh( newObject, lockMode );

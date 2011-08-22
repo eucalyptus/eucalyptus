@@ -87,6 +87,7 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
+import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.util.Numbers;
 import com.google.common.collect.Iterables;
 
@@ -176,44 +177,40 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   }
   
   public SetReference<PrivateNetworkIndex, VmInstance> allocateNetworkIndex( ) throws TransactionException {
-    EntityTransaction db = Entities.get( ExtantNetwork.class );
-    SetReference<PrivateNetworkIndex, VmInstance> ref = null;
-    try {
-      ExtantNetwork exNet = Entities.merge( this );
-      PrivateNetworkIndex netIdx = null;
-      for ( Long i : Numbers.shuffled( NetworkGroups.networkIndexInterval( ) ) ) {
-        try {
-          Entities.uniqueResult( PrivateNetworkIndex.create( this, i ) );
-          continue;
-        } catch ( Exception ex ) {
+    if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
+      return PrivateNetworkIndex.bogus( ).allocate( );
+    } else if ( !Entities.isPersistent( this ) ) {
+      throw new TransientEntityException( this.toString( ) );
+    } else {
+      EntityTransaction db = Entities.get( ExtantNetwork.class );
+      SetReference<PrivateNetworkIndex, VmInstance> ref = null;
+      try {
+//        Entities.refresh( this );
+        PrivateNetworkIndex netIdx = null;
+        for ( Long i : Numbers.shuffled( NetworkGroups.networkIndexInterval( ) ) ) {
           try {
-            netIdx = PrivateNetworkIndex.create( exNet, i );
-            netIdx = Entities.persist( netIdx );
-            exNet.getIndexes( ).add( netIdx );
-            exNet = Entities.merge( exNet );
-            break;
-          } catch ( Exception ex1 ) {
+            Entities.uniqueResult( PrivateNetworkIndex.create( this, i ) );
             continue;
+          } catch ( Exception ex ) {
+            try {
+              netIdx = PrivateNetworkIndex.create( this, i );
+              this.getIndexes( ).add( netIdx );
+              break;
+            } catch ( Exception ex1 ) {
+              continue;
+            }
           }
         }
-      }
-      if ( netIdx != null ) {
-        try {
-          ref = netIdx.allocate( );
-          Entities.merge( this );
-          db.commit( );
-          return ref;
-        } catch ( Exception ex1 ) {
-          db.rollback( );
+        if ( netIdx != null ) {
+          return netIdx.allocate( );
+        } else {
           throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName );
         }
-      } else {
-        throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName );
+      } catch ( TransactionException ex ) {
+        throw ex;
+      } catch ( Exception ex ) {
+        throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName, ex );
       }
-    } catch ( TransactionException ex ) {
-      throw ex;
-    } catch ( Exception ex ) {
-      throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName, ex );
     }
   }
   
