@@ -85,6 +85,7 @@ import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
+import org.hibernate.LockMode;
 import org.hibernate.NonUniqueResultException;
 import org.hibernate.Query;
 import org.hibernate.Session;
@@ -184,6 +185,7 @@ public class EntityWrapper<TYPE> {
     final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
     final List<T> resultList = this.getSession( )
                                    .createCriteria( example.getClass( ) )
+                                   .setLockMode( LockMode.NONE )
                                    .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
                                    .setCacheable( true )
                                    .add( qbe )
@@ -231,11 +233,12 @@ public class EntityWrapper<TYPE> {
       } else if ( ( example instanceof HasNaturalId ) && ( ( ( HasNaturalId ) example ).getNaturalId( ) != null ) ) {
         final String natId = ( ( HasNaturalId ) example ).getNaturalId( );
         final T ret = ( T ) this.createCriteria( example.getClass( ) )
-                                .add( Restrictions.naturalId( ).set( "naturalId", natId ) )
+                                .setLockMode( LockMode.NONE )
                                 .setCacheable( true )
                                 .setMaxResults( 1 )
                                 .setFetchSize( 1 )
                                 .setFirstResult( 0 )
+                                .add( Restrictions.naturalId( ).set( "naturalId", natId ) )
                                 .uniqueResult( );
         if ( ret == null ) {
           throw new NoSuchElementException( "@NaturalId: " + natId );
@@ -243,11 +246,12 @@ public class EntityWrapper<TYPE> {
         return ret;
       } else {
         final T ret = ( T ) this.createCriteria( example.getClass( ) )
-                                .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
+                                .setLockMode( LockMode.NONE )
                                 .setCacheable( true )
                                 .setMaxResults( 1 )
                                 .setFetchSize( 1 )
                                 .setFirstResult( 0 )
+                                .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
                                 .uniqueResult( );
         if ( ret == null ) {
           throw new NoSuchElementException( "example: " + LogUtil.dumpObject( example ) );
