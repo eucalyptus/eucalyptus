@@ -390,6 +390,8 @@ public class NetworkConfigType extends EucalyptusData {
   }
   
   public void updateDns( String domain ) {
+    this.ipAddress = ( this.ipAddress == null ? "0.0.0.0" : this.ipAddress )
+    this.ignoredPublicIp = ( this.ignoredPublicIp == null ? "0.0.0.0" : this.ignoredPublicIp )
     this.publicDnsName = "euca-${this.ignoredPublicIp.replaceAll( '\\.', '-' )}.eucalyptus.${domain}";
     this.privateDnsName = "euca-${this.ipAddress.replaceAll( '\\.', '-' )}.eucalyptus.internal";
   }
