@@ -65,6 +65,7 @@
 package com.eucalyptus.cluster;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -972,18 +973,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.passwordData = passwordData;
   }
   
-  @Override
-  public String toString( ) {
-    return String
-                 .format(
-                          "VmInstance [instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerAccountNumber=%s, ownerUserId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
-                          this.instanceId, this.sshKeyPair, this.launchIndex, this.launchTime, this.networkConfig, this.networkGroups,
-                          this.getOwnerAccountNumber( ), this.getOwnerUserId( ),
-                          this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.runtimeState,
-                          System.currentTimeMillis( ) - this.getLastUpdateTimestamp( ).getTime( ),
-                          this.userData, this.vmType, this.transientVolumes );
-  }
-  
   /**
    * @return the platform
    */
@@ -1147,9 +1136,57 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public String getRamdiskId( ) {
     return this.ramdiskId;
   }
-
+  
   public Partition lookupPartition( ) {
     return Partitions.lookupByName( this.partitionName );
+  }
+  
+  private List<String> getReasonDetails( ) {
+    return this.reasonDetails;
+  }
+  
+  private ConcurrentMap<String, AttachedVolume> getTransientVolumes( ) {
+    return this.transientVolumes;
+  }
+  
+  private String getPartitionName( ) {
+    return this.partitionName;
+  }
+  
+  private Boolean getPrivateNetwork( ) {
+    return this.privateNetwork;
+  }
+  
+  private String getVbrString( ) {
+    return this.vbrString;
+  }
+  
+  private Set<NetworkGroup> getNetworkGroups( ) {
+    return this.networkGroups;
+  }
+  
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "VmInstance " );
+    builder.append( this.instanceId ).append( " " );
+    if ( this.runtimeState != null ) builder.append( " " ).append( this.runtimeState.getReference( ) ).append( " " );
+    if ( this.clusterName != null ) builder.append( "clusterName=" ).append( this.clusterName ).append( ":" );
+    if ( this.partitionName != null ) builder.append( "partitionName=" ).append( this.partitionName ).append( ":" );
+    if ( this.imageId != null ) builder.append( "imageId=" ).append( this.imageId ).append( ":" );
+    if ( this.kernelId != null ) builder.append( "kernelId=" ).append( this.kernelId ).append( ":" );
+    if ( this.ramdiskId != null ) builder.append( "ramdiskId=" ).append( this.ramdiskId ).append( ":" );
+    if ( this.vmType != null ) builder.append( "vmType=" ).append( this.vmType ).append( ":" );
+    if ( this.platform != null ) builder.append( "platform=" ).append( this.platform ).append( ":" );
+    if ( this.networkGroups != null ) builder.append( "networkGroups=" ).append( this.networkGroups ).append( ":" );
+    if ( this.networkIndex != null ) builder.append( "networkIndex=" ).append( this.networkIndex ).append( ":" );
+    if ( this.transientVolumes != null ) builder.append( "transientVolumes=" ).append( this.transientVolumes ).append( ":" );
+    if ( this.persistentVolumes != null ) builder.append( "persistentVolumes=" ).append( this.persistentVolumes );
+    if ( this.bundleTask != null ) builder.append( "bundleTask=" ).append( this.bundleTask ).append( ":" );
+    if ( this.networkConfig != null ) builder.append( "networkConfig=" ).append( this.networkConfig ).append( ":" );
+    if ( this.launchTime != null ) builder.append( "launchTime=" ).append( this.launchTime ).append( ":" );
+    if ( this.sshKeyPair != null ) builder.append( "sshKeyPair=" ).append( this.sshKeyPair ).append( ":" );
+    return builder.toString( );
   }
   
 }
