@@ -76,9 +76,8 @@ public class VmId {
   @Column( name = "metadata_vm_instance_id" )
   private String     instanceId;
   
-  VmId( VmInstance vmInstance, String reservationId, String instanceId ) {
+  VmId( String reservationId, String instanceId ) {
     super( );
-    this.vmInstance = vmInstance;
     this.reservationId = reservationId;
     this.instanceId = instanceId;
   }

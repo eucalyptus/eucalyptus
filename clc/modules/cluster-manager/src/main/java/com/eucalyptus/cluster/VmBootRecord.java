@@ -113,9 +113,8 @@ public class VmBootRecord {
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private VmType                  vmType;
   
-  VmBootRecord( VmInstance vmInstance, BootableSet bootSet, byte[] userData, SshKeyPair sshKeyPair, VmType vmType ) {
+  VmBootRecord( BootableSet bootSet, byte[] userData, SshKeyPair sshKeyPair, VmType vmType ) {
     super( );
-    this.vmInstance = vmInstance;
     this.machineImage = ( ImageInfo ) bootSet.getMachine( );
     this.kernel = bootSet.getKernel( );
     this.ramdisk = bootSet.getRamdisk( );

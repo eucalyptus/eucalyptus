@@ -153,17 +153,17 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Transient
   private final NetworkConfigType networkConfig    = new NetworkConfigType( );
   @Embedded
-  private final VmId                    vmId;
+  private final VmId              vmId;
   @Embedded
-  private final VmBootRecord            bootRecord;
+  private final VmBootRecord      bootRecord;
   @Embedded
   private final VmUsageStats      usageStats;
   @Embedded
-  private final VmLaunchRecord          launchRecord;
+  private final VmLaunchRecord    launchRecord;
   @Embedded
   private final VmRuntimeState    runtimeState;
   @Embedded
-  private final VmPlacement             placement;
+  private final VmPlacement       placement;
   
   @Column( name = "metadata_vm_private_networking" )
   private final Boolean           privateNetwork;
@@ -219,7 +219,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public static class Builder {
-    VmInstance                                    newVm = new VmInstance( );
     VmId                                          vmId;
     VmBootRecord                                  vmBootRecord;
     VmUsageStats                                  vmUsageStats;
@@ -241,18 +240,18 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     
     public Builder withIds( final String instanceId, final String reservationId ) {
-      this.vmId = new VmId( this.newVm, reservationId, instanceId );
+      this.vmId = new VmId( reservationId, instanceId );
       return this;
     }
     
     public Builder placement( final Partition partition, final String clusterName ) {
       final ServiceConfiguration config = Partitions.lookupService( ClusterController.class, partition );
-      this.vmPlacement = new VmPlacement( this.newVm, config.getName( ), config.getPartition( ) );
+      this.vmPlacement = new VmPlacement( config.getName( ), config.getPartition( ) );
       return this;
     }
     
     public Builder bootRecord( final BootableSet bootSet, final byte[] userData, final SshKeyPair sshKeyPair, final VmType vmType ) {
-      this.vmBootRecord = new VmBootRecord( this.newVm, bootSet, userData, sshKeyPair, vmType );
+      this.vmBootRecord = new VmBootRecord( bootSet, userData, sshKeyPair, vmType );
       return this;
     }
     
@@ -267,7 +266,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     
     public VmInstance build( final Integer launchndex ) {
-      return new VmInstance( this.owner, this.vmId, this.vmBootRecord, new VmLaunchRecord( launchndex, new Date( ) ), this.vmPlacement, this.networkRulesGroups, this.networkIndex );
+      return new VmInstance( this.owner, this.vmId, this.vmBootRecord, new VmLaunchRecord( launchndex, new Date( ) ), this.vmPlacement,
+                             this.networkRulesGroups, this.networkIndex );
     }
   }
   
@@ -286,6 +286,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.privateNetwork = Boolean.FALSE;
     this.usageStats = new VmUsageStats( this );
     this.networkIndex = networkIndex.get( );
+    this.networkGroups.addAll( networkRulesGroups );
     this.runtimeState = new VmRuntimeState( this );
     this.networkConfig.setMacAddress( VmInstances.asMacAddress( this.vmId.getInstanceId( ) ) );
     this.networkConfig.setIpAddress( DEFAULT_IP );

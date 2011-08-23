@@ -80,9 +80,8 @@ public class VmPlacement {
   @Column( name = "metadata_vm_partition_name" )
   private String     partitionName;
   
-  VmPlacement( VmInstance vmInstance, String clusterName, String partitionName ) {
+  VmPlacement( String clusterName, String partitionName ) {
     super( );
-    this.vmInstance = vmInstance;
     this.clusterName = clusterName;
     this.partitionName = partitionName;
   }
