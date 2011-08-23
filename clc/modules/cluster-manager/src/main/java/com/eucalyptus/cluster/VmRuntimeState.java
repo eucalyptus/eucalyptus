@@ -170,7 +170,6 @@ public class VmRuntimeState {
     
     EntityTransaction db = Entities.get( VmRuntimeState.class );
     try {
-      VmRuntimeState entity = Entities.merge( this );
       if ( newState == null || this.runtimeState == null || this.runtimeState.getReference( ) == null ) {
         this.runtimeState = new AtomicMarkableReference<VmState>( newState != null
           ? newState

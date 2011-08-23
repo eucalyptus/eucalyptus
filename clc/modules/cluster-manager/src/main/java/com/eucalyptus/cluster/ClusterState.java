@@ -101,8 +101,6 @@ public class ClusterState {
   public void handleOrphan( ClusterAddressInfo address ) {
     Integer orphanCount = 1;
     orphanCount = orphans.putIfAbsent( address, orphanCount );
-    EventRecord.caller( ClusterState.class, EventType.ADDRESS_STATE,
-                        "Found orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).debug( );
     orphanCount = ( orphanCount == null )
       ? 1
       : orphanCount;
