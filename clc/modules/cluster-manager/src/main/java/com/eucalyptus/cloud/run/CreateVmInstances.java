@@ -94,7 +94,7 @@ public class CreateVmInstances {
     }
     for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
       try {
-        VmInstance.CreateAllocation.INSTANCE.apply( token );
+        token.setVmInstance( VmInstance.CreateAllocation.INSTANCE.apply( token ) );
       } catch ( Exception ex ) {
         LOG.error( ex , ex );
       }

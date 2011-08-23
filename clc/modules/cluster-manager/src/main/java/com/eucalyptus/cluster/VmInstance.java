@@ -179,14 +179,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex     networkIndex;
   
-  public enum CreateAllocation implements Predicate<ResourceToken> {
+  public enum CreateAllocation implements Function<ResourceToken,VmInstance> {
     INSTANCE;
     
     /**
      * @see com.google.common.base.Predicate#apply(java.lang.Object)
      */
     @Override
-    public boolean apply( ResourceToken token ) {
+    public VmInstance apply( ResourceToken token ) {
       final EntityTransaction db = Entities.get( VmInstance.class );
       try {
         final Allocation allocInfo = token.getAllocationInfo( );
@@ -202,7 +202,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         token.getNetworkIndex( ).set( vmInst );
         db.commit( );
         token.setVmInstance( vmInst );
-        return true;
+        return vmInst;
       } catch ( final ResourceAllocationException ex ) {
         db.rollback( );
         Logs.extreme( ).error( ex, ex );
