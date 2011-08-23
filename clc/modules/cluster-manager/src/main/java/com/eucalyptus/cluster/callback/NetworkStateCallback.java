@@ -1,12 +1,15 @@
 package com.eucalyptus.cluster.callback;
 
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.network.NetworkGroups;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.FailedRequestException;
@@ -52,26 +55,23 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
   }
   
   private void updateClusterConfiguration( final DescribeNetworksResponseType reply ) {
+    
+    EntityTransaction db = Entities.get( NetworkStateCallback.class );
     try {
-      Transactions.one( this.getSubject( ).getConfiguration( ), updateCallback( reply ) );
-    } catch ( TransactionException ex ) {
-      LOG.error( ex, ex );
+      ClusterConfiguration config = Entities.uniqueResult( this.getSubject( ).getConfiguration( ) );
+      config.setNetworkMode( reply.getMode( ) );
+      config.setUseNetworkTags( reply.getUseVlans( ) == 1 );
+      config.setMinNetworkTag( reply.getVlanMin( ) );
+      config.setMaxNetworkTag( reply.getVlanMax( ) );
+      config.setAddressesPerNetwork( reply.getAddrsPerNet( ) );
+      config.setVnetNetmask( reply.getVnetNetmask( ) );
+      config.setVnetSubnet( reply.getVnetSubnet( ) );
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw ex;
     }
-  }
-  
-  private Callback<ClusterConfiguration> updateCallback( final DescribeNetworksResponseType reply ) {
-    return new Callback<ClusterConfiguration>( ) {
-      @Override
-      public void fire( ClusterConfiguration input ) {
-        input.setNetworkMode( reply.getMode( ) );
-        input.setUseNetworkTags( reply.getUseVlans( ) == 1 );
-        input.setMinNetworkTag( reply.getVlanMin( ) );
-        input.setMaxNetworkTag( reply.getVlanMax( ) );
-        input.setAddressesPerNetwork( reply.getAddrsPerNet( ) );
-        input.setVnetNetmask( reply.getVnetNetmask( ) );
-        input.setVnetSubnet( reply.getVnetSubnet( ) );
-      }
-    };
   }
   
   /**
