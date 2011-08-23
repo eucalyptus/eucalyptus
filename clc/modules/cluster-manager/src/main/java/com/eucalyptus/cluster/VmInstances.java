@@ -220,7 +220,7 @@ public class VmInstances {
     }
   }
   
-  public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final String networkFqName, final Cluster cluster ) {
+  public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final Cluster cluster ) {
     final UnconditionalCallback cleanup = new UnconditionalCallback( ) {
       @Override
       public void fire( ) {
@@ -244,9 +244,6 @@ public class VmInstances {
   
   public static void cleanUp( final VmInstance vm ) {
     try {
-      final String networkFqName = !vm.getNetworkRulesGroups( ).isEmpty( )
-        ? vm.getOwner( ).getAccountNumber( ) + "-" + vm.getNetworkNames( ).first( )
-        : null;
       final Cluster cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
       VmInstances.cleanUpAttachedVolumes( vm );
       
@@ -259,7 +256,7 @@ public class VmInstances {
           LOG.debug( e1, e1 );
         }
       }
-      req.then( VmInstances.getCleanUpCallback( address, vm, networkFqName, cluster ) );
+      req.then( VmInstances.getCleanUpCallback( address, vm, cluster ) );
       req.dispatch( cluster.getConfiguration( ) );
     } catch ( final Throwable e ) {
       LOG.error( e, e );
