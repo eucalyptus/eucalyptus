@@ -69,6 +69,7 @@ import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 import com.eucalyptus.address.Address.Transition;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.cluster.VmNetworkConfig;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Expendable;
@@ -154,7 +155,7 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   public void fireException( Throwable e ) {
     try {
       VmInstance vm = VmInstances.lookupByInstanceIp( super.getRequest( ).getDestination( ) );
-      vm.updatePublicAddress( VmInstance.DEFAULT_IP );
+      vm.updatePublicAddress( VmNetworkConfig.DEFAULT_IP );
     } catch ( Exception t ) {
       LOG.debug( t, t );
     } finally {

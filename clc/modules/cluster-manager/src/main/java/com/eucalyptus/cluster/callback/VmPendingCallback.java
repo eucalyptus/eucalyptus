@@ -8,6 +8,7 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstance.Reason;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.cluster.VmNetworkConfig;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.vm.VmState;
@@ -62,7 +63,7 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
           vm.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
         } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
                     && ( VmState.PENDING.equals( vm.getRuntimeState( ) ) || VmState.RUNNING.equals( vm.getRuntimeState( ) ) ) ) {
-          if ( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
+          if ( !VmNetworkConfig.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
             vm.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
           }
           vm.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );

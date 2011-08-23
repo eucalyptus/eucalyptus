@@ -148,11 +148,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Transient
   private static Logger           LOG              = Logger.getLogger( VmInstance.class );
   @Transient
-  public static String            DEFAULT_IP       = "0.0.0.0";
-  @Transient
   public static String            DEFAULT_TYPE     = "m1.small";
-  @Transient
-  private final NetworkConfigType networkConfig    = new NetworkConfigType( );
+  @Embedded
+  private final VmNetworkConfig   networkConfig;
   @Embedded
   private final VmId              vmId;
   @Embedded
@@ -286,12 +284,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.networkIndex = networkIndex.get( );
     this.networkGroups.addAll( networkRulesGroups );
     this.runtimeState = new VmRuntimeState( this );
-    this.networkConfig.setMacAddress( VmInstances.asMacAddress( this.vmId.getInstanceId( ) ) );
-    this.networkConfig.setIpAddress( DEFAULT_IP );
-    this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
-    this.networkConfig.setPrivateDnsName( DEFAULT_IP );
-    this.networkConfig.setPublicDnsName( DEFAULT_IP );
-    this.updateDns( );
+    this.networkConfig = new VmNetworkConfig( this );
     this.store( );
   }
   
@@ -304,6 +297,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.placement = null;
     this.privateNetwork = null;
     this.usageStats = null;
+    this.networkConfig = null;
   }
   
   protected VmInstance( ) {
@@ -315,17 +309,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.networkIndex = null;
     this.usageStats = null;
     this.runtimeState = null;
-    this.networkConfig.setIpAddress( DEFAULT_IP );
-    this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
-    this.networkConfig.setPrivateDnsName( DEFAULT_IP );
-    this.networkConfig.setPublicDnsName( DEFAULT_IP );
+    this.networkConfig = null;
   }
   
   @PrePersist
   @PreUpdate
   private void preLoad( ) {
     this.setState( this.runtimeState.getRuntimeState( ) );
-    for ( VmVolumeAttachment vol : this.runtimeState.getTransientVolumeAttachments( ) ) {
+    for ( final VmVolumeAttachment vol : this.runtimeState.getTransientVolumeAttachments( ) ) {
       this.runtimeState.getTransientVolumes( ).put( vol.getVolumeId( ), vol );
     }
   }
@@ -349,27 +340,17 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public void updatePublicAddress( final String publicAddr ) {
-    if ( !VmInstance.DEFAULT_IP.equals( publicAddr ) && !"".equals( publicAddr )
+    if ( !VmNetworkConfig.DEFAULT_IP.equals( publicAddr ) && !"".equals( publicAddr )
          && ( publicAddr != null ) ) {
-      this.getNetworkConfig( ).setIgnoredPublicIp( publicAddr );
+      this.networkConfig.setPublicAddress( publicAddr );
     }
-  }
-  
-  private void updateDns( ) {
-    String dnsDomain = null;
-    try {
-      dnsDomain = edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
-    } catch ( final Exception e ) {}
-    this.getNetworkConfig( ).updateDns( dnsDomain == null
-      ? "dns-disabled"
-      : dnsDomain );
   }
   
   public void updatePrivateAddress( final String privateAddr ) {
-    if ( !VmInstance.DEFAULT_IP.equals( privateAddr ) && !"".equals( privateAddr ) && ( privateAddr != null ) ) {
-      this.getNetworkConfig( ).setIpAddress( privateAddr );
+    if ( !VmNetworkConfig.DEFAULT_IP.equals( privateAddr ) && !"".equals( privateAddr ) && ( privateAddr != null ) ) {
+      this.networkConfig.setPrivateAddress( privateAddr );
     }
-    this.updateDns( );
+    this.networkConfig.updateDns( );
   }
   
   public VmState getRuntimeState( ) {
@@ -437,13 +418,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     m.put( "instance-id", this.getInstanceId( ) );
     m.put( "instance-type", this.getVmType( ).getName( ) );
     if ( dns ) {
-      m.put( "local-hostname", this.getNetworkConfig( ).getPrivateDnsName( ) );
+      m.put( "local-hostname", this.networkConfig.getPrivateDnsName( ) );
     } else {
-      m.put( "local-hostname", this.getNetworkConfig( ).getIpAddress( ) );
+      m.put( "local-hostname", this.networkConfig.getPrivateAddress( ) );
     }
-    m.put( "local-ipv4", this.getNetworkConfig( ).getIpAddress( ) );
+    m.put( "local-ipv4", this.networkConfig.getPrivateAddress( ) );
     if ( dns ) {
-      m.put( "public-hostname", this.getNetworkConfig( ).getPublicDnsName( ) );
+      m.put( "public-hostname", this.networkConfig.getPublicDnsName( ) );
     } else {
       m.put( "public-hostname", this.getPublicAddress( ) );
     }
@@ -527,8 +508,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public boolean hasPublicAddress( ) {
-    final NetworkConfigType conf = this.getNetworkConfig( );
-    return ( conf != null ) && !( DEFAULT_IP.equals( conf.getIgnoredPublicIp( ) ) || conf.getIpAddress( ).equals( conf.getIgnoredPublicIp( ) ) );
+    return ( this.networkConfig != null )
+           && !( VmNetworkConfig.DEFAULT_IP.equals( this.networkConfig.getPublicAddress( ) ) || this.networkConfig.getPrivateAddress( ).equals( this.networkConfig.getPublicAddress( ) ) );
   }
   
   public String getInstanceId( ) {
@@ -566,11 +547,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public String getPrivateAddress( ) {
-    return this.networkConfig.getIpAddress( );
+    return this.networkConfig.getPrivateAddress( );
   }
   
   public String getPublicAddress( ) {
-    return this.networkConfig.getIgnoredPublicIp( );
+    return this.networkConfig.getPublicAddress( );
   }
   
   public String getPrivateDnsName( ) {
@@ -579,10 +560,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   public String getPublicDnsName( ) {
     return this.networkConfig.getPublicDnsName( );
-  }
-  
-  private NetworkConfigType getNetworkConfig( ) {
-    return this.networkConfig;
   }
   
   public String getPasswordData( ) {
@@ -725,7 +702,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   static String getDEFAULT_IP( ) {
-    return DEFAULT_IP;
+    return VmNetworkConfig.DEFAULT_IP;
   }
   
   static String getDEFAULT_TYPE( ) {
@@ -867,9 +844,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       @Override
       public boolean apply( final VmInfo runVm ) {
         
-        EntityTransaction db = Entities.get( VmInstance.class );
+        final EntityTransaction db = Entities.get( VmInstance.class );
         try {
-          VmInstance vm = Entities.merge( VmInstance.this );
+          final VmInstance vm = Entities.merge( VmInstance.this );
           final VmState state = VmState.Mapper.get( runVm.getStateName( ) );
           final long splitTime = VmInstance.this.getSplitTime( );
           final VmState oldState = VmInstance.this.getRuntimeState( );
@@ -888,7 +865,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             VmInstance.this.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
           } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
                       && ( VmState.PENDING.equals( VmInstance.this.getRuntimeState( ) ) || VmState.RUNNING.equals( VmInstance.this.getRuntimeState( ) ) ) ) {
-            if ( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
+            if ( !VmNetworkConfig.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
               VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
             }
             VmInstance.this.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
@@ -899,7 +876,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             } catch ( final Exception e ) {}
           }
           db.commit( );
-        } catch ( Exception ex ) {
+        } catch ( final Exception ex ) {
           Logs.exhaust( ).error( ex, ex );
           db.rollback( );
         }
@@ -970,10 +947,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           String publicDnsName = input.getPublicDnsName( );
           String privateDnsName = input.getPrivateDnsName( );
           publicDnsName = ( publicDnsName == null
-            ? VmInstance.DEFAULT_IP
+            ? VmNetworkConfig.DEFAULT_IP
             : publicDnsName );
           privateDnsName = ( privateDnsName == null
-            ? VmInstance.DEFAULT_IP
+            ? VmNetworkConfig.DEFAULT_IP
             : privateDnsName );
           runningInstance.setDnsName( publicDnsName );
           runningInstance.setIpAddress( publicDnsName );
@@ -983,14 +960,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           String publicDnsName = input.getPublicAddress( );
           String privateDnsName = input.getPrivateAddress( );
           publicDnsName = ( publicDnsName == null
-            ? VmInstance.DEFAULT_IP
+            ? VmNetworkConfig.DEFAULT_IP
             : publicDnsName );
           privateDnsName = ( privateDnsName == null
-            ? VmInstance.DEFAULT_IP
+            ? VmNetworkConfig.DEFAULT_IP
             : privateDnsName );
           runningInstance.setPrivateDnsName( privateDnsName );
           runningInstance.setPrivateIpAddress( privateDnsName );
-          if ( !VmInstance.DEFAULT_IP.equals( publicDnsName ) ) {
+          if ( !VmNetworkConfig.DEFAULT_IP.equals( publicDnsName ) ) {
             runningInstance.setDnsName( publicDnsName );
             runningInstance.setIpAddress( publicDnsName );
           } else {

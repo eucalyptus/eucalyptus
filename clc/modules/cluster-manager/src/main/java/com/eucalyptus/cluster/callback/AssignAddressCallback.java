@@ -70,6 +70,7 @@ import com.eucalyptus.address.Address.Transition;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.cluster.VmNetworkConfig;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
@@ -117,7 +118,7 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
       VmInstance vm = VmInstances.lookup( super.getRequest( ).getInstanceId( ) );
       VmState vmState = vm.getRuntimeState( );
       if ( !VmState.RUNNING.equals( vmState ) && !VmState.PENDING.equals( vmState ) ) {
-        vm.updatePublicAddress( VmInstance.DEFAULT_IP );
+        vm.updatePublicAddress( VmNetworkConfig.DEFAULT_IP );
         return false;
       } else {
         vm.updatePublicAddress( this.address.getName( ) );
