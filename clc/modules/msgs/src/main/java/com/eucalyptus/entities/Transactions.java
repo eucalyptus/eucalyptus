@@ -222,7 +222,7 @@ public class Transactions {
     assertThat( c, notNullValue( ) );
     EntityTransaction db = Transactions.get( saveMe );
     try {
-      T entity = Entities.merge( saveMe );
+      T entity = Entities.persist( saveMe );
       try {
         c.fire( entity );
       } catch ( Exception ex ) {

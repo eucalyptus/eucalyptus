@@ -871,10 +871,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             }
             VmInstance.this.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
             VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
-            try {
-              final NetworkGroup network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );
-              //GRZE:NET//        network.extantNetworkIndex( VmInstance.this.getClusterName( ), VmInstance.this.getNetworkIndex( ) );
-            } catch ( final Exception e ) {}
           }
           db.commit( );
         } catch ( final Exception ex ) {
