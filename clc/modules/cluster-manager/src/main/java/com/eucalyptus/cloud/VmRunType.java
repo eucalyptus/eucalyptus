@@ -137,6 +137,7 @@ public class VmRunType extends CloudClusterMessage {
       this.buildit.setUuid( naturalId );
       return this;
     }
+    
     public VmRunType.Builder instanceId( final String instanceId ) {
       this.buildit.setInstanceId( instanceId );
       this.buildit.setMacAddress( String.format( "d0:0d:%s:%s:%s:%s", instanceId.substring( 2, 4 ), instanceId.substring( 4, 6 ), instanceId.substring( 6, 8 ),
@@ -161,6 +162,8 @@ public class VmRunType extends CloudClusterMessage {
     
     public VmRunType.Builder owner( UserFullName ownerFullName ) {
       this.buildit.setUserId( ownerFullName.getUserId( ) );
+      this.buildit.setOwnerId( ownerFullName.getUserId( ) );
+      this.buildit.setAccountId( ownerFullName.getAccountNumber( ) );
       return this;
     }
     
@@ -184,6 +187,8 @@ public class VmRunType extends CloudClusterMessage {
   @Nullable
   private VmKeyInfo    keyInfo;
   private String       instanceId;
+  private String       ownerId;
+  private String       accountId;
   private String       uuid;
   private String       macAddress;
   private List<String> networkNames = new ArrayList<String>( );
@@ -218,7 +223,7 @@ public class VmRunType extends CloudClusterMessage {
   }
   
   void setUserData( final String userData ) {
-    if( userData == null ) {
+    if ( userData == null ) {
       this.userData = new String( Base64.encode( new byte[] {} ) );
     } else {
       this.userData = userData;
@@ -327,5 +332,21 @@ public class VmRunType extends CloudClusterMessage {
   
   void setNetworkIndex( final Long networkIndex ) {
     this.networkIndex = networkIndex;
+  }
+  
+  private String getOwnerId( ) {
+    return this.ownerId;
+  }
+  
+  private void setOwnerId( String ownerId ) {
+    this.ownerId = ownerId;
+  }
+  
+  private String getAccountId( ) {
+    return this.accountId;
+  }
+  
+  private void setAccountId( String accountId ) {
+    this.accountId = accountId;
   }
 }

@@ -117,6 +117,7 @@ public class VmInfo extends EucalyptusData {
   String stateName;
   NetworkConfigType netParams = new NetworkConfigType();
   String ownerId;
+  String accountId;
   String reservationId;
   String serviceTag;
   String userData;
