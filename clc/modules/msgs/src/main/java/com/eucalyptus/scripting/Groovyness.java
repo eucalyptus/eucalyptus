@@ -101,12 +101,12 @@ public class Groovyness {
     }
   }
   
-  public static Object eval( String code, Map context ) throws ScriptExecutionFailedException {
+  public static <T> T eval( String code, Map context ) throws ScriptExecutionFailedException {
     try {
       Bindings bindings = new SimpleBindings( context );
       SimpleScriptContext scriptContext = new SimpleScriptContext( );
       scriptContext.setBindings( bindings, SimpleScriptContext.ENGINE_SCOPE );
-      return getGroovyEngine( ).eval( code, scriptContext );
+      return ( T ) getGroovyEngine( ).eval( code, scriptContext );
     } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new ScriptExecutionFailedException( "Executing the requested script failed: " + code, e );

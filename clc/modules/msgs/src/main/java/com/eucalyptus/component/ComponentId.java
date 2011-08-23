@@ -143,17 +143,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public FullName makeFullName( ServiceConfiguration config, String... parts ) {
     return new ComponentFullName( config, parts );
   }
-  
-//  public FullName makeFullName( String partition, String name, String... parts ) {
-//    if ( this.isPartitioned( ) ) {
-//      return new ComponentFullName( this, partition, name, parts );
-//    } else if ( this.isCloudLocal( ) ) {
-//      return new ComponentFullName( this, Eucalyptus.INCOGNITO.name( ), name, parts );
-//    } else {
-//      return new ComponentFullName( this, this.getName( ), name, parts );
-//    }
-//  }
-//  
+
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
     return Lists.newArrayList( );
   }

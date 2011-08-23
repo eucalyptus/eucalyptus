@@ -63,9 +63,10 @@
 
 package com.eucalyptus.component;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.FullName;
 import com.google.common.base.Joiner;
 
@@ -81,18 +82,20 @@ public class ComponentFullName implements FullName {
   private final static String PREFIX = "arn:euca";
   
   ComponentFullName( ComponentId componentType, String partition, String name, String... pathPartsArray ) {
-    Assertions.assertNotNull( componentType );
-    Assertions.assertNotNull( partition );
-    Assertions.assertNotNull( name );
+    assertThat( componentType, notNullValue( ) );
     
     this.realComponentId = componentType;
-    this.name = name;
-    
+    this.name = name != null
+      ? name
+      : "null";
+    partition = partition != null
+      ? partition
+      : "null";
     boolean hasParentComponent = !this.realComponentId.serviceDependencies( ).isEmpty( );
     ComponentId tempComponentId = Empyrean.INSTANCE;
     String tempPartition = "";
     if ( hasParentComponent || this.realComponentId.isPartitioned( ) ) {
-      if( this.realComponentId.isCloudLocal( ) ) {
+      if ( this.realComponentId.isCloudLocal( ) ) {
         tempComponentId = Eucalyptus.INSTANCE;
       } else if ( this.realComponentId.isAlwaysLocal( ) ) {
         tempComponentId = Empyrean.INSTANCE;
