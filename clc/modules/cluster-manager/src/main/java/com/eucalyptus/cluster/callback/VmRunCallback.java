@@ -64,6 +64,7 @@
 package com.eucalyptus.cluster.callback;
 
 import java.util.NoSuchElementException;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.cloud.ResourceToken;
@@ -72,6 +73,7 @@ import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cluster.NoSuchTokenException;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusClusterException;
@@ -119,12 +121,18 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       return;
     }
     for ( final VmInfo vmInfo : reply.getVms( ) ) {
+      
+      EntityTransaction db = Entities.get( VmRunCallback.class );
       try {
         final VmInstance vm = VmInstances.lookup( vmInfo.getInstanceId( ) );
         vm.updateAddresses( vmInfo.getNetParams( ).getIpAddress( ), vmInfo.getNetParams( ).getIgnoredPublicIp( ) );
         vm.clearPending( );
-      } catch ( final NoSuchElementException e ) {
-        LOG.error( e, e );
+        LOG.trace( vm );
+        db.commit( );
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        LOG.error( ex );
+        db.rollback( );
       }
     }
   }

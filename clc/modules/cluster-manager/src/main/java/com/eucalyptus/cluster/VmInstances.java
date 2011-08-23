@@ -243,6 +243,7 @@ public class VmInstances {
   }
   
   public static void cleanUp( final VmInstance vm ) {
+    LOG.trace( Threads.currentStackString( ) );
     try {
       final Cluster cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
       VmInstances.cleanUpAttachedVolumes( vm );
