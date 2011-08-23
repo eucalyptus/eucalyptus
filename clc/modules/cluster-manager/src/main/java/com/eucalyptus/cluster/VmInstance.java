@@ -107,6 +107,7 @@ import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
@@ -263,16 +264,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.reservationId = reservationId;
     this.launchIndex = launchIndex;
     this.instanceId = instanceId;
-    this.clusterName = placement;
-    String p = null;
-    try {
-      p = ServiceConfigurations.lookupByName( ClusterController.class, this.clusterName ).getPartition( );
-    } catch ( final PersistenceException ex ) {
-      p = placement;
-      /** ASAP:GRZE: review **/
-      LOG.debug( "Failed to find cluster configuration named: " + this.clusterName + " using that as the partition name." );
-    }
-    this.partitionName = p;
+    ServiceConfiguration config = lookupServiceConfiguration( placement );
+    this.clusterName = config == null
+      ? placement
+      : config.getName( );
+    this.partitionName = config == null
+      ? placement
+      : config.getPartition( );
     this.userData = userData;
     this.sshKeyPair = KeyPairs.noKey( ).equals( sshKeyPair ) || ( sshKeyPair == null )
       ? null
@@ -288,7 +286,17 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.store( );
   }
   
-  public String getVbrAsString( final BootableSet bootSet, final VmType vmType ) {
+  private ServiceConfiguration lookupServiceConfiguration( String name ) {
+    ServiceConfiguration config = null;
+    try {
+      config = ServiceConfigurations.lookupByName( ClusterController.class, name );
+    } catch ( final PersistenceException ex ) {
+      LOG.debug( "Failed to find cluster configuration named: " + this.clusterName + " using that as the partition name." );
+    }
+    return config;
+  }
+  
+  private String getVbrAsString( final BootableSet bootSet, final VmType vmType ) {
     try {
       return BindingManager.getDefaultBinding( ).toString( bootSet.populateVirtualBootRecord( vmType ) );
     } catch ( MetadataException ex1 ) {

@@ -440,7 +440,7 @@ public class VmControl {
         LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, ctx.getUserFullName( ).toString( ), v.getBundleTask( ).getBundleId( ),
                                     v.getInstanceId( ) ) );
         
-        final Cluster cluster = Clusters.getInstance( ).lookup( v.getClusterName( ) );
+        final Cluster cluster = Clusters.getInstance( ).lookup( v.getPartition( ) );
         
         request.setInstanceId( v.getInstanceId( ) );
         reply.setTask( v.getBundleTask( ) );
