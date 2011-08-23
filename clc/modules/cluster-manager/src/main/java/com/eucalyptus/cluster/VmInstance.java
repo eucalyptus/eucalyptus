@@ -169,9 +169,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Column( name = "metadata_vm_private_networking" )
   private final Boolean           privateNetwork;
   @ManyToMany
-  @JoinTable( name = "metadata_vm_has_network_groups",
-              joinColumns = { @JoinColumn( name = "metadata_vm_id" ) },
-              inverseJoinColumns = { @JoinColumn( name = "metadata_network_group_id" ) } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final Set<NetworkGroup> networkGroups    = Sets.newHashSet( );
   
