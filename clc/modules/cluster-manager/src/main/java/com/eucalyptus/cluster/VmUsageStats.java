@@ -70,7 +70,7 @@ import org.hibernate.annotations.Parent;
 @Embeddable
 public class VmUsageStats {
   @Parent
-  private final VmInstance vmInstance;
+  private VmInstance vmInstance;
   @Column( name = "metadata_vm_block_bytes" )
   private Long             blockBytes;
   @Column( name = "metadata_vm_network_bytes" )
@@ -99,6 +99,10 @@ public class VmUsageStats {
   
   VmInstance getVmInstance( ) {
     return this.vmInstance;
+  }
+
+  private void setVmInstance( VmInstance vmInstance ) {
+    this.vmInstance = vmInstance;
   }
   
 }

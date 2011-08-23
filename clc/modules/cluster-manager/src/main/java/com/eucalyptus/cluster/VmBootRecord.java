@@ -64,14 +64,11 @@
 package com.eucalyptus.cluster;
 
 import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
-import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
@@ -87,35 +84,34 @@ import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 @Embeddable
 public class VmBootRecord {
   @Parent
-  private final VmInstance              vmInstance;
+  private VmInstance              vmInstance;
   @ManyToOne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final ImageInfo               machineImage;
+  private ImageInfo               machineImage;
   @ManyToOne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final KernelImageInfo         kernel;
+  private KernelImageInfo         kernel;
   @ManyToOne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final RamdiskImageInfo        ramdisk;
+  private RamdiskImageInfo        ramdisk;
   @Column( name = "metadata_vm_platform" )
   private String                        platform;
   @Embedded
-  private final Set<VmVolumeAttachment> persistentVolumes = Sets.newHashSet( );
+  private Set<VmVolumeAttachment> persistentVolumes = Sets.newHashSet( );
   @Lob
   @Column( name = "metadata_vm_user_data" )
-  private final byte[]                  userData;
+  private byte[]                  userData;
   @ManyToOne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final SshKeyPair              sshKeyPair;
+  private SshKeyPair              sshKeyPair;
   @ManyToOne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final VmType                  vmType;
+  private VmType                  vmType;
   
   VmBootRecord( VmInstance vmInstance, BootableSet bootSet, byte[] userData, SshKeyPair sshKeyPair, VmType vmType ) {
     super( );
@@ -186,6 +182,42 @@ public class VmBootRecord {
       }
     }
     return vmTypeInfo;
+  }
+
+  private ImageInfo getMachineImage( ) {
+    return this.machineImage;
+  }
+
+  private void setMachineImage( ImageInfo machineImage ) {
+    this.machineImage = machineImage;
+  }
+
+  private void setVmInstance( VmInstance vmInstance ) {
+    this.vmInstance = vmInstance;
+  }
+
+  private void setKernel( KernelImageInfo kernel ) {
+    this.kernel = kernel;
+  }
+
+  private void setRamdisk( RamdiskImageInfo ramdisk ) {
+    this.ramdisk = ramdisk;
+  }
+
+  private void setPersistentVolumes( Set<VmVolumeAttachment> persistentVolumes ) {
+    this.persistentVolumes = persistentVolumes;
+  }
+
+  private void setUserData( byte[] userData ) {
+    this.userData = userData;
+  }
+
+  private void setSshKeyPair( SshKeyPair sshKeyPair ) {
+    this.sshKeyPair = sshKeyPair;
+  }
+
+  private void setVmType( VmType vmType ) {
+    this.vmType = vmType;
   }
   
 }

@@ -70,11 +70,11 @@ import org.hibernate.annotations.Parent;
 @Embeddable
 public class VmId {
   @Parent
-  private final VmInstance vmInstance;
+  private VmInstance vmInstance;
   @Column( name = "metadata_vm_reservation_id" )
-  private final String     reservationId;
+  private String     reservationId;
   @Column( name = "metadata_vm_instance_id" )
-  private final String     instanceId;
+  private String     instanceId;
   
   VmId( VmInstance vmInstance, String reservationId, String instanceId ) {
     super( );
@@ -82,16 +82,28 @@ public class VmId {
     this.reservationId = reservationId;
     this.instanceId = instanceId;
   }
-
+  
   private VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
-
+  
   public String getReservationId( ) {
     return this.reservationId;
   }
-
+  
   public String getInstanceId( ) {
     return this.instanceId;
+  }
+  
+  private void setVmInstance( VmInstance vmInstance ) {
+    this.vmInstance = vmInstance;
+  }
+  
+  private void setReservationId( String reservationId ) {
+    this.reservationId = reservationId;
+  }
+  
+  private void setInstanceId( String instanceId ) {
+    this.instanceId = instanceId;
   }
 }

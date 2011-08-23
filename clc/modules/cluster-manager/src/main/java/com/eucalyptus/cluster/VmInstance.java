@@ -921,5 +921,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public boolean startBundleTask( BundleTask bundleTask ) {
     return this.runtimeState.startBundleTask( bundleTask );
   }
+
+  private void setNetworkIndex( PrivateNetworkIndex networkIndex ) {
+    this.networkIndex = networkIndex;
+  }
   
 }

@@ -97,31 +97,31 @@ import com.google.common.collect.Sets;
 @Embeddable
 public class VmRuntimeState {
   @Transient
-  private static String                                   SEND_USER_TERMINATE = "SIGTERM";
+  private static String                             SEND_USER_TERMINATE = "SIGTERM";
   @Transient
-  private static String                                   SEND_USER_STOP      = "SIGSTOP";
+  private static String                             SEND_USER_STOP      = "SIGSTOP";
   @Transient
-  private static Logger                                   LOG                 = Logger.getLogger( VmRuntimeState.class );
+  private static Logger                             LOG                 = Logger.getLogger( VmRuntimeState.class );
   @Parent
-  private final VmInstance                                vmInstance;
+  private VmInstance                                vmInstance;
   @Transient
-  private final AtomicMarkableReference<BundleTask>       bundleTask          = new AtomicMarkableReference<BundleTask>( null, false );
+  private AtomicMarkableReference<BundleTask>       bundleTask          = new AtomicMarkableReference<BundleTask>( null, false );
   @Transient
-  private String                                          serviceTag;
+  private String                                    serviceTag;
   @Transient
-  private Reason                                          reason;
+  private Reason                                    reason;
   @Transient
-  private final List<String>                              reasonDetails       = Lists.newArrayList( );
+  private List<String>                              reasonDetails       = Lists.newArrayList( );
   @Transient
-  private StringBuffer                                    consoleOutput       = new StringBuffer( );
+  private StringBuffer                              consoleOutput       = new StringBuffer( );
 //  @Embedded
-//private final Set<VmVolumeAttachment>             transientVolumes = Sets.newHashSet( );
+//private Set<VmVolumeAttachment>             transientVolumes = Sets.newHashSet( );
   @Transient
-  private final ConcurrentMap<String, VmVolumeAttachment> transientVolumes    = new ConcurrentSkipListMap<String, VmVolumeAttachment>( );
+  private ConcurrentMap<String, VmVolumeAttachment> transientVolumes    = new ConcurrentSkipListMap<String, VmVolumeAttachment>( );
   @Transient
-  protected final AtomicMarkableReference<VmState>        runtimeState        = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
+  protected final AtomicMarkableReference<VmState>  runtimeState        = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
   @Column( name = "metadata_vm_password_data" )
-  private String                                          passwordData;
+  private String                                    passwordData;
   
   VmRuntimeState( VmInstance vmInstance ) {
     super( );
@@ -482,6 +482,22 @@ public class VmRuntimeState {
   
   ConcurrentMap<String, VmVolumeAttachment> getTransientVolumes( ) {
     return this.transientVolumes;
+  }
+  
+  private void setBundleTask( AtomicMarkableReference<BundleTask> bundleTask ) {
+    this.bundleTask = bundleTask;
+  }
+  
+  private void setReasonDetails( List<String> reasonDetails ) {
+    this.reasonDetails = reasonDetails;
+  }
+  
+  private void setTransientVolumes( ConcurrentMap<String, VmVolumeAttachment> transientVolumes ) {
+    this.transientVolumes = transientVolumes;
+  }
+  
+  private void setVmInstance( VmInstance vmInstance ) {
+    this.vmInstance = vmInstance;
   }
   
 }

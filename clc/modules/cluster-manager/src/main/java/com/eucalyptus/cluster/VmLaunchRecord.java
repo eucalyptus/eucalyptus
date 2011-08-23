@@ -71,11 +71,11 @@ import org.hibernate.annotations.Parent;
 @Embeddable
 public class VmLaunchRecord {
   @Parent
-  private final VmInstance vmInstance;
+  private VmInstance vmInstance;
   @Column( name = "metadata_vm_launch_index" )
-  private final Integer    launchIndex;
+  private Integer    launchIndex;
   @Column( name = "metadata_vm_launch_time" )
-  private final Date       launchTime;
+  private Date       launchTime;
   
   VmLaunchRecord( VmInstance vmInstance, Integer launchIndex, Date launchTime ) {
     super( );
@@ -94,6 +94,18 @@ public class VmLaunchRecord {
   
   Date getLaunchTime( ) {
     return this.launchTime;
+  }
+
+  private void setVmInstance( VmInstance vmInstance ) {
+    this.vmInstance = vmInstance;
+  }
+
+  private void setLaunchIndex( Integer launchIndex ) {
+    this.launchIndex = launchIndex;
+  }
+
+  private void setLaunchTime( Date launchTime ) {
+    this.launchTime = launchTime;
   }
   
 }

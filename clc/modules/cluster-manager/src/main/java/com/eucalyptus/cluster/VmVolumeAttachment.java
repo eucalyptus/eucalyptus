@@ -79,7 +79,7 @@ public class VmVolumeAttachment {
   }
   
   @Parent
-  private final VmInstance vmInstance;
+  private VmInstance vmInstance;
   private String           volumeId;
   private String           device;
   private String           remoteDevice;
@@ -89,7 +89,7 @@ public class VmVolumeAttachment {
 //  @OneToOne
 //  @JoinTable( name = "metadata_vm_has_volume", joinColumns = { @JoinColumn( name = "metadata_vm_id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_volume_id" ) } )
 //  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-//  private final Volume     volume;
+//  private Volume     volume;
   
   VmInstance getVmInstance( ) {
     return this.vmInstance;

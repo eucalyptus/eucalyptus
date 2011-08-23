@@ -72,11 +72,11 @@ import com.eucalyptus.component.Partitions;
 @Embeddable
 public class VmPlacement {
   @Parent
-  private final VmInstance vmInstance;
+  private VmInstance vmInstance;
   @Column( name = "metadata_vm_cluster_name" )
-  private final String     clusterName;
+  private String     clusterName;
   @Column( name = "metadata_vm_partition_name" )
-  private final String     partitionName;
+  private String     partitionName;
   
   VmPlacement( VmInstance vmInstance, String clusterName, String partitionName ) {
     super( );
@@ -99,6 +99,18 @@ public class VmPlacement {
   
   public Partition lookupPartition( ) {
     return Partitions.lookupByName( this.partitionName );
+  }
+
+  private void setVmInstance( VmInstance vmInstance ) {
+    this.vmInstance = vmInstance;
+  }
+
+  private void setClusterName( String clusterName ) {
+    this.clusterName = clusterName;
+  }
+
+  private void setPartitionName( String partitionName ) {
+    this.partitionName = partitionName;
   }
   
 }
