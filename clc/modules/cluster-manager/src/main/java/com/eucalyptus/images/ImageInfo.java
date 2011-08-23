@@ -71,6 +71,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import javax.persistence.CascadeType;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
 import javax.persistence.DiscriminatorType;
@@ -152,10 +153,12 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   private ImageMetadata.Type         imageType;
   
   @ElementCollection
+  @CollectionTable(name="metadata_images_permissions")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<String>                permissions      = new HashSet<String>( );
   
   @ElementCollection
+  @CollectionTable(name="metadata_images_pcodes")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<String>                productCodes     = new HashSet<String>( );
   

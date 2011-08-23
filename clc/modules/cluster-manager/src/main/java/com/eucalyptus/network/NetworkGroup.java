@@ -67,11 +67,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
-import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
@@ -96,9 +94,7 @@ import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransientEntityException;
-import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Numbers;
 import com.eucalyptus.util.OwnerFullName;
@@ -128,13 +124,12 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   private String           description;
   
   @Fetch( FetchMode.JOIN )
-  @OneToMany( cascade = { CascadeType.MERGE, CascadeType.PERSIST /** GRZE:WTF , CascadeType.REFRESH **/
-  } )
+  @OneToMany( cascade = CascadeType.ALL )
   @JoinTable( name = "metadata_network_group_has_rules", joinColumns = { @JoinColumn( name = "id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_rule_id" ) } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkRule> networkRules = new HashSet<NetworkRule>( );
   
-  @OneToOne( cascade = { CascadeType.MERGE, CascadeType.PERSIST }, fetch = FetchType.EAGER, optional = true, orphanRemoval = true )
+  @OneToOne( cascade = { CascadeType.ALL }, fetch = FetchType.EAGER, optional = true, orphanRemoval = true )
   @NotFound( action = NotFoundAction.IGNORE )
   @JoinColumn( name = "vm_network_index", nullable = true, insertable = true, updatable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
