@@ -102,6 +102,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.UserMetadata;
+import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.callback.BundleCallback;
@@ -254,7 +255,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.imageId = bootSet.getMachine( ).getDisplayName( );
     this.kernelId = bootSet.getKernel( ).getDisplayName( );
     this.ramdiskId = bootSet.getRamdisk( ).getDisplayName( );
-    this.vbrString = BindingManager.getDefaultBinding( ).toString( bootSet.populateVirtualBootRecord( vmType ) );
+    this.vbrString = getVbrAsString( bootSet, vmType );
     this.privateNetwork = Boolean.FALSE;
     this.launchTime = new Date( );
     this.blockBytes = 0l;
@@ -287,6 +288,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.store( );
   }
   
+  public void getVbrAsString( final BootableSet bootSet, final VmType vmType ) {
+    try {
+      BindingManager.getDefaultBinding( ).toString( bootSet.populateVirtualBootRecord( vmType ) );
+    } catch ( MetadataException ex1 ) {
+      LOG.error( ex1, ex1 );
+    }
+  }
+  
   protected VmInstance( final OwnerFullName ownerFullName, final String instanceId2 ) {
     super( ownerFullName, instanceId2 );
     this.instanceId = instanceId2;
@@ -303,6 +312,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.vmType = null;
     this.privateNetwork = null;
     this.vbrString = null;
+    this.imageId = null;
+    this.kernelId = null;
+    this.ramdiskId = null;
   }
   
   protected VmInstance( ) {
@@ -320,6 +332,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.vmType = null;
     this.privateNetwork = null;
     this.vbrString = null;
+    this.imageId = null;
+    this.kernelId = null;
+    this.ramdiskId = null;
   }
   
   public void updateBlockBytes( final long blkbytes ) {
