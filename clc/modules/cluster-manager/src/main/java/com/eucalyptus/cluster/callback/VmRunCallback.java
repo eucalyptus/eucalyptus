@@ -100,7 +100,7 @@ public class VmRunCallback extends MessageCallback<VmRunType,VmRunResponseType> 
     for( String vmId : msg.getInstanceIds( ) ) {
       try {
         VmInstance vm = VmInstances.getInstance( ).lookup( vmId );
-        if( !VmState.PENDING.equals( vm.getState( ) ) ) {
+        if( !VmState.PENDING.equals( vm.getRuntimeState( ) ) ) {
           throw new EucalyptusClusterException("Intercepted a RunInstances request for an instance which has meanwhile been terminated." );
         }
       } catch ( Exception e ) {

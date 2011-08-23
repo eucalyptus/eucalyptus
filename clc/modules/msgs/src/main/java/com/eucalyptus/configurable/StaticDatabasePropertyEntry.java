@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,103 +61,103 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.address;
+package com.eucalyptus.configurable;
 
-import java.util.NoSuchElementException;
 import javax.persistence.Column;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PrePersist;
 import javax.persistence.Table;
-import javax.persistence.Transient;
-import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.configurable.PropertyChangeListener;
-import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.RecoverablePersistenceException;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Logs;
 
 @Entity
 @javax.persistence.Entity
-@PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "cloud_address_configuration" )
+@PersistenceContext( name = "eucalyptus_config" )
+@Table( name = "config_static_property" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass( root = "cloud.addresses", description = "Configuration options controlling the handling of public/elastic addresses." )
-public class AddressingConfiguration extends AbstractPersistent {
-  @Transient
-  private static Logger LOG = Logger.getLogger( AddressingConfiguration.class );
+public class StaticDatabasePropertyEntry extends AbstractPersistent {
+  @Column( name = "config_static_field_name", nullable = false, unique = true )
+  private final String fieldName;
+  @Column( name = "config_static_field_value" )
+  private String       value;
+  @Column( name = "config_static_prop_name", nullable = false, unique = true )
+  private String       propName;
   
-  @ConfigurableField( displayName = "max_addresses_per_user", changeListener = PropertyChangeListeners.IsPositiveInteger.class,
-                      description = "The maximum number of addresses a user can have simultaneiously allocated before the next allocation will fail." )
-  @Column( name = "config_addr_max_per_user", nullable = false )
-  private Integer       maxUserPublicAddresses;
   
-  @ConfigurableField( displayName = "dynamic_public_addressing", description = "Public addresses are assigned to instances by the system as available." )
-  @Column( name = "config_addr_do_dynamic_public_addresses", nullable = false, columnDefinition = "boolean default true" )
-  private Boolean       doDynamicPublicAddresses;
-  
-  @ConfigurableField( displayName = "static_address_pool", changeListener = PropertyChangeListeners.IsPositiveInteger.class,
-                      description = "Public addresses are assigned to instances by the system only from a pool of reserved instances whose size is determined by this value." )
-  @Column( name = "config_addr_reserved_public_addresses" )
-  private Integer       systemReservedPublicAddresses;
-  
-  public AddressingConfiguration( ) {
+  private StaticDatabasePropertyEntry( ) {
     super( );
+    this.fieldName = null;
+  }
+
+  private StaticDatabasePropertyEntry( String fieldName, String propName, String value ) {
+    super( );
+    this.propName = propName;
+    this.fieldName = fieldName;
+    this.value = value;
   }
   
-  public static AddressingConfiguration getInstance( ) {
-    AddressingConfiguration ret = null;
+  static StaticDatabasePropertyEntry update( String fieldName, String propName, String newFieldValue ) throws Exception {
+    EntityWrapper<StaticDatabasePropertyEntry> db = EntityWrapper.get( StaticDatabasePropertyEntry.class );
     try {
-      ret = EntityWrapper.get( AddressingConfiguration.class ).lookupAndClose( new AddressingConfiguration( ) );
-    } catch ( NoSuchElementException ex1 ) {
+      StaticDatabasePropertyEntry dbEntry = db.getUnique( new StaticDatabasePropertyEntry( fieldName, propName, null ) );
+      dbEntry.setValue( newFieldValue );
+      db.commit( );
+      return dbEntry;
+    } catch ( Exception ex ) {
+      StaticDatabasePropertyEntry dbEntry;
       try {
-        ret = EntityWrapper.get( AddressingConfiguration.class ).mergeAndCommit( new AddressingConfiguration( ) );
-      } catch ( RecoverablePersistenceException ex ) {
-        LOG.error( ex, ex );
-        ret = new AddressingConfiguration( );
+        dbEntry = new StaticDatabasePropertyEntry( fieldName, propName, newFieldValue );
+        db.persist( dbEntry );
+        db.commit( );
+      } catch ( Exception ex1 ) {
+        throw ex1;
+      }
+      return dbEntry;
+    }
+  }
+  
+  static StaticDatabasePropertyEntry lookup( String fieldName, String propName, String defaultFieldValue ) throws Exception {
+    EntityWrapper<StaticDatabasePropertyEntry> db = EntityWrapper.get( StaticDatabasePropertyEntry.class );
+    try {
+      StaticDatabasePropertyEntry dbEntry = db.getUnique( new StaticDatabasePropertyEntry( fieldName, propName, null ) );
+      db.commit( );
+      return dbEntry;
+    } catch ( Exception ex ) {
+      StaticDatabasePropertyEntry dbEntry;
+      try {
+        dbEntry = new StaticDatabasePropertyEntry( fieldName, propName, defaultFieldValue );
+        db.persist( dbEntry );
+        db.commit( );
+        return dbEntry;
+      } catch ( Exception ex1 ) {
+        Logs.extreme( ).error( "Failed to lookup static configuration property for: " + fieldName + " with property name: " + propName ); 
+        db.rollback( );
+        throw ex1;
       }
     }
-    return ret;
   }
   
-  @PrePersist
-  protected void initialize( ) {
-    if ( this.maxUserPublicAddresses == null ) {
-      this.maxUserPublicAddresses = 5;
-    }
-    if ( this.doDynamicPublicAddresses == null ) {
-      this.doDynamicPublicAddresses = Boolean.TRUE;
-    }
-    if ( this.systemReservedPublicAddresses == null ) {
-      this.systemReservedPublicAddresses = 0;
-    }
+  private void setValue( String value ) {
+    this.value = value;
   }
   
-  public Integer getMaxUserPublicAddresses( ) {
-    return this.maxUserPublicAddresses;
+  public String getFieldName( ) {
+    return this.fieldName;
   }
   
-  public void setMaxUserPublicAddresses( Integer maxUserPublicAddresses ) {
-    this.maxUserPublicAddresses = maxUserPublicAddresses;
+  public String getValue( ) {
+    return this.value;
   }
   
-  public Boolean getDoDynamicPublicAddresses( ) {
-    return this.doDynamicPublicAddresses;
+  public String getPropName( ) {
+    return this.propName;
   }
   
-  public void setDoDynamicPublicAddresses( Boolean doDynamicPublicAddresses ) {
-    this.doDynamicPublicAddresses = doDynamicPublicAddresses;
-  }
-  
-  public Integer getSystemReservedPublicAddresses( ) {
-    return this.systemReservedPublicAddresses;
-  }
-  
-  public void setSystemReservedPublicAddresses( Integer systemReservedPublicAddresses ) {
-    this.systemReservedPublicAddresses = systemReservedPublicAddresses;
+  private void setPropName( String propName ) {
+    this.propName = propName;
   }
 }

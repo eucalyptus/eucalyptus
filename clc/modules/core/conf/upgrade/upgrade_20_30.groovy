@@ -820,14 +820,14 @@ class upgrade_20_30 extends AbstractUpgradeScript {
 
             // Specify the type of object; in this case we want tables
             String[] types = {"TABLE"};
-            dbmd.getTables(null, null, "%", types).each { table ->
-                // Get the table name
-                if (table.getString(3) == tableName) {
+            def tables = dbmd.getTables(null, null, null, null);
+            while(tables.next()) {
+                if (tables.getString("TABLE_NAME") == tableName) {
                     return true;
                 }
             }
         } catch (SQLException e) {
-            LOG.warn('During check for table ${tableName}: ${e}');
+            LOG.warn("During check for table ${tableName}: ${e}");
         }
         return false;
     }
