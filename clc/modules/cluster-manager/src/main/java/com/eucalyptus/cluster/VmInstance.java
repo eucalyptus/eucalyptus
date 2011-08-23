@@ -855,7 +855,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         
         EntityTransaction db = Entities.get( VmInstance.class );
         try {
-          VmInstance vm = Entities.merge( this );
+          VmInstance vm = Entities.merge( VmInstance.this );
           final VmState state = VmState.Mapper.get( runVm.getStateName( ) );
           final long splitTime = VmInstance.this.getSplitTime( );
           final VmState oldState = VmInstance.this.getRuntimeState( );
@@ -888,9 +888,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex, ex );
           db.rollback( );
-          throw ex;
         }
-        
         return true;
       }
     };
