@@ -171,12 +171,15 @@ public class Entities {
       return createTransaction( obj );
     }
   }
-  
-  @SuppressWarnings( { "unchecked", "cast" } )
   public static <T> List<T> query( final T example ) {
+    return query( example, false );
+  }  
+  @SuppressWarnings( { "unchecked", "cast" } )
+  public static <T> List<T> query( final T example, boolean readOnly ) {
     final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
     final List<T> resultList = ( List<T> ) getTransaction( example ).getTxState( ).getSession( )
                                                                     .createCriteria( example.getClass( ) )
+                                                                    .setReadOnly( readOnly )
                                                                     .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
                                                                     .setCacheable( true )
                                                                     .add( qbe )
