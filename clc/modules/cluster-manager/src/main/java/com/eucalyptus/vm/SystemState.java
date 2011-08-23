@@ -201,7 +201,6 @@ public class SystemState {
         vm.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
       }
       vm.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
-      vm.updateNetworkIndex( runVm.getNetParams( ).getNetworkIndex( ) );
       vm.updateVolumeAttachments( runVm.getVolumes( ) );
       try {
         NetworkGroup network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );

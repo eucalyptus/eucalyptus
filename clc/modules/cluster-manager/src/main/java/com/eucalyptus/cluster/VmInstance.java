@@ -356,13 +356,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.networkBytes += netbytes;
   }
   
-  public void updateNetworkIndex( final Long newIndex ) {
-    if ( ( this.getNetworkConfig( ).getNetworkIndex( ) > 0 ) && ( newIndex > 0 )
-         && ( VmState.RUNNING.equals( this.getRuntimeState( ) ) || VmState.PENDING.equals( this.getRuntimeState( ) ) ) ) {
-      this.getNetworkConfig( ).setNetworkIndex( newIndex );
-    }
-  }
-  
   public void updateAddresses( final String privateAddr, final String publicAddr ) {
     this.updatePrivateAddress( privateAddr );
     this.updatePublicAddress( publicAddr );
