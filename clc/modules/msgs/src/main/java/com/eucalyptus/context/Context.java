@@ -159,8 +159,11 @@ public class Context {
   
   void clear( ) {
     EventRecord.caller( Context.class, EventType.CONTEXT_CLEAR, this.correlationId, this.channel.toString( ) ).debug( );
-    this.muleEvent.clear( );
-    this.muleEvent = null;
+    if ( this.muleEvent != null ) { 
+        this.muleEvent.clear( );
+        this.muleEvent = null;
+    }
+    this.contracts.clear( );
   }
   
   private final static <TYPE> TYPE check( final TYPE obj ) {
