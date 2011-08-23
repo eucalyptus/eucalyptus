@@ -123,7 +123,7 @@ public class VmRuntimeState {
   @Transient
   private ConcurrentMap<String, VmVolumeAttachment> transientVolumes           = new ConcurrentSkipListMap<String, VmVolumeAttachment>( );
   @Transient
-  protected final AtomicMarkableReference<VmState>  runtimeState               = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
+  protected AtomicMarkableReference<VmState>  runtimeState               = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
   @Lob
   @Column( name = "metadata_vm_password_data" )
   private String                                    passwordData;
@@ -165,11 +165,11 @@ public class VmRuntimeState {
   }
   
   public void setState( final VmState newState, Reason reason, final String... extra ) {
-    final VmState oldState = this.runtimeState.getReference( );
-    if ( oldState == null ) {
-      this.runtimeState.set( newState, false );
+    if ( this.runtimeState == null || this.runtimeState.getReference( ) == null ) {
+      this.runtimeState = new AtomicMarkableReference<VmState>( newState, false );
       return;
     } 
+    final VmState oldState = this.runtimeState.getReference( );
     if ( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && Reason.USER_TERMINATED.equals( reason ) ) {
       VmInstances.cleanUp( this.getVmInstance( ) );
       if ( !this.reasonDetails.contains( SEND_USER_TERMINATE ) ) {
