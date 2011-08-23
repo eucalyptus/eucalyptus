@@ -152,22 +152,6 @@ public class VmCreateImageTask {
     this.progress = progress;
   }
   
-  private String getBucket( ) {
-    return this.bucket;
-  }
-  
-  private void setBucket( final String bucket ) {
-    this.bucket = bucket;
-  }
-  
-  private String getPrefix( ) {
-    return this.prefix;
-  }
-  
-  private void setPrefix( final String prefix ) {
-    this.prefix = prefix;
-  }
-  
   private String getErrorMessage( ) {
     return this.errorMessage;
   }
