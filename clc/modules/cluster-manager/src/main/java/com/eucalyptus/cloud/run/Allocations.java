@@ -68,6 +68,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.address.Addresses;
@@ -90,6 +91,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.NoSuchContextException;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.entities.TransientEntityException;
@@ -173,12 +175,17 @@ public class Allocations {
     }
 
     public ExtantNetwork getExtantNetwork( ) {
+      EntityTransaction db = Entities.get( ExtantNetwork.class );
       try {
-        return this.primaryNetwork.extantNetwork( );
+        ExtantNetwork ex = this.primaryNetwork.extantNetwork( );
+        db.commit( );
+        return ex;
       } catch ( TransientEntityException ex ) {
         LOG.error( ex , ex );
+        db.rollback( );
         throw new RuntimeException( ex );
       } catch ( NotEnoughResourcesException ex ) {
+        db.rollback( );
         return ExtantNetwork.bogus( this.getPrimaryNetwork( ) );
       }
     }
