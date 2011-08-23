@@ -83,6 +83,9 @@ import javax.persistence.ManyToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
+import javax.persistence.PostLoad;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
@@ -315,6 +318,20 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.networkIndex = null;
     this.usageStats = null;
     this.runtimeState = null;
+  }
+  
+  @PrePersist
+  @PreUpdate
+  private void preLoad( ) {
+    this.setState( this.runtimeState.getState( ) );
+    for ( VmVolumeAttachment vol : this.runtimeState.getTransientVolumeAttachments( ) ) {
+      this.runtimeState.getTransientVolumes( ).put( vol.getVolumeId( ), vol );
+    }
+  }
+  
+  @PostLoad
+  private void postLoad( ) {
+    this.runtimeState.setState( this.getState( ), false );
   }
   
   public void updateBlockBytes( final long blkbytes ) {

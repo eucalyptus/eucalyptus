@@ -137,19 +137,6 @@ public class VmRuntimeState {
     super( );
   }
   
-  @PrePersist
-  @PreUpdate
-  private void preLoad( ) {
-    this.getVmInstance( ).setState( this.runtimeState.getReference( ) );
-    for ( VmVolumeAttachment vol : this.transientVolumeAttachments ) {
-      this.transientVolumes.put( vol.getVolumeId( ), vol );
-    }
-  }
-  
-  @PostLoad
-  private void postLoad( ) {
-    this.runtimeState.set( this.getVmInstance( ).getState( ), false );
-  }
   
   public String getReason( ) {
     if ( this.reason == null ) {
@@ -179,6 +166,10 @@ public class VmRuntimeState {
   
   public void setState( final VmState newState, Reason reason, final String... extra ) {
     final VmState oldState = this.runtimeState.getReference( );
+    if ( oldState == null ) {
+      this.runtimeState.set( newState, false );
+      return;
+    } 
     if ( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && Reason.USER_TERMINATED.equals( reason ) ) {
       VmInstances.cleanUp( this.getVmInstance( ) );
       if ( !this.reasonDetails.contains( SEND_USER_TERMINATE ) ) {
