@@ -315,6 +315,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.networkIndex = null;
     this.usageStats = null;
     this.runtimeState = null;
+    this.networkConfig.setMacAddress( VmInstances.asMacAddress( this.vmId.getInstanceId( ) ) );
+    this.networkConfig.setIpAddress( DEFAULT_IP );
+    this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
+    this.networkConfig.setPrivateDnsName( DEFAULT_IP );
+    this.networkConfig.setPublicDnsName( DEFAULT_IP );
   }
   
   @PrePersist
