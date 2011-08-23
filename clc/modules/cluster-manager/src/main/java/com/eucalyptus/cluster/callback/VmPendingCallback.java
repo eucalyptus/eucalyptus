@@ -2,11 +2,13 @@ package com.eucalyptus.cluster.callback;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.CancellationException;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstance.Reason;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
@@ -50,6 +52,7 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
     for ( final VmInfo runVm : reply.getVms( ) ) {
       runVm.setPlacement( this.getSubject( ).getConfiguration( ).getName( ) );
       VmState state = VmState.Mapper.get( runVm.getStateName( ) );
+      EntityTransaction db = Entities.get( VmInstance.class );
       try {
         final VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
         vm.setServiceTag( runVm.getServiceTag( ) );
@@ -65,7 +68,8 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
           vm.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
           vm.updateVolumeAttachments( runVm.getVolumes( ) );
         }
-      } catch ( NoSuchElementException e ) {
+        db.commit( );
+      } catch ( Exception ex ) {
         LOG.debug( "Ignoring update for uncached vm: " + runVm.getInstanceId( ) );
       }
     }

@@ -794,7 +794,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       
       @Override
       public boolean apply( final VmVolumeAttachment arg0 ) {
-        return predicate.apply( VmVolumeAttachment.asAttachedVolume( VmInstance.this ).apply(  arg0 ) );
+        return predicate.apply( VmVolumeAttachment.asAttachedVolume( VmInstance.this ).apply( arg0 ) );
       }
     } );
   }
@@ -852,33 +852,45 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       
       @Override
       public boolean apply( final VmInfo runVm ) {
-        final VmState state = VmState.Mapper.get( runVm.getStateName( ) );
-        final long splitTime = VmInstance.this.getSplitTime( );
-        final VmState oldState = VmInstance.this.getRuntimeState( );
-        VmInstance.this.runtimeState.setServiceTag( runVm.getServiceTag( ) );
-        VmInstance.this.setBundleTaskState( runVm.getBundleTaskStateName( ) );
         
-        if ( VmState.SHUTTING_DOWN.equals( VmInstance.this.getRuntimeState( ) ) && ( splitTime > VmInstances.SHUT_DOWN_TIME ) ) {
-          VmInstance.this.setState( VmState.TERMINATED, Reason.EXPIRED );
-        } else if ( VmState.STOPPING.equals( VmInstance.this.getRuntimeState( ) ) && ( splitTime > VmInstances.SHUT_DOWN_TIME ) ) {
-          VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
-        } else if ( VmState.STOPPING.equals( VmInstance.this.getRuntimeState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
-          VmInstance.this.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
-        } else if ( VmState.SHUTTING_DOWN.equals( VmInstance.this.getRuntimeState( ) )
-                    && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
-          VmInstance.this.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
-        } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
-                    && ( VmState.PENDING.equals( VmInstance.this.getRuntimeState( ) ) || VmState.RUNNING.equals( VmInstance.this.getRuntimeState( ) ) ) ) {
-          if ( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
-            VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
+        EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          VmInstance vm = Entities.merge( this );
+          final VmState state = VmState.Mapper.get( runVm.getStateName( ) );
+          final long splitTime = VmInstance.this.getSplitTime( );
+          final VmState oldState = VmInstance.this.getRuntimeState( );
+          VmInstance.this.runtimeState.setServiceTag( runVm.getServiceTag( ) );
+          VmInstance.this.setBundleTaskState( runVm.getBundleTaskStateName( ) );
+          
+          if ( VmState.SHUTTING_DOWN.equals( VmInstance.this.getRuntimeState( ) ) && ( splitTime > VmInstances.SHUT_DOWN_TIME ) ) {
+            VmInstance.this.setState( VmState.TERMINATED, Reason.EXPIRED );
+          } else if ( VmState.STOPPING.equals( VmInstance.this.getRuntimeState( ) ) && ( splitTime > VmInstances.SHUT_DOWN_TIME ) ) {
+            VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
+          } else if ( VmState.STOPPING.equals( VmInstance.this.getRuntimeState( ) )
+                      && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
+            VmInstance.this.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
+          } else if ( VmState.SHUTTING_DOWN.equals( VmInstance.this.getRuntimeState( ) )
+                      && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
+            VmInstance.this.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
+          } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
+                      && ( VmState.PENDING.equals( VmInstance.this.getRuntimeState( ) ) || VmState.RUNNING.equals( VmInstance.this.getRuntimeState( ) ) ) ) {
+            if ( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
+              VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
+            }
+            VmInstance.this.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
+            VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
+            try {
+              final NetworkGroup network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );
+              //GRZE:NET//        network.extantNetworkIndex( VmInstance.this.getClusterName( ), VmInstance.this.getNetworkIndex( ) );
+            } catch ( final Exception e ) {}
           }
-          VmInstance.this.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
-          VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
-          try {
-            final NetworkGroup network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );
-            //GRZE:NET//        network.extantNetworkIndex( VmInstance.this.getClusterName( ), VmInstance.this.getNetworkIndex( ) );
-          } catch ( final Exception e ) {}
+          db.commit( );
+        } catch ( Exception ex ) {
+          Logs.exhaust( ).error( ex, ex );
+          db.rollback( );
+          throw ex;
         }
+        
         return true;
       }
     };

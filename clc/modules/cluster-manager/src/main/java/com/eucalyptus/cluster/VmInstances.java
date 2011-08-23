@@ -340,6 +340,7 @@ public class VmInstances {
       if ( ( vm == null ) || VmState.TERMINATED.equals( vm.getState( ) ) ) {
         throw new NoSuchElementException( "Failed to lookup vm instance: " + name );
       }
+      db.commit( );
       return vm;
     } catch ( NoSuchElementException ex ) {
       db.rollback( );
