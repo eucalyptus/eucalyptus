@@ -173,5 +173,9 @@ public class VmVolumeAttachment {
    * @param instanceId
    */
   public void setInstanceId( String instanceId ) {}
+
+  private void setVmInstance( VmInstance vmInstance ) {
+    this.vmInstance = vmInstance;
+  }
   
 }
