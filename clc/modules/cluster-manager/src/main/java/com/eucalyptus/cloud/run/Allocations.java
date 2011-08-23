@@ -177,7 +177,8 @@ public class Allocations {
     public ExtantNetwork getExtantNetwork( ) {
       EntityTransaction db = Entities.get( ExtantNetwork.class );
       try {
-        ExtantNetwork ex = this.primaryNetwork.extantNetwork( );
+        NetworkGroup net = Entities.merge( this.primaryNetwork );
+        ExtantNetwork ex = net.extantNetwork( );
         db.commit( );
         return ex;
       } catch ( TransientEntityException ex ) {
