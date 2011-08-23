@@ -125,5 +125,14 @@ public class VmPlacement {
   private void setPlacement( String placement ) {
     this.placement = placement;
   }
+
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "VmPlacement:" );
+    if ( this.clusterName != null ) builder.append( "clusterName=" ).append( this.clusterName ).append( ":" );
+    if ( this.partitionName != null ) builder.append( "partitionName=" ).append( this.partitionName );
+    return builder.toString( );
+  }
   
 }

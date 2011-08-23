@@ -110,5 +110,14 @@ public class VmUsageStats {
   private void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
+
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "VmUsageStats:" );
+    if ( this.blockBytes != null ) builder.append( "blockBytes=" ).append( this.blockBytes ).append( ":" );
+    if ( this.networkBytes != null ) builder.append( "networkBytes=" ).append( this.networkBytes );
+    return builder.toString( );
+  }
   
 }

@@ -109,4 +109,13 @@ public class VmId {
   private void setInstanceId( String instanceId ) {
     this.instanceId = instanceId;
   }
+
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "VmId:" );
+    if ( this.reservationId != null ) builder.append( "reservationId=" ).append( this.reservationId ).append( ":" );
+    if ( this.instanceId != null ) builder.append( "instanceId=" ).append( this.instanceId );
+    return builder.toString( );
+  }
 }

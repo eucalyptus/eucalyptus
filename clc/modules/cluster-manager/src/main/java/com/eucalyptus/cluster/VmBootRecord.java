@@ -63,6 +63,7 @@
 
 package com.eucalyptus.cluster;
 
+import java.util.Arrays;
 import java.util.Set;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
@@ -222,6 +223,21 @@ public class VmBootRecord {
   
   private void setVmType( VmType vmType ) {
     this.vmType = vmType;
+  }
+
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "VmBootRecord:" );
+    if ( this.machineImage != null ) builder.append( "machineImage=" ).append( this.machineImage ).append( ":" );
+    if ( this.kernel != null ) builder.append( "kernel=" ).append( this.kernel ).append( ":" );
+    if ( this.ramdisk != null ) builder.append( "ramdisk=" ).append( this.ramdisk ).append( ":" );
+    if ( this.platform != null ) builder.append( "platform=" ).append( this.platform ).append( ":" );
+    if ( this.persistentVolumes != null ) builder.append( "persistentVolumes=" ).append( this.persistentVolumes ).append( ":" );
+    if ( this.userData != null ) builder.append( "userData=" ).append( Arrays.toString( this.userData ) ).append( ":" );
+    if ( this.sshKeyPair != null ) builder.append( "sshKeyPair=" ).append( this.sshKeyPair ).append( ":" );
+    if ( this.vmType != null ) builder.append( "vmType=" ).append( this.vmType );
+    return builder.toString( );
   }
   
 }

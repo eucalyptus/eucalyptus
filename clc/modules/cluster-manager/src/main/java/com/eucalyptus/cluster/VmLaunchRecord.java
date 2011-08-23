@@ -110,5 +110,14 @@ public class VmLaunchRecord {
   private void setLaunchTime( Date launchTime ) {
     this.launchTime = launchTime;
   }
+
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "VmLaunchRecord:" );
+    if ( this.launchIndex != null ) builder.append( "launchIndex=" ).append( this.launchIndex ).append( ":" );
+    if ( this.launchTime != null ) builder.append( "launchTime=" ).append( this.launchTime );
+    return builder.toString( );
+  }
   
 }
