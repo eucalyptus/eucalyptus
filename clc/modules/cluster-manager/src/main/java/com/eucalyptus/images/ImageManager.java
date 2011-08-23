@@ -74,13 +74,9 @@ import javax.xml.xpath.XPathExpressionException;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
@@ -92,8 +88,11 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -119,25 +118,31 @@ import edu.ucsb.eucalyptus.msgs.ResetImageAttributeType;
 
 public class ImageManager {
   
-  public static Logger LOG = Logger.getLogger( ImageManager.class );
+  public static Logger        LOG  = Logger.getLogger( ImageManager.class );
   
-  private static final String ALL = "all";
+  private static final String ALL  = "all";
   private static final String SELF = "self";
   
-  private static final String ADD = "add";
-
+  private static final String ADD  = "add";
+  
   public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException, TransactionException {
     DescribeImagesResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
     final User requestUser = ctx.getUser( );
     final String action = PolicySpec.requestToAction( request );
-    final Set<String> imageSelectionSet = request.getImagesSet( ) != null ? new HashSet<String>( request.getImagesSet( ) ) : new HashSet<String>( );
-    final Set<String> ownerSelectionSet = request.getOwnersSet( ) != null ? new HashSet<String>( request.getOwnersSet( ) ) : new HashSet<String>( );
+    final Set<String> imageSelectionSet = request.getImagesSet( ) != null
+      ? new HashSet<String>( request.getImagesSet( ) )
+      : new HashSet<String>( );
+    final Set<String> ownerSelectionSet = request.getOwnersSet( ) != null
+      ? new HashSet<String>( request.getOwnersSet( ) )
+      : new HashSet<String>( );
     if ( ownerSelectionSet.remove( SELF ) ) {
       ownerSelectionSet.add( requestAccountId );
     }
-    final Set<String> exeBySelectionSet = request.getExecutableBySet( ) != null ? new HashSet<String>( request.getExecutableBySet( ) ) : new HashSet<String>( );
+    final Set<String> exeBySelectionSet = request.getExecutableBySet( ) != null
+      ? new HashSet<String>( request.getExecutableBySet( ) )
+      : new HashSet<String>( );
     final boolean exeByNonEmpty = exeBySelectionSet.size( ) > 0;
     final boolean exeByHasSelf = exeBySelectionSet.remove( SELF );
     final boolean exeByHasAll = exeBySelectionSet.remove( ALL );
@@ -160,19 +165,20 @@ public class ImageManager {
         }
         // Check if selected by explicit account permissions
         if ( exeByNonEmpty ) {
-          if ( !( ( exeByHasAll && image.getImagePublic( ) ) ||   // public
+          if ( !( ( exeByHasAll && image.getImagePublic( ) ) || // public
                   ( exeByHasSelf && ( image.getOwner( ).isOwner( requestAccountId ) || image.hasPermission( requestAccountId ) ) ) || // implicit or explicit, but no public
-                  ( !exeBySelectionSet.isEmpty( ) && ( image.getOwner( ).isOwner( requestAccountId ) && image.hasPermission( ( String[] ) exeBySelectionSet.toArray( ) ) ) ) 
-                ) ) {
-            return false;
-          }
-        }
-        // Check IAM permission at the end
-        if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, image.getDisplayName( ), null, action, requestUser ) ) {
-          return false;
-        }
-        return true;
-      }
+          ( !exeBySelectionSet.isEmpty( ) && ( image.getOwner( ).isOwner( requestAccountId ) && image.hasPermission( ( String[] ) exeBySelectionSet.toArray( ) ) ) )
+                                             ) ) {
+                                               return false;
+                                             }
+                                           }
+                                           // Check IAM permission at the end
+                                           if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, image.getDisplayName( ), null,
+                                                                           action, requestUser ) ) {
+                                             return false;
+                                           }
+                                           return true;
+                                         }
       
     };
     List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), imageFilter, Images.TO_IMAGE_DETAILS );
@@ -245,12 +251,12 @@ public class ImageManager {
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
     final User requestUser = Contexts.lookup( ).getUser( );
     final String action = PolicySpec.requestToAction( request );
-
+    
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
-          ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
+           ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
             !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), null, action, requestUser ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to deregister image" );
       }
@@ -305,7 +311,7 @@ public class ImageManager {
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
-          ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
+           ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
             !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), null, action, requestUser ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to describe image attribute" );
       }
@@ -397,7 +403,7 @@ public class ImageManager {
       db.rollback( );
       reply.set_return( false );
     }
-
+    
     return reply;
   }
   
@@ -411,11 +417,11 @@ public class ImageManager {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
-      if ( ctx.hasAdministrativePrivileges( ) || 
-           ( imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) && 
+      if ( ctx.hasAdministrativePrivileges( ) ||
+           ( imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) &&
              Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), null, action, requestUser ) ) ) {
         imgInfo.resetPermission( );
-        db.commit( );          
+        db.commit( );
       } else {
         db.rollback( );
         reply.set_return( false );
@@ -426,6 +432,19 @@ public class ImageManager {
       reply.set_return( false );
     }
     return reply;
+  }
+  
+  private static MessageCallback<CreateImageType, CreateImageResponseType> createImageCallback( final CreateImageType request ) {
+    return new MessageCallback<CreateImageType, CreateImageResponseType>( ) {
+      {
+        this.setRequest( request );
+      }
+      @Override
+      public void fire( CreateImageResponseType msg ) {
+        LOG.info( msg );
+      }
+    };
+    
   }
   
   public CreateImageResponseType createImage( CreateImageType request ) throws EucalyptusCloudException {
@@ -445,13 +464,14 @@ public class ImageManager {
       throw new EucalyptusCloudException( "Cannot create an image from an instance which is not in either the 'running' or 'stopped' state: "
                                           + vm.getInstanceId( ) + " is in state " + vm.getRuntimeState( ).getName( ) );
     }
-//    if ( !"ebs".equals( vm.getVmTypeInfo( ).lookupRoot( ).getType( ) ) && !ctx.hasAdministrativePrivileges( ) ) {
-//      throw new EucalyptusCloudException( "Cannot create an image from an instance which is not booted from a volume: " + vm.getInstanceId( ) + " is in state "
-//                                          + vm.getRuntimeState( ).getName( ) );
-//    }
+    if ( !( vm.getMachine( ) instanceof BlockStorageImageInfo ) && !ctx.hasAdministrativePrivileges( ) ) {
+      throw new EucalyptusCloudException( "Cannot create an image from an instance which is not booted from a volume: " + vm.getInstanceId( ) + " is in state "
+                                          + vm.getRuntimeState( ).getName( ) );
+    }
     Cluster cluster = null;
     try {
-      cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
+      cluster = Clusters.lookup( vm.lookupPartition( ) );
+      AsyncRequests.newRequest( createImageCallback( request ) ).dispatch( cluster.getConfiguration( ) );
     } catch ( NoSuchElementException e ) {
       LOG.debug( e );
       throw new EucalyptusCloudException( "Cluster does not exist: " + vm.lookupClusterConfiguration( ) );

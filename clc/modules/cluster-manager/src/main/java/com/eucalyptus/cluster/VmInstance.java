@@ -110,7 +110,10 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.images.Emis.BootableSet;
+import com.eucalyptus.images.KernelImageInfo;
+import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.Networks;
@@ -1010,5 +1013,21 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       
     }
     
+  }
+
+  public BootableImageInfo getMachine( ) {
+    return this.bootRecord.getMachine( );
+  }
+
+  public KernelImageInfo getKernel( ) {
+    return this.bootRecord.getKernel( );
+  }
+
+  public RamdiskImageInfo getRamdisk( ) {
+    return this.bootRecord.getRamdisk( );
+  }
+
+  public boolean isLinux( ) {
+    return this.bootRecord.isLinux( );
   }
 }
