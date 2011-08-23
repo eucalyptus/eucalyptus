@@ -307,13 +307,20 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   protected VmInstance( ) {
-    this.runtimeState = null;
     this.vmId = null;
     this.bootRecord = null;
     this.launchRecord = null;
     this.placement = null;
     this.privateNetwork = Boolean.FALSE;
-    this.usageStats = null;
+    this.networkIndex = null;
+    this.usageStats = new VmUsageStats( this );
+    this.runtimeState = new VmRuntimeState( this );
+    this.networkConfig.setIpAddress( DEFAULT_IP );
+    this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
+    this.networkConfig.setPrivateDnsName( DEFAULT_IP );
+    this.networkConfig.setPublicDnsName( DEFAULT_IP );
+    this.updateDns( );
+    this.store( );
   }
   
   public void updateBlockBytes( final long blkbytes ) {
