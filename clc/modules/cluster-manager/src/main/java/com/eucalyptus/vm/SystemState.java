@@ -323,7 +323,7 @@ public class SystemState {
         ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getNamespace( ), v.getNetworkNames( ) );
         rsvMap.put( reservation.getReservationId( ), reservation );
       }
-      rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( v.getAsRunningInstanceItemType( ) );
+      rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstance.Transform.INSTANCE.apply( v ) );
     }
     if ( isAdmin ) {
       for ( VmInstance v : VmInstances.listDisabledValues( ) ) {
@@ -333,7 +333,7 @@ public class SystemState {
           ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ), v.getNetworkNames( ) );
           rsvMap.put( reservation.getReservationId( ), reservation );
         }
-        rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( v.getAsRunningInstanceItemType( ) );
+        rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstance.Transform.INSTANCE.apply( v ) );
       }
     }
     return new ArrayList<ReservationInfoType>( rsvMap.values( ) );
