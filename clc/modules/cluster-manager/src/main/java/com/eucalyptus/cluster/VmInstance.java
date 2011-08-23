@@ -278,7 +278,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                       final VmPlacement placement,
                       final List<NetworkGroup> networkRulesGroups,
                       final SetReference<PrivateNetworkIndex, VmInstance> networkIndex ) {
-    super( );
+    super( owner, vmId.getInstanceId( ) );
     this.vmId = vmId;
     this.bootRecord = bootRecord;
     this.launchRecord = launchRecord;
