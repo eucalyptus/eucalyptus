@@ -825,7 +825,7 @@ int cc_describeNetworks(char *nameserver, char **ccs, int ccsLen, axutil_env_t *
   snrt = adb_DescribeNetworksResponse_get_DescribeNetworksResponse(output, env);
   printf("describenetworks returned status %d\n", adb_describeNetworksResponseType_get_return(snrt, env));
 
-  printf("useVlans: %d mode: %s addrspernet: %d addrIndexMin: %d addrIndexMax: %d\n", adb_describeNetworksResponseType_get_useVlans(snrt, env), adb_describeNetworksResponseType_get_mode(snrt, env), adb_describeNetworksResponseType_get_addrsPerNet(snrt, env), adb_describeNetworksResponseType_get_addrIndexMin(snrt, env), adb_describeNetworksResponseType_get_addrIndexMax(snrt, env));
+  printf("useVlans: %d mode: %s addrspernet: %d addrIndexMin: %d addrIndexMax: %d vlanMin: %d vlanMax: %d\n", adb_describeNetworksResponseType_get_useVlans(snrt, env), adb_describeNetworksResponseType_get_mode(snrt, env), adb_describeNetworksResponseType_get_addrsPerNet(snrt, env), adb_describeNetworksResponseType_get_addrIndexMin(snrt, env), adb_describeNetworksResponseType_get_addrIndexMax(snrt, env), adb_describeNetworksResponseType_get_vlanMin(snrt, env), adb_describeNetworksResponseType_get_vlanMax(snrt, env));
   {
     int i, numnets, numaddrs, j;
     numnets = adb_describeNetworksResponseType_sizeof_activeNetworks(snrt, env);
@@ -1005,7 +1005,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	char *amiId;
 	char *state;
 	char *reservationId;
-	char *ownerId, *keyName;
+	char *ownerId, *accountId, *keyName;
 	char *uuid;
 	int networkIndex;
 	
@@ -1014,6 +1014,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	//amiId = adb_ccInstanceType_get_imageId(it, env);
 	reservationId = adb_ccInstanceType_get_reservationId(it, env);
 	ownerId = adb_ccInstanceType_get_ownerId(it, env);
+	accountId = adb_ccInstanceType_get_accountId(it, env);
 	keyName = adb_ccInstanceType_get_keyName(it, env);
 	state = adb_ccInstanceType_get_stateName(it, env);
 	nct = adb_ccInstanceType_get_netParams(it, env);
@@ -1054,7 +1055,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t *env, axis
 	volId = adb_volumeType_get_volumeId(vol, env);
 
 	networkIndex = adb_netConfigType_get_networkIndex(nct, env);
-	printf("Desc: uuid=%s instanceId=%s reservationId=%s ownerId=%s state=%s privMac=%s privIp=%s pubIp=%s vlan=%d keyName=%s vmTypeName=%s cores=%d mem=%d disk=%d serviceTag=%s userData=%s launchIndex=%s groupName=%s volId=%s networkIndex=%d\n", uuid, instId, reservationId, ownerId, state, adb_netConfigType_get_privateMacAddress(nct, env), adb_netConfigType_get_privateIp(nct, env), adb_netConfigType_get_publicIp(nct, env), adb_netConfigType_get_vlan(nct, env), keyName, adb_virtualMachineType_get_name(vm, env), adb_virtualMachineType_get_cores(vm, env),adb_virtualMachineType_get_memory(vm, env),adb_virtualMachineType_get_disk(vm, env), adb_ccInstanceType_get_serviceTag(it, env), adb_ccInstanceType_get_userData(it, env), adb_ccInstanceType_get_launchIndex(it, env), adb_ccInstanceType_get_groupNames_at(it, env, 0), volId, networkIndex);
+	printf("Desc: uuid=%s instanceId=%s reservationId=%s ownerId=%s accountId=%s state=%s privMac=%s privIp=%s pubIp=%s vlan=%d keyName=%s vmTypeName=%s cores=%d mem=%d disk=%d serviceTag=%s userData=%s launchIndex=%s groupName=%s volId=%s networkIndex=%d\n", uuid, instId, reservationId, ownerId, accountId, state, adb_netConfigType_get_privateMacAddress(nct, env), adb_netConfigType_get_privateIp(nct, env), adb_netConfigType_get_publicIp(nct, env), adb_netConfigType_get_vlan(nct, env), keyName, adb_virtualMachineType_get_name(vm, env), adb_virtualMachineType_get_cores(vm, env),adb_virtualMachineType_get_memory(vm, env),adb_virtualMachineType_get_disk(vm, env), adb_ccInstanceType_get_serviceTag(it, env), adb_ccInstanceType_get_userData(it, env), adb_ccInstanceType_get_launchIndex(it, env), adb_ccInstanceType_get_groupNames_at(it, env, 0), volId, networkIndex);
 	
       }
     }

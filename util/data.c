@@ -125,7 +125,7 @@ void free_metadata (ncMetadata ** metap)
 ncInstance * allocate_instance (char *uuid,
                                 char *instanceId, char *reservationId, 
                                 virtualMachine *params, 
-                                char *stateName, int stateCode, char *userId, 
+                                char *stateName, int stateCode, char *userId, char *ownerId, char *accountId,
                                 netConfig *ncnet, char *keyName,
                                 char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize)
 {
@@ -182,6 +182,13 @@ ncInstance * allocate_instance (char *uuid,
     if (userId) {
       safe_strncpy(inst->userId, userId, CHAR_BUFFER_SIZE);
     }
+    if (ownerId) {
+        safe_strncpy(inst->ownerId, ownerId, CHAR_BUFFER_SIZE);
+    }
+    if (accountId) {
+        safe_strncpy(inst->accountId, accountId, CHAR_BUFFER_SIZE);
+    }
+
     if (params) {
       memcpy(&(inst->params), params, sizeof(virtualMachine));
     }

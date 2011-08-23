@@ -300,6 +300,8 @@ static void copy_instance_to_adb (adb_instanceType_t * instance, const axutil_en
     adb_instanceType_set_kernelId(instance, env, outInst->kernelId);
     adb_instanceType_set_ramdiskId(instance, env, outInst->ramdiskId);
     adb_instanceType_set_userId(instance, env, outInst->userId);
+    adb_instanceType_set_ownerId(instance, env, outInst->ownerId);
+    adb_instanceType_set_accountId(instance, env, outInst->accountId);
     adb_instanceType_set_keyName(instance, env, outInst->keyName);
     adb_instanceType_set_instanceType(instance, env, copy_vm_type_to_adb (env, &(outInst->params)));
     
@@ -368,6 +370,8 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
     axis2_char_t * kernelURL = adb_ncRunInstanceType_get_kernelURL(input, env);
     axis2_char_t * ramdiskId = adb_ncRunInstanceType_get_ramdiskId(input, env);
     axis2_char_t * ramdiskURL = adb_ncRunInstanceType_get_ramdiskURL(input, env);
+    axis2_char_t * ownerId = adb_ncRunInstanceType_get_ownerId(input, env);
+    axis2_char_t * accountId = adb_ncRunInstanceType_get_accountId(input, env);
     axis2_char_t * keyName = adb_ncRunInstanceType_get_keyName(input, env);
     adb_netConfigType_t *net_type = adb_ncRunInstanceType_get_netParams(input, env);
     netConfig netparams;
@@ -406,6 +410,7 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
                                        imageId, imageURL, 
                                        kernelId, kernelURL, 
                                        ramdiskId, ramdiskURL, 
+                                       ownerId, accountId,
                                        keyName, 
                                        &netparams, 
                                        userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize,

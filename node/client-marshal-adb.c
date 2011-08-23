@@ -192,6 +192,8 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         (char *)adb_instanceType_get_stateName(instance, env),
         0,
         (char *)adb_instanceType_get_userId(instance, env), 
+        (char *)adb_instanceType_get_ownerId(instance, env), 
+        (char *)adb_instanceType_get_accountId(instance, env), 
         &ncnet, 
         (char *)adb_instanceType_get_keyName(instance, env),
         (char *)adb_instanceType_get_userData(instance, env),
@@ -220,10 +222,12 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         safe_strncpy (outInst->volumes[i].stateName, adb_volumeType_get_state (volume, env), CHAR_BUFFER_SIZE);
     }
     
+    logprintfl(EUCADEBUG, "MEH: %s/%s\n", outInst->ownerId, outInst->accountId);
+
     return outInst;
 }
 
-int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
+int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
 {
     int i;
     axutil_env_t * env = st->env;
@@ -250,6 +254,8 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceI
     adb_ncRunInstanceType_set_kernelURL(request, env, kernelURL);
     adb_ncRunInstanceType_set_ramdiskId(request, env, ramdiskId);
     adb_ncRunInstanceType_set_ramdiskURL(request, env, ramdiskURL);
+    adb_ncRunInstanceType_set_ownerId(request, env, ownerId);
+    adb_ncRunInstanceType_set_accountId(request, env, accountId);
     adb_ncRunInstanceType_set_keyName(request, env, keyName);
     adb_netConfigType_t *netConfig = adb_netConfigType_create(env);
     adb_netConfigType_set_privateMacAddress(netConfig, env, netparams->privateMac);
