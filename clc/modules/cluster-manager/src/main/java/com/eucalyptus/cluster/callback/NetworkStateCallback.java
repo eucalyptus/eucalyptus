@@ -6,11 +6,8 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionException;
-import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.google.common.collect.Lists;
@@ -38,20 +35,6 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
   public void fire( final DescribeNetworksResponseType reply ) {
     NetworkStateCallback.this.updateClusterConfiguration( reply );
     NetworkGroups.updateNetworkRangeConfiguration( );
-    /** verify network indexes **/
-//    EntityWrapper<ExtantNetwork> db = EntityWrapper.get( ExtantNetwork.class );
-//    List<ExtantNetwork> allNets = db.query( new ExtantNetwork( ) );
-//    Transactions.each( new ExtantNetwork( ), new Callback<ExtantNetwork>( ) {
-//      
-//      @Override
-//      public void fire( ExtantNetwork t ) {
-//        for( Integer i = reply.getAddrIndexMin( ); i < reply.getAddrIndexMax( ); i++ ) {
-//          Transactions.l
-//        }
-//      }
-//      
-//    } );
-//    NetworkGroups.update( reply.getUseVlans( ), reply.getAddrsPerNet( ), reply.getAddrIndexMax( ), reply.getAddrIndexMax( ), reply.getActiveNetworks( ) );
   }
   
   private void updateClusterConfiguration( final DescribeNetworksResponseType reply ) {
@@ -62,6 +45,8 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
       config.setUseNetworkTags( reply.getUseVlans( ) == 1 );
       config.setMinNetworkTag( reply.getVlanMin( ) );
       config.setMaxNetworkTag( reply.getVlanMax( ) );
+      config.setMinNetworkIndex( (long) reply.getAddrIndexMin( ).intValue( ) );
+      config.setMaxNetworkIndex( (long) reply.getAddrIndexMax( ).intValue( ) );
       config.setAddressesPerNetwork( reply.getAddrsPerNet( ) );
       config.setVnetNetmask( reply.getVnetNetmask( ) );
       config.setVnetSubnet( reply.getVnetSubnet( ) );
