@@ -339,9 +339,14 @@ public class Entities {
    * @throws NoSuchElementException 
    * @throws TransactionException 
    */
-  public static <T> T merge( final T newObject ) throws ConstraintViolationException, TransactionException, NoSuchElementException {
+  public static <T> T merge( final T newObject ) throws ConstraintViolationException {
     if ( !isPersistent( newObject ) ) {
-      return uniqueResult( newObject );
+      try {
+        return uniqueResult( newObject );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+        throw new RuntimeException( ex );
+      }
     } else {
       try {
         T persistedObject = getTransaction( newObject ).getTxState( ).getEntityManager( ).merge( newObject );
