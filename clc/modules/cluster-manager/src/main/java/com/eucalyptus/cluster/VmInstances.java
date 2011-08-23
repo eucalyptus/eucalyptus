@@ -428,9 +428,10 @@ public class VmInstances {
   
   public static void disable( final VmInstance that ) throws NoSuchElementException {
     final EntityTransaction db = Entities.get( VmInstance.class );
-    if ( VmState.TERMINATED.equals( that.getState( ) ) ) {
+    if ( VmState.RUNNING.ordinal( ) >= that.getState( ).ordinal( ) ) {
       try {
         Entities.merge( that );
+        that.setState( VmState.TERMINATED );
         db.commit( );
       } catch ( RuntimeException ex ) {
         db.rollback( );

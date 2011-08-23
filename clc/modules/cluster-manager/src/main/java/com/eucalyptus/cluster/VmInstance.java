@@ -315,16 +315,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @PrePersist
   @PreUpdate
   private void preLoad( ) {
-    this.setState( this.runtimeState.getRuntimeState( ) );
     for ( final VmVolumeAttachment vol : this.runtimeState.getTransientVolumeAttachments( ) ) {
       this.runtimeState.getTransientVolumes( ).put( vol.getVolumeId( ), vol );
     }
   }
-  
-//  @PostLoad
-//  private void postLoad( ) {
-//    this.runtimeState.setState( this.getState( ), Reason.NORMAL );
-//  }
   
   public void updateBlockBytes( final long blkbytes ) {
     this.usageStats.setBlockBytes( this.usageStats.getBlockBytes( ) + blkbytes );
@@ -354,11 +348,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public VmState getRuntimeState( ) {
-    return this.runtimeState.getRuntimeState( );
+    return this.getState( );
   }
   
-  public void setRuntimeState( final VmState state ) {
-    this.runtimeState.setState( state, Reason.NORMAL );
+  private void setRuntimeState( final VmState state ) {
+    this.setState( state, Reason.NORMAL );
   }
   
   void store( ) {
@@ -738,7 +732,17 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param reason
    */
   public void setState( final VmState stopping, final Reason reason, final String... extra ) {
-    this.runtimeState.setState( stopping, reason, extra );
+    
+    final EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      final VmInstance entity = Entities.merge( this );
+      entity.runtimeState.setState( stopping, reason, extra );
+      db.commit( );
+    } catch ( final Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new RuntimeException( ex );
+    }
   }
   
   /**
@@ -817,10 +821,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    */
   public byte[] getUserData( ) {
     return this.bootRecord.getUserData( );
-  }
-  
-  public void clearPending( ) {
-    this.runtimeState.clearPending( );
   }
   
   public void clearPendingBundleTask( ) {
@@ -930,13 +930,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           runningInstance.setStateCode( Integer.toString( VmState.TERMINATED.getCode( ) ) );
           runningInstance.setStateName( VmState.TERMINATED.getName( ) );
         } else {
-          runningInstance.setStateCode( Integer.toString( input.runtimeState.getRuntimeState( ).getCode( ) ) );
-          runningInstance.setStateName( input.runtimeState.getRuntimeState( ).getName( ) );
+          runningInstance.setStateCode( Integer.toString( input.getState( ).getCode( ) ) );
+          runningInstance.setStateName( input.getState( ).getName( ) );
         }
         runningInstance.setPlatform( input.getPlatform( ) );
         
-        runningInstance.setStateCode( Integer.toString( input.runtimeState.getRuntimeState( ).getCode( ) ) );
-        runningInstance.setStateName( input.runtimeState.getRuntimeState( ).getName( ) );
+        runningInstance.setStateCode( Integer.toString( input.getState( ).getCode( ) ) );
+        runningInstance.setStateName( input.getState( ).getName( ) );
         runningInstance.setInstanceId( input.vmId.getInstanceId( ) );
         //ASAP:FIXME:GRZE: restore.
         runningInstance.setProductCodes( new ArrayList<String>( ) );

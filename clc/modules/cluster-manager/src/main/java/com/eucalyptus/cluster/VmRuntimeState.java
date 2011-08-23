@@ -125,11 +125,11 @@ public class VmRuntimeState {
   private Set<VmVolumeAttachment>                   transientVolumeAttachments = Sets.newHashSet( );
   @Transient
   private ConcurrentMap<String, VmVolumeAttachment> transientVolumes           = new ConcurrentSkipListMap<String, VmVolumeAttachment>( );
-  @Transient
-  protected AtomicMarkableReference<VmState>        runtimeState               = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
   @Lob
   @Column( name = "metadata_vm_password_data" )
   private String                                    passwordData;
+  @Column( name = "metadata_vm_pending" )
+  private Boolean                                   pending;
   
   VmRuntimeState( VmInstance vmInstance ) {
     super( );
@@ -155,98 +155,66 @@ public class VmRuntimeState {
     }
   }
   
-  public boolean clearPending( ) {
-    if ( this.runtimeState.isMarked( ) && ( this.getRuntimeState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
-      this.runtimeState.set( this.getRuntimeState( ), false );
-      VmInstances.cleanUp( this.getVmInstance( ) );
-      return true;
-    } else {
-      this.runtimeState.set( this.getRuntimeState( ), false );
-      return false;
-    }
-  }
-  
   public void setState( final VmState newState, Reason reason, final String... extra ) {
-    
-    EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      if ( newState == null || this.runtimeState == null || this.runtimeState.getReference( ) == null ) {
-        this.runtimeState = new AtomicMarkableReference<VmState>( newState != null
-          ? newState
-          : VmState.PENDING, false );
-        return;
+    final VmState oldState = this.getVmInstance( ).getState( );
+    Runnable action = null;
+    if ( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && Reason.USER_TERMINATED.equals( reason ) ) {
+      action = cleanUpRunnable( SEND_USER_TERMINATE );
+    } else if ( VmState.STOPPING.equals( newState ) && VmState.STOPPING.equals( oldState ) && Reason.USER_STOPPED.equals( reason ) ) {
+      action = cleanUpRunnable( SEND_USER_STOP );
+    } else if ( ( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) || VmState.BURIED.equals( newState ) ) {
+      VmInstances.deregister( this.getVmInstance( ).getInstanceId( ) );
+    } else if ( oldState.equals( newState ) ) {
+      if ( Reason.APPEND.equals( reason ) ) {
+        reason = this.reason;
       }
-      final VmState oldState = this.runtimeState.getReference( );
-      if ( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && Reason.USER_TERMINATED.equals( reason ) ) {
-        VmInstances.cleanUp( this.getVmInstance( ) );
-        if ( !this.reasonDetails.contains( SEND_USER_TERMINATE ) ) {
-          this.addReasonDetail( SEND_USER_TERMINATE );
-        }
-      } else if ( VmState.STOPPING.equals( newState ) && VmState.STOPPING.equals( oldState ) && Reason.USER_STOPPED.equals( reason ) ) {
-        VmInstances.cleanUp( this.getVmInstance( ) );
-        if ( !this.reasonDetails.contains( SEND_USER_STOP ) ) {
-          this.addReasonDetail( SEND_USER_STOP );
-        }
-      } else if ( ( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) || VmState.BURIED.equals( newState ) ) {
-        VmInstances.deregister( this.getVmInstance( ).getInstanceId( ) );
-      } else if ( !this.getRuntimeState( ).equals( newState ) ) {
-        if ( Reason.APPEND.equals( reason ) ) {
-          reason = this.reason;
-        }
-        this.addReasonDetail( extra );
-        LOG.info( String.format( "%s state change: %s -> %s", this.getVmInstance( ).getInstanceId( ), this.getState( ), newState ) );
-        this.reason = reason;
-        if ( this.runtimeState.isMarked( ) && VmState.PENDING.equals( this.getRuntimeState( ) ) ) {
-          if ( VmState.SHUTTING_DOWN.equals( newState ) || VmState.PENDING.equals( newState ) ) {
-            this.runtimeState.set( newState, true );
-          } else {
-            this.runtimeState.set( newState, false );
-          }
-        } else if ( this.runtimeState.isMarked( ) && VmState.SHUTTING_DOWN.equals( this.getState( ) ) ) {
-          LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
-        } else if ( !this.runtimeState.isMarked( ) ) {
-          if ( ( oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) && ( newState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
-            this.runtimeState.set( newState, false );
-            VmInstances.cleanUp( this.getVmInstance( ) );
-          } else if ( VmState.PENDING.equals( oldState ) && VmState.RUNNING.equals( newState ) ) {
-            this.runtimeState.set( newState, false );
-          } else if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) ) {
-            this.runtimeState.set( newState, false );
-            VmInstances.disable( this.getVmInstance( ) );
-            VmInstances.cleanUp( this.getVmInstance( ) );
-          } else if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
-            this.runtimeState.set( newState, false );
-            VmInstances.disable( this.getVmInstance( ) );
-          } else if ( ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) && ( newState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) ) {
-            this.runtimeState.set( oldState, false );
-            VmInstances.cleanUp( this.getVmInstance( ) );
-          } else if ( newState.ordinal( ) > oldState.ordinal( ) ) {
-            this.runtimeState.set( newState, false );
-          }
-          this.getVmInstance( ).setState( this.getRuntimeState( ) );
-          this.getVmInstance( ).store( );
-        } else {
-          LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
-        }
-        this.getVmInstance( ).setState( this.runtimeState.getReference( ) );
-        if ( !this.getState( ).equals( oldState ) ) {
-          EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.getVmInstance( ).getInstanceId( ), this.vmInstance.getOwner( ),
-                              this.runtimeState.getReference( ).name( ) );
+      this.addReasonDetail( extra );
+      LOG.info( String.format( "%s state change: %s -> %s", this.getVmInstance( ).getInstanceId( ), this.getVmInstance( ).getState( ), newState ) );
+      this.reason = reason;
+      if ( ( oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) && ( newState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
+        this.getVmInstance( ).setState( newState );
+        action = cleanUpRunnable( );
+      } else if ( VmState.PENDING.equals( oldState ) && VmState.RUNNING.equals( newState ) ) {
+        this.getVmInstance( ).setState( newState );
+      } else if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) ) {
+        this.getVmInstance( ).setState( newState );
+        action = cleanUpRunnable( );
+      } else if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
+        this.getVmInstance( ).setState( newState );
+      } else if ( ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) && ( newState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) ) {
+        this.getVmInstance( ).setState( oldState );
+        action = cleanUpRunnable( );
+      } else if ( newState.ordinal( ) > oldState.ordinal( ) ) {
+        this.getVmInstance( ).setState( newState );
+      }
+      this.getVmInstance( ).store( );
+      if ( action != null ) {
+        try {
+          action.run( );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
         }
       }
-      db.commit( );
-    } catch ( Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
-      db.rollback( );
+      if ( !this.getVmInstance( ).getState( ).equals( oldState ) ) {
+        EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.getVmInstance( ).getInstanceId( ), this.vmInstance.getOwner( ),
+                              this.getVmInstance( ).getState( ).name( ) );
+      }
     }
-    
   }
   
-  /**
-   * @return
-   */
-  private VmState getState( ) {
-    return this.runtimeState.getReference( );
+  private Runnable cleanUpRunnable( ) {
+    return cleanUpRunnable( null );
+  }
+  
+  private Runnable cleanUpRunnable( final String reason ) {
+    return new Runnable( ) {
+      public void run( ) {
+        VmInstances.cleanUp( VmRuntimeState.this.getVmInstance( ) );
+        if ( reason != null && !VmRuntimeState.this.reasonDetails.contains( reason ) ) {
+          VmRuntimeState.this.addReasonDetail( reason );
+        }
+      }
+    };
   }
   
   VmBundleTask resetBundleTask( ) {
@@ -302,14 +270,7 @@ public class VmRuntimeState {
   }
   
   VmState getRuntimeState( ) {
-    return this.runtimeState.getReference( );
-  }
-  
-  /**
-   * @return
-   */
-  public boolean isMarked( ) {
-    return this.runtimeState.isMarked( );
+    return this.getReference( );
   }
   
   /**

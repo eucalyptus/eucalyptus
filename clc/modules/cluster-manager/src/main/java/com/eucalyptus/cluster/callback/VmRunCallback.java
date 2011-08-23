@@ -126,7 +126,6 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       try {
         final VmInstance vm = VmInstances.lookup( vmInfo.getInstanceId( ) );
         vm.updateAddresses( vmInfo.getNetParams( ).getIpAddress( ), vmInfo.getNetParams( ).getIgnoredPublicIp( ) );
-        vm.clearPending( );
         LOG.trace( vm );
         db.commit( );
       } catch ( Exception ex ) {
