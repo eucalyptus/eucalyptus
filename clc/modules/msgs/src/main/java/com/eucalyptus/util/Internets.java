@@ -125,7 +125,7 @@ public class Internets {
   private static InetAddress lookupDefaultRoute( ) {
     InetAddress laddr = null;
     try {
-      String localAddr = ( String ) Groovyness.eval( "hi=\"ip -o route get 4.2.2.1\".execute();hi.waitFor();hi.text" );
+      String localAddr = ( String ) Groovyness.eval( "hi=\"/sbin/ip -o route get 4.2.2.1\".execute();hi.waitFor();hi.text" );
       String[] parts = localAddr.replaceAll( ".*src *", "" ).split( " " );
       if ( parts.length >= 1 ) {
         laddr = InetAddresses.forString( parts[0] );

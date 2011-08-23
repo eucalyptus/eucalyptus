@@ -29,7 +29,6 @@ public class Properties {
         props.add( new Property( entry.getQualifiedName( ), value, entry.getDescription( ) ) );
       }
     } else {
-      deprecatedEucaOps( request, props );
       for ( ConfigurableProperty entry : PropertyDirectory.getPropertyEntrySet( ) ) {
         if ( request.getProperties( ).contains( entry.getQualifiedName( ) ) ) {
           String value = "********";
@@ -51,25 +50,6 @@ public class Properties {
       }
     }
     return reply;
-  }
-  /**
-   * DO NOT USE THIS ANYMORE.
-   */
-  @Deprecated
-  private void deprecatedEucaOps( DescribePropertiesType request, List<Property> props ) {
-    Iterable<String> eucas = Iterables.filter( request.getProperties( ), new Predicate<String>( ) {
-      @Override
-      public boolean apply( String arg0 ) {
-        return arg0.matches( "euca=.*" );
-      }
-    } );
-    for ( String altValue : eucas ) {
-      try {
-        props.add( new Property( ( altValue = altValue.replaceAll( "euca=", "" ) ), "" + Groovyness.eval( altValue ), altValue ) );
-      } catch ( Exception ex ) {
-        props.add( new Property( altValue, ex.getMessage( ), Exceptions.string( ex ) ) );
-      }
-    }
   }
   private static final String INTERNAL_OP = "euca";
   public ModifyPropertyValueResponseType modifyProperty( ModifyPropertyValueType request ) throws EucalyptusCloudException {

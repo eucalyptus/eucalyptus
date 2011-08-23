@@ -113,9 +113,9 @@ public class Groovyness {
     }
   }
   
-  public static Object eval( String code ) throws ScriptExecutionFailedException {
+  public static <T> T eval( String code ) throws ScriptExecutionFailedException {
     try {
-      return getGroovyEngine( ).eval( code );
+      return ( T ) getGroovyEngine( ).eval( code );
     } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new ScriptExecutionFailedException( "Executing the requested script failed: " + code, e );
