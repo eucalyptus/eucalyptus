@@ -153,17 +153,17 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Transient
   private final NetworkConfigType networkConfig    = new NetworkConfigType( );
   @Embedded
-  private VmId              vmId;
+  private final VmId                    vmId;
   @Embedded
-  private VmBootRecord      bootRecord;
+  private final VmBootRecord            bootRecord;
   @Embedded
   private final VmUsageStats      usageStats;
   @Embedded
-  private VmLaunchRecord    launchRecord;
+  private final VmLaunchRecord          launchRecord;
   @Embedded
   private final VmRuntimeState    runtimeState;
   @Embedded
-  private VmPlacement       placement;
+  private final VmPlacement             placement;
   
   @Column( name = "metadata_vm_private_networking" )
   private final Boolean           privateNetwork;
@@ -218,15 +218,24 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public static class Builder {
-    VmInstance     newVm = new VmInstance( );
-    VmId           vmId;
-    VmBootRecord   vmBootRecord;
-    VmUsageStats   vmUsageStats;
-    VmPlacement    vmPlacement;
-    VmLaunchRecord vmLaunchRecord;
+    VmInstance                                    newVm = new VmInstance( );
+    VmId                                          vmId;
+    VmBootRecord                                  vmBootRecord;
+    VmUsageStats                                  vmUsageStats;
+    VmPlacement                                   vmPlacement;
+    VmLaunchRecord                                vmLaunchRecord;
+    List<NetworkGroup>                            networkRulesGroups;
+    SetReference<PrivateNetworkIndex, VmInstance> networkIndex;
+    OwnerFullName                                 owner;
     
     public Builder owner( final OwnerFullName owner ) {
-      this.newVm.setOwner( owner );
+      this.owner = owner;
+      return this;
+    }
+    
+    public Builder networking( final List<NetworkGroup> groups, final SetReference<PrivateNetworkIndex, VmInstance> networkIndex ) {
+      this.networkRulesGroups = groups;
+      this.networkIndex = networkIndex;
       return this;
     }
     
@@ -257,11 +266,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     
     public VmInstance build( final Integer index ) {
-      this.newVm.launchRecord = new VmLaunchRecord( this.newVm, index, new Date( ) );
-      this.newVm.bootRecord = vmBootRecord;
-      this.newVm.vmId = vmId;
-      this.newVm.placement = vmPlacement;
-      return this.newVm;
+      return new VmInstance( this.owner, this.vmId, this.vmBootRecord, new VmLaunchRecord( index, new Date( ) ), this.vmPlacement, this.networkRulesGroups, this.networkIndex );
     }
   }
   
@@ -616,7 +621,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
        * 
        */
       private static final long serialVersionUID = 1L;
-
+      
       {
         this.setState( VmState.TERMINATED );
       }

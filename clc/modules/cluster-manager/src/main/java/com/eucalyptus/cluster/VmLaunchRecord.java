@@ -77,9 +77,8 @@ public class VmLaunchRecord {
   @Column( name = "metadata_vm_launch_time" )
   private Date       launchTime;
   
-  VmLaunchRecord( VmInstance vmInstance, Integer launchIndex, Date launchTime ) {
+  VmLaunchRecord( Integer launchIndex, Date launchTime ) {
     super( );
-    this.vmInstance = vmInstance;
     this.launchIndex = launchIndex;
     this.launchTime = launchTime;
   }
