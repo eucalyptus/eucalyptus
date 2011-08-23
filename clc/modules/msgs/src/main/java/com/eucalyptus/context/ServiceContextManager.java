@@ -63,6 +63,8 @@
 
 package com.eucalyptus.context;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Set;
@@ -93,7 +95,6 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Templates;
 import com.google.common.collect.Lists;
@@ -190,14 +191,14 @@ public class ServiceContextManager {
           shutdown( );
         }
         this.context = this.createContext( reloadComponentIds );
-        Assertions.assertNotNull( this.context, "BUG: failed to build mule context for reasons unknown" );
+        assertThat( this.context, notNullValue());
         try {
-          this.context.start( );
           if ( Bootstrap.isShuttingDown( ) ) {
             this.running.set( false );
             shutdown( );
             return;
           }
+          this.context.start( );
           this.client = new MuleClient( this.context );
           this.endpointToService.clear( );
           this.serviceToEndpoint.clear( );
