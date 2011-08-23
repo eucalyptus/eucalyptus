@@ -445,16 +445,20 @@ public class ImageManager {
       throw new EucalyptusCloudException( "Cannot create an image from an instance which is not in either the 'running' or 'stopped' state: "
                                           + vm.getInstanceId( ) + " is in state " + vm.getRuntimeState( ).getName( ) );
     }
-//    if ( !"ebs".equals( vm.getVmTypeInfo( ).lookupRoot( ).getType( ) ) && !ctx.hasAdministrativePrivileges( ) ) {
-//      throw new EucalyptusCloudException( "Cannot create an image from an instance which is not booted from a volume: " + vm.getInstanceId( ) + " is in state "
-//                                          + vm.getRuntimeState( ).getName( ) );
-//    }
-    Cluster cluster = null;
-    try {
-      cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
-    } catch ( NoSuchElementException e ) {
-      LOG.debug( e );
-      throw new EucalyptusCloudException( "Cluster does not exist: " + vm.lookupClusterConfiguration( ) );
+    if ( vm.isBlockStorage( ) && !ctx.hasAdministrativePrivileges( ) ) {
+      throw new EucalyptusCloudException( "Cannot create an image from an instance which is not booted from a volume: " + vm.getInstanceId( ) + " is in state "
+                                          + vm.getRuntimeState( ).getName( ) );
+    } else if ( vm.isBlockStorage( ) ) {
+      
+    } else {
+      Cluster cluster = null;
+      try {
+        cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
+        
+      } catch ( NoSuchElementException e ) {
+        LOG.debug( e );
+        throw new EucalyptusCloudException( "Cluster does not exist: " + vm.lookupClusterConfiguration( ) );
+      }
     }
     //save instance state
     //terminate the instance

@@ -115,8 +115,8 @@ public class VmNetworkConfig {
     this.publicAddress = ( this.publicAddress == null
       ? "0.0.0.0"
       : this.publicAddress );
-    this.publicDnsName = "euca-" + this.publicAddress.replaceAll( "\\.", "-" ) + ".eucalyptus." + dnsDomain;
-    this.privateDnsName = "euca-" + this.privateAddress.replaceAll( "\\.", "-" ) + ".eucalyptus.internal";
+    this.publicDnsName = "euca-" + this.publicAddress.replaceAll( "\\.", "-" ) + VmInstances.INSTANCE_SUBDOMAIN + "." + dnsDomain;
+    this.privateDnsName = "euca-" + this.privateAddress.replaceAll( "\\.", "-" ) + VmInstances.INSTANCE_SUBDOMAIN + ".internal";
   }
   
   private VmInstance getParent( ) {
@@ -127,7 +127,7 @@ public class VmNetworkConfig {
     this.parent = parent;
   }
   
-   String getMacAddress( ) {
+  String getMacAddress( ) {
     return this.macAddress;
   }
   
@@ -135,7 +135,7 @@ public class VmNetworkConfig {
     this.macAddress = macAddress;
   }
   
-   String getPrivateAddress( ) {
+  String getPrivateAddress( ) {
     return this.privateAddress;
   }
   

@@ -89,6 +89,9 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
+import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
@@ -123,12 +126,26 @@ import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 @ConfigurableClass( root = "vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
 public class VmInstances {
   @ConfigurableField( description = "Amount of time (in milliseconds) before a VM which is not reported by a cluster will be marked as terminated.", initial = "" + 10 * 60 * 1000 )
-  public static Long    SHUT_DOWN_TIME = 10 * 60 * 1000l;
+  public static Long         SHUT_DOWN_TIME     = 10 * 60 * 1000l;
   @ConfigurableField( description = "Amount of time (in milliseconds) that a terminated VM will continue to be reported.", initial = "" + 60 * 60 * 1000 )
-  public static Long    BURY_TIME      = 60 * 60 * 1000l;
+  public static Long         BURY_TIME          = 60 * 60 * 1000l;
   @ConfigurableField( description = "Prefix to use for instance MAC addresses.", initial = "d0:0d" )
-  public static String MAC_PREFIX = "d0:0d";
-  private static Logger LOG            = Logger.getLogger( VmInstances.class );
+  public static String       MAC_PREFIX         = "d0:0d";
+  @ConfigurableField( description = "Subdomain to use for instance DNS.", initial = ".eucalyptus", changeListener = SubdomainListener.class )
+  public static final String INSTANCE_SUBDOMAIN = ".eucalyptus";
+  
+  public static class SubdomainListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+      
+      if ( !newValue.toString( ).startsWith( "." ) || newValue.toString( ).endsWith( "." ) )
+        throw new ConfigurablePropertyException( "Subdomain must begin and cannot end with a '.' -- e.g., '." + newValue.toString( ).replaceAll( "\\.$", "" )
+                                                 + "' is correct." + t.getFieldName( ) );
+      
+    }
+  }
+  
+  private static Logger LOG = Logger.getLogger( VmInstances.class );
   
   enum VmIsOperational implements Predicate<VmInstance> {
     INSTANCE;
@@ -325,9 +342,9 @@ public class VmInstances {
   public static String asMacAddress( final String instanceId ) {
     return String.format( "%s:%s:%s:%s:%s",
                           VmInstances.MAC_PREFIX,
-                          instanceId.substring( 2, 4 ), 
-                          instanceId.substring( 4, 6 ), 
-                          instanceId.substring( 6, 8 ), 
+                          instanceId.substring( 2, 4 ),
+                          instanceId.substring( 4, 6 ),
+                          instanceId.substring( 6, 8 ),
                           instanceId.substring( 8, 10 ) );
   }
   

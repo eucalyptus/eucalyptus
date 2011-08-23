@@ -110,7 +110,11 @@ public class VmRuntimeState {
   private static Logger                             LOG                        = Logger.getLogger( VmRuntimeState.class );
   @Parent
   private VmInstance                                vmInstance;
+  @Embedded
   private VmBundleTask                              bundleTask;
+  @Embedded
+  private VmCreateImageTask                         createImageTask;
+  @Column( name = "metadata_vm_service_tag" )
   private String                                    serviceTag;
   @Transient
   private Reason                                    reason;
@@ -472,6 +476,10 @@ public class VmRuntimeState {
   
   Set<VmVolumeAttachment> getTransientVolumeAttachments( ) {
     return this.transientVolumeAttachments;
+  }
+  
+  public Boolean isCreatingImage( ) {
+    return this.createImageTask != null;
   }
   
 }

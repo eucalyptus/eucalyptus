@@ -78,6 +78,7 @@ import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.images.Emis.BootableSet;
+import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
@@ -86,6 +87,7 @@ import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.collect.Sets;
+import edu.ucsb.eucalyptus.cloud.ws.BlockStorage;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 @Embeddable
@@ -172,6 +174,10 @@ public class VmBootRecord {
     this.platform = platform;
   }
   
+  public boolean isBlockStorage( ) {
+    return this.getMachine( ) instanceof BlockStorageImageInfo;
+  }
+
   public boolean isLinux( ) {
     return ImageMetadata.Platform.linux.equals( this.getMachine( ).getPlatform( ) ) || this.getMachine( ).getPlatform( ) == null;
   }

@@ -481,7 +481,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return this.mappedState;
     }
   }
-  
+
+  public Boolean isCreatingImage( ) {
+    return this.runtimeState.isCreatingImage( );
+  }
+
   public Boolean isBundling( ) {
     return this.runtimeState.isBundling( );
   }
@@ -998,5 +1002,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       
     }
     
+  }
+
+  public boolean isLinux( ) {
+    return this.bootRecord.isLinux( );
+  }
+
+  public boolean isBlockStorage( ) {
+    return this.bootRecord.isBlockStorage( );
   }
 }
