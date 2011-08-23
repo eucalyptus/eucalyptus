@@ -63,7 +63,6 @@
  */
 package com.eucalyptus.cloud.run;
 
-import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -71,15 +70,8 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionException;
-import com.eucalyptus.entities.TransactionExecutionException;
-import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 public class CreateVmInstances {
@@ -100,39 +92,14 @@ public class CreateVmInstances {
     if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, "", action, requestUser, quantity ) ) {
       throw new EucalyptusCloudException( "Quota exceeded in allocating " + quantity + " vm instances for " + requestUser.getName( ) );
     }
-    final String reservationId = VmInstances.getId( allocInfo.getReservationIndex( ), -1 ).replaceAll( "i-", "r-" );
-    final int vmIndex = 0; /*<--- this corresponds to the first instance id CANT COLLIDE WITH RSVID             */
     for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-      final VmInstance vmInst = this.makeVmInstance( token );
+      try {
+        VmInstance.CreateAllocation.INSTANCE.apply( token );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
     }
     return allocInfo;
   }
   
-  private VmInstance makeVmInstance( final ResourceToken token ) throws TransactionException, ResourceAllocationException {
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      final Allocation allocInfo = token.getAllocationInfo( );
-      VmInstance vmInst = new VmInstance.Builder( ).owner( allocInfo.getOwnerFullName( ) )
-                                                   .withIds( token.getInstanceId( ), allocInfo.getReservationId( ) )
-                                                   .bootRecord( allocInfo.getBootSet( ),
-                                                                allocInfo.getUserData( ),
-                                                                allocInfo.getSshKeyPair( ),
-                                                                allocInfo.getVmType( ) )
-                                                   .placement( allocInfo.getPartition( ), allocInfo.getRequest( ).getAvailabilityZone( ) )
-                                                   .build( );
-      vmInst = Entities.persist( vmInst );
-      token.getNetworkIndex( ).set( vmInst );
-      db.commit( );
-      token.setVmInstance( vmInst );
-      return vmInst;
-    } catch ( final ResourceAllocationException ex ) {
-      db.rollback( );
-      Logs.extreme( ).error( ex, ex );
-      throw ex;
-    } catch ( final Exception ex ) {
-      db.rollback( );
-      Logs.extreme( ).error( ex, ex );
-      throw new TransactionExecutionException( ex );
-    }
-  }
 }

@@ -93,7 +93,9 @@ import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
+import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.UserMetadata;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.component.ComponentIds;
@@ -105,6 +107,7 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.Emis.BootableSet;
@@ -112,7 +115,9 @@ import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.Networks;
 import com.eucalyptus.network.PrivateNetworkIndex;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.InstanceEvent;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.vm.BundleTask;
@@ -171,6 +176,43 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @JoinColumn( name = "metadata_vm_network_index", nullable = true, insertable = true, updatable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex     networkIndex;
+  
+  public enum CreateAllocation implements Predicate<ResourceToken> {
+    INSTANCE;
+    
+    /**
+     * @see com.google.common.base.Predicate#apply(java.lang.Object)
+     */
+    @Override
+    public boolean apply( ResourceToken token ) {
+      final EntityTransaction db = Entities.get( VmInstance.class );
+      try {
+        final Allocation allocInfo = token.getAllocationInfo( );
+        VmInstance vmInst = new VmInstance.Builder( ).owner( allocInfo.getOwnerFullName( ) )
+                                                     .withIds( token.getInstanceId( ), allocInfo.getReservationId( ) )
+                                                     .bootRecord( allocInfo.getBootSet( ),
+                                                                  allocInfo.getUserData( ),
+                                                                  allocInfo.getSshKeyPair( ),
+                                                                  allocInfo.getVmType( ) )
+                                                     .placement( allocInfo.getPartition( ), allocInfo.getRequest( ).getAvailabilityZone( ) )
+                                                     .build( );
+        vmInst = Entities.persist( vmInst );
+        token.getNetworkIndex( ).set( vmInst );
+        db.commit( );
+        token.setVmInstance( vmInst );
+        return true;
+      } catch ( final ResourceAllocationException ex ) {
+        db.rollback( );
+        Logs.extreme( ).error( ex, ex );
+        throw Exceptions.toUndeclared( ex );
+      } catch ( final Exception ex ) {
+        db.rollback( );
+        Logs.extreme( ).error( ex, ex );
+        throw Exceptions.toUndeclared( new TransactionExecutionException( ex ) );
+      }
+    }
+    
+  }
   
   public static class Builder {
     VmInstance   newVm = new VmInstance( );
@@ -921,7 +963,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public boolean startBundleTask( BundleTask bundleTask ) {
     return this.runtimeState.startBundleTask( bundleTask );
   }
-
+  
   private void setNetworkIndex( PrivateNetworkIndex networkIndex ) {
     this.networkIndex = networkIndex;
   }
