@@ -246,7 +246,7 @@ public class VmInstances {
       final String networkFqName = !vm.getNetworkRulesGroups( ).isEmpty( )
         ? vm.getOwner( ).getAccountNumber( ) + "-" + vm.getNetworkNames( ).first( )
         : null;
-      final Cluster cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
+      final Cluster cluster = Clusters.getInstance( ).lookup( vm.getPartition( ) );
       VmInstances.cleanUpAttachedVolumes( vm );
       
       Address address = null;
