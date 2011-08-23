@@ -269,7 +269,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   }
   
   public String getClusterNetworkName( ) {
-    return this.getOwnerUserId( ) + "-" + this.getNaturalId( );
+    return this.getOwnerAccountNumber( ) + "-" + this.getNaturalId( );
   }
   
   public ExtantNetwork extantNetwork( ) throws NotEnoughResourcesException, TransientEntityException {
