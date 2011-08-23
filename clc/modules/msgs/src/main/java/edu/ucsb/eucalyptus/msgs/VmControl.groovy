@@ -253,7 +253,7 @@ public class ReservationInfoType extends EucalyptusData {
   def ReservationInfoType(final reservationId, final ownerId, final groupSet) {
     this.reservationId = reservationId;
     this.ownerId = ownerId;
-    this.groupSet = groupSet;
+    this.groupSet.addAll( groupSet );
   }
   
   def ReservationInfoType() {
