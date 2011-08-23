@@ -77,6 +77,7 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
 import javax.persistence.JoinColumn;
@@ -228,7 +229,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.runtimeState.set( this.getState( ), false );
   }
   
-  @ManyToMany
+  @ManyToMany//TODO:GRZE: maybe cascade here?
   @JoinTable( name = "metadata_metadata_vm_has_network_groups", joinColumns = { @JoinColumn( name = "metadata_vm_id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_group_id" ) } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final Set<NetworkGroup>                     networkGroups     = Sets.newHashSet( );
@@ -1182,7 +1183,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     if ( this.networkIndex != null ) builder.append( "networkIndex=" ).append( this.networkIndex ).append( ":" );
     if ( this.transientVolumes != null ) builder.append( "transientVolumes=" ).append( this.transientVolumes ).append( ":" );
     if ( this.persistentVolumes != null ) builder.append( "persistentVolumes=" ).append( this.persistentVolumes );
-    if ( this.bundleTask != null ) builder.append( "bundleTask=" ).append( this.bundleTask ).append( ":" );
+    if ( this.bundleTask != null && this.bundleTask.getReference( ) != null ) builder.append( "bundleTask=" ).append( this.bundleTask ).append( ":" );
     if ( this.networkConfig != null ) builder.append( "networkConfig=" ).append( this.networkConfig ).append( ":" );
     if ( this.launchTime != null ) builder.append( "launchTime=" ).append( this.launchTime ).append( ":" );
     if ( this.sshKeyPair != null ) builder.append( "sshKeyPair=" ).append( this.sshKeyPair ).append( ":" );

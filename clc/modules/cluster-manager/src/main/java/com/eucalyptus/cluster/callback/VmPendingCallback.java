@@ -63,7 +63,6 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
             vm.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
           }
           vm.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
-          vm.updateNetworkIndex( runVm.getNetParams( ).getNetworkIndex( ) );
           vm.updateVolumeAttachments( runVm.getVolumes( ) );
         }
       } catch ( NoSuchElementException e ) {
