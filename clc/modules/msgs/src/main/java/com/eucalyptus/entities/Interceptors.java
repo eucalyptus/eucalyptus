@@ -128,8 +128,8 @@ public class Interceptors {
     @Override
     public boolean onLoad( final Object entity, final Serializable id, final Object[] state, final String[] propertyNames, final Type[] types ) {
       try {
-        LOG.debug( String.format( "%s():%d %s %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ),
-                                  id, toStringNullably( entity ) ) );
+        LOG.debug( String.format( "%s():%d %s %s", Threads.currentStackFrame( ).getMethodName( ), ++this.operations, entity.getClass( ).getSimpleName( ),
+                                  id ) );
       } catch ( Exception ex ) {
         LOG.error( ex );
       }
