@@ -86,6 +86,10 @@ public class VmPlacement {
     this.partitionName = partitionName;
   }
   
+  VmPlacement( ) {
+    super( );
+  }
+
   VmInstance getVmInstance( ) {
     return this.vmInstance;
   }

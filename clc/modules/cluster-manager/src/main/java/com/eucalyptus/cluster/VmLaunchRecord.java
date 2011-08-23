@@ -83,6 +83,10 @@ public class VmLaunchRecord {
     this.launchTime = launchTime;
   }
   
+  VmLaunchRecord( ) {
+    super( );
+  }
+  
   VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
@@ -94,15 +98,15 @@ public class VmLaunchRecord {
   Date getLaunchTime( ) {
     return this.launchTime;
   }
-
+  
   private void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
-
+  
   private void setLaunchIndex( Integer launchIndex ) {
     this.launchIndex = launchIndex;
   }
-
+  
   private void setLaunchTime( Date launchTime ) {
     this.launchTime = launchTime;
   }

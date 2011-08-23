@@ -101,7 +101,7 @@ public class VmBootRecord {
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private RamdiskImageInfo        ramdisk;
   @Column( name = "metadata_vm_platform" )
-  private String                        platform;
+  private String                  platform;
   @ElementCollection
   private Set<VmVolumeAttachment> persistentVolumes = Sets.newHashSet( );
   @Lob
@@ -113,6 +113,10 @@ public class VmBootRecord {
   @ManyToOne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private VmType                  vmType;
+  
+  VmBootRecord( ) {
+    super( );
+  }
   
   VmBootRecord( BootableSet bootSet, byte[] userData, SshKeyPair sshKeyPair, VmType vmType ) {
     super( );
@@ -183,39 +187,39 @@ public class VmBootRecord {
     }
     return vmTypeInfo;
   }
-
+  
   private ImageInfo getMachineImage( ) {
     return this.machineImage;
   }
-
+  
   private void setMachineImage( ImageInfo machineImage ) {
     this.machineImage = machineImage;
   }
-
+  
   private void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
-
+  
   private void setKernel( KernelImageInfo kernel ) {
     this.kernel = kernel;
   }
-
+  
   private void setRamdisk( RamdiskImageInfo ramdisk ) {
     this.ramdisk = ramdisk;
   }
-
+  
   private void setPersistentVolumes( Set<VmVolumeAttachment> persistentVolumes ) {
     this.persistentVolumes = persistentVolumes;
   }
-
+  
   private void setUserData( byte[] userData ) {
     this.userData = userData;
   }
-
+  
   private void setSshKeyPair( SshKeyPair sshKeyPair ) {
     this.sshKeyPair = sshKeyPair;
   }
-
+  
   private void setVmType( VmType vmType ) {
     this.vmType = vmType;
   }

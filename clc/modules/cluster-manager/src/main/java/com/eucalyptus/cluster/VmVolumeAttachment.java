@@ -70,14 +70,6 @@ import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 
 @Embeddable
 public class VmVolumeAttachment {
-  public static VmVolumeAttachment fromAttachedVolume( VmInstance vm, AttachedVolume vol ) {
-    return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ) );
-  }
-  
-  public static AttachedVolume asAttachedVolume( VmInstance vm, VmVolumeAttachment vol ) {
-    return new AttachedVolume( vol.getVolumeId( ), vm.getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
-  }
-  
   @Parent
   private VmInstance vmInstance;
   private String           volumeId;
@@ -91,10 +83,11 @@ public class VmVolumeAttachment {
 //  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 //  private Volume     volume;
   
-  VmInstance getVmInstance( ) {
-    return this.vmInstance;
-  }
   
+  VmVolumeAttachment( ) {
+    super( );
+  }
+
   public VmVolumeAttachment( VmInstance vmInstance, String volumeId, String device, String remoteDevice, String status, Date attachTime ) {
     super( );
     this.vmInstance = vmInstance;
@@ -105,10 +98,23 @@ public class VmVolumeAttachment {
     this.attachTime = attachTime;
   }
   
+  public static VmVolumeAttachment fromAttachedVolume( VmInstance vm, AttachedVolume vol ) {
+    return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ) );
+  }
+  
+  public static AttachedVolume asAttachedVolume( VmInstance vm, VmVolumeAttachment vol ) {
+    return new AttachedVolume( vol.getVolumeId( ), vm.getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
+  }
+  
+
 //  Volume getVolume( ) {
 //    return this.volume;
 //  }
   
+  VmInstance getVmInstance( ) {
+    return this.vmInstance;
+  }
+
   String getVolumeId( ) {
     return this.volumeId;
   }

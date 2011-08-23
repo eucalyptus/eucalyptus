@@ -128,6 +128,10 @@ public class VmRuntimeState {
     this.vmInstance = vmInstance;
   }
   
+  VmRuntimeState( ) {
+    super( );
+  }
+
   @PrePersist
   @PreUpdate
   private void preLoad( ) {

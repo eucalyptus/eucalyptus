@@ -72,13 +72,17 @@ public class VmUsageStats {
   @Parent
   private VmInstance vmInstance;
   @Column( name = "metadata_vm_block_bytes" )
-  private Long             blockBytes;
+  private Long       blockBytes;
   @Column( name = "metadata_vm_network_bytes" )
-  private Long             networkBytes;
+  private Long       networkBytes;
   
   VmUsageStats( VmInstance vmInstance ) {
     super( );
     this.vmInstance = vmInstance;
+  }
+  
+  VmUsageStats( ) {
+    super( );
   }
   
   Long getBlockBytes( ) {
@@ -100,7 +104,7 @@ public class VmUsageStats {
   VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
-
+  
   private void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
