@@ -164,24 +164,26 @@ public class SystemState {
   
   private static void updateVmInstance( final String originCluster, final VmInfo runVm ) {
     VmState state = VmState.Mapper.get( runVm.getStateName( ) );
-    VmInstance vm = null;
+    
+    EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      vm = VmInstances.lookup( runVm.getInstanceId( ) );
-    } catch ( NoSuchElementException e ) {
       try {
-        vm = VmInstances.lookupDisabled( runVm.getInstanceId( ) );
+        VmInstance vm = Entities.uniqueResult( VmInstance.named( null, runVm.getInstanceId( ) ) );
         if ( !VmState.BURIED.equals( vm.getRuntimeState( ) ) && vm.getSplitTime( ) > VmInstances.BURY_TIME ) {
           vm.setState( VmState.BURIED, Reason.BURIED );
         }
-        return;
-      } catch ( NoSuchElementException e1 ) {
+        vm.doUpdate( ).apply( runVm ); 
+      } catch ( Exception ex ) {
+        Logs.extreme( ).error( ex, ex );
         if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) ) ) {
           SystemState.restoreInstance( originCluster, runVm );
         }
-        return;
       }
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
     }
-    vm.doUpdate( ).apply( runVm ); 
   }
   
   public static ArrayList<String> getAncestors( BaseMessage parentMsg, String manifestPath ) {
