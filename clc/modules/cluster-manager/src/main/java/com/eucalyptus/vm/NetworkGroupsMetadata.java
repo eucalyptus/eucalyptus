@@ -116,7 +116,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
       for ( VmInstance vm : VmInstances.listValues( ) ) {
         if ( VmState.RUNNING.ordinal( ) < vm.getState( ).ordinal( ) ) continue;
         for ( NetworkGroup ruleGroup : vm.getNetworkRulesGroups( ) ) {
-          networks.put( ruleGroup.getNaturalId( ), vm.getPrivateAddress( ) );
+          networks.put( ruleGroup.getClusterNetworkName( ), vm.getPrivateAddress( ) );
           if ( !rules.containsKey( ruleGroup.getNaturalId( ) ) ) {
             for ( NetworkRule netRule : ruleGroup.getNetworkRules( ) ) {
               String rule = String.format( "-P %s -%s %d%s%d ", netRule.getProtocol( ), ( "icmp".equals( netRule.getProtocol( ) )
@@ -125,10 +125,10 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
                 ? ":"
                 : "-" ), netRule.getHighPort( ) );
               for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {
-                rules.put( ruleGroup.getName( ), String.format( "%s -o %s -u %s", rule, peer.getGroupName( ), peer.getUserQueryKey( ) ) );
+                rules.put( ruleGroup.getClusterNetworkName( ), String.format( "%s -o %s -u %s", rule, peer.getGroupName( ), peer.getUserQueryKey( ) ) );
               }
               for ( IpRange cidr : netRule.getIpRanges( ) ) {
-                rules.put( ruleGroup.getName( ), String.format( "%s -s %s", rule, cidr.getValue( ) ) );
+                rules.put( ruleGroup.getClusterNetworkName( ), String.format( "%s -s %s", rule, cidr.getValue( ) ) );
               }
             }
           }
