@@ -123,7 +123,7 @@ public class VmRuntimeState {
   @Transient
   private ConcurrentMap<String, VmVolumeAttachment> transientVolumes           = new ConcurrentSkipListMap<String, VmVolumeAttachment>( );
   @Transient
-  protected AtomicMarkableReference<VmState>  runtimeState               = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
+  protected AtomicMarkableReference<VmState>        runtimeState               = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
   @Lob
   @Column( name = "metadata_vm_password_data" )
   private String                                    passwordData;
@@ -136,7 +136,6 @@ public class VmRuntimeState {
   VmRuntimeState( ) {
     super( );
   }
-  
   
   public String getReason( ) {
     if ( this.reason == null ) {
@@ -166,9 +165,11 @@ public class VmRuntimeState {
   
   public void setState( final VmState newState, Reason reason, final String... extra ) {
     if ( newState == null || this.runtimeState == null || this.runtimeState.getReference( ) == null ) {
-      this.runtimeState = new AtomicMarkableReference<VmState>( newState != null ? newState : VmState.PENDING, false );
+      this.runtimeState = new AtomicMarkableReference<VmState>( newState != null
+        ? newState
+        : VmState.PENDING, false );
       return;
-    } 
+    }
     final VmState oldState = this.runtimeState.getReference( );
     if ( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && Reason.USER_TERMINATED.equals( reason ) ) {
       VmInstances.cleanUp( this.getVmInstance( ) );
@@ -216,6 +217,7 @@ public class VmRuntimeState {
         } else if ( newState.ordinal( ) > oldState.ordinal( ) ) {
           this.runtimeState.set( newState, false );
         }
+        this.getVmInstance( ).setState( this.getRuntimeState( ) );
         this.getVmInstance( ).store( );
       } else {
         LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
@@ -498,7 +500,7 @@ public class VmRuntimeState {
   private void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
-
+  
   Set<VmVolumeAttachment> getTransientVolumeAttachments( ) {
     return this.transientVolumeAttachments;
   }
