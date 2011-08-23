@@ -107,6 +107,8 @@ import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
@@ -1151,6 +1153,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   public String getRamdiskId( ) {
     return this.ramdiskId;
+  }
+
+  public Partition lookupPartition( ) {
+    return Partitions.lookupByName( this.partitionName );
   }
   
 }

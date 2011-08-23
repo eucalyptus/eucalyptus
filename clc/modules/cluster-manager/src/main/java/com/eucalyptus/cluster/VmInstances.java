@@ -246,7 +246,7 @@ public class VmInstances {
       final String networkFqName = !vm.getNetworkRulesGroups( ).isEmpty( )
         ? vm.getOwner( ).getAccountNumber( ) + "-" + vm.getNetworkNames( ).first( )
         : null;
-      final Cluster cluster = Clusters.getInstance( ).lookup( vm.getPartition( ) );
+      final Cluster cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
       VmInstances.cleanUpAttachedVolumes( vm );
       
       Address address = null;
@@ -279,7 +279,7 @@ public class VmInstances {
         @Override
         public boolean apply( final AttachedVolume arg0 ) {
           try {
-            final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vm.getPartition( ) );
+            final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vm.lookupPartition( ) );
             vm.removeVolumeAttachment( arg0.getVolumeId( ) );
             final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
             scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );

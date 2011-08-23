@@ -45,8 +45,8 @@ public abstract class AbstractSystemAddressManager {
   
   public abstract List<Address> allocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesException;
   
-  public Address allocateSystemAddress( final String partition ) throws NotEnoughResourcesException {
-    return this.allocateSystemAddresses( Partitions.lookupByName( partition ), 1 ).get( 0 );
+  public Address allocateSystemAddress( final Partition partition ) throws NotEnoughResourcesException {
+    return this.allocateSystemAddresses( partition, 1 ).get( 0 );
     
   }
   

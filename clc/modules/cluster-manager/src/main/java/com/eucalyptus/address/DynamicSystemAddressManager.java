@@ -48,7 +48,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   
   @Override
   public void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesException {
-    final Address addr = this.allocateSystemAddress( vm.getPartition( ) );
+    final Address addr = this.allocateSystemAddress( vm.lookupPartition( ) );
     AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>( ) {
       @Override
       public void fire( final BaseMessage response ) {
