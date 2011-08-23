@@ -45,8 +45,8 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
       config.setUseNetworkTags( reply.getUseVlans( ) == 1 );
       config.setMinNetworkTag( reply.getVlanMin( ) );
       config.setMaxNetworkTag( reply.getVlanMax( ) );
-      config.setMinNetworkIndex( (long) reply.getAddrIndexMin( ).intValue( ) );
-      config.setMaxNetworkIndex( (long) reply.getAddrIndexMax( ).intValue( ) );
+      config.setMinNetworkIndex( ( long ) reply.getAddrIndexMin( ).intValue( ) );
+      config.setMaxNetworkIndex( ( long ) reply.getAddrIndexMax( ).intValue( ) );
       config.setAddressesPerNetwork( reply.getAddrsPerNet( ) );
       config.setVnetNetmask( reply.getVnetNetmask( ) );
       config.setVnetSubnet( reply.getVnetSubnet( ) );
