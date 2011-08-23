@@ -136,7 +136,7 @@ public class VmBootRecord {
   }
   
   public BootableImageInfo getMachine( ) {
-    return this.machineImage;
+    return ( BootableImageInfo ) this.machineImage;
   }
   
   public KernelImageInfo getKernel( ) {
