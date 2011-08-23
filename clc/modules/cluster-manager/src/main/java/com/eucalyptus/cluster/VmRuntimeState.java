@@ -498,5 +498,9 @@ public class VmRuntimeState {
   private void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
+
+  Set<VmVolumeAttachment> getTransientVolumeAttachments( ) {
+    return this.transientVolumeAttachments;
+  }
   
 }

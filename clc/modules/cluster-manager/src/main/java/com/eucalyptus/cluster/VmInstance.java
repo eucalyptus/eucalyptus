@@ -323,7 +323,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @PrePersist
   @PreUpdate
   private void preLoad( ) {
-    this.setState( this.runtimeState.getState( ) );
+    this.setState( this.runtimeState.getRuntimeState( ) );
     for ( VmVolumeAttachment vol : this.runtimeState.getTransientVolumeAttachments( ) ) {
       this.runtimeState.getTransientVolumes( ).put( vol.getVolumeId( ), vol );
     }
@@ -331,7 +331,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   @PostLoad
   private void postLoad( ) {
-    this.runtimeState.setState( this.getState( ), false );
+    this.runtimeState.setState( this.getState( ), Reason.NORMAL );
   }
   
   public void updateBlockBytes( final long blkbytes ) {
