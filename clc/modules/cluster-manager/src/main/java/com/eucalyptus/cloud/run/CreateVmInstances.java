@@ -86,12 +86,12 @@ public class CreateVmInstances {
   private static Logger LOG = Logger.getLogger( CreateVmInstances.class );
   
   public Allocation allocate( final Allocation allocInfo ) throws Exception {
-    long quantity = allocInfo.getAllocationTokens( ).size( );
-    Context ctx = allocInfo.getContext( );
-    User requestUser = ctx.getUser( );
-    UserFullName userFullName = ctx.getUserFullName( );
-    String action = PolicySpec.requestToAction( allocInfo.getRequest( ) );
-    String vmType = allocInfo.getVmType( ).getName( );
+    final long quantity = allocInfo.getAllocationTokens( ).size( );
+    final Context ctx = allocInfo.getContext( );
+    final User requestUser = ctx.getUser( );
+    final UserFullName userFullName = ctx.getUserFullName( );
+    final String action = PolicySpec.requestToAction( allocInfo.getRequest( ) );
+    final String vmType = allocInfo.getVmType( ).getName( );
     // Allocate VmType instances
     if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VMTYPE, vmType, action, requestUser, 1L ) ) {
       throw new EucalyptusCloudException( "Quota exceeded in allocating vm type " + vmType + " for " + requestUser.getName( ) );
@@ -100,40 +100,36 @@ public class CreateVmInstances {
     if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, "", action, requestUser, quantity ) ) {
       throw new EucalyptusCloudException( "Quota exceeded in allocating " + quantity + " vm instances for " + requestUser.getName( ) );
     }
-    String reservationId = VmInstances.getId( allocInfo.getReservationIndex( ), -1 ).replaceAll( "i-", "r-" );
-    int vmIndex = 0; /*<--- this corresponds to the first instance id CANT COLLIDE WITH RSVID             */
-    for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-      VmInstance vmInst = makeVmInstance( token );
+    final String reservationId = VmInstances.getId( allocInfo.getReservationIndex( ), -1 ).replaceAll( "i-", "r-" );
+    final int vmIndex = 0; /*<--- this corresponds to the first instance id CANT COLLIDE WITH RSVID             */
+    for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+      final VmInstance vmInst = this.makeVmInstance( token );
     }
     return allocInfo;
   }
   
-  private VmInstance makeVmInstance( ResourceToken token ) throws TransactionException, ResourceAllocationException {
-    EntityTransaction db = Entities.get( VmInstance.class );
+  private VmInstance makeVmInstance( final ResourceToken token ) throws TransactionException, ResourceAllocationException {
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      Allocation allocInfo = token.getAllocationInfo( );
-      VmInstance vmInst = new VmInstance( allocInfo.getOwnerFullName( ),
-                                          token.getInstanceId( ),
-                                          token.getInstanceUuid( ),
-                                          allocInfo.getReservationId( ),
-                                          token.getLaunchIndex( ),
-                                          allocInfo.getRequest( ).getAvailabilityZone( ),
-                                          allocInfo.getUserData( ),
-                                          allocInfo.getBootSet( ),
-                                          allocInfo.getSshKeyPair( ),
-                                          allocInfo.getVmType( ),
-                                          allocInfo.getNetworkGroups( ),
-                                          token.getNetworkIndex( ) );
+      final Allocation allocInfo = token.getAllocationInfo( );
+      VmInstance vmInst = new VmInstance.Builder( ).owner( allocInfo.getOwnerFullName( ) )
+                                                   .withIds( token.getInstanceId( ), allocInfo.getReservationId( ) )
+                                                   .bootRecord( allocInfo.getBootSet( ),
+                                                                allocInfo.getUserData( ),
+                                                                allocInfo.getSshKeyPair( ),
+                                                                allocInfo.getVmType( ) )
+                                                   .placement( allocInfo.getRequest( ).getAvailabilityZone( ) )
+                                                   .build( );
       vmInst = Entities.persist( vmInst );
       token.getNetworkIndex( ).set( vmInst );
       db.commit( );
       token.setVmInstance( vmInst );
       return vmInst;
-    } catch ( ResourceAllocationException ex ) {
+    } catch ( final ResourceAllocationException ex ) {
       db.rollback( );
       Logs.extreme( ).error( ex, ex );
       throw ex;
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       db.rollback( );
       Logs.extreme( ).error( ex, ex );
       throw new TransactionExecutionException( ex );

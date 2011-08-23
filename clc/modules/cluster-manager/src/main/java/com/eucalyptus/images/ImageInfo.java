@@ -153,12 +153,12 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   private ImageMetadata.Type         imageType;
   
   @ElementCollection
-  @CollectionTable(name="metadata_images_permissions")
+  @CollectionTable( name = "metadata_images_permissions" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<String>                permissions      = new HashSet<String>( );
   
   @ElementCollection
-  @CollectionTable(name="metadata_images_pcodes")
+  @CollectionTable( name = "metadata_images_pcodes" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<String>                productCodes     = new HashSet<String>( );
   
@@ -257,6 +257,20 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   }
   
   @SuppressWarnings( "unchecked" )
+  public ImageInfo revokePermission( final Account account ) {
+    EntityTransaction db = Entities.get( ImageInfo.class );
+    try {
+      ImageInfo entity = Entities.merge( this );
+      entity.getPermissions( ).remove( account.getAccountNumber( ) );
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+    }
+    return this;
+  }
+  
+  @SuppressWarnings( "unchecked" )
   public ImageInfo grantPermission( final Account account ) {
     EntityTransaction db = Entities.get( ImageInfo.class );
     try {
@@ -301,36 +315,6 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
     return this;
   }
   
-  public List<String> listProductCodes( ) {
-    final List<String> prods = Lists.newArrayList( );
-    try {
-      Transactions.one( ImageInfo.self( this ), new Callback<ImageInfo>( ) {
-        @Override
-        public void fire( final ImageInfo t ) {
-          prods.addAll( t.getProductCodes( ) );
-        }
-      } );
-    } catch ( final ExecutionException e ) {
-      LOG.debug( e, e );
-    }
-    return prods;
-  }
-  
-  public List<String> listLaunchPermissions( ) {
-    final List<String> perms = Lists.newArrayList( );
-    try {
-      Transactions.one( ImageInfo.self( this ), new Callback<ImageInfo>( ) {
-        @Override
-        public void fire( final ImageInfo t ) {
-          perms.addAll( t.getPermissions( ) );
-        }
-      } );
-    } catch ( final ExecutionException e ) {
-      LOG.debug( e, e );
-    }
-    return perms;
-  }
-  
   public ImageInfo resetProductCodes( ) {
     try {
       Transactions.one( ImageInfo.self( this ), new Callback<ImageInfo>( ) {
@@ -345,27 +329,8 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
     return this;
   }
   
-  public ImageInfo revokePermission( final Account account ) {
-    try {
-      Transactions.one( ImageInfo.self( this ), new Callback<ImageInfo>( ) {
-        @Override
-        public void fire( final ImageInfo t ) {
-          final LaunchPermission imgAuth;
-          t.getPermissions( ).remove( new LaunchPermission( t, account.getAccountNumber( ) ) );
-        }
-      } );
-    } catch ( final ExecutionException e ) {
-      LOG.debug( e, e );
-    }
-    return this;
-  }
-  
-  private Set<String> getProductCodes( ) {
+  Set<String> getProductCodes( ) {
     return this.productCodes;
-  }
-  
-  private void setProductCodes( final Set<String> productCodes ) {
-    this.productCodes = productCodes;
   }
   
   /**

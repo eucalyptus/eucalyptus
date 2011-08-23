@@ -293,10 +293,10 @@ public class VolumeManager {
     }
     Cluster cluster = null;
     try {
-      cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
+      cluster = Clusters.lookup( vm.lookupPartition( ) );
     } catch ( NoSuchElementException e ) {
       LOG.debug( e, e );
-      throw new EucalyptusCloudException( "Cluster does not exist: " + vm.getClusterName( ) );
+      throw new EucalyptusCloudException( "Cluster does not exist: " + vm.lookupClusterConfiguration( ) );
     }
     final String deviceName = request.getDevice( );
     final String volumeId = request.getVolumeId( );
@@ -360,7 +360,7 @@ public class VolumeManager {
     vm.addVolumeAttachment( attachVol );
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
                .withDetails( volume.getOwner( ).toString( ), volume.getDisplayName( ), "instance", vm.getInstanceId( ) )
-               .withDetails( "cluster", vm.getClusterName( ) ).info( );
+               .withDetails( "partition", vm.lookupPartition( ).toString( ) ).info( );
     volume.setState( State.BUSY );
     reply.setAttachedVolume( attachVol );
     return reply;
@@ -409,10 +409,10 @@ public class VolumeManager {
     
     Cluster cluster = null;
     try {
-      cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
+      cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
     } catch ( NoSuchElementException e ) {
       LOG.debug( e, e );
-      throw new EucalyptusCloudException( "Cluster does not exist: " + vm.getClusterName( ) );
+      throw new EucalyptusCloudException( "Cluster does not exist: " + vm.lookupClusterConfiguration( ) );
     }
     ServiceConfiguration scVm;
     try {
@@ -433,7 +433,8 @@ public class VolumeManager {
     request.setInstanceId( vm.getInstanceId( ) );
     AsyncRequests.newRequest( new VolumeDetachCallback( request ) ).dispatch( cluster.getConfiguration( ) );
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DETACH )
-               .withDetails( vm.getOwner( ).toString( ), volume.getVolumeId( ), "instance", vm.getInstanceId( ) ).withDetails( "cluster", vm.getClusterName( ) ).info( );
+               .withDetails( vm.getOwner( ).toString( ), volume.getVolumeId( ), "instance", vm.getInstanceId( ) ).withDetails( "cluster",
+                                                                                                                               vm.lookupClusterConfiguration( ).toString( ) ).info( );
     volume.setStatus( "detaching" );
     reply.setDetachedVolume( volume );
     return reply;

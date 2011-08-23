@@ -181,32 +181,7 @@ public class SystemState {
         return;
       }
     }
-    long splitTime = vm.getSplitTime( );
-    VmState oldState = vm.getRuntimeState( );
-    vm.setServiceTag( runVm.getServiceTag( ) );
-    vm.setPlatform( runVm.getPlatform( ) );
-    vm.setBundleTaskState( runVm.getBundleTaskStateName( ) );
-    
-    if ( VmState.SHUTTING_DOWN.equals( vm.getRuntimeState( ) ) && splitTime > VmInstances.SHUT_DOWN_TIME ) {
-      vm.setState( VmState.TERMINATED, Reason.EXPIRED );
-    } else if ( VmState.STOPPING.equals( vm.getRuntimeState( ) ) && splitTime > VmInstances.SHUT_DOWN_TIME ) {
-      vm.setState( VmState.STOPPED, Reason.EXPIRED );
-    } else if ( VmState.STOPPING.equals( vm.getRuntimeState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
-      vm.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
-    } else if ( VmState.SHUTTING_DOWN.equals( vm.getRuntimeState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
-      vm.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
-    } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
-                && ( VmState.PENDING.equals( vm.getRuntimeState( ) ) || VmState.RUNNING.equals( vm.getRuntimeState( ) ) ) ) {
-      if ( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
-        vm.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
-      }
-      vm.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
-      vm.updateVolumeAttachments( runVm.getVolumes( ) );
-      try {
-        NetworkGroup network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );
-        //GRZE:NET//        network.extantNetworkIndex( vm.getClusterName( ), vm.getNetworkIndex( ) );
-      } catch ( Exception e ) {}
-    }
+    vm.doUpdate( ).apply( runVm ); 
   }
   
   public static ArrayList<String> getAncestors( BaseMessage parentMsg, String manifestPath ) {

@@ -389,7 +389,11 @@ public class Entities {
    * @return
    */
   public static boolean isPersistent( Object obj ) {
-    return getTransaction( obj ).getTxState( ).getSession( ).contains( obj );
+    if ( !hasTransaction( ) ) {
+      return false;
+    } else {
+      return getTransaction( obj ).getTxState( ).getSession( ).contains( obj );
+    }
   }
   
   /**

@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,88 +53,52 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.images;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.*;
-import com.eucalyptus.entities.AbstractPersistent;
-import javax.persistence.*;
-import org.hibernate.annotations.Entity;
-import javax.persistence.Table;
+package com.eucalyptus.cluster;
 
-@Entity @javax.persistence.Entity
-@PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_image_product_code" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class ProductCode extends AbstractPersistent {
-  @Column( name = "metadata_image_product_code_value" )
-  private String value;
-  
-  @ManyToOne
-  @JoinColumn( name = "metadata_image_productcode_for_image_id" )
-  private ImageInfo parent;
+import javax.persistence.Column;
+import javax.persistence.Embeddable;
+import org.hibernate.annotations.Parent;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
 
-  public ProductCode( ) {}
+@Embeddable
+public class VmPlacement {
+  @Parent
+  private final VmInstance vmInstance;
+  @Column( name = "metadata_vm_cluster_name" )
+  private final String     clusterName;
+  @Column( name = "metadata_vm_partition_name" )
+  private final String     partitionName;
   
-  public ProductCode( final ImageInfo parent, final String value ) {
-    this.parent = parent;
-    this.value = value;
-  }
-  
-  public String getValue( ) {
-    return value;
-  }
-  
-  public void setValue( final String value ) {
-    this.value = value;
-  }
-  
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = super.hashCode( );
-    result = prime * result + ( ( this.value == null )
-      ? 0
-      : this.value.hashCode( ) );
-    return result;
+  VmPlacement( VmInstance vmInstance, String clusterName, String partitionName ) {
+    super( );
+    this.vmInstance = vmInstance;
+    this.clusterName = clusterName;
+    this.partitionName = partitionName;
   }
   
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) {
-      return true;
-    }
-    if ( !super.equals( obj ) ) {
-      return false;
-    }
-    if ( getClass( ) != obj.getClass( ) ) {
-      return false;
-    }
-    ProductCode other = ( ProductCode ) obj;
-    if ( this.value == null ) {
-      if ( other.value != null ) {
-        return false;
-      }
-    } else if ( !this.value.equals( other.value ) ) {
-      return false;
-    }
-    return true;
+  VmInstance getVmInstance( ) {
+    return this.vmInstance;
   }
-
-  public ImageInfo getParent( ) {
-    return this.parent;
+  
+  String getClusterName( ) {
+    return this.clusterName;
   }
-
-  public void setParent( ImageInfo parent ) {
-    this.parent = parent;
+  
+  String getPartitionName( ) {
+    return this.partitionName;
+  }
+  
+  public Partition lookupPartition( ) {
+    return Partitions.lookupByName( this.partitionName );
   }
   
 }

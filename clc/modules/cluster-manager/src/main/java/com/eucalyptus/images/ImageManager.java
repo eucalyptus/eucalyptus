@@ -338,9 +338,7 @@ public class ImageManager {
         reply.getLaunchPermission( ).add( LaunchPermissionItemType.getUser( Contexts.lookup( ).getAccount( ).getAccountNumber( ) ) );
       } else if ( request.getProductCodes( ) != null ) {
         reply.setRealResponse( reply.getProductCodes( ) );
-        for ( String p : imgInfo.listProductCodes( ) ) {
-          reply.getProductCodes( ).add( p );
-        }
+        reply.getProductCodes( ).addAll( imgInfo.getProductCodes( ) );
       } else if ( request.getBlockDeviceMapping( ) != null ) {
         reply.setRealResponse( reply.getBlockDeviceMapping( ) );
         reply.getBlockDeviceMapping( ).add( ImageUtil.EMI );
@@ -453,10 +451,10 @@ public class ImageManager {
 //    }
     Cluster cluster = null;
     try {
-      cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
+      cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
     } catch ( NoSuchElementException e ) {
       LOG.debug( e );
-      throw new EucalyptusCloudException( "Cluster does not exist: " + vm.getClusterName( ) );
+      throw new EucalyptusCloudException( "Cluster does not exist: " + vm.lookupClusterConfiguration( ) );
     }
     //save instance state
     //terminate the instance

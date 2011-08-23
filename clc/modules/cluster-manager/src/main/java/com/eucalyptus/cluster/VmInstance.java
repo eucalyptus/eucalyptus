@@ -65,32 +65,23 @@
 package com.eucalyptus.cluster;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.atomic.AtomicMarkableReference;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
+import javax.persistence.Embedded;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
-import javax.persistence.Lob;
 import javax.persistence.ManyToMany;
-import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
-import javax.persistence.PostLoad;
-import javax.persistence.PrePersist;
-import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
@@ -100,14 +91,11 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.UserMetadata;
-import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
-import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
@@ -120,12 +108,10 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.Emis.BootableSet;
-import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.network.Networks;
 import com.eucalyptus.network.PrivateNetworkIndex;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
@@ -135,9 +121,9 @@ import com.eucalyptus.vm.VmType;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
@@ -149,138 +135,103 @@ import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 @Table( name = "metadata_instances" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetadata<VmInstance> {
-  private static final long                           serialVersionUID    = 1L;
+  private static final long       serialVersionUID = 1L;
   @Transient
-  private static Logger                               LOG                 = Logger.getLogger( VmInstance.class );
+  private static Logger           LOG              = Logger.getLogger( VmInstance.class );
   @Transient
-  public static String                                DEFAULT_IP          = "0.0.0.0";
+  public static String            DEFAULT_IP       = "0.0.0.0";
   @Transient
-  public static String                                DEFAULT_TYPE        = "m1.small";
+  public static String            DEFAULT_TYPE     = "m1.small";
   @Transient
-  private static String                               SEND_USER_TERMINATE = "SIGTERM";
-  @Transient
-  private static String                               SEND_USER_STOP      = "SIGSTOP";
+  private final NetworkConfigType networkConfig    = new NetworkConfigType( );
+  @Embedded
+  private final VmId              vmId;
+  @Embedded
+  private final VmBootRecord      bootRecord;
+  @Embedded
+  private final VmUsageStats      usageStats;
+  @Embedded
+  private final VmLaunchRecord    launchRecord;
+  @Embedded
+  private final VmRuntimeState    runtimeState;
+  @Embedded
+  private final VmPlacement       placement;
   
-  @Transient
-  private final AtomicMarkableReference<BundleTask>   bundleTask          = new AtomicMarkableReference<BundleTask>( null, false );
-  @Transient
-  private String                                      serviceTag;
-  @Transient
-  private Reason                                      reason;
-  @Transient
-  private final List<String>                          reasonDetails       = Lists.newArrayList( );
-  @Transient
-  private StringBuffer                                consoleOutput       = new StringBuffer( );
-  @Transient
-  private final ConcurrentMap<String, AttachedVolume> transientVolumes    = new ConcurrentSkipListMap<String, AttachedVolume>( );
-  @Transient
-  private final NetworkConfigType                     networkConfig       = new NetworkConfigType( );
-  @Transient
-  protected final AtomicMarkableReference<VmState>    runtimeState        = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
-  @Column( name = "metadata_vm_reservation_id" )
-  private final String                                reservationId;
-  @Column( name = "metadata_vm_launch_index" )
-  private final Integer                               launchIndex;
-  @Column( name = "metadata_vm_instance_id" )
-  private final String                                instanceId;
-  @Column( name = "vm_cluster_name" )
-  private final String                                clusterName;
-  @Column( name = "metadata_vm_partition_name" )
-  private final String                                partitionName;
-  @Lob
-  @Column( name = "metadata_vm_user_data" )
-  private final byte[]                                userData;
-  @Column( name = "metadata_vm_launch_time" )
-  private final Date                                  launchTime;
-  @Column( name = "metadata_vm_password_data" )
-  private String                                      passwordData;
   @Column( name = "metadata_vm_private_networking" )
-  private final Boolean                               privateNetwork;
-  @Column( name = "metadata_vm_block_bytes" )
-  private Long                                        blockBytes;
-  @Column( name = "metadata_vm_network_bytes" )
-  private Long                                        networkBytes;
-  @ManyToOne
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final SshKeyPair                            sshKeyPair;
-  @ManyToOne
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final VmType                                vmType;
-  @Column( name = "metadata_vm_platform" )
-  private String                                      platform;
-  @Column( name = "metadata_vm_vbr" )
-  private final String                                vbrString;
-  @Column( name = "metadata_vm_image_id" )
-  private final String                                imageId;
-  @Column( name = "metadata_vm_kernel_id" )
-  private final String                                kernelId;
-  @Column( name = "metadata_vm_ramdisk_id" )
-  private final String                                ramdiskId;
-  
-  @PrePersist
-  @PreUpdate
-  private void preLoad( ) {
-    super.setState( this.runtimeState.getReference( ) );
-  }
-  
-  @PostLoad
-  private void postLoad( ) {
-    this.runtimeState.set( this.getState( ), false );
-  }
-  
+  private final Boolean           privateNetwork;
   @ManyToMany
-  @JoinTable( name = "metadata_metadata_vm_has_network_groups", joinColumns = { @JoinColumn( name = "metadata_vm_id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_group_id" ) } )
+  @JoinTable( name = "metadata_vm_has_network_groups",
+              joinColumns = { @JoinColumn( name = "metadata_vm_id" ) },
+              inverseJoinColumns = { @JoinColumn( name = "metadata_network_group_id" ) } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final Set<NetworkGroup>                     networkGroups     = Sets.newHashSet( );
+  private final Set<NetworkGroup> networkGroups    = Sets.newHashSet( );
   
   @NotFound( action = NotFoundAction.IGNORE )
   @OneToOne( fetch = FetchType.EAGER, cascade = CascadeType.REMOVE )
-  @JoinColumn( name = "vm_network_index", nullable = true, insertable = true, updatable = true )
+  @JoinColumn( name = "metadata_vm_network_index", nullable = true, insertable = true, updatable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private PrivateNetworkIndex                         networkIndex;
+  private PrivateNetworkIndex     networkIndex;
   
-  @Transient
-  //TODO:GRZE:NOW
-  private final ConcurrentMap<String, AttachedVolume> persistentVolumes = new ConcurrentSkipListMap<String, AttachedVolume>( );
+  public static class Builder {
+    VmInstance   newVm = new VmInstance( );
+    VmId         vmId;
+    VmBootRecord vmBootRecord;
+    VmUsageStats vmUsageStats;
+    VmPlacement  vmPlacement;
+    
+    public Builder owner( final OwnerFullName owner ) {
+      this.newVm.setOwner( owner );
+      return this;
+    }
+    
+    public Builder withIds( final String instanceId, final String reservationId ) {
+      this.vmId = new VmId( this.newVm, reservationId, instanceId );
+      return this;
+    }
+    
+    public Builder placement( final String clusterName ) {
+      final ServiceConfiguration config = this.lookupServiceConfiguration( clusterName );
+      this.vmPlacement = new VmPlacement( this.newVm, config.getName( ), config.getPartition( ) );
+      return this;
+    }
+    
+    public Builder bootRecord( final BootableSet bootSet, final byte[] userData, final SshKeyPair sshKeyPair, final VmType vmType ) {
+      this.vmBootRecord = new VmBootRecord( this.newVm, bootSet, userData, sshKeyPair, vmType );
+      return this;
+    }
+    
+    private ServiceConfiguration lookupServiceConfiguration( final String name ) {
+      ServiceConfiguration config = null;
+      try {
+        config = ServiceConfigurations.lookupByName( ClusterController.class, name );
+      } catch ( final PersistenceException ex ) {
+        LOG.debug( "Failed to find cluster configuration named: " + name + " using that as the partition name." );
+      }
+      return config;
+    }
+    
+    public VmInstance build( ) {
+      return this.newVm;
+    }
+  }
   
-  public VmInstance( final UserFullName owner,
-                     final String instanceId,
-                     final String instanceUuid,
-                     final String reservationId,
-                     final int launchIndex,
-                     final String placement,
-                     final byte[] userData,
-                     final BootableSet bootSet,
-                     final SshKeyPair sshKeyPair,
-                     final VmType vmType,
+  public VmInstance( final OwnerFullName owner,
+                     final VmId vmId,
+                     final VmBootRecord bootRecord,
+                     final VmLaunchRecord launchRecord,
+                     final VmPlacement placement,
                      final List<NetworkGroup> networkRulesGroups,
                      final SetReference<PrivateNetworkIndex, VmInstance> networkIndex ) {
-    super( owner, instanceId );
-    this.imageId = bootSet.getMachine( ).getDisplayName( );
-    this.kernelId = bootSet.getKernel( ).getDisplayName( );
-    this.ramdiskId = bootSet.getRamdisk( ).getDisplayName( );
-    this.vbrString = getVbrAsString( bootSet, vmType );
+    super( );
+    this.vmId = vmId;
+    this.bootRecord = bootRecord;
+    this.launchRecord = launchRecord;
+    this.placement = placement;
     this.privateNetwork = Boolean.FALSE;
-    this.launchTime = new Date( );
-    this.blockBytes = 0l;
-    this.networkBytes = 0l;
-    this.reservationId = reservationId;
-    this.launchIndex = launchIndex;
-    this.instanceId = instanceId;
-    ServiceConfiguration config = lookupServiceConfiguration( placement );
-    this.clusterName = config == null
-      ? placement
-      : config.getName( );
-    this.partitionName = config == null
-      ? placement
-      : config.getPartition( );
-    this.userData = userData;
-    this.sshKeyPair = KeyPairs.noKey( ).equals( sshKeyPair ) || ( sshKeyPair == null )
-      ? null
-      : sshKeyPair;
-    this.vmType = vmType;
+    this.usageStats = new VmUsageStats( this );
     this.networkIndex = networkIndex.get( );
-    this.networkConfig.setMacAddress( "d0:0d:" + VmInstances.asMacAddress( this.instanceId ) );
+    this.runtimeState = new VmRuntimeState( this );
+    this.networkConfig.setMacAddress( VmInstances.asMacAddress( this.vmId.getInstanceId( ) ) );
     this.networkConfig.setIpAddress( DEFAULT_IP );
     this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
     this.networkConfig.setPrivateDnsName( DEFAULT_IP );
@@ -289,72 +240,33 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.store( );
   }
   
-  private ServiceConfiguration lookupServiceConfiguration( String name ) {
-    ServiceConfiguration config = null;
-    try {
-      config = ServiceConfigurations.lookupByName( ClusterController.class, name );
-    } catch ( final PersistenceException ex ) {
-      LOG.debug( "Failed to find cluster configuration named: " + this.clusterName + " using that as the partition name." );
-    }
-    return config;
-  }
-  
-  private String getVbrAsString( final BootableSet bootSet, final VmType vmType ) {
-    try {
-      return BindingManager.getDefaultBinding( ).toString( bootSet.populateVirtualBootRecord( vmType ) );
-    } catch ( MetadataException ex1 ) {
-      LOG.error( ex1, ex1 );
-      return null;
-    }
-  }
-  
   protected VmInstance( final OwnerFullName ownerFullName, final String instanceId2 ) {
     super( ownerFullName, instanceId2 );
-    this.instanceId = instanceId2;
-    this.launchTime = null;
-    this.launchIndex = null;
-    this.blockBytes = null;
-    this.networkBytes = null;
-    this.reservationId = null;
-    this.clusterName = null;
-    this.partitionName = null;
-    this.userData = null;
-    this.platform = null;
-    this.sshKeyPair = null;
-    this.vmType = null;
-    this.privateNetwork = null;
-    this.vbrString = null;
-    this.imageId = null;
-    this.kernelId = null;
-    this.ramdiskId = null;
+    this.runtimeState = null;
+    this.vmId = null;
+    this.bootRecord = null;
+    this.launchRecord = null;
+    this.placement = null;
+    this.privateNetwork = Boolean.FALSE;
+    this.usageStats = null;
   }
   
   protected VmInstance( ) {
-    this.instanceId = null;
-    this.launchTime = null;
-    this.launchIndex = null;
-    this.blockBytes = null;
-    this.networkBytes = null;
-    this.reservationId = null;
-    this.clusterName = null;
-    this.partitionName = null;
-    this.userData = null;
-    this.platform = null;
-    this.sshKeyPair = null;
-    this.vmType = null;
-    this.privateNetwork = null;
-    this.vbrString = null;
-    this.imageId = null;
-    this.kernelId = null;
-    this.ramdiskId = null;
+    this.runtimeState = null;
+    this.vmId = null;
+    this.bootRecord = null;
+    this.launchRecord = null;
+    this.placement = null;
+    this.privateNetwork = Boolean.FALSE;
+    this.usageStats = null;
   }
   
   public void updateBlockBytes( final long blkbytes ) {
-    this.blockBytes += blkbytes;
+    this.usageStats.setBlockBytes( this.usageStats.getBlockBytes( ) + blkbytes );
   }
   
   public void updateNetworkBytes( final long netbytes ) {
-    this.networkBytes += netbytes;
+    this.usageStats.setNetworkBytes( this.usageStats.getNetworkBytes( ) + netbytes );
   }
   
   public void updateAddresses( final String privateAddr, final String publicAddr ) {
@@ -386,108 +298,20 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.updateDns( );
   }
   
-  public boolean clearPending( ) {
-    if ( this.runtimeState.isMarked( ) && ( this.getRuntimeState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
-      this.runtimeState.set( this.getRuntimeState( ), false );
-      VmInstances.cleanUp( this );
-      return true;
-    } else {
-      this.runtimeState.set( this.getRuntimeState( ), false );
-      return false;
-    }
-  }
-  
   public VmState getRuntimeState( ) {
-    return this.runtimeState.getReference( );
+    return this.runtimeState.getRuntimeState( );
   }
   
   public void setRuntimeState( final VmState state ) {
-    this.setState( state, Reason.NORMAL );
+    this.runtimeState.setState( state, Reason.NORMAL );
   }
   
-  public String getReason( ) {
-    if ( this.reason == null ) {
-      this.reason = Reason.NORMAL;
-    }
-    return this.reason.name( ) + ": " + this.reason + ( this.reasonDetails != null
-      ? " -- " + this.reasonDetails
-      : "" );
+  void store( ) {
+    this.fireUsageEvent( );
+    this.firePersist( );
   }
   
-  private void addReasonDetail( final String... extra ) {
-    for ( final String s : extra ) {
-      this.reasonDetails.add( s );
-    }
-  }
-  
-  public void setState( final VmState newState, Reason reason, final String... extra ) {
-    final VmState oldState = this.runtimeState.getReference( );
-    if ( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && Reason.USER_TERMINATED.equals( reason ) ) {
-      VmInstances.cleanUp( this );
-      if ( !this.reasonDetails.contains( SEND_USER_TERMINATE ) ) {
-        this.addReasonDetail( SEND_USER_TERMINATE );
-      }
-    } else if ( VmState.STOPPING.equals( newState ) && VmState.STOPPING.equals( oldState ) && Reason.USER_STOPPED.equals( reason ) ) {
-      VmInstances.cleanUp( this );
-      if ( !this.reasonDetails.contains( SEND_USER_STOP ) ) {
-        this.addReasonDetail( SEND_USER_STOP );
-      }
-    } else if ( ( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) || VmState.BURIED.equals( newState ) ) {
-      VmInstances.deregister( this.getName( ) );
-    } else if ( !this.getRuntimeState( ).equals( newState ) ) {
-      if ( Reason.APPEND.equals( reason ) ) {
-        reason = this.reason;
-      }
-      this.addReasonDetail( extra );
-      LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getState( ), newState ) );
-      this.reason = reason;
-      if ( this.runtimeState.isMarked( ) && VmState.PENDING.equals( this.getRuntimeState( ) ) ) {
-        if ( VmState.SHUTTING_DOWN.equals( newState ) || VmState.PENDING.equals( newState ) ) {
-          this.runtimeState.set( newState, true );
-        } else {
-          this.runtimeState.set( newState, false );
-        }
-      } else if ( this.runtimeState.isMarked( ) && VmState.SHUTTING_DOWN.equals( this.getState( ) ) ) {
-        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
-      } else if ( !this.runtimeState.isMarked( ) ) {
-        if ( ( oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) && ( newState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
-          this.runtimeState.set( newState, false );
-          VmInstances.cleanUp( this );
-        } else if ( VmState.PENDING.equals( oldState ) && VmState.RUNNING.equals( newState ) ) {
-          this.runtimeState.set( newState, false );
-        } else if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) ) {
-          this.runtimeState.set( newState, false );
-          VmInstances.disable( this );
-          VmInstances.cleanUp( this );
-        } else if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
-          this.runtimeState.set( newState, false );
-          VmInstances.disable( this );
-        } else if ( ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) && ( newState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) ) {
-          this.runtimeState.set( oldState, false );
-          VmInstances.cleanUp( this );
-        } else if ( newState.ordinal( ) > oldState.ordinal( ) ) {
-          this.runtimeState.set( newState, false );
-        }
-        this.store( );
-      } else {
-        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
-      }
-      super.setState( this.runtimeState.getReference( ) );
-      if ( !this.getState( ).equals( oldState ) ) {
-        EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.getOwner( ), this.runtimeState.getReference( ).name( ), this.launchTime );
-      }
-    }
-  }
-  
-  private void store( ) {
-    try {
-      ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getInstanceUuid( ), this.getDisplayName( ), this.vmType.getName( ),
-                                                                    this.getOwner( ).getUserId( ), this.getOwnerUserName( ),
-                                                                    this.getOwner( ).getAccountNumber( ), this.getOwnerAccountName( ),
-                                                                    this.clusterName, this.partitionName, this.networkBytes, this.blockBytes ) );
-    } catch ( final EventFailedException ex ) {
-      LOG.error( ex, ex );
-    }
+  private void firePersist( ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     if ( !Entities.isPersistent( this ) ) {
       db.rollback( );
@@ -499,6 +323,19 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         db.rollback( );
         LOG.debug( ex );
       }
+    }
+  }
+  
+  private void fireUsageEvent( ) {
+    try {
+      ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getInstanceUuid( ), this.getDisplayName( ),
+                                                                    this.bootRecord.getVmType( ).getName( ),
+                                                                    this.getOwner( ).getUserId( ), this.getOwnerUserName( ),
+                                                                    this.getOwner( ).getAccountNumber( ), this.getOwnerAccountName( ),
+                                                                    this.placement.getClusterName( ), this.placement.getPartitionName( ),
+                                                                    this.usageStats.getNetworkBytes( ), this.usageStats.getBlockBytes( ) ) );
+    } catch ( final EventFailedException ex ) {
+      LOG.error( ex, ex );
     }
   }
   
@@ -518,7 +355,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     //ASAP: FIXME: GRZE:
 //    m.put( "ami-id", this.getImageInfo( ).getImageId( ) );
 //    m.put( "product-codes", this.getImageInfo( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
-    m.put( "ami-launch-index", "" + this.getLaunchIndex( ) );
+    m.put( "ami-launch-index", "" + this.launchRecord.getLaunchIndex( ) );
 //    m.put( "ancestor-ami-ids", this.getImageInfo( ).getAncestorIds( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
     
 //    m.put( "ami-manifest-path", this.getImageInfo( ).getImageLocation( ) );
@@ -537,10 +374,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       m.put( "public-hostname", this.getPublicAddress( ) );
     }
     m.put( "public-ipv4", this.getPublicAddress( ) );
-    m.put( "reservation-id", this.getReservationId( ) );
-    m.put( "kernel-id", this.getKernelId( ) );
-    if ( this.getRamdiskId( ) != null ) {
-      m.put( "ramdisk-id", this.getRamdiskId( ) );
+    m.put( "reservation-id", this.vmId.getReservationId( ) );
+    m.put( "kernel-id", this.bootRecord.getKernel( ).getDisplayName( ) );
+    if ( this.bootRecord.getRamdisk( ) != null ) {
+      m.put( "ramdisk-id", this.bootRecord.getRamdisk( ).getDisplayName( ) );
     }
     m.put( "security-groups", this.getNetworkNames( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
     
@@ -552,10 +389,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     m.put( "block-device-mapping/swap", "sda3" );
     m.put( "block-device-mapping/root", "/dev/sda1" );
     
-    m.put( "public-keys/", "0=" + this.getSshKeyPair( ).getName( ) );
+    m.put( "public-keys/", "0=" + this.bootRecord.getSshKeyPair( ).getName( ) );
     m.put( "public-keys/0", "openssh-key" );
     m.put( "public-keys/0/", "openssh-key" );
-    m.put( "public-keys/0/openssh-key", this.getSshKeyPair( ).getPublicKey( ) );
+    m.put( "public-keys/0/openssh-key", this.bootRecord.getSshKeyPair( ).getPublicKey( ) );
     
     m.put( "placement/", "availability-zone" );
     m.put( "placement/availability-zone", this.getPartition( ) );
@@ -596,127 +433,47 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public Boolean isBundling( ) {
-    return this.bundleTask.getReference( ) != null;
+    return this.runtimeState.isBundling( );
   }
   
   public BundleTask resetBundleTask( ) {
-    final BundleTask oldTask = this.bundleTask.getReference( );
-    this.bundleTask.set( null, false );
-    return oldTask;
+    return this.runtimeState.resetBundleTask( );
   }
   
   private BundleState getBundleTaskState( ) {
-    if ( this.bundleTask.getReference( ) != null ) {
-      return BundleState.valueOf( this.getBundleTask( ).getState( ) );
-    } else {
-      return null;
-    }
+    return this.runtimeState.getBundleTaskState( );
   }
   
   public void setBundleTaskState( final String state ) {
-    BundleState next = null;
-    if ( BundleState.storing.getMappedState( ).equals( state ) ) {
-      next = BundleState.storing;
-    } else if ( BundleState.complete.getMappedState( ).equals( state ) ) {
-      next = BundleState.complete;
-    } else if ( BundleState.failed.getMappedState( ).equals( state ) ) {
-      next = BundleState.failed;
-    } else {
-      next = BundleState.none;
-    }
-    if ( this.bundleTask.getReference( ) != null ) {
-      if ( !this.bundleTask.isMarked( ) ) {
-        final BundleState current = BundleState.valueOf( this.getBundleTask( ).getState( ) );
-        if ( BundleState.complete.equals( current ) || BundleState.failed.equals( current ) ) {
-          return; //already finished, wait and timeout the state along with the instance.
-        } else if ( BundleState.storing.equals( next ) || BundleState.storing.equals( current ) ) {
-          this.getBundleTask( ).setState( next.name( ) );
-          EventRecord.here( BundleCallback.class, EventType.BUNDLE_TRANSITION, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
-                            this.getInstanceId( ),
-                            this.getBundleTask( ).getState( ) ).info( );
-          this.getBundleTask( ).setUpdateTime( new Date( ) );
-        } else if ( BundleState.none.equals( next ) && BundleState.failed.equals( current ) ) {
-          this.resetBundleTask( );
-        }
-      } else {
-        this.getBundleTask( ).setUpdateTime( new Date( ) );
-      }
-    }
-  }
-  
-  public Boolean cancelBundleTask( ) {
-    if ( this.getBundleTask( ) != null ) {
-      this.bundleTask.set( this.getBundleTask( ), true );
-      this.getBundleTask( ).setState( BundleState.canceling.name( ) );
-      EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
-                        this.getInstanceId( ),
-                        this.getBundleTask( ).getState( ) ).info( );
-      return true;
-    } else {
-      return false;
-    }
-  }
-  
-  public Boolean clearPendingBundleTask( ) {
-    if ( BundleState.pending.name( ).equals( this.getBundleTask( ).getState( ) )
-         && this.bundleTask.compareAndSet( this.getBundleTask( ), this.getBundleTask( ), true, false ) ) {
-      this.getBundleTask( ).setState( BundleState.storing.name( ) );
-      EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTING, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
-                        this.getInstanceId( ),
-                        this.getBundleTask( ).getState( ) ).info( );
-      return true;
-    } else if ( BundleState.canceling.name( ).equals( this.getBundleTask( ).getState( ) )
-                && this.bundleTask.compareAndSet( this.getBundleTask( ), this.getBundleTask( ), true, false ) ) {
-      EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELLED, this.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
-                        this.getInstanceId( ),
-                        this.getBundleTask( ).getState( ) ).info( );
-      this.resetBundleTask( );
-      return true;
-    } else {
-      return false;
-    }
-  }
-  
-  public Boolean startBundleTask( final BundleTask task ) {
-    if ( this.bundleTask.compareAndSet( null, task, false, true ) ) {
-      return true;
-    } else {
-      if ( ( this.getBundleTask( ) != null ) && BundleState.failed.equals( BundleState.valueOf( this.getBundleTask( ).getState( ) ) ) ) {
-        this.resetBundleTask( );
-        this.bundleTask.set( task, true );
-        return true;
-      } else {
-        return false;
-      }
-    }
+    this.runtimeState.setBundleTaskState( state );
   }
   
   public String getImageId( ) {
-    return this.imageId;
+    return this.bootRecord.getMachine( ).getDisplayName( );
   }
   
   public RunningInstancesItemType getAsRunningInstanceItemType( ) {
     final boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     final RunningInstancesItemType runningInstance = new RunningInstancesItemType( );
     
-    runningInstance.setAmiLaunchIndex( Integer.toString( this.launchIndex ) );
+    runningInstance.setAmiLaunchIndex( Integer.toString( this.launchRecord.getLaunchIndex( ) ) );
     if ( ( this.getBundleTaskState( ) != null ) && !BundleState.none.equals( this.getBundleTaskState( ) ) ) {
       runningInstance.setStateCode( Integer.toString( VmState.TERMINATED.getCode( ) ) );
       runningInstance.setStateName( VmState.TERMINATED.getName( ) );
     } else {
-      runningInstance.setStateCode( Integer.toString( this.runtimeState.getReference( ).getCode( ) ) );
-      runningInstance.setStateName( this.runtimeState.getReference( ).getName( ) );
+      runningInstance.setStateCode( Integer.toString( this.runtimeState.getRuntimeState( ).getCode( ) ) );
+      runningInstance.setStateName( this.runtimeState.getRuntimeState( ).getName( ) );
     }
     runningInstance.setPlatform( this.getPlatform( ) );
     
-    runningInstance.setStateCode( Integer.toString( this.runtimeState.getReference( ).getCode( ) ) );
-    runningInstance.setStateName( this.runtimeState.getReference( ).getName( ) );
-    runningInstance.setInstanceId( this.instanceId );
+    runningInstance.setStateCode( Integer.toString( this.runtimeState.getRuntimeState( ).getCode( ) ) );
+    runningInstance.setStateName( this.runtimeState.getRuntimeState( ).getName( ) );
+    runningInstance.setInstanceId( this.vmId.getInstanceId( ) );
 //ASAP:FIXME:GRZE: restore.
     runningInstance.setProductCodes( new ArrayList<String>( ) );
-    runningInstance.setImageId( this.getImageId( ) );
-    runningInstance.setKernel( this.getKernelId( ) );
-    runningInstance.setRamdisk( this.getRamdiskId( ) );
+    runningInstance.setImageId( this.bootRecord.getMachine( ).getDisplayName( ) );
+    runningInstance.setKernel( this.bootRecord.getKernel( ).getDisplayName( ) );
+    runningInstance.setRamdisk( this.bootRecord.getRamdisk( ).getDisplayName( ) );
     if ( dns ) {
       String publicDnsName = this.getPublicDnsName( );
       String privateDnsName = this.getPrivateDnsName( );
@@ -750,19 +507,19 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       }
     }
     
-    runningInstance.setReason( this.getReason( ) );
+    runningInstance.setReason( this.runtimeState.getReason( ) );
     
-    if ( this.getSshKeyPair( ) != null )
-      runningInstance.setKeyName( this.getSshKeyPair( ).getName( ) );
+    if ( this.bootRecord.getSshKeyPair( ) != null )
+      runningInstance.setKeyName( this.bootRecord.getSshKeyPair( ).getName( ) );
     else runningInstance.setKeyName( "" );
     
     runningInstance.setInstanceType( this.getVmType( ).getName( ) );
-    runningInstance.setPlacement( this.partitionName );
+    runningInstance.setPlacement( this.placement.getPartitionName( ) );
     
-    runningInstance.setLaunchTime( this.launchTime );
+    runningInstance.setLaunchTime( this.launchRecord.getLaunchTime( ) );
     
     runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( "/dev/sda1" ) );
-    for ( final AttachedVolume attachedVol : this.transientVolumes.values( ) ) {
+    for ( final VmVolumeAttachment attachedVol : this.runtimeState.getTransientVolumes( ).values( ) ) {
       runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ), attachedVol.getStatus( ),
                                                                               attachedVol.getAttachTime( ) ) );
     }
@@ -770,67 +527,25 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return runningInstance;
   }
   
-  public void setServiceTag( final String serviceTag ) {
-    this.serviceTag = serviceTag;
-  }
-  
-  public String getServiceTag( ) {
-    return this.serviceTag;
-  }
-  
   public boolean hasPublicAddress( ) {
     final NetworkConfigType conf = this.getNetworkConfig( );
     return ( conf != null ) && !( DEFAULT_IP.equals( conf.getIgnoredPublicIp( ) ) || conf.getIpAddress( ).equals( conf.getIgnoredPublicIp( ) ) );
-  }
-  
-  public String getReservationId( ) {
-    return this.reservationId;
   }
   
   public String getInstanceId( ) {
     return super.getDisplayName( );
   }
   
-  public int getLaunchIndex( ) {
-    return this.launchIndex;
-  }
-  
-  public String getClusterName( ) {
-    return this.clusterName;
-  }
-  
-  public String getPlacement( ) {
-    return this.clusterName;//TODO:GRZE:RELEASE this should be reporting the partition name
-  }
-  
-  public Date getLaunchTime( ) {
-    return this.launchTime;
-  }
-  
-  public byte[] getUserData( ) {
-    return this.userData;
-  }
-  
   public String getConsoleOutputString( ) {
-    return new String( Base64.encode( this.consoleOutput.toString( ).getBytes( ) ) );
-  }
-  
-  public StringBuffer getConsoleOutput( ) {
-    return this.consoleOutput;
+    return new String( Base64.encode( this.runtimeState.getConsoleOutput( ).toString( ).getBytes( ) ) );
   }
   
   public void setConsoleOutput( final StringBuffer consoleOutput ) {
-    this.consoleOutput = consoleOutput;
-    if ( this.passwordData == null ) {
-      final String tempCo = consoleOutput.toString( ).replaceAll( "[\r\n]*", "" );
-      if ( tempCo.matches( ".*<Password>[\\w=+/]*</Password>.*" ) ) {
-        this.passwordData = tempCo.replaceAll( ".*<Password>", "" ).replaceAll( "</Password>.*", "" );
-      }
-    }
+    this.runtimeState.setConsoleOutput( consoleOutput );
   }
   
   public VmType getVmType( ) {
-    return this.vmType;
+    return this.bootRecord.getVmType( );
   }
   
   public Set<NetworkGroup> getNetworkRulesGroups( ) {
@@ -871,168 +586,49 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.networkConfig;
   }
   
-  private AttachedVolume resolveVolumeId( final String volumeId ) throws NoSuchElementException {
-    final AttachedVolume v = this.transientVolumes.get( volumeId );
-    if ( v == null ) {
-      throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getInstanceId( ) + " and volume " + volumeId );
-    } else {
-      return v;
-    }
-  }
-  
-  public AttachedVolume removeVolumeAttachment( final String volumeId ) throws NoSuchElementException {
-    final AttachedVolume v = this.transientVolumes.remove( volumeId );
-    if ( v == null ) {
-      throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getInstanceId( ) + " and volume " + volumeId );
-    } else {
-      return v;
-    }
-  }
-  
-  public void updateVolumeAttachment( final String volumeId, final String state ) throws NoSuchElementException {
-    final AttachedVolume v = this.resolveVolumeId( volumeId );
-    v.setStatus( state );
-    v.setInstanceId( this.getInstanceId( ) );
-  }
-  
-  public AttachedVolume lookupVolumeAttachment( final String volumeId ) throws NoSuchElementException {
-    return this.resolveVolumeId( volumeId );
-  }
-  
-  public AttachedVolume lookupVolumeAttachment( final Predicate<AttachedVolume> pred ) throws NoSuchElementException {
-    final AttachedVolume v = Iterables.find( this.transientVolumes.values( ), pred );
-    if ( v == null ) {
-      throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getInstanceId( ) + " using predicate "
-                                        + pred.getClass( ).getCanonicalName( ) );
-    } else {
-      return v;
-    }
-  }
-  
-  public <T> Iterable<T> transformVolumeAttachments( final Function<? super AttachedVolume, T> function ) throws NoSuchElementException {
-    return Iterables.transform( this.transientVolumes.values( ), function );
-  }
-  
-  public boolean eachVolumeAttachment( final Predicate<AttachedVolume> pred ) throws NoSuchElementException {
-    return Iterables.all( this.transientVolumes.values( ), pred );
-  }
-  
-  public void addVolumeAttachment( final AttachedVolume volume ) {
-    final String volumeId = volume.getVolumeId( );
-    volume.setStatus( "attaching" );
-    volume.setInstanceId( this.getInstanceId( ) );
-    final AttachedVolume v = this.transientVolumes.put( volumeId, volume );
-    if ( v != null ) {
-      this.transientVolumes.replace( volumeId, v );
-    }
-  }
-  
-  public void updateVolumeAttachments( final List<AttachedVolume> ncAttachedVols ) throws NoSuchElementException {
-    final Map<String, AttachedVolume> ncAttachedVolMap = new HashMap<String, AttachedVolume>( ) {
-      /**
-       * 
-       */
-      @Transient
-      private static final long serialVersionUID = 1L;
-      
-      {
-        for ( final AttachedVolume v : ncAttachedVols ) {
-          this.put( v.getVolumeId( ), v );
-        }
-      }
-    };
-    this.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
-      @Override
-      public boolean apply( final AttachedVolume arg0 ) {
-        final String volId = arg0.getVolumeId( );
-        if ( ncAttachedVolMap.containsKey( volId ) ) {
-          final AttachedVolume ncVol = ncAttachedVolMap.get( volId );
-          if ( "detached".equals( ncVol.getStatus( ) ) ) {
-            VmInstance.this.removeVolumeAttachment( volId );
-          } else if ( "attaching".equals( arg0.getStatus( ) ) || "attached".equals( arg0.getStatus( ) ) ) {
-            VmInstance.this.updateVolumeAttachment( volId, arg0.getStatus( ) );
-          }
-        } else if ( "detaching".equals( arg0.getStatus( ) ) ) {//TODO:GRZE:remove this case when NC is updated to report "detached" state
-          VmInstance.this.removeVolumeAttachment( volId );
-        }
-        ncAttachedVolMap.remove( volId );
-        return true;
-      }
-    } );
-    for ( final AttachedVolume v : ncAttachedVolMap.values( ) ) {
-      LOG.warn( "Restoring volume attachment state for " + this.getInstanceId( ) + " with " + v.toString( ) );
-      this.addVolumeAttachment( v );
-    }
-  }
-  
   public String getPasswordData( ) {
-    return this.passwordData;
+    return this.runtimeState.getPasswordData( );
   }
   
   public void setPasswordData( final String passwordData ) {
-    this.passwordData = passwordData;
+    this.runtimeState.setPasswordData( passwordData );
   }
   
   /**
    * @return the platform
    */
   public String getPlatform( ) {
-    return this.platform;
-  }
-  
-  /**
-   * @param platform the platform to set
-   */
-  public void setPlatform( final String platform ) {
-    this.platform = platform;
+    return this.bootRecord.getPlatform( );
   }
   
   /**
    * @return the bundleTask
    */
   public BundleTask getBundleTask( ) {
-    return this.bundleTask.getReference( );
+    return this.runtimeState.getBundleTask( );
   }
   
   /**
    * @return the networkBytes
    */
   public Long getNetworkBytes( ) {
-    return this.networkBytes;
-  }
-  
-  /**
-   * @param networkBytes the networkBytes to set
-   */
-  public void setNetworkBytes( final Long networkBytes ) {
-    this.networkBytes = networkBytes;
+    return this.usageStats.getNetworkBytes( );
   }
   
   /**
    * @return the blockBytes
    */
   public Long getBlockBytes( ) {
-    return this.blockBytes;
-  }
-  
-  /**
-   * @param blockBytes the blockBytes to set
-   */
-  public void setBlockBytes( final Long blockBytes ) {
-    this.blockBytes = blockBytes;
+    return this.usageStats.getBlockBytes( );
   }
   
   @Override
   public String getPartition( ) {
-    return this.partitionName;
+    return this.placement.getPartitionName( );
   }
   
   public String getInstanceUuid( ) {
     return this.getNaturalId( );
-  }
-  
-  public SshKeyPair getSshKeyPair( ) {
-    return this.sshKeyPair;
   }
   
   public static VmInstance named( final OwnerFullName ownerFullName, final String instanceId ) {
@@ -1041,10 +637,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   public static VmInstance namedTerminated( final OwnerFullName ownerFullName, final String instanceId ) {
     return new VmInstance( ownerFullName, instanceId ) {
-      private static final long serialVersionUID = 1L;
-      
       {
-        this.runtimeState.set( VmState.TERMINATED, false );
+        this.setState( VmState.TERMINATED );
       }
     };
   }
@@ -1080,10 +674,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     
   }
   
-  private void setNetworkIndex( final PrivateNetworkIndex networkIndex ) {
-    this.networkIndex = networkIndex;
-  }
-  
   private PrivateNetworkIndex getNetworkIndex( ) {
     return this.networkIndex;
   }
@@ -1097,68 +687,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
   }
   
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = super.hashCode( );
-    result = prime * result + ( ( this.instanceId == null )
-      ? 0
-      : this.instanceId.hashCode( ) );
-    return result;
-  }
-  
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) {
-      return true;
-    }
-    if ( !super.equals( obj ) ) {
-      return false;
-    }
-    if ( getClass( ) != obj.getClass( ) ) {
-      return false;
-    }
-    VmInstance other = ( VmInstance ) obj;
-    if ( this.instanceId == null ) {
-      if ( other.instanceId != null ) {
-        return false;
-      }
-    } else if ( !this.instanceId.equals( other.instanceId ) ) {
-      return false;
-    }
-    return true;
-  }
-  
-  public String getKernelId( ) {
-    return this.kernelId;
-  }
-  
-  public String getRamdiskId( ) {
-    return this.ramdiskId;
-  }
-  
-  public Partition lookupPartition( ) {
-    return Partitions.lookupByName( this.partitionName );
-  }
-  
-  private List<String> getReasonDetails( ) {
-    return this.reasonDetails;
-  }
-  
-  private ConcurrentMap<String, AttachedVolume> getTransientVolumes( ) {
-    return this.transientVolumes;
-  }
-  
-  private String getPartitionName( ) {
-    return this.partitionName;
-  }
-  
   private Boolean getPrivateNetwork( ) {
     return this.privateNetwork;
-  }
-  
-  private String getVbrString( ) {
-    return this.vbrString;
   }
   
   private Set<NetworkGroup> getNetworkGroups( ) {
@@ -1167,26 +697,229 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   @Override
   public String toString( ) {
-    StringBuilder builder = new StringBuilder( );
-    builder.append( "VmInstance " );
-    builder.append( this.instanceId ).append( " " );
-    if ( this.runtimeState != null ) builder.append( " " ).append( this.runtimeState.getReference( ) ).append( " " );
-    if ( this.clusterName != null ) builder.append( "clusterName=" ).append( this.clusterName ).append( ":" );
-    if ( this.partitionName != null ) builder.append( "partitionName=" ).append( this.partitionName ).append( ":" );
-    if ( this.imageId != null ) builder.append( "imageId=" ).append( this.imageId ).append( ":" );
-    if ( this.kernelId != null ) builder.append( "kernelId=" ).append( this.kernelId ).append( ":" );
-    if ( this.ramdiskId != null ) builder.append( "ramdiskId=" ).append( this.ramdiskId ).append( ":" );
-    if ( this.vmType != null ) builder.append( "vmType=" ).append( this.vmType ).append( ":" );
-    if ( this.platform != null ) builder.append( "platform=" ).append( this.platform ).append( ":" );
-    if ( this.networkGroups != null ) builder.append( "networkGroups=" ).append( this.networkGroups ).append( ":" );
-    if ( this.networkIndex != null ) builder.append( "networkIndex=" ).append( this.networkIndex ).append( ":" );
-    if ( this.transientVolumes != null ) builder.append( "transientVolumes=" ).append( this.transientVolumes ).append( ":" );
-    if ( this.persistentVolumes != null ) builder.append( "persistentVolumes=" ).append( this.persistentVolumes );
-    if ( this.bundleTask != null && this.bundleTask.getReference( ) != null ) builder.append( "bundleTask=" ).append( this.bundleTask ).append( ":" );
-    if ( this.networkConfig != null ) builder.append( "networkConfig=" ).append( this.networkConfig ).append( ":" );
-    if ( this.launchTime != null ) builder.append( "launchTime=" ).append( this.launchTime ).append( ":" );
-    if ( this.sshKeyPair != null ) builder.append( "sshKeyPair=" ).append( this.sshKeyPair ).append( ":" );
-    return builder.toString( );
+    StringBuilder builder2 = new StringBuilder( );
+    builder2.append( "VmInstance:" );
+    if ( this.vmId != null ) builder2.append( "vmId=" ).append( this.vmId ).append( ":" );
+    if ( this.networkConfig != null ) builder2.append( "networkConfig=" ).append( this.networkConfig ).append( ":" );
+    if ( this.privateNetwork != null ) builder2.append( "privateNetwork=" ).append( this.privateNetwork ).append( ":" );
+    if ( this.placement != null ) builder2.append( "placement=" ).append( this.placement ).append( ":" );
+    if ( this.launchRecord != null ) builder2.append( "launchRecord=" ).append( this.launchRecord ).append( ":" );
+    if ( this.networkIndex != null ) builder2.append( "networkIndex=" ).append( this.networkIndex ).append( ":" );
+    if ( this.runtimeState != null ) builder2.append( "runtimeState=" ).append( this.runtimeState ).append( ":" );
+    if ( this.networkGroups != null ) builder2.append( "networkGroups=" ).append( this.networkGroups ).append( ":" );
+    if ( this.bootRecord != null ) builder2.append( "bootRecord=" ).append( this.bootRecord ).append( ":" );
+    if ( this.usageStats != null ) builder2.append( "usageStats=" ).append( this.usageStats );
+    return builder2.toString( );
+  }
+  
+  static long getSerialversionuid( ) {
+    return serialVersionUID;
+  }
+  
+  static Logger getLOG( ) {
+    return LOG;
+  }
+  
+  static String getDEFAULT_IP( ) {
+    return DEFAULT_IP;
+  }
+  
+  static String getDEFAULT_TYPE( ) {
+    return DEFAULT_TYPE;
+  }
+  
+  VmId getVmId( ) {
+    return this.vmId;
+  }
+  
+  VmBootRecord getBootRecord( ) {
+    return this.bootRecord;
+  }
+  
+  VmUsageStats getUsageStats( ) {
+    return this.usageStats;
+  }
+  
+  VmLaunchRecord getLaunchRecord( ) {
+    return this.launchRecord;
+  }
+  
+  VmPlacement getPlacement( ) {
+    return this.placement;
+  }
+  
+  public Partition lookupPartition( ) {
+    return this.placement.lookupPartition( );
+  }
+  
+  /**
+   * @param stopping
+   * @param reason
+   */
+  public void setState( VmState stopping, Reason reason, String... extra ) {
+    this.runtimeState.setState( stopping, reason, extra );
+  }
+  
+  /**
+   * @param predicate
+   */
+  public void lookupVolumeAttachment( final Predicate<AttachedVolume> predicate ) {
+    this.runtimeState.lookupVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
+      
+      @Override
+      public boolean apply( VmVolumeAttachment vol ) {
+        return predicate.apply( VmVolumeAttachment.asAttachedVolume( VmInstance.this, vol ) );
+      }
+    } );
+  }
+  
+  /**
+   * @param volumeId
+   * @return
+   */
+  public AttachedVolume lookupVolumeAttachment( String volumeId ) {
+    return VmVolumeAttachment.asAttachedVolume( this, this.runtimeState.lookupVolumeAttachment( volumeId ) );
+  }
+  
+  /**
+   * @param attachVol
+   */
+  public void addVolumeAttachment( AttachedVolume vol ) {
+    this.runtimeState.addVolumeAttachment( VmVolumeAttachment.fromAttachedVolume( this, vol ) );
+  }
+  
+  /**
+   * @return
+   */
+  public ServiceConfiguration lookupClusterConfiguration( ) {
+    return Partitions.lookupService( ClusterController.class, this.lookupPartition( ) );
+  }
+  
+  /**
+   * @param predicate
+   * @return
+   */
+  public boolean eachVolumeAttachment( final Predicate<AttachedVolume> predicate ) {
+    return this.runtimeState.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
+      
+      @Override
+      public boolean apply( VmVolumeAttachment arg0 ) {
+        return predicate.apply( VmVolumeAttachment.asAttachedVolume( VmInstance.this, arg0 ) );
+      }
+    } );
+  }
+  
+  /**
+   * @param volumeId
+   * @return
+   */
+  public AttachedVolume removeVolumeAttachment( String volumeId ) {
+    return VmVolumeAttachment.asAttachedVolume( this, this.runtimeState.removeVolumeAttachment( volumeId ) );
+  }
+  
+  /**
+   * @return
+   */
+  public String getServiceTag( ) {
+    return this.runtimeState.getServiceTag( );
+  }
+  
+  /**
+   * @return
+   */
+  public String getReservationId( ) {
+    return this.vmId.getReservationId( );
+  }
+  
+  /**
+   * @return
+   */
+  public byte[] getUserData( ) {
+    return this.bootRecord.getUserData( );
+  }
+  
+  public void clearPending( ) {
+    this.runtimeState.clearPending( );
+  }
+  
+  public void clearPendingBundleTask( ) {
+    this.runtimeState.clearPendingBundleTask( );
+  }
+  
+  /**
+   * @param volumeId
+   * @param newState
+   */
+  public void updateVolumeAttachment( String volumeId, String newState ) {
+    this.runtimeState.updateVolumeAttachment( volumeId, newState );
+  }
+  
+  /**
+   * @return
+   */
+  public Predicate<VmInfo> doUpdate( ) {
+    return new Predicate<VmInfo>( ) {
+      
+      @Override
+      public boolean apply( VmInfo runVm ) {
+        VmState state = VmState.Mapper.get( runVm.getStateName( ) );
+        long splitTime = VmInstance.this.getSplitTime( );
+        VmState oldState = VmInstance.this.getRuntimeState( );
+        VmInstance.this.runtimeState.setServiceTag( runVm.getServiceTag( ) );
+        VmInstance.this.setBundleTaskState( runVm.getBundleTaskStateName( ) );
+        
+        if ( VmState.SHUTTING_DOWN.equals( VmInstance.this.getRuntimeState( ) ) && splitTime > VmInstances.SHUT_DOWN_TIME ) {
+          VmInstance.this.setState( VmState.TERMINATED, Reason.EXPIRED );
+        } else if ( VmState.STOPPING.equals( VmInstance.this.getRuntimeState( ) ) && splitTime > VmInstances.SHUT_DOWN_TIME ) {
+          VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
+        } else if ( VmState.STOPPING.equals( VmInstance.this.getRuntimeState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
+          VmInstance.this.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
+        } else if ( VmState.SHUTTING_DOWN.equals( VmInstance.this.getRuntimeState( ) )
+                    && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
+          VmInstance.this.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
+        } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
+                    && ( VmState.PENDING.equals( VmInstance.this.getRuntimeState( ) ) || VmState.RUNNING.equals( VmInstance.this.getRuntimeState( ) ) ) ) {
+          if ( !VmInstance.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
+            VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
+          }
+          VmInstance.this.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
+          VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
+          try {
+            NetworkGroup network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );
+            //GRZE:NET//        network.extantNetworkIndex( VmInstance.this.getClusterName( ), VmInstance.this.getNetworkIndex( ) );
+          } catch ( Exception e ) {}
+        }
+        return true;
+      }
+    };
+  }
+  
+  /**
+   * @param volumes
+   */
+  public void updateVolumeAttachments( List<AttachedVolume> volumes ) {
+    this.runtimeState.updateVolumeAttachments( Lists.transform( volumes, new Function<AttachedVolume, VmVolumeAttachment>( ) {
+      
+      @Override
+      public VmVolumeAttachment apply( AttachedVolume arg0 ) {
+        return VmVolumeAttachment.fromAttachedVolume( VmInstance.this, arg0 );
+      }
+    } ) );
+  }
+  
+  /**
+   * @param serviceTag
+   */
+  public void setServiceTag( String serviceTag ) {
+    this.runtimeState.setServiceTag( serviceTag );
+  }
+  
+  /**
+   * @param bundleTask
+   * @return
+   */
+  public boolean startBundleTask( BundleTask bundleTask ) {
+    return this.runtimeState.startBundleTask( bundleTask );
   }
   
 }

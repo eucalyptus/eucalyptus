@@ -126,6 +126,8 @@ public class VmInstances {
   public static Long    SHUT_DOWN_TIME = 10 * 60 * 1000l;
   @ConfigurableField( description = "Amount of time (in milliseconds) that a terminated VM will continue to be reported.", initial = "" + 60 * 60 * 1000 )
   public static Long    BURY_TIME      = 60 * 60 * 1000l;
+  @ConfigurableField( description = "Prefix to use for instance MAC addresses.", initial = "d0:0d" )
+  public static String MAC_PREFIX = "d0:0d";
   private static Logger LOG            = Logger.getLogger( VmInstances.class );
   
   enum VmIsOperational implements Predicate<VmInstance> {
@@ -274,7 +276,7 @@ public class VmInstances {
   
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
     try {
-      final Cluster cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
+      final Cluster cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
       vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
         @Override
         public boolean apply( final AttachedVolume arg0 ) {
@@ -323,8 +325,12 @@ public class VmInstances {
   }
   
   public static String asMacAddress( final String instanceId ) {
-    return String
-                 .format( "%s:%s:%s:%s", instanceId.substring( 2, 4 ), instanceId.substring( 4, 6 ), instanceId.substring( 6, 8 ), instanceId.substring( 8, 10 ) );
+    return String.format( "%s:%s:%s:%s:%s",
+                          VmInstances.MAC_PREFIX,
+                          instanceId.substring( 2, 4 ), 
+                          instanceId.substring( 4, 6 ), 
+                          instanceId.substring( 6, 8 ), 
+                          instanceId.substring( 8, 10 ) );
   }
   
   public static VmInstance lookup( final String name ) throws NoSuchElementException {
