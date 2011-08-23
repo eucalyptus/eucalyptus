@@ -320,7 +320,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.networkConfig.setPrivateDnsName( DEFAULT_IP );
     this.networkConfig.setPublicDnsName( DEFAULT_IP );
     this.updateDns( );
-    this.store( );
   }
   
   public void updateBlockBytes( final long blkbytes ) {
