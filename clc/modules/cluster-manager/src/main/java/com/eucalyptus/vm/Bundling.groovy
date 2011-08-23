@@ -69,6 +69,7 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.Filter;
 import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.cluster.VmInstance;
 
 public class VmBundleMessage extends EucalyptusMessage {
   
@@ -137,7 +138,6 @@ public class BundleTask extends EucalyptusData {
   String errorMessage;
   String errorCode;
   public BundleTask() {
-    
   }
   public BundleTask( String bundleId, String instanceId, String bucket, String prefix ) {
     this.bundleId = bundleId;
@@ -148,5 +148,19 @@ public class BundleTask extends EucalyptusData {
     this.startTime = new Date();
     this.updateTime = new Date();
     this.progress = "0%";
+  }
+  public BundleTask( String instanceId, String bundleId, String state, Date startTime, Date updateTime, String progress, String bucket, String prefix,
+  String errorMessage, String errorCode ) {
+    super( );
+    this.instanceId = instanceId;
+    this.bundleId = bundleId;
+    this.state = state;
+    this.startTime = startTime;
+    this.updateTime = updateTime;
+    this.progress = progress;
+    this.bucket = bucket;
+    this.prefix = prefix;
+    this.errorMessage = errorMessage;
+    this.errorCode = errorCode;
   }
 }

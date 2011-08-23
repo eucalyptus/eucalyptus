@@ -64,30 +64,36 @@
 package com.eucalyptus.cluster;
 
 import java.util.Date;
+import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import org.hibernate.annotations.Parent;
+import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 
 @Embeddable
 public class VmVolumeAttachment {
   @Parent
   private VmInstance vmInstance;
-  private String           volumeId;
-  private String           device;
-  private String           remoteDevice;
-  private String           status;
-  private Date             attachTime = new Date( );
+  @Column( name = "metadata_vm_volume_id" )
+  private String     volumeId;
+  @Column( name = "metadata_vm_volume_device" )
+  private String     device;
+  @Column( name = "metadata_vm_volume_remove_device" )
+  private String     remoteDevice;
+  @Column( name = "metadata_vm_volume_status" )
+  private String     status;
+  @Column( name = "metadata_vm_volume_attach_time" )
+  private Date       attachTime = new Date( );
   
 //  @OneToOne
 //  @JoinTable( name = "metadata_vm_has_volume", joinColumns = { @JoinColumn( name = "metadata_vm_id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_volume_id" ) } )
 //  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 //  private Volume     volume;
   
-  
   VmVolumeAttachment( ) {
     super( );
   }
-
+  
   public VmVolumeAttachment( VmInstance vmInstance, String volumeId, String device, String remoteDevice, String status, Date attachTime ) {
     super( );
     this.vmInstance = vmInstance;
@@ -98,15 +104,24 @@ public class VmVolumeAttachment {
     this.attachTime = attachTime;
   }
   
-  public static VmVolumeAttachment fromAttachedVolume( VmInstance vm, AttachedVolume vol ) {
-    return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ) );
+  
+  public static Function<AttachedVolume, VmVolumeAttachment> fromAttachedVolume( final VmInstance vm ) {
+    return new Function<AttachedVolume, VmVolumeAttachment> () {
+      @Override
+      public VmVolumeAttachment apply( AttachedVolume vol ) {
+        return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ) );
+      }
+    };
   }
   
-  public static AttachedVolume asAttachedVolume( VmInstance vm, VmVolumeAttachment vol ) {
-    return new AttachedVolume( vol.getVolumeId( ), vm.getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
-  }
+  public static Function<VmVolumeAttachment, AttachedVolume> asAttachedVolume( final VmInstance vm ) {
+    return new Function<VmVolumeAttachment, AttachedVolume>() {
+      @Override
+      public AttachedVolume apply( VmVolumeAttachment vol ) {
+        return new AttachedVolume( vol.getVolumeId( ), vm.getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
+      }
+    };  }
   
-
 //  Volume getVolume( ) {
 //    return this.volume;
 //  }
@@ -114,7 +129,7 @@ public class VmVolumeAttachment {
   VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
-
+  
   String getVolumeId( ) {
     return this.volumeId;
   }
@@ -174,12 +189,12 @@ public class VmVolumeAttachment {
   public int compareTo( AttachedVolume that ) {
     return this.volumeId.compareTo( that.getVolumeId( ) );
   }
-
+  
   /**
    * @param instanceId
    */
   public void setInstanceId( String instanceId ) {}
-
+  
   private void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }

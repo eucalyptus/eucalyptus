@@ -758,7 +758,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       
       @Override
       public boolean apply( final VmVolumeAttachment vol ) {
-        return predicate.apply( VmVolumeAttachment.asAttachedVolume( VmInstance.this, vol ) );
+        return predicate.apply( VmVolumeAttachment.asAttachedVolume( VmInstance.this ).apply( vol ) );
       }
     } );
   }
@@ -768,14 +768,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @return
    */
   public AttachedVolume lookupVolumeAttachment( final String volumeId ) {
-    return VmVolumeAttachment.asAttachedVolume( this, this.runtimeState.lookupVolumeAttachment( volumeId ) );
+    return VmVolumeAttachment.asAttachedVolume( this ).apply( this.runtimeState.lookupVolumeAttachment( volumeId ) );
   }
   
   /**
    * @param attachVol
    */
   public void addVolumeAttachment( final AttachedVolume vol ) {
-    this.runtimeState.addVolumeAttachment( VmVolumeAttachment.fromAttachedVolume( this, vol ) );
+    this.runtimeState.addVolumeAttachment( VmVolumeAttachment.fromAttachedVolume( this ).apply( vol ) );
   }
   
   /**
@@ -794,7 +794,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       
       @Override
       public boolean apply( final VmVolumeAttachment arg0 ) {
-        return predicate.apply( VmVolumeAttachment.asAttachedVolume( VmInstance.this, arg0 ) );
+        return predicate.apply( VmVolumeAttachment.asAttachedVolume( VmInstance.this ).apply(  arg0 ) );
       }
     } );
   }
@@ -804,7 +804,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @return
    */
   public AttachedVolume removeVolumeAttachment( final String volumeId ) {
-    return VmVolumeAttachment.asAttachedVolume( this, this.runtimeState.removeVolumeAttachment( volumeId ) );
+    return VmVolumeAttachment.asAttachedVolume( this ).apply( this.runtimeState.removeVolumeAttachment( volumeId ) );
   }
   
   /**
@@ -888,13 +888,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param volumes
    */
   public void updateVolumeAttachments( final List<AttachedVolume> volumes ) {
-    this.runtimeState.updateVolumeAttachments( Lists.transform( volumes, new Function<AttachedVolume, VmVolumeAttachment>( ) {
-      
-      @Override
-      public VmVolumeAttachment apply( final AttachedVolume arg0 ) {
-        return VmVolumeAttachment.fromAttachedVolume( VmInstance.this, arg0 );
-      }
-    } ) );
+    this.runtimeState.updateVolumeAttachments( Lists.transform( volumes, VmVolumeAttachment.fromAttachedVolume( VmInstance.this ) ) );
   }
   
   /**
