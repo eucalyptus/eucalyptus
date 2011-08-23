@@ -79,6 +79,7 @@ import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.images.Emis.BootableSet;
+import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.keys.KeyPairs;
@@ -95,7 +96,7 @@ public class VmBootRecord {
   private final VmInstance              vmInstance;
   @ManyToOne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private final BootableImageInfo       machineImage;
+  private final ImageInfo               machineImage;
   @ManyToOne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final KernelImageInfo         kernel;
@@ -119,14 +120,14 @@ public class VmBootRecord {
   VmBootRecord( VmInstance vmInstance, BootableSet bootSet, byte[] userData, SshKeyPair sshKeyPair, VmType vmType ) {
     super( );
     this.vmInstance = vmInstance;
-    this.machineImage = bootSet.getMachine( );
+    this.machineImage = ( ImageInfo ) bootSet.getMachine( );
     this.kernel = bootSet.getKernel( );
     this.ramdisk = bootSet.getRamdisk( );
     this.platform = bootSet.getMachine( ).getPlatform( ).name( );
     this.userData = userData;
     this.sshKeyPair = KeyPairs.noKey( ).equals( sshKeyPair ) || ( sshKeyPair == null )
-    ? null
-    : sshKeyPair;
+      ? null
+      : sshKeyPair;
     this.vmType = vmType;
   }
   
