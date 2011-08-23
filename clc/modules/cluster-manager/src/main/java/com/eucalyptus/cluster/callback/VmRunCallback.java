@@ -122,7 +122,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
     }
     for ( final VmInfo vmInfo : reply.getVms( ) ) {
       
-      EntityTransaction db = Entities.get( VmRunCallback.class );
+      EntityTransaction db = Entities.get( VmInstance.class );
       try {
         final VmInstance vm = VmInstances.lookup( vmInfo.getInstanceId( ) );
         vm.updateAddresses( vmInfo.getNetParams( ).getIpAddress( ), vmInfo.getNetParams( ).getIgnoredPublicIp( ) );
