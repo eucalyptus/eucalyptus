@@ -347,8 +347,7 @@ public class Entities {
       try {
         return uniqueResult( newObject );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
-        throw new RuntimeException( ex );
+        return persist( newObject );
       }
     } else {
       try {
