@@ -168,7 +168,7 @@ public class VmRuntimeState {
   
   public void setState( final VmState newState, Reason reason, final String... extra ) {
     
-    EntityTransaction db = Entities.get( VmRuntimeState.class );
+    EntityTransaction db = Entities.get( VmInstance.class );
     try {
       if ( newState == null || this.runtimeState == null || this.runtimeState.getReference( ) == null ) {
         this.runtimeState = new AtomicMarkableReference<VmState>( newState != null
