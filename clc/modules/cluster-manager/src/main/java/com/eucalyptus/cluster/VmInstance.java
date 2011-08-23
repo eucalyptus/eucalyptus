@@ -496,7 +496,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.runtimeState.isBundling( );
   }
   
-  public BundleTask resetBundleTask( ) {
+  public VmBundleTask resetBundleTask( ) {
     return this.runtimeState.resetBundleTask( );
   }
   
@@ -590,7 +590,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @return the bundleTask
    */
   public BundleTask getBundleTask( ) {
-    return this.runtimeState.getBundleTask( );
+    return VmBundleTask.asBundleTask( this ).apply( this.runtimeState.getBundleTask( ) );
   }
   
   /**
@@ -903,7 +903,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @return
    */
   public boolean startBundleTask( final BundleTask bundleTask ) {
-    return this.runtimeState.startBundleTask( bundleTask );
+    return this.runtimeState.startBundleTask( VmBundleTask.fromBundleTask( this ).apply( bundleTask ) );
   }
   
   private void setNetworkIndex( final PrivateNetworkIndex networkIndex ) {

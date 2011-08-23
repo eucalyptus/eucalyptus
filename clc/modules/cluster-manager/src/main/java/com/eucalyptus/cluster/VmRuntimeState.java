@@ -72,9 +72,12 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
+import javax.persistence.Lob;
 import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
@@ -97,29 +100,31 @@ import com.google.common.collect.Sets;
 @Embeddable
 public class VmRuntimeState {
   @Transient
-  private static String                             SEND_USER_TERMINATE = "SIGTERM";
+  private static String                             SEND_USER_TERMINATE        = "SIGTERM";
   @Transient
-  private static String                             SEND_USER_STOP      = "SIGSTOP";
+  private static String                             SEND_USER_STOP             = "SIGSTOP";
   @Transient
-  private static Logger                             LOG                 = Logger.getLogger( VmRuntimeState.class );
+  private static Logger                             LOG                        = Logger.getLogger( VmRuntimeState.class );
   @Parent
   private VmInstance                                vmInstance;
-  @Transient
-  private AtomicMarkableReference<BundleTask>       bundleTask          = new AtomicMarkableReference<BundleTask>( null, false );
-  @Transient
+  private VmBundleTask                              bundleTask;
   private String                                    serviceTag;
   @Transient
   private Reason                                    reason;
   @Transient
-  private List<String>                              reasonDetails       = Lists.newArrayList( );
+  private List<String>                              reasonDetails              = Lists.newArrayList( );
   @Transient
-  private StringBuffer                              consoleOutput       = new StringBuffer( );
+  private StringBuffer                              consoleOutput              = new StringBuffer( );
 //  @Embedded
 //private Set<VmVolumeAttachment>             transientVolumes = Sets.newHashSet( );
+  @ElementCollection
+  @CollectionTable( name = "metadata_vm_transient_volume_attachments" )
+  private Set<VmVolumeAttachment>                   transientVolumeAttachments = Sets.newHashSet( );
   @Transient
-  private ConcurrentMap<String, VmVolumeAttachment> transientVolumes    = new ConcurrentSkipListMap<String, VmVolumeAttachment>( );
+  private ConcurrentMap<String, VmVolumeAttachment> transientVolumes           = new ConcurrentSkipListMap<String, VmVolumeAttachment>( );
   @Transient
-  protected final AtomicMarkableReference<VmState>  runtimeState        = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
+  protected final AtomicMarkableReference<VmState>  runtimeState               = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
+  @Lob
   @Column( name = "metadata_vm_password_data" )
   private String                                    passwordData;
   
@@ -131,11 +136,14 @@ public class VmRuntimeState {
   VmRuntimeState( ) {
     super( );
   }
-
+  
   @PrePersist
   @PreUpdate
   private void preLoad( ) {
     this.getVmInstance( ).setState( this.runtimeState.getReference( ) );
+    for ( VmVolumeAttachment vol : this.transientVolumeAttachments ) {
+      this.transientVolumes.put( vol.getVolumeId( ), vol );
+    }
   }
   
   @PostLoad
@@ -236,9 +244,9 @@ public class VmRuntimeState {
     return this.runtimeState.getReference( );
   }
   
-  BundleTask resetBundleTask( ) {
-    final BundleTask oldTask = this.bundleTask.getReference( );
-    this.bundleTask.set( null, false );
+  VmBundleTask resetBundleTask( ) {
+    VmBundleTask oldTask = this.bundleTask;
+    this.bundleTask = null;
     return oldTask;
   }
   
@@ -280,8 +288,8 @@ public class VmRuntimeState {
     return this.vmInstance;
   }
   
-  BundleTask getBundleTask( ) {
-    return this.bundleTask.getReference( );
+  VmBundleTask getBundleTask( ) {
+    return this.bundleTask;
   }
   
   List<String> getReasonDetails( ) {
@@ -303,11 +311,11 @@ public class VmRuntimeState {
    * @return
    */
   public Boolean isBundling( ) {
-    return this.bundleTask.getReference( ) != null;
+    return this.bundleTask != null;
   }
   
   BundleState getBundleTaskState( ) {
-    if ( this.bundleTask.getReference( ) != null ) {
+    if ( this.bundleTask != null ) {
       return BundleState.valueOf( this.getBundleTask( ).getState( ) );
     } else {
       return null;
@@ -325,29 +333,24 @@ public class VmRuntimeState {
     } else {
       next = BundleState.none;
     }
-    if ( this.bundleTask.getReference( ) != null ) {
-      if ( !this.bundleTask.isMarked( ) ) {
-        final BundleState current = BundleState.valueOf( this.getBundleTask( ).getState( ) );
-        if ( BundleState.complete.equals( current ) || BundleState.failed.equals( current ) ) {
-          return; //already finished, wait and timeout the state along with the instance.
-        } else if ( BundleState.storing.equals( next ) || BundleState.storing.equals( current ) ) {
-          this.getBundleTask( ).setState( next.name( ) );
-          EventRecord.here( BundleCallback.class, EventType.BUNDLE_TRANSITION, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
-                            this.getVmInstance( ).getInstanceId( ),
-                            this.getBundleTask( ).getState( ) ).info( );
-          this.getBundleTask( ).setUpdateTime( new Date( ) );
-        } else if ( BundleState.none.equals( next ) && BundleState.failed.equals( current ) ) {
-          this.resetBundleTask( );
-        }
-      } else {
+    if ( this.bundleTask != null ) {
+      final BundleState current = BundleState.valueOf( this.getBundleTask( ).getState( ) );
+      if ( BundleState.complete.equals( current ) || BundleState.failed.equals( current ) ) {
+        return; //already finished, wait and timeout the state along with the instance.
+      } else if ( BundleState.storing.equals( next ) || BundleState.storing.equals( current ) ) {
+        this.getBundleTask( ).setState( next.name( ) );
+        EventRecord.here( BundleCallback.class, EventType.BUNDLE_TRANSITION, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
+                          this.getVmInstance( ).getInstanceId( ),
+                          this.getBundleTask( ).getState( ) ).info( );
         this.getBundleTask( ).setUpdateTime( new Date( ) );
+      } else if ( BundleState.none.equals( next ) && BundleState.failed.equals( current ) ) {
+        this.resetBundleTask( );
       }
     }
   }
   
   public Boolean cancelBundleTask( ) {
     if ( this.getBundleTask( ) != null ) {
-      this.bundleTask.set( this.getBundleTask( ), true );
       this.getBundleTask( ).setState( BundleState.canceling.name( ) );
       EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
                         this.getVmInstance( ).getInstanceId( ),
@@ -359,15 +362,13 @@ public class VmRuntimeState {
   }
   
   public Boolean clearPendingBundleTask( ) {
-    if ( BundleState.pending.name( ).equals( this.getBundleTask( ).getState( ) )
-         && this.bundleTask.compareAndSet( this.getBundleTask( ), this.getBundleTask( ), true, false ) ) {
+    if ( BundleState.pending.name( ).equals( this.getBundleTask( ).getState( ) ) ) {
       this.getBundleTask( ).setState( BundleState.storing.name( ) );
       EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTING, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
                         this.getVmInstance( ).getInstanceId( ),
                         this.getBundleTask( ).getState( ) ).info( );
       return true;
-    } else if ( BundleState.canceling.name( ).equals( this.getBundleTask( ).getState( ) )
-                && this.bundleTask.compareAndSet( this.getBundleTask( ), this.getBundleTask( ), true, false ) ) {
+    } else if ( BundleState.canceling.name( ).equals( this.getBundleTask( ).getState( ) ) ) {
       EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELLED, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
                         this.getVmInstance( ).getInstanceId( ),
                         this.getBundleTask( ).getState( ) ).info( );
@@ -378,13 +379,14 @@ public class VmRuntimeState {
     }
   }
   
-  public Boolean startBundleTask( final BundleTask task ) {
-    if ( this.bundleTask.compareAndSet( null, task, false, true ) ) {
+  public Boolean startBundleTask( final VmBundleTask task ) {
+    if ( this.bundleTask == null ) {
+      this.bundleTask = task;
       return true;
     } else {
       if ( ( this.getBundleTask( ) != null ) && BundleState.failed.equals( BundleState.valueOf( this.getBundleTask( ).getState( ) ) ) ) {
         this.resetBundleTask( );
-        this.bundleTask.set( task, true );
+        this.bundleTask = task;
         return true;
       } else {
         return false;
@@ -403,6 +405,7 @@ public class VmRuntimeState {
   
   public VmVolumeAttachment removeVolumeAttachment( final String volumeId ) throws NoSuchElementException {
     final VmVolumeAttachment v = this.transientVolumes.remove( volumeId );
+    this.transientVolumeAttachments.remove( v );
     if ( v == null ) {
       throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getVmInstance( ).getInstanceId( ) + " and volume " + volumeId );
     } else {
@@ -443,6 +446,7 @@ public class VmRuntimeState {
     final VmVolumeAttachment v = this.getTransientVolumes( ).put( volumeId, volume );
     if ( v != null ) {
       this.getTransientVolumes( ).replace( volumeId, v );
+      this.transientVolumeAttachments.add( volume );
     }
   }
   
@@ -488,7 +492,7 @@ public class VmRuntimeState {
     return this.transientVolumes;
   }
   
-  private void setBundleTask( AtomicMarkableReference<BundleTask> bundleTask ) {
+  private void setBundleTask( VmBundleTask bundleTask ) {
     this.bundleTask = bundleTask;
   }
   

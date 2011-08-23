@@ -71,7 +71,7 @@ import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 
 @Embeddable
-public class VmVolumeAttachment {
+public class VmVolumeAttachment implements Comparable<VmVolumeAttachment>{
   @Parent
   private VmInstance vmInstance;
   @Column( name = "metadata_vm_volume_id" )
@@ -104,9 +104,8 @@ public class VmVolumeAttachment {
     this.attachTime = attachTime;
   }
   
-  
   public static Function<AttachedVolume, VmVolumeAttachment> fromAttachedVolume( final VmInstance vm ) {
-    return new Function<AttachedVolume, VmVolumeAttachment> () {
+    return new Function<AttachedVolume, VmVolumeAttachment>( ) {
       @Override
       public VmVolumeAttachment apply( AttachedVolume vol ) {
         return new VmVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ) );
@@ -115,12 +114,13 @@ public class VmVolumeAttachment {
   }
   
   public static Function<VmVolumeAttachment, AttachedVolume> asAttachedVolume( final VmInstance vm ) {
-    return new Function<VmVolumeAttachment, AttachedVolume>() {
+    return new Function<VmVolumeAttachment, AttachedVolume>( ) {
       @Override
       public AttachedVolume apply( VmVolumeAttachment vol ) {
         return new AttachedVolume( vol.getVolumeId( ), vm.getInstanceId( ), vol.getDevice( ), vol.getRemoteDevice( ) );
       }
-    };  }
+    };
+  }
   
 //  Volume getVolume( ) {
 //    return this.volume;
@@ -173,7 +173,7 @@ public class VmVolumeAttachment {
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
     if ( o == null || !getClass( ).equals( o.getClass( ) ) ) return false;
-    AttachedVolume that = ( AttachedVolume ) o;
+    VmVolumeAttachment that = ( VmVolumeAttachment ) o;
     if ( this.volumeId != null
       ? !volumeId.equals( that.getVolumeId( ) )
       : that.getVolumeId( ) != null ) return false;
@@ -186,7 +186,7 @@ public class VmVolumeAttachment {
       : 0 );
   }
   
-  public int compareTo( AttachedVolume that ) {
+  public int compareTo( VmVolumeAttachment that ) {
     return this.volumeId.compareTo( that.getVolumeId( ) );
   }
   
