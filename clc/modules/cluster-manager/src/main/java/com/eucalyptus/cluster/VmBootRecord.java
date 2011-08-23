@@ -65,6 +65,7 @@ package com.eucalyptus.cluster;
 
 import java.util.Set;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
 import javax.persistence.Lob;
@@ -101,7 +102,7 @@ public class VmBootRecord {
   private RamdiskImageInfo        ramdisk;
   @Column( name = "metadata_vm_platform" )
   private String                        platform;
-  @Embedded
+  @ElementCollection
   private Set<VmVolumeAttachment> persistentVolumes = Sets.newHashSet( );
   @Lob
   @Column( name = "metadata_vm_user_data" )
