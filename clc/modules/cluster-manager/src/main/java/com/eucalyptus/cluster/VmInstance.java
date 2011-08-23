@@ -198,6 +198,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                                   allocInfo.getSshKeyPair( ),
                                                                   allocInfo.getVmType( ) )
                                                      .placement( allocInfo.getPartition( ), allocInfo.getRequest( ).getAvailabilityZone( ) )
+                                                     .networking( allocInfo.getNetworkGroups( ), token.getNetworkIndex( ) )
                                                      .build( token.getLaunchIndex( ) );
         vmInst = Entities.persist( vmInst );
         token.getNetworkIndex( ).set( vmInst );
@@ -265,8 +266,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return config;
     }
     
-    public VmInstance build( final Integer index ) {
-      return new VmInstance( this.owner, this.vmId, this.vmBootRecord, new VmLaunchRecord( index, new Date( ) ), this.vmPlacement, this.networkRulesGroups, this.networkIndex );
+    public VmInstance build( final Integer launchndex ) {
+      return new VmInstance( this.owner, this.vmId, this.vmBootRecord, new VmLaunchRecord( launchndex, new Date( ) ), this.vmPlacement, this.networkRulesGroups, this.networkIndex );
     }
   }
   
