@@ -330,10 +330,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
   }
   
-  @PostLoad
-  private void postLoad( ) {
-    this.runtimeState.setState( this.getState( ), Reason.NORMAL );
-  }
+//  @PostLoad
+//  private void postLoad( ) {
+//    this.runtimeState.setState( this.getState( ), Reason.NORMAL );
+//  }
   
   public void updateBlockBytes( final long blkbytes ) {
     this.usageStats.setBlockBytes( this.usageStats.getBlockBytes( ) + blkbytes );
