@@ -362,7 +362,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   void store( ) {
-    this.setState( this.getRuntimeState( ) );
     this.fireUsageEvent( );
     this.firePersist( );
   }
