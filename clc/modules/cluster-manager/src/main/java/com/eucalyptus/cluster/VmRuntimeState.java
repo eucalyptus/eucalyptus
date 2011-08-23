@@ -269,10 +269,6 @@ public class VmRuntimeState {
     return this.reasonDetails;
   }
   
-  VmState getRuntimeState( ) {
-    return this.getReference( );
-  }
-  
   /**
    * @return
    */
