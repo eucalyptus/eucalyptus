@@ -78,6 +78,7 @@ import com.eucalyptus.network.NetworkRule;
 import com.eucalyptus.util.ByteArray;
 import com.google.common.base.Function;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 
 public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArray> {
@@ -96,47 +97,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
           return topoString.get( );
         } else {
           lastTime = System.currentTimeMillis( );
-          StringBuilder buf = new StringBuilder( );
-          Multimap<String, String> networks = ArrayListMultimap.create( );
-          Multimap<String, String> rules = ArrayListMultimap.create( );
-          EntityTransaction tx = Entities.get( VmInstance.class );
-          try {
-            for ( VmInstance vm : VmInstances.listValues( ) ) {
-              if ( VmState.RUNNING.ordinal( ) < vm.getState( ).ordinal( ) ) continue;
-              for ( NetworkGroup ruleGroup : vm.getNetworkRulesGroups( ) ) {
-                networks.put( ruleGroup.getNaturalId( ), vm.getPrivateAddress( ) );
-                if ( !rules.containsKey( ruleGroup.getNaturalId( ) ) ) {
-                  for ( NetworkRule netRule : ruleGroup.getNetworkRules( ) ) {
-                    String rule = String.format( "-P %s -%s %d%s%d ", netRule.getProtocol( ), ( "icmp".equals( netRule.getProtocol( ) )
-                      ? "t"
-                      : "p" ), netRule.getLowPort( ), ( "icmp".equals( netRule.getProtocol( ) )
-                      ? ":"
-                      : "-" ), netRule.getHighPort( ) );
-                    for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {
-                      rules.put( ruleGroup.getName( ), String.format( "%s -o %s -u %s", rule, peer.getGroupName( ), peer.getUserQueryKey( ) ) );
-                    }
-                    for ( IpRange cidr : netRule.getIpRanges( ) ) {
-                      rules.put( ruleGroup.getName( ), String.format( "%s -s %s", rule, cidr.getValue( ) ) );
-                    }
-                  }
-                }
-              }
-            }
-            for ( String networkName : rules.keySet( ) ) {
-              for ( String rule : rules.get( networkName ) ) {
-                buf.append( "RULE " ).append( networkName ).append( " " ).append( rule ).append( "\n" );
-              }
-            }
-            for ( String networkName : networks.keySet( ) ) {
-              buf.append( "GROUP " ).append( networkName );
-              for ( String ip : networks.get( networkName ) ) {
-                buf.append( " " ).append( ip );
-              }
-              buf.append( "\n" );
-            }
-          } finally {
-            tx.rollback( );
-          }
+          StringBuilder buf = generateTopology( );
           topoString.set( buf.toString( ) );
         }
         return topoString.get( );
@@ -144,6 +105,64 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
         lock.unlock( );
       }
     }
+  }
+
+  public StringBuilder generateTopology( ) {
+    StringBuilder buf = new StringBuilder( );
+    Multimap<String, String> networks = ArrayListMultimap.create( );
+    Multimap<String, String> rules = ArrayListMultimap.create( );
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      for ( VmInstance vm : VmInstances.listValues( ) ) {
+        if ( VmState.RUNNING.ordinal( ) < vm.getState( ).ordinal( ) ) continue;
+        for ( NetworkGroup ruleGroup : vm.getNetworkRulesGroups( ) ) {
+          networks.put( ruleGroup.getNaturalId( ), vm.getPrivateAddress( ) );
+          if ( !rules.containsKey( ruleGroup.getNaturalId( ) ) ) {
+            for ( NetworkRule netRule : ruleGroup.getNetworkRules( ) ) {
+              String rule = String.format( "-P %s -%s %d%s%d ", netRule.getProtocol( ), ( "icmp".equals( netRule.getProtocol( ) )
+                ? "t"
+                : "p" ), netRule.getLowPort( ), ( "icmp".equals( netRule.getProtocol( ) )
+                ? ":"
+                : "-" ), netRule.getHighPort( ) );
+              for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {
+                rules.put( ruleGroup.getName( ), String.format( "%s -o %s -u %s", rule, peer.getGroupName( ), peer.getUserQueryKey( ) ) );
+              }
+              for ( IpRange cidr : netRule.getIpRanges( ) ) {
+                rules.put( ruleGroup.getName( ), String.format( "%s -s %s", rule, cidr.getValue( ) ) );
+              }
+            }
+          }
+        }
+      }
+      buf.append( rulesToString( rules ) );
+      buf.append( groupsToString( networks ) );
+      db.commit( );
+    } catch ( Exception ex ) {
+      db.rollback( );
+    }
+    return buf;
+  }
+
+  private static String groupsToString( Multimap<String, String> networks ) {
+    StringBuilder buf = new StringBuilder( );
+    for ( String networkName : networks.keySet( ) ) {
+      buf.append( "GROUP " ).append( networkName );
+      for ( String ip : networks.get( networkName ) ) {
+        buf.append( " " ).append( ip );
+      }
+      buf.append( "\n" );
+    }
+    return buf.toString( );
+  }
+
+  private static String rulesToString( Multimap<String, String> rules ) {
+    StringBuilder buf = new StringBuilder( );
+    for ( String networkName : rules.keySet( ) ) {
+      for ( String rule : rules.get( networkName ) ) {
+        buf.append( "RULE " ).append( networkName ).append( " " ).append( rule ).append( "\n" );
+      }
+    }
+    return buf.toString( );
   }
   
   @Override
