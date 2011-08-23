@@ -67,6 +67,7 @@ import java.util.Set;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
+import javax.persistence.Embedded;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import org.hibernate.annotations.Cache;
@@ -74,7 +75,6 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.images.ImageInfo;
@@ -224,7 +224,4 @@ public class VmBootRecord {
     this.vmType = vmType;
   }
   
-  private boolean isBlockStorage( ) {
-    return this.getMachine( ) instanceof BlockStorageImageInfo;
-  }
 }

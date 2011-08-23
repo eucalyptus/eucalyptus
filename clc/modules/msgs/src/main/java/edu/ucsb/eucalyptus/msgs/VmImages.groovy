@@ -300,11 +300,4 @@ public class CreateImageType extends VmImageMessage {
   String description;
   Boolean noReboot;
   public CreateImageType() {  }
-  CreateImageType( String instanceId, String name, String description, Boolean noReboot ) {
-    super( );
-    this.instanceId = instanceId;
-    this.name = name;
-    this.description = description;
-    this.noReboot = noReboot;
-  }
 }
