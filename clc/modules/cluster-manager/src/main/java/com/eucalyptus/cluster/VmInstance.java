@@ -65,6 +65,7 @@
 package com.eucalyptus.cluster;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -152,17 +153,17 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Transient
   private final NetworkConfigType networkConfig    = new NetworkConfigType( );
   @Embedded
-  private final VmId              vmId;
+  private VmId              vmId;
   @Embedded
-  private final VmBootRecord      bootRecord;
+  private VmBootRecord      bootRecord;
   @Embedded
   private final VmUsageStats      usageStats;
   @Embedded
-  private final VmLaunchRecord    launchRecord;
+  private VmLaunchRecord    launchRecord;
   @Embedded
   private final VmRuntimeState    runtimeState;
   @Embedded
-  private final VmPlacement       placement;
+  private VmPlacement       placement;
   
   @Column( name = "metadata_vm_private_networking" )
   private final Boolean           privateNetwork;
@@ -179,14 +180,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex     networkIndex;
   
-  public enum CreateAllocation implements Function<ResourceToken,VmInstance> {
+  public enum CreateAllocation implements Function<ResourceToken, VmInstance> {
     INSTANCE;
     
     /**
      * @see com.google.common.base.Predicate#apply(java.lang.Object)
      */
     @Override
-    public VmInstance apply( ResourceToken token ) {
+    public VmInstance apply( final ResourceToken token ) {
       final EntityTransaction db = Entities.get( VmInstance.class );
       try {
         final Allocation allocInfo = token.getAllocationInfo( );
@@ -197,7 +198,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                                   allocInfo.getSshKeyPair( ),
                                                                   allocInfo.getVmType( ) )
                                                      .placement( allocInfo.getPartition( ), allocInfo.getRequest( ).getAvailabilityZone( ) )
-                                                     .build( );
+                                                     .build( token.getLaunchIndex( ) );
         vmInst = Entities.persist( vmInst );
         token.getNetworkIndex( ).set( vmInst );
         db.commit( );
@@ -217,11 +218,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public static class Builder {
-    VmInstance   newVm = new VmInstance( );
-    VmId         vmId;
-    VmBootRecord vmBootRecord;
-    VmUsageStats vmUsageStats;
-    VmPlacement  vmPlacement;
+    VmInstance     newVm = new VmInstance( );
+    VmId           vmId;
+    VmBootRecord   vmBootRecord;
+    VmUsageStats   vmUsageStats;
+    VmPlacement    vmPlacement;
+    VmLaunchRecord vmLaunchRecord;
     
     public Builder owner( final OwnerFullName owner ) {
       this.newVm.setOwner( owner );
@@ -233,7 +235,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return this;
     }
     
-    public Builder placement( Partition partition, final String clusterName ) {
+    public Builder placement( final Partition partition, final String clusterName ) {
       final ServiceConfiguration config = Partitions.lookupService( ClusterController.class, partition );
       this.vmPlacement = new VmPlacement( this.newVm, config.getName( ), config.getPartition( ) );
       return this;
@@ -254,18 +256,22 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return config;
     }
     
-    public VmInstance build( ) {
+    public VmInstance build( final Integer index ) {
+      this.newVm.launchRecord = new VmLaunchRecord( this.newVm, index, new Date( ) );
+      this.newVm.bootRecord = vmBootRecord;
+      this.newVm.vmId = vmId;
+      this.newVm.placement = vmPlacement;
       return this.newVm;
     }
   }
   
-  public VmInstance( final OwnerFullName owner,
-                     final VmId vmId,
-                     final VmBootRecord bootRecord,
-                     final VmLaunchRecord launchRecord,
-                     final VmPlacement placement,
-                     final List<NetworkGroup> networkRulesGroups,
-                     final SetReference<PrivateNetworkIndex, VmInstance> networkIndex ) {
+  private VmInstance( final OwnerFullName owner,
+                      final VmId vmId,
+                      final VmBootRecord bootRecord,
+                      final VmLaunchRecord launchRecord,
+                      final VmPlacement placement,
+                      final List<NetworkGroup> networkRulesGroups,
+                      final SetReference<PrivateNetworkIndex, VmInstance> networkIndex ) {
     super( );
     this.vmId = vmId;
     this.bootRecord = bootRecord;
@@ -606,6 +612,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   public static VmInstance namedTerminated( final OwnerFullName ownerFullName, final String instanceId ) {
     return new VmInstance( ownerFullName, instanceId ) {
+      /**
+       * 
+       */
+      private static final long serialVersionUID = 1L;
+
       {
         this.setState( VmState.TERMINATED );
       }
@@ -666,7 +677,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   @Override
   public String toString( ) {
-    StringBuilder builder2 = new StringBuilder( );
+    final StringBuilder builder2 = new StringBuilder( );
     builder2.append( "VmInstance:" );
     if ( this.vmId != null ) builder2.append( "vmId=" ).append( this.vmId ).append( ":" );
     if ( this.networkConfig != null ) builder2.append( "networkConfig=" ).append( this.networkConfig ).append( ":" );
@@ -725,7 +736,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param stopping
    * @param reason
    */
-  public void setState( VmState stopping, Reason reason, String... extra ) {
+  public void setState( final VmState stopping, final Reason reason, final String... extra ) {
     this.runtimeState.setState( stopping, reason, extra );
   }
   
@@ -736,7 +747,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.runtimeState.lookupVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
       
       @Override
-      public boolean apply( VmVolumeAttachment vol ) {
+      public boolean apply( final VmVolumeAttachment vol ) {
         return predicate.apply( VmVolumeAttachment.asAttachedVolume( VmInstance.this, vol ) );
       }
     } );
@@ -746,14 +757,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param volumeId
    * @return
    */
-  public AttachedVolume lookupVolumeAttachment( String volumeId ) {
+  public AttachedVolume lookupVolumeAttachment( final String volumeId ) {
     return VmVolumeAttachment.asAttachedVolume( this, this.runtimeState.lookupVolumeAttachment( volumeId ) );
   }
   
   /**
    * @param attachVol
    */
-  public void addVolumeAttachment( AttachedVolume vol ) {
+  public void addVolumeAttachment( final AttachedVolume vol ) {
     this.runtimeState.addVolumeAttachment( VmVolumeAttachment.fromAttachedVolume( this, vol ) );
   }
   
@@ -772,7 +783,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.runtimeState.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
       
       @Override
-      public boolean apply( VmVolumeAttachment arg0 ) {
+      public boolean apply( final VmVolumeAttachment arg0 ) {
         return predicate.apply( VmVolumeAttachment.asAttachedVolume( VmInstance.this, arg0 ) );
       }
     } );
@@ -782,7 +793,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param volumeId
    * @return
    */
-  public AttachedVolume removeVolumeAttachment( String volumeId ) {
+  public AttachedVolume removeVolumeAttachment( final String volumeId ) {
     return VmVolumeAttachment.asAttachedVolume( this, this.runtimeState.removeVolumeAttachment( volumeId ) );
   }
   
@@ -819,7 +830,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param volumeId
    * @param newState
    */
-  public void updateVolumeAttachment( String volumeId, String newState ) {
+  public void updateVolumeAttachment( final String volumeId, final String newState ) {
     this.runtimeState.updateVolumeAttachment( volumeId, newState );
   }
   
@@ -830,16 +841,16 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return new Predicate<VmInfo>( ) {
       
       @Override
-      public boolean apply( VmInfo runVm ) {
-        VmState state = VmState.Mapper.get( runVm.getStateName( ) );
-        long splitTime = VmInstance.this.getSplitTime( );
-        VmState oldState = VmInstance.this.getRuntimeState( );
+      public boolean apply( final VmInfo runVm ) {
+        final VmState state = VmState.Mapper.get( runVm.getStateName( ) );
+        final long splitTime = VmInstance.this.getSplitTime( );
+        final VmState oldState = VmInstance.this.getRuntimeState( );
         VmInstance.this.runtimeState.setServiceTag( runVm.getServiceTag( ) );
         VmInstance.this.setBundleTaskState( runVm.getBundleTaskStateName( ) );
         
-        if ( VmState.SHUTTING_DOWN.equals( VmInstance.this.getRuntimeState( ) ) && splitTime > VmInstances.SHUT_DOWN_TIME ) {
+        if ( VmState.SHUTTING_DOWN.equals( VmInstance.this.getRuntimeState( ) ) && ( splitTime > VmInstances.SHUT_DOWN_TIME ) ) {
           VmInstance.this.setState( VmState.TERMINATED, Reason.EXPIRED );
-        } else if ( VmState.STOPPING.equals( VmInstance.this.getRuntimeState( ) ) && splitTime > VmInstances.SHUT_DOWN_TIME ) {
+        } else if ( VmState.STOPPING.equals( VmInstance.this.getRuntimeState( ) ) && ( splitTime > VmInstances.SHUT_DOWN_TIME ) ) {
           VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
         } else if ( VmState.STOPPING.equals( VmInstance.this.getRuntimeState( ) ) && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
           VmInstance.this.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
@@ -854,9 +865,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           VmInstance.this.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
           VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
           try {
-            NetworkGroup network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );
+            final NetworkGroup network = Networks.getInstance( ).lookup( runVm.getOwnerId( ) + "-" + runVm.getGroupNames( ).get( 0 ) );
             //GRZE:NET//        network.extantNetworkIndex( VmInstance.this.getClusterName( ), VmInstance.this.getNetworkIndex( ) );
-          } catch ( Exception e ) {}
+          } catch ( final Exception e ) {}
         }
         return true;
       }
@@ -866,11 +877,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   /**
    * @param volumes
    */
-  public void updateVolumeAttachments( List<AttachedVolume> volumes ) {
+  public void updateVolumeAttachments( final List<AttachedVolume> volumes ) {
     this.runtimeState.updateVolumeAttachments( Lists.transform( volumes, new Function<AttachedVolume, VmVolumeAttachment>( ) {
       
       @Override
-      public VmVolumeAttachment apply( AttachedVolume arg0 ) {
+      public VmVolumeAttachment apply( final AttachedVolume arg0 ) {
         return VmVolumeAttachment.fromAttachedVolume( VmInstance.this, arg0 );
       }
     } ) );
@@ -879,7 +890,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   /**
    * @param serviceTag
    */
-  public void setServiceTag( String serviceTag ) {
+  public void setServiceTag( final String serviceTag ) {
     this.runtimeState.setServiceTag( serviceTag );
   }
   
@@ -887,11 +898,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param bundleTask
    * @return
    */
-  public boolean startBundleTask( BundleTask bundleTask ) {
+  public boolean startBundleTask( final BundleTask bundleTask ) {
     return this.runtimeState.startBundleTask( bundleTask );
   }
   
-  private void setNetworkIndex( PrivateNetworkIndex networkIndex ) {
+  private void setNetworkIndex( final PrivateNetworkIndex networkIndex ) {
     this.networkIndex = networkIndex;
   }
   
@@ -903,7 +914,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
      * @see com.google.common.base.Supplier#get()
      */
     @Override
-    public RunningInstancesItemType apply( VmInstance input ) {
+    public RunningInstancesItemType apply( final VmInstance input ) {
       RunningInstancesItemType runningInstance;
       try {
         final boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
@@ -973,12 +984,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         
         runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( "/dev/sda1" ) );
         for ( final VmVolumeAttachment attachedVol : input.runtimeState.getTransientVolumes( ).values( ) ) {
-          runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ), attachedVol.getStatus( ),
+          runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),
+                                                                                  attachedVol.getStatus( ),
                                                                                   attachedVol.getAttachTime( ) ) );
         }
         return runningInstance;
-      } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+      } catch ( final Exception ex ) {
+        LOG.error( ex, ex );
         throw Exceptions.toUndeclared( ex );
       }
       
