@@ -189,8 +189,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return this;
     }
     
-    public Builder placement( final String clusterName ) {
-      final ServiceConfiguration config = this.lookupServiceConfiguration( clusterName );
+    public Builder placement( Partition partition, final String clusterName ) {
+      final ServiceConfiguration config = Partitions.lookupService( ClusterController.class, partition );
       this.vmPlacement = new VmPlacement( this.newVm, config.getName( ), config.getPartition( ) );
       return this;
     }

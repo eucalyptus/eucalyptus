@@ -118,7 +118,7 @@ public class CreateVmInstances {
                                                                 allocInfo.getUserData( ),
                                                                 allocInfo.getSshKeyPair( ),
                                                                 allocInfo.getVmType( ) )
-                                                   .placement( allocInfo.getRequest( ).getAvailabilityZone( ) )
+                                                   .placement( allocInfo.getPartition( ), allocInfo.getRequest( ).getAvailabilityZone( ) )
                                                    .build( );
       vmInst = Entities.persist( vmInst );
       token.getNetworkIndex( ).set( vmInst );
