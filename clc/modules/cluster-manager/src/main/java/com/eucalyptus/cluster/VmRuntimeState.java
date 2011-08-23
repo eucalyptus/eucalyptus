@@ -165,7 +165,7 @@ public class VmRuntimeState {
   }
   
   public void setState( final VmState newState, Reason reason, final String... extra ) {
-    if ( this.runtimeState == null || this.runtimeState.getReference( ) == null ) {
+    if ( newState == null || this.runtimeState == null || this.runtimeState.getReference( ) == null ) {
       this.runtimeState = new AtomicMarkableReference<VmState>( newState != null ? newState : VmState.PENDING, false );
       return;
     } 

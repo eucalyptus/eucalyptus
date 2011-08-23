@@ -237,7 +237,6 @@ public class VmInstances {
             LOG.debug( e, e );
           }
         }
-        vm.releaseNetworkIndex( );
       }
     };
     return cleanup;
