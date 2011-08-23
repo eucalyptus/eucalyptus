@@ -64,6 +64,7 @@
 package com.eucalyptus.cluster;
 
 import java.util.Date;
+import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import org.hibernate.annotations.Parent;
 import com.eucalyptus.vm.BundleTask;
@@ -73,14 +74,23 @@ import com.google.common.base.Function;
 public class VmBundleTask {
   @Parent
   private VmInstance vmInstance;
+  @Column( name = "metadata_vm_bundle_id" )
   private String     bundleId;
+  @Column( name = "metadata_vm_bundle_state" )
   private String     state;
+  @Column( name = "metadata_vm_bundle_start_time" )
   private Date       startTime;
+  @Column( name = "metadata_vm_bundle_update_time" )
   private Date       updateTime;
+  @Column( name = "metadata_vm_bundle_progress" )
   private String     progress;
+  @Column( name = "metadata_vm_bundle_bucket" )
   private String     bucket;
+  @Column( name = "metadata_vm_bundle_prefix" )
   private String     prefix;
+  @Column( name = "metadata_vm_bundle_error_msg" )
   private String     errorMessage;
+  @Column( name = "metadata_vm_bundle_error_code" )
   private String     errorCode;
   
   VmBundleTask( ) {

@@ -64,27 +64,34 @@
 package com.eucalyptus.cluster;
 
 import java.util.Date;
+import javax.persistence.Column;
 import org.hibernate.annotations.Parent;
 import com.google.common.base.Function;
 
 public class VmCreateImageTask {
   @Parent
   private VmInstance vmInstance;
+  @Column( name = "metadata_vm_createimage_id" )
   private String     createImageId;
+  @Column( name = "metadata_vm_createimage_state" )
   private String     state;
+  @Column( name = "metadata_vm_createimage_start_time" )
   private Date       startTime;
+  @Column( name = "metadata_vm_createimage_update_time" )
   private Date       updateTime;
+  @Column( name = "metadata_vm_createimage_progress" )
   private String     progress;
-  private String     bucket;
-  private String     prefix;
+  @Column( name = "metadata_vm_createimage_error_msg" )
   private String     errorMessage;
+  @Column( name = "metadata_vm_createimage_error_code" )
   private String     errorCode;
   
   VmCreateImageTask( ) {
     super( );
   }
   
-  VmCreateImageTask( final VmInstance vmInstance, final String createImageId, final String state, final Date startTime, final Date updateTime, final String progress, final String errorMessage,
+  VmCreateImageTask( final VmInstance vmInstance, final String createImageId, final String state, final Date startTime, final Date updateTime,
+                     final String progress, final String errorMessage,
                      final String errorCode ) {
     super( );
     this.vmInstance = vmInstance;
