@@ -99,6 +99,7 @@ import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.util.Resource.SetReference;
@@ -253,6 +254,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.imageId = bootSet.getMachine( ).getDisplayName( );
     this.kernelId = bootSet.getKernel( ).getDisplayName( );
     this.ramdiskId = bootSet.getRamdisk( ).getDisplayName( );
+    this.vbrString = BindingManager.getDefaultBinding( ).toString( bootSet.populateVirtualBootRecord( vmType ) );
     this.privateNetwork = Boolean.FALSE;
     this.launchTime = new Date( );
     this.blockBytes = 0l;
@@ -300,6 +302,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.sshKeyPair = null;
     this.vmType = null;
     this.privateNetwork = null;
+    this.vbrString = null;
   }
   
   protected VmInstance( ) {
@@ -316,6 +319,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.sshKeyPair = null;
     this.vmType = null;
     this.privateNetwork = null;
+    this.vbrString = null;
   }
   
   public void updateBlockBytes( final long blkbytes ) {
@@ -954,7 +958,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return String
                  .format(
                           "VmInstance [instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerAccountNumber=%s, ownerUserId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
-                          this.instanceId, this.sshKeyPair, this.launchIndex, this.launchTime, this.networkConfig, this.networkGroups, this.getOwnerAccountNumber( ), this.getOwnerUserId( ),
+                          this.instanceId, this.sshKeyPair, this.launchIndex, this.launchTime, this.networkConfig, this.networkGroups,
+                          this.getOwnerAccountNumber( ), this.getOwnerUserId( ),
                           this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.runtimeState,
                           System.currentTimeMillis( ) - this.getLastUpdateTimestamp( ).getTime( ),
                           this.userData, this.vmType, this.transientVolumes );
