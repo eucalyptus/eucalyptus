@@ -288,11 +288,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.store( );
   }
   
-  public void getVbrAsString( final BootableSet bootSet, final VmType vmType ) {
+  public String getVbrAsString( final BootableSet bootSet, final VmType vmType ) {
     try {
-      BindingManager.getDefaultBinding( ).toString( bootSet.populateVirtualBootRecord( vmType ) );
+      return BindingManager.getDefaultBinding( ).toString( bootSet.populateVirtualBootRecord( vmType ) );
     } catch ( MetadataException ex1 ) {
       LOG.error( ex1, ex1 );
+      return null;
     }
   }
   
