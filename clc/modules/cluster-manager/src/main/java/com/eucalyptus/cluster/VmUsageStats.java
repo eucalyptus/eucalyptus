@@ -79,6 +79,8 @@ public class VmUsageStats {
   VmUsageStats( VmInstance vmInstance ) {
     super( );
     this.vmInstance = vmInstance;
+    this.blockBytes = 0l;
+    this.networkBytes = 0l;
   }
   
   VmUsageStats( ) {
