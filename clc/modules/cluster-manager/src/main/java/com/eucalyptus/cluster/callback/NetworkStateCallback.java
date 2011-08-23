@@ -55,7 +55,7 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
   }
   
   private void updateClusterConfiguration( final DescribeNetworksResponseType reply ) {
-    EntityTransaction db = Entities.get( NetworkStateCallback.class );
+    EntityTransaction db = Entities.get( ClusterConfiguration.class );
     try {
       ClusterConfiguration config = Entities.uniqueResult( this.getSubject( ).getConfiguration( ) );
       config.setNetworkMode( reply.getMode( ) );
