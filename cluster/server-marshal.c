@@ -1146,7 +1146,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t *runInstances
   if (!accountId) {
     accountId = ccMeta.userId;
   }
-  ownerId = adb_runInstancesType_get_accountId(rit, env);
+  ownerId = adb_runInstancesType_get_ownerId(rit, env);
   if (!ownerId) {
     ownerId = accountId;
   }
