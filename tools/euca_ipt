@@ -218,7 +218,7 @@ sub new_euca_ipt() {
 	if ($line =~ /^\s*RULE/) {
 	    my ($add, $chainuser, @rule) = split(/\s+/, $line);
 	    if ($chainuser && @rule) {
-		$chainuser =~ s/-//g;
+		$chainuser =~ s/-//;
 		chomp(my $chain = encode_base64(md5($chainuser)));
 		$chain = md5_base64($chainuser) . "==";
 		$newchains{$chain} .= ",,," . join(" ", @rule);
