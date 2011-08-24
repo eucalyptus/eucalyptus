@@ -184,7 +184,7 @@ public class VmControl {
             return true;
           } catch ( final NoSuchElementException e ) {
             try {
-              VmInstances.lookupDisabled( instanceId ).setState( VmState.BURIED, Reason.BURIED );
+              VmInstances.deregister( instanceId );
               return true;
             } catch ( final NoSuchElementException e1 ) {
               return false;
