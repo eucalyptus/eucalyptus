@@ -82,18 +82,18 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 
 public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArray> {
-  private static Logger LOG = Logger.getLogger( NetworkGroupsMetadata.class );
+  private static Logger                  LOG        = Logger.getLogger( NetworkGroupsMetadata.class );
   private static Lock                    lock       = new ReentrantLock( );
   private static Long                    lastTime   = 0l;
   private static AtomicReference<String> topoString = new AtomicReference<String>( null );
   
   private String getNetworkTopology( ) {
-    if ( topoString.get( ) != null && ( lastTime + ( 1 * 1000l ) ) > System.currentTimeMillis( ) ) {
+    if ( topoString.get( ) != null && ( lastTime + ( VmInstances.NETWORK_METADATA_REFRESH_TIME * 1000l ) ) > System.currentTimeMillis( ) ) {
       return topoString.get( );
     } else {
       lock.lock( );
       try {
-        if ( topoString.get( ) != null && ( lastTime + ( 1 * 1000l ) ) > System.currentTimeMillis( ) ) {
+        if ( topoString.get( ) != null && ( lastTime + ( VmInstances.NETWORK_METADATA_REFRESH_TIME * 1000l ) ) > System.currentTimeMillis( ) ) {
           return topoString.get( );
         } else {
           lastTime = System.currentTimeMillis( );
@@ -106,7 +106,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
       }
     }
   }
-
+  
   public StringBuilder generateTopology( ) {
     StringBuilder buf = new StringBuilder( );
     Multimap<String, String> networks = ArrayListMultimap.create( );
@@ -114,7 +114,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
       for ( VmInstance vm : VmInstances.listValues( ) ) {
-        if ( VmState.RUNNING.ordinal( ) < vm.getState( ).ordinal( ) ) continue;
+        if ( VmState.RUNNING.ordinal( ) > vm.getState( ).ordinal( ) ) continue;
         for ( NetworkGroup ruleGroup : vm.getNetworkRulesGroups( ) ) {
           networks.put( ruleGroup.getClusterNetworkName( ), vm.getPrivateAddress( ) );
           if ( !rules.containsKey( ruleGroup.getNaturalId( ) ) ) {
@@ -142,7 +142,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
     }
     return buf;
   }
-
+  
   private static String groupsToString( Multimap<String, String> networks ) {
     StringBuilder buf = new StringBuilder( );
     for ( String networkName : networks.keySet( ) ) {
@@ -154,7 +154,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
     }
     return buf.toString( );
   }
-
+  
   private static String rulesToString( Multimap<String, String> rules ) {
     StringBuilder buf = new StringBuilder( );
     for ( String networkName : rules.keySet( ) ) {

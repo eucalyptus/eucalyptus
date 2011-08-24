@@ -126,13 +126,15 @@ import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 @ConfigurableClass( root = "vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
 public class VmInstances {
   @ConfigurableField( description = "Amount of time (in milliseconds) before a VM which is not reported by a cluster will be marked as terminated.", initial = "" + 10 * 60 * 1000 )
-  public static Long         SHUT_DOWN_TIME     = 10 * 60 * 1000l;
+  public static Long         SHUT_DOWN_TIME                = 10 * 60 * 1000l;
   @ConfigurableField( description = "Amount of time (in milliseconds) that a terminated VM will continue to be reported.", initial = "" + 60 * 60 * 1000 )
-  public static Long         BURY_TIME          = 60 * 60 * 1000l;
+  public static Long         BURY_TIME                     = 60 * 60 * 1000l;
+  @ConfigurableField( description = "Maximum amount of time (in seconds) that the network topology service takes to propagate state changes.", initial = "" + 60 * 60 * 1000 )
+  public static Integer      NETWORK_METADATA_REFRESH_TIME = 15;
   @ConfigurableField( description = "Prefix to use for instance MAC addresses.", initial = "d0:0d" )
-  public static String       MAC_PREFIX         = "d0:0d";
+  public static String       MAC_PREFIX                    = "d0:0d";
   @ConfigurableField( description = "Subdomain to use for instance DNS.", initial = ".eucalyptus", changeListener = SubdomainListener.class )
-  public static final String INSTANCE_SUBDOMAIN = ".eucalyptus";
+  public static final String INSTANCE_SUBDOMAIN            = ".eucalyptus";
   
   public static class SubdomainListener implements PropertyChangeListener {
     @Override
