@@ -481,5 +481,12 @@ public class VmRuntimeState {
   public Boolean isCreatingImage( ) {
     return this.createImageTask != null;
   }
+
+  /**
+   * @param createImageTaskStateName
+   */
+  public void setCrateImageTaskState( String createImageTaskStateName ) {
+    /** TODO:GRZE: FINISH BFE HERE **/
+  }
   
 }

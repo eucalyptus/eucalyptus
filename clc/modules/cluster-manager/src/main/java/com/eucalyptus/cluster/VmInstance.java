@@ -173,7 +173,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private final Set<NetworkGroup> networkGroups    = Sets.newHashSet( );
   
   @NotFound( action = NotFoundAction.IGNORE )
-  @OneToOne( fetch = FetchType.EAGER, cascade = CascadeType.REMOVE, orphanRemoval = true )
+  @OneToOne( fetch = FetchType.EAGER, cascade = { CascadeType.PERSIST, CascadeType.MERGE }, orphanRemoval = true )
   @JoinColumn( name = "metadata_vm_network_index", nullable = true, insertable = true, updatable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex     networkIndex;
@@ -488,11 +488,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return this.mappedState;
     }
   }
-
+  
   public Boolean isCreatingImage( ) {
     return this.runtimeState.isCreatingImage( );
   }
-
+  
   public Boolean isBundling( ) {
     return this.runtimeState.isBundling( );
   }
@@ -749,7 +749,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     try {
       final VmInstance entity = Entities.merge( this );
       entity.runtimeState.setState( stopping, reason, extra );
-      if( VmState.TERMINATED.equals( entity.getState( ) ) || VmState.BURIED.equals( entity.getState( ) ) ) {
+      if ( VmState.TERMINATED.equals( entity.getState( ) ) || VmState.BURIED.equals( entity.getState( ) ) ) {
         entity.cleanUp( );
       }
       db.commit( );
@@ -867,6 +867,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           final VmState oldState = VmInstance.this.getRuntimeState( );
           VmInstance.this.runtimeState.setServiceTag( runVm.getServiceTag( ) );
           VmInstance.this.setBundleTaskState( runVm.getBundleTaskStateName( ) );
+          VmInstance.this.setCreateImageTaskState( runVm.getBundleTaskStateName( ) );
           
           if ( VmState.SHUTTING_DOWN.equals( VmInstance.this.getRuntimeState( ) ) && ( splitTime > VmInstances.SHUT_DOWN_TIME ) ) {
             VmInstance.this.setState( VmState.TERMINATED, Reason.EXPIRED );
@@ -894,6 +895,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         return true;
       }
     };
+  }
+  
+  /**
+   * @param bundleTaskStateName
+   */
+  protected void setCreateImageTaskState( final String createImageTaskStateName ) {
+    this.runtimeState.setCrateImageTaskState( createImageTaskStateName );
   }
   
   /**
@@ -1013,11 +1021,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     
   }
-
+  
   public boolean isLinux( ) {
     return this.bootRecord.isLinux( );
   }
-
+  
   public boolean isBlockStorage( ) {
     return this.bootRecord.isBlockStorage( );
   }

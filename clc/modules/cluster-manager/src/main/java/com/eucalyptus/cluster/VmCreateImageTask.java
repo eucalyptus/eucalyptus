@@ -66,7 +66,6 @@ package com.eucalyptus.cluster;
 import java.util.Date;
 import javax.persistence.Column;
 import org.hibernate.annotations.Parent;
-import com.google.common.base.Function;
 
 public class VmCreateImageTask {
   @Parent
