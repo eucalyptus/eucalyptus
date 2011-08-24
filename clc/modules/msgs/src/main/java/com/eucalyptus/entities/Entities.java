@@ -521,7 +521,7 @@ public class Entities {
         }
       } else {
         this.endStes.put( this.record.getUuid( ), Threads.currentStackFrame( 1 ) );
-        Logs.extreme( ).error( "Duplicate call to commit( ): " + Threads.currentStackString( ) );
+        Logs.extreme( ).error( "Duplicate call to rollback( ): " + Threads.currentStackString( ) );
       }
     }
     
