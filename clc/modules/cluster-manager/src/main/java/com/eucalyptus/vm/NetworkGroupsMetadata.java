@@ -138,6 +138,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
       buf.append( groupsToString( networks ) );
       db.commit( );
     } catch ( Exception ex ) {
+      LOG.error( ex, ex );
       db.rollback( );
     }
     return buf;
