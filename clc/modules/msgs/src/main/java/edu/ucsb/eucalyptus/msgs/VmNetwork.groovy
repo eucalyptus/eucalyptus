@@ -186,7 +186,7 @@ public class ClusterAddressInfo extends EucalyptusData implements Comparable<Clu
   }
   
   public int compareTo( ClusterAddressInfo that ) {
-    return ( this.address + this.instanceIp ).compareTo( that.address + that.instanceIp );
+    return ( this.address ).compareTo( that.address );
   }
   
   @Override
@@ -198,9 +198,6 @@ public class ClusterAddressInfo extends EucalyptusData implements Comparable<Clu
     if ( this.address == null ) {
       if ( other.address != null ) return false;
     } else if ( !this.address.equals( other.address ) ) return false;
-    if ( this.instanceIp == null ) {
-      if ( other.instanceIp != null ) return false;
-    } else if ( !this.instanceIp.equals( other.instanceIp ) ) return false;
     return true;
   }
   
