@@ -222,8 +222,6 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         safe_strncpy (outInst->volumes[i].stateName, adb_volumeType_get_state (volume, env), CHAR_BUFFER_SIZE);
     }
     
-    logprintfl(EUCADEBUG, "MEH: %s/%s\n", outInst->ownerId, outInst->accountId);
-
     return outInst;
 }
 

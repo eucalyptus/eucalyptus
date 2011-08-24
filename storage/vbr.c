@@ -1111,8 +1111,6 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean do_make_work_c
         return NULL;
 
     case NC_LOCATION_URL: {
-        logprintfl(EUCADEBUG, "MEH: %s\n", vbr->preparedResourceLocation);
-        
         // get the digest for size and signature
         char manifestURL[MAX_PATH];
         char * blob_sig = NULL;
