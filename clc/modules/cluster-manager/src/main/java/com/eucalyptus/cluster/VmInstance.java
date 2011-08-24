@@ -173,7 +173,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private final Set<NetworkGroup> networkGroups    = Sets.newHashSet( );
   
   @NotFound( action = NotFoundAction.IGNORE )
-  @OneToOne( fetch = FetchType.EAGER, cascade = CascadeType.REMOVE )
+  @OneToOne( fetch = FetchType.EAGER, cascade = CascadeType.REMOVE, orphanRemoval = true )
   @JoinColumn( name = "metadata_vm_network_index", nullable = true, insertable = true, updatable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex     networkIndex;
