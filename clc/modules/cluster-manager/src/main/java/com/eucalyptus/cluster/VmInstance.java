@@ -179,8 +179,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private PrivateNetworkIndex     networkIndex;
   
   void cleanUp( ) {
-    this.networkIndex = null;
     this.networkGroups.clear( );
+    this.networkIndex = null;
   }
   
   public enum CreateAllocation implements Function<ResourceToken, VmInstance> {
