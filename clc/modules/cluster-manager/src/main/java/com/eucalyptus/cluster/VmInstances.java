@@ -411,18 +411,18 @@ public class VmInstances {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final List<VmInstance> vms = Entities.query( VmInstance.named( null, null ) );
-      final Collection<VmInstance> ret = Collections2.filter( vms, new Predicate<VmInstance>( ) {
-        
-        @Override
-        public boolean apply( final VmInstance input ) {
-          for ( NetworkGroup i : input.getNetworkRulesGroups( ) ) {
-            Logs.extreme( ).trace( "Found network group: " + i.toString( ) );
-          }
-          return !VmState.TERMINATED.equals( input.getState( ) );
-        }
-      } );
+//      final Collection<VmInstance> ret = Collections2.filter( vms, new Predicate<VmInstance>( ) {
+//        
+//        @Override
+//        public boolean apply( final VmInstance input ) {
+//          for ( NetworkGroup i : input.getNetworkRulesGroups( ) ) {
+//            Logs.extreme( ).trace( "Found network group: " + i.toString( ) );
+//          }
+//          return !VmState.TERMINATED.equals( input.getState( ) );
+//        }
+//      } );
       db.commit( );
-      return Lists.newArrayList( ret );
+      return Lists.newArrayList( vms );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       db.rollback( );
