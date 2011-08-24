@@ -85,6 +85,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
 import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
+import javax.persistence.PreRemove;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -166,7 +167,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   @Column( name = "metadata_vm_private_networking" )
   private final Boolean           privateNetwork;
-  @ManyToMany
+  @NotFound( action = NotFoundAction.IGNORE )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final Set<NetworkGroup> networkGroups    = Sets.newHashSet( );
   
@@ -175,6 +176,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @JoinColumn( name = "metadata_vm_network_index", nullable = true, insertable = true, updatable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex     networkIndex;
+  
+  void cleanUp( ) {
+    this.networkIndex = null;
+    this.networkGroups.clear( );
+  }
   
   public enum CreateAllocation implements Function<ResourceToken, VmInstance> {
     INSTANCE;

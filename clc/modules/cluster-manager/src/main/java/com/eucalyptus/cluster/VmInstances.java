@@ -385,6 +385,7 @@ public class VmInstances {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, key ) );
+      vm.cleanUp( );
       Entities.delete( vm );
       db.commit( );
     } catch ( final Exception ex ) {
