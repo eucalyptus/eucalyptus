@@ -334,19 +334,19 @@ public class VmRunType extends CloudClusterMessage {
     this.networkIndex = networkIndex;
   }
   
-  private String getOwnerId( ) {
+  public String getOwnerId( ) {
     return this.ownerId;
   }
   
-  private void setOwnerId( String ownerId ) {
+  public void setOwnerId( String ownerId ) {
     this.ownerId = ownerId;
   }
   
-  private String getAccountId( ) {
+  public String getAccountId( ) {
     return this.accountId;
   }
   
-  private void setAccountId( String accountId ) {
+  public void setAccountId( String accountId ) {
     this.accountId = accountId;
   }
 }
