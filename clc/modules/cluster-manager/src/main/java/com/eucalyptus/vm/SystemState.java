@@ -301,7 +301,7 @@ public class SystemState {
     Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
     final EntityTransaction db = Entities.get( VmInstance.class );
     for ( VmInstance v : VmInstances.listValues( ) ) {
-      if ( !VmState.STOPPED.equals( v.getState( ) ) ) {
+      if ( !VmState.STOPPED.equals( v.getState( ) ) && v.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
         long time = ( System.currentTimeMillis( ) - v.getLastUpdateTimestamp( ).getTime( ) );
         if ( time > VmInstances.SHUT_DOWN_TIME ) {
           v.setState( VmState.TERMINATED, Reason.EXPIRED );
