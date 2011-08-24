@@ -168,12 +168,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Column( name = "metadata_vm_private_networking" )
   private final Boolean           privateNetwork;
   @NotFound( action = NotFoundAction.IGNORE )
-  @ManyToMany
+  @ManyToMany( cascade = CascadeType.REMOVE )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final Set<NetworkGroup> networkGroups    = Sets.newHashSet( );
   
   @NotFound( action = NotFoundAction.IGNORE )
-  @OneToOne( fetch = FetchType.EAGER, cascade = { CascadeType.PERSIST, CascadeType.MERGE }, orphanRemoval = true )
+  @OneToOne( fetch = FetchType.EAGER, cascade = CascadeType.REMOVE, orphanRemoval = true )
   @JoinColumn( name = "metadata_vm_network_index", nullable = true, insertable = true, updatable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex     networkIndex;
