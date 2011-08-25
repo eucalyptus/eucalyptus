@@ -3771,7 +3771,7 @@ int syncNetworkState() {
 }
 
 int maintainNetworkState() {
-  int rc, i, ret=0;
+  int rc, i, j, ret=0, done=0;
   char pidfile[MAX_PATH], *pidstr=NULL;
   
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
@@ -3791,12 +3791,34 @@ int maintainNetworkState() {
 	  }
 	}
       }
+
       for (i=0; i<NUMBER_OF_VLANS; i++) {
 	if ( !activeNetworks[i] && vnetconfig->networks[i].active ) {
 	  logprintfl(EUCAWARN, "maintainNetworkState(): network active but no running instances (%s, %s, %d)\n", vnetconfig->users[i].userName, vnetconfig->users[i].netName, i);
 	  sem_mywait(VNET);
 	  rc = vnetStopNetwork(vnetconfig, i, vnetconfig->users[i].userName, vnetconfig->users[i].netName);
 	  sem_mypost(VNET);
+	}
+	if ( activeNetworks[i] ) {
+	  // make sure all active network indexes are used by an instance
+	  for (j=0; j<NUMBER_OF_HOSTS_PER_VLAN; j++) {
+	    if (vnetconfig->networks[i].addrs[j].active && (vnetconfig->networks[i].addrs[j].ip != 0) ) {
+	      // dan
+	      char *ip=NULL;
+	      ccInstance *myInstance=NULL;
+
+	      ip = hex2dot(vnetconfig->networks[i].addrs[j].ip);
+	      rc = find_instanceCacheIP(ip, &myInstance);
+	      if (rc) {
+		// network index marked as used, but no instance in cache with that index/ip
+		logprintfl(EUCAWARN, "maintainNetworkState(): address active but no instances using addr (%s, %d, %d\n", ip, i, j);
+	      } else {
+		logprintfl(EUCAWARN, "maintainNetworkState(): address active and found for instance (%s, %s, %d, %d\n", myInstance->instanceId, ip, i, j);
+	      }
+	      if (myInstance) free(myInstance);
+	      if (ip) free(ip);
+	    }
+	  }
 	}
       }
     }
