@@ -69,7 +69,10 @@ class ConfigFile(dict):
             if not line.startswith('#'):
                 t = line.split('=', 1)
                 if len(t) == 2:
-                    self[t[0]] = t[1].strip('"\n ')
+                    name = t[0]
+                    # Remove comments at end of line
+                    value = t[1].split('#', 1)[0].strip('"\n ')
+                    self[name] = value
         fp.close()
         
     def _backup(self):

@@ -101,7 +101,7 @@ public class TopologyMetadata implements Function<MetadataRequest, ByteArray> {
           Multimap<String, String> networks = ArrayListMultimap.create( );
           Multimap<String, String> rules = ArrayListMultimap.create( );
           for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
-            if( VmState.RUNNING.ordinal( ) < vm.getState( ).ordinal( ) ) continue;
+            if( VmState.RUNNING.ordinal( ) < vm.getRuntimeState( ).ordinal( ) ) continue;
             Network network = vm.getNetworks( ).get( 0 );
             try {
               network = NetworkGroupUtil.getUserNetworkRulesGroup( network.getUserFullName( ), network.getNetworkName( ) ).getVmNetwork( );
@@ -122,7 +122,7 @@ public class TopologyMetadata implements Function<MetadataRequest, ByteArray> {
                   }
                 }
               }
-            } catch ( EucalyptusCloudException e ) {
+            } catch ( Exception e ) {
               LOG.trace( "Topology info not available for unknown group: " + network.getName( ) + " because of " + e.getMessage( ), e );
             }
           }

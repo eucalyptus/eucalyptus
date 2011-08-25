@@ -177,10 +177,10 @@ public class VmControl {
           try {
             final VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
             if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
-              final int oldCode = v.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
-              final String oldState = v.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
+              final int oldCode = v.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
+              final String oldState = v.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
               results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
-              if ( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
+              if ( VmState.RUNNING.equals( v.getRuntimeState( ) ) || VmState.PENDING.equals( v.getRuntimeState( ) ) ) {
                 v.setState( VmState.SHUTTING_DOWN, Reason.USER_TERMINATED );
               }
             }
@@ -253,7 +253,7 @@ public class VmControl {
     }
     if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, request.getInstanceId( ), v.getOwner( ) ) ) {
       throw new EucalyptusCloudException( "Permission denied for vm: " + request.getInstanceId( ) );
-    } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
+    } else if ( !VmState.RUNNING.equals( v.getRuntimeState( ) ) ) {
       final GetConsoleOutputResponseType reply = request.getReply( );
       reply.setInstanceId( request.getInstanceId( ) );
       reply.setTimestamp( new Date( ) );
@@ -333,8 +333,8 @@ public class VmControl {
           };
           Allocation allocInfo = VerifyMetadata.handle( runRequest );
           allocInfo = AdmissionControl.handle( allocInfo );
-          final int oldCode = v.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
-          final String oldState = v.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
+          final int oldCode = v.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
+          final String oldState = v.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
           reply.getInstancesSet( ).add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
         } catch ( MetadataException ex1 ) {
           LOG.error( ex1, ex1 );
@@ -355,10 +355,10 @@ public class VmControl {
           try {
             final VmInstance v = VmInstances.getInstance( ).lookup( instanceId );
             if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
-              final int oldCode = v.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
-              final String oldState = v.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
+              final int oldCode = v.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
+              final String oldState = v.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
               results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
-              if ( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
+              if ( VmState.RUNNING.equals( v.getRuntimeState( ) ) || VmState.PENDING.equals( v.getRuntimeState( ) ) ) {
                 v.setState( VmState.STOPPING, Reason.USER_STOPPED );
               }
             }
@@ -477,7 +477,7 @@ public class VmControl {
         return reply;
       } else if ( !"windows".equals( v.getPlatform( ) ) ) {
         throw new EucalyptusCloudException( "Failed to bundle requested vm because the platform is not 'windows': " + request.getInstanceId( ) );
-      } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
+      } else if ( !VmState.RUNNING.equals( v.getRuntimeState( ) ) ) {
         throw new EucalyptusCloudException( "Failed to bundle requested vm because it is not currently 'running': " + request.getInstanceId( ) );
       } else if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
         BundleInstanceChecker.check( request );
@@ -515,7 +515,7 @@ public class VmControl {
       final Context ctx = Contexts.lookup( );
       Cluster cluster = null;
       final VmInstance v = VmInstances.getInstance( ).lookup( request.getInstanceId( ) );
-      if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
+      if ( !VmState.RUNNING.equals( v.getRuntimeState( ) ) ) {
         throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
       }
       if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, request.getInstanceId( ), v.getOwner( ) ) ) {

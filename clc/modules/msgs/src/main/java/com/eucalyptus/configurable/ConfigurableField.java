@@ -6,13 +6,19 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 
-@Target({ ElementType.TYPE, ElementType.FIELD })
-@Retention(RetentionPolicy.RUNTIME)
+@Target( { ElementType.TYPE, ElementType.FIELD } )
+@Retention( RetentionPolicy.RUNTIME )
 public @interface ConfigurableField {
-  String description() default "None available.";
-  String initial() default "";
-  boolean readonly() default true;
-  String displayName() default "None";
-  ConfigurableFieldType type() default ConfigurableFieldType.KEYVALUE;
-  Class<? extends PropertyChangeListener> changeListener() default NoopEventListener.class;
+  String description( ) default "None available.";
+  
+  String initial( ) default "";
+  
+  boolean readonly( ) default true;
+  
+  String displayName( ) default "None";
+  
+  ConfigurableFieldType type( ) default ConfigurableFieldType.KEYVALUE;
+  
+  Class<? extends PropertyChangeListener> changeListener( ) default NoopEventListener.class;
+  
 }

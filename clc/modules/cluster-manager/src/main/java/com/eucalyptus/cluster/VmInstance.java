@@ -72,7 +72,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import javax.persistence.Column;
 import javax.persistence.Lob;
@@ -96,16 +95,14 @@ import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.vm.BundleTask;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.reporting.event.InstanceEvent;
-import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.vm.BundleTask;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.SystemState.Reason;
 import com.eucalyptus.vm.VmState;
@@ -114,9 +111,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.Bytes;
 import edu.ucsb.eucalyptus.cloud.Network;
-import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
@@ -163,8 +158,6 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   private final String                                instanceId;
   @Column( name = "vm_instance_uuid" )
   private final String                                instanceUuid;
-  @Transient
-  private final FullName                              owner;
   @Column( name = "vm_cluster_name" )
   private final String                                clusterName;
   @Column( name = "vm_partition_name" )
@@ -182,9 +175,11 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   private Long                                        blockBytes;
   @Column( name = "vm_network_bytes" )
   private Long                                        networkBytes;
-  @Column( name = "vm_ssh_key_pair" )
+  @Transient
+//  @Column( name = "vm_ssh_key_pair" )
   private SshKeyPair                                  sshKeyPair;
-  @Column( name = "vm_type" )
+  @Transient
+//  @Column( name = "vm_type" )
   private final VmType                                vmType;
   
   @Transient
@@ -200,7 +195,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   @Transient
   private final NetworkConfigType                     networkConfig       = new NetworkConfigType( );
   @Transient
-  private final AtomicMarkableReference<VmState>      state               = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
+  private final AtomicMarkableReference<VmState>      runtimeState               = new AtomicMarkableReference<VmState>( VmState.PENDING, false );
   
   public VmInstance( final UserFullName owner,
                      final String instanceId, final String instanceUuid,
@@ -211,6 +206,8 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
                      final String platform,
                      final List<Network> networks, final String networkIndex ) {
     super( owner, instanceId );
+    this.stopWatch.start( );
+    this.updateWatch.start( );
     this.launchTime = new Date( );
     this.blockBytes = 0l;
     this.networkBytes = 0l;
@@ -218,7 +215,6 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     this.launchIndex = launchIndex;
     this.instanceUuid = instanceUuid;
     this.instanceId = instanceId;
-    this.owner = owner;
     this.clusterName = placement;
     this.vbr = vbr;
     String p = null;
@@ -241,8 +237,6 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     this.networkConfig.setIpAddress( DEFAULT_IP );
     this.networkConfig.setIgnoredPublicIp( DEFAULT_IP );
     this.networkConfig.setNetworkIndex( Integer.parseInt( networkIndex ) );
-    this.stopWatch.start( );
-    this.updateWatch.start( );
     this.updateDns( );
     this.store( );
   }
@@ -256,7 +250,6 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     this.blockBytes = null;
     this.networkBytes = null;
     this.reservationId = null;
-    this.owner = null;
     this.clusterName = null;
     this.vbr = null;
     this.partitionName = null;
@@ -274,7 +267,6 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
     this.blockBytes = null;
     this.networkBytes = null;
     this.reservationId = null;
-    this.owner = null;
     this.clusterName = null;
     this.vbr = null;
     this.partitionName = null;
@@ -294,7 +286,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   
   public void updateNetworkIndex( Integer newIndex ) {
     if ( this.getNetworkConfig( ).getNetworkIndex( ) > 0 && newIndex > 0
-         && ( VmState.RUNNING.equals( this.getState( ) ) || VmState.PENDING.equals( this.getState( ) ) ) ) {
+         && ( VmState.RUNNING.equals( this.getRuntimeState( ) ) || VmState.PENDING.equals( this.getRuntimeState( ) ) ) ) {
       this.getNetworkConfig( ).setNetworkIndex( newIndex );
     }
   }
@@ -327,21 +319,21 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   }
   
   public boolean clearPending( ) {
-    if ( this.state.isMarked( ) && this.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
-      this.state.set( this.getState( ), false );
+    if ( this.runtimeState.isMarked( ) && this.getRuntimeState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
+      this.runtimeState.set( this.getRuntimeState( ), false );
       VmInstances.cleanUp( this );
       return true;
     } else {
-      this.state.set( this.getState( ), false );
+      this.runtimeState.set( this.getRuntimeState( ), false );
       return false;
     }
   }
   
-  public VmState getState( ) {
-    return this.state.getReference( );
+  public VmState getRuntimeState( ) {
+    return this.runtimeState.getReference( );
   }
   
-  public void setState( final VmState state ) {
+  public void setRuntimeState( final VmState state ) {
     this.setState( state, SystemState.Reason.NORMAL );
   }
   
@@ -369,7 +361,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
       this.updateWatch.unsplit( );
     }
     this.resetStopWatch( );
-    VmState oldState = this.state.getReference( );
+    VmState oldState = this.runtimeState.getReference( );
     if ( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && Reason.USER_TERMINATED.equals( reason ) ) {
       VmInstances.cleanUp( this );
       if ( !this.reasonDetails.contains( SEND_USER_TERMINATE ) ) {
@@ -384,49 +376,49 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
       VmInstances.getInstance( ).deregister( this.getName( ) );
       try {
         Transactions.delete( this );
-      } catch ( ExecutionException ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
-    } else if ( !this.getState( ).equals( newState ) ) {
+    } else if ( !this.getRuntimeState( ).equals( newState ) ) {
       if ( Reason.APPEND.equals( reason ) ) {
         reason = this.reason;
       }
       this.addReasonDetail( extra );
-      LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getState( ), newState ) );
+      LOG.info( String.format( "%s state change: %s -> %s", this.getInstanceId( ), this.getRuntimeState( ), newState ) );
       this.reason = reason;
-      if ( this.state.isMarked( ) && VmState.PENDING.equals( this.getState( ) ) ) {
+      if ( this.runtimeState.isMarked( ) && VmState.PENDING.equals( this.getRuntimeState( ) ) ) {
         if ( VmState.SHUTTING_DOWN.equals( newState ) || VmState.PENDING.equals( newState ) ) {
-          this.state.set( newState, true );
+          this.runtimeState.set( newState, true );
         } else {
-          this.state.set( newState, false );
+          this.runtimeState.set( newState, false );
         }
-      } else if ( this.state.isMarked( ) && VmState.SHUTTING_DOWN.equals( this.getState( ) ) ) {
-        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
-      } else if ( !this.state.isMarked( ) ) {
+      } else if ( this.runtimeState.isMarked( ) && VmState.SHUTTING_DOWN.equals( this.getRuntimeState( ) ) ) {
+        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getRuntimeState( ) );
+      } else if ( !this.runtimeState.isMarked( ) ) {
         if ( oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) && newState.ordinal( ) > VmState.RUNNING.ordinal( ) ) {
-          this.state.set( newState, false );
+          this.runtimeState.set( newState, false );
           VmInstances.cleanUp( this );
         } else if ( VmState.PENDING.equals( oldState ) && VmState.RUNNING.equals( newState ) ) {
-          this.state.set( newState, false );
+          this.runtimeState.set( newState, false );
         } else if ( VmState.TERMINATED.equals( newState ) && oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) {
-          this.state.set( newState, false );
+          this.runtimeState.set( newState, false );
           VmInstances.getInstance( ).disable( this.getName( ) );
           VmInstances.cleanUp( this );
         } else if ( VmState.TERMINATED.equals( newState ) && oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) {
-          this.state.set( newState, false );
+          this.runtimeState.set( newState, false );
           VmInstances.getInstance( ).disable( this.getName( ) );
         } else if ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) && newState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) {
-          this.state.set( oldState, false );
+          this.runtimeState.set( oldState, false );
           VmInstances.cleanUp( this );
         } else if ( newState.ordinal( ) > oldState.ordinal( ) ) {
-          this.state.set( newState, false );
+          this.runtimeState.set( newState, false );
         }
         this.store( );
       } else {
-        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getState( ) );
+        LOG.debug( "Ignoring events for state transition because the instance is marked as pending: " + oldState + " to " + this.getRuntimeState( ) );
       }
-      if ( !this.getState( ).equals( oldState ) ) {
-        EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.owner, this.state.getReference( ).name( ), this.launchTime );
+      if ( !this.getRuntimeState( ).equals( oldState ) ) {
+        EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.instanceId, this.getOwner( ), this.runtimeState.getReference( ).name( ), this.launchTime );
       }
     }
   }
@@ -434,8 +426,9 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
   private void store( ) {
     try {
     	//TODO: GRZE!!!! 1111oneoneone1111111oneoneone
+      UserFullName ufn = ( UserFullName ) this.getOwner( );
       ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getInstanceUuid( ), this.getDisplayName( ), this.vmType.getName( ),
-                                                                    this.getOwner( ).getNamespace( ), null, this.getOwner( ).getName( ), null,
+                                                                    ufn.getUserId( ), ufn.getUserName( ), ufn.getAccountNumber( ),ufn.getAccountNumber( ), 
                                                                     this.clusterName, this.partitionName, this.networkBytes, this.blockBytes ) );
     } catch ( EventFailedException ex ) {
       LOG.error( ex, ex );
@@ -449,7 +442,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
           t.setNetworkBytes( VmInstance.this.getNetworkBytes( ) );
         }
       } );
-    } catch ( ExecutionException ex ) {
+    } catch ( Exception ex ) {
       LOG.error( ex, ex );
     }
   }
@@ -666,13 +659,13 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
       runningInstance.setStateCode( Integer.toString( VmState.TERMINATED.getCode( ) ) );
       runningInstance.setStateName( VmState.TERMINATED.getName( ) );
     } else {
-      runningInstance.setStateCode( Integer.toString( this.state.getReference( ).getCode( ) ) );
-      runningInstance.setStateName( this.state.getReference( ).getName( ) );
+      runningInstance.setStateCode( Integer.toString( this.runtimeState.getReference( ).getCode( ) ) );
+      runningInstance.setStateName( this.runtimeState.getReference( ).getName( ) );
     }
     runningInstance.setPlatform( this.getPlatform( ) );
     
-    runningInstance.setStateCode( Integer.toString( this.state.getReference( ).getCode( ) ) );
-    runningInstance.setStateName( this.state.getReference( ).getName( ) );
+    runningInstance.setStateCode( Integer.toString( this.runtimeState.getReference( ).getCode( ) ) );
+    runningInstance.setStateName( this.runtimeState.getReference( ).getName( ) );
     runningInstance.setInstanceId( this.instanceId );
 //ASAP:FIXME:GRZE: restore.
     runningInstance.setProductCodes( new ArrayList<String>( ) );
@@ -947,7 +940,7 @@ public class VmInstance extends UserMetadata<VmState> implements HasName<VmInsta
                  .format(
                           "VmInstance [instanceId=%s, keyInfo=%s, launchIndex=%s, launchTime=%s, networkConfig=%s, networks=%s, ownerId=%s, placement=%s, privateNetwork=%s, reason=%s, reservationId=%s, state=%s, stopWatch=%s, userData=%s, vmTypeInfo=%s, volumes=%s]",
                           this.instanceId, this.sshKeyPair, this.launchIndex, this.launchTime, this.networkConfig, this.networks, this.getOwner( ),
-                          this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.state, this.stopWatch, this.userData, this.vmType,
+                          this.clusterName, this.privateNetwork, this.reason, this.reservationId, this.runtimeState, this.stopWatch, this.userData, this.vmType,
                           this.transientVolumes );
   }
   
