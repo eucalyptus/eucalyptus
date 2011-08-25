@@ -68,6 +68,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
@@ -93,12 +94,14 @@ import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 public class Entities {
-  
+  private static ConcurrentMap<String, String>                   txLog              = new MapMaker( ).softKeys( ).softKeys( ).makeMap( );
   private static Logger                                          LOG                = Logger.getLogger( Entities.class );
+  private static ThreadLocal<String>                             txRootThreadLocal  = new ThreadLocal<String>( );
   private static ThreadLocal<ConcurrentMap<String, CascadingTx>> txStateThreadLocal = new ThreadLocal<ConcurrentMap<String, CascadingTx>>( ) {
                                                                                       
                                                                                       @Override
@@ -138,7 +141,6 @@ public class Entities {
     } else if ( tx.isActive( ) ) {
       return true;
     } else {
-      txStateThreadLocal.get( ).remove( ctx );
       return false;
     }
   }
@@ -151,14 +153,37 @@ public class Entities {
     }
   }
   
-  public static void removeTransaction( String uuid ) {
-    txStateThreadLocal.get( ).remove( uuid );
+  public static void removeTransaction( CascadingTx tx ) {
+    String txId = makeTxRootName( tx );
+    txLog.remove( txStateThreadLocal.toString( ) + tx.getRecord( ).getPersistenceContext( ) );
+    txStateThreadLocal.get( ).remove( tx.getRecord( ).getPersistenceContext( ) );
+    if ( txId.equals( txStateThreadLocal.get( ) ) ) {
+      for ( Entry<String, CascadingTx> e : txStateThreadLocal.get( ).entrySet( ) ) {
+        LOG.error( "Found stranded transaction: " + e.getKey( ) + " started at: " + e.getValue( ).getRecord( ).getStack( ) );
+        try {
+          e.getValue( ).rollback( );
+        } catch ( Exception ex ) {
+          LOG.trace( ex , ex );
+        }
+      }
+      txStateThreadLocal.get( ).clear( );
+      txStateThreadLocal.remove( );
+    }
+  }
+
+  private static String makeTxRootName( CascadingTx tx ) {
+    return txStateThreadLocal.toString( ) + tx.getRecord( ).getPersistenceContext( );
   }
   
   private static CascadingTx createTransaction( final Object obj ) throws RecoverablePersistenceException, RuntimeException {
     final String ctx = lookatPersistenceContext( obj );
     final CascadingTx ret = new CascadingTx( ctx );
     ret.begin( );
+    if ( txRootThreadLocal.get( ) == null ) {
+      String txId = makeTxRootName( ret );
+      LOG.trace( "Creating root entry for transaction tree: " + txId + " at: \n" + Threads.currentStackString( ) );
+      txRootThreadLocal.set( txId );
+    }
     txStateThreadLocal.get( ).put( ctx, ret );
     return ret;
   }
@@ -446,10 +471,8 @@ public class Entities {
    * Private for a reason.
    */
   private static class CascadingTx implements EntityTransaction {
-    final TxRecord                               record;
-    private final TxState                        txState;
-    private final Map<String, StackTraceElement> startStes = Maps.newHashMap( );
-    private final Map<String, StackTraceElement> endStes   = Maps.newHashMap( );
+    private final TxRecord record;
+    private final TxState  txState;
     
     /**
      * Private for a reason.
@@ -462,7 +485,6 @@ public class Entities {
     CascadingTx( final String ctx ) throws RecoverablePersistenceException {
       final StackTraceElement ste = Threads.currentStackFrame( 4 );
       final String uuid = UUID.randomUUID( ).toString( );
-      this.startStes.put( uuid, ste );
       this.record = new TxRecord( ctx, uuid, ste );
       try {
         this.txState = new TxState( ctx );
@@ -602,7 +624,7 @@ public class Entities {
       };
     }
     
-    private TxRecord getRecord( ) {
+    TxRecord getRecord( ) {
       return this.record;
     }
     
@@ -755,11 +777,13 @@ public class Entities {
     private final String            uuid;
     private final Long              startTime;
     private final StackTraceElement ste;
+    private final String            stack;
     
     TxRecord( final String persistenceContext, final String uuid, final StackTraceElement ste ) {
       this.persistenceContext = persistenceContext;
       this.uuid = uuid;
       this.ste = ste;
+      this.stack = Threads.currentStackString( );
       this.startTime = System.currentTimeMillis( );
     }
     
@@ -777,6 +801,10 @@ public class Entities {
     
     public StackTraceElement getSte( ) {
       return this.ste;
+    }
+    
+    String getStack( ) {
+      return this.stack;
     }
     
   }
