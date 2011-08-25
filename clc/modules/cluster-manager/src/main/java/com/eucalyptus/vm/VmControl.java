@@ -203,7 +203,7 @@ public class VmControl {
               db.commit( );
               return true;
             } catch ( final NoSuchElementException e ) {
-              db.commit( );
+              db.rollback( );
               return false;
             }
           } catch ( AuthException ex ) {
