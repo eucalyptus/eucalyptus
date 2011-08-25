@@ -303,18 +303,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     } 
   }
   
-  private Integer attemptNetworkTagging( ) throws NotEnoughResourcesException {
-    for ( Integer i : Numbers.shuffled( NetworkGroups.networkTagInterval( ) ) ) {
-      try {
-        Entities.uniqueResult( ExtantNetwork.named( i ) );
-        continue;
-      } catch ( Exception ex ) {
-        return i;
-      }
-    }
-    throw new NotEnoughResourcesException( "Failed to allocate network tag for network: " + this.getFullName( ) + ": no network tags are free." );
-  }
-  
   ExtantNetwork getExtantNetwork( ) {
     return this.extantNetwork;
   }

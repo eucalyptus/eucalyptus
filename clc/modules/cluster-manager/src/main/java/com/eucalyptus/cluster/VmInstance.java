@@ -186,7 +186,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   @PreRemove
   void cleanUp( ) {
-    this.networkGroups.clear( );
     try {
       if ( this.networkIndex != null ) {
         this.networkIndex.release( );
