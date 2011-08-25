@@ -93,6 +93,10 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
+import org.hibernate.criterion.Restrictions;
+import com.eucalyptus.address.Address;
+import com.eucalyptus.address.Addresses;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.UserMetadata;
@@ -111,8 +115,11 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.Emis.BootableSet;
+import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
+import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.Logs;
@@ -124,6 +131,7 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.vm.BundleTask;
 import com.eucalyptus.vm.VmState;
 import com.eucalyptus.vm.VmType;
+import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
@@ -175,6 +183,125 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   void cleanUp( ) {
     this.networkGroups.clear( );
+  }
+  
+  public enum RestoreAllocation implements Predicate<VmInfo> {
+    INSTANCE;
+    
+    private static Function<String, NetworkGroup> transformNetworkNames( final UserFullName userFullName ) {
+      return new Function<String, NetworkGroup>( ) {
+        
+        @Override
+        public NetworkGroup apply( final String arg0 ) {
+          final NetworkGroup result = ( NetworkGroup ) Entities.createCriteria( NetworkGroup.class ).setReadOnly( true )
+                                                               .add( Restrictions.like( "naturalId", arg0.replace( userFullName.getAccountNumber( ) + "-", "" ) ) )
+                                                               .uniqueResult( );
+          return result;
+        }
+      };
+    }
+    
+    @Override
+    public boolean apply( final VmInfo input ) {
+      final EntityTransaction db = Entities.get( VmInstance.class );
+      try {
+        final VmType vmType = VmTypes.getVmType( input.getInstanceType( ).getName( ) );
+        final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) );
+        Partition partition;
+        try {
+          partition = Partitions.lookupByName( input.getPlacement( ) );
+        } catch ( final Exception ex2 ) {
+          partition = Partitions.lookupByName( "default" );
+        }
+        @SuppressWarnings( "deprecation" )
+        final BootableSet bootSet = Emis.newBootableSet( vmType, partition, input.getImageId( ), input.getKernelId( ), input.getRamdiskId( ) );
+        
+        int launchIndex;
+        try {
+          launchIndex = Integer.parseInt( input.getLaunchIndex( ) );
+        } catch ( final Exception ex1 ) {
+          launchIndex = 1;
+        }
+        
+        SshKeyPair keyPair = null;
+        try {
+          keyPair = KeyPairs.lookup( userFullName, input.getKeyValue( ) );
+        } catch ( final Exception ex ) {
+          keyPair = KeyPairs.noKey( );
+        }
+        
+        byte[] userData = null;
+        try {
+          userData = Base64.decode( input.getUserData( ) );
+        } catch ( final Exception ex ) {
+          userData = new byte[0];
+        }
+        
+        List<NetworkGroup> networks = null;
+        try {
+          networks = Lists.transform( input.getGroupNames( ), transformNetworkNames( userFullName ) );
+        } catch ( final Exception ex ) {
+          LOG.error( ex, ex );
+        }
+        
+        SetReference<PrivateNetworkIndex, VmInstance> index = null;
+        ExtantNetwork exNet;
+        final NetworkGroup network = ( !networks.isEmpty( )
+          ? networks.get( 0 )
+          : null );
+        if ( network != null ) {
+          if ( !network.hasExtantNetwork( ) ) {
+            exNet = network.reclaim( input.getNetParams( ).getVlan( ) );
+          } else {
+            exNet = network.extantNetwork( );
+            if ( !exNet.getTag( ).equals( input.getNetParams( ).getVlan( ) ) ) {
+              exNet = null;
+            } else {
+              index = exNet.reclaimNetworkIndex( input.getNetParams( ).getNetworkIndex( ) );
+            }
+          }
+        }
+        
+        final VmInstance vmInst = new VmInstance.Builder( ).owner( userFullName )
+                                                           .withIds( input.getInstanceId( ), input.getReservationId( ) )
+                                                           .bootRecord( bootSet,
+                                                                        userData,
+                                                                        keyPair,
+                                                                        vmType )
+                                                           .placement( partition, partition.getName( ) )
+                                                           .networking( networks, index )
+                                                           .build( launchIndex );
+        
+        vmInst.setNaturalId( input.getUuid( ) );
+        Address addr;
+        try {
+          addr = Addresses.getInstance( ).lookup( input.getNetParams( ).getIgnoredPublicIp( ) );
+          if ( addr.isAssigned( ) &&
+               addr.getInstanceAddress( ).equals( input.getNetParams( ).getIpAddress( ) ) &&
+               addr.getInstanceId( ).equals( input.getInstanceId( ) ) ) {
+            vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+          } else if ( !addr.isAssigned( ) && addr.isAllocated( ) && ( addr.isSystemOwned( ) || addr.getOwner( ).equals( userFullName ) ) ) {
+            vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+          } else {
+            vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIpAddress( ) );
+          }
+        } catch ( final Exception ex ) {
+          LOG.error( ex );
+        }
+        Entities.persist( vmInst );
+        db.commit( );
+        return true;
+      } catch ( final Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        db.rollback( );
+        return false;
+      }
+      //TODO:GRZE: this is the case in restore where we either need to report the failed instance restore, terminate the instance, or handle partial reporting of the instance info.
+//      } catch ( NoSuchElementException e ) {
+//        ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
+//        AsyncRequests.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
+    }
+    
   }
   
   public enum CreateAllocation implements Function<ResourceToken, VmInstance> {
@@ -284,7 +411,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.privateNetwork = Boolean.FALSE;
     this.usageStats = new VmUsageStats( this );
     this.networkIndex = null;
-    Function<NetworkGroup, NetworkGroup> func = Entities.merge( );
+    final Function<NetworkGroup, NetworkGroup> func = Entities.merge( );
     this.networkGroups.addAll( Collections2.transform( networkRulesGroups, func ) );
     this.runtimeState = new VmRuntimeState( this );
     this.networkConfig = new VmNetworkConfig( this );
@@ -1025,9 +1152,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public boolean isBlockStorage( ) {
     return this.bootRecord.isBlockStorage( );
   }
-
+  
   @Override
-  public void setNaturalId( String naturalId ) {
+  public void setNaturalId( final String naturalId ) {
     super.setNaturalId( naturalId );
   }
 }

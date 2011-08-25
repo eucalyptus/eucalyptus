@@ -78,7 +78,6 @@ import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 
 public class KeyPairs {
