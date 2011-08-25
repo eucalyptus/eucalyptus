@@ -208,7 +208,19 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   public enum VmStateSet implements Predicate<VmInstance> {
     RUN( VmState.PENDING, VmState.RUNNING ),
-    CHANGING( VmState.PENDING, VmState.STOPPING, VmState.SHUTTING_DOWN ),
+    CHANGING( VmState.PENDING, VmState.STOPPING, VmState.SHUTTING_DOWN ) {
+      
+      @Override
+      public boolean apply( VmInstance arg0 ) {
+        return super.apply( arg0 ) || !arg0.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
+          @Override
+          public boolean apply( final AttachedVolume arg0 ) {
+            return !arg0.getStatus( ).endsWith( "ing" );
+          }
+        } );
+      }
+      
+    },
     STOP( VmState.STOPPING, VmState.STOPPED ),
     TERM( VmState.SHUTTING_DOWN, VmState.TERMINATED ),
     NOT_RUNNING( VmState.STOPPING, VmState.STOPPED, VmState.SHUTTING_DOWN, VmState.TERMINATED ),
@@ -222,12 +234,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     
     @Override
     public boolean apply( final VmInstance arg0 ) {
-      return this.states.contains( arg0.getState( ) ) || arg0.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
-        @Override
-        public boolean apply( final AttachedVolume arg0 ) {
-          return !arg0.getStatus( ).endsWith( "ing" );
-        }
-      } );
+      return this.states.contains( arg0.getState( ) );
     }
     
     public boolean contains( final Object o ) {
