@@ -99,7 +99,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 public class Entities {
-  private static ConcurrentMap<String, String>                   txLog              = new MapMaker( ).softKeys( ).softKeys( ).makeMap( );
+  private static ConcurrentMap<String, String>                   txLog              = new MapMaker( ).softKeys( ).softValues( ).makeMap( );
   private static Logger                                          LOG                = Logger.getLogger( Entities.class );
   private static ThreadLocal<String>                             txRootThreadLocal  = new ThreadLocal<String>( );
   private static ThreadLocal<ConcurrentMap<String, CascadingTx>> txStateThreadLocal = new ThreadLocal<ConcurrentMap<String, CascadingTx>>( ) {
