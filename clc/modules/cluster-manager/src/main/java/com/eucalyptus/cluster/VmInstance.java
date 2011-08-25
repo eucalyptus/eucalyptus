@@ -191,7 +191,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     try {
       this.networkIndex.release( ).clear( );
     } catch ( ResourceAllocationException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     }
   }
   
@@ -637,11 +637,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.placement = placement;
     this.privateNetwork = Boolean.FALSE;
     this.usageStats = new VmUsageStats( this );
-    this.networkIndex = networkIndex.set( this );
-    final Function<NetworkGroup, NetworkGroup> func = Entities.merge( );
-    this.networkGroups.addAll( Collections2.transform( networkRulesGroups, func ) );
     this.runtimeState = new VmRuntimeState( this );
     this.networkConfig = new VmNetworkConfig( this );
+    final Function<NetworkGroup, NetworkGroup> func = Entities.merge( );
+    this.networkGroups.addAll( Collections2.transform( networkRulesGroups, func ) );
+    this.networkIndex = networkIndex.set( this );
     this.store( );
   }
   
