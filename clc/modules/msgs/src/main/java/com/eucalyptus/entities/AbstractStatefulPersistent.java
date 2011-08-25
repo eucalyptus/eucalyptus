@@ -130,5 +130,13 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
   public final String getName( ) {
     return this.getDisplayName( );
   }
+
+  private String getStateChangeStack( ) {
+    return this.stateChangeStack;
+  }
+
+  private void setStateChangeStack( String stateChangeStack ) {
+    this.stateChangeStack = stateChangeStack;
+  }
   
 }
