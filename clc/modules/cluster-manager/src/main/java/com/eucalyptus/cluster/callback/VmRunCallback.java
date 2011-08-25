@@ -120,57 +120,57 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
   
   @Override
   public void fire( final VmRunResponseType reply ) {
+    
+    EntityTransaction db = Entities.get( VmInstance.class );
     try {
       token.redeem( );
-    } catch ( final Throwable e ) {
-      this.fireException( e );
-      LOG.debug( e, e );
-      return;
-    }
-    for ( final VmInfo vmInfo : reply.getVms( ) ) {
-      
-      EntityTransaction db = Entities.get( VmInstance.class );
-      try {
+      for ( final VmInfo vmInfo : reply.getVms( ) ) {
         final VmInstance vm = VmInstances.lookup( vmInfo.getInstanceId( ) );
         vm.updateAddresses( vmInfo.getNetParams( ).getIpAddress( ), vmInfo.getNetParams( ).getIgnoredPublicIp( ) );
-        LOG.trace( vm );
-        db.commit( );
-      } catch ( Exception ex ) {
-        Logs.exhaust( ).error( ex, ex );
-        LOG.error( ex );
-        db.rollback( );
       }
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      this.fireException( ex );
     }
   }
   
   @Override
   public void fireException( final Throwable e ) {
-    LOG.debug( "-> Release resource tokens for unused resources." );
-    try {
-      this.token.release( );
-    } catch ( final Exception ex ) {
-      LOG.error( ex.getMessage( ) );
-      Logs.extreme( ).error( ex, ex );
-    }
-    final SetReference<PrivateNetworkIndex, VmInstance> networkIndex = this.token.getNetworkIndex( );
-    try {
-      LOG.debug( "-> Release network index allocation: " + networkIndex.get( ) );
-      networkIndex.clear( );
-    } catch ( final Exception ex ) {
-      LOG.error( ex.getMessage( ) );
-      Logs.extreme( ).error( ex, ex );
-    }
     
-    final Address addr = this.token.getAddress( );
-    LOG.debug( "-> Release addresses from failed vm run allocation: " + addr );
+    EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      
-      addr.release( );
-    } catch ( final Exception ex ) {
-      LOG.error( ex.getMessage( ) );
-      Logs.extreme( ).error( ex, ex );
+      LOG.debug( "-> Release resource tokens for unused resources." );
+      try {
+        this.token.release( );
+      } catch ( final Exception ex ) {
+        LOG.error( ex.getMessage( ) );
+        Logs.extreme( ).error( ex, ex );
+      }
+      final SetReference<PrivateNetworkIndex, VmInstance> networkIndex = this.token.getNetworkIndex( );
+      try {
+        LOG.debug( "-> Release network index allocation: " + networkIndex.get( ) );
+        networkIndex.clear( );
+      } catch ( final Exception ex ) {
+        LOG.error( ex.getMessage( ) );
+        Logs.extreme( ).error( ex, ex );
+      }
+      final Address addr = this.token.getAddress( );
+      LOG.debug( "-> Release addresses from failed vm run allocation: " + addr );
+      try {
+        
+        addr.release( );
+      } catch ( final Exception ex ) {
+        LOG.error( ex.getMessage( ) );
+        Logs.extreme( ).error( ex, ex );
+      }
+      LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ), e );
+      LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.commit( );
     }
-    LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ), e );
-    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( ) ) );
   }
 }
