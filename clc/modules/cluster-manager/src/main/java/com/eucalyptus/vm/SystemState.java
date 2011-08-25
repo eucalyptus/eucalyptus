@@ -65,6 +65,7 @@ package com.eucalyptus.vm;
 
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -113,10 +114,12 @@ import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.RequestFilters;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
@@ -231,28 +234,21 @@ public class SystemState {
   public static ArrayList<ReservationInfoType> handle( final DescribeInstancesType request ) throws Exception {
     final Context ctx = Contexts.lookup( );
     final boolean isAdmin = ctx.hasAdministrativePrivileges( );
+    final boolean isVerbose = request.getInstancesSet( ).remove( "verbose" );
     final ArrayList<String> instancesSet = request.getInstancesSet( );
-    final String action = PolicySpec.requestToAction( request );
-    final User requestUser = ctx.getUser( );
     final Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
-    final EntityTransaction db = Entities.get( VmInstance.class );
     Predicate<VmInstance> privileged = RestrictedTypes.filterPrivileged( );
     for ( final VmInstance v : Iterables.filter( VmInstances.listValues( ), privileged ) ) {
       if ( VmStateSet.DONE.apply( v ) && ( v.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
         final long time = ( System.currentTimeMillis( ) - v.getLastUpdateTimestamp( ).getTime( ) );
         if ( v.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
           v.setState( VmState.TERMINATED, Reason.EXPIRED );
-          continue;
         } else if ( v.getSplitTime( ) > VmInstances.BURY_TIME ) {
           v.setState( VmState.BURIED, Reason.BURIED );
         }
-      }
-      
-      Account instanceAccount = null;
-      try {
-        instanceAccount = Accounts.lookupUserById( v.getOwner( ).getUniqueId( ) ).getAccount( );
-      } catch ( final AuthException e ) {
-        throw new EucalyptusCloudException( e );
+        if ( !isVerbose ) {
+          continue;
+        }
       }
       if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) {
         continue;
