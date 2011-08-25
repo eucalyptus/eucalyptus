@@ -650,7 +650,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.networkConfig = new VmNetworkConfig( this );
     final Function<NetworkGroup, NetworkGroup> func = Entities.merge( );
     this.networkGroups.addAll( Collections2.transform( networkRulesGroups, func ) );
-    this.networkIndex = networkIndex.set( this );
+    this.networkIndex = Entities.merge( networkIndex.set( this ) );
     this.store( );
   }
   
