@@ -481,7 +481,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         try {
           final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, arg0 ) );
           if ( ( vm == null ) || VmStateSet.DONE.apply( vm ) ) {
-            throw new NoSuchElementException( "Failed to lookup vm instance: " + arg0 );
+            throw new NoSuchElementException( "Failed to lookup vm instance: " + arg0 + "\nFound: " + vm );
           }
           db.commit( );
           return vm;
