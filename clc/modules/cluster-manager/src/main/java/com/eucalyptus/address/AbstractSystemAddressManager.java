@@ -107,15 +107,20 @@ public abstract class AbstractSystemAddressManager {
             final VmInstance vm = VmInstances.lookupByInstanceIp( addrInfo.getInstanceIp( ) );
             clearOrphan( addrInfo );
           } catch ( final NoSuchElementException e ) {
-            InetAddress addr = null;
             try {
-              addr = Inet4Address.getByName( addrInfo.getInstanceIp( ) );
-            } catch ( final UnknownHostException e1 ) {
-              LOG.debug( e1, e1 );
-            }
-            if ( ( addr == null ) || !addr.isLoopbackAddress( ) ) {
-              handleOrphan( cluster.getName( ), addrInfo );
-            }
+              final VmInstance vm = VmInstances.lookupByInstanceIp( addrInfo.getInstanceIp( ) );
+              clearOrphan( addrInfo );
+            } catch ( final NoSuchElementException ex ) {
+              InetAddress addr = null;
+              try {
+                addr = Inet4Address.getByName( addrInfo.getInstanceIp( ) );
+              } catch ( final UnknownHostException e1 ) {
+                LOG.debug( e1, e1 );
+              }
+              if ( ( addr == null ) || !addr.isLoopbackAddress( ) ) {
+                handleOrphan( cluster.getName( ), addrInfo );
+              }
+          }
           }
         } else if ( address.isAllocated( ) && Principals.nobodyFullName( ).equals( address.getOwner( ) ) && !address.isPending( ) ) {
           Helper.markAsAllocated( cluster, addrInfo, address );
