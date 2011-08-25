@@ -64,6 +64,7 @@
 package com.eucalyptus.network;
 
 import java.util.HashSet;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -79,10 +80,10 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import org.hibernate.exception.ConstraintViolationException;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.cloud.AccountMetadata;
 import com.eucalyptus.cloud.UserMetadata;
-import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cloud.util.Resource;
 import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
@@ -96,7 +97,6 @@ import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Numbers;
-import com.google.common.collect.Iterables;
 
 @Entity
 @javax.persistence.Entity
@@ -105,20 +105,21 @@ import com.google.common.collect.Iterables;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ExtantNetwork extends UserMetadata<Resource.State> {
   @Transient
-  private static final long        serialVersionUID = 1L;
+  private static final long              serialVersionUID = 1L;
   @Transient
-  private static Logger            LOG              = Logger.getLogger( ExtantNetwork.class );
+  private static Logger                  LOG              = Logger.getLogger( ExtantNetwork.class );
   @Column( name = "metadata_extant_network_tag", unique = true )
-  private Integer                  tag;
+  private Integer                        tag;
   
-  @OneToMany( cascade = { CascadeType.ALL }, orphanRemoval = true, fetch = FetchType.EAGER )
+  @NotFound( action = NotFoundAction.IGNORE )
+  @OneToMany
   @JoinColumn( name = "metadata_extant_network_index_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<PrivateNetworkIndex> indexes          = new HashSet<PrivateNetworkIndex>( );
+  private final Set<PrivateNetworkIndex> indexes          = new HashSet<PrivateNetworkIndex>( );
   
   @OneToOne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private NetworkGroup             networkGroup;
+  private NetworkGroup                   networkGroup;
   
   @SuppressWarnings( "unused" )
   private ExtantNetwork( ) {
@@ -136,15 +137,15 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
     this.networkGroup = networkGroup;
   }
   
-  private ExtantNetwork( NetworkGroup networkGroup ) {
+  private ExtantNetwork( final NetworkGroup networkGroup ) {
     super( networkGroup.getOwner( ), networkGroup.getDisplayName( ) );
   }
   
-  public static ExtantNetwork named( Integer tag ) {
+  public static ExtantNetwork named( final Integer tag ) {
     return new ExtantNetwork( tag );
   }
   
-  public static ExtantNetwork named( NetworkGroup networkGroup ) {
+  public static ExtantNetwork named( final NetworkGroup networkGroup ) {
     return new ExtantNetwork( networkGroup );
   }
   
@@ -152,7 +153,7 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
     return new ExtantNetwork( networkGroup, tag );
   }
   
-  public static ExtantNetwork bogus( NetworkGroup networkGroup ) {
+  public static ExtantNetwork bogus( final NetworkGroup networkGroup ) {
     return new ExtantNetwork( networkGroup, -1 );
   }
   
@@ -164,48 +165,45 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
     this.tag = tag;
   }
   
-  public SetReference<PrivateNetworkIndex, VmInstance> reclaimNetworkIndex( Long idx ) throws TransactionException {
+  public SetReference<PrivateNetworkIndex, VmInstance> reclaimNetworkIndex( final Long idx ) throws TransactionException {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       try {
         return PrivateNetworkIndex.bogus( ).allocate( );
-      } catch ( ResourceAllocationException ex ) {
+      } catch ( final ResourceAllocationException ex ) {
         throw new RuntimeException( "BUG BUG BUG: failed to call PrivateNetworkIndex.allocate() on the .bogus() index." );
       }
     } else if ( !Entities.isPersistent( this ) ) {
       throw new TransientEntityException( this.toString( ) );
     } else {
-      EntityTransaction db = Entities.get( PrivateNetworkIndex.class );
+      final EntityTransaction db = Entities.get( PrivateNetworkIndex.class );
       try {
         try {
-          PrivateNetworkIndex netIdx = Entities.uniqueResult( PrivateNetworkIndex.named( this, idx ) );
+          final PrivateNetworkIndex netIdx = Entities.uniqueResult( PrivateNetworkIndex.named( this, idx ) );
           if ( Resource.State.FREE.equals( netIdx.getState( ) ) ) {
-            SetReference<PrivateNetworkIndex, VmInstance> ref = netIdx.allocate( );
+            final SetReference<PrivateNetworkIndex, VmInstance> ref = netIdx.allocate( );
             db.commit( );
             return ref;
           } else {
             try {
               netIdx.teardown( );
-            } catch ( Exception ex ) {
-              LOG.error( ex , ex );
+            } catch ( final Exception ex ) {
+              LOG.error( ex, ex );
             }
-            SetReference<PrivateNetworkIndex, VmInstance> ref = netIdx.allocate( );
+            final SetReference<PrivateNetworkIndex, VmInstance> ref = netIdx.allocate( );
             db.commit( );
             return ref;
           }
-        } catch ( Exception ex ) {
-          try {
-            PrivateNetworkIndex netIdx = PrivateNetworkIndex.create( this, idx );
-            Entities.persist( netIdx );
-            SetReference<PrivateNetworkIndex, VmInstance> ref = netIdx.allocate( );
-            db.commit( );
-            return ref;
-          } catch ( Exception ex1 ) {
-            throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName, ex1 );
-          }
+        } catch ( final Exception ex ) {
+          final PrivateNetworkIndex netIdx = PrivateNetworkIndex.create( this, idx );
+          Entities.persist( netIdx );
+          final SetReference<PrivateNetworkIndex, VmInstance> ref = netIdx.allocate( );
+          db.commit( );
+          return ref;
         }
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         Logs.exhaust( ).error( ex, ex );
         db.rollback( );
+        throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName, ex1 );
       }
     }
   }
@@ -214,33 +212,33 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       try {
         return PrivateNetworkIndex.bogus( ).allocate( );
-      } catch ( ResourceAllocationException ex ) {
+      } catch ( final ResourceAllocationException ex ) {
         throw new RuntimeException( "BUG BUG BUG: failed to call PrivateNetworkIndex.allocate() on the .bogus() index." );
       }
     } else if ( !Entities.isPersistent( this ) ) {
       throw new TransientEntityException( this.toString( ) );
     } else {
-      SetReference<PrivateNetworkIndex, VmInstance> ref = null;
+      EntityTransaction db = Entities.get( PrivateNetworkIndex.class );
       try {
-        PrivateNetworkIndex netIdx = null;
-        for ( Long i : Numbers.shuffled( NetworkGroups.networkIndexInterval( ) ) ) {
+        for ( final Long i : Numbers.shuffled( NetworkGroups.networkIndexInterval( ) ) ) {
           try {
             Entities.uniqueResult( PrivateNetworkIndex.named( this, i ) );
             continue;
-          } catch ( Exception ex ) {
+          } catch ( final Exception ex ) {
             try {
-              netIdx = PrivateNetworkIndex.create( this, i );
-              Entities.persist( netIdx );
-              return netIdx.allocate( );
-            } catch ( Exception ex1 ) {
+              PrivateNetworkIndex netIdx = Entities.persist( PrivateNetworkIndex.create( this, i ) );
+              SetReference<PrivateNetworkIndex, VmInstance> ref = netIdx.allocate( );
+              db.commit( );
+              return ref;
+            } catch ( final Exception ex1 ) {
               continue;
             }
           }
         }
-        throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName );
-      } catch ( TransactionException ex ) {
-        throw ex;
+        throw new NoSuchElementException( );
       } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        db.rollback( );
         throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName, ex );
       }
     }
@@ -250,7 +248,7 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
     return this.networkGroup;
   }
   
-  void setNetworkGroup( NetworkGroup networkGroup ) {
+  void setNetworkGroup( final NetworkGroup networkGroup ) {
     this.networkGroup = networkGroup;
   }
   
@@ -265,17 +263,17 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
   }
   
   @Override
-  public boolean equals( Object obj ) {
+  public boolean equals( final Object obj ) {
     if ( this == obj ) {
       return true;
     }
     if ( !super.equals( obj ) ) {
       return false;
     }
-    if ( getClass( ) != obj.getClass( ) ) {
+    if ( this.getClass( ) != obj.getClass( ) ) {
       return false;
     }
-    ExtantNetwork other = ( ExtantNetwork ) obj;
+    final ExtantNetwork other = ( ExtantNetwork ) obj;
     if ( this.tag == null ) {
       if ( other.tag != null ) {
         return false;
@@ -287,7 +285,7 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
   }
   
   @Override
-  public int compareTo( AccountMetadata that ) {
+  public int compareTo( final AccountMetadata that ) {
     if ( that instanceof ExtantNetwork ) {
       return this.getTag( ).compareTo( ( ( ExtantNetwork ) that ).getTag( ) );
     } else {
@@ -295,8 +293,9 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
     }
   }
   
+  @Override
   public String toString( ) {
-    StringBuilder builder = new StringBuilder( );
+    final StringBuilder builder = new StringBuilder( );
     builder.append( "ExtantNetwork:" );
     if ( this.networkGroup != null ) builder.append( this.networkGroup.getDisplayName( ) ).append( ":" );
     if ( this.tag != null ) builder.append( "tag=" ).append( this.tag ).append( ":" );
