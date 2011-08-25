@@ -221,10 +221,6 @@ public class SystemState {
     return ancestorIds;
   }
   
-  private static void restoreInstance( final String cluster, final VmInfo runVm ) {
-
-  }
-  
   public static ArrayList<ReservationInfoType> handle( final DescribeInstancesType request ) throws Exception {
     final Context ctx = Contexts.lookup( );
     final boolean isAdmin = ctx.hasAdministrativePrivileges( );
