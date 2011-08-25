@@ -205,7 +205,7 @@ public class RestrictedTypes {
   public static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> lookupFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     Context ctx = Contexts.lookup( );
     Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
-    LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + lookupFunction + " typed as " + Classes.genericsToClasses( lookupFunction ) );
+    LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + lookupFunction.getClass() + " typed as " + Classes.genericsToClasses( lookupFunction ) );
     List<Class<?>> lookupTypes = Classes.genericsToClasses( lookupFunction );
     if ( lookupTypes.isEmpty( ) ) {
       throw new IllegalArgumentException( "Failed to find required generic type for lookup " + lookupFunction.getClass( )

@@ -184,22 +184,17 @@ public class VmControl {
         public boolean apply( final String instanceId ) {
           EntityTransaction db = Entities.get( VmInstance.class );
           try {
+            VmInstance vm = null;
             try {
               try {
-                VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.Lookup.INSTANCE );
-                if ( VmStateSet.RUN.contains( vm.getRuntimeState( ) ) ) {
-                  final int oldCode = vm.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
-                  final String oldState = vm.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
-                  vm.setState( VmState.SHUTTING_DOWN, Reason.USER_TERMINATED );
-                  results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
-                }
+                vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.Lookup.INSTANCE );
               } catch ( NoSuchElementException ex ) {
-                VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.Lookup.TERMINATED );
-                final int oldCode = vm.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
-                final String oldState = vm.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
-                VmInstance.Transitions.DEREGISTER.apply( vm );
-                results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
+                vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.Lookup.TERMINATED );
               }
+              final int oldCode = vm.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
+              final String oldState = vm.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
+              VmInstance.Transitions.DEREGISTER.apply( vm );
+              results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
               db.commit( );
               return true;
             } catch ( final NoSuchElementException e ) {
