@@ -91,6 +91,7 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.LogUtil;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -171,9 +172,11 @@ public class Entities {
       return createTransaction( obj );
     }
   }
+  
   public static <T> List<T> query( final T example ) {
     return query( example, false );
-  }  
+  }
+  
   @SuppressWarnings( { "unchecked", "cast" } )
   public static <T> List<T> query( final T example, boolean readOnly ) {
     final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
@@ -339,8 +342,8 @@ public class Entities {
    * 
    * @throws ConstraintViolationException
    * @param newObject
-   * @throws NoSuchElementException 
-   * @throws TransactionException 
+   * @throws NoSuchElementException
+   * @throws TransactionException
    */
   public static <T> T merge( final T newObject ) throws ConstraintViolationException {
     if ( !isPersistent( newObject ) ) {
@@ -363,15 +366,25 @@ public class Entities {
     }
   }
   
+  public static <T> Function<T, T> merge( ) {
+    return new Function<T, T>( ) {
+      
+      @Override
+      public T apply( T arg0 ) {
+        return Entities.merge( arg0 );
+      }
+    };
+  }
+  
   public static <T> void refresh( final T newObject ) throws ConstraintViolationException {
     try {
-      getTransaction( newObject ).getTxState( ).getEntityManager( ).refresh( newObject, (LockModeType) null );
+      getTransaction( newObject ).getTxState( ).getEntityManager( ).refresh( newObject, ( LockModeType ) null );
     } catch ( final RuntimeException ex ) {
       PersistenceExceptions.throwFiltered( ex );
       throw ex;
     }
   }
-
+  
   public static <T> void refresh( final T newObject, final LockModeType lockMode ) throws ConstraintViolationException {
     try {
       getTransaction( newObject ).getTxState( ).getEntityManager( ).refresh( newObject, lockMode );

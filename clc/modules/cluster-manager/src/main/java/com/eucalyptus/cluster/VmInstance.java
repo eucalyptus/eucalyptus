@@ -65,6 +65,7 @@
 package com.eucalyptus.cluster;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -290,7 +291,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.privateNetwork = Boolean.FALSE;
     this.usageStats = new VmUsageStats( this );
     this.networkIndex = networkIndex.get( );
-    this.networkGroups.addAll( networkRulesGroups );
+    Function<NetworkGroup, NetworkGroup> func = Entities.merge( );
+    this.networkGroups.addAll( Collections2.transform( networkRulesGroups, func ) );
     this.runtimeState = new VmRuntimeState( this );
     this.networkConfig = new VmNetworkConfig( this );
     this.store( );
