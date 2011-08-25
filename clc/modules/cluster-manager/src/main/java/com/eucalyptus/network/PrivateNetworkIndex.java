@@ -77,7 +77,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
-import com.eucalyptus.cloud.util.PersistentResource;
+import com.eucalyptus.cloud.util.PersistentReference;
 import com.eucalyptus.cloud.util.Resource;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.VmInstance;
@@ -88,7 +88,7 @@ import com.google.common.base.Predicate;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_indices" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex, VmInstance> {
+public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex, VmInstance> {
   @Transient
   private static final PrivateNetworkIndex bogusIndex = new PrivateNetworkIndex( -1, -1l );
   @Column( name = "metadata_network_index" )
@@ -190,12 +190,25 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   }
   
   @Override
-  protected void setReferer( VmInstance referer ) {
+  protected void setReference( VmInstance referer ) {
     this.setInstance( referer );
+    if ( referer != null ) {
+      referer.setNetworkIndex( this );
+    }
   }
   
   @Override
-  protected VmInstance getReferer( ) {
+  protected VmInstance clearReference( ) {
+    final VmInstance vm = this.getInstance( );
+    this.setInstance( null );
+    if( vm != null ) {
+      vm.setNetworkIndex( null );
+    }
+    return vm;
+  }
+
+  @Override
+  protected VmInstance getReference( ) {
     return this.getInstance( );
   }
   

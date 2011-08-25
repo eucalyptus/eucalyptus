@@ -165,7 +165,7 @@ public class Entities {
       txStateThreadLocal.remove( );
     }
   }
-
+  
   private static void cleanStrandedTx( CascadingTx txValue ) {
     LOG.error( "Found stranded transaction: " + txValue.getRecord( ).getPersistenceContext( ) + " started at: " + txValue.getRecord( ).getStack( ) );
     try {
@@ -506,7 +506,9 @@ public class Entities {
      */
     @Override
     public boolean getRollbackOnly( ) throws RecoverablePersistenceException {
-      return this.txState.getRollbackOnly( );
+      return this.txState == null
+        ? false
+        : this.txState.getRollbackOnly( );
     }
     
     /**
@@ -515,7 +517,9 @@ public class Entities {
      */
     @Override
     public void setRollbackOnly( ) throws RecoverablePersistenceException {
-      this.txState.setRollbackOnly( );
+      if ( this.txState != null ) {
+        this.txState.setRollbackOnly( );
+      }
     }
     
     /**
@@ -525,7 +529,9 @@ public class Entities {
      */
     @Override
     public boolean isActive( ) throws RecoverablePersistenceException {
-      return this.txState.isActive( );
+      return this.txState == null
+        ? false
+        : this.txState.isActive( );
     }
     
     /**

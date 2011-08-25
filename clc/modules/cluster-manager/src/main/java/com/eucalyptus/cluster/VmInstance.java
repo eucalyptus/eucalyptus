@@ -174,7 +174,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private final Set<NetworkGroup> networkGroups    = Sets.newHashSet( );
   
   @NotFound( action = NotFoundAction.IGNORE )
-  @OneToOne( fetch = FetchType.EAGER, cascade = { CascadeType.REMOVE, CascadeType.MERGE }, orphanRemoval = true )
+  @OneToOne( fetch = FetchType.EAGER, cascade = { CascadeType.REMOVE }, orphanRemoval = true )
   @JoinColumn( name = "metadata_vm_network_index", nullable = true, insertable = true, updatable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex     networkIndex;
@@ -289,7 +289,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.placement = placement;
     this.privateNetwork = Boolean.FALSE;
     this.usageStats = new VmUsageStats( this );
-    this.networkIndex = networkIndex.get( );
+    this.networkIndex = null;
     Function<NetworkGroup, NetworkGroup> func = Entities.merge( );
     this.networkGroups.addAll( Collections2.transform( networkRulesGroups, func ) );
     this.runtimeState = new VmRuntimeState( this );
@@ -669,6 +669,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public void releaseNetworkIndex( ) {
     try {
       this.networkIndex.release( );
+      
     } catch ( final ResourceAllocationException ex ) {
       LOG.trace( ex, ex );
       LOG.error( ex );
@@ -927,7 +928,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.runtimeState.startBundleTask( VmBundleTask.fromBundleTask( this ).apply( bundleTask ) );
   }
   
-  private void setNetworkIndex( final PrivateNetworkIndex networkIndex ) {
+  public void setNetworkIndex( final PrivateNetworkIndex networkIndex ) {
     this.networkIndex = networkIndex;
   }
   
