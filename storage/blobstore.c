@@ -200,7 +200,7 @@ const char * blobstore_get_last_msg () {
     return _blobstore_last_msg;
 }
 
-static __thread char _blobstore_last_trace [4096] = "";
+static __thread char _blobstore_last_trace [8172] = "";
 const char * blobstore_get_last_trace() {
     return _blobstore_last_trace;
 }
@@ -359,7 +359,7 @@ static int close_and_unlock (int fd)
                     logprintfl (EUCADEBUG2, "{%u} close_and_unlock: fd=%d freed\n", (unsigned int)pthread_self(), fd);
                 } else {
                     assert (l->refs>=0);
-                    pthread_rwlock_unlock (&(l->lock)); // give up the posix lock
+                    pthread_rwlock_unlock (&(l->lock)); // give up the Posix lock
                     logprintfl (EUCADEBUG2, "{%u} close_and_unlock: fd=%d lock has references=%d\n", (unsigned int)pthread_self(), fd, l->refs);
                 }
             } else {
@@ -412,6 +412,7 @@ static int open_and_lock (const char * path,
     long long started = time_usec();
     long long deadline = started + timeout_usec;
 
+    // verify the flags and, based on them,
     // decide what type of lock to use
     if (flags & BLOBSTORE_FLAG_RDONLY) {
         l_type = F_RDLCK; // use shared (read) lock
@@ -433,6 +434,8 @@ static int open_and_lock (const char * path,
     }
 
     // handle intra-process locking, with a pthreads read-write lock
+    // either find in a global linked list 'locks_list' or
+    // allocate and append to it a 'blobstore_filelock' struct
     blobstore_filelock * path_lock = NULL;
     { // critical section
         pthread_mutex_lock (&_blobstore_mutex); // grab the global mutex
@@ -478,18 +481,18 @@ static int open_and_lock (const char * path,
         goto error;
     }
     for (;;) {
-        // first try getting the posix rwlock
+        // first try getting the Posix rwlock
         int ret;
         if (l_type == F_WRLCK) 
             ret = pthread_rwlock_trywrlock (&(path_lock->lock));
         else 
             ret = pthread_rwlock_tryrdlock (&(path_lock->lock));
         if (ret==0) {
-            // posix rwlock succeeded, try the file lock
+            // Posix rwlock succeeded, try the file lock
             errno = 0;
             if (fcntl (fd, F_SETLK, file_lock (l_type, SEEK_SET)) == 0)
                 break; // success!
-            pthread_rwlock_unlock (&(path_lock->lock)); // give up the posix lock
+            pthread_rwlock_unlock (&(path_lock->lock)); // give up the Posix lock
             if (errno != EAGAIN) { // any error other than inability to get the lock
                 PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
                 goto error;
@@ -521,8 +524,16 @@ static int open_and_lock (const char * path,
 
  error:
 
+    // due to aproblem above (inability to open the file or
+    // to acquire Posix locks within the deadline), the 
+    // 'blobstore_filelock' struct will be removed from the 
+    // global linked list 'locks_list', its files closed,
+    // and its memory freed -- but only if this is the last 
+    // thread using it
+
     { // critical section
         pthread_mutex_lock (&_blobstore_mutex); // grab the global lock to protect locks_list traversal
+
         // we must recalculate next_ptr since the element that it points to
         // may have been removed from the LL and freed while we were outside
         // the critical section
@@ -532,8 +543,8 @@ static int open_and_lock (const char * path,
                 break;
             next_ptr = &(l->next); 
         }
-        // next_ptr now points either to LL head or 
-        // to the last non-matching element's next pointer
+        // next_ptr must point at the struct we are looking for,
+        // which must be in the list
         assert (* next_ptr == path_lock);
         
         { // inner critical section 
@@ -1564,8 +1575,11 @@ blockblob * blockblob_open ( blobstore * bs,
     bb->size_bytes = size_bytes;
     set_blockblob_metadata_path (BLOCKBLOB_PATH_BLOCKS, bs, bb->id, bb->blocks_path, sizeof (bb->blocks_path));
 
+    int blobstore_locked = 0;
     if (blobstore_lock(bs, timeout_usec)==-1) { // lock it so we can create blob's file atomically
         goto free; // failed to obtain a lock on the blobstore
+    } else {
+        blobstore_locked = 1;
     }
     int created_directory = ensure_blockblob_metadata_path (bs, bb->id); // TODO: maybe don't create directories needlessly if flags==0?
     if (created_directory==-1) {
@@ -1574,17 +1588,16 @@ blockblob * blockblob_open ( blobstore * bs,
     }
     if (blobstore_unlock(bs)==-1) {
         ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to unlock the blobstore");
-        goto clean;
-    }    
+        goto free;
+    }
+    blobstore_locked = 0;
 
-    int saved_errno = 0;
     int created_blob = 0;
     bb->fd = open_and_lock (bb->blocks_path, flags | BLOBSTORE_FLAG_RDWR, timeout_usec, BLOBSTORE_FILE_PERM); // blobs are always opened with exclusive write access
 
     if (bb->fd != -1) { 
         struct stat sb;
         if (fstat (bb->fd, &sb)==-1) {
-            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
             goto clean;
         }
         
@@ -1593,6 +1606,8 @@ blockblob * blockblob_open ( blobstore * bs,
 
             if (blobstore_lock(bs, timeout_usec)==-1) { // lock it so we can traverse blobstore safely
                 goto clean; // failed to obtain a lock on the blobstore
+            } else {
+                blobstore_locked = 1;
             }
             
             // put existing items in the blobstore into a LL
@@ -1645,13 +1660,15 @@ blockblob * blockblob_open ( blobstore * bs,
                 goto clean;
             }
             if (sig)
-                if (write_blockblob_metadata_path (BLOCKBLOB_PATH_SIG, bs, bb->id, sig))
+                if (write_blockblob_metadata_path (BLOCKBLOB_PATH_SIG, bs, bb->id, sig)) {
                     goto clean; 
+                }
             bb->snapshot_type = BLOBSTORE_SNAPSHOT_NONE; // just created, so not a snapshot
 
             if (blobstore_unlock(bs)==-1) {
                 ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to unlock the blobstore");
             }
+            blobstore_locked = 0;
 
         } else { // blob existed
 
@@ -1713,27 +1730,29 @@ blockblob * blockblob_open ( blobstore * bs,
     }
     goto out;
 
-
  clean:
-
-    saved_errno = _blobstore_errno; // save it because close_and_unlock() or delete_blockblob_files() may reset it
-    if (bb->fd!=-1) {
-        close_and_unlock (bb->fd); 
-    }
-    if (created_directory || created_blob) { // only delete disk state if we created it
-        delete_blockblob_files (bs, bb->id);
-    }
-    if (saved_errno) {
-        _blobstore_errno = saved_errno;
+    {
+        int saved_errno = _blobstore_errno; // save it because close_and_unlock() or delete_blockblob_files() may reset it
+        if (bb->fd!=-1) {
+            close_and_unlock (bb->fd); 
+        }
+        if (created_directory || created_blob) { // only delete disk state if we created it
+            delete_blockblob_files (bs, bb->id);
+        }
+        if (saved_errno) {
+            _blobstore_errno = saved_errno;
+        }
     }
 
  unlock:
-    saved_errno = _blobstore_errno; // save it because 
-    if (blobstore_unlock (bs)==-1) {
-        ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to unlock the blobstore");
-    }
-    if (saved_errno) {
-        _blobstore_errno = saved_errno;
+    {
+        int saved_errno = _blobstore_errno;
+        if (blobstore_locked && blobstore_unlock (bs)==-1) {
+            ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to unlock the blobstore");
+            if (saved_errno) {
+                _blobstore_errno = saved_errno;
+            }
+        }
     }
 
  free:
@@ -1742,10 +1761,11 @@ blockblob * blockblob_open ( blobstore * bs,
         bb = NULL;
 
     }
+
  out:
     logprintfl (EUCADEBUG2, "{%u} blockblob_open: done with blob id=%s ret=%012lx\n", (unsigned int)pthread_self(), id, bb);
     if (bb==NULL) {
-        logprintfl (EUCADEBUG2, "{%u} blockblob_open: errno=%d msg=%s\n", _blobstore_errno, blobstore_get_last_msg());
+        logprintfl (EUCADEBUG2, "{%u} blockblob_open: errno=%d msg=%s\n", (unsigned int)pthread_self(), _blobstore_errno, blobstore_get_last_msg());
     }
     
     free_bbs (bbs);
@@ -2670,7 +2690,7 @@ static int do_clone_stresstest (const char * base, const char * name, blobstore_
     int errors = 0;
     printf ("commencing cloning stress-test...\n");
 
-    blobstore * bs1 = create_teststore (STRESS_BS_SIZE, base, name, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_NONE,  BLOBSTORE_SNAPSHOT_DM);
+    blobstore * bs1 = create_teststore (STRESS_BS_SIZE, base, name, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_DM);
     if (bs1==NULL) { errors++; goto done; }
     blobstore * bs2 = create_teststore (STRESS_BS_SIZE, base, name, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_DM);
     if (bs2==NULL) { 

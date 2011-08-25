@@ -65,81 +65,122 @@ package com.eucalyptus.configurable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
+import com.eucalyptus.util.Logs;
 
 public class StaticPropertyEntry extends AbstractConfigurableProperty {
   static Logger LOG = Logger.getLogger( StaticPropertyEntry.class );
-  private Field         field;
-  public StaticPropertyEntry( Class definingClass, String entrySetName, Field field, String description, String defaultValue, PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias, PropertyChangeListener changeListener ) {
+  private Field field;
+  
+  public StaticPropertyEntry( Class definingClass, String entrySetName, Field field, String description, String defaultValue, PropertyTypeParser typeParser,
+                              Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias, PropertyChangeListener changeListener ) {
     super( definingClass, entrySetName, field, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias, changeListener );
     this.field = field;
   }
+  
+  private String getFieldCanonicalName( ) {
+    return this.getField( ).getDeclaringClass( ).getCanonicalName( ) + "." + this.getFieldName( );
+  }
+  
   public Field getField( ) {
     return this.field;
   }
+  
   @Override
   public String getValue( ) {
-    try {
-      return ""+this.field.get( null );
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-      return super.getDefaultValue();
+    if ( Bootstrap.isFinished( ) ) {
+      try {
+        String dbValue = StaticDatabasePropertyEntry.lookup( this.getFieldCanonicalName( ), this.getQualifiedName( ), this.safeGetFieldValue( ) ).getValue( );
+        Object o = super.getTypeParser( ).parse( dbValue );
+        this.field.set( null, o );
+        return dbValue;
+      } catch ( Exception e ) {
+        LOG.warn( "Failed to get property: " + super.getQualifiedName( ) + " because of " + e.getMessage( ) );
+        Logs.extreme( ).debug( e, e );
+        return super.getDefaultValue( );
+      }
+    } else {
+      return super.getDefaultValue( );
     }
   }
+  
+  private String safeGetFieldValue( ) {
+    try {
+      Object o = this.field.get( null );
+      if ( o == null ) {
+        return super.getDefaultValue( );
+      } else {
+        return o.toString( );
+      }
+    } catch ( Exception ex ) {
+      return super.getDefaultValue( );
+    }
+  }
+  
   @Override
   public String setValue( String s ) {
-    try {
-      Object o = super.getTypeParser( ).parse( s );
-      this.fireChange( s );
-      this.field.set( null, o );
-      LOG.info( "--> Set property value:  " + super.getQualifiedName( ) + " to " + s );
-    } catch ( Throwable t ) {
-      LOG.warn( "Failed to set property: " + super.getQualifiedName( ) + " because of " + t.getMessage( ) );
-      LOG.debug( t, t );
+    if ( Bootstrap.isFinished( ) ) {
+      try {
+        Object o = super.getTypeParser( ).parse( s );
+        this.fireChange( s );
+        StaticDatabasePropertyEntry.update( this.getFieldCanonicalName( ), this.getQualifiedName( ), s );
+        this.field.set( null, o );
+        LOG.info( "--> Set property value:  " + super.getQualifiedName( ) + " to " + s );
+      } catch ( Exception e ) {
+        LOG.warn( "Failed to set property: " + super.getQualifiedName( ) + " because of " + e.getMessage( ) );
+        Logs.extreme( ).debug( e, e );
+      }
+      return this.getValue( );
+    } else {
+      return super.getDefaultValue( );
     }
-    return this.getValue( );
   }
-
+  
   public static class StaticPropertyBuilder implements ConfigurablePropertyBuilder {
     private static String qualifiedName( Class c, Field f ) {
       ConfigurableClass annote = ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class );
       return annote.root( ) + "." + f.getName( ).toLowerCase( );
     }
-
+    
     @Override
     public ConfigurableProperty buildProperty( Class c, Field field ) throws ConfigurablePropertyException {
-      if( c.isAnnotationPresent( ConfigurableClass.class ) && field.isAnnotationPresent( ConfigurableField.class ) ) {
+      if ( c.isAnnotationPresent( ConfigurableClass.class ) && field.isAnnotationPresent( ConfigurableField.class ) ) {
         ConfigurableClass classAnnote = ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class );
         ConfigurableField annote = ( ConfigurableField ) field.getAnnotation( ConfigurableField.class );
         String description = annote.description( );
         String defaultValue = annote.initial( );
         String fq = qualifiedName( c, field );
         String fqPrefix = fq.replaceAll( "\\..*", "" );
-        String alias = classAnnote.alias();
+        String alias = classAnnote.alias( );
         PropertyTypeParser p = PropertyTypeParser.get( field.getType( ) );
         ConfigurableProperty entry = null;
         Class<? extends PropertyChangeListener> changeListenerClass = annote.changeListener( );
         PropertyChangeListener changeListener;
-        if( !changeListenerClass.equals( NoopEventListener.class ) ) {
+        if ( !changeListenerClass.equals( NoopEventListener.class ) ) {
+          if ( changeListenerClass.isEnum( ) ) {
+            changeListener = changeListenerClass.getEnumConstants( )[0];
+          }
           try {
             changeListener = changeListenerClass.newInstance( );
           } catch ( Throwable e ) {
             changeListener = NoopEventListener.NOOP;
-          }          
+          }
         } else {
-          changeListener = NoopEventListener.NOOP; 
+          changeListener = NoopEventListener.NOOP;
         }
         int modifiers = field.getModifiers( );
         if ( Modifier.isPublic( modifiers ) && Modifier.isStatic( modifiers ) ) {
-          entry = new StaticPropertyEntry( c, fqPrefix, field, description, defaultValue, p, annote.readonly( ), annote.displayName(), annote.type(), alias, changeListener );
-          entry.setValue( defaultValue );
+          entry = new StaticPropertyEntry( c, fqPrefix, field, description, defaultValue, p, annote.readonly( ), annote.displayName( ), annote.type( ), alias,
+                                           changeListener );
+//          entry.setValue( defaultValue );
           return entry;
-        } 
-      } 
+        }
+      }
       return null;
     }
   }
-
+  
   /**
    * @see com.eucalyptus.configurable.AbstractConfigurableProperty#getQueryObject()
    */

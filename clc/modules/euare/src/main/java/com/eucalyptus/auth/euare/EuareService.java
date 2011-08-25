@@ -136,7 +136,7 @@ public class EuareService {
       User admin = newAccount.addUser( User.ACCOUNT_ADMIN, "/", true/*skipRegistration*/, true/*enabled*/, null/*info*/ );
       admin.createToken( );
       admin.createConfirmationCode( );
-      admin.createPassword( );
+      //admin.createPassword( );
       AccountType account = reply.getCreateAccountResult( ).getAccount( );
       account.setAccountName( newAccount.getName( ) );
       account.setAccountId( newAccount.getAccountNumber( ) );
@@ -421,7 +421,7 @@ public class EuareService {
       }
     }
     // Policy attached to account admin is the account policy. Only system admin can put policy to an account.
-    if ( userFound.isAccountAdmin( ) ){
+    if ( userFound.isAccountAdmin( ) && !requestUser.isSystemAdmin( ) ){
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Only system admin can put policy on an account" );      
     }
     if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
@@ -546,8 +546,8 @@ public class EuareService {
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
-      if ( userFound.isSystemAdmin( ) ) {
-        throw new AuthException( "System admin can not be updated" );
+      if ( userFound.isSystemAdmin( ) && userFound.isAccountAdmin( ) ) {
+        throw new AuthException( "admin@eucalyptus can not be updated" );
       }
     } catch ( Exception e ) {
       LOG.debug( e, e );
@@ -1103,8 +1103,8 @@ public class EuareService {
     User userToDelete = null;
     try {
       userToDelete = account.lookupUserByName( request.getUserName( ) );
-      if ( userToDelete.isSystemAdmin( ) ) {
-        throw new AuthException( "System admin can not be deleted" );
+      if ( userToDelete.isSystemAdmin( ) && userToDelete.isAccountAdmin( ) ) {
+        throw new AuthException( "admin@eucalyptus can not be deleted" );
       }
     } catch ( Exception e ) {
       LOG.debug( e, e );

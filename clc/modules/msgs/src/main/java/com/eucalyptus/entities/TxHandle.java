@@ -15,7 +15,10 @@ import org.hibernate.ejb.EntityManagerFactoryImpl;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Assertions;
+import com.eucalyptus.util.Logs;
+import com.google.common.base.Joiner;
 
 public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   private static Logger                                   LOG         = Logger.getLogger( TxHandle.class );
@@ -24,7 +27,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   private EntityManager                                   em;
   private final WeakReference<Session>                    session;
   private EntityTransaction                               delegate;
-  private final Exception                                 owner;
+  private final String                                    owner;
   private final Calendar                                  startTime;
   private final String                                    txUuid;
   private final StopWatch                                 stopWatch;
@@ -33,7 +36,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   
   public TxHandle( String ctx ) {
     this.txUuid = String.format( "%s:%s", ctx, UUID.randomUUID( ).toString( ) );
-    this.owner = new Exception( );
+    this.owner = Joiner.on( "\t\n" ).join( Thread.currentThread( ).getStackTrace( ) );
     this.startTime = Calendar.getInstance( );
     this.stopWatch = new StopWatch( );
     this.stopWatch.start( );
@@ -195,7 +198,9 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
   
   @Override
   public String toString( ) {
-    return String.format( "TxHandle:txUuid=%s:startTime=%s:splitTime=%s", this.txUuid, this.startTime, this.splitTime );
+    return String.format( "TxHandle:txUuid=%s:startTime=%s:splitTime=%s:owner=%s", this.txUuid, this.startTime.getTime( ), this.splitTime, Logs.EXTREME
+                          ? this.owner
+                          : "n/a" );
   }
   
   public static class TxWatchdog implements EventListener {
@@ -206,7 +211,7 @@ public class TxHandle implements Comparable<TxHandle>, EntityTransaction {
         for ( TxHandle tx : TxHandle.outstanding.values( ) ) {
           if ( tx.isExpired( ) ) {
             LOG.error( "Found expired TxHandle: " + tx );
-            LOG.error( tx.owner, tx.owner );
+            LOG.error( tx.owner );
           }
         }
       }
