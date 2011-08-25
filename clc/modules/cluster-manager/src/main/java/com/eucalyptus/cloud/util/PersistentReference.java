@@ -167,7 +167,10 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
           final R refererEntity = Entities.merge( referer );
           this.setReference( refererEntity );
           this.setState( finalState );
-        } 
+        } else {
+          this.setReference( null );
+          this.setState( finalState );
+        }
       }
       db.commit( );
       return thisEntity.get( );
