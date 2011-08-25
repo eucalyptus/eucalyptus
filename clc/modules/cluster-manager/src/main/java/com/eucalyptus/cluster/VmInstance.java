@@ -65,7 +65,6 @@
 package com.eucalyptus.cluster;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -79,14 +78,11 @@ import javax.persistence.Embedded;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
-import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
-import javax.persistence.PreRemove;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -118,7 +114,6 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroup;
-import com.eucalyptus.network.Networks;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.InstanceEvent;
@@ -137,7 +132,6 @@ import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
-import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 @Entity
@@ -1030,5 +1024,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   public boolean isBlockStorage( ) {
     return this.bootRecord.isBlockStorage( );
+  }
+
+  @Override
+  public void setNaturalId( String naturalId ) {
+    super.setNaturalId( naturalId );
   }
 }

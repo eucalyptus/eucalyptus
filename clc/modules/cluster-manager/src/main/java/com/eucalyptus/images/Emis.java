@@ -235,7 +235,37 @@ public class Emis {
       return this.ramdisk;
     }
   }
-  
+
+  /**
+   * Temporary: Don't even think of referencing this symbol.
+   */
+  @Deprecated 
+  public static BootableSet newBootableSet( VmType vmType, Partition partition, String imageId, String kernelId, String ramdiskId ) throws MetadataException, AuthException {
+    BootableSet bootSet = null;
+    try {
+      bootSet = new BootableSet( LookupMachine.INSTANCE.apply( imageId ) );
+    } catch ( Exception e ) {
+      try {
+        bootSet = new BootableSet( LookupBlockStorage.INSTANCE.apply( imageId ) );
+      } catch ( IllegalContextAccessException ex ) {
+        throw new VerificationException( ex );
+      } catch ( NoSuchElementException ex ) {
+        throw new NoSuchMetadataException( ex );
+      } catch ( PersistenceException ex ) {
+        throw new InvalidMetadataException( ex );
+      }
+    }
+    KernelImageInfo kernel = ( kernelId == null ? null : LookupKernel.INSTANCE.apply( kernelId ) );
+    RamdiskImageInfo ramdisk = ( ramdiskId == null ? null : LookupRamdisk.INSTANCE.apply( ramdiskId ) );
+    if( kernel != null && ramdisk != null ) {
+      return new TrifectaBootableSet( bootSet.getMachine( ), kernel, ramdisk );
+    } else if ( kernel != null ) {
+      return new NoRamdiskBootableSet( bootSet.getMachine( ), kernel );
+    } else {
+      return bootSet;
+    }
+
+  }
   public static BootableSet newBootableSet( VmType vmType, Partition partition, String imageId ) throws MetadataException, AuthException {
     BootableSet bootSet = null;
     try {

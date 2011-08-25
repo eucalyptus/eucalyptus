@@ -79,6 +79,7 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import org.hibernate.criterion.Restrictions;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
@@ -92,6 +93,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
@@ -99,15 +101,20 @@ import com.eucalyptus.cluster.VmInstance.Reason;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.images.Emis;
+import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
+import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.Networks;
@@ -172,9 +179,8 @@ public class SystemState {
         if ( !VmState.BURIED.equals( vm.getRuntimeState( ) ) && vm.getSplitTime( ) > VmInstances.BURY_TIME ) {
           vm.setState( VmState.BURIED, Reason.BURIED );
         }
-        vm.doUpdate( ).apply( runVm ); 
+        vm.doUpdate( ).apply( runVm );
       } catch ( Exception ex ) {
-        Logs.extreme( ).error( ex, ex );
         if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) ) ) {
           SystemState.restoreInstance( originCluster, runVm );
         }
@@ -230,6 +236,80 @@ public class SystemState {
   }
   
   private static void restoreInstance( final String cluster, final VmInfo runVm ) {
+    
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      final VmType vmType = VmTypes.getVmType( runVm.getInstanceType( ).getName( ) );
+      final UserFullName userFullName = UserFullName.getInstance( runVm.getOwnerId( ) );
+      Partition partition;
+      try {
+        partition = Partitions.lookupByName( runVm.getPlacement( ) );
+      } catch ( Exception ex2 ) {}
+      @SuppressWarnings( "deprecation" )
+      BootableSet bootSet = Emis.newBootableSet( vmType, partition, runVm.getImageId( ), runVm.getKernelId( ), runVm.getRamdiskId( ) );
+      
+      int launchIndex;
+      try {
+        launchIndex = Integer.parseInt( runVm.getLaunchIndex( ) );
+      } catch ( Exception ex1 ) {
+        launchIndex = 1;
+      }
+      
+      SshKeyPair keyPair;
+      try {
+        keyPair = KeyPairs.lookup( userFullName, runVm.getKeyValue( ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+      }
+      
+      byte[] userData;
+      try {
+        userData = Base64.decode( runVm.getUserData( ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+      }
+      
+      List<NetworkGroup> networks;
+      try {
+        networks = Lists.transform( runVm.getGroupNames( ), transformNetworkNames( userFullName ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+      }
+      
+      SetReference<PrivateNetworkIndex, VmInstance> index;
+      ExtantNetwork exNet;
+      NetworkGroup network = ( !networks.isEmpty( )
+        ? networks.get( 0 )
+        : null );
+      if ( network != null ) {
+        if ( !network.hasExtantNetwork( ) ) {
+          exNet = network.reclaim( runVm.getNetParams( ).getVlan( ) );
+        } else {
+          exNet = network.extantNetwork( );
+          if ( !exNet.getTag( ).equals( runVm.getNetParams( ).getVlan( ) ) ) {
+            exNet = null;
+          } else {
+            index = exNet.reclaimNetworkIndex( runVm.getNetParams( ).getNetworkIndex( ) );
+          }
+        }
+      }
+      VmInstance vmInst = new VmInstance.Builder( ).owner( userFullName )
+                                                   .withIds( runVm.getInstanceId( ), runVm.getReservationId( ) )
+                                                   .bootRecord( bootSet,
+                                                                userData,
+                                                                keyPair,
+                                                                vmType )
+                                                   .placement( partition, partition.getName( ) )
+                                                   .networking( networks, index )
+                                                   .build( launchIndex );
+      
+      vmInst.setNaturalId( runVm.getUuid( ) );
+      Entities.persist( vmInst );
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+    }
     try {
       String instanceUuid = runVm.getUuid( );
       String instanceId = runVm.getInstanceId( );
@@ -261,28 +341,15 @@ public class SystemState {
         key = KeyPairs.noKey( );
       }
       VmType vmType = VmTypes.getVmType( runVm.getInstanceType( ).getName( ) );
-      List<NetworkGroup> networks = Lists.transform( runVm.getGroupNames( ), new Function<String, NetworkGroup>( ) {
-        
-        @Override
-        public NetworkGroup apply( String arg0 ) {
-          try {
-            return NetworkGroups.lookup( ownerId, arg0 );
-          } catch ( MetadataException ex ) {
-            LOG.error( ex );
-            Logs.extreme( ).error( ex, ex );
-            throw new RuntimeException( "Failed to find information for group owned by: " + ownerId + " which is called " + arg0 );
-          }
-        }
-      } );
 //      VmInstance vm = new VmInstance( ownerId, instanceId, instanceUuid, 
 //                                      reservationId, launchIndex, placement, 
 //                                      userData, runVm.getInstanceType( ), key,
 //                                      vmType,
 //                                      networks,
 //                                      new PrivateNetworkIndex( runVm.getNetParams( ).getVlan( ), runVm.getNetParams( ).getNetworkIndex( ) ) );
-//      vm.clearPending( );
-//      vm.updatePublicAddress( VmInstance.DEFAULT_IP );
-//      VmInstances.register( vm );
+      vm.clearPending( );
+      vm.updatePublicAddress( VmInstance.DEFAULT_IP );
+      VmInstances.register( vm );
 //TODO:GRZE: this is the case in restore where we either need to report the failed instance restore, terminate the instance, or handle partial reporting of the instance info.
 //    } catch ( NoSuchElementException e ) {
 //      ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
@@ -290,6 +357,19 @@ public class SystemState {
     } catch ( Exception t ) {
       LOG.error( t, t );
     }
+  }
+  
+  private static Function<String, NetworkGroup> transformNetworkNames( final UserFullName userFullName ) {
+    return new Function<String, NetworkGroup>( ) {
+      
+      @Override
+      public NetworkGroup apply( String arg0 ) {
+        NetworkGroup result = ( NetworkGroup ) Entities.createCriteria( NetworkGroup.class ).setReadOnly( true )
+                                                       .add( Restrictions.like( "naturalId", arg0.replace( userFullName.getAccountNumber( ) + "-", "" ) ) )
+                                                       .uniqueResult( );
+        return result;
+      }
+    };
   }
   
   public static ArrayList<ReservationInfoType> handle( DescribeInstancesType request ) throws Exception {

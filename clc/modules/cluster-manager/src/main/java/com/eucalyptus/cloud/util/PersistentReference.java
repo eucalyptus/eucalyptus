@@ -112,7 +112,11 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
    */
   @Override
   public final SetReference<T, R> allocate( ) throws ResourceAllocationException {
-    this.doSetReferer( null, Resource.State.FREE, Resource.State.PENDING );
+    try {
+      this.doSetReferer( null, Resource.State.FREE, Resource.State.PENDING );
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+    }
     return this.doCreateSetReference( );
   }
   

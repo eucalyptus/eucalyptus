@@ -79,6 +79,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cloud.util.Resource;
@@ -175,6 +176,33 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
     this.indexes = indexes;
   }
   
+  public SetReference<PrivateNetworkIndex, VmInstance> reclaimNetworkIndex( Long idx ) throws TransactionException {
+    if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
+      try {
+        return PrivateNetworkIndex.bogus( ).allocate( );
+      } catch ( ResourceAllocationException ex ) {
+        throw new RuntimeException( "BUG BUG BUG: failed to call PrivateNetworkIndex.allocate() on the .bogus() index." );
+      }
+    } else if ( !Entities.isPersistent( this ) ) {
+      throw new TransientEntityException( this.toString( ) );
+    } else {
+      SetReference<PrivateNetworkIndex, VmInstance> ref = null;
+      PrivateNetworkIndex netIdx = null;
+      try {
+        return Entities.uniqueResult( PrivateNetworkIndex.named( this, idx ) ).allocate( );
+      } catch ( Exception ex ) {
+        try {
+          netIdx = PrivateNetworkIndex.create( this, idx );
+          Entities.persist( netIdx );
+          this.getIndexes( ).add( netIdx );
+          return netIdx.allocate( );
+        } catch ( Exception ex1 ) {
+          throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName, ex1 );
+        }
+      }
+    }
+  }
+  
   public SetReference<PrivateNetworkIndex, VmInstance> allocateNetworkIndex( ) throws TransactionException {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       try {
@@ -210,18 +238,6 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
         throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName, ex );
       }
     }
-  }
-  
-  private Long attemptNetworkIndex( ) throws NotEnoughResourcesException {
-    for ( Long i : Numbers.shuffled( NetworkGroups.networkIndexInterval( ) ) ) {
-      try {
-        Entities.uniqueResult( PrivateNetworkIndex.create( this, i ) );
-        continue;
-      } catch ( Exception ex ) {
-        return i;
-      }
-    }
-    throw new NotEnoughResourcesException( "Failed to allocate network tag for network: " + this.toString( ) + ": no network tags are free." );
   }
   
   public NetworkGroup getNetworkGroup( ) {

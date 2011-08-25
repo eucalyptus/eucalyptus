@@ -170,7 +170,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
           if( msg.getException( ) != null ) {
             Logs.extreme( ).debug( msg, msg.getException( ) );
           }
-          String response = Binding.createRestFault( msg.getRequestType( ), msg.getMessage( ), Exceptions.string( msg.getException( ) ) );
+          String response = Binding.createRestFault( msg.getRequestType( ), msg.getMessage( ), msg.getError( ) );
           byteOut.write( response.getBytes( ) );
           httpResponse.setStatus( msg.getHttpStatus( ) );
         } else {//actually try to bind response

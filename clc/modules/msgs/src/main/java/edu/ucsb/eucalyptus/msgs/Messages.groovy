@@ -69,6 +69,7 @@ import com.eucalyptus.component.ServiceConfiguration
 import com.eucalyptus.component.ServiceConfigurations
 import com.eucalyptus.component.id.ComponentService
 import com.eucalyptus.component.id.Eucalyptus
+import com.eucalyptus.system.Threads
 import com.eucalyptus.util.Exceptions
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord
 
@@ -193,27 +194,20 @@ public class ExceptionResponseType extends BaseMessage {
   public ExceptionResponseType() {
   }
   public ExceptionResponseType( BaseMessage msg, String message, Throwable exception ) {
-    this.source = exception.getClass( ).getCanonicalName( );
-    this.message = message!=null?message:exception.getMessage( );
-    this.setUserId( msg.getUserId( ) );
-    this.setCorrelationId( msg.getCorrelationId( ) );
-    this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
-    this.exception = exception;
-    if( this.exception != null ) {
-      this.error = Exceptions.string( exception );
-    }
-    this.set_return(false);
+    this( msg, message, HttpResponseStatus.BAD_REQUEST, exception );
   }
   public ExceptionResponseType( BaseMessage msg, String message, HttpResponseStatus httpStatus, Throwable exception ) {
+    super( msg );
     this.httpStatus = httpStatus;
     this.source = exception.getClass( ).getCanonicalName( );
-    this.message = message!=null?message:exception.getMessage( );
-    this.setUserId( msg.getUserId( ) );
-    this.setCorrelationId( msg.getCorrelationId( ) );
+    this.message = (message!=null?message:exception.getMessage( ));
+    this.message = (this.message!=null?this.message:exception.getClass());
     this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
     this.exception = exception;
     if( this.exception != null ) {
       this.error = Exceptions.string( exception );
+    } else {
+      this.error = Threads.currentStackString( );
     }
     this.set_return(false);
   }

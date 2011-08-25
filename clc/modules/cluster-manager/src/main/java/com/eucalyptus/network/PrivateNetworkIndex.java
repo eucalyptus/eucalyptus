@@ -133,6 +133,10 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
     this.index = index;
   }
   
+  public static PrivateNetworkIndex named( Integer vlan, Long networkIndex ) {
+    return new PrivateNetworkIndex( vlan, networkIndex );
+  }
+
   public static PrivateNetworkIndex named( ExtantNetwork exNet, Long index ) {
     return new PrivateNetworkIndex( exNet.getTag( ), index );
   }
@@ -283,5 +287,5 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   private void setInstance( VmInstance instance ) {
     this.instance = instance;
   }
-  
+
 }

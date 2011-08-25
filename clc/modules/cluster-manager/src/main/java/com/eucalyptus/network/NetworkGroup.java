@@ -272,6 +272,16 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     return this.getOwnerAccountNumber( ) + "-" + this.getNaturalId( );
   }
   
+  public ExtantNetwork reclaim( Integer i ) throws NotEnoughResourcesException, TransientEntityException {
+    if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
+      return ExtantNetwork.bogus( this );
+    } else if ( !Entities.isPersistent( this ) ) {
+      throw new TransientEntityException( this.toString( ) );
+    } else {
+      return Entities.persist( ExtantNetwork.create( this, i ) );
+    }    
+  }
+
   public ExtantNetwork extantNetwork( ) throws NotEnoughResourcesException, TransientEntityException {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       return ExtantNetwork.bogus( this );
@@ -316,6 +326,10 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   
   private void setExtantNetwork( final ExtantNetwork extantNetwork ) {
     this.extantNetwork = extantNetwork;
+  }
+
+  public boolean hasExtantNetwork( ) {
+    return this.extantNetwork != null;
   }
   
 }

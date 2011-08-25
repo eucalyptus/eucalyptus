@@ -89,6 +89,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Classes;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Function;
@@ -393,6 +394,24 @@ public class Entities {
         throw ex;
       }
     }
+  }
+  
+  public <T> T lookupAndClose( final T example ) throws NoSuchElementException {
+    EntityTransaction db;
+    T ret = null;
+    if ( !hasTransaction( example ) ) {
+      db = get( example );
+    } else {
+      db = getTransaction( example ).join( );
+    }
+    try {
+      ret = uniqueResult( example );
+      db.commit( );
+    } catch ( TransactionException ex ) {
+      db.rollback( );
+      throw new NoSuchElementException( ex.getMessage( ) );
+    }
+    return ret;
   }
   
   public static <T> Function<T, T> merge( ) {
