@@ -184,9 +184,9 @@ public class VmRuntimeState {
         action = this.cleanUpRunnable( );
       } else if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
         this.getVmInstance( ).setState( newState );
-      } else if ( ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) && ( newState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) ) {
-        this.getVmInstance( ).setState( oldState );
-        action = this.cleanUpRunnable( );
+//      } else if ( ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) && ( newState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) ) {
+//        this.getVmInstance( ).setState( oldState );
+//        action = this.cleanUpRunnable( );
       } else if ( newState.ordinal( ) > oldState.ordinal( ) ) {
         this.getVmInstance( ).setState( newState );
       }

@@ -203,6 +203,10 @@ public class Entities {
     }
   }
   
+  public static <T> void flush( T object ) {
+    getTransaction( object ).txState.getEntityManager( ).flush( );
+  }
+
   public static <T> List<T> query( final T example ) {
     return query( example, false );
   }

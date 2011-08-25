@@ -548,6 +548,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                      .build( token.getLaunchIndex( ) );
         vmInst = Entities.persist( vmInst );
         token.getNetworkIndex( ).set( vmInst );
+        Entities.flush( vmInst );
         db.commit( );
         token.setVmInstance( vmInst );
         return vmInst;
@@ -1091,7 +1092,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     try {
       final VmInstance entity = Entities.merge( this );
       entity.runtimeState.setState( stopping, reason, extra );
-      if ( VmState.TERMINATED.equals( entity.getState( ) ) || VmState.BURIED.equals( entity.getState( ) ) ) {
+      if ( VmStateSet.DONE.apply( entity ) ) {
         entity.cleanUp( );
       }
       db.commit( );
@@ -1208,7 +1209,15 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             final VmState state = VmState.Mapper.get( runVm.getStateName( ) );
             final long splitTime = VmInstance.this.getSplitTime( );
             final VmState oldState = VmInstance.this.getRuntimeState( );
-            if ( VmStateSet.TERM.apply( VmInstance.this ) && ( VmInstance.this.getSplitTime( ) > VmInstances.BURY_TIME ) ) {
+            if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
+                 && ( VmState.PENDING.equals( VmInstance.this.getRuntimeState( ) ) || VmState.RUNNING.equals( VmInstance.this.getRuntimeState( ) ) ) ) {
+              VmInstance.this.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
+              VmInstance.this.runtimeState.setServiceTag( runVm.getServiceTag( ) );
+              VmInstance.this.setBundleTaskState( runVm.getBundleTaskStateName( ) );
+              VmInstance.this.setCreateImageTaskState( runVm.getBundleTaskStateName( ) );
+              VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
+              VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
+            } else if ( VmStateSet.TERM.apply( VmInstance.this ) && ( VmInstance.this.getSplitTime( ) > VmInstances.BURY_TIME ) ) {
               VmInstance.this.setState( VmState.TERMINATED, Reason.EXPIRED );
             } else if ( VmStateSet.STOP.apply( VmInstance.this ) && ( VmInstance.this.getSplitTime( ) > VmInstances.BURY_TIME ) ) {
               VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
@@ -1227,9 +1236,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               } else if ( VmState.SHUTTING_DOWN.equals( VmInstance.this.getRuntimeState( ) )
                           && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
                 VmInstance.this.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
-              } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
-                          && ( VmState.PENDING.equals( VmInstance.this.getRuntimeState( ) ) || VmState.RUNNING.equals( VmInstance.this.getRuntimeState( ) ) ) ) {
-                VmInstance.this.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
               }
             }
             db.commit( );
