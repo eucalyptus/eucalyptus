@@ -215,25 +215,34 @@ public class SystemState {
     final Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
     Predicate<VmInstance> privileged = RestrictedTypes.filterPrivileged( );
     for ( final VmInstance v : Iterables.filter( VmInstances.listValues( ), privileged ) ) {
-      if ( VmStateSet.DONE.apply( v ) && ( v.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
-        final long time = ( System.currentTimeMillis( ) - v.getLastUpdateTimestamp( ).getTime( ) );
-        if ( v.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
-          VmInstance.Transitions.TERMINATE.apply( v );
-        } else if ( v.getSplitTime( ) > VmInstances.BURY_TIME ) {
-          VmInstance.Transitions.DELETE.apply( v );
+      
+      EntityTransaction db = Entities.get( VmInstance.class );
+      try {
+        if ( VmStateSet.DONE.apply( v ) && ( v.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
+          final long time = ( System.currentTimeMillis( ) - v.getLastUpdateTimestamp( ).getTime( ) );
+          if ( v.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
+            VmInstance.Transitions.TERMINATE.apply( v );
+          } else if ( v.getSplitTime( ) > VmInstances.BURY_TIME ) {
+            VmInstance.Transitions.DELETE.apply( v );
+          }
+          if ( !isVerbose ) {
+            continue;
+          }
         }
-        if ( !isVerbose ) {
+        if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) {
           continue;
         }
+        if ( rsvMap.get( v.getReservationId( ) ) == null ) {
+          final ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getNamespace( ), v.getNetworkNames( ) );
+          rsvMap.put( reservation.getReservationId( ), reservation );
+        }
+        rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstance.Transform.INSTANCE.apply( v ) );
+        db.commit( );
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        db.rollback( );
+        throw ex;
       }
-      if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) {
-        continue;
-      }
-      if ( rsvMap.get( v.getReservationId( ) ) == null ) {
-        final ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getNamespace( ), v.getNetworkNames( ) );
-        rsvMap.put( reservation.getReservationId( ), reservation );
-      }
-      rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstance.Transform.INSTANCE.apply( v ) );
     }
     return new ArrayList<ReservationInfoType>( rsvMap.values( ) );
   }
