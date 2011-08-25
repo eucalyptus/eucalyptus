@@ -247,7 +247,7 @@ public class HostManager {
           break;
         case FINISHED:
           if ( msg.getObject( ) instanceof List ) {
-            LOG.debug( "Received updated host information: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+            Logs.exhaust( ).debug( "Received updated host information: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
             this.receive( ( List<Host> ) msg.getObject( ) );
           } else {
             LOG.debug( "Received unknown message type: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );

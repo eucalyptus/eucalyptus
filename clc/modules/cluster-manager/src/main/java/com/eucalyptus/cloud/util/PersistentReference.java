@@ -174,7 +174,7 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
         }
       }
       db.commit( );
-      return thisEntity.get( );
+      return ( T ) thisEntity;
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       LOG.error( ex );
