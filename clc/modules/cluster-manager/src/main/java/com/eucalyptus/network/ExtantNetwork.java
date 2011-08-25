@@ -193,7 +193,17 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
       SetReference<PrivateNetworkIndex, VmInstance> ref = null;
       PrivateNetworkIndex netIdx = null;
       try {
-        return Entities.uniqueResult( PrivateNetworkIndex.named( this, idx ) ).allocate( );
+        netIdx = Entities.uniqueResult( PrivateNetworkIndex.named( this, idx ) );
+        if ( Resource.State.FREE.equals( netIdx.getState( ) ) ) {
+          return netIdx.allocate( );
+        } else {
+          try {
+            netIdx.teardown( );
+            return netIdx.allocate( );
+          } catch ( Exception ex ) {
+            LOG.error( ex , ex );
+          }
+        }
       } catch ( Exception ex ) {
         try {
           netIdx = PrivateNetworkIndex.create( this, idx );

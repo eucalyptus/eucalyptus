@@ -105,8 +105,9 @@ public interface Resource<T extends Resource<T, R>, R extends HasNaturalId> {
   
   /**
    * Dependent external resource state has been cleared and the resource is ready for re-use.
+   * @throws ResourceAllocationException 
    */
-  public void teardown( );
+  public void teardown( ) throws ResourceAllocationException;
   
   /**
    * Attempt to recover a resource allocation -- e.g., after a system restart. Constraints must be

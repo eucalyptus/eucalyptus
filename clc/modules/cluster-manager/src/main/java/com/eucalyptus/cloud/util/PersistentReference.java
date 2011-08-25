@@ -131,12 +131,13 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
   
   /**
    * {@inheritDoc ResourceAlllocation#teardown()}
+   * @throws ResourceAllocationException 
    * 
    * @see Resource#teardown()
    */
   @Override
-  public final void teardown( ) {
-    Logs.exhaust( ).trace( "teardown( ) called: " + Threads.currentStackString( ) );
+  public final void teardown( ) throws ResourceAllocationException {
+    final T ret = this.doSetReferer( null, null, Resource.State.FREE );
   }
   
   /**
