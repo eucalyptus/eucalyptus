@@ -150,39 +150,39 @@ import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 @Table( name = "metadata_instances" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetadata {
-  private static final long       serialVersionUID = 1L;
+  private static final long     serialVersionUID = 1L;
   
   @Transient
-  private static Logger           LOG              = Logger.getLogger( VmInstance.class );
+  private static Logger         LOG              = Logger.getLogger( VmInstance.class );
   @Transient
-  public static String            DEFAULT_TYPE     = "m1.small";
+  public static String          DEFAULT_TYPE     = "m1.small";
   @Embedded
-  private final VmNetworkConfig   networkConfig;
+  private final VmNetworkConfig networkConfig;
   @Embedded
-  private final VmId              vmId;
+  private final VmId            vmId;
   @Embedded
-  private final VmBootRecord      bootRecord;
+  private final VmBootRecord    bootRecord;
   @Embedded
-  private final VmUsageStats      usageStats;
+  private final VmUsageStats    usageStats;
   @Embedded
-  private final VmLaunchRecord    launchRecord;
+  private final VmLaunchRecord  launchRecord;
   @Embedded
-  private final VmRuntimeState    runtimeState;
+  private final VmRuntimeState  runtimeState;
   @Embedded
-  private final VmPlacement       placement;
+  private final VmPlacement     placement;
   
   @Column( name = "metadata_vm_private_networking" )
-  private final Boolean           privateNetwork;
+  private final Boolean         privateNetwork;
   @NotFound( action = NotFoundAction.IGNORE )
   @ManyToMany( cascade = { CascadeType.ALL }, fetch = FetchType.LAZY )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<NetworkGroup> networkGroups    = Sets.newHashSet( );
+  private Set<NetworkGroup>     networkGroups    = Sets.newHashSet( );
   
   @NotFound( action = NotFoundAction.IGNORE )
   @OneToOne( fetch = FetchType.EAGER, cascade = { CascadeType.ALL }, orphanRemoval = true, optional = true )
   @JoinColumn( name = "metadata_vm_network_index", nullable = true, insertable = true, updatable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private PrivateNetworkIndex     networkIndex;
+  private PrivateNetworkIndex   networkIndex;
   
   @PreRemove
   void cleanUp( ) {
@@ -896,16 +896,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.bootRecord.getVmType( );
   }
   
-  public Set<NetworkGroup> getNetworkRulesGroups( ) {
-    return this.networkGroups;
-  }
-  
   public List<NetworkGroup> getNetworks( ) {
-    return Lists.newArrayList( this.networkGroups );
+    return ( List<NetworkGroup> ) ( this.networkGroups != null
+      ? Lists.newArrayList( this.networkGroups )
+      : Lists.newArrayList( ) );
   }
   
   public NavigableSet<String> getNetworkNames( ) {
-    return new TreeSet<String>( Collections2.transform( this.networkGroups, new Function<NetworkGroup, String>( ) {
+    return new TreeSet<String>( Collections2.transform( this.getNetworkGroups( ), new Function<NetworkGroup, String>( ) {
       
       @Override
       public String apply( final NetworkGroup arg0 ) {
