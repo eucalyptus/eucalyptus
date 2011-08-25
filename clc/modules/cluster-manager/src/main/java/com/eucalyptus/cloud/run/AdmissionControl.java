@@ -76,11 +76,9 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
-import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmTypeAvailability;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
@@ -366,7 +364,7 @@ public class AdmissionControl {
           try {
             ExtantNetwork exNet = Entities.merge( rscToken.getExtantNetwork( ) );
             assertThat( exNet, notNullValue( ) );
-            SetReference<PrivateNetworkIndex, VmInstance> addrIndex = exNet.allocateNetworkIndex( );
+            PrivateNetworkIndex addrIndex = exNet.allocateNetworkIndex( );
             rscToken.setNetworkIndex( addrIndex );
             rscToken.setExtantNetwork( Entities.merge( exNet ) );
             db.commit( );

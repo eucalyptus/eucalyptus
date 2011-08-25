@@ -65,20 +65,7 @@ package com.eucalyptus.cloud.util;
 
 import com.eucalyptus.util.HasNaturalId;
 
-public interface Resource<T extends Resource<T, R>, R extends HasNaturalId> {
-  public interface SetReference<T, R> {
-    public T set( R referer ) throws ResourceAllocationException;
-    
-    public T get( );
-    
-    public T clear( ) throws ResourceAllocationException;
-  }
-  
-  public interface ClearReference<T> {
-    public T clear( ) throws ResourceAllocationException;
-    
-    public T abort( ) throws ResourceAllocationException;
-  }
+public interface Reference<T extends Reference<T, R>, R extends HasNaturalId> {
   
   enum State {
     UNKNOWN, FREE, PENDING, EXTANT, RELEASING
@@ -88,31 +75,42 @@ public interface Resource<T extends Resource<T, R>, R extends HasNaturalId> {
    * Request is in-flight on the network (not just in memory) and state updates should be
    * disregarded until the in-flight request completes.
    * 
-   * Calling {@link SetReference#set(Object)} completes the allocation, while calling
-   * {@link SetReference#clear()} resets the state to that before the reference change.
+   * Calling {@link Reference#set(Object)} completes the allocation, while calling
+   * {@link Reference#teardown()} resets the state to that before the reference change.
    */
-  public SetReference<T, R> allocate( ) throws ResourceAllocationException;
+  public T set( R referer ) throws ResourceAllocationException;
+  
+  /**
+   * Request is in-flight on the network (not just in memory) and state updates should be
+   * disregarded until the in-flight request completes.
+   * 
+   * Calling {@link Reference#set(Object)} completes the allocation, while calling
+   * {@link Reference#teardown()} resets the state to that before the reference change.
+   */
+  public T allocate( ) throws ResourceAllocationException;
   
   /**
    * The procedure for gracefully releasing the resource is pending a submitted in-flight request.
    * Potential references to stale state may exist and should be disregarded until in-flight
    * requests complete.
    * 
-   * Calling {@link SetReference#set(Object)} completes releasing the allocation, while calling
-   * {@link SetReference#clear()} resets the state to that before the reference change.
+   * Calling {@link Reference#set(Object)} completes releasing the allocation, while calling
+   * {@link Reference#clear()} resets the state to that before the reference change.
    */
-  public ClearReference<T> release( ) throws ResourceAllocationException;
+  public T release( ) throws ResourceAllocationException;
   
   /**
    * Dependent external resource state has been cleared and the resource is ready for re-use.
-   * @throws ResourceAllocationException 
+   * 
+   * @throws ResourceAllocationException
    */
   public void teardown( ) throws ResourceAllocationException;
   
   /**
    * Attempt to recover a resource allocation -- e.g., after a system restart. Constraints must be
    * enforced on valid initial state.
-   * @throws ResourceAllocationException 
+   * 
+   * @throws ResourceAllocationException
    */
   public T reclaim( R referer ) throws ResourceAllocationException;
   

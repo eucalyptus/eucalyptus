@@ -69,7 +69,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmRunType;
-import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cluster.NoSuchTokenException;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstance.VmState;
@@ -148,10 +147,10 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
         LOG.error( ex.getMessage( ) );
         Logs.extreme( ).error( ex, ex );
       }
-      final SetReference<PrivateNetworkIndex, VmInstance> networkIndex = this.token.getNetworkIndex( );
+      final PrivateNetworkIndex networkIndex = this.token.getNetworkIndex( );
       try {
-        LOG.debug( "-> Release network index allocation: " + networkIndex.get( ) );
-        networkIndex.clear( );
+        LOG.debug( "-> Release network index allocation: " + networkIndex );
+        networkIndex.teardown( );
       } catch ( final Exception ex ) {
         LOG.error( ex.getMessage( ) );
         Logs.extreme( ).error( ex, ex );

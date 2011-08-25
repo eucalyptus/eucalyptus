@@ -103,7 +103,6 @@ import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.VmInstance.VmState;
 import com.eucalyptus.component.ComponentIds;
@@ -189,7 +188,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   void cleanUp( ) {
     this.networkGroups.clear( );
     try {
-      this.networkIndex.release( ).clear( );
+      if ( this.networkIndex != null ) {
+        this.networkIndex.release( );
+        this.networkIndex.teardown( );
+      }
     } catch ( ResourceAllocationException ex ) {
       LOG.error( ex, ex );
     }
@@ -363,7 +365,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           LOG.error( ex, ex );
         }
         
-        SetReference<PrivateNetworkIndex, VmInstance> index = null;
+        PrivateNetworkIndex index = null;
         ExtantNetwork exNet;
         final NetworkGroup network = ( !networks.isEmpty( )
           ? networks.get( 0 )
@@ -577,21 +579,21 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public static class Builder {
-    VmId                                          vmId;
-    VmBootRecord                                  vmBootRecord;
-    VmUsageStats                                  vmUsageStats;
-    VmPlacement                                   vmPlacement;
-    VmLaunchRecord                                vmLaunchRecord;
-    List<NetworkGroup>                            networkRulesGroups;
-    SetReference<PrivateNetworkIndex, VmInstance> networkIndex;
-    OwnerFullName                                 owner;
+    VmId                vmId;
+    VmBootRecord        vmBootRecord;
+    VmUsageStats        vmUsageStats;
+    VmPlacement         vmPlacement;
+    VmLaunchRecord      vmLaunchRecord;
+    List<NetworkGroup>  networkRulesGroups;
+    PrivateNetworkIndex networkIndex;
+    OwnerFullName       owner;
     
     public Builder owner( final OwnerFullName owner ) {
       this.owner = owner;
       return this;
     }
     
-    public Builder networking( final List<NetworkGroup> groups, final SetReference<PrivateNetworkIndex, VmInstance> networkIndex ) {
+    public Builder networking( final List<NetworkGroup> groups, final PrivateNetworkIndex networkIndex ) {
       this.networkRulesGroups = groups;
       this.networkIndex = networkIndex;
       return this;
@@ -635,7 +637,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                       final VmLaunchRecord launchRecord,
                       final VmPlacement placement,
                       final List<NetworkGroup> networkRulesGroups,
-                      final SetReference<PrivateNetworkIndex, VmInstance> networkIndex ) throws ResourceAllocationException {
+                      final PrivateNetworkIndex networkIndex ) throws ResourceAllocationException {
     super( owner, vmId.getInstanceId( ) );
     this.setState( VmState.PENDING );
     this.vmId = vmId;

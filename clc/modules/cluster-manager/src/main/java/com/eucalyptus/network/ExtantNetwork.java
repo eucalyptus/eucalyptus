@@ -66,10 +66,8 @@ package com.eucalyptus.network;
 import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
-import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
@@ -84,10 +82,8 @@ import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.cloud.AccountMetadata;
 import com.eucalyptus.cloud.UserMetadata;
-import com.eucalyptus.cloud.util.Resource;
-import com.eucalyptus.cloud.util.Resource.SetReference;
+import com.eucalyptus.cloud.util.Reference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
-import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
@@ -103,7 +99,7 @@ import com.eucalyptus.util.Numbers;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_extant_network" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class ExtantNetwork extends UserMetadata<Resource.State> {
+public class ExtantNetwork extends UserMetadata<Reference.State> {
   @Transient
   private static final long              serialVersionUID = 1L;
   @Transient
@@ -165,7 +161,7 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
     this.tag = tag;
   }
   
-  public SetReference<PrivateNetworkIndex, VmInstance> reclaimNetworkIndex( final Long idx ) throws TransactionException {
+  public PrivateNetworkIndex reclaimNetworkIndex( final Long idx ) throws TransactionException {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       try {
         return PrivateNetworkIndex.bogus( ).allocate( );
@@ -179,8 +175,8 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
       try {
         try {
           final PrivateNetworkIndex netIdx = Entities.uniqueResult( PrivateNetworkIndex.named( this, idx ) );
-          if ( Resource.State.FREE.equals( netIdx.getState( ) ) ) {
-            final SetReference<PrivateNetworkIndex, VmInstance> ref = netIdx.allocate( );
+          if ( Reference.State.FREE.equals( netIdx.getState( ) ) ) {
+            final PrivateNetworkIndex ref = netIdx.allocate( );
             db.commit( );
             return ref;
           } else {
@@ -189,14 +185,12 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
             } catch ( final Exception ex ) {
               LOG.error( ex, ex );
             }
-            final SetReference<PrivateNetworkIndex, VmInstance> ref = netIdx.allocate( );
+            final PrivateNetworkIndex ref = netIdx.allocate( );
             db.commit( );
             return ref;
           }
         } catch ( final Exception ex ) {
-          final PrivateNetworkIndex netIdx = PrivateNetworkIndex.create( this, idx );
-          Entities.persist( netIdx );
-          final SetReference<PrivateNetworkIndex, VmInstance> ref = netIdx.allocate( );
+          final PrivateNetworkIndex ref = Entities.persist( PrivateNetworkIndex.create( this, idx ) ).allocate( );
           db.commit( );
           return ref;
         }
@@ -208,7 +202,7 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
     }
   }
   
-  public SetReference<PrivateNetworkIndex, VmInstance> allocateNetworkIndex( ) throws TransactionException {
+  public PrivateNetworkIndex allocateNetworkIndex( ) throws TransactionException {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       try {
         return PrivateNetworkIndex.bogus( ).allocate( );
@@ -227,7 +221,7 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
           } catch ( final Exception ex ) {
             try {
               PrivateNetworkIndex netIdx = Entities.persist( PrivateNetworkIndex.create( this, i ) );
-              SetReference<PrivateNetworkIndex, VmInstance> ref = netIdx.allocate( );
+              PrivateNetworkIndex ref = netIdx.allocate( );
               db.commit( );
               return ref;
             } catch ( final Exception ex1 ) {

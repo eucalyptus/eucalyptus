@@ -133,7 +133,7 @@ public class Entities {
     return !txStateThreadLocal.get( ).isEmpty( );
   }
   
-  private static boolean hasTransaction( final Object obj ) {
+  public static boolean hasTransaction( final Object obj ) {
     final String ctx = lookatPersistenceContext( obj );
     CascadingTx tx = txStateThreadLocal.get( ).get( ctx );
     if ( tx == null ) {

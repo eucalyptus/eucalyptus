@@ -63,7 +63,6 @@
 
 package com.eucalyptus.network;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
@@ -79,13 +78,11 @@ import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.cloud.AccountMetadata;
 import com.eucalyptus.cloud.util.PersistentReference;
-import com.eucalyptus.cloud.util.Resource;
-import com.eucalyptus.cloud.util.ResourceAllocationException;
+import com.eucalyptus.cloud.util.Reference;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.FullName;
-import com.google.common.base.Predicate;
 
 @Entity
 @javax.persistence.Entity
@@ -117,7 +114,7 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   private PrivateNetworkIndex( ExtantNetwork network ) {
     super( null, null );
     this.extantNetwork = network;
-    this.setState( Resource.State.FREE );
+    this.setState( Reference.State.FREE );
     this.bogusId = null;
     this.index = null;
   }
@@ -125,7 +122,7 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   private PrivateNetworkIndex( ExtantNetwork network, Long index ) {
     super( network.getOwner( ), network.getTag( ) + ":" + index );
     this.extantNetwork = network;
-    this.setState( Resource.State.FREE );
+    this.setState( Reference.State.FREE );
     this.bogusId = network.getTag( ) + ":" + index;
     this.index = index;
   }
@@ -153,34 +150,6 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
     return bogusIndex;
   }
   
-  public static SetReference<PrivateNetworkIndex, VmInstance> bogusSetReference( ) {
-    return new SetReference<PrivateNetworkIndex, VmInstance>( ) {
-      
-      public int compareTo( PrivateNetworkIndex o ) {
-        return bogusIndex.compareTo( o );
-      }
-      
-      @Override
-      public PrivateNetworkIndex set( VmInstance referer ) throws ResourceAllocationException {
-        return bogusIndex;
-      }
-      
-      @Override
-      public PrivateNetworkIndex get( ) {
-        return bogusIndex;
-      }
-      
-      public PrivateNetworkIndex abort( ) throws ResourceAllocationException {
-        return bogusIndex;
-      }
-      
-      @Override
-      public PrivateNetworkIndex clear( ) throws ResourceAllocationException {
-        return bogusIndex;
-      }
-    };
-  }
-  
   public Long getIndex( ) {
     return this.index;
   }
@@ -203,16 +172,6 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
     if ( referer != null ) {
       referer.setNetworkIndex( this );
     }
-  }
-  
-  @Override
-  protected VmInstance clearReference( ) {
-    final VmInstance vm = this.getInstance( );
-    this.setInstance( null );
-    if ( vm != null ) {
-      vm.setNetworkIndex( null );
-    }
-    return vm;
   }
   
   @Override

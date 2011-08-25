@@ -70,7 +70,6 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NoSuchTokenException;
@@ -83,22 +82,22 @@ import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.PrivateNetworkIndex;
 
 public class ResourceToken implements Comparable<ResourceToken> {
-  private static Logger                                 LOG    = Logger.getLogger( ResourceToken.class );
-  private final Allocation                              allocation;
-  private final Integer                                 launchIndex;
-  private final String                                  instanceId;
-  private final String                                  instanceUuid;
+  private static Logger       LOG    = Logger.getLogger( ResourceToken.class );
+  private final Allocation    allocation;
+  private final Integer       launchIndex;
+  private final String        instanceId;
+  private final String        instanceUuid;
   @Nullable
-  private Address                                       address;
+  private Address             address;
   @Nullable
-  private ExtantNetwork                                 extantNetwork;
+  private ExtantNetwork       extantNetwork;
   @Nullable
-  private SetReference<PrivateNetworkIndex, VmInstance> networkIndex;
-  private final Date                                    creationTime;
-  private final Integer                                 resourceAllocationSequenceNumber;
-  private final Integer                                 amount = 1;
+  private PrivateNetworkIndex networkIndex;
+  private final Date          creationTime;
+  private final Integer       resourceAllocationSequenceNumber;
+  private final Integer       amount = 1;
   @Nullable
-  private VmInstance                                    vmInst;
+  private VmInstance          vmInst;
   
   public ResourceToken( final Allocation allocInfo, final int resourceAllocationSequenceNumber, final int launchIndex ) {
     this.allocation = allocInfo;
@@ -142,10 +141,10 @@ public class ResourceToken implements Comparable<ResourceToken> {
     return this.instanceUuid;
   }
   
-  public SetReference<PrivateNetworkIndex, VmInstance> getNetworkIndex( ) {
+  public PrivateNetworkIndex getNetworkIndex( ) {
     return this.networkIndex != null
       ? this.networkIndex
-      : PrivateNetworkIndex.bogusSetReference( );
+      : PrivateNetworkIndex.bogus( );
   }
   
   public Integer getLaunchIndex( ) {
@@ -162,7 +161,7 @@ public class ResourceToken implements Comparable<ResourceToken> {
     }
     if ( this.networkIndex != null ) {
       try {
-        this.networkIndex.clear( );
+        this.networkIndex.release( );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
@@ -232,7 +231,7 @@ public class ResourceToken implements Comparable<ResourceToken> {
     Clusters.lookup( this.getAllocationInfo( ).getPartition( ) ).getNodeState( ).releaseToken( this );
   }
   
-  public void setNetworkIndex( SetReference<PrivateNetworkIndex, VmInstance> networkIndex ) {
+  public void setNetworkIndex( PrivateNetworkIndex networkIndex ) {
     this.networkIndex = networkIndex;
   }
   
@@ -262,7 +261,7 @@ public class ResourceToken implements Comparable<ResourceToken> {
       builder.append( "tag=" ).append( this.extantNetwork.getTag( ) ).append( ":" );
     }
     if ( this.networkIndex != null ) {
-      builder.append( "idx=" ).append( this.networkIndex.get( ).getIndex( ) );
+      builder.append( "idx=" ).append( this.networkIndex.getIndex( ) );
     }
     return builder.toString( );
   }
@@ -270,7 +269,7 @@ public class ResourceToken implements Comparable<ResourceToken> {
   public void setVmInstance( VmInstance vmInst ) {
     this.vmInst = vmInst;
   }
-
+  
   public VmInstance getVmInstance( ) {
     return this.vmInst;
   }
