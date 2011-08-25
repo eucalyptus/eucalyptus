@@ -100,6 +100,7 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
     try {
       this.updateState( );
     } catch ( IllegalStateException e ) {
+      LOG.debug( e, e );
       AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getPartition( ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
@@ -124,6 +125,7 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
         return true;
       }
     } catch ( NoSuchElementException e ) {
+      LOG.debug( e, e );
       return false;
     }
   }
