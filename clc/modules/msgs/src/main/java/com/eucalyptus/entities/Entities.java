@@ -163,14 +163,14 @@ public class Entities {
         try {
           e.getValue( ).rollback( );
         } catch ( Exception ex ) {
-          LOG.trace( ex , ex );
+          LOG.trace( ex, ex );
         }
       }
       txStateThreadLocal.get( ).clear( );
       txStateThreadLocal.remove( );
     }
   }
-
+  
   private static String makeTxRootName( CascadingTx tx ) {
     return txStateThreadLocal.toString( ) + tx.getRecord( ).getPersistenceContext( );
   }
@@ -472,7 +472,7 @@ public class Entities {
    */
   private static class CascadingTx implements EntityTransaction {
     private final TxRecord record;
-    private final TxState  txState;
+    private TxState        txState;
     
     /**
      * Private for a reason.
@@ -533,9 +533,9 @@ public class Entities {
       try {
         this.txState.begin( );
       } catch ( RecoverablePersistenceException ex ) {
-        removeTransaction( this.record.getUuid( ) );
+        removeTransaction( this );
       } catch ( RuntimeException ex ) {
-        removeTransaction( this.record.getUuid( ) );
+        removeTransaction( this );
         throw ex;
       }
     }
@@ -546,16 +546,15 @@ public class Entities {
      */
     @Override
     public void rollback( ) throws RecoverablePersistenceException {
-      removeTransaction( this.record.getUuid( ) );
+      removeTransaction( this );
       if ( ( this.txState != null ) && this.txState.isActive( ) ) {
         try {
           this.txState.rollback( );
-          this.endStes.put( this.record.getUuid( ), Threads.currentStackFrame( 1 ) );
+          this.txState = null;
         } catch ( final RuntimeException ex ) {
           throw PersistenceExceptions.throwFiltered( ex );
         }
       } else {
-        this.endStes.put( this.record.getUuid( ), Threads.currentStackFrame( 1 ) );
         Logs.extreme( ).error( "Duplicate call to rollback( ): " + Threads.currentStackString( ) );
       }
     }
@@ -566,11 +565,10 @@ public class Entities {
      */
     @Override
     public void commit( ) throws RecoverablePersistenceException {
-      removeTransaction( this.record.getUuid( ) );
+      removeTransaction( this );
       if ( ( this.txState != null ) && this.txState.isActive( ) ) {
         try {
           this.txState.commit( );
-          this.endStes.put( this.record.getUuid( ), Threads.currentStackFrame( 1 ) );
         } catch ( final RuntimeException ex ) {
           throw PersistenceExceptions.throwFiltered( ex );
         }
@@ -586,9 +584,6 @@ public class Entities {
     public EntityTransaction join( ) {
       return new EntityTransaction( ) {
         private final String uuid = UUID.randomUUID( ).toString( );
-        {
-          CascadingTx.this.startStes.put( CascadingTx.this.getRecord( ).getUuid( ) + ":" + this.uuid, Threads.currentStackFrame( 2 ) );
-        }
         
         @Override
         public void setRollbackOnly( ) {}
@@ -611,7 +606,6 @@ public class Entities {
         @Override
         public void commit( ) {
           try {
-            CascadingTx.this.endStes.put( CascadingTx.this.getRecord( ).getUuid( ) + ":" + this.uuid, Threads.currentStackFrame( 1 ) );
 //            CascadingTx.this.getTxState( ).getEntityManager( ).flush( );
 //          Logs.exhaust( ).trace( "Child call to commit() is ignored: " + Threads.currentStackRange( 2, 8 ) );
           } catch ( final HibernateException ex ) {
