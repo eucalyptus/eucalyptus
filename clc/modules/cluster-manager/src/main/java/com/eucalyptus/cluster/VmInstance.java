@@ -347,7 +347,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           userData = new byte[0];
         }
         
-        List<NetworkGroup> networks = Lists.newArrayList( );
+        final List<NetworkGroup> networks = Lists.newArrayList( );
         try {
           networks.addAll( Lists.transform( input.getGroupNames( ), transformNetworkNames( userFullName ) ) );
         } catch ( final Exception ex ) {
@@ -822,7 +822,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.runtimeState.resetBundleTask( );
   }
   
-  private BundleState getBundleTaskState( ) {
+  BundleState getBundleTaskState( ) {
     return this.runtimeState.getBundleTaskState( );
   }
   
@@ -1270,7 +1270,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         final boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
         runningInstance = new RunningInstancesItemType( );
         
-        runningInstance.setAmiLaunchIndex( Integer.toString( input.launchRecord.getLaunchIndex( ) ) );
+        runningInstance.setAmiLaunchIndex( Integer.toString( input.getLaunchRecord( ).getLaunchIndex( ) ) );
         if ( ( input.getBundleTaskState( ) != null ) && !BundleState.none.equals( input.getBundleTaskState( ) ) ) {
           runningInstance.setStateCode( Integer.toString( VmState.TERMINATED.getCode( ) ) );
           runningInstance.setStateName( VmState.TERMINATED.getName( ) );
@@ -1282,12 +1282,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         
         runningInstance.setStateCode( Integer.toString( input.getState( ).getCode( ) ) );
         runningInstance.setStateName( input.getState( ).getName( ) );
-        runningInstance.setInstanceId( input.vmId.getInstanceId( ) );
+        runningInstance.setInstanceId( input.getVmId( ).getInstanceId( ) );
         //ASAP:FIXME:GRZE: restore.
         runningInstance.setProductCodes( new ArrayList<String>( ) );
-        runningInstance.setImageId( input.bootRecord.getMachine( ).getDisplayName( ) );
-        runningInstance.setKernel( input.bootRecord.getKernel( ).getDisplayName( ) );
-        runningInstance.setRamdisk( input.bootRecord.getRamdisk( ).getDisplayName( ) );
+        runningInstance.setImageId( input.getBootRecord( ).getMachine( ).getDisplayName( ) );
+        runningInstance.setKernel( input.getBootRecord( ).getKernel( ).getDisplayName( ) );
+        runningInstance.setRamdisk( input.getBootRecord( ).getRamdisk( ).getDisplayName( ) );
         if ( dns ) {
           String publicDnsName = input.getPublicDnsName( );
           String privateDnsName = input.getPrivateDnsName( );
@@ -1323,14 +1323,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         
         runningInstance.setReason( input.runtimeState.getReason( ) );
         
-        if ( input.bootRecord.getSshKeyPair( ) != null )
-          runningInstance.setKeyName( input.bootRecord.getSshKeyPair( ).getName( ) );
+        if ( input.getBootRecord( ).getSshKeyPair( ) != null )
+          runningInstance.setKeyName( input.getBootRecord( ).getSshKeyPair( ).getName( ) );
         else runningInstance.setKeyName( "" );
         
         runningInstance.setInstanceType( input.getVmType( ).getName( ) );
-        runningInstance.setPlacement( input.placement.getPartitionName( ) );
+        runningInstance.setPlacement( input.getPlacement( ).getPartitionName( ) );
         
-        runningInstance.setLaunchTime( input.launchRecord.getLaunchTime( ) );
+        runningInstance.setLaunchTime( input.getLaunchRecord( ).getLaunchTime( ) );
         
         runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( "/dev/sda1" ) );
         for ( final VmVolumeAttachment attachedVol : input.runtimeState.getTransientVolumes( ).values( ) ) {
