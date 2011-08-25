@@ -203,7 +203,7 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
       } catch ( final Exception ex ) {
         Logs.exhaust( ).error( ex, ex );
         db.rollback( );
-        throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName, ex1 );
+        throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName, ex );
       }
     }
   }
