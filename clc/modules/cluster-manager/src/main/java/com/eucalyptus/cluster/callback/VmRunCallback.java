@@ -147,14 +147,6 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
         LOG.error( ex.getMessage( ) );
         Logs.extreme( ).error( ex, ex );
       }
-      final PrivateNetworkIndex networkIndex = this.token.getNetworkIndex( );
-      try {
-        LOG.debug( "-> Release network index allocation: " + networkIndex );
-        networkIndex.teardown( );
-      } catch ( final Exception ex ) {
-        LOG.error( ex.getMessage( ) );
-        Logs.extreme( ).error( ex, ex );
-      }
       final Address addr = this.token.getAddress( );
       LOG.debug( "-> Release addresses from failed vm run allocation: " + addr );
       try {

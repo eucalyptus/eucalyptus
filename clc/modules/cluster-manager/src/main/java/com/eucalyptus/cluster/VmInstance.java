@@ -191,6 +191,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       if ( this.networkIndex != null ) {
         this.networkIndex.release( );
         this.networkIndex.teardown( );
+        this.networkIndex = null;
       }
     } catch ( ResourceAllocationException ex ) {
       LOG.error( ex, ex );
