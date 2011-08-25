@@ -175,7 +175,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Column( name = "metadata_vm_private_networking" )
   private final Boolean           privateNetwork;
   @NotFound( action = NotFoundAction.IGNORE )
-  @ManyToMany( cascade = { CascadeType.REMOVE, CascadeType.MERGE } )
+  @ManyToMany( cascade = { CascadeType.ALL } )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final Set<NetworkGroup> networkGroups    = Sets.newHashSet( );
   
@@ -188,6 +188,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @PreRemove
   void cleanUp( ) {
     this.networkGroups.clear( );
+    try {
+      this.networkIndex.release( ).clear( );
+    } catch ( ResourceAllocationException ex ) {
+      LOG.error( ex , ex );
+    }
   }
   
   public enum Filters implements Predicate<VmInstance> {

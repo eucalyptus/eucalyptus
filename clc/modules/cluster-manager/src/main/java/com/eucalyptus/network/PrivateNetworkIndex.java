@@ -104,7 +104,7 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private ExtantNetwork                    extantNetwork;
   @NotFound( action = NotFoundAction.IGNORE )
-  @OneToOne( mappedBy = "networkIndex", fetch = FetchType.LAZY )
+  @OneToOne( mappedBy = "networkIndex", fetch = FetchType.LAZY, optional = true )
   private VmInstance                       instance;
   
   private PrivateNetworkIndex( ) {
