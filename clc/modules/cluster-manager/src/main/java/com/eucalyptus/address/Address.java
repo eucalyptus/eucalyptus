@@ -172,8 +172,6 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
                                                                   };
   @Transient
   private volatile SplitTransition        transition;
-  @Transient
-  private FullName                        owner;
   
   public Address( ) {}
   
@@ -490,7 +488,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   public String getUserId( ) {
-    return this.owner.getUniqueId( );
+    return this.getOwner( ).getUserId( );
   }
   
   public String getInstanceAddress( ) {

@@ -213,7 +213,6 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   }
   
   public static Address allocate( BaseMessage request ) throws EucalyptusCloudException, NotEnoughResourcesException {
-    //GRZE:WARN: not here.
     Context ctx = Contexts.lookup( );
     String action = PolicySpec.requestToAction( request );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
@@ -224,13 +223,9 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         throw new EucalyptusCloudException( "Exceeded quota in allocating address by " + ctx.getUser( ).getName( ) );
       }
     }
-    
-    //TODO(wenye): add quota restriction.
-//TODO:GRZE:FIXME    Addresses.policyLimits( userId, isAdministrator );
     return Addresses.getAddressManager( ).allocateNext( ctx.getUserFullName( ) );
   }
   
-  //TODO: add return of callback, use reassign, special case for now
   public static void system( VmInstance vm ) {
     try {
       if( VmState.PENDING.equals( vm.getRuntimeState( ) ) || VmState.RUNNING.equals( vm.getRuntimeState( ) ) ) {
