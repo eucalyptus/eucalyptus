@@ -303,7 +303,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         try {
           partition = Partitions.lookupByName( input.getPlacement( ) );
         } catch ( final Exception ex2 ) {
-          partition = Partitions.lookupByName( "default" );
+          partition = Partitions.lookupByName( Clusters.getInstance( ).lookup( input.getPlacement( ) ).getPartition( ) );
         }
         @SuppressWarnings( "deprecation" )
         final BootableSet bootSet = Emis.newBootableSet( vmType, partition, input.getImageId( ), input.getKernelId( ), input.getRamdiskId( ) );
