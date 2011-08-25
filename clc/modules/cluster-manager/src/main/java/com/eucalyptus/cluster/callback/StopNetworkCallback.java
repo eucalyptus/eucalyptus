@@ -63,7 +63,10 @@
  */
 package com.eucalyptus.cluster.callback;
 
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Expendable;
@@ -80,13 +83,19 @@ public class StopNetworkCallback extends BroadcastCallback<StopNetworkType, Stop
   @SuppressWarnings( "deprecation" )
   public StopNetworkCallback( final NetworkGroup networkGroup ) {
     this.networkGroup = networkGroup;
+    
+    EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
+      NetworkGroup entity = Entities.merge( this.networkGroup );
       this.tag = this.networkGroup.extantNetwork( ).getTag( );
+      db.commit( );
     } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
       this.tag = -1;
     }
-    StopNetworkType msg = new StopNetworkType( this.networkGroup.getOwnerAccountNumber( ), 
-                                               this.networkGroup.getOwnerUserId( ), 
+    StopNetworkType msg = new StopNetworkType( this.networkGroup.getOwnerAccountNumber( ),
+                                               this.networkGroup.getOwnerUserId( ),
                                                this.networkGroup.getNaturalId( ),
                                                this.tag ).regarding( );
     msg.setUserId( this.networkGroup.getOwnerUserId( ) );
