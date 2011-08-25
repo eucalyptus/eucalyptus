@@ -207,7 +207,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     CHANGING( VmState.PENDING, VmState.STOPPING, VmState.SHUTTING_DOWN ),
     STOP( VmState.STOPPING, VmState.STOPPED ),
     TERM( VmState.SHUTTING_DOWN, VmState.TERMINATED ),
-    NOT_RUNNING( VmState.STOPPING, VmState.STOPPED, VmState.SHUTTING_DOWN, VmState.TERMINATED );
+    NOT_RUNNING( VmState.STOPPING, VmState.STOPPED, VmState.SHUTTING_DOWN, VmState.TERMINATED ),
+    DONE( VmState.TERMINATED, VmState.BURIED );
     
     private Set<VmState> states;
     
@@ -450,6 +451,29 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
   }
   
+  public enum LookupTerminated implements Function<String, VmInstance> {
+    INSTANCE;
+    
+    @Override
+    public VmInstance apply( final String arg0 ) {
+      final EntityTransaction db = Entities.get( VmInstance.class );
+      try {
+        final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, arg0 ) );
+        if ( ( vm == null ) || !VmStateSet.DONE.apply( vm ) ) {
+          throw new NoSuchElementException( "Failed to lookup vm instance: " + arg0 );
+        }
+        db.commit( );
+        return vm;
+      } catch ( final NoSuchElementException ex ) {
+        db.rollback( );
+        throw ex;
+      } catch ( final Exception ex ) {
+        db.rollback( );
+        throw new NoSuchElementException( "Failed to lookup vm instance: " + arg0 );
+      }
+    }
+  }
+
   public enum Lookup implements Function<String, VmInstance> {
     INSTANCE;
     

@@ -83,6 +83,7 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstance.Reason;
 import com.eucalyptus.cluster.VmInstance.VmState;
+import com.eucalyptus.cluster.VmInstance.VmStateSet;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.cluster.callback.CancelBundleCallback;
@@ -181,7 +182,7 @@ public class VmControl {
               VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.Lookup.INSTANCE );
               final int oldCode = vm.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
               final String oldState = vm.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
-              if ( VmState.RUNNING.equals( vm.getRuntimeState( ) ) || VmState.PENDING.equals( vm.getRuntimeState( ) ) ) {
+              if ( VmStateSet.RUN.contains( vm.getRuntimeState( ) ) ) {
                 vm.setState( VmState.SHUTTING_DOWN, Reason.USER_TERMINATED );
               }
               results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
