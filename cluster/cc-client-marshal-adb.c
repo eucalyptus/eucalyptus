@@ -84,6 +84,7 @@ int cc_killallInstances(axutil_env_t *env, axis2_stub_t *stub) {
   adb_DescribeInstancesResponse_t *diOut=NULL;
   adb_describeInstancesResponseType_t *dirt=NULL;
   
+  bzero(instIds, 256 * sizeof(instIds[0]));
   //  adb_netConfigType_t *nct=NULL;
   //  adb_virtualMachineType_t *vm=NULL;
 
@@ -1129,20 +1130,21 @@ int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, 
   {
     char *instId, *resId, *mac;
     int j, i;
-    resId = malloc(sizeof(char) * 32);
-    instId = malloc(sizeof(char) * 32);
-    mac = malloc(sizeof(char) * 32);
+    int SIZE = 32;
+    resId = malloc(sizeof(char) * SIZE);
+    instId = malloc(sizeof(char) * SIZE);
+    mac = malloc(sizeof(char) * SIZE);
     
     for (i=0; i<num; i++) {
-      snprintf(mac, 32, "aa:dd:11:%c%c:%c%c:%c%c", rand()%5 + 65,rand()%5 + 65, rand()%5 + 65,rand()%5 + 65,rand()%5 + 65,rand()%5 + 65);
+      snprintf(mac, SIZE, "aa:dd:11:%c%c:%c%c:%c%c", rand()%5 + 65,rand()%5 + 65, rand()%5 + 65,rand()%5 + 65,rand()%5 + 65,rand()%5 + 65);
       adb_runInstancesType_add_macAddresses(rit, env, mac);
       
-      snprintf(instId, 32, "i-");
-      snprintf(resId, 32, "r-");
+      snprintf(instId, SIZE, "i-");
+      snprintf(resId, SIZE, "r-");
       for (j=0; j<8; j++) {
 	char c[2];
 	snprintf(c, 2, "%c",(rand()%26) + 97);
-	strncat(instId, c, 32);
+	strncat(instId, c, SIZE - strlen(instId) - 1);
       }
       adb_runInstancesType_add_instanceIds(rit, env, instId);
 
@@ -1150,7 +1152,7 @@ int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, 
     for (j=0; j<8; j++) {
       char c[2];
       snprintf(c, 2, "%c",(rand()%26) + 97);
-      strncat(resId, c, 32);
+      strncat(resId, c, SIZE - strlen(resId) - 1);
     }
     adb_runInstancesType_set_reservationId(rit, env, resId);
   }

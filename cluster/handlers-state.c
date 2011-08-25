@@ -407,6 +407,11 @@ int clean_network_state(void) {
   vnetConfig *tmpvnetconfig;
 
   tmpvnetconfig = malloc(sizeof(vnetConfig));
+  if(!tmpvnetconfig) { 
+    logprintfl(EUCAERROR, "clean_network_state(): out of memory\n");
+    return -1;
+  }
+
   memcpy(tmpvnetconfig, vnetconfig, sizeof(vnetConfig));
   
   snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del 169.254.169.254/32 dev %s", config->eucahome, tmpvnetconfig->pubInterface);

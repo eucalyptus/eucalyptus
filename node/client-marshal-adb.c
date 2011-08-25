@@ -302,6 +302,8 @@ int ncGetConsoleOutputStub (ncStub *st, ncMetadata *meta, char *instanceId, char
     axutil_env_t * env = st->env;
     axis2_stub_t * stub = st->stub;
     
+    if(!consoleOutput) return -1;
+
     adb_ncGetConsoleOutput_t     * input   = adb_ncGetConsoleOutput_create(env); 
     adb_ncGetConsoleOutputType_t * request = adb_ncGetConsoleOutputType_create(env);
     

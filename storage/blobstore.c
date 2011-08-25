@@ -2226,12 +2226,11 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
             break;
         } 
         case BLOBSTORE_ZERO:
-            if (m->relation_type!=BLOBSTORE_COPY) {
-                zero_dev = dm_get_zero ();
-                if (zero_dev == NULL) {
-                    return -1;
-                }
+            zero_dev = dm_get_zero ();
+            if (zero_dev == NULL) {
+                return -1;
             }
+
             break;
         default:
             ERR (BLOBSTORE_ERROR_INVAL, "invalid map entry type");
@@ -2397,6 +2396,8 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
                 goto cleanup; // ditto
             }
         }
+    } else {
+        free (main_dm_table);
     }
 
     goto free;
@@ -3174,7 +3175,7 @@ static void * competitor_function (void * ptr)
     int nfiles = (sizeof(_farray)/sizeof(char *));
 
     printf ("%u/%u: competitor running with timeout=%lld\n", (unsigned int)pthread_self(), (int)getpid(), timeout_usec);
-    int * fsuccesses = calloc (nfiles, sizeof (int *));
+    int * fsuccesses = calloc (nfiles, sizeof (int));
     
     for (int i=0; i<COMPETITIVE_ITERATIONS; i++) {
         int findex = (int)(nfiles*((double)random()/RAND_MAX)); // pick random file

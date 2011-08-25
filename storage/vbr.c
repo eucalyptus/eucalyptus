@@ -1824,7 +1824,7 @@ static int provision_vm (const char * id, const char * sshkey, const char * eki,
     next_instances_slot++;
     pthread_mutex_unlock (&competitors_mutex);
 
-    bzero   (vm, sizeof (vm));
+    bzero   (vm, sizeof (*vm));
     add_vbr (vm, VBR_SIZE, NC_FORMAT_NONE, "none", eki,    NC_RESOURCE_KERNEL,    NC_LOCATION_NONE, 0, 0, 0, NULL);
     add_vbr (vm, VBR_SIZE, NC_FORMAT_NONE, "none", eri,    NC_RESOURCE_RAMDISK,   NC_LOCATION_NONE, 0, 0, 0, NULL);
     add_vbr (vm, VBR_SIZE, NC_FORMAT_EXT3, "ext3", emi,    NC_RESOURCE_IMAGE,     NC_LOCATION_NONE, 0, 1, BUS_TYPE_SCSI, NULL);

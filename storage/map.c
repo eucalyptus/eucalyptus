@@ -46,7 +46,8 @@ void map_set (map * m, const char * key, void * val)
         if (mp->next==NULL) {
             mp->next = (map *) calloc(1, sizeof(map));
             mp = mp->next;
-            set (mp, key, val);
+            if(mp != NULL) // TODO: need to return an error if calloc failed
+                set (mp, key, val);
             return;
         }
     }
