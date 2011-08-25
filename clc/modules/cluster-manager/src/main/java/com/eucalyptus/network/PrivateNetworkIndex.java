@@ -99,12 +99,12 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   private final Long                       index;
   @Column( name = "metadata_network_index_bogus_id", unique = true )
   private final String                     bogusId;
-  @ManyToOne
-  @JoinColumn( name = "metadata_network_index_extant_network" )
+  @ManyToOne( cascade = CascadeType.REMOVE )
+  @JoinColumn( name = "metadata_network_index_extant_network_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private ExtantNetwork                    extantNetwork;
   @NotFound( action = NotFoundAction.IGNORE )
-  @OneToOne( mappedBy = "networkIndex", fetch = FetchType.LAZY, cascade = CascadeType.REMOVE )
+  @OneToOne( mappedBy = "networkIndex", fetch = FetchType.LAZY )
   private VmInstance                       instance;
   
   private PrivateNetworkIndex( ) {
