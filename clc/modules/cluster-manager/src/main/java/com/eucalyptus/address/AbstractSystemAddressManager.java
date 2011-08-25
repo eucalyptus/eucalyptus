@@ -99,7 +99,7 @@ public abstract class AbstractSystemAddressManager {
     for ( final ClusterAddressInfo addrInfo : ccList ) {
       try {
         final Address address = Helper.lookupOrCreate( cluster, addrInfo );
-        if ( address.isAssigned( ) && !address.isPending( ) ) {
+        if ( address.isAssigned( ) && !addrInfo.hasMapping( ) && !address.isPending( ) ) {
           if ( Principals.nobodyFullName( ).equals( address.getOwner( ) ) ) {
             Helper.markAsAllocated( cluster, addrInfo, address );
           }
@@ -108,7 +108,7 @@ public abstract class AbstractSystemAddressManager {
             clearOrphan( addrInfo );
           } catch ( final NoSuchElementException e ) {
             try {
-              final VmInstance vm = VmInstances.lookupByInstanceIp( addrInfo.getInstanceIp( ) );
+              final VmInstance vm = VmInstances.lookup( address.getInstanceId( ) );
               clearOrphan( addrInfo );
             } catch ( final NoSuchElementException ex ) {
               InetAddress addr = null;
@@ -120,7 +120,7 @@ public abstract class AbstractSystemAddressManager {
               if ( ( addr == null ) || !addr.isLoopbackAddress( ) ) {
                 handleOrphan( cluster.getName( ), addrInfo );
               }
-          }
+            }
           }
         } else if ( address.isAllocated( ) && Principals.nobodyFullName( ).equals( address.getOwner( ) ) && !address.isPending( ) ) {
           Helper.markAsAllocated( cluster, addrInfo, address );
