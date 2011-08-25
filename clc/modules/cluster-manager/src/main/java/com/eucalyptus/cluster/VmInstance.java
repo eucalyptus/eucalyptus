@@ -384,7 +384,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         db.commit( );
         return true;
       } catch ( final Exception ex ) {
-        Logs.exhaust( ).error( ex, ex );
+        Logs.extreme( ).error( ex, ex );
         db.rollback( );
         return false;
       }
