@@ -132,7 +132,7 @@ public class SystemState {
     } );
     
     for ( final String vmId : unreportedVms ) {
-      EntityTransaction db = Entities.get( SystemState.class );
+      EntityTransaction db = Entities.get( VmInstance.class );
       try {
         final VmInstance vm = VmInstances.lookup( vmId );
         if ( VmState.SHUTTING_DOWN.apply( vm ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
