@@ -250,6 +250,8 @@ public class RestrictedTypes {
             throw new NoSuchElementException( "Failed to lookup requested " + rscType.getCanonicalName( ) + " with id " + identifier + " using "
                                               + lookupFunction.getClass( ) );
           }
+        } catch ( NoSuchElementException ex ) {
+          throw ex;
         } catch ( PersistenceException ex ) {
           Logs.extreme( ).error( ex, ex );
           LOG.error( ex );
@@ -257,8 +259,8 @@ public class RestrictedTypes {
         } catch ( Exception ex ) {
           Logs.extreme( ).error( ex, ex );
           LOG.error( ex );
-          throw new PersistenceException( "Error occurred while attempting to lookup " + identifier + " using lookup: " + lookupFunction + " typed as "
-                                          + Classes.genericsToClasses( lookupFunction ), ex );
+          throw new PersistenceException( "Error occurred while attempting to lookup " + identifier + " using lookup: " + lookupFunction.getClass( ) + " typed as "
+                                          + rscType, ex );
         }
         
         Account owningAccount = Accounts.lookupUserById( requestedObject.getOwner( ).getUniqueId( ) ).getAccount( );
