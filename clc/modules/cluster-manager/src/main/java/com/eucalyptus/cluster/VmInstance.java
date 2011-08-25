@@ -203,8 +203,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                      .placement( allocInfo.getPartition( ), allocInfo.getRequest( ).getAvailabilityZone( ) )
                                                      .networking( allocInfo.getNetworkGroups( ), token.getNetworkIndex( ) )
                                                      .build( token.getLaunchIndex( ) );
-        token.getNetworkIndex( ).set( vmInst );
         vmInst = Entities.persist( vmInst );
+        token.getNetworkIndex( ).set( vmInst );
         db.commit( );
         token.setVmInstance( vmInst );
         return vmInst;
