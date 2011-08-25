@@ -141,6 +141,7 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   }
   
   protected void setOwner( OwnerFullName owner ) {
+    this.ownerFullNameCached = null;
     this.setOwnerAccountNumber( owner != null
       ? owner.getAccountNumber( )
       : null );
