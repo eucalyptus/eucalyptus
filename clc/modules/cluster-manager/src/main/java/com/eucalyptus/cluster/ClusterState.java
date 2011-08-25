@@ -69,6 +69,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
+import com.eucalyptus.address.AddressingConfiguration;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -82,46 +83,11 @@ public class ClusterState {
   private Integer                                             addressCapacity;
   private Boolean                                             publicAddressing      = false;
   private Boolean                                             addressingInitialized = false;
-  private ConcurrentNavigableMap<ClusterAddressInfo, Integer> orphans               = new ConcurrentSkipListMap<ClusterAddressInfo, Integer>( );
   
   ClusterState( String clusterName ) {
     this.clusterName = clusterName;
   }
-  
-  public void clearOrphan( ClusterAddressInfo address ) {
-    Integer delay = orphans.remove( address );
-    delay = ( delay == null
-      ? 0
-      : delay );
-    if ( delay > 2 ) {
-      LOG.warn( "Forgetting stale orphan address mapping from cluster " + clusterName + " for " + address.toString( ) );
-    }
-  }
-  
-  public void handleOrphan( ClusterAddressInfo address ) {
-    Integer orphanCount = 1;
-    orphanCount = orphans.putIfAbsent( address, orphanCount );
-    orphanCount = ( orphanCount == null )
-      ? 1
-      : orphanCount;
-    orphans.put( address, orphanCount + 1 );
-    EventRecord.caller( ClusterState.class, EventType.ADDRESS_STATE,
-                        "Updated orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).debug( );
-    if ( orphanCount > 3 ) {
-      EventRecord.caller( ClusterState.class, EventType.ADDRESS_STATE,
-                          "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).warn( );
-      try {
-        final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
-        if ( addr.isAssigned( ) ) {
-          AsyncRequests.newRequest( new UnassignAddressCallback( address ) ).dispatch( this.clusterName );
-        } else if ( addr.isSystemOwned( ) ) {
-          addr.release( );
-        }
-      } catch ( NoSuchElementException e ) {}
-      orphans.remove( address );
-    }
-  }
-  
+    
   public Boolean hasPublicAddressing( ) {
     return this.publicAddressing;
   }

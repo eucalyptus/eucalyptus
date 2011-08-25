@@ -87,13 +87,10 @@ import com.eucalyptus.records.Logs;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass( root = "cloud.addresses", description = "Configuration options controlling the handling of public/elastic addresses." )
 public class AddressingConfiguration extends AbstractPersistent {
-  /**
-   * 
-   */
-  private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID     = 1L;
   
   @Transient
-  private static Logger     LOG              = Logger.getLogger( AddressingConfiguration.class );
+  private static Logger     LOG                  = Logger.getLogger( AddressingConfiguration.class );
   
   @ConfigurableField( displayName = "max_addresses_per_user", changeListener = PropertyChangeListeners.IsPositiveInteger.class,
                       description = "The maximum number of addresses a user can have simultaneiously allocated before the next allocation will fail." )
@@ -108,6 +105,11 @@ public class AddressingConfiguration extends AbstractPersistent {
                       description = "Public addresses are assigned to instances by the system only from a pool of reserved instances whose size is determined by this value." )
   @Column( name = "config_addr_reserved_public_addresses" )
   private Integer           systemReservedPublicAddresses;
+  
+  @ConfigurableField( displayName = "address_orphan_count", changeListener = PropertyChangeListeners.IsPositiveInteger.class,
+                      description = "Number of times an orphaned address is reported by a cluster before it is reclaimed by the system." )
+  @Column( name = "config_addr_orphan_ticks" )
+  public static final int   ADDRESS_ORPHAN_TICKS = 10;
   
   public AddressingConfiguration( ) {
     super( );

@@ -6,24 +6,67 @@ import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstance.VmState;
+import com.eucalyptus.cluster.VmInstance.VmStateSet;
+import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
 import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 
 public abstract class AbstractSystemAddressManager {
-  private final static Logger LOG = Logger.getLogger( AbstractSystemAddressManager.class );
+  private final static Logger                                              LOG     = Logger.getLogger( AbstractSystemAddressManager.class );
+  private static final ConcurrentNavigableMap<ClusterAddressInfo, Integer> orphans = new ConcurrentSkipListMap<ClusterAddressInfo, Integer>( );
+  
+  public static void clearOrphan( ClusterAddressInfo address ) {
+    Integer delay = orphans.remove( address );
+    delay = ( delay == null
+      ? 0
+      : delay );
+    if ( delay > 2 ) {
+      LOG.warn( "Forgetting stale orphan address mapping for " + address.toString( ) );
+    }
+  }
+  
+  public static void handleOrphan( String cluster, ClusterAddressInfo address ) {
+    Integer orphanCount = 1;
+    orphanCount = orphans.putIfAbsent( address, orphanCount );
+    orphanCount = ( orphanCount == null )
+      ? 1
+      : orphanCount;
+    orphans.put( address, orphanCount + 1 );
+    EventRecord.caller( ClusterState.class, EventType.ADDRESS_STATE,
+                        "Updated orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).debug( );
+    if ( orphanCount > AddressingConfiguration.ADDRESS_ORPHAN_TICKS ) {
+      EventRecord.caller( ClusterState.class, EventType.ADDRESS_STATE,
+                          "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).warn( );
+      try {
+        final Address addr = Addresses.getInstance( ).lookup( address.getAddress( ) );
+        if ( addr.isAssigned( ) ) {
+          AsyncRequests.newRequest( new UnassignAddressCallback( address ) ).dispatch( cluster );
+        } else if ( addr.isSystemOwned( ) ) {
+          addr.release( );
+        }
+      } catch ( NoSuchElementException e ) {}
+      orphans.remove( address );
+    }
+  }
   
   public Address allocateNext( final OwnerFullName userId ) throws NotEnoughResourcesException {
     final Address addr = Addresses.getInstance( ).enableFirst( ).allocate( userId );
@@ -62,7 +105,7 @@ public abstract class AbstractSystemAddressManager {
           }
           try {
             final VmInstance vm = VmInstances.lookupByInstanceIp( addrInfo.getInstanceIp( ) );
-            cluster.getState( ).clearOrphan( addrInfo );
+            clearOrphan( addrInfo );
           } catch ( final NoSuchElementException e ) {
             InetAddress addr = null;
             try {
@@ -71,7 +114,7 @@ public abstract class AbstractSystemAddressManager {
               LOG.debug( e1, e1 );
             }
             if ( ( addr == null ) || !addr.isLoopbackAddress( ) ) {
-              cluster.getState( ).handleOrphan( addrInfo );
+              handleOrphan( cluster.getName( ), addrInfo );
             }
           }
         } else if ( address.isAllocated( ) && Principals.nobodyFullName( ).equals( address.getOwner( ) ) && !address.isPending( ) ) {
@@ -101,21 +144,21 @@ public abstract class AbstractSystemAddressManager {
         vm = Helper.maybeFindVm( addrInfo.getAddress( ), addrInfo.getInstanceIp( ) );
         if ( ( addr != null ) && ( vm != null ) ) {
           Helper.ensureAllocated( addr, vm );
-          cluster.getState( ).clearOrphan( addrInfo );
-        } else if ( addr != null && vm != null && vm.getRuntimeState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
-          cluster.getState( ).handleOrphan( addrInfo );
+          clearOrphan( addrInfo );
+        } else if ( addr != null && vm != null && VmStateSet.DONE.apply( vm ) ) {
+          handleOrphan( cluster.getName( ), addrInfo );
         } else if ( ( addr != null ) && ( vm == null ) ) {
-          cluster.getState( ).handleOrphan( addrInfo );
+          handleOrphan( cluster.getName( ), addrInfo );
         } else if ( ( addr == null ) && ( vm != null ) ) {
           addr = new Address( Principals.systemFullName( ), addrInfo.getAddress( ), cluster.getPartition( ), vm.getInstanceId( ), vm.getPrivateAddress( ) );
-          cluster.getState( ).clearOrphan( addrInfo );
+          clearOrphan( addrInfo );
         } else if ( ( addr == null ) && ( vm == null ) ) {
           addr = new Address( addrInfo.getAddress( ), cluster.getPartition( ) );
-          cluster.getState( ).handleOrphan( addrInfo );
+          handleOrphan( cluster.getName( ), addrInfo );
         }
       } else {
         if ( ( addr != null ) && addr.isAssigned( ) && !addr.isPending( ) ) {
-          cluster.getState( ).handleOrphan( addrInfo );
+          handleOrphan( cluster.getName( ), addrInfo );
         } else if ( ( addr != null ) && !addr.isAssigned( ) && !addr.isPending( ) && addr.isSystemOwned( ) ) {
           try {
             addr.release( );
@@ -123,7 +166,7 @@ public abstract class AbstractSystemAddressManager {
             LOG.error( ex );
           }
         } else if ( ( addr != null ) && Address.Transition.system.equals( addr.getTransition( ) ) ) {
-          cluster.getState( ).handleOrphan( addrInfo );
+          handleOrphan( cluster.getName( ), addrInfo );
         } else if ( addr == null ) {
           addr = new Address( addrInfo.getAddress( ), cluster.getPartition( ) );
           Helper.clearVmState( addrInfo );
@@ -143,7 +186,7 @@ public abstract class AbstractSystemAddressManager {
               } else {
                 address.assign( vm ).clearPending( );
               }
-              cluster.getState( ).clearOrphan( addrInfo );
+              clearOrphan( addrInfo );
               return;
             }
           }
