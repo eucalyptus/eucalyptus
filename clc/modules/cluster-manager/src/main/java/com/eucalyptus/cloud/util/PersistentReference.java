@@ -131,7 +131,8 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
   
   /**
    * {@inheritDoc ResourceAlllocation#teardown()}
-   * @throws ResourceAllocationException 
+   * 
+   * @throws ResourceAllocationException
    * 
    * @see Resource#teardown()
    */
@@ -146,7 +147,7 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
    * @see Resource#reclaim(com.eucalyptus.util.HasNaturalId)
    * @param referer
    * @return
-   * @throws ResourceAllocationException 
+   * @throws ResourceAllocationException
    */
   @Override
   public final T reclaim( final R referer ) throws ResourceAllocationException {
@@ -165,7 +166,7 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
                                     + this.getState( ) + ")." );
       } else {
         if ( referer != null && !Resource.State.PENDING.equals( finalState ) ) {
-          final R refererEntity = Entities.merge( referer );
+          final R refererEntity = referer;
           this.setReference( refererEntity );
           this.setState( finalState );
         } else {
