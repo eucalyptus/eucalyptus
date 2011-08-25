@@ -71,28 +71,21 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.atomic.AtomicMarkableReference;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
-import javax.persistence.EntityTransaction;
 import javax.persistence.Lob;
-import javax.persistence.PostLoad;
-import javax.persistence.PrePersist;
-import javax.persistence.PreUpdate;
+import javax.persistence.PreRemove;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Parent;
 import com.eucalyptus.cluster.VmInstance.BundleState;
 import com.eucalyptus.cluster.VmInstance.Reason;
 import com.eucalyptus.cluster.callback.BundleCallback;
-import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.records.Logs;
-import com.eucalyptus.vm.BundleTask;
 import com.eucalyptus.vm.VmState;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -142,6 +135,12 @@ public class VmRuntimeState {
   
   VmRuntimeState( ) {
     super( );
+  }
+  
+  @PreRemove
+  private void cleanUp( ) {
+    this.transientVolumeAttachments.clear( );
+    this.transientVolumes.clear( );
   }
   
   public String getReason( ) {

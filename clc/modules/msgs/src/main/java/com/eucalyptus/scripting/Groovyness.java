@@ -1,7 +1,9 @@
 package com.eucalyptus.scripting;
 
+import groovy.lang.ExpandoMetaClassCreationHandle;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyObject;
+import groovy.lang.GroovySystem;
 import groovy.lang.ReadOnlyPropertyException;
 import java.io.BufferedReader;
 import java.io.File;
@@ -9,9 +11,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import javax.script.Bindings;
-import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
@@ -27,6 +27,7 @@ public class Groovyness {
   public static ScriptEngine getGroovyEngine( ) {
     synchronized ( Groovyness.class ) {
       if ( groovyEngine == null ) {
+        GroovySystem.getMetaClassRegistry( ).setMetaClassCreationHandle( new ExpandoMetaClassCreationHandle( ) );
         ScriptEngineManager manager = new ScriptEngineManager( );
         groovyEngine = manager.getEngineByName( "groovy" );
       }

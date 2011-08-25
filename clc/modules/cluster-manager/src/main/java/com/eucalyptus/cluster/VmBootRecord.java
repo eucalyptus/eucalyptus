@@ -70,6 +70,7 @@ import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
+import javax.persistence.PreRemove;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
@@ -132,6 +133,11 @@ public class VmBootRecord {
     this.vmType = vmType;
   }
   
+  @PreRemove
+  private void cleanUp( ) {
+    this.persistentVolumes.clear( );
+  }
+
   private VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
