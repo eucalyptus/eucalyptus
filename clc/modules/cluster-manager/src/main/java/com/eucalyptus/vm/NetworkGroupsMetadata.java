@@ -115,22 +115,30 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
     try {
       for ( VmInstance vm : VmInstances.listValues( ) ) {
         if ( VmState.RUNNING.ordinal( ) > vm.getState( ).ordinal( ) ) continue;
-        for ( NetworkGroup ruleGroup : vm.getNetworkRulesGroups( ) ) {
-          networks.put( ruleGroup.getClusterNetworkName( ), vm.getPrivateAddress( ) );
-          if ( !rules.containsKey( ruleGroup.getNaturalId( ) ) ) {
-            for ( NetworkRule netRule : ruleGroup.getNetworkRules( ) ) {
-              String rule = String.format( "-P %s -%s %d%s%d ", netRule.getProtocol( ), ( "icmp".equals( netRule.getProtocol( ) )
-                ? "t"
-                : "p" ), netRule.getLowPort( ), ( "icmp".equals( netRule.getProtocol( ) )
-                ? ":"
-                : "-" ), netRule.getHighPort( ) );
-              for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {
-                rules.put( ruleGroup.getClusterNetworkName( ), String.format( "%s -o %s -u %s", rule, peer.getGroupName( ), peer.getUserQueryKey( ) ) );
-              }
-              for ( IpRange cidr : netRule.getIpRanges( ) ) {
-                rules.put( ruleGroup.getClusterNetworkName( ), String.format( "%s -s %s", rule, cidr.getValue( ) ) );
+        for ( NetworkGroup ruleGroup : vm.getNetworks( ) ) {
+          try {
+            networks.put( ruleGroup.getClusterNetworkName( ), vm.getPrivateAddress( ) );
+            if ( !rules.containsKey( ruleGroup.getNaturalId( ) ) ) {
+              for ( NetworkRule netRule : ruleGroup.getNetworkRules( ) ) {
+                try {
+                  String rule = String.format( "-P %s -%s %d%s%d ", netRule.getProtocol( ), ( "icmp".equals( netRule.getProtocol( ) )
+                    ? "t"
+                    : "p" ), netRule.getLowPort( ), ( "icmp".equals( netRule.getProtocol( ) )
+                    ? ":"
+                    : "-" ), netRule.getHighPort( ) );
+                  for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {
+                    rules.put( ruleGroup.getClusterNetworkName( ), String.format( "%s -o %s -u %s", rule, peer.getGroupName( ), peer.getUserQueryKey( ) ) );
+                  }
+                  for ( IpRange cidr : netRule.getIpRanges( ) ) {
+                    rules.put( ruleGroup.getClusterNetworkName( ), String.format( "%s -s %s", rule, cidr.getValue( ) ) );
+                  }
+                } catch ( Exception ex ) {
+                  LOG.error( ex , ex );
+                }
               }
             }
+          } catch ( Exception ex ) {
+            LOG.error( ex , ex );
           }
         }
       }
