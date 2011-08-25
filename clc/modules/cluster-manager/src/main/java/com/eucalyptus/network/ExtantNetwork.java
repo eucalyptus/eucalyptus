@@ -131,6 +131,7 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
     super( networkGroup.getOwner( ), networkGroup.getDisplayName( ) );
     this.tag = tag;
     this.networkGroup = networkGroup;
+    this.setState( Reference.State.PENDING );
   }
   
   private ExtantNetwork( final NetworkGroup networkGroup ) {
