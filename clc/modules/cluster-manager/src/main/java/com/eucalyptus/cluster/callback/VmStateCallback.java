@@ -1,7 +1,11 @@
 package com.eucalyptus.cluster.callback;
 
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.VmType;
@@ -36,7 +40,15 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         }
       }
     }
-    SystemState.handle( reply );
+    
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      SystemState.handle( reply );
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+    }
   }
 
   /**
