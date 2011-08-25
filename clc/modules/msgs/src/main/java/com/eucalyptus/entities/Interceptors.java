@@ -298,10 +298,12 @@ public class Interceptors {
     return interceptor = i;
   }
   
-  private static Interceptor interceptor = get( );
+  private static Interceptor interceptor           = get( );
+  
+  private static Boolean     TRANSACTION_INTERCEPT = Boolean.FALSE;
   
   static Interceptor get( ) {
-    return Logs.isExtrrreeeme( )
+    return TRANSACTION_INTERCEPT
       ? logger( )
       : empty( );
   }
