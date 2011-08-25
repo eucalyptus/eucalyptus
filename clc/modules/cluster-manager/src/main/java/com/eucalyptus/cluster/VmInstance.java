@@ -427,7 +427,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         }
       }
     },
-    DEREGISTER {
+    TERMINATE {
       @Override
       public VmInstance apply( final VmInstance vm ) {
         if ( !Entities.isPersistent( vm ) ) {

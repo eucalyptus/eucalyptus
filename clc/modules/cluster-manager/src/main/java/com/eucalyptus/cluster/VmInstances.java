@@ -351,12 +351,12 @@ public class VmInstances {
   
   @Deprecated
   public static VmInstance deregister( final VmInstance vm ) throws TransactionException {
-    return VmInstance.Transitions.DEREGISTER.apply( vm );
+    return VmInstance.Transitions.TERMINATE.apply( vm );
   }
   
   @Deprecated
   public static VmInstance deregister( final String key ) throws NoSuchElementException {
-    return Functions.compose( VmInstance.Transitions.DEREGISTER, VmInstance.Lookup.INSTANCE ).apply( key );
+    return Functions.compose( VmInstance.Transitions.TERMINATE, VmInstance.Lookup.INSTANCE ).apply( key );
   }
   
   @Deprecated

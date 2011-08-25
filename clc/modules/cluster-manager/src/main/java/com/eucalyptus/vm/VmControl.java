@@ -193,7 +193,11 @@ public class VmControl {
               }
               final int oldCode = vm.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
               final String oldState = vm.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
-              VmInstance.Transitions.DEREGISTER.apply( vm );
+              if ( VmStateSet.DONE.apply( vm ) ) {
+                VmInstance.Transitions.DELETE.apply( vm );
+              } else {
+                VmInstance.Transitions.TERMINATE.apply( vm );
+              }
               results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
               db.commit( );
               return true;

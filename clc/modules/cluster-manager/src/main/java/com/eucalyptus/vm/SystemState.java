@@ -138,7 +138,7 @@ public class SystemState {
         } else if ( VmState.TERMINATED.apply( vm ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
           vm.setState( VmState.BURIED, Reason.EXPIRED );
         } else if ( VmState.BURIED.apply( vm ) ) {
-          VmInstance.Transitions.DEREGISTER.apply( vm );
+          VmInstance.Transitions.TERMINATE.apply( vm );
         }
       } catch ( final NoSuchElementException e ) {}
     }
@@ -218,7 +218,7 @@ public class SystemState {
       if ( VmStateSet.DONE.apply( v ) && ( v.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
         final long time = ( System.currentTimeMillis( ) - v.getLastUpdateTimestamp( ).getTime( ) );
         if ( v.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
-          v.setState( VmState.TERMINATED, Reason.EXPIRED );
+          VmInstance.Transitions.TERMINATE.apply( v );
         } else if ( v.getSplitTime( ) > VmInstances.BURY_TIME ) {
           VmInstance.Transitions.DELETE.apply( v );
         }
