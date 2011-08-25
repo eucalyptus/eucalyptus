@@ -552,7 +552,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                      .networking( allocInfo.getNetworkGroups( ), token.getNetworkIndex( ) )
                                                      .build( token.getLaunchIndex( ) );
         vmInst = Entities.persist( vmInst );
-        token.getNetworkIndex( ).set( vmInst );
         Entities.flush( vmInst );
         db.commit( );
         token.setVmInstance( vmInst );
@@ -617,7 +616,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return config;
     }
     
-    public VmInstance build( final Integer launchndex ) {
+    public VmInstance build( final Integer launchndex ) throws ResourceAllocationException {
       return new VmInstance( this.owner, this.vmId, this.vmBootRecord, new VmLaunchRecord( launchndex, new Date( ) ), this.vmPlacement,
                              this.networkRulesGroups, this.networkIndex );
     }
@@ -629,7 +628,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                       final VmLaunchRecord launchRecord,
                       final VmPlacement placement,
                       final List<NetworkGroup> networkRulesGroups,
-                      final SetReference<PrivateNetworkIndex, VmInstance> networkIndex ) {
+                      final SetReference<PrivateNetworkIndex, VmInstance> networkIndex ) throws ResourceAllocationException {
     super( owner, vmId.getInstanceId( ) );
     this.setState( VmState.PENDING );
     this.vmId = vmId;
@@ -638,7 +637,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.placement = placement;
     this.privateNetwork = Boolean.FALSE;
     this.usageStats = new VmUsageStats( this );
-    this.networkIndex = null;
+    this.networkIndex = networkIndex.set( this );
     final Function<NetworkGroup, NetworkGroup> func = Entities.merge( );
     this.networkGroups.addAll( Collections2.transform( networkRulesGroups, func ) );
     this.runtimeState = new VmRuntimeState( this );
