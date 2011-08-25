@@ -237,18 +237,14 @@ public class SystemBootstrapper {
         return true;
       }
     } );
-    try {
-      SystemBootstrapper.runComponentStages( Component.Transition.STARTING, Components.filterWhichCanLoad( ) );
-    } catch ( Exception ex1 ) {
-      LOG.error( ex1, ex1 );
-    }
     Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
       @Override
       public void run( ) {
         try {
+          SystemBootstrapper.runComponentStages( Component.Transition.STARTING, Components.filterWhichCanLoad( ) );
           SystemBootstrapper.runComponentStages( Component.Transition.READY_CHECK, Components.filterWhichCanLoad( ) );
           SystemBootstrapper.runComponentStages( Component.Transition.ENABLING, Components.filterWhichCanLoad( ) );
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
       }
@@ -272,7 +268,7 @@ public class SystemBootstrapper {
     }
   }
   
-  private static void runComponentStages( Transition transition, Predicate<Component> filter ) throws Throwable {
+  private static void runComponentStages( Transition transition, Predicate<Component> filter ) {
     for ( Component c : Iterables.filter( Components.list( ), filter ) ) {
       try {
         Bootstrap.applyTransition( c, transition );
