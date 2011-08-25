@@ -96,7 +96,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
   
   @Override
   public void initialize( final VmRunType msg ) throws Exception {
-    EntityTransaction db = Entities.get( VmRunCallback.class );
+    EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance vm = VmInstances.lookup( msg.getInstanceId( ) );
       msg.setUserId( vm.getOwnerUserId( ) );
