@@ -135,12 +135,12 @@ public class SystemState {
       EntityTransaction db = Entities.get( VmInstance.class );
       try {
         final VmInstance vm = VmInstances.lookup( vmId );
-        if ( VmState.SHUTTING_DOWN.apply( vm ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
+        if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
           vm.setState( VmState.TERMINATED, Reason.EXPIRED );
-        } else if ( VmState.TERMINATED.apply( vm ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
+        } else if ( VmState.TERMINATED.apply( vm ) && vm.getSplitTime( ) > VmInstances.BURY_TIME ) {
           vm.setState( VmState.BURIED, Reason.EXPIRED );
         } else if ( VmState.BURIED.apply( vm ) ) {
-          VmInstance.Transitions.TERMINATE.apply( vm );
+          VmInstance.Transitions.DELETE.apply( vm );
         } else {
           VmInstance.Transitions.TERMINATE.apply( vm );
         }
