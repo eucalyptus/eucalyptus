@@ -2417,6 +2417,8 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
                 goto cleanup; // ditto
             }
         }
+    } else {
+        free (main_dm_table);
     }
 
     goto free;
