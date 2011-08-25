@@ -63,6 +63,7 @@
 
 package com.eucalyptus.vm;
 
+import java.security.AccessControlException;
 import java.util.Date;
 import java.util.List;
 import java.util.NavigableSet;
@@ -98,6 +99,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -106,7 +108,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
-import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
@@ -179,25 +180,31 @@ public class VmControl {
         public boolean apply( final String instanceId ) {
           try {
             try {
-              VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.Lookup.INSTANCE );
-              final int oldCode = vm.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
-              final String oldState = vm.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
-              if ( VmStateSet.RUN.contains( vm.getRuntimeState( ) ) ) {
-                vm.setState( VmState.SHUTTING_DOWN, Reason.USER_TERMINATED );
-              }
-              results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
-            } catch ( AuthException ex ) {
-              LOG.error( ex );
-            } catch ( Exception ex ) {
-            }
-            return true;
-          } catch ( final NoSuchElementException e ) {
-            try {
-              VmInstances.deregister( instanceId );
+              try {
+                VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.Lookup.INSTANCE );
+                if ( VmStateSet.RUN.contains( vm.getRuntimeState( ) ) ) {
+                  final int oldCode = vm.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
+                  final String oldState = vm.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
+                  vm.setState( VmState.SHUTTING_DOWN, Reason.USER_TERMINATED );
+                  results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
+                }
+              } catch ( NoSuchElementException ex ) {
+                VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.LookupTerminated.INSTANCE );
+                final int oldCode = vm.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
+                final String oldState = vm.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
+                VmInstance.Deregister.INSTANCE.apply( vm );
+                results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
+              } 
               return true;
-            } catch ( final NoSuchElementException e1 ) {
+            } catch ( final NoSuchElementException e ) {
               return false;
             }
+          } catch ( AuthException ex ) {
+            throw new AccessControlException( "Not authorized to terminate instance: " + instanceId + " because of: " + ex.getMessage( ) );
+          } catch ( IllegalContextAccessException ex ) {
+            throw new RuntimeException( "Failed to terminate instance: " + instanceId + " becuase of: " + ex.getMessage( ), ex );
+          } catch ( PersistenceException ex ) {
+            throw new RuntimeException( "Failed to terminate instance: " + instanceId + " becuase of: " + ex.getMessage( ), ex );
           }
         }
       } );
