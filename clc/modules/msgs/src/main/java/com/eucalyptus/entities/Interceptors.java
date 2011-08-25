@@ -288,14 +288,13 @@ public class Interceptors {
   private static Interceptor empty( ) {
     if ( interceptor != null && interceptor instanceof EmptyInterceptor ) {
       return interceptor;
-    } else if ( interceptor != null && !( interceptor instanceof EmptyInterceptor ) ) {
-      final Interceptor i = new EmptyInterceptor( );
-      interceptor = i;
-      return i;
     } else {
       final Interceptor i = new EmptyInterceptor( ) {
         private static final long serialVersionUID = 1L;
       };
+      if ( interceptor != null && !( interceptor instanceof EmptyInterceptor ) ) {
+        interceptor = i;
+      }
       return i;
     }
   }
@@ -304,12 +303,11 @@ public class Interceptors {
   private static Interceptor logger( ) {
     if ( interceptor != null && interceptor instanceof LogMonitorInterceptor ) {
       return interceptor;
-    } else if ( interceptor != null && !( interceptor instanceof LogMonitorInterceptor ) ) {
-      final Interceptor i = new LogMonitorInterceptor( );
-      interceptor = i;
-      return i;
     } else {
       final Interceptor i = new LogMonitorInterceptor( );
+      if ( interceptor != null && !( interceptor instanceof LogMonitorInterceptor ) ) {
+        interceptor = i;
+      }
       return i;
     }
   }
