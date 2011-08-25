@@ -151,7 +151,7 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
   @SuppressWarnings( "unchecked" )
   T doSetReferer( final R referer, final Reference.State preconditionState, final Reference.State finalState ) throws ResourceAllocationException {
     this.checkPreconditions( preconditionState );
-    if ( referer != null && !Reference.State.PENDING.equals( finalState ) ) {
+    if ( ( referer != null ) && !Reference.State.PENDING.equals( finalState ) ) {
       final R refererEntity = referer;
       this.setReference( refererEntity );
       this.setState( finalState );
@@ -178,5 +178,5 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
   public T set( final R referer ) throws ResourceAllocationException {
     final T ret = PersistentReference.this.doSetReferer( referer, Reference.State.PENDING, Reference.State.EXTANT );
     return ret;
-  }  
+  }
 }

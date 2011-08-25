@@ -1016,6 +1016,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     
   }
   
+  public void redeem( ) {
+    this.networkIndex.
+  }
+  
   private PrivateNetworkIndex getNetworkIndex( ) {
     return this.networkIndex;
   }
