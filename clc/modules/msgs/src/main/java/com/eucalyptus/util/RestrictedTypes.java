@@ -200,7 +200,8 @@ public class RestrictedTypes {
    *           is authorized.
    * @throws IllegalContextAccessException if the current request context cannot be determined.
    */
-  public static <T extends HasOwningAccount> T doPrivileged( String identifier, Function<String, T> lookupFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  @SuppressWarnings( "rawtypes" )
+  public static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> lookupFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     Context ctx = Contexts.lookup( );
     Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
     LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + lookupFunction + " typed as " + Classes.genericsToClasses( lookupFunction ) );
@@ -256,6 +257,44 @@ public class RestrictedTypes {
     }
   }
   
+  public static <T extends RestrictedType<T>> Predicate<T> filterPrivileged( ) {
+    return new Predicate<T>( ) {
+      
+      @Override
+      public boolean apply( T arg0 ) {
+        Context ctx = Contexts.lookup( );
+        Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
+        Class<?> rscType = arg0.getClass( );
+        Ats ats = Ats.inClassHierarchy( rscType );
+        Ats msgAts = Ats.inClassHierarchy( msgType );
+        if ( !ats.has( PolicyVendor.class ) && !msgAts.has( PolicyVendor.class ) ) {
+          throw new IllegalArgumentException( "Failed to determine policy for looking up type instance " + arg0.toString( )
+                                              + ": required @PolicyVendor missing in resource type hierarchy " + rscType.getCanonicalName( )
+                                              + " and request type hierarchy " + msgType.getCanonicalName( ) );
+        } else if ( !ats.has( PolicyResourceType.class ) && !msgAts.has( PolicyResourceType.class ) ) {
+          throw new IllegalArgumentException( "Failed to determine policy for looking up type instance " + arg0.toString( )
+                                              + ": required @PolicyResourceType missing in resource type hierarchy " + rscType.getCanonicalName( )
+                                              + " and request type hierarchy " + msgType.getCanonicalName( ) );
+        } else {
+          PolicyVendor vendor = ats.get( PolicyVendor.class );
+          PolicyResourceType type = ats.get( PolicyResourceType.class );
+          String action = PolicySpec.requestToAction( ctx.getRequest( ) );
+          if ( action == null ) {
+            action = vendor.value( ) + ":" + ctx.getRequest( ).getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
+          }
+          User requestUser = ctx.getUser( );
+          try {
+            Account owningAccount = Accounts.lookupAccountById( arg0.getOwner( ).getAccountNumber( ) );
+            return Permissions.isAuthorized( vendor.value( ), type.value( ), arg0.getDisplayName( ), owningAccount, action, requestUser );
+          } catch ( AuthException ex ) {
+            return false;
+          }
+        }
+      }
+      
+    };
+  }
+  
   public static boolean checkPrivilege( BaseMessage request, String vendor, String resourceType, String resourceId, FullName resourceOwner ) {
     Context ctx = Contexts.lookup( );
     String action = PolicySpec.requestToAction( request );
@@ -270,7 +309,7 @@ public class RestrictedTypes {
     return ( ctx.hasAdministrativePrivileges( ) || Permissions.isAuthorized( vendor, resourceType, resourceId, account, action, requestUser ) );
   }
   
-  public static boolean isContextAuthorized( String identifier ) {
+  private static boolean isContextAuthorized( String identifier ) {
     String resourceName = ( identifier == null
       ? ""
       : identifier );
@@ -306,11 +345,11 @@ public class RestrictedTypes {
     return false;
   }
   
-  public static String findPolicyAction( Object rscType ) {
+  private static String findPolicyAction( Object rscType ) {
     return findPolicyAction( Classes.typeOf( rscType ) );
   }
   
-  public static String findPolicyAction( Class<RestrictedType<?>> rscType ) {
+  private static String findPolicyAction( Class<RestrictedType<?>> rscType ) {
     Context ctx = Contexts.lookup( );
     Ats ats = Ats.inClassHierarchy( rscType );
     PolicyVendor vendor = ats.get( PolicyVendor.class );

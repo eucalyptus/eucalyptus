@@ -83,10 +83,10 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Parent;
 import com.eucalyptus.cluster.VmInstance.BundleState;
 import com.eucalyptus.cluster.VmInstance.Reason;
+import com.eucalyptus.cluster.VmInstance.VmState;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.vm.VmState;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -119,7 +119,7 @@ public class VmRuntimeState {
 //private Set<VmVolumeAttachment>             transientVolumes = Sets.newHashSet( );
   @ElementCollection
   @CollectionTable( name = "metadata_vm_transient_volume_attachments" )
-  private Set<VmVolumeAttachment>                   transientVolumeAttachments = Sets.newHashSet( );
+  private final Set<VmVolumeAttachment>                   transientVolumeAttachments = Sets.newHashSet( );
   @Transient
   private ConcurrentMap<String, VmVolumeAttachment> transientVolumes           = new ConcurrentSkipListMap<String, VmVolumeAttachment>( );
   @Lob
@@ -128,7 +128,7 @@ public class VmRuntimeState {
   @Column( name = "metadata_vm_pending" )
   private Boolean                                   pending;
   
-  VmRuntimeState( VmInstance vmInstance ) {
+  VmRuntimeState( final VmInstance vmInstance ) {
     super( );
     this.vmInstance = vmInstance;
   }
@@ -162,9 +162,9 @@ public class VmRuntimeState {
     final VmState oldState = this.getVmInstance( ).getState( );
     Runnable action = null;
     if ( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && Reason.USER_TERMINATED.equals( reason ) ) {
-      action = cleanUpRunnable( SEND_USER_TERMINATE );
+      action = this.cleanUpRunnable( SEND_USER_TERMINATE );
     } else if ( VmState.STOPPING.equals( newState ) && VmState.STOPPING.equals( oldState ) && Reason.USER_STOPPED.equals( reason ) ) {
-      action = cleanUpRunnable( SEND_USER_STOP );
+      action = this.cleanUpRunnable( SEND_USER_STOP );
     } else if ( ( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) || VmState.BURIED.equals( newState ) ) {
       VmInstances.deregister( this.getVmInstance( ).getInstanceId( ) );
     } else if ( !oldState.equals( newState ) ) {
@@ -176,17 +176,17 @@ public class VmRuntimeState {
       this.reason = reason;
       if ( ( oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) && ( newState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
         this.getVmInstance( ).setState( newState );
-        action = cleanUpRunnable( );
+        action = this.cleanUpRunnable( );
       } else if ( VmState.PENDING.equals( oldState ) && VmState.RUNNING.equals( newState ) ) {
         this.getVmInstance( ).setState( newState );
       } else if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) ) {
         this.getVmInstance( ).setState( newState );
-        action = cleanUpRunnable( );
+        action = this.cleanUpRunnable( );
       } else if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
         this.getVmInstance( ).setState( newState );
       } else if ( ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) && ( newState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) ) {
         this.getVmInstance( ).setState( oldState );
-        action = cleanUpRunnable( );
+        action = this.cleanUpRunnable( );
       } else if ( newState.ordinal( ) > oldState.ordinal( ) ) {
         this.getVmInstance( ).setState( newState );
       }
@@ -194,7 +194,7 @@ public class VmRuntimeState {
       if ( action != null ) {
         try {
           action.run( );
-        } catch ( Exception ex ) {
+        } catch ( final Exception ex ) {
           LOG.error( ex, ex );
         }
       }
@@ -206,14 +206,15 @@ public class VmRuntimeState {
   }
   
   private Runnable cleanUpRunnable( ) {
-    return cleanUpRunnable( null );
+    return this.cleanUpRunnable( null );
   }
   
   private Runnable cleanUpRunnable( final String reason ) {
     return new Runnable( ) {
+      @Override
       public void run( ) {
         VmInstances.cleanUp( VmRuntimeState.this.getVmInstance( ) );
-        if ( reason != null && !VmRuntimeState.this.reasonDetails.contains( reason ) ) {
+        if ( ( reason != null ) && !VmRuntimeState.this.reasonDetails.contains( reason ) ) {
           VmRuntimeState.this.addReasonDetail( reason );
         }
       }
@@ -221,7 +222,7 @@ public class VmRuntimeState {
   }
   
   VmBundleTask resetBundleTask( ) {
-    VmBundleTask oldTask = this.bundleTask;
+    final VmBundleTask oldTask = this.bundleTask;
     this.bundleTask = null;
     return oldTask;
   }
@@ -230,11 +231,11 @@ public class VmRuntimeState {
     return this.serviceTag;
   }
   
-  void setServiceTag( String serviceTag ) {
+  void setServiceTag( final String serviceTag ) {
     this.serviceTag = serviceTag;
   }
   
-  void setReason( Reason reason ) {
+  void setReason( final Reason reason ) {
     this.reason = reason;
   }
   
@@ -256,7 +257,7 @@ public class VmRuntimeState {
     return this.passwordData;
   }
   
-  void setPasswordData( String passwordData ) {
+  void setPasswordData( final String passwordData ) {
     this.passwordData = passwordData;
   }
   
@@ -287,7 +288,7 @@ public class VmRuntimeState {
     }
   }
   
-  void setBundleTaskState( String state ) {
+  void setBundleTaskState( final String state ) {
     BundleState next = null;
     if ( BundleState.storing.getMappedState( ).equals( state ) ) {
       next = BundleState.storing;
@@ -457,19 +458,19 @@ public class VmRuntimeState {
     return this.transientVolumes;
   }
   
-  private void setBundleTask( VmBundleTask bundleTask ) {
+  private void setBundleTask( final VmBundleTask bundleTask ) {
     this.bundleTask = bundleTask;
   }
   
-  private void setReasonDetails( List<String> reasonDetails ) {
+  private void setReasonDetails( final List<String> reasonDetails ) {
     this.reasonDetails = reasonDetails;
   }
   
-  private void setTransientVolumes( ConcurrentMap<String, VmVolumeAttachment> transientVolumes ) {
+  private void setTransientVolumes( final ConcurrentMap<String, VmVolumeAttachment> transientVolumes ) {
     this.transientVolumes = transientVolumes;
   }
   
-  private void setVmInstance( VmInstance vmInstance ) {
+  private void setVmInstance( final VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
   
@@ -480,11 +481,11 @@ public class VmRuntimeState {
   public Boolean isCreatingImage( ) {
     return this.createImageTask != null;
   }
-
+  
   /**
    * @param createImageTaskStateName
    */
-  public void setCrateImageTaskState( String createImageTaskStateName ) {
+  public void setCrateImageTaskState( final String createImageTaskStateName ) {
     /** TODO:GRZE: FINISH BFE HERE **/
   }
   

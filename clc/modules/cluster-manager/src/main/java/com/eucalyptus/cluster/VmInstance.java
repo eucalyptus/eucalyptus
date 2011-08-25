@@ -70,6 +70,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.persistence.CascadeType;
@@ -83,6 +84,7 @@ import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
 import javax.persistence.PrePersist;
+import javax.persistence.PreRemove;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -103,6 +105,7 @@ import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
+import com.eucalyptus.cluster.VmInstance.VmState;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
@@ -113,6 +116,7 @@ import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionExecutionException;
+import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.Emis;
@@ -129,7 +133,6 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.vm.BundleTask;
-import com.eucalyptus.vm.VmState;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
@@ -137,6 +140,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import edu.emory.mathcs.backport.java.util.Arrays;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
@@ -149,6 +153,7 @@ import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetadata<VmInstance> {
   private static final long       serialVersionUID = 1L;
+  
   @Transient
   private static Logger           LOG              = Logger.getLogger( VmInstance.class );
   @Transient
@@ -181,8 +186,95 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex     networkIndex;
   
+  @PreRemove
   void cleanUp( ) {
     this.networkGroups.clear( );
+  }
+  
+  public enum Filters implements Predicate<VmInstance> {
+    BUNDLING {
+      
+      @Override
+      public boolean apply( VmInstance arg0 ) {
+        return arg0.isBundling( );
+      }
+      
+    };
+  }
+  
+  public enum VmStateSet implements Predicate<VmInstance> {
+    RUN( VmState.PENDING, VmState.RUNNING ),
+    CHANGING( VmState.PENDING, VmState.STOPPING, VmState.SHUTTING_DOWN ),
+    STOP( VmState.STOPPING, VmState.STOPPED ),
+    TERM( VmState.SHUTTING_DOWN, VmState.TERMINATED ),
+    NOT_RUNNING( VmState.STOPPING, VmState.STOPPED, VmState.SHUTTING_DOWN, VmState.TERMINATED );
+    
+    private Set<VmState> states;
+    
+    VmStateSet( final VmState... states ) {
+      this.states = Sets.newHashSet( states );
+    }
+    
+    @Override
+    public boolean apply( final VmInstance arg0 ) {
+      return this.states.contains( arg0.getState( ) ) || arg0.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
+        @Override
+        public boolean apply( final AttachedVolume arg0 ) {
+          return !arg0.getStatus( ).endsWith( "ing" );
+        }
+      } );
+    }
+    
+    public boolean contains( Object o ) {
+      return this.states.contains( o );
+    }
+    
+  }
+  
+  public enum VmState implements Predicate<VmInstance> {
+    PENDING( 0 ),
+    RUNNING( 16 ),
+    SHUTTING_DOWN( 32 ),
+    TERMINATED( 48 ),
+    STOPPING( 64 ),
+    STOPPED( 80 ),
+    BURIED( 128 );
+    private String name;
+    private int    code;
+    
+    VmState( final int code ) {
+      this.name = this.name( ).toLowerCase( ).replace( "_", "-" );
+      this.code = code;
+    }
+    
+    public String getName( ) {
+      return this.name;
+    }
+    
+    public int getCode( ) {
+      return this.code;
+    }
+    
+    public static class Mapper {
+      private static Map<String, VmState> stateMap = getStateMap( );
+      
+      private static Map<String, VmState> getStateMap( ) {
+        final Map<String, VmState> map = new HashMap<String, VmState>( );
+        map.put( "Extant", VmState.RUNNING );
+        map.put( "Pending", VmState.PENDING );
+        map.put( "Teardown", VmState.SHUTTING_DOWN );
+        return map;
+      }
+      
+      public static VmState get( final String stateName ) {
+        return Mapper.stateMap.get( stateName );
+      }
+    }
+    
+    @Override
+    public boolean apply( final VmInstance arg0 ) {
+      return this.equals( arg0.getState( ) );
+    }
   }
   
   public enum RestoreAllocation implements Predicate<VmInfo> {
@@ -302,6 +394,78 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 //        AsyncRequests.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
     }
     
+  }
+  
+  public enum Register implements Function<VmInstance, VmInstance> {
+    INSTANCE;
+    
+    @Override
+    public VmInstance apply( final VmInstance arg0 ) {
+      final EntityTransaction db = Entities.get( VmInstance.class );
+      try {
+        final VmInstance entityObj = Entities.merge( arg0 );
+        db.commit( );
+        return entityObj;
+      } catch ( final RuntimeException ex ) {
+        Logs.extreme( ).error( ex, ex );
+        db.rollback( );
+        throw ex;
+      }
+    }
+  }
+  
+  public enum Deregister implements Function<VmInstance, VmInstance> {
+    INSTANCE;
+    
+    @Override
+    public VmInstance apply( final VmInstance vm ) {
+      if ( !Entities.isPersistent( vm ) ) {
+        throw new TransientEntityException( vm.toString( ) );
+      } else {
+        final EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          Entities.delete( vm );
+          db.commit( );
+          return vm;
+        } catch ( final Exception ex ) {
+          Logs.exhaust( ).trace( ex, ex );
+          db.rollback( );
+          throw new NoSuchElementException( "Failed to lookup instance: " + vm );
+        }
+      }
+    }
+  }
+  
+  public enum Lookup implements Function<String, VmInstance> {
+    INSTANCE;
+    
+    @Override
+    public VmInstance apply( final String arg0 ) {
+      final EntityTransaction db = Entities.get( VmInstance.class );
+      try {
+        final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, arg0 ) );
+        if ( ( vm == null ) || VmState.TERMINATED.equals( vm.getState( ) ) ) {
+          throw new NoSuchElementException( "Failed to lookup vm instance: " + arg0 );
+        }
+        db.commit( );
+        return vm;
+      } catch ( final NoSuchElementException ex ) {
+        db.rollback( );
+        throw ex;
+      } catch ( final Exception ex ) {
+        db.rollback( );
+        throw new NoSuchElementException( "Failed to lookup vm instance: " + arg0 );
+      }
+    }
+  }
+  
+  public enum FilterTerminated implements Predicate<VmInstance> {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( final VmInstance arg0 ) {
+      return false;
+    }
   }
   
   public enum CreateAllocation implements Function<ResourceToken, VmInstance> {
@@ -467,6 +631,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     if ( !VmNetworkConfig.DEFAULT_IP.equals( publicAddr ) && !"".equals( publicAddr )
          && ( publicAddr != null ) ) {
       this.networkConfig.setPublicAddress( publicAddr );
+    } else {
+      this.networkConfig.setPublicAddress( VmNetworkConfig.DEFAULT_IP );
     }
   }
   
@@ -981,39 +1147,43 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       
       @Override
       public boolean apply( final VmInfo runVm ) {
-        
-        final EntityTransaction db = Entities.get( VmInstance.class );
-        try {
-          final VmInstance vm = Entities.merge( VmInstance.this );
-          final VmState state = VmState.Mapper.get( runVm.getStateName( ) );
-          final long splitTime = VmInstance.this.getSplitTime( );
-          final VmState oldState = VmInstance.this.getRuntimeState( );
-          VmInstance.this.runtimeState.setServiceTag( runVm.getServiceTag( ) );
-          VmInstance.this.setBundleTaskState( runVm.getBundleTaskStateName( ) );
-          VmInstance.this.setCreateImageTaskState( runVm.getBundleTaskStateName( ) );
-          
-          if ( VmState.SHUTTING_DOWN.equals( VmInstance.this.getRuntimeState( ) ) && ( splitTime > VmInstances.SHUT_DOWN_TIME ) ) {
-            VmInstance.this.setState( VmState.TERMINATED, Reason.EXPIRED );
-          } else if ( VmState.STOPPING.equals( VmInstance.this.getRuntimeState( ) ) && ( splitTime > VmInstances.SHUT_DOWN_TIME ) ) {
-            VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
-          } else if ( VmState.STOPPING.equals( VmInstance.this.getRuntimeState( ) )
-                      && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
-            VmInstance.this.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
-          } else if ( VmState.SHUTTING_DOWN.equals( VmInstance.this.getRuntimeState( ) )
-                      && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
-            VmInstance.this.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
-          } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
-                      && ( VmState.PENDING.equals( VmInstance.this.getRuntimeState( ) ) || VmState.RUNNING.equals( VmInstance.this.getRuntimeState( ) ) ) ) {
-            if ( !VmNetworkConfig.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
+        if ( !Entities.isPersistent( VmInstance.this ) ) {
+          throw new TransientEntityException( this.toString( ) );
+        } else {
+          final EntityTransaction db = Entities.get( VmInstance.class );
+          try {
+            final VmState state = VmState.Mapper.get( runVm.getStateName( ) );
+            final long splitTime = VmInstance.this.getSplitTime( );
+            final VmState oldState = VmInstance.this.getRuntimeState( );
+            if ( VmStateSet.TERM.apply( VmInstance.this ) && ( VmInstance.this.getSplitTime( ) > VmInstances.BURY_TIME ) ) {
+              VmInstance.this.setState( VmState.TERMINATED, Reason.EXPIRED );
+            } else if ( VmStateSet.STOP.apply( VmInstance.this ) && ( VmInstance.this.getSplitTime( ) > VmInstances.BURY_TIME ) ) {
+              VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
+            } else if ( VmStateSet.NOT_RUNNING.apply( VmInstance.this ) && ( VmInstance.this.getSplitTime( ) > VmInstances.BURY_TIME ) ) {
+              VmInstance.this.setState( VmState.BURIED, Reason.BURIED );
+              VmInstances.deregister( VmInstance.this );
+            } else {
+              VmInstance.this.runtimeState.setServiceTag( runVm.getServiceTag( ) );
+              VmInstance.this.setBundleTaskState( runVm.getBundleTaskStateName( ) );
+              VmInstance.this.setCreateImageTaskState( runVm.getBundleTaskStateName( ) );
+              VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
               VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
+              if ( VmState.STOPPING.equals( VmInstance.this.getRuntimeState( ) )
+                          && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
+                VmInstance.this.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
+              } else if ( VmState.SHUTTING_DOWN.equals( VmInstance.this.getRuntimeState( ) )
+                          && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
+                VmInstance.this.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
+              } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
+                          && ( VmState.PENDING.equals( VmInstance.this.getRuntimeState( ) ) || VmState.RUNNING.equals( VmInstance.this.getRuntimeState( ) ) ) ) {
+                VmInstance.this.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
+              }
             }
-            VmInstance.this.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
-            VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
+            db.commit( );
+          } catch ( final Exception ex ) {
+            Logs.exhaust( ).error( ex, ex );
+            db.rollback( );
           }
-          db.commit( );
-        } catch ( final Exception ex ) {
-          Logs.exhaust( ).error( ex, ex );
-          db.rollback( );
         }
         return true;
       }

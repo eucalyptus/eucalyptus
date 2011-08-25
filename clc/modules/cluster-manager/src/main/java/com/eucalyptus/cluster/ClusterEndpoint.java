@@ -230,12 +230,6 @@ public class ClusterEndpoint implements Startable {
                                                                                    retList.add( new ClusterInfoType( val, "" ) );
                                                                                    LOG.info( val );
                                                                                  }
-                                                                                 retList.add( new ClusterInfoType( "================== Disabled VMs", "" ) );
-                                                                                 for ( VmInstance vm : VmInstances.listDisabledValues( ) ) {
-                                                                                   String val = vm.toString( );
-                                                                                   retList.add( new ClusterInfoType( val, "" ) );
-                                                                                   LOG.info( val );
-                                                                                 }
                                                                                  retList.add( new ClusterInfoType( "================== Clusters", "" ) );
                                                                                  for ( Cluster cluster : Clusters.getInstance( ).listValues( ) ) {
                                                                                    String val = cluster.toString( );

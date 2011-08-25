@@ -72,7 +72,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ImageMetadata;
 
 @MappedSuperclass
-public class PutGetImageInfo extends ImageInfo implements ImageMetadata.StaticDiskImage {
+public class PutGetImageInfo extends ImageInfo implements ImageMetadata.StaticDiskImage<ImageInfo> {
   @Column( name = "metadata_image_manifest_path" )
   private String manifestLocation;
   

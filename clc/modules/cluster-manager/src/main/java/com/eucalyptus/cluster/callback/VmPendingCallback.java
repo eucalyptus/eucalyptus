@@ -1,46 +1,41 @@
 package com.eucalyptus.cluster.callback;
 
-import java.util.NoSuchElementException;
 import java.util.concurrent.CancellationException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstance.Reason;
+import com.eucalyptus.cluster.VmInstance.VmState;
+import com.eucalyptus.cluster.VmInstance.VmStateSet;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.VmNetworkConfig;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.async.FailedRequestException;
-import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmDescribeType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 
 public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
-  private static Logger LOG = Logger.getLogger( VmPendingCallback.class );
+  private static Logger               LOG          = Logger.getLogger( VmPendingCallback.class );
+  
+  private final Predicate<VmInstance> clusterMatch = new Predicate<VmInstance>( ) {
+                                                     
+                                                     @Override
+                                                     public boolean apply( VmInstance arg0 ) {
+                                                       return arg0.getPartition( ).equals( VmPendingCallback.this.getSubject( ).getConfiguration( ).getPartition( ) )
+                                                     ;
+                                                   }
+                                                   };
   
   public VmPendingCallback( Cluster cluster ) {
     super( cluster );
     super.setRequest( new VmDescribeType( ) {
       {
         regarding( );
-        for ( VmInstance vm : VmInstances.listValues( ) ) {
-          if ( vm.getPartition( ).equals( VmPendingCallback.this.getSubject( ).getConfiguration( ).getPartition( ) ) ) {
-            if ( VmState.PENDING.equals( vm.getState( ) )
-                        || vm.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) {
-              this.getInstancesSet( ).add( vm.getInstanceId( ) );
-            } else if ( vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
-              @Override
-              public boolean apply( AttachedVolume arg0 ) {
-                return !arg0.getStatus( ).endsWith( "ing" );
-              }
-            } ) ) {
-
-            }
-          }
-        }
+        Predicate<VmInstance> filter = Predicates.and( VmStateSet.CHANGING, VmPendingCallback.this.clusterMatch );
       }
     } );
     if ( this.getRequest( ).getInstancesSet( ).isEmpty( ) ) {

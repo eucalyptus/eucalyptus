@@ -65,18 +65,16 @@ package com.eucalyptus.cloud;
 
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
-import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
-import javax.persistence.PreUpdate;
 import javax.persistence.Transient;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.entities.AbstractStatefulPersistent;
-import com.eucalyptus.util.HasOwningAccount;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedType.AccountRestrictedType;
 
 @MappedSuperclass
-public abstract class AccountMetadata<STATE extends Enum<STATE>> extends AbstractStatefulPersistent<STATE> implements HasOwningAccount {
+public abstract class AccountMetadata<STATE extends Enum<STATE>> extends AbstractStatefulPersistent<STATE> implements AccountRestrictedType {
   @Column( name = "metadata_account_id" )
   private String          ownerAccountNumber;
   @Column( name = "metadata_account_name" )
@@ -113,7 +111,6 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
       : null;
   }
   
-  @Override
   public OwnerFullName getOwner( ) {
     if ( this.ownerFullNameCached != null ) {
       return this.ownerFullNameCached;

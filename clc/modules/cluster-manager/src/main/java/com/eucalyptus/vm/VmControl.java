@@ -67,9 +67,11 @@ import java.util.Date;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
+import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.run.AdmissionControl;
@@ -80,6 +82,7 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstance.Reason;
+import com.eucalyptus.cluster.VmInstance.VmState;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.cluster.callback.CancelBundleCallback;
@@ -92,6 +95,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.EventRecord;
@@ -101,6 +105,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
@@ -172,14 +177,17 @@ public class VmControl {
         @Override
         public boolean apply( final String instanceId ) {
           try {
-            final VmInstance v = VmInstances.lookup( instanceId );
-            if ( RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
-              final int oldCode = v.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
-              final String oldState = v.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
-              results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
-              if ( VmState.RUNNING.equals( v.getRuntimeState( ) ) || VmState.PENDING.equals( v.getRuntimeState( ) ) ) {
-                v.setState( VmState.SHUTTING_DOWN, Reason.USER_TERMINATED );
+            try {
+              VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.Lookup.INSTANCE );
+              final int oldCode = vm.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
+              final String oldState = vm.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
+              if ( VmState.RUNNING.equals( vm.getRuntimeState( ) ) || VmState.PENDING.equals( vm.getRuntimeState( ) ) ) {
+                vm.setState( VmState.SHUTTING_DOWN, Reason.USER_TERMINATED );
               }
+              results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
+            } catch ( AuthException ex ) {
+              LOG.error( ex );
+            } catch ( Exception ex ) {
             }
             return true;
           } catch ( final NoSuchElementException e ) {
@@ -272,15 +280,8 @@ public class VmControl {
     final Context ctx = Contexts.lookup( );
     final DescribeBundleTasksResponseType reply = request.getReply( );
     if ( request.getBundleIds( ).isEmpty( ) ) {
-      for ( final VmInstance v : VmInstances.listValues( ) ) {
-        if ( v.isBundling( )
-             && ( RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), v.getOwner( ) ) ) ) {
-          reply.getBundleTasks( ).add( v.getBundleTask( ) );
-        }
-      }
-      for ( final VmInstance v : VmInstances.listDisabledValues( ) ) {
-        if ( v.isBundling( )
-             && ( RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), v.getOwner( ) ) ) ) {
+      for ( final VmInstance v : Iterables.filter( VmInstances.listValues( ), VmInstance.Filters.BUNDLING ) ) {
+        if ( RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), v.getOwner( ) ) ) {
           reply.getBundleTasks( ).add( v.getBundleTask( ) );
         }
       }

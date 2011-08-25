@@ -72,11 +72,11 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Transient;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.util.HasOwningUser;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedType.UserRestrictedType;
 
 @MappedSuperclass
-public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMetadata<STATE> implements HasOwningUser {
+public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMetadata<STATE> implements UserRestrictedType {
   @Transient
   private static final long serialVersionUID = 1L;
   

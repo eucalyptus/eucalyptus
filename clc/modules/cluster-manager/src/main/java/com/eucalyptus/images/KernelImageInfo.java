@@ -70,6 +70,8 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.cloud.ImageMetadata.Architecture;
+import com.eucalyptus.cloud.ImageMetadata.Platform;
 
 @Entity
 @javax.persistence.Entity

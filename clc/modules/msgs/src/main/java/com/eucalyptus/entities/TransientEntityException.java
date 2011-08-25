@@ -63,7 +63,8 @@
 
 package com.eucalyptus.entities;
 
-public class TransientEntityException extends TransactionException {
+public class TransientEntityException extends RuntimeException {
+  private static final long serialVersionUID = 1L;
   
   public TransientEntityException( ) {
     super( );

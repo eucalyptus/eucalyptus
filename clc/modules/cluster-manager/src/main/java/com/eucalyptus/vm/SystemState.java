@@ -95,6 +95,8 @@ import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstance.Reason;
+import com.eucalyptus.cluster.VmInstance.VmState;
+import com.eucalyptus.cluster.VmInstance.VmStateSet;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partition;
@@ -127,7 +129,6 @@ public class SystemState {
   public static Logger LOG = Logger.getLogger( SystemState.class );
   
   public static void handle( final VmDescribeResponseType request ) {
-    VmInstances.flushBuried( );
     final String originCluster = request.getOriginCluster( );
     for ( final VmInfo runVm : request.getVms( ) ) {
       SystemState.updateVmInstance( originCluster, runVm );
@@ -164,13 +165,10 @@ public class SystemState {
     try {
       try {
         final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, runVm.getInstanceId( ) ) );
-        if ( !VmState.BURIED.equals( vm.getRuntimeState( ) ) && ( vm.getSplitTime( ) > VmInstances.BURY_TIME ) ) {
-          vm.setState( VmState.BURIED, Reason.BURIED );
-        }
         vm.doUpdate( ).apply( runVm );
       } catch ( final Exception ex ) {
-        if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) ) ) {
-          SystemState.restoreInstance( originCluster, runVm );
+        if ( VmStateSet.RUN.contains( state ) ) {
+          VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
         }
       }
       db.commit( );
@@ -261,17 +259,6 @@ public class SystemState {
         rsvMap.put( reservation.getReservationId( ), reservation );
       }
       rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstance.Transform.INSTANCE.apply( v ) );
-    }
-    if ( isAdmin ) {
-      for ( final VmInstance v : VmInstances.listDisabledValues( ) ) {
-        if ( VmState.BURIED.equals( v.getState( ) ) ) continue;
-        if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) continue;
-        if ( rsvMap.get( v.getReservationId( ) ) == null ) {
-          final ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ), v.getNetworkNames( ) );
-          rsvMap.put( reservation.getReservationId( ), reservation );
-        }
-        rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstance.Transform.INSTANCE.apply( v ) );
-      }
     }
     return new ArrayList<ReservationInfoType>( rsvMap.values( ) );
   }

@@ -82,6 +82,7 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cluster.VmInstance.Reason;
+import com.eucalyptus.cluster.VmInstance.VmState;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Partitions;
@@ -97,6 +98,8 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionExecutionException;
+import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.EventRecord;
@@ -110,9 +113,9 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.SystemState;
-import com.eucalyptus.vm.VmState;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
@@ -232,11 +235,7 @@ public class VmInstances {
   }
   
   public static VmInstance lookupByBundleId( final String bundleId ) throws NoSuchElementException {
-    try {
-      return Iterables.find( listValues( ), withBundleId( bundleId ) );
-    } catch ( NoSuchElementException ex ) {
-      return Iterables.find( listDisabledValues( ), withBundleId( bundleId ) );
-    }
+    return Iterables.find( listValues( ), withBundleId( bundleId ) );
   }
   
   public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final Cluster cluster ) {
@@ -331,16 +330,6 @@ public class VmInstances {
     return vm;
   }
   
-  public static void flushBuried( ) {
-    for ( final VmInstance vm : VmInstances.listDisabledValues( ) ) {
-      if ( ( vm.getSplitTime( ) > VmInstances.BURY_TIME ) && !VmState.BURIED.equals( vm.getState( ) ) ) {
-        vm.setState( VmState.BURIED, Reason.BURIED );
-      } else if ( ( vm.getSplitTime( ) > VmInstances.BURY_TIME ) && VmState.BURIED.equals( vm.getState( ) ) ) {
-        VmInstances.deregister( vm.getName( ) );
-      }
-    }
-  }
-  
   public static String asMacAddress( final String instanceId ) {
     return String.format( "%s:%s:%s:%s:%s",
                           VmInstances.MAC_PREFIX,
@@ -350,78 +339,31 @@ public class VmInstances {
                           instanceId.substring( 8, 10 ) );
   }
   
+  @Deprecated
   public static VmInstance lookup( final String name ) throws NoSuchElementException {
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, name ) );
-      if ( ( vm == null ) || VmState.TERMINATED.equals( vm.getState( ) ) ) {
-        throw new NoSuchElementException( "Failed to lookup vm instance: " + name );
-      }
-      db.commit( );
-      return vm;
-    } catch ( NoSuchElementException ex ) {
-      db.rollback( );
-      throw ex;
-    } catch ( final Exception ex ) {
-      db.rollback( );
-      throw new NoSuchElementException( "Failed to lookup vm instance: " + name );
-    }
+    return VmInstance.Lookup.INSTANCE.apply( name );
   }
   
+  @Deprecated
   public static VmInstance register( final VmInstance obj ) {
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      VmInstance entityObj = Entities.merge( obj );
-      db.commit( );
-      return entityObj;
-    } catch ( final RuntimeException ex ) {
-      Logs.extreme( ).error( ex, ex );
-      db.rollback( );
-      throw ex;
-    }
+    return VmInstance.Register.INSTANCE.apply( obj );
   }
   
-  public static void deregister( final String key ) throws NoSuchElementException {
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, key ) );
-      vm.cleanUp( );
-      Entities.delete( vm );
-      db.commit( );
-    } catch ( final Exception ex ) {
-      Logs.exhaust( ).trace( ex, ex );
-      db.rollback( );
-      throw new NoSuchElementException( "Failed to lookup instance: " + key );
-    }
+  @Deprecated
+  public static VmInstance deregister( final VmInstance vm ) throws TransactionException {
+    return VmInstance.Deregister.INSTANCE.apply( vm );
   }
   
-  public static List<VmInstance> listDisabledValues( ) {
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      final List<VmInstance> vms = Entities.query( VmInstance.namedTerminated( null, null ) );
-      db.commit( );
-      return vms;
-    } catch ( final Exception ex ) {
-      db.rollback( );
-      Logs.extreme( ).error( ex, ex );
-      return Lists.newArrayList( );
-    }
+  @Deprecated
+  public static VmInstance deregister( final String key ) throws NoSuchElementException {
+    return Functions.compose( VmInstance.Deregister.INSTANCE, VmInstance.Lookup.INSTANCE ).apply( key );
   }
   
+  @Deprecated
   public static List<VmInstance> listValues( ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final List<VmInstance> vms = Entities.query( VmInstance.named( null, null ) );
-//      final Collection<VmInstance> ret = Collections2.filter( vms, new Predicate<VmInstance>( ) {
-//        
-//        @Override
-//        public boolean apply( final VmInstance input ) {
-//          for ( NetworkGroup i : input.getNetworkRulesGroups( ) ) {
-//            Logs.extreme( ).trace( "Found network group: " + i.toString( ) );
-//          }
-//          return !VmState.TERMINATED.equals( input.getState( ) );
-//        }
-//      } );
       db.commit( );
       return Lists.newArrayList( vms );
     } catch ( final Exception ex ) {
@@ -431,6 +373,7 @@ public class VmInstances {
     }
   }
   
+  @Deprecated
   public static VmInstance lookupDisabled( final String name ) throws NoSuchElementException {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
@@ -446,6 +389,7 @@ public class VmInstances {
     }
   }
   
+  @Deprecated
   public static void disable( final VmInstance that ) throws NoSuchElementException {
     final EntityTransaction db = Entities.get( VmInstance.class );
     if ( VmState.RUNNING.ordinal( ) >= that.getState( ).ordinal( ) ) {

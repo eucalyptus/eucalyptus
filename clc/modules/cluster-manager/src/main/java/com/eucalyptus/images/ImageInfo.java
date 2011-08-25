@@ -119,7 +119,7 @@ import com.google.common.collect.Sets;
 @Inheritance( strategy = InheritanceType.SINGLE_TABLE )
 @DiscriminatorColumn( name = "metadata_image_discriminator", discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "metadata_kernel_or_ramdisk" )
-public class ImageInfo extends UserMetadata<ImageMetadata.State> implements ImageMetadata {
+public class ImageInfo extends UserMetadata<ImageMetadata.State> implements ImageMetadata<ImageInfo> {
   @Transient
   private static final long          serialVersionUID = 1L;
   
@@ -372,7 +372,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   
   @Override
   public int compareTo( final ImageMetadata o ) {
-    return this.getDisplayName( ).compareTo( o.getName( ) );
+    return this.getDisplayName( ).compareTo( o.getDisplayName( ) );
   }
   
   @Override

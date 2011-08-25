@@ -6,9 +6,9 @@ import com.eucalyptus.util.OwnerFullName;
 
 /** GRZE:WARN: values are intentionally opaque strings and /not/ a symbolic reference. **/
 @PolicyResourceType( "image" )
-public interface ImageMetadata extends CloudMetadata<ImageMetadata> {
+public interface ImageMetadata<T extends ImageMetadata<T>> extends CloudMetadata<ImageMetadata<T>> {
   
-  public interface StaticDiskImage extends ImageMetadata {
+  public interface StaticDiskImage<S extends ImageMetadata<S>> extends ImageMetadata<S> {
     public abstract String getManifestLocation( );
     public abstract String getSignature( );
   }

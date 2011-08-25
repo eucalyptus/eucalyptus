@@ -69,6 +69,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstance.VmState;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.network.IpRange;
@@ -78,7 +79,6 @@ import com.eucalyptus.network.NetworkRule;
 import com.eucalyptus.util.ByteArray;
 import com.google.common.base.Function;
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 
 public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArray> {
