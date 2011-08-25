@@ -190,7 +190,11 @@ public class VmRuntimeState {
       } else if ( newState.ordinal( ) > oldState.ordinal( ) ) {
         this.getVmInstance( ).setState( newState );
       }
-      this.getVmInstance( ).store( );
+      try {
+        this.getVmInstance( ).store( );
+      } catch ( Exception ex1 ) {
+        LOG.error( ex1 , ex1 );
+      }
       if ( action != null ) {
         try {
           action.run( );
