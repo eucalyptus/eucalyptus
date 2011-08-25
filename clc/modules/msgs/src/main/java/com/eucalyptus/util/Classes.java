@@ -127,7 +127,7 @@ public class Classes {
     public Class<?> apply( final Object o ) {
       return ( o instanceof Class
           ? ( Class<?> ) o
-          : o.getClass( ) );
+          : ( o != null ? o.getClass( ) : null ) );
     }
   }
   

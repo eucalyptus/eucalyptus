@@ -286,7 +286,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         @Override
         public NetworkGroup apply( final String arg0 ) {
           final NetworkGroup result = ( NetworkGroup ) Entities.createCriteria( NetworkGroup.class ).setReadOnly( true )
-                                                               .add( Restrictions.like( "naturalId", arg0.replace( userFullName.getAccountNumber( ) + "-", "" ) ) )
+                                                               .add( Restrictions.like( "naturalId", arg0.replace( userFullName.getAccountNumber( ) + "-", "" ) + "%" ) )
                                                                .uniqueResult( );
           return result;
         }
@@ -343,9 +343,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           userData = new byte[0];
         }
         
-        List<NetworkGroup> networks = null;
+        List<NetworkGroup> networks = Lists.newArrayList( );
         try {
-          networks = Lists.transform( input.getGroupNames( ), transformNetworkNames( userFullName ) );
+          networks.addAll( Lists.transform( input.getGroupNames( ), transformNetworkNames( userFullName ) ) );
         } catch ( final Exception ex ) {
           LOG.error( ex, ex );
         }
