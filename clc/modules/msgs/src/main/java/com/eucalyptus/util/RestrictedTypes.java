@@ -211,13 +211,19 @@ public class RestrictedTypes {
       throw new IllegalArgumentException( "Failed to find required generic type for lookup " + lookupFunction.getClass( )
                                           + " so the policy type for looking up " + identifier + " cannot be determined." );
     } else {
-      Class<?> rscType = Iterables.find( lookupTypes, new Predicate<Class<?>>( ) {
-        
-        @Override
-        public boolean apply( Class<?> arg0 ) {
-          return RestrictedType.class.isAssignableFrom( arg0 );
-        }
-      } );
+      Class<?> rscType;
+      try {
+        rscType = Iterables.find( lookupTypes, new Predicate<Class<?>>( ) {
+          
+          @Override
+          public boolean apply( Class<?> arg0 ) {
+            return RestrictedType.class.isAssignableFrom( arg0 );
+          }
+        } );
+      } catch ( NoSuchElementException ex1 ) {
+        LOG.error( ex1 , ex1 );
+        throw ex1;
+      }
       Ats ats = Ats.inClassHierarchy( rscType );
       Ats msgAts = Ats.inClassHierarchy( msgType );
       if ( !ats.has( PolicyVendor.class ) && !msgAts.has( PolicyVendor.class ) ) {

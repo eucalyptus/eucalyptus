@@ -104,7 +104,7 @@
 	<classpathentry kind="lib" path="lib/geronimo-stax-1.0-spec-1.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/groovy-all-1.7.2.jar"/>
 	<classpathentry kind="lib" path="lib/guava-r09-gwt.jar"/>
-	<classpathentry kind="lib" path="lib/guava-r09.jar"/>
+	<classpathentry kind="lib" path="lib/guava-r09.jar" sourcepath="/bzr/third-party/guava-r08"/>
 	<classpathentry kind="lib" path="lib/gwt-api-checker-2.2.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-dev-2.2.jar"/>
 	<classpathentry kind="lib" path="lib/gwt-servlet-2.2.jar"/>
