@@ -75,6 +75,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
 
 @Entity
@@ -83,7 +84,7 @@ import com.eucalyptus.util.OwnerFullName;
 @Table( name = "cloud_vm_types" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 //@ConfigurableClass(root="eucalyptus",alias="vmtypes",deferred=true,singleton=false,description="Virtual Machine type definitions")
-public class VmType extends AbstractPersistent implements VmTypeMetadata<VmType> {
+public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFullName<VmTypeMetadata> {
   /**
    * 
    */
@@ -180,7 +181,7 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata<VmType>
   }
   
   @Override
-  public int compareTo( final VmType that ) {
+  public int compareTo( final VmTypeMetadata that ) {
     if ( this.equals( that ) ) return 0;
     if ( ( this.getCpu( ) <= that.getCpu( ) ) && ( this.getDisk( ) <= that.getDisk( ) ) && ( this.getMemory( ) <= that.getMemory( ) ) ) return -1;
     if ( ( this.getCpu( ) >= that.getCpu( ) ) && ( this.getDisk( ) >= that.getDisk( ) ) && ( this.getMemory( ) >= that.getMemory( ) ) ) return 1;

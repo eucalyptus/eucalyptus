@@ -69,12 +69,14 @@ import javax.persistence.PrePersist;
 import javax.persistence.Transient;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.cloud.CloudMetadata.KeyPairMetadata;
 import com.eucalyptus.entities.AbstractStatefulPersistent;
+import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedType.AccountRestrictedType;
 
 @MappedSuperclass
-public abstract class AccountMetadata<STATE extends Enum<STATE>> extends AbstractStatefulPersistent<STATE> implements AccountRestrictedType {
+public abstract class AccountMetadata<STATE extends Enum<STATE>> extends AbstractStatefulPersistent<STATE> implements AccountRestrictedType, HasFullName<AccountMetadata> {
   @Column( name = "metadata_account_id" )
   private String          ownerAccountNumber;
   @Column( name = "metadata_account_name" )
@@ -209,4 +211,10 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
     }
     return true;
   }
+  
+  @Override
+  public int compareTo( AccountMetadata that ) {
+    return this.getFullName( ).toString( ).compareTo( that.getFullName( ).toString( ) );
+  }
+  
 }

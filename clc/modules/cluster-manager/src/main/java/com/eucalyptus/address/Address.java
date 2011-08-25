@@ -77,6 +77,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.AccountMetadata;
 import com.eucalyptus.cloud.CloudMetadata.AddressMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cluster.VmInstance;
@@ -101,7 +102,7 @@ import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_addresses" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class Address extends UserMetadata<Address.State> implements AddressMetadata<Address> {
+public class Address extends UserMetadata<Address.State> implements AddressMetadata {
   public enum State {
     broken, unallocated, allocated, assigned, impending;
   }
@@ -522,11 +523,6 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   @Override
-  public int compareTo( final Address that ) {
-    return this.getName( ).compareTo( that.getName( ) );
-  }
-  
-  @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
     if ( !( o instanceof Address ) ) return false;
@@ -590,6 +586,15 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   public FullName getFullName( ) {
     return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( ClusterController.class ).name( ) ).namespace( this.getPartition( ) ).relativeId( "public-address",
                                                                                                                                                            this.getName( ) );
+  }
+
+  @Override
+  public int compareTo( AccountMetadata that ) {
+    if ( that instanceof Address ) {
+      return this.getName( ).compareTo( that.getName( ) );
+    } else {
+      return super.compareTo( that );
+    }
   }
   
 }

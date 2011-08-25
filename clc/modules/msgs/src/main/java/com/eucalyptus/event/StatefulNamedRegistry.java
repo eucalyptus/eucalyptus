@@ -13,7 +13,7 @@ import com.eucalyptus.util.HasName;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
-public class StatefulNamedRegistry<T extends HasName<T>, E extends Enum<E>> {
+public class StatefulNamedRegistry<T extends HasName, E extends Enum<E>> {
   private static Logger LOG = Logger.getLogger( StatefulNamedRegistry.class );
   
   public static class StateEvent<T, E extends Enum<E>> extends GenericEvent<T> {
@@ -97,8 +97,8 @@ public class StatefulNamedRegistry<T extends HasName<T>, E extends Enum<E>> {
   }
   
   private final ConcurrentNavigableMap<String, StatefulValue> stateMap = new ConcurrentSkipListMap<String, StatefulValue>( );
-  private E[]                                                       states;
-  private ReadWriteLock                                             canHas;
+  private E[]                                                 states;
+  private ReadWriteLock                                       canHas;
   
   protected StatefulNamedRegistry( E... states ) {
     super( );

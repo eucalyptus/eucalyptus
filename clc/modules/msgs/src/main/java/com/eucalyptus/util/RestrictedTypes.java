@@ -257,7 +257,7 @@ public class RestrictedTypes {
     }
   }
   
-  public static <T extends RestrictedType<T>> Predicate<T> filterPrivileged( ) {
+  public static <T extends RestrictedType> Predicate<T> filterPrivileged( ) {
     return new Predicate<T>( ) {
       
       @Override

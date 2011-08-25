@@ -98,17 +98,14 @@ import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.Tx;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 @Entity
@@ -119,7 +116,7 @@ import com.google.common.collect.Sets;
 @Inheritance( strategy = InheritanceType.SINGLE_TABLE )
 @DiscriminatorColumn( name = "metadata_image_discriminator", discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "metadata_kernel_or_ramdisk" )
-public class ImageInfo extends UserMetadata<ImageMetadata.State> implements ImageMetadata<ImageInfo> {
+public class ImageInfo extends UserMetadata<ImageMetadata.State> implements ImageMetadata {
   @Transient
   private static final long          serialVersionUID = 1L;
   
@@ -368,11 +365,6 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   @Override
   public String toString( ) {
     return this.getFullName( ).toString( );
-  }
-  
-  @Override
-  public int compareTo( final ImageMetadata o ) {
-    return this.getDisplayName( ).compareTo( o.getDisplayName( ) );
   }
   
   @Override

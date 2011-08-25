@@ -80,16 +80,20 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.cloud.AccountMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cloud.util.Resource;
 import com.eucalyptus.cloud.util.Resource.SetReference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.TransientEntityException;
+import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Numbers;
 import com.google.common.collect.Iterables;
 
@@ -98,7 +102,7 @@ import com.google.common.collect.Iterables;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_extant_network" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class ExtantNetwork extends UserMetadata<Resource.State> implements Comparable<ExtantNetwork> {
+public class ExtantNetwork extends UserMetadata<Resource.State> {
   @Transient
   private static final long        serialVersionUID = 1L;
   @Transient
@@ -286,8 +290,12 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
   }
   
   @Override
-  public int compareTo( ExtantNetwork that ) {
-    return this.getTag( ).compareTo( that.getTag( ) );
+  public int compareTo( AccountMetadata that ) {
+    if ( that instanceof ExtantNetwork ) {
+      return this.getTag( ).compareTo( ( ( ExtantNetwork ) that ).getTag( ) );
+    } else {
+      return super.compareTo( that );
+    }
   }
   
   public String toString( ) {
@@ -299,4 +307,23 @@ public class ExtantNetwork extends UserMetadata<Resource.State> implements Compa
     return builder.toString( );
   }
   
+  /**
+   * @see com.eucalyptus.util.HasFullName#getPartition()
+   */
+  @Override
+  public String getPartition( ) {
+    return Eucalyptus.INSTANCE.getName( );
+  }
+  
+  /**
+   * @see com.eucalyptus.util.HasFullName#getFullName()
+   */
+  @Override
+  public FullName getFullName( ) {
+    return FullName.create.vendor( "euca" )
+                          .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
+                          .namespace( this.getOwnerAccountNumber( ) )
+                          .relativeId( "security-group", this.getNetworkGroup( ).getDisplayName( ),
+                                       "tag", this.getTag( ).toString( ) );
+  }
 }

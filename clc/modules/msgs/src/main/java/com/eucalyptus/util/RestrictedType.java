@@ -68,7 +68,7 @@ package com.eucalyptus.util;
  * 
  * @see RestrictedTypes
  */
-public interface RestrictedType<T> extends HasFullName<T> {
+public interface RestrictedType<T> {
   public abstract String getDisplayName( );
   
   public abstract OwnerFullName getOwner( );

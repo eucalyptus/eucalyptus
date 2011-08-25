@@ -107,7 +107,7 @@ import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements NetworkGroupMetadata<NetworkGroup> {
+public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements NetworkGroupMetadata {
   @Transient
   private static final long   serialVersionUID = 1L;
   @Transient
@@ -262,11 +262,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
                                                                           return pfrule;
                                                                         }
                                                                       };
-  
-  @Override
-  public int compareTo( final NetworkGroup that ) {
-    return this.getUniqueName( ).compareTo( that.getUniqueName( ) );
-  }
   
   public String getClusterNetworkName( ) {
     return this.getOwnerAccountNumber( ) + "-" + this.getNaturalId( );

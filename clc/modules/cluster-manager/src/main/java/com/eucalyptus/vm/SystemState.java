@@ -113,8 +113,11 @@ import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
@@ -233,25 +236,25 @@ public class SystemState {
     final User requestUser = ctx.getUser( );
     final Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
     final EntityTransaction db = Entities.get( VmInstance.class );
-    for ( final VmInstance v : VmInstances.listValues( ) ) {
-      if ( !VmState.STOPPED.equals( v.getState( ) ) && ( v.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
+    Predicate<VmInstance> privileged = RestrictedTypes.filterPrivileged( );
+    for ( final VmInstance v : Iterables.filter( VmInstances.listValues( ), privileged ) ) {
+      if ( VmStateSet.DONE.apply( v ) && ( v.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
         final long time = ( System.currentTimeMillis( ) - v.getLastUpdateTimestamp( ).getTime( ) );
-        if ( time > VmInstances.SHUT_DOWN_TIME ) {
+        if ( v.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
           v.setState( VmState.TERMINATED, Reason.EXPIRED );
           continue;
-        } else if ( time > VmInstances.SHUT_DOWN_TIME ) {
+        } else if ( v.getSplitTime( ) > VmInstances.BURY_TIME ) {
           v.setState( VmState.BURIED, Reason.BURIED );
         }
       }
+      
       Account instanceAccount = null;
       try {
         instanceAccount = Accounts.lookupUserById( v.getOwner( ).getUniqueId( ) ).getAccount( );
       } catch ( final AuthException e ) {
         throw new EucalyptusCloudException( e );
       }
-      if ( ( !isAdmin &&
-           !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), instanceAccount, action, requestUser ) )
-           || ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) ) {
+      if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) {
         continue;
       }
       if ( rsvMap.get( v.getReservationId( ) ) == null ) {

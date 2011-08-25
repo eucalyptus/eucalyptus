@@ -71,11 +71,13 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.cloud.CloudMetadata;
+import com.eucalyptus.cloud.CloudMetadata.KeyPairMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
 
 @Entity
@@ -83,7 +85,7 @@ import com.eucalyptus.util.OwnerFullName;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_keypairs" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudMetadata.KeyPairMetadata<SshKeyPair> {
+public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPairMetadata {
   enum State {
     available, removing
   }
@@ -142,11 +144,6 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements CloudM
                           .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
                           .namespace( this.getOwnerAccountNumber( ) )
                           .relativeId( "keypair", this.getDisplayName( ) );
-  }
-  
-  @Override
-  public int compareTo( SshKeyPair that ) {
-    return this.getFullName( ).toString( ).compareTo( that.getFullName( ).toString( ) );
   }
   
   static SshKeyPair noKey( ) {

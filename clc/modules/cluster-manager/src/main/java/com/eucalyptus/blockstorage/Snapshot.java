@@ -82,7 +82,7 @@ import com.eucalyptus.util.StorageProperties;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_snapshots" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class Snapshot extends UserMetadata<State> implements SnapshotMetadata<Snapshot> {
+public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   @Column( name = "metadata_snapshot_vol_size" )
   private Integer  volumeSize;
   @Column( name = "metadata_snapshot_parentvolume", updatable = false )
@@ -153,11 +153,6 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata<Sn
   @Override
   public String getPartition( ) {
     return this.volumePartition;
-  }
-  
-  @Override
-  public int compareTo( Snapshot o ) {
-    return this.getDisplayName( ).compareTo( o.getName( ) );
   }
   
   @Override

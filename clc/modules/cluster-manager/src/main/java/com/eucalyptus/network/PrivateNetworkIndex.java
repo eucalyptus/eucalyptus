@@ -77,10 +77,14 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
+import com.eucalyptus.cloud.AccountMetadata;
 import com.eucalyptus.cloud.util.PersistentReference;
 import com.eucalyptus.cloud.util.Resource;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.util.FullName;
 import com.google.common.base.Predicate;
 
 @Entity
@@ -99,8 +103,8 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   @JoinColumn( name = "metadata_network_index_extant_network" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private ExtantNetwork                    extantNetwork;
-  @NotFound(action=NotFoundAction.IGNORE)
-  @OneToOne( mappedBy = "networkIndex", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE )
+  @NotFound( action = NotFoundAction.IGNORE )
+  @OneToOne( mappedBy = "networkIndex", fetch = FetchType.LAZY, cascade = CascadeType.REMOVE )
   private VmInstance                       instance;
   
   private PrivateNetworkIndex( ) {
@@ -136,11 +140,11 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   public static PrivateNetworkIndex named( Integer vlan, Long networkIndex ) {
     return new PrivateNetworkIndex( vlan, networkIndex );
   }
-
+  
   public static PrivateNetworkIndex named( ExtantNetwork exNet, Long index ) {
     return new PrivateNetworkIndex( exNet.getTag( ), index );
   }
-
+  
   public static PrivateNetworkIndex create( ExtantNetwork exNet, Long index ) {//TODO:GRZE: fix for sanity.
     return new PrivateNetworkIndex( exNet, index );
   }
@@ -205,12 +209,12 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   protected VmInstance clearReference( ) {
     final VmInstance vm = this.getInstance( );
     this.setInstance( null );
-    if( vm != null ) {
+    if ( vm != null ) {
       vm.setNetworkIndex( null );
     }
     return vm;
   }
-
+  
   @Override
   protected VmInstance getReference( ) {
     return this.getInstance( );
@@ -249,15 +253,20 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   }
   
   @Override
-  public int compareTo( PrivateNetworkIndex o ) {
-    if ( this.getExtantNetwork( ) != null ) {
-      return ( this.getExtantNetwork( ).getTag( ).equals( o.getExtantNetwork( ).getTag( ) )
-        ? this.getIndex( ).compareTo( o.getIndex( ) )
-        : this.getExtantNetwork( ).compareTo( o.getExtantNetwork( ) ) );
+  public int compareTo( AccountMetadata that ) {
+    if ( that instanceof PrivateNetworkIndex ) {
+      PrivateNetworkIndex o = ( PrivateNetworkIndex ) that;
+      if ( this.getExtantNetwork( ) != null ) {
+        return ( this.getExtantNetwork( ).getTag( ).equals( o.getExtantNetwork( ).getTag( ) )
+          ? this.getIndex( ).compareTo( o.getIndex( ) )
+          : this.getExtantNetwork( ).compareTo( o.getExtantNetwork( ) ) );
+      } else {
+        return ( o.getExtantNetwork( ) == null
+          ? 0
+          : -1 );
+      }
     } else {
-      return ( o.getExtantNetwork( ) == null
-        ? 0
-        : -1 );
+      return super.compareTo( that );
     }
   }
   
@@ -287,5 +296,26 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   private void setInstance( VmInstance instance ) {
     this.instance = instance;
   }
-
+  
+  /**
+   * @see com.eucalyptus.util.HasFullName#getPartition()
+   */
+  @Override
+  public String getPartition( ) {
+    return Eucalyptus.INSTANCE.getName( );
+  }
+  
+  /**
+   * @see com.eucalyptus.util.HasFullName#getFullName()
+   */
+  @Override
+  public FullName getFullName( ) {
+    return FullName.create.vendor( "euca" )
+                          .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
+                          .namespace( this.getOwnerAccountNumber( ) )
+                          .relativeId( "security-group", this.getExtantNetwork( ).getNetworkGroup( ).getDisplayName( ),
+                                       "tag", this.getExtantNetwork( ).getTag( ).toString( ),
+                                       "index", this.getIndex( ).toString( ) );
+  }
+  
 }

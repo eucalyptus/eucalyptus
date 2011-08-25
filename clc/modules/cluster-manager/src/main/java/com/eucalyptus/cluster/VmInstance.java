@@ -100,6 +100,7 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
+import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
@@ -130,6 +131,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.vm.BundleTask;
@@ -151,7 +153,7 @@ import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_instances" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetadata<VmInstance> {
+public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetadata {
   private static final long       serialVersionUID = 1L;
   
   @Transient
@@ -787,11 +789,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     m.put( "", dir );
     return m;
-  }
-  
-  @Override
-  public int compareTo( final VmInstance that ) {
-    return this.getName( ).compareTo( that.getName( ) );
   }
   
   public synchronized long getSplitTime( ) {

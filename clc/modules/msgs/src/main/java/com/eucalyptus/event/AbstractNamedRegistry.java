@@ -74,10 +74,12 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
 import com.google.common.collect.Lists;
 
-public abstract class AbstractNamedRegistry<TYPE extends HasName<? extends TYPE>> {
+@SuppressWarnings( "rawtypes" )
+public abstract class AbstractNamedRegistry<TYPE extends HasFullName> {
   protected ReadWriteLock                      canHas = new ReentrantReadWriteLock( );
   private ConcurrentNavigableMap<String, TYPE> activeMap;
   private ConcurrentNavigableMap<String, TYPE> disabledMap;

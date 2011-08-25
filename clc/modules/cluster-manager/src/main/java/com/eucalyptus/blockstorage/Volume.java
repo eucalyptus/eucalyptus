@@ -85,13 +85,13 @@ import com.eucalyptus.util.StorageProperties;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_volumes" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class Volume extends UserMetadata<State> implements VolumeMetadata<Volume> {
+public class Volume extends UserMetadata<State> implements VolumeMetadata {
   @Column( name = "metadata_volume_size" )
   private Integer  size;
   @Column( name = "metadata_volume_sc_name" )
   private String   scName;
   @Column( name = "metadata_volume_partition" )
-  private String   partition;      //TODO:GRZE: change to injected ref.
+  private String   partition;     //TODO:GRZE: change to injected ref.
   @Column( name = "metadata_volume_parentsnapshot" )
   private String   parentSnapshot;
   @Lob
@@ -254,8 +254,4 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata<Volume
                           .relativeId( "volume", this.getDisplayName( ) );
   }
   
-  @Override
-  public int compareTo( Volume o ) {
-    return this.getDisplayName( ).compareTo( o.getName( ) );
-  }
 }

@@ -78,28 +78,28 @@ import com.eucalyptus.util.RestrictedType;
  * @see PolicyVendor
  **/
 @PolicyVendor( "ec2" )
-public interface CloudMetadata<T> extends RestrictedType<T> {
+public interface CloudMetadata extends RestrictedType {
   
   @PolicyResourceType( "keypair" )
-  public interface KeyPairMetadata<S extends KeyPairMetadata<S>> extends CloudMetadata<S> {}
+  public interface KeyPairMetadata extends CloudMetadata {}
   
   @PolicyResourceType( "securitygroup" )
-  public interface NetworkGroupMetadata<S extends NetworkGroupMetadata<S>> extends CloudMetadata<S> {}
+  public interface NetworkGroupMetadata extends CloudMetadata {}
   
   @PolicyResourceType( "address" )
-  public interface AddressMetadata<S extends AddressMetadata<S>> extends CloudMetadata<S> {}
+  public interface AddressMetadata extends CloudMetadata {}
   
   @PolicyResourceType( "volume" )
-  public interface VolumeMetadata<S extends VolumeMetadata<S>> extends CloudMetadata<S> {}
+  public interface VolumeMetadata extends CloudMetadata {}
   
   @PolicyResourceType( "snapshot" )
-  public interface SnapshotMetadata<S extends SnapshotMetadata<S>> extends CloudMetadata<S> {}
+  public interface SnapshotMetadata extends CloudMetadata {}
   
   @PolicyResourceType( "instance" )
-  public interface VmInstanceMetadata<S extends VmInstanceMetadata<S>> extends CloudMetadata<S> {}
+  public interface VmInstanceMetadata extends CloudMetadata {}
   
   @PolicyResourceType( "vmtype" )
-  public interface VmTypeMetadata<S extends VmTypeMetadata<S>> extends CloudMetadata<S> {
+  public interface VmTypeMetadata extends CloudMetadata {
     public abstract Integer getMemory( );
     
     public abstract Integer getCpu( );
