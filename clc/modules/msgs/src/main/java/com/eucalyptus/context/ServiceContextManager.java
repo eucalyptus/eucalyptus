@@ -127,11 +127,13 @@ public class ServiceContextManager {
       public void run( ) {
         ServiceContextManager.this.queue.clear( );
         ServiceContextManager.this.running.set( false );
-        try {
-          ServiceContextManager.this.context.stop( );
-          ServiceContextManager.this.context.dispose( );
-        } catch ( MuleException ex ) {
-          LOG.error( ex , ex );
+        if ( ServiceContextManager.this.context != null ) {
+          try {
+            ServiceContextManager.this.context.stop( );
+            ServiceContextManager.this.context.dispose( );
+          } catch ( MuleException ex ) {
+            LOG.error( ex, ex );
+          }
         }
       }
       
@@ -197,7 +199,7 @@ public class ServiceContextManager {
           shutdown( );
         }
         this.context = this.createContext( reloadComponentIds );
-        assertThat( this.context, notNullValue());
+        assertThat( this.context, notNullValue( ) );
         try {
           if ( Bootstrap.isShuttingDown( ) ) {
             this.running.set( false );
