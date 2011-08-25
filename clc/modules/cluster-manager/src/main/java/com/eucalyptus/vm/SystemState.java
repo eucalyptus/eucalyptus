@@ -130,7 +130,9 @@ public class SystemState {
         return vmId;
       }
     } );
+    
     for ( final String vmId : unreportedVms ) {
+      EntityTransaction db = Entities.get( SystemState.class );
       try {
         final VmInstance vm = VmInstances.lookup( vmId );
         if ( VmState.SHUTTING_DOWN.apply( vm ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
@@ -140,9 +142,13 @@ public class SystemState {
         } else if ( VmState.BURIED.apply( vm ) ) {
           VmInstance.Transitions.TERMINATE.apply( vm );
         } else {
-          VmInstance.Transitions.TERMINATE.apply( vm );          
+          VmInstance.Transitions.TERMINATE.apply( vm );
         }
-      } catch ( final NoSuchElementException e ) {}
+        db.commit( );
+      } catch ( final Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        db.rollback( );
+      }
     }
   }
   
