@@ -166,7 +166,7 @@ public class VmRuntimeState {
     } else if ( VmState.STOPPING.equals( newState ) && VmState.STOPPING.equals( oldState ) && Reason.USER_STOPPED.equals( reason ) ) {
       action = this.cleanUpRunnable( SEND_USER_STOP );
     } else if ( ( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) || VmState.BURIED.equals( newState ) ) {
-//      VmInstance.Transitions.DEREGISTER.apply( this.getVmInstance( ) );
+      action = this.cleanUpRunnable( SEND_USER_TERMINATE );
     } else if ( !oldState.equals( newState ) ) {
       if ( Reason.APPEND.equals( reason ) ) {
         reason = this.reason;
