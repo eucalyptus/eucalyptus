@@ -108,6 +108,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
@@ -189,10 +190,10 @@ public class VmControl {
                   results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
                 }
               } catch ( NoSuchElementException ex ) {
-                VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.LookupTerminated.INSTANCE );
+                VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.Lookup.TERMINATED );
                 final int oldCode = vm.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
                 final String oldState = vm.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
-                VmInstance.Deregister.INSTANCE.apply( vm );
+                VmInstance.Transitions.DEREGISTER.apply( vm );
                 results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
               } 
               return true;
@@ -251,10 +252,10 @@ public class VmControl {
   public void getConsoleOutput( final GetConsoleOutputType request ) throws EucalyptusCloudException {
     VmInstance v = null;
     try {
-      v = VmInstances.lookup( request.getInstanceId( ) );
+      v = VmInstance.Lookup.INSTANCE.apply( request.getInstanceId( ) );
     } catch ( final NoSuchElementException e2 ) {
       try {
-        v = VmInstances.lookupDisabled( request.getInstanceId( ) );
+        v = VmInstance.Lookup.TERMINATED.apply( request.getInstanceId( ) );
         final GetConsoleOutputResponseType reply = request.getReply( );
         reply.setInstanceId( request.getInstanceId( ) );
         reply.setTimestamp( new Date( ) );
@@ -359,7 +360,7 @@ public class VmControl {
         @Override
         public boolean apply( final String instanceId ) {
           try {
-            final VmInstance v = VmInstances.lookup( instanceId );
+            final VmInstance v = VmInstance.Lookup.INSTANCE.apply( instanceId );
             if ( RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
               final int oldCode = v.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
               final String oldState = v.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );

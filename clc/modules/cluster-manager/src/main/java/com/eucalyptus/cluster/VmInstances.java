@@ -346,17 +346,17 @@ public class VmInstances {
   
   @Deprecated
   public static VmInstance register( final VmInstance obj ) {
-    return VmInstance.Register.INSTANCE.apply( obj );
+    return VmInstance.Transitions.REGISTER.apply( obj );
   }
   
   @Deprecated
   public static VmInstance deregister( final VmInstance vm ) throws TransactionException {
-    return VmInstance.Deregister.INSTANCE.apply( vm );
+    return VmInstance.Transitions.DEREGISTER.apply( vm );
   }
   
   @Deprecated
   public static VmInstance deregister( final String key ) throws NoSuchElementException {
-    return Functions.compose( VmInstance.Deregister.INSTANCE, VmInstance.Lookup.INSTANCE ).apply( key );
+    return Functions.compose( VmInstance.Transitions.DEREGISTER, VmInstance.Lookup.INSTANCE ).apply( key );
   }
   
   @Deprecated
@@ -370,40 +370,6 @@ public class VmInstances {
       Logs.extreme( ).error( ex, ex );
       db.rollback( );
       return Lists.newArrayList( );
-    }
-  }
-  
-  @Deprecated
-  public static VmInstance lookupDisabled( final String name ) throws NoSuchElementException {
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      final VmInstance vm = Entities.uniqueResult( VmInstance.namedTerminated( null, name ) );
-      db.commit( );
-      return vm;
-    } catch ( NoSuchElementException ex ) {
-      db.rollback( );
-      throw ex;
-    } catch ( Exception ex ) {
-      db.rollback( );
-      throw new NoSuchElementException( ex.getMessage( ) );
-    }
-  }
-  
-  @Deprecated
-  public static void disable( final VmInstance that ) throws NoSuchElementException {
-    final EntityTransaction db = Entities.get( VmInstance.class );
-    if ( VmState.RUNNING.ordinal( ) >= that.getState( ).ordinal( ) ) {
-      try {
-        Entities.merge( that );
-        that.setState( VmState.TERMINATED );
-        db.commit( );
-      } catch ( RuntimeException ex ) {
-        db.rollback( );
-        throw new NoSuchElementException( "Failed to lookup instance: " + that.getState( ) );
-      }
-    } else {
-      db.rollback( );
-      throw new NoSuchElementException( "Instance state is invalid: " + that.getState( ) );
     }
   }
   

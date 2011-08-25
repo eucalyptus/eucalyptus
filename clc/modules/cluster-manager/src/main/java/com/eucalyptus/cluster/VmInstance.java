@@ -287,7 +287,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         @Override
         public NetworkGroup apply( final String arg0 ) {
           final NetworkGroup result = ( NetworkGroup ) Entities.createCriteria( NetworkGroup.class ).setReadOnly( true )
-                                                               .add( Restrictions.like( "naturalId", arg0.replace( userFullName.getAccountNumber( ) + "-", "" ) + "%" ) )
+                                                               .add( Restrictions.like( "naturalId", arg0.replace( userFullName.getAccountNumber( ) + "-", "" )
+                                                                                                     + "%" ) )
                                                                .uniqueResult( );
           return result;
         }
@@ -411,89 +412,86 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     
   }
   
-  public enum Register implements Function<VmInstance, VmInstance> {
-    INSTANCE;
-    
-    @Override
-    public VmInstance apply( final VmInstance arg0 ) {
-      final EntityTransaction db = Entities.get( VmInstance.class );
-      try {
-        final VmInstance entityObj = Entities.merge( arg0 );
-        db.commit( );
-        return entityObj;
-      } catch ( final RuntimeException ex ) {
-        Logs.extreme( ).error( ex, ex );
-        db.rollback( );
-        throw ex;
-      }
-    }
-  }
-  
-  public enum Deregister implements Function<VmInstance, VmInstance> {
-    INSTANCE;
-    
-    @Override
-    public VmInstance apply( final VmInstance vm ) {
-      if ( !Entities.isPersistent( vm ) ) {
-        throw new TransientEntityException( vm.toString( ) );
-      } else {
+  public enum Transitions implements Function<VmInstance, VmInstance> {
+    REGISTER {
+      @Override
+      public VmInstance apply( final VmInstance arg0 ) {
         final EntityTransaction db = Entities.get( VmInstance.class );
         try {
-          Entities.delete( vm );
+          final VmInstance entityObj = Entities.merge( arg0 );
           db.commit( );
-          return vm;
-        } catch ( final Exception ex ) {
-          Logs.exhaust( ).trace( ex, ex );
+          return entityObj;
+        } catch ( final RuntimeException ex ) {
+          Logs.extreme( ).error( ex, ex );
           db.rollback( );
-          throw new NoSuchElementException( "Failed to lookup instance: " + vm );
+          throw ex;
         }
       }
-    }
+    },
+    DEREGISTER {
+      @Override
+      public VmInstance apply( final VmInstance vm ) {
+        if ( !Entities.isPersistent( vm ) ) {
+          throw new TransientEntityException( vm.toString( ) );
+        } else {
+          final EntityTransaction db = Entities.get( VmInstance.class );
+          try {
+            Entities.delete( vm );
+            db.commit( );
+            return vm;
+          } catch ( final Exception ex ) {
+            Logs.exhaust( ).trace( ex, ex );
+            db.rollback( );
+            throw new NoSuchElementException( "Failed to lookup instance: " + vm );
+          }
+        }
+      }
+    };
+    
   }
   
-  public enum LookupTerminated implements Function<String, VmInstance> {
-    INSTANCE;
-    
-    @Override
-    public VmInstance apply( final String arg0 ) {
-      final EntityTransaction db = Entities.get( VmInstance.class );
-      try {
-        final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, arg0 ) );
-        if ( ( vm == null ) || !VmStateSet.DONE.apply( vm ) ) {
-          throw new NoSuchElementException( "Failed to lookup vm instance: " + arg0 );
-        }
-        db.commit( );
-        return vm;
-      } catch ( final NoSuchElementException ex ) {
-        db.rollback( );
-        throw ex;
-      } catch ( final Exception ex ) {
-        db.rollback( );
-        throw new NoSuchElementException( "Failed to lookup vm instance: " + arg0 );
-      }
-    }
-  }
-
   public enum Lookup implements Function<String, VmInstance> {
-    INSTANCE;
-    
-    @Override
-    public VmInstance apply( final String arg0 ) {
-      final EntityTransaction db = Entities.get( VmInstance.class );
-      try {
-        final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, arg0 ) );
-        if ( ( vm == null ) || VmState.TERMINATED.equals( vm.getState( ) ) ) {
+    INSTANCE {
+      
+      @Override
+      public VmInstance apply( final String arg0 ) {
+        final EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, arg0 ) );
+          if ( ( vm == null ) || VmStateSet.DONE.apply( vm ) ) {
+            throw new NoSuchElementException( "Failed to lookup vm instance: " + arg0 );
+          }
+          db.commit( );
+          return vm;
+        } catch ( final NoSuchElementException ex ) {
+          db.rollback( );
+          throw ex;
+        } catch ( final Exception ex ) {
+          db.rollback( );
           throw new NoSuchElementException( "Failed to lookup vm instance: " + arg0 );
         }
-        db.commit( );
-        return vm;
-      } catch ( final NoSuchElementException ex ) {
-        db.rollback( );
-        throw ex;
-      } catch ( final Exception ex ) {
-        db.rollback( );
-        throw new NoSuchElementException( "Failed to lookup vm instance: " + arg0 );
       }
+    },
+    TERMINATED {
+      @Override
+      public VmInstance apply( final String arg0 ) {
+        final EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, arg0 ) );
+          if ( ( vm == null ) || !VmStateSet.DONE.apply( vm ) ) {
+            throw new NoSuchElementException( "Failed to lookup vm instance: " + arg0 );
+          }
+          db.commit( );
+          return vm;
+        } catch ( final NoSuchElementException ex ) {
+          db.rollback( );
+          throw ex;
+        } catch ( final Exception ex ) {
+          db.rollback( );
+          throw new NoSuchElementException( "Failed to lookup vm instance: " + arg0 );
+        }
+      }
+      
     }
   }
   
@@ -502,11 +500,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     
     @Override
     public boolean apply( final VmInstance arg0 ) {
-      return false;
+      return !VmStateSet.DONE.apply( arg0 );
     }
   }
   
-  public enum CreateAllocation implements Function<ResourceToken, VmInstance> {
+  public enum Create implements Function<ResourceToken, VmInstance> {
     INSTANCE;
     
     /**

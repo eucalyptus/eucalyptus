@@ -154,7 +154,6 @@ public class ClusterAllocator implements Runnable {
         try {
           final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
           vm.setState( VmState.TERMINATED, Reason.FAILED, e.getMessage( ) );
-          VmInstances.disable( vm );
         } catch ( final Exception e1 ) {
           LOG.debug( e1, e1 );
         }

@@ -99,13 +99,9 @@ public class MetadataRequest {
       try {
         Address addr = Addresses.getInstance( ).lookup( requestIp );
         try {
-          findVm = VmInstances.lookup( addr.getInstanceId( ) );
+          findVm = VmInstance.Lookup.INSTANCE.apply( addr.getInstanceId( ) );
         } catch ( Exception ex ) {
-          try {
-            findVm = VmInstances.lookupDisabled( addr.getInstanceId( ) );
-          } catch ( Exception ex1 ) {
-            LOG.error( ex1 );
-          }
+          LOG.error( ex );
         }
       } catch ( NoSuchElementException ex2 ) {
       }

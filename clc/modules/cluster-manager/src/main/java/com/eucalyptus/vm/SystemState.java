@@ -151,8 +151,12 @@ public class SystemState {
     for ( final String vmId : unreportedVms ) {
       try {
         final VmInstance vm = VmInstances.lookup( vmId );
-        if ( vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
+        if ( VmState.SHUTTING_DOWN.apply( vm ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
           vm.setState( VmState.TERMINATED, Reason.EXPIRED );
+        } else if ( VmState.TERMINATED.apply( vm ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
+          vm.setState( VmState.BURIED, Reason.EXPIRED );
+        } else if ( VmState.BURIED.apply( vm ) ) {
+          VmInstance.Transitions.DEREGISTER.apply( vm );
         }
       } catch ( final NoSuchElementException e ) {}
     }
