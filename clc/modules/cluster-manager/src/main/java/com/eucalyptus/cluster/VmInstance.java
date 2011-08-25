@@ -195,7 +195,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     BUNDLING {
       
       @Override
-      public boolean apply( VmInstance arg0 ) {
+      public boolean apply( final VmInstance arg0 ) {
         return arg0.isBundling( );
       }
       
@@ -225,7 +225,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       } );
     }
     
-    public boolean contains( Object o ) {
+    public boolean contains( final Object o ) {
       return this.states.contains( o );
     }
     
@@ -305,8 +305,22 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         } catch ( final Exception ex2 ) {
           partition = Partitions.lookupByName( Clusters.getInstance( ).lookup( input.getPlacement( ) ).getPartition( ) );
         }
-        @SuppressWarnings( "deprecation" )
-        final BootableSet bootSet = Emis.newBootableSet( vmType, partition, input.getImageId( ), input.getKernelId( ), input.getRamdiskId( ) );
+        String imageId = null;
+        String kernelId = null;
+        String ramdiskId = null;
+        try {
+          imageId = input.getInstanceType( ).lookupRoot( ).getId( );
+          kernelId = input.getInstanceType( ).lookupKernel( ).getId( );
+          ramdiskId = input.getInstanceType( ).lookupRamdisk( ).getId( );
+        } catch ( final Exception ex2 ) {
+          LOG.error( ex2, ex2 );
+        }
+        BootableSet bootSet = null;
+        if ( imageId != null ) {
+          bootSet = Emis.newBootableSet( vmType, partition, imageId, kernelId, ramdiskId );
+        } else {
+          //TODO:GRZE: handle the case where an instance is running and it's root emi has been deregistered.
+        }
         
         int launchIndex;
         try {
