@@ -117,7 +117,7 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   private PrivateNetworkIndex( ExtantNetwork network ) {
     super( null, null );
     this.extantNetwork = network;
-    this.setState( Resource.State.PENDING );
+    this.setState( Resource.State.FREE );
     this.bogusId = null;
     this.index = null;
   }
@@ -125,7 +125,7 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   private PrivateNetworkIndex( ExtantNetwork network, Long index ) {
     super( network.getOwner( ), network.getTag( ) + ":" + index );
     this.extantNetwork = network;
-    this.setState( Resource.State.PENDING );
+    this.setState( Resource.State.FREE );
     this.bogusId = network.getTag( ) + ":" + index;
     this.index = index;
   }
