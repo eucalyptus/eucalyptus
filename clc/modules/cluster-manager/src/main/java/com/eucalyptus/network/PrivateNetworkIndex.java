@@ -63,7 +63,9 @@
 
 package com.eucalyptus.network;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
@@ -73,6 +75,8 @@ import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.cloud.util.PersistentResource;
 import com.eucalyptus.cloud.util.Resource;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
@@ -95,7 +99,8 @@ public class PrivateNetworkIndex extends PersistentResource<PrivateNetworkIndex,
   @JoinColumn( name = "metadata_network_index_extant_network" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private ExtantNetwork                    extantNetwork;
-  @OneToOne( mappedBy = "networkIndex" )
+  @NotFound(action=NotFoundAction.IGNORE)
+  @OneToOne( mappedBy = "networkIndex", fetch=FetchType.LAZY, cascade=CascadeType.REMOVE )
   private VmInstance                       instance;
   
   private PrivateNetworkIndex( ) {
