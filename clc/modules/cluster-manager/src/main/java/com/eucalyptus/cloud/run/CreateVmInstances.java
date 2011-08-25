@@ -98,6 +98,7 @@ public class CreateVmInstances {
         token.setVmInstance( vmInst );
       } catch ( Exception ex ) {
         LOG.error( ex , ex );
+        throw new RuntimeException( ex );
       }
     }
     return allocInfo;
