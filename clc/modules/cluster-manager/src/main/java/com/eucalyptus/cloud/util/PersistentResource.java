@@ -203,7 +203,7 @@ public abstract class PersistentResource<T extends PersistentResource<T, R>, R e
       @SuppressWarnings( "unchecked" )
       @Override
       public T get( ) {
-        return ( T ) PersistentResource.this;
+        return Entities.merge( ( T ) PersistentResource.this );
       }
       
       public int compareTo( final T o ) {
