@@ -286,21 +286,36 @@ public class Interceptors {
   private static Logger LOG = Logger.getLogger( Interceptors.class );
   
   private static Interceptor empty( ) {
-    final Interceptor i = new EmptyInterceptor( ) {
-      private static final long serialVersionUID = 1L;
-    };
-    return interceptor = i;
+    if ( interceptor != null && interceptor instanceof EmptyInterceptor ) {
+      return interceptor;
+    } else if ( interceptor != null && !( interceptor instanceof EmptyInterceptor ) ) {
+      final Interceptor i = new EmptyInterceptor( );
+      interceptor = i;
+      return i;
+    } else {
+      final Interceptor i = new EmptyInterceptor( ) {
+        private static final long serialVersionUID = 1L;
+      };
+      return i;
+    }
   }
   
   @SuppressWarnings( "synthetic-access" )
   private static Interceptor logger( ) {
-    final Interceptor i = new LogMonitorInterceptor( );
-    return interceptor = i;
+    if ( interceptor != null && interceptor instanceof LogMonitorInterceptor ) {
+      return interceptor;
+    } else if ( interceptor != null && !( interceptor instanceof LogMonitorInterceptor ) ) {
+      final Interceptor i = new LogMonitorInterceptor( );
+      interceptor = i;
+      return i;
+    } else {
+      final Interceptor i = new LogMonitorInterceptor( );
+      return i;
+    }
   }
   
-  private static Interceptor interceptor           = get( );
-  
   private static Boolean     TRANSACTION_INTERCEPT = Boolean.FALSE;
+  private static Interceptor interceptor           = get( );
   
   static Interceptor get( ) {
     return TRANSACTION_INTERCEPT
