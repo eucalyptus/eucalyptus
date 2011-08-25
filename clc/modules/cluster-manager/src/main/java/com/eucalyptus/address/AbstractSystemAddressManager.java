@@ -146,7 +146,9 @@ public abstract class AbstractSystemAddressManager {
       }
       Helper.checkUniqueness( addrInfo );
       if ( addrInfo.hasMapping( ) ) {
-        vm = Helper.maybeFindVm( addrInfo.getAddress( ), addrInfo.getInstanceIp( ) );
+        vm = Helper.maybeFindVm( addr != null
+          ? addr.getInstanceId( )
+          : null, addrInfo.getAddress( ), addrInfo.getInstanceIp( ) );
         if ( ( addr != null ) && ( vm != null ) ) {
           Helper.ensureAllocated( addr, vm );
           clearOrphan( addrInfo );
@@ -218,16 +220,23 @@ public abstract class AbstractSystemAddressManager {
       } catch ( final NoSuchElementException e ) {}
     }
     
-    private static VmInstance maybeFindVm( final String publicIp, final String privateIp ) {
+    private static VmInstance maybeFindVm( final String instanceId, final String publicIp, final String privateIp ) {
       VmInstance vm = null;
       try {
-        vm = VmInstances.lookupByInstanceIp( privateIp );
-        LOG.trace( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getRuntimeState( ) + " " + publicIp );
-        if ( publicIp.equals( vm.getPublicAddress( ) ) ) {
-          LOG.trace( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
-          return vm;
+        vm = VmInstances.lookup( instanceId );
+        try {
+          vm = VmInstances.lookupByInstanceIp( privateIp );
+          LOG.trace( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getRuntimeState( ) + " " + publicIp );
+          if ( publicIp.equals( vm.getPublicAddress( ) ) ) {
+            LOG.trace( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
+            return vm;
+          }
+        } catch ( final NoSuchElementException e ) {
+          LOG.error( e );
         }
-      } catch ( final NoSuchElementException e ) {}
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex );
+      }
       return null;
     }
     
