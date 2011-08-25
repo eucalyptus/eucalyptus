@@ -139,6 +139,8 @@ public class SystemState {
           vm.setState( VmState.BURIED, Reason.EXPIRED );
         } else if ( VmState.BURIED.apply( vm ) ) {
           VmInstance.Transitions.TERMINATE.apply( vm );
+        } else {
+          VmInstance.Transitions.TERMINATE.apply( vm );          
         }
       } catch ( final NoSuchElementException e ) {}
     }
