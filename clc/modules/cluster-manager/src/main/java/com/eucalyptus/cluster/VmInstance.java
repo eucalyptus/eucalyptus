@@ -479,6 +479,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         } else {
           final EntityTransaction db = Entities.get( VmInstance.class );
           try {
+            vm.cleanUp( );
             Entities.delete( vm );
             db.commit( );
             return vm;
