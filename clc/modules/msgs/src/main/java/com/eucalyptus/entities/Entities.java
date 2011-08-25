@@ -746,7 +746,6 @@ public class Entities {
       public void rollback( ) {
         try {
           this.transaction.rollback( );
-          CascadingTx.this.endStes.put( CascadingTx.this.record.getUuid( ), Threads.currentStackFrame( 1 ) );
         } catch ( final RuntimeException ex ) {
           LOG.warn( ex );
           Logs.exhaust( ).warn( ex, ex );
