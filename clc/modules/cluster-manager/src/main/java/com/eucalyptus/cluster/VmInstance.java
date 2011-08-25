@@ -446,8 +446,26 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           }
         }
       }
+    },
+    DELETE {
+      @Override
+      public VmInstance apply( final VmInstance vm ) {
+        if ( !Entities.isPersistent( vm ) ) {
+          throw new TransientEntityException( vm.toString( ) );
+        } else {
+          final EntityTransaction db = Entities.get( VmInstance.class );
+          try {
+            Entities.delete( vm );
+            db.commit( );
+            return vm;
+          } catch ( final Exception ex ) {
+            Logs.exhaust( ).trace( ex, ex );
+            db.rollback( );
+            throw new NoSuchElementException( "Failed to lookup instance: " + vm );
+          }
+        }
+      }
     };
-    
   }
   
   public enum Lookup implements Function<String, VmInstance> {

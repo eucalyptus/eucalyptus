@@ -220,7 +220,7 @@ public class SystemState {
         if ( v.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
           v.setState( VmState.TERMINATED, Reason.EXPIRED );
         } else if ( v.getSplitTime( ) > VmInstances.BURY_TIME ) {
-          v.setState( VmState.BURIED, Reason.BURIED );
+          VmInstance.Transitions.DELETE.apply( v );
         }
         if ( !isVerbose ) {
           continue;
