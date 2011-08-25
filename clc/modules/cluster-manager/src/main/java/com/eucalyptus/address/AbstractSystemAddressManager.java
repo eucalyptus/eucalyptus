@@ -145,9 +145,9 @@ public abstract class AbstractSystemAddressManager {
         if ( ( addr != null ) && ( vm != null ) ) {
           Helper.ensureAllocated( addr, vm );
           clearOrphan( addrInfo );
-        } else if ( addr != null && vm != null && VmStateSet.DONE.apply( vm ) ) {
+        } else if ( addr != null && !addr.isPending( ) && vm != null && VmStateSet.DONE.apply( vm ) ) {
           handleOrphan( cluster.getName( ), addrInfo );
-        } else if ( ( addr != null ) && ( vm == null ) ) {
+        } else if ( ( addr != null && !addr.isPending( ) ) && ( vm == null ) ) {
           handleOrphan( cluster.getName( ), addrInfo );
         } else if ( ( addr == null ) && ( vm != null ) ) {
           addr = new Address( Principals.systemFullName( ), addrInfo.getAddress( ), cluster.getPartition( ), vm.getInstanceId( ), vm.getPrivateAddress( ) );

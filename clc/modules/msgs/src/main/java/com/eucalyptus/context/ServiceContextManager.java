@@ -125,8 +125,8 @@ public class ServiceContextManager {
       
       @Override
       public void run( ) {
-        ServiceContextManager.this.queue.clear( );
         ServiceContextManager.this.running.set( false );
+        ServiceContextManager.this.queue.clear( );
         if ( ServiceContextManager.this.context != null ) {
           try {
             ServiceContextManager.this.context.stop( );
