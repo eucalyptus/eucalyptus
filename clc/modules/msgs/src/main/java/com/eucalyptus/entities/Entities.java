@@ -86,6 +86,7 @@ import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.entities.Entities.CascadingTx;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.Threads;
@@ -141,6 +142,7 @@ public class Entities {
     } else if ( tx.isActive( ) ) {
       return true;
     } else {
+      cleanStrandedTx( tx );
       return false;
     }
   }
@@ -159,15 +161,19 @@ public class Entities {
     txStateThreadLocal.get( ).remove( tx.getRecord( ).getPersistenceContext( ) );
     if ( txId.equals( txStateThreadLocal.get( ) ) ) {
       for ( Entry<String, CascadingTx> e : txStateThreadLocal.get( ).entrySet( ) ) {
-        LOG.error( "Found stranded transaction: " + e.getKey( ) + " started at: " + e.getValue( ).getRecord( ).getStack( ) );
-        try {
-          e.getValue( ).rollback( );
-        } catch ( Exception ex ) {
-          LOG.trace( ex, ex );
-        }
+        cleanStrandedTx( e.getValue( ) );
       }
       txStateThreadLocal.get( ).clear( );
       txStateThreadLocal.remove( );
+    }
+  }
+
+  private static void cleanStrandedTx( CascadingTx txValue ) {
+    LOG.error( "Found stranded transaction: " + txValue.getRecord( ).getPersistenceContext( ) + " started at: " + txValue.getRecord( ).getStack( ) );
+    try {
+      txValue.rollback( );
+    } catch ( Exception ex ) {
+      LOG.trace( ex, ex );
     }
   }
   
