@@ -116,7 +116,7 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
   private boolean checkVmState( ) {
     try {
       VmInstance vm = VmInstances.lookup( super.getRequest( ).getInstanceId( ) );
-      if ( VmStateSet.RUN.apply( vm ) ) {
+      if ( !VmStateSet.RUN.apply( vm ) ) {
         vm.updatePublicAddress( VmNetworkConfig.DEFAULT_IP );
         return false;
       } else {
