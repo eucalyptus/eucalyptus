@@ -125,8 +125,14 @@ public class ServiceContextManager {
       
       @Override
       public void run( ) {
+        ServiceContextManager.this.queue.clear( );
         ServiceContextManager.this.running.set( false );
-        ServiceContextManager.shutdown( );
+        try {
+          ServiceContextManager.this.context.stop( );
+          ServiceContextManager.this.context.dispose( );
+        } catch ( MuleException ex ) {
+          LOG.error( ex , ex );
+        }
       }
       
     } );

@@ -214,10 +214,11 @@ public class SystemState {
     final ArrayList<String> instancesSet = request.getInstancesSet( );
     final Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
     Predicate<VmInstance> privileged = RestrictedTypes.filterPrivileged( );
-    for ( final VmInstance v : Iterables.filter( VmInstances.listValues( ), privileged ) ) {
+    for ( final VmInstance vm : Iterables.filter( VmInstances.listValues( ), privileged ) ) {
       
       EntityTransaction db = Entities.get( VmInstance.class );
       try {
+        VmInstance v = Entities.merge( vm );
         if ( VmStateSet.DONE.apply( v ) && ( v.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
           final long time = ( System.currentTimeMillis( ) - v.getLastUpdateTimestamp( ).getTime( ) );
           if ( v.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
