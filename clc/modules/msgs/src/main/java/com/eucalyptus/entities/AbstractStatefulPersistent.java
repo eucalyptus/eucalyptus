@@ -66,8 +66,10 @@ package com.eucalyptus.entities;
 import javax.persistence.Column;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.Lob;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.Transient;
+import com.eucalyptus.system.Threads;
 
 @MappedSuperclass
 public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> extends AbstractPersistent {
@@ -77,6 +79,9 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
   @Column( name = "metadata_state" )
   @Enumerated( EnumType.STRING )
   STATE                     state;
+  @Lob
+  @Column( name = "metadata_state_change_stack" )
+  protected String          stateChangeStack;
   @Column( name = "metadata_display_name" )
   protected String          displayName;
   
@@ -100,6 +105,7 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
   }
   
   public void setState( final STATE state ) {
+    this.stateChangeStack = Threads.currentStackString( );
     this.state = state;
   }
   
