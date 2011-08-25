@@ -196,7 +196,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         this.networkIndex.teardown( );
         this.networkIndex = null;
       }
-    } catch ( ResourceAllocationException ex ) {
+    } catch ( final ResourceAllocationException ex ) {
       LOG.error( ex, ex );
     }
   }
@@ -217,7 +217,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     CHANGING( VmState.PENDING, VmState.STOPPING, VmState.SHUTTING_DOWN ) {
       
       @Override
-      public boolean apply( VmInstance arg0 ) {
+      public boolean apply( final VmInstance arg0 ) {
         return super.apply( arg0 ) || !arg0.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
           @Override
           public boolean apply( final AttachedVolume arg0 ) {
@@ -896,12 +896,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.bootRecord.getVmType( );
   }
   
-  public List<NetworkGroup> getNetworks( ) {
-    return ( List<NetworkGroup> ) ( this.networkGroups != null
-      ? Lists.newArrayList( this.networkGroups )
-      : Lists.newArrayList( ) );
-  }
-  
   public NavigableSet<String> getNetworkNames( ) {
     return new TreeSet<String>( Collections2.transform( this.getNetworkGroups( ), new Function<NetworkGroup, String>( ) {
       
@@ -1039,8 +1033,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.privateNetwork;
   }
   
-  private Set<NetworkGroup> getNetworkGroups( ) {
-    return this.networkGroups;
+  public Set<NetworkGroup> getNetworkGroups( ) {
+    return ( Set<NetworkGroup> ) ( this.networkGroups != null
+      ? this.networkGroups
+      : Sets.newHashSet( ) );
   }
   
   @Override

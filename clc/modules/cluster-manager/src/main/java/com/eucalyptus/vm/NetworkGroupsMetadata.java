@@ -115,7 +115,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
     try {
       for ( VmInstance vm : VmInstances.listValues( ) ) {
         if ( VmState.RUNNING.ordinal( ) > vm.getState( ).ordinal( ) ) continue;
-        for ( NetworkGroup ruleGroup : vm.getNetworks( ) ) {
+        for ( NetworkGroup ruleGroup : vm.getNetworkGroups( ) ) {
           try {
             ruleGroup = Entities.merge( ruleGroup );
             networks.put( ruleGroup.getClusterNetworkName( ), vm.getPrivateAddress( ) );
