@@ -93,6 +93,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.TransientEntityException;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Numbers;
 import com.google.common.collect.Iterables;
@@ -155,29 +156,12 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
     return new ExtantNetwork( networkGroup, -1 );
   }
   
-  public boolean hasIndexes( ) {
-    for ( PrivateNetworkIndex index : this.getIndexes( ) ) {
-      if ( Resource.State.EXTANT.equals( index.getState( ) ) ) {
-        return true;
-      }
-    }
-    return false;
-  }
-  
   public Integer getTag( ) {
     return this.tag;
   }
   
   protected void setTag( final Integer tag ) {
     this.tag = tag;
-  }
-  
-  protected Set<PrivateNetworkIndex> getIndexes( ) {
-    return this.indexes;
-  }
-  
-  protected void setIndexes( final Set<PrivateNetworkIndex> indexes ) {
-    this.indexes = indexes;
   }
   
   public SetReference<PrivateNetworkIndex, VmInstance> reclaimNetworkIndex( Long idx ) throws TransactionException {
@@ -190,29 +174,38 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
     } else if ( !Entities.isPersistent( this ) ) {
       throw new TransientEntityException( this.toString( ) );
     } else {
-      SetReference<PrivateNetworkIndex, VmInstance> ref = null;
-      PrivateNetworkIndex netIdx = null;
+      EntityTransaction db = Entities.get( PrivateNetworkIndex.class );
       try {
-        netIdx = Entities.uniqueResult( PrivateNetworkIndex.named( this, idx ) );
-        if ( Resource.State.FREE.equals( netIdx.getState( ) ) ) {
-          return netIdx.allocate( );
-        } else {
+        try {
+          PrivateNetworkIndex netIdx = Entities.uniqueResult( PrivateNetworkIndex.named( this, idx ) );
+          if ( Resource.State.FREE.equals( netIdx.getState( ) ) ) {
+            SetReference<PrivateNetworkIndex, VmInstance> ref = netIdx.allocate( );
+            db.commit( );
+            return ref;
+          } else {
+            try {
+              netIdx.teardown( );
+            } catch ( Exception ex ) {
+              LOG.error( ex , ex );
+            }
+            SetReference<PrivateNetworkIndex, VmInstance> ref = netIdx.allocate( );
+            db.commit( );
+            return ref;
+          }
+        } catch ( Exception ex ) {
           try {
-            netIdx.teardown( );
-            return netIdx.allocate( );
-          } catch ( Exception ex ) {
-            LOG.error( ex , ex );
+            PrivateNetworkIndex netIdx = PrivateNetworkIndex.create( this, idx );
+            Entities.persist( netIdx );
+            SetReference<PrivateNetworkIndex, VmInstance> ref = netIdx.allocate( );
+            db.commit( );
+            return ref;
+          } catch ( Exception ex1 ) {
+            throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName, ex1 );
           }
         }
       } catch ( Exception ex ) {
-        try {
-          netIdx = PrivateNetworkIndex.create( this, idx );
-          Entities.persist( netIdx );
-          this.getIndexes( ).add( netIdx );
-          return netIdx.allocate( );
-        } catch ( Exception ex1 ) {
-          throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName, ex1 );
-        }
+        Logs.exhaust( ).error( ex, ex );
+        db.rollback( );
       }
     }
   }
@@ -238,7 +231,6 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
             try {
               netIdx = PrivateNetworkIndex.create( this, i );
               Entities.persist( netIdx );
-              this.getIndexes( ).add( netIdx );
               return netIdx.allocate( );
             } catch ( Exception ex1 ) {
               continue;
@@ -260,11 +252,6 @@ public class ExtantNetwork extends UserMetadata<Resource.State> {
   
   void setNetworkGroup( NetworkGroup networkGroup ) {
     this.networkGroup = networkGroup;
-  }
-  
-  void addPrivateNetworkIndex( PrivateNetworkIndex idx ) {
-    idx.setExtantNetwork( this );
-    this.getIndexes( ).add( idx );
   }
   
   @Override
