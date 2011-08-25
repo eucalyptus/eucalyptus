@@ -145,10 +145,12 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
    * @see Resource#reclaim(com.eucalyptus.util.HasNaturalId)
    * @param referer
    * @return
+   * @throws ResourceAllocationException 
    */
   @Override
-  public final T reclaim( final R referer ) {
-    return null;
+  public final T reclaim( final R referer ) throws ResourceAllocationException {
+    final T ret = PersistentReference.this.doSetReferer( referer, Resource.State.FREE, Resource.State.EXTANT );
+    return ret;
   }
   
   @SuppressWarnings( "unchecked" )

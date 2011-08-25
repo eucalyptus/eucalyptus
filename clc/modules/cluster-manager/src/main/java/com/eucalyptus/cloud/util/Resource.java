@@ -111,7 +111,8 @@ public interface Resource<T extends Resource<T, R>, R extends HasNaturalId> exte
   /**
    * Attempt to recover a resource allocation -- e.g., after a system restart. Constraints must be
    * enforced on valid initial state.
+   * @throws ResourceAllocationException 
    */
-  public T reclaim( R referer );
+  public T reclaim( R referer ) throws ResourceAllocationException;
   
 }
