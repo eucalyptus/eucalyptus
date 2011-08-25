@@ -68,6 +68,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
+import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
@@ -99,10 +100,12 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.BundleInstanceChecker;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
@@ -179,6 +182,7 @@ public class VmControl {
       Iterables.all( request.getInstancesSet( ), new Predicate<String>( ) {
         @Override
         public boolean apply( final String instanceId ) {
+          EntityTransaction db = Entities.get( VmInstance.class );
           try {
             try {
               try {
@@ -195,16 +199,25 @@ public class VmControl {
                 final String oldState = vm.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
                 VmInstance.Transitions.DEREGISTER.apply( vm );
                 results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
-              } 
+              }
+              db.commit( );
               return true;
             } catch ( final NoSuchElementException e ) {
+              db.commit( );
               return false;
             }
           } catch ( AuthException ex ) {
+            db.rollback( );
             throw new AccessControlException( "Not authorized to terminate instance: " + instanceId + " because of: " + ex.getMessage( ) );
           } catch ( IllegalContextAccessException ex ) {
+            db.rollback( );
             throw new RuntimeException( "Failed to terminate instance: " + instanceId + " becuase of: " + ex.getMessage( ), ex );
           } catch ( PersistenceException ex ) {
+            db.rollback( );
+            throw new RuntimeException( "Failed to terminate instance: " + instanceId + " becuase of: " + ex.getMessage( ), ex );
+          } catch ( Exception ex ) {
+            Logs.exhaust( ).error( ex, ex );
+            db.rollback( );
             throw new RuntimeException( "Failed to terminate instance: " + instanceId + " becuase of: " + ex.getMessage( ), ex );
           }
         }
@@ -329,7 +342,7 @@ public class VmControl {
         final VmInstance v = vm;
         try {
           RunInstancesType runRequest = new RunInstancesType( ) {
-            { 
+            {
               this.setMinCount( 1 );
               this.setMaxCount( 1 );
               this.setImageId( v.getImageId( ) );
