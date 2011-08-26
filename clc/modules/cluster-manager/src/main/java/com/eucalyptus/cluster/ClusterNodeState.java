@@ -168,7 +168,7 @@ public class ClusterNodeState {
     if ( this.submittedTokens.remove( token ) || this.pendingTokens.remove( token ) ) {
       this.redeemedTokens.add( token );
     } else {
-      LOG.error( Joiner.on("\n" ).join( "pending", this.pendingTokens, "submitted", this.submittedTokens, "redeemed", this.redeemedTokens ), new NoSuchTokenException( ) );
+      LOG.error( "Failed to find token: " + token + "\n" + Joiner.on("\n" ).join( "pending", this.pendingTokens, "submitted", this.submittedTokens, "redeemed", this.redeemedTokens ), new NoSuchTokenException( ) );
     }
   }
   
