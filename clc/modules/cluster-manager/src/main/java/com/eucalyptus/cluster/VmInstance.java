@@ -1121,13 +1121,22 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param predicate
    */
   public void lookupVolumeAttachment( final Predicate<AttachedVolume> predicate ) {
-    this.runtimeState.lookupVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
-      
-      @Override
-      public boolean apply( final VmVolumeAttachment vol ) {
-        return predicate.apply( VmVolumeAttachment.asAttachedVolume( VmInstance.this ).apply( vol ) );
-      }
-    } );
+    
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      VmInstance entity = Entities.merge( this );
+      this.runtimeState.lookupVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
+        
+        @Override
+        public boolean apply( final VmVolumeAttachment vol ) {
+          return predicate.apply( VmVolumeAttachment.asAttachedVolume( VmInstance.this ).apply( vol ) );
+        }
+      } );
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+    }
   }
   
   /**
@@ -1135,14 +1144,33 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @return
    */
   public AttachedVolume lookupVolumeAttachment( final String volumeId ) {
-    return VmVolumeAttachment.asAttachedVolume( this ).apply( this.runtimeState.lookupVolumeAttachment( volumeId ) );
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      VmInstance entity = Entities.merge( this );
+      AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( this.runtimeState.lookupVolumeAttachment( volumeId ) );
+      db.commit( );
+      return ret;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new NoSuchElementException( "Failed to lookup volume: " + volumeId );
+    }
   }
   
   /**
    * @param attachVol
    */
   public void addVolumeAttachment( final AttachedVolume vol ) {
-    this.runtimeState.addVolumeAttachment( VmVolumeAttachment.fromAttachedVolume( this ).apply( vol ) );
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      VmInstance entity = Entities.merge( this );
+      this.runtimeState.addVolumeAttachment( VmVolumeAttachment.fromAttachedVolume( entity ).apply( vol ) );
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+    }
+
   }
   
   /**
@@ -1157,13 +1185,24 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @return
    */
   public boolean eachVolumeAttachment( final Predicate<AttachedVolume> predicate ) {
-    return this.runtimeState.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
-      
-      @Override
-      public boolean apply( final VmVolumeAttachment arg0 ) {
-        return predicate.apply( VmVolumeAttachment.asAttachedVolume( VmInstance.this ).apply( arg0 ) );
-      }
-    } );
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      VmInstance entity = Entities.merge( this );
+      boolean ret = this.runtimeState.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
+        
+        @Override
+        public boolean apply( final VmVolumeAttachment arg0 ) {
+          return predicate.apply( VmVolumeAttachment.asAttachedVolume( VmInstance.this ).apply( arg0 ) );
+        }
+      } );
+      db.commit( );
+      return ret;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      return false;
+    }
+    
   }
   
   /**
@@ -1171,7 +1210,17 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @return
    */
   public AttachedVolume removeVolumeAttachment( final String volumeId ) {
-    return VmVolumeAttachment.asAttachedVolume( this ).apply( this.runtimeState.removeVolumeAttachment( volumeId ) );
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      VmInstance entity = Entities.merge( this );
+      AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( this.runtimeState.removeVolumeAttachment( volumeId ) );
+      db.commit( );
+      return ret;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new NoSuchElementException( "Failed to lookup volume: " + volumeId );
+    }
   }
   
   /**
@@ -1204,7 +1253,15 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param newState
    */
   public void updateVolumeAttachment( final String volumeId, final String newState ) {
-    this.runtimeState.updateVolumeAttachment( volumeId, newState );
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      VmInstance entity = Entities.merge( this );
+      entity.runtimeState.updateVolumeAttachment( volumeId, newState );
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+    }
   }
   
   /**
@@ -1274,7 +1331,15 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param volumes
    */
   public void updateVolumeAttachments( final List<AttachedVolume> volumes ) {
-    this.runtimeState.updateVolumeAttachments( Lists.transform( volumes, VmVolumeAttachment.fromAttachedVolume( VmInstance.this ) ) );
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      VmInstance entity = Entities.merge( this );
+      this.runtimeState.updateVolumeAttachments( Lists.transform( volumes, VmVolumeAttachment.fromAttachedVolume( this ) ) );
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+    }
   }
   
   /**
