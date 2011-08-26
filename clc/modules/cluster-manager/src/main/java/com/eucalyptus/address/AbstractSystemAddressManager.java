@@ -189,12 +189,12 @@ public abstract class AbstractSystemAddressManager {
           for ( final VmInstance vm : VmInstances.listValues( ) ) {
             if ( addrInfo.getInstanceIp( ).equals( vm.getPrivateAddress( ) ) && VmState.RUNNING.equals( vm.getRuntimeState( ) ) ) {
               LOG.warn( "Out of band address state change: " + LogUtil.dumpObject( addrInfo ) + " address=" + address + " vm=" + vm );
-              if ( !address.isAllocated( ) ) {
-                address.pendingAssignment( ).assign( vm ).clearPending( );
-              } else {
-                address.assign( vm ).clearPending( );
-              }
-              clearOrphan( addrInfo );
+//              if ( !address.isAllocated( ) ) {
+//                address.pendingAssignment( ).assign( vm ).clearPending( );
+//              } else {
+//                address.assign( vm ).clearPending( );
+//              }
+//              clearOrphan( addrInfo );
               return;
             }
           }
