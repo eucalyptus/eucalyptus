@@ -103,7 +103,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
   }
   
   private boolean checkInterval( ) {
-    return ( lastTime + refreshInterval( ) ) > System.currentTimeMillis( );
+    return !( ( lastTime + refreshInterval( ) ) > System.currentTimeMillis( ) );
   }
   
   private long refreshInterval( ) {
