@@ -174,7 +174,7 @@ public class ClusterAddressInfo extends EucalyptusData implements Comparable<Clu
   }
   
   public boolean hasMapping() {
-    return this.instanceIp != null &&  !"".equals( this.instanceIp );
+    return this.instanceIp != null &&  !"".equals( this.instanceIp ) && !"0.0.0.0".equals( this.instanceIp );
   }
   
   @Override
