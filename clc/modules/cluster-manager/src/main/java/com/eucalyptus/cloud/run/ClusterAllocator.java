@@ -281,7 +281,7 @@ public class ClusterAllocator implements Runnable {
         @Override
         public void fire( final VmRunResponseType response ) {
           try {
-            final VmInstance vm = VmInstances.lookup( addr.getInstanceId( ) );
+            final VmInstance vm = VmInstances.lookup( response.getVms( ).iterator( ).next( ).getInstanceId( ) );
             Success<BaseMessage> vmUpdateCallback = new Callback.Success<BaseMessage>( ) {
               @Override
               public void fire( final BaseMessage response ) {
