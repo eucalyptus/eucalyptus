@@ -63,7 +63,6 @@
  */
 package com.eucalyptus.cluster.callback;
 
-import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
@@ -74,7 +73,6 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstance.VmState;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
@@ -119,7 +117,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
   
   @Override
   public void fire( final VmRunResponseType reply ) {
-    
+    Logs.extreme( ).error( reply );
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
       token.redeem( );
