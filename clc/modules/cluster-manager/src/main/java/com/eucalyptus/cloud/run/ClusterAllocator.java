@@ -99,6 +99,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Callback.Success;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.StatefulMessageSet;
@@ -273,22 +274,29 @@ public class ClusterAllocator implements Runnable {
                                    .owner( this.allocInfo.getOwnerFullName( ) )
                                    .create( );
     final Request<VmRunType, VmRunResponseType> req = AsyncRequests.newRequest( new VmRunCallback( run, childToken ) );
+    final Address addr = childToken.getAddress( );
     if ( childToken.getAddress( ) != null ) {
-      req.then( new Callback.Success<VmRunResponseType>( ) {
+      Success<VmRunResponseType> addrCallback = new Callback.Success<VmRunResponseType>( ) {
+        @SuppressWarnings( "unchecked" )
         @Override
         public void fire( final VmRunResponseType response ) {
-          final Address addr = childToken.getAddress( );
-          for ( final VmInfo vmInfo : response.getVms( ) ) {//TODO: this will have some funny failure characteristics
-            final VmInstance vm = VmInstances.lookup( vmInfo.getInstanceId( ) );
-            AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>( ) {
+          try {
+            final VmInstance vm = VmInstances.lookup( addr.getInstanceId( ) );
+            Success<BaseMessage> vmUpdateCallback = new Callback.Success<BaseMessage>( ) {
               @Override
               public void fire( final BaseMessage response ) {
                 vm.updateAddresses( addr.getInstanceAddress( ), addr.getName( ) );
               }
-            } ).dispatch( addr.getPartition( ) );
+            };
+            AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) )
+                         .then( vmUpdateCallback )
+                         .dispatch( addr.getPartition( ) );
+          } catch ( Exception ex ) {
+            LOG.error( ex , ex );
           }
         }
-      } );
+      };
+      req.then( addrCallback );
     }
     return req;
   }

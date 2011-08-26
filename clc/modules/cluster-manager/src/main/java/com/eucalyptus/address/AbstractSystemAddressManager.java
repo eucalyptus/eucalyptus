@@ -22,6 +22,7 @@ import com.eucalyptus.component.Partition;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -228,7 +229,7 @@ public abstract class AbstractSystemAddressManager {
         try {
           vm = VmInstances.lookupByInstanceIp( privateIp );
         } catch ( final NoSuchElementException e ) {
-          LOG.error( e );
+          Logs.exhaust( ).error( e );
         }
       }
       if ( vm != null ) {
