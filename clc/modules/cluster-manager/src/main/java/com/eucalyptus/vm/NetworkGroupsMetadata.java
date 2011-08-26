@@ -88,23 +88,31 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
   private static AtomicReference<String> topoString = new AtomicReference<String>( null );
   
   private String getNetworkTopology( ) {
-    if ( topoString.get( ) != null && ( lastTime + ( VmInstances.NETWORK_METADATA_REFRESH_TIME * 1000l ) ) > System.currentTimeMillis( ) ) {
+    if ( topoString.get( ) != null && checkInterval( ) ) {
       return topoString.get( );
     } else {
       lock.lock( );
       try {
-        if ( topoString.get( ) != null && ( lastTime + ( VmInstances.NETWORK_METADATA_REFRESH_TIME * 1000l ) ) > System.currentTimeMillis( ) ) {
+        if ( topoString.get( ) != null && checkInterval( ) ) {
           return topoString.get( );
         } else {
-          lastTime = System.currentTimeMillis( );
           StringBuilder buf = generateTopology( );
           topoString.set( buf.toString( ) );
+          lastTime = System.currentTimeMillis( );
         }
         return topoString.get( );
       } finally {
         lock.unlock( );
       }
     }
+  }
+
+  private boolean checkInterval( ) {
+    return ( lastTime + refreshInterval( ) ) > System.currentTimeMillis( );
+  }
+
+  private long refreshInterval( ) {
+    return VmInstances.NETWORK_METADATA_REFRESH_TIME * 1000l;
   }
   
   public StringBuilder generateTopology( ) {
