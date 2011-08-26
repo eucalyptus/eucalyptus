@@ -85,7 +85,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
   private static Logger                  LOG        = Logger.getLogger( NetworkGroupsMetadata.class );
   private static Lock                    lock       = new ReentrantLock( );
   private static Long                    lastTime   = 0l;
-  private static AtomicReference<String> topoString = new AtomicReference<String>( null );
+  private static AtomicReference<String> topoString = new AtomicReference<String>( "" );
   
   private String getNetworkTopology( ) {
     if ( topoString.get( ) != null && checkInterval( ) ) {
