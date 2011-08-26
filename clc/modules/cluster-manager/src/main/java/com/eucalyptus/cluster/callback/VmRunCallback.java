@@ -120,7 +120,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
     Logs.extreme( ).error( reply );
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      token.redeem( );
+      this.token.redeem( );
       for ( final VmInfo vmInfo : reply.getVms( ) ) {
         final VmInstance vm = VmInstances.lookup( vmInfo.getInstanceId( ) );
         vm.updateAddresses( vmInfo.getNetParams( ).getIpAddress( ), vmInfo.getNetParams( ).getIgnoredPublicIp( ) );

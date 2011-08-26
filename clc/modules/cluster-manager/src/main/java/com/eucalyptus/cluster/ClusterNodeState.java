@@ -80,6 +80,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.ResourceType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
@@ -167,7 +168,7 @@ public class ClusterNodeState {
     if ( this.submittedTokens.remove( token ) || this.pendingTokens.remove( token ) ) {
       this.redeemedTokens.add( token );
     } else {
-      throw new NoSuchTokenException( );
+      LOG.error( Joiner.on("\n" ).join( "pending", this.pendingTokens, "submitted", this.submittedTokens, "redeemed", this.redeemedTokens ), new NoSuchTokenException( ) );
     }
   }
   
