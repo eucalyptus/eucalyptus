@@ -88,34 +88,29 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
   private static AtomicReference<String> topoString = new AtomicReference<String>( "" );
   
   private String getNetworkTopology( ) {
-    if ( topoString.get( ) != null && checkInterval( ) ) {
+    if ( checkInterval( ) ) {
       return topoString.get( );
     } else {
       lock.lock( );
       try {
-        if ( topoString.get( ) != null && checkInterval( ) ) {
-          return topoString.get( );
-        } else {
-          StringBuilder buf = generateTopology( );
-          topoString.set( buf.toString( ) );
-          lastTime = System.currentTimeMillis( );
-        }
+        topoString.set( generateTopology( ) );
+        lastTime = System.currentTimeMillis( );
         return topoString.get( );
       } finally {
         lock.unlock( );
       }
     }
   }
-
+  
   private boolean checkInterval( ) {
     return ( lastTime + refreshInterval( ) ) > System.currentTimeMillis( );
   }
-
+  
   private long refreshInterval( ) {
     return VmInstances.NETWORK_METADATA_REFRESH_TIME * 1000l;
   }
   
-  public StringBuilder generateTopology( ) {
+  public String generateTopology( ) {
     StringBuilder buf = new StringBuilder( );
     Multimap<String, String> networks = ArrayListMultimap.create( );
     Multimap<String, String> rules = ArrayListMultimap.create( );
@@ -142,12 +137,12 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
                     rules.put( ruleGroup.getClusterNetworkName( ), String.format( "%s -s %s", rule, cidr.getValue( ) ) );
                   }
                 } catch ( Exception ex ) {
-                  LOG.error( ex , ex );
+                  LOG.error( ex, ex );
                 }
               }
             }
           } catch ( Exception ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
           }
         }
       }
@@ -158,7 +153,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
       LOG.error( ex, ex );
       db.rollback( );
     }
-    return buf;
+    return buf.toString( );
   }
   
   private static String groupsToString( Multimap<String, String> networks ) {
