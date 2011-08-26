@@ -227,13 +227,14 @@ public abstract class AbstractSystemAddressManager {
       } catch ( NoSuchElementException ex ) {
         try {
           vm = VmInstances.lookupByInstanceIp( privateIp );
-          LOG.trace( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getRuntimeState( ) + " " + publicIp );
-          if ( publicIp.equals( vm.getPublicAddress( ) ) ) {
-            LOG.trace( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
-            return vm;
-          }
         } catch ( final NoSuchElementException e ) {
           LOG.error( e );
+        }
+      }
+      if ( vm != null ) {
+        LOG.trace( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getRuntimeState( ) + " " + publicIp );
+        if ( publicIp.equals( vm.getPublicAddress( ) ) ) {
+          LOG.trace( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
         }
       }
       return vm;
