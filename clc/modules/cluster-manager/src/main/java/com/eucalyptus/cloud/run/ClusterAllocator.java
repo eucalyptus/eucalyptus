@@ -130,7 +130,7 @@ public class ClusterAllocator implements Runnable {
   private final Allocation          allocInfo;
   private Cluster                   cluster;
   
-  public static void create( final ResourceToken t, final Allocation allocInfo ) {
+  public static void create( final Allocation allocInfo ) {
     Threads.lookup( ClusterController.class, ClusterAllocator.class ).submit( new ClusterAllocator( allocInfo ) );
   }
   

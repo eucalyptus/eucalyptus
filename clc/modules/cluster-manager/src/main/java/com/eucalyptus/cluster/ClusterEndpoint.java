@@ -135,9 +135,7 @@ public class ClusterEndpoint implements Startable {
   }
   
   public void enqueue( Allocation allocInfo ) {
-    for ( ResourceToken t : allocInfo.getAllocationTokens( ) ) {
-      ClusterAllocator.create( t, allocInfo );
-    }
+    ClusterAllocator.create( allocInfo );
     RequestContext.getEventContext( ).setStopFurtherProcessing( true );
   }
   
