@@ -224,6 +224,7 @@ public abstract class AbstractSystemAddressManager {
       VmInstance vm = null;
       try {
         vm = VmInstances.lookup( instanceId );
+      } catch ( NoSuchElementException ex ) {
         try {
           vm = VmInstances.lookupByInstanceIp( privateIp );
           LOG.trace( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getRuntimeState( ) + " " + publicIp );
@@ -234,8 +235,6 @@ public abstract class AbstractSystemAddressManager {
         } catch ( final NoSuchElementException e ) {
           LOG.error( e );
         }
-      } catch ( NoSuchElementException ex ) {
-        LOG.error( ex );
       }
       return vm;
     }
