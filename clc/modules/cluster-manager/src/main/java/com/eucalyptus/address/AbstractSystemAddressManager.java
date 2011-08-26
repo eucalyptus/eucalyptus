@@ -237,7 +237,7 @@ public abstract class AbstractSystemAddressManager {
       } catch ( NoSuchElementException ex ) {
         LOG.error( ex );
       }
-      return null;
+      return vm;
     }
     
     private static void ensureAllocated( final Address addr, final VmInstance vm ) {
