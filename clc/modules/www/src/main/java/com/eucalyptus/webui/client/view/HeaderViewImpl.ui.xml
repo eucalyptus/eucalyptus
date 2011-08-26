@@ -45,6 +45,11 @@
         	display:table-cell;
         	vertical-align:middle;
         }
+        .logoDiv {
+        	display:table;
+        	margin-left:1em;
+        	height:100%;
+        }
         .userDiv {
         	display:table;
             margin-left:4em;
@@ -55,10 +60,14 @@
         	height:100%;
         	margin-right:2em;
         }
+        
     </ui:style>
     
     <g:HTMLPanel styleName="{style.headerBar}">
-        <div class="{style.horizontalLeft}"><img alt="Eucalyptus" src="themes/active/logo.png"/></div>
+        <div class="{style.horizontalLeft} {style.logoDiv}">
+            <div class="{style.vcenter}">
+                <img alt="Eucalyptus" src="themes/active/logo.png"/></div>
+            </div>
         <div class="{style.horizontalLeft} {style.userDiv}">
             <div class="{style.vcenter}">
                 <euca:UserLink ui:field="userLink"/>
