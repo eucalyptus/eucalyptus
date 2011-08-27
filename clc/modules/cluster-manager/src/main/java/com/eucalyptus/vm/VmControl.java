@@ -64,8 +64,11 @@
 package com.eucalyptus.vm;
 
 import java.security.AccessControlException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
@@ -141,6 +144,7 @@ import edu.ucsb.eucalyptus.msgs.MonitorInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.MonitorInstancesType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
+import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
@@ -164,8 +168,43 @@ public class VmControl {
   
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
     final DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final boolean isAdmin = ctx.hasAdministrativePrivileges( );
+    final boolean isVerbose = msg.getInstancesSet( ).remove( "verbose" );
+    final ArrayList<String> instancesSet = msg.getInstancesSet( );
+    final Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
+    Predicate<VmInstance> privileged = RestrictedTypes.filterPrivileged( );
     try {
-      reply.setReservationSet( SystemState.handle( msg ) );
+      for ( final VmInstance vm : Iterables.filter( VmInstances.listValues( ), privileged ) ) {
+        
+        EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          VmInstance v = Entities.merge( vm );
+          if ( VmState.TERMINATED.apply( v ) && v.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
+            VmInstance.Transitions.TERMINATE.apply( v );
+          } else if ( VmState.BURIED.apply( v ) && v.getSplitTime( ) > VmInstances.BURY_TIME ) {
+            VmInstance.Transitions.DELETE.apply( v );
+          }
+          if ( VmState.BURIED.apply( v ) && !isVerbose ) {
+            continue;
+          }
+          if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) {
+            continue;
+          }
+          if ( rsvMap.get( v.getReservationId( ) ) == null ) {
+            final ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getNamespace( ), v.getNetworkNames( ) );
+            rsvMap.put( reservation.getReservationId( ), reservation );
+          }
+          rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstance.Transform.INSTANCE.apply( v ) );
+          db.commit( );
+        } catch ( Exception ex ) {
+          Logs.exhaust( ).error( ex, ex );
+          db.rollback( );
+          throw ex;
+        }
+      }
+      ArrayList<ReservationInfoType> vms = new ArrayList<ReservationInfoType>( rsvMap.values( ) );
+      reply.setReservationSet( vms );
     } catch ( final Exception e ) {
       LOG.error( e );
       LOG.debug( e, e );

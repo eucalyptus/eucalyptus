@@ -1,15 +1,22 @@
 package com.eucalyptus.cluster.callback;
 
+import java.util.List;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstance.Reason;
+import com.eucalyptus.cluster.VmInstance.VmState;
+import com.eucalyptus.cluster.VmInstance.VmStateSet;
+import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmDescribeType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
@@ -29,6 +36,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   @Override
   public void fire( VmDescribeResponseType reply ) {
     reply.setOriginCluster( this.getSubject( ).getConfiguration( ).getName( ) );
+
     for ( VmInfo vmInfo : reply.getVms( ) ) {
       vmInfo.setPlacement( this.getSubject( ).getConfiguration( ).getName( ) );
       VmTypeInfo typeInfo = vmInfo.getInstanceType( );
@@ -41,16 +49,66 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       }
     }
     
-    EntityTransaction db = Entities.get( VmInstance.class );
-    try {
-      SystemState.handle( reply );
-      db.commit( );
-    } catch ( Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
-      db.rollback( );
+    for ( final VmInfo runVm : reply.getVms( ) ) {
+      final VmState state = VmState.Mapper.get( runVm.getStateName( ) );
+      
+      final EntityTransaction db1 = Entities.get( VmInstance.class );
+      try {
+        try {
+          final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, runVm.getInstanceId( ) ) );
+          vm.doUpdate( ).apply( runVm );
+        } catch ( final Exception ex ) {
+          if ( VmStateSet.RUN.contains( state ) ) {
+            VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
+          }
+        }
+        db1.commit( );
+      } catch ( final Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        db1.rollback( );
+      }
+    }
+
+    final List<String> unreportedVms = Lists.transform( VmInstances.listValues( ), new Function<VmInstance, String>( ) {
+      
+      @Override
+      public String apply( final VmInstance input ) {
+        return input.getInstanceId( );
+      }
+    } );
+    
+    final List<String> runningVmIds = Lists.transform( reply.getVms( ), new Function<VmInfo, String>( ) {
+      @Override
+      public String apply( final VmInfo arg0 ) {
+        final String vmId = arg0.getImageId( );
+        unreportedVms.remove( vmId );
+        return vmId;
+      }
+    } );
+    
+    for ( final String vmId : unreportedVms ) {
+      EntityTransaction db1 = Entities.get( VmInstance.class );
+      try {
+        final VmInstance vm = VmInstances.lookup( vmId );
+        if ( VmStateSet.RUN.apply( vm ) ) {
+          //noop.
+        } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
+          vm.setState( VmState.TERMINATED, Reason.EXPIRED );
+        } else if ( VmState.TERMINATED.apply( vm ) && vm.getSplitTime( ) > VmInstances.BURY_TIME ) {
+          VmInstance.Transitions.DELETE.apply( vm );
+        } else if ( VmState.BURIED.apply( vm ) ) {
+          VmInstance.Transitions.DELETE.apply( vm );
+        } else if ( VmStateSet.DONE.apply( vm ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
+          VmInstance.Transitions.TERMINATE.apply( vm );
+        }
+        db1.commit( );
+      } catch ( final Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        db1.rollback( );
+      }
     }
   }
-
+  
   /**
    * @see com.eucalyptus.cluster.callback.StateUpdateMessageCallback#fireException(com.eucalyptus.util.async.FailedRequestException)
    * @param t
