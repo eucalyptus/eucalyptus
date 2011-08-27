@@ -1042,23 +1042,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       : Sets.newHashSet( ) );
   }
   
-  @Override
-  public String toString( ) {
-    final StringBuilder builder2 = new StringBuilder( );
-    builder2.append( "VmInstance:" );
-    if ( this.vmId != null ) builder2.append( "vmId=" ).append( this.vmId ).append( ":" );
-    if ( this.networkConfig != null ) builder2.append( "networkConfig=" ).append( this.networkConfig ).append( ":" );
-    if ( this.privateNetwork != null ) builder2.append( "privateNetwork=" ).append( this.privateNetwork ).append( ":" );
-    if ( this.placement != null ) builder2.append( "placement=" ).append( this.placement ).append( ":" );
-    if ( this.launchRecord != null ) builder2.append( "launchRecord=" ).append( this.launchRecord ).append( ":" );
-    if ( this.networkIndex != null ) builder2.append( "networkIndex=" ).append( this.networkIndex ).append( ":" );
-    if ( this.runtimeState != null ) builder2.append( "runtimeState=" ).append( this.runtimeState ).append( ":" );
-    if ( this.networkGroups != null ) builder2.append( "networkGroups=" ).append( this.networkGroups ).append( ":" );
-    if ( this.bootRecord != null ) builder2.append( "bootRecord=" ).append( this.bootRecord ).append( ":" );
-    if ( this.usageStats != null ) builder2.append( "usageStats=" ).append( this.usageStats );
-    return builder2.toString( );
-  }
-  
   static long getSerialversionuid( ) {
     return serialVersionUID;
   }
@@ -1469,5 +1452,24 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   private VmVolumeState getTransientVolumeState( ) {
     return this.transientVolumeState;
+  }
+
+  @Override
+  public String toString( ) {
+    StringBuilder builder2 = new StringBuilder( );
+    builder2.append( "VmInstance:" );
+    if ( this.networkConfig != null ) builder2.append( "networkConfig=" ).append( this.networkConfig ).append( ":" );
+    if ( this.vmId != null ) builder2.append( "vmId=" ).append( this.vmId ).append( ":" );
+    if ( this.bootRecord != null ) builder2.append( "bootRecord=" ).append( this.bootRecord ).append( ":" );
+    if ( this.usageStats != null ) builder2.append( "usageStats=" ).append( this.usageStats ).append( ":" );
+    if ( this.launchRecord != null ) builder2.append( "launchRecord=" ).append( this.launchRecord ).append( ":" );
+    if ( this.runtimeState != null ) builder2.append( "runtimeState=" ).append( this.runtimeState ).append( ":" );
+    if ( this.transientVolumeState != null ) builder2.append( "transientVolumeState=" ).append( this.transientVolumeState ).append( ":" );
+    if ( this.persistentVolumeState != null ) builder2.append( "persistentVolumeState=" ).append( this.persistentVolumeState ).append( ":" );
+    if ( this.placement != null ) builder2.append( "placement=" ).append( this.placement ).append( ":" );
+    if ( this.privateNetwork != null ) builder2.append( "privateNetwork=" ).append( this.privateNetwork ).append( ":" );
+    if ( this.networkGroups != null ) builder2.append( "networkGroups=" ).append( this.networkGroups ).append( ":" );
+    if ( this.networkIndex != null ) builder2.append( "networkIndex=" ).append( this.networkIndex );
+    return builder2.toString( );
   }
 }
