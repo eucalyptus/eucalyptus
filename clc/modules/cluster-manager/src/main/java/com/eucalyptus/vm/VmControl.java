@@ -146,6 +146,7 @@ import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
+import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.StartInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.StartInstancesType;
 import edu.ucsb.eucalyptus.msgs.StopInstancesResponseType;
@@ -198,7 +199,10 @@ public class VmControl {
           Logs.exhaust( ).error( ex, ex );
           db.rollback( );
           try {
-            rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( VmInstances.transform( vm ) );
+            RunningInstancesItemType ret = VmInstances.transform( vm );
+            if ( ret != null ) {
+              rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( ret );
+            }
           } catch ( Exception ex1 ) {
             LOG.error( ex1 , ex1 );
           }
