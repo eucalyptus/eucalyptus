@@ -68,6 +68,8 @@ import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.Lob;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
@@ -83,32 +85,31 @@ import com.google.common.collect.Lists;
 @Embeddable
 public class VmRuntimeState {
   @Transient
-  private static String     SEND_USER_TERMINATE = "SIGTERM";
+  private static String      SEND_USER_TERMINATE = "SIGTERM";
   @Transient
-  private static String     SEND_USER_STOP      = "SIGSTOP";
+  private static String      SEND_USER_STOP      = "SIGSTOP";
   @Transient
-  private static Logger     LOG                 = Logger.getLogger( VmRuntimeState.class );
+  private static Logger      LOG                 = Logger.getLogger( VmRuntimeState.class );
   @Parent
-  private VmInstance        vmInstance;
+  private VmInstance         vmInstance;
   @Embedded
-  private VmBundleTask      bundleTask;
+  private VmBundleTask       bundleTask;
   @Embedded
-  private VmCreateImageTask createImageTask;
+  private VmCreateImageTask  createImageTask;
   @Column( name = "metadata_vm_service_tag" )
-  private String            serviceTag;
+  private String             serviceTag;
+  @Enumerated( EnumType.STRING )
+  @Column( name = "metadata_vm_reason" )
+  private Reason             reason;
+  @Embedded
+  private final List<String> reasonDetails       = Lists.newArrayList( );
   @Transient
-  private Reason            reason;
-  @Transient
-  private List<String>      reasonDetails       = Lists.newArrayList( );
-  @Transient
-  private StringBuffer      consoleOutput       = new StringBuffer( );
-//  @Embedded
-//private Set<VmVolumeAttachment>             transientVolumes = Sets.newHashSet( );
+  private final StringBuffer consoleOutput       = new StringBuffer( );
   @Lob
   @Column( name = "metadata_vm_password_data" )
-  private String            passwordData;
+  private String             passwordData;
   @Column( name = "metadata_vm_pending" )
-  private Boolean           pending;
+  private Boolean            pending;
   
   VmRuntimeState( final VmInstance vmInstance ) {
     super( );

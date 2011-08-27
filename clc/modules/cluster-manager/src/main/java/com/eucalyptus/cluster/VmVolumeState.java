@@ -68,10 +68,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import javax.persistence.CollectionTable;
 import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
-import javax.persistence.PreRemove;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Parent;
@@ -80,7 +78,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 
 @Embeddable
 public class VmVolumeState {
@@ -88,7 +85,9 @@ public class VmVolumeState {
   private static Logger    LOG = Logger.getLogger( VmVolumeState.class );
   @Parent
   private VmInstance vmInstance;
-  
+  @ElementCollection
+  private final Set<VmVolumeAttachment> attachments = Sets.newHashSet( );
+
   VmVolumeState( ) {
     super( );
     this.vmInstance = null;
@@ -99,14 +98,6 @@ public class VmVolumeState {
     this.vmInstance = vmInstance;
   }
   
-  @ElementCollection
-  @CollectionTable( name = "metadata_vm_transient_volume_attachments" )
-  private final Set<VmVolumeAttachment> attachments = Sets.newHashSet( );
-  
-  @PreRemove
-  private void cleanUp( ) {
-    this.attachments.clear( );
-  }
   
   private VmVolumeAttachment resolveVolumeId( final String volumeId ) throws NoSuchElementException {
     final VmVolumeAttachment v = Iterables.find( this.attachments, volumeIdFilter( volumeId ) );
