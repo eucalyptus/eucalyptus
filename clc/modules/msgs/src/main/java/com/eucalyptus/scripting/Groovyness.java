@@ -18,17 +18,29 @@ import javax.script.ScriptException;
 import javax.script.SimpleBindings;
 import javax.script.SimpleScriptContext;
 import org.apache.log4j.Logger;
+import org.codehaus.groovy.control.CompilerConfiguration;
 import com.eucalyptus.system.SubDirectory;
 
 public class Groovyness {
   private static Logger      LOG          = Logger.getLogger( Groovyness.class );
   public static ScriptEngine groovyEngine = getGroovyEngine( );
   
-  public static ScriptEngine getGroovyEngine( ) {
+  private static GroovyClassLoader getGroovyClassLoader( ) {
+    CompilerConfiguration config = new CompilerConfiguration( );
+    config.setDebug( true );
+    config.setVerbose( true );
+    ClassLoader parent = ClassLoader.getSystemClassLoader( );
+    GroovyClassLoader loader = new GroovyClassLoader( parent );
+    loader.setShouldRecompile( true );
+    return loader;
+  }
+  
+
+  private static ScriptEngine getGroovyEngine( ) {
     synchronized ( Groovyness.class ) {
       if ( groovyEngine == null ) {
         GroovySystem.getMetaClassRegistry( ).setMetaClassCreationHandle( new ExpandoMetaClassCreationHandle( ) );
-        ScriptEngineManager manager = new ScriptEngineManager( );
+        ScriptEngineManager manager = new ScriptEngineManager( getGroovyClassLoader( ) );
         groovyEngine = manager.getEngineByName( "groovy" );
       }
       return groovyEngine;
@@ -38,14 +50,13 @@ public class Groovyness {
   public static <T> T newInstance( String fileName ) throws ScriptExecutionFailedException {
     GroovyObject groovyObject = null;
     try {
-      ClassLoader parent = ClassLoader.getSystemClassLoader( );
-      GroovyClassLoader loader = new GroovyClassLoader( parent );
       File f = new File( fileName );
       if ( !f.exists( ) ) {
         f = new File( SubDirectory.SCRIPTS + File.separator + fileName + ( fileName.endsWith( ".groovy" )
           ? ""
           : ".groovy" ) );
       }
+      GroovyClassLoader loader = getGroovyClassLoader( );
       Class groovyClass = loader.parseClass( f );
       groovyObject = ( GroovyObject ) groovyClass.newInstance( );
     } catch ( Exception e ) {
@@ -59,7 +70,7 @@ public class Groovyness {
       throw new ScriptExecutionFailedException( e.getMessage( ), e );
     }
   }
-  
+
   public static <T> T run( SubDirectory dir, String fileName ) {
     fileName = dir + File.separator + fileName;
     String fileNameWExt = fileName + ".groovy";
