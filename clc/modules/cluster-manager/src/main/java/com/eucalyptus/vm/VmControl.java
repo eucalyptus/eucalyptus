@@ -179,9 +179,9 @@ public class VmControl {
         try {
           VmInstance v = Entities.merge( vm );
           if ( VmState.TERMINATED.apply( v ) && v.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
-            VmInstance.Transitions.TERMINATE.apply( v );
+            VmInstances.terminate( v );
           } else if ( VmState.BURIED.apply( v ) && v.getSplitTime( ) > VmInstances.BURY_TIME ) {
-            VmInstance.Transitions.DELETE.apply( v );
+            VmInstances.delete( v );
           }
           if ( VmState.BURIED.apply( v ) && !isVerbose ) {
             continue;
@@ -231,9 +231,9 @@ public class VmControl {
               final int oldCode = vm.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
               final String oldState = vm.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
               if ( VmStateSet.DONE.apply( vm ) ) {
-                VmInstance.Transitions.DELETE.apply( vm );
+                VmInstances.delete( vm );
               } else {
-                VmInstance.Transitions.TERMINATE.apply( vm );
+                VmInstances.terminate( vm );
               }
               results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
               db.commit( );
@@ -301,10 +301,10 @@ public class VmControl {
   public void getConsoleOutput( final GetConsoleOutputType request ) throws EucalyptusCloudException {
     VmInstance v = null;
     try {
-      v = VmInstance.Lookup.INSTANCE.apply( request.getInstanceId( ) );
+      v = VmInstances.lookup( request.getInstanceId( ) );
     } catch ( final NoSuchElementException e2 ) {
       try {
-        v = VmInstance.Lookup.TERMINATED.apply( request.getInstanceId( ) );
+        v = VmInstances.lookup( request.getInstanceId( ) );
         final GetConsoleOutputResponseType reply = request.getReply( );
         reply.setInstanceId( request.getInstanceId( ) );
         reply.setTimestamp( new Date( ) );
@@ -409,7 +409,7 @@ public class VmControl {
         @Override
         public boolean apply( final String instanceId ) {
           try {
-            final VmInstance v = VmInstance.Lookup.INSTANCE.apply( instanceId );
+            final VmInstance v = VmInstances.lookup( instanceId );
             if ( RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
               final int oldCode = v.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
               final String oldState = v.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
@@ -421,7 +421,7 @@ public class VmControl {
             return true;
           } catch ( final NoSuchElementException e ) {
             try {
-              VmInstances.deregister( instanceId );
+              VmInstances.terminate( instanceId );
               return true;
             } catch ( final NoSuchElementException e1 ) {
               return false;

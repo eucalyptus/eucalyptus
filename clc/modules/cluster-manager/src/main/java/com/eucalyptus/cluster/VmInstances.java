@@ -332,23 +332,23 @@ public class VmInstances {
                           instanceId.substring( 8, 10 ) );
   }
   
-  @Deprecated
   public static VmInstance lookup( final String name ) throws NoSuchElementException {
     return VmInstance.Lookup.INSTANCE.apply( name );
   }
   
-  @Deprecated
-  public static VmInstance register( final VmInstance obj ) {
-    return VmInstance.Transitions.REGISTER.apply( obj );
+  public static VmInstance register( final VmInstance vm ) {
+    return VmInstance.Transitions.REGISTER.apply( vm );
   }
   
-  @Deprecated
-  public static VmInstance deregister( final VmInstance vm ) throws TransactionException {
+  public static VmInstance delete( final VmInstance vm ) throws TransactionException {
+    return VmInstance.Transitions.DELETE.apply( vm );
+  }
+
+  public static VmInstance terminate( final VmInstance vm ) throws TransactionException {
     return VmInstance.Transitions.TERMINATE.apply( vm );
   }
   
-  @Deprecated
-  public static VmInstance deregister( final String key ) throws NoSuchElementException {
+  public static VmInstance terminate( final String key ) throws NoSuchElementException {
     return Functions.compose( VmInstance.Transitions.TERMINATE, VmInstance.Lookup.INSTANCE ).apply( key );
   }
   

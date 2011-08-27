@@ -88,18 +88,19 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     for ( final String vmId : unreportedVms ) {
       EntityTransaction db1 = Entities.get( VmInstance.class );
       try {
-        final VmInstance vm = VmInstances.lookup( vmId );
+        VmInstance vm = VmInstances.lookup( vmId );
         if ( VmStateSet.RUN.apply( vm ) ) {
           //noop.
         } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
           vm.setState( VmState.TERMINATED, Reason.EXPIRED );
-          VmInstance.Transitions.DELETE.apply( vm );//TODO:GRZE:OMG:TEMPORARYA!!?@!!@!11
+          vm = VmInstances.delete( vm );//TODO:GRZE:OMG:TEMPORARYA!!?@!!@!11
+          
         } else if ( VmState.TERMINATED.apply( vm ) && vm.getSplitTime( ) > VmInstances.BURY_TIME ) {
-          VmInstance.Transitions.DELETE.apply( vm );
+          VmInstances.delete( vm );
         } else if ( VmState.BURIED.apply( vm ) ) {
-          VmInstance.Transitions.DELETE.apply( vm );
+          VmInstances.delete( vm );
         } else if ( VmStateSet.DONE.apply( vm ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
-          VmInstance.Transitions.TERMINATE.apply( vm );
+          VmInstances.terminate( vm );
         }
         db1.commit( );
       } catch ( final Exception ex ) {

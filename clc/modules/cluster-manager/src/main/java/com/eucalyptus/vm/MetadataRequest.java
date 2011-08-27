@@ -99,7 +99,7 @@ public class MetadataRequest {
       try {
         Address addr = Addresses.getInstance( ).lookup( requestIp );
         try {
-          findVm = VmInstance.Lookup.INSTANCE.apply( addr.getInstanceId( ) );
+          findVm = VmInstances.lookup( addr.getInstanceId( ) );
         } catch ( Exception ex ) {
           LOG.error( ex );
         }
