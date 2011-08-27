@@ -199,13 +199,13 @@ public class ServiceContextManager {
           shutdown( );
         }
         this.context = this.createContext( reloadComponentIds );
+        if ( Bootstrap.isShuttingDown( ) ) {
+          this.running.set( false );
+          shutdown( );
+          return;
+        }
         assertThat( this.context, notNullValue( ) );
         try {
-          if ( Bootstrap.isShuttingDown( ) ) {
-            this.running.set( false );
-            shutdown( );
-            return;
-          }
           this.context.start( );
           this.client = new MuleClient( this.context );
           this.endpointToService.clear( );
@@ -242,6 +242,9 @@ public class ServiceContextManager {
       for ( ComponentId componentId : currentComponentIds ) {
         Component component = Components.lookup( componentId );
         String errMsg = "Failed to render model for: " + componentId + " because of: ";
+        if ( Bootstrap.isShuttingDown( ) ) {
+          return null;
+        }
         LOG.info( "-> Rendering configuration for " + componentId.name( ) );
         try {
           String outString = Templates.prepare( componentId.getServiceModelFileName( ) )
