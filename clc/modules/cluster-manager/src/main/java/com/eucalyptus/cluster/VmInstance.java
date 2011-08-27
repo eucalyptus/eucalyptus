@@ -150,43 +150,43 @@ import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 @Table( name = "metadata_instances" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetadata {
-  private static final long     serialVersionUID = 1L;
+  private static final long    serialVersionUID = 1L;
   
   @Transient
-  private static Logger         LOG              = Logger.getLogger( VmInstance.class );
+  private static Logger        LOG              = Logger.getLogger( VmInstance.class );
   @Transient
-  public static String          DEFAULT_TYPE     = "m1.small";
+  public static String         DEFAULT_TYPE     = "m1.small";
   @Embedded
-  private final VmNetworkConfig networkConfig;
+  private VmNetworkConfig      networkConfig;
   @Embedded
-  private final VmId            vmId;
+  private final VmId           vmId;
   @Embedded
-  private final VmBootRecord    bootRecord;
+  private final VmBootRecord   bootRecord;
   @Embedded
-  private final VmUsageStats    usageStats;
+  private final VmUsageStats   usageStats;
   @Embedded
-  private final VmLaunchRecord  launchRecord;
+  private final VmLaunchRecord launchRecord;
   @Embedded
-  private VmRuntimeState        runtimeState;
+  private VmRuntimeState       runtimeState;
   @Embedded
-  private VmVolumeState   transientVolumeState;
+  private VmVolumeState        transientVolumeState;
   @Embedded
-  private VmVolumeState   persistentVolumeState;
+  private VmVolumeState        persistentVolumeState;
   @Embedded
-  private final VmPlacement     placement;
+  private final VmPlacement    placement;
   
   @Column( name = "metadata_vm_private_networking" )
-  private final Boolean         privateNetwork;
+  private final Boolean        privateNetwork;
   @NotFound( action = NotFoundAction.IGNORE )
   @ManyToMany( cascade = { CascadeType.ALL }, fetch = FetchType.LAZY )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<NetworkGroup>     networkGroups    = Sets.newHashSet( );
+  private Set<NetworkGroup>    networkGroups    = Sets.newHashSet( );
   
   @NotFound( action = NotFoundAction.IGNORE )
   @OneToOne( fetch = FetchType.EAGER, cascade = { CascadeType.ALL }, orphanRemoval = true, optional = true )
   @JoinColumn( name = "metadata_vm_network_index", nullable = true, insertable = true, updatable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private PrivateNetworkIndex   networkIndex;
+  private PrivateNetworkIndex  networkIndex;
   
   @PreRemove
   void cleanUp( ) {
@@ -712,17 +712,17 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public void updatePublicAddress( final String publicAddr ) {
     if ( !VmNetworkConfig.DEFAULT_IP.equals( publicAddr ) && !"".equals( publicAddr )
          && ( publicAddr != null ) ) {
-      this.networkConfig.setPublicAddress( publicAddr );
+      this.getNetworkConfig( ).setPublicAddress( publicAddr );
     } else {
-      this.networkConfig.setPublicAddress( VmNetworkConfig.DEFAULT_IP );
+      this.getNetworkConfig( ).setPublicAddress( VmNetworkConfig.DEFAULT_IP );
     }
   }
   
   public void updatePrivateAddress( final String privateAddr ) {
     if ( !VmNetworkConfig.DEFAULT_IP.equals( privateAddr ) && !"".equals( privateAddr ) && ( privateAddr != null ) ) {
-      this.networkConfig.setPrivateAddress( privateAddr );
+      this.getNetworkConfig( ).setPrivateAddress( privateAddr );
     }
-    this.networkConfig.updateDns( );
+    this.getNetworkConfig( ).updateDns( );
   }
   
   public VmRuntimeState getRuntimeState( ) {
@@ -793,13 +793,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     m.put( "instance-id", this.getInstanceId( ) );
     m.put( "instance-type", this.getVmType( ).getName( ) );
     if ( dns ) {
-      m.put( "local-hostname", this.networkConfig.getPrivateDnsName( ) );
+      m.put( "local-hostname", this.getNetworkConfig( ).getPrivateDnsName( ) );
     } else {
-      m.put( "local-hostname", this.networkConfig.getPrivateAddress( ) );
+      m.put( "local-hostname", this.getNetworkConfig( ).getPrivateAddress( ) );
     }
-    m.put( "local-ipv4", this.networkConfig.getPrivateAddress( ) );
+    m.put( "local-ipv4", this.getNetworkConfig( ).getPrivateAddress( ) );
     if ( dns ) {
-      m.put( "public-hostname", this.networkConfig.getPublicDnsName( ) );
+      m.put( "public-hostname", this.getNetworkConfig( ).getPublicDnsName( ) );
     } else {
       m.put( "public-hostname", this.getPublicAddress( ) );
     }
@@ -883,7 +883,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   public boolean hasPublicAddress( ) {
     return ( this.networkConfig != null )
-           && !( VmNetworkConfig.DEFAULT_IP.equals( this.networkConfig.getPublicAddress( ) ) || this.networkConfig.getPrivateAddress( ).equals( this.networkConfig.getPublicAddress( ) ) );
+           && !( VmNetworkConfig.DEFAULT_IP.equals( this.getNetworkConfig( ).getPublicAddress( ) ) || this.getNetworkConfig( ).getPrivateAddress( ).equals( this.getNetworkConfig( ).getPublicAddress( ) ) );
   }
   
   public String getInstanceId( ) {
@@ -913,19 +913,19 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public String getPrivateAddress( ) {
-    return this.networkConfig.getPrivateAddress( );
+    return this.getNetworkConfig( ).getPrivateAddress( );
   }
   
   public String getPublicAddress( ) {
-    return this.networkConfig.getPublicAddress( );
+    return this.getNetworkConfig( ).getPublicAddress( );
   }
   
   public String getPrivateDnsName( ) {
-    return this.networkConfig.getPrivateDnsName( );
+    return this.getNetworkConfig( ).getPrivateDnsName( );
   }
   
   public String getPublicDnsName( ) {
-    return this.networkConfig.getPublicDnsName( );
+    return this.getNetworkConfig( ).getPublicDnsName( );
   }
   
   public String getPasswordData( ) {
@@ -1304,7 +1304,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param bundleTaskStateName
    */
   protected void updateCreateImageTaskState( final String createImageTaskStateName ) {
-    this.getRuntimeState( ).setCrateImageTaskState( createImageTaskStateName );
+    this.getRuntimeState( ).setCreateImageTaskState( createImageTaskStateName );
   }
   
   /**
@@ -1457,7 +1457,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public String toString( ) {
     final StringBuilder builder2 = new StringBuilder( );
     builder2.append( "VmInstance:" );
-    if ( this.networkConfig != null ) builder2.append( "networkConfig=" ).append( this.networkConfig ).append( ":" );
+    if ( this.networkConfig != null ) builder2.append( "networkConfig=" ).append( this.getNetworkConfig( ) ).append( ":" );
     if ( this.vmId != null ) builder2.append( "vmId=" ).append( this.vmId ).append( ":" );
     if ( this.bootRecord != null ) builder2.append( "bootRecord=" ).append( this.bootRecord ).append( ":" );
     if ( this.usageStats != null ) builder2.append( "usageStats=" ).append( this.usageStats ).append( ":" );
@@ -1473,6 +1473,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   private VmNetworkConfig getNetworkConfig( ) {
+    if ( this.networkConfig == null ) {
+      this.networkConfig = new VmNetworkConfig( this );
+    }
     return this.networkConfig;
   }
   

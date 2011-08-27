@@ -353,8 +353,10 @@ public class VmRuntimeState {
   /**
    * @param createImageTaskStateName
    */
-  public void setCrateImageTaskState( final String createImageTaskStateName ) {
-    this.createImageTask.setState( createImageTaskStateName );
+  public void setCreateImageTaskState( final String createImageTaskStateName ) {
+    if ( this.createImageTask != null ) {
+      this.createImageTask.setState( createImageTaskStateName );
+    }
   }
   
   @Override
