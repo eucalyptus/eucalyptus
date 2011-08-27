@@ -12,7 +12,6 @@ import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.async.FailedRequestException;
-import com.eucalyptus.vm.SystemState;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
