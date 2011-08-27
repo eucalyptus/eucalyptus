@@ -200,7 +200,7 @@ public class VmControl {
           try {
             rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( VmInstance.Transform.INSTANCE.apply( vm ) );
           } catch ( Exception ex1 ) {
-            LOG.error( ex1 , ex1 );
+            LOG.error( ex1, ex1 );
           }
         }
       }

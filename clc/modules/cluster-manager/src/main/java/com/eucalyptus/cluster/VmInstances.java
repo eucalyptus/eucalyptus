@@ -333,10 +333,10 @@ public class VmInstances {
   }
   
   public static VmInstance lookup( final String name ) throws NoSuchElementException {
-    if ( !terminateCache.containsKey( name ) ) {
-      return VmInstance.Lookup.INSTANCE.apply( name );
-    } else {
+    if ( name != null && terminateCache.containsKey( name ) ) {
       return terminateCache.get( name );
+    } else {
+      return VmInstance.Lookup.INSTANCE.apply( name );
     }
   }
   
