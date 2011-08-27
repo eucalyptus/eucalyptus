@@ -252,10 +252,6 @@ public class VmRuntimeState {
     return this.bundleTask;
   }
   
-  List<String> getReasonDetails( ) {
-    return this.reasonDetails;
-  }
-  
   /**
    * @return
    */
@@ -347,10 +343,6 @@ public class VmRuntimeState {
     this.bundleTask = bundleTask;
   }
   
-  private void setReasonDetails( final List<String> reasonDetails ) {
-    this.reasonDetails = reasonDetails;
-  }
-  
   private void setVmInstance( final VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
@@ -363,7 +355,7 @@ public class VmRuntimeState {
    * @param createImageTaskStateName
    */
   public void setCrateImageTaskState( final String createImageTaskStateName ) {
-    /** TODO:GRZE: FINISH BFE HERE **/
+    this.createImageTask.setState( createImageTaskStateName );
   }
   
   @Override
@@ -395,6 +387,14 @@ public class VmRuntimeState {
   
   private void setPending( Boolean pending ) {
     this.pending = pending;
+  }
+  
+  private Set<String> getReasonDetails( ) {
+    return this.reasonDetails;
+  }
+  
+  private void setReasonDetails( Set<String> reasonDetails ) {
+    this.reasonDetails = reasonDetails;
   }
   
 }
