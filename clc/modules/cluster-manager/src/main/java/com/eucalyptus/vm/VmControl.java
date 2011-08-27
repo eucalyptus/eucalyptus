@@ -201,7 +201,7 @@ public class VmControl {
             throw ex;
           }
         } else {
-          rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstance.Transform.INSTANCE.apply( vm ) );
+          rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( VmInstance.Transform.INSTANCE.apply( vm ) );
         }
       }
       ArrayList<ReservationInfoType> vms = new ArrayList<ReservationInfoType>( rsvMap.values( ) );
