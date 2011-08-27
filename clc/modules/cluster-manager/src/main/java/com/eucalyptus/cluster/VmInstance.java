@@ -1472,4 +1472,16 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     if ( this.networkIndex != null ) builder2.append( "networkIndex=" ).append( this.networkIndex );
     return builder2.toString( );
   }
+
+  private VmNetworkConfig getNetworkConfig( ) {
+    return this.networkConfig;
+  }
+
+  private VmVolumeState getPersistentVolumeState( ) {
+    return this.persistentVolumeState;
+  }
+
+  private void setNetworkGroups( Set<NetworkGroup> networkGroups ) {
+    this.networkGroups = networkGroups;
+  }
 }

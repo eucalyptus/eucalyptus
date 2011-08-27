@@ -378,4 +378,20 @@ public class VmRuntimeState {
     return builder.toString( );
   }
   
+  private VmCreateImageTask getCreateImageTask( ) {
+    return this.createImageTask;
+  }
+  
+  private void setCreateImageTask( VmCreateImageTask createImageTask ) {
+    this.createImageTask = createImageTask;
+  }
+  
+  private Boolean getPending( ) {
+    return this.pending;
+  }
+  
+  private void setPending( Boolean pending ) {
+    this.pending = pending;
+  }
+  
 }
