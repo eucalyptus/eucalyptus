@@ -169,9 +169,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Embedded
   private VmRuntimeState        runtimeState;
   @Embedded
-  private final VmVolumeState   transientVolumeState;
+  private VmVolumeState   transientVolumeState;
   @Embedded
-  private final VmVolumeState   persistentVolumeState;
+  private VmVolumeState   persistentVolumeState;
   @Embedded
   private final VmPlacement     placement;
   
@@ -1447,6 +1447,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   private VmVolumeState getTransientVolumeState( ) {
+    if ( this.transientVolumeState == null ) {
+      this.transientVolumeState = new VmVolumeState( this );
+    }
     return this.transientVolumeState;
   }
   
@@ -1474,6 +1477,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   private VmVolumeState getPersistentVolumeState( ) {
+    if ( this.persistentVolumeState == null ) {
+      this.persistentVolumeState = new VmVolumeState( this );
+    }
     return this.persistentVolumeState;
   }
   
