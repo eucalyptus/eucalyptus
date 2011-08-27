@@ -64,9 +64,9 @@
 package com.eucalyptus.cluster;
 
 import java.util.Date;
-import java.util.List;
 import java.util.Set;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
 import javax.persistence.EnumType;
@@ -102,7 +102,7 @@ public class VmRuntimeState {
   @Enumerated( EnumType.STRING )
   @Column( name = "metadata_vm_reason" )
   private Reason            reason;
-  @Embedded
+  @ElementCollection
   private Set<String>       reasonDetails = Sets.newHashSet( );
   @Transient
   private StringBuffer      consoleOutput       = new StringBuffer( );
