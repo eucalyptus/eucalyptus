@@ -65,6 +65,7 @@ package com.eucalyptus.cluster;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
@@ -80,40 +81,41 @@ import com.eucalyptus.cluster.VmInstance.VmState;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 @Embeddable
 public class VmRuntimeState {
   @Transient
-  private static String      SEND_USER_TERMINATE = "SIGTERM";
+  private static String     SEND_USER_TERMINATE = "SIGTERM";
   @Transient
-  private static String      SEND_USER_STOP      = "SIGSTOP";
+  private static String     SEND_USER_STOP      = "SIGSTOP";
   @Transient
-  private static Logger      LOG                 = Logger.getLogger( VmRuntimeState.class );
+  private static Logger     LOG                 = Logger.getLogger( VmRuntimeState.class );
   @Parent
-  private VmInstance         vmInstance;
+  private VmInstance        vmInstance;
   @Embedded
-  private VmBundleTask       bundleTask;
+  private VmBundleTask      bundleTask;
   @Embedded
-  private VmCreateImageTask  createImageTask;
+  private VmCreateImageTask createImageTask;
   @Column( name = "metadata_vm_service_tag" )
-  private String             serviceTag;
+  private String            serviceTag;
   @Enumerated( EnumType.STRING )
   @Column( name = "metadata_vm_reason" )
-  private Reason             reason;
+  private Reason            reason;
   @Embedded
-  private List<String> reasonDetails       = Lists.newArrayList( );
+  private Set<String>       reasonDetails;
   @Transient
-  private StringBuffer consoleOutput       = new StringBuffer( );
+  private StringBuffer      consoleOutput       = new StringBuffer( );
   @Lob
   @Column( name = "metadata_vm_password_data" )
-  private String             passwordData;
+  private String            passwordData;
   @Column( name = "metadata_vm_pending" )
-  private Boolean            pending;
+  private Boolean           pending;
   
   VmRuntimeState( final VmInstance vmInstance ) {
     super( );
     this.vmInstance = vmInstance;
+    this.reasonDetails = Sets.newHashSet( );
   }
   
   VmRuntimeState( ) {
