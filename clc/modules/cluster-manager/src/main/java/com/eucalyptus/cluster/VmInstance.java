@@ -1136,6 +1136,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
+      throw new NoSuchElementException( "Failed to lookup volume satisfying the predicate: " + predicate.getClass( ) );
     }
   }
   

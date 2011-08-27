@@ -492,5 +492,22 @@ public class VmRuntimeState {
   public void setCrateImageTaskState( final String createImageTaskStateName ) {
     /** TODO:GRZE: FINISH BFE HERE **/
   }
+
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "VmRuntimeState:" );
+    if ( this.bundleTask != null ) builder.append( "bundleTask=" ).append( this.bundleTask ).append( ":" );
+    if ( this.createImageTask != null ) builder.append( "createImageTask=" ).append( this.createImageTask ).append( ":" );
+    if ( this.serviceTag != null ) builder.append( "serviceTag=" ).append( this.serviceTag ).append( ":" );
+    if ( this.reason != null ) builder.append( "reason=" ).append( this.reason ).append( ":" );
+    if ( this.reasonDetails != null ) builder.append( "reasonDetails=" ).append( this.reasonDetails ).append( ":" );
+    if ( this.consoleOutput != null ) builder.append( "consoleOutput=" ).append( this.consoleOutput ).append( ":" );
+    if ( this.transientVolumeAttachments != null ) builder.append( "transientVolumeAttachments=" ).append( this.transientVolumeAttachments ).append( ":" );
+    if ( this.transientVolumes != null ) builder.append( "transientVolumes=" ).append( this.transientVolumes ).append( ":" );
+    if ( this.passwordData != null ) builder.append( "passwordData=" ).append( this.passwordData ).append( ":" );
+    if ( this.pending != null ) builder.append( "pending=" ).append( this.pending );
+    return builder.toString( );
+  }
   
 }

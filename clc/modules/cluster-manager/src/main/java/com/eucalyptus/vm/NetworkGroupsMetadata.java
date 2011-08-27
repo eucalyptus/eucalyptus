@@ -88,22 +88,11 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
   private static AtomicReference<String> topoString = new AtomicReference<String>( "" );
   
   private String getNetworkTopology( ) {
-    if ( checkInterval( ) ) {
-      return topoString.get( );
-    } else {
-      lock.lock( );
-      try {
-        topoString.set( generateTopology( ) );
-        lastTime = System.currentTimeMillis( );
-        return topoString.get( );
-      } finally {
-        lock.unlock( );
-      }
-    }
+    return generateTopology( );//GRZE:FIXME: this is stupid and will perform poorly.
   }
   
   private boolean checkInterval( ) {
-    return !( ( lastTime + refreshInterval( ) ) > System.currentTimeMillis( ) );
+    return ( lastTime + refreshInterval( ) ) < System.currentTimeMillis( );
   }
   
   private long refreshInterval( ) {
@@ -130,11 +119,17 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
                     : "p" ), netRule.getLowPort( ), ( "icmp".equals( netRule.getProtocol( ) )
                     ? ":"
                     : "-" ), netRule.getHighPort( ) );
-                  for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {
-                    rules.put( ruleGroup.getClusterNetworkName( ), String.format( "%s -o %s -u %s", rule, peer.getGroupName( ), peer.getUserQueryKey( ) ) );
+                  for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {                    
+                    String ruleString = String.format( "%s -o %s -u %s", rule, peer.getGroupName( ), peer.getUserQueryKey( ) );
+                    if ( !rules.get( ruleGroup.getClusterNetworkName( ) ).contains( ruleString ) ) {
+                      rules.put( ruleGroup.getClusterNetworkName( ), ruleString );
+                    }
                   }
                   for ( IpRange cidr : netRule.getIpRanges( ) ) {
-                    rules.put( ruleGroup.getClusterNetworkName( ), String.format( "%s -s %s", rule, cidr.getValue( ) ) );
+                    String ruleString = String.format( "%s -s %s", rule, cidr.getValue( ) );
+                    if ( !rules.get( ruleGroup.getClusterNetworkName( ) ).contains( ruleString ) ) {
+                      rules.put( ruleGroup.getClusterNetworkName( ), ruleString );
+                    }
                   }
                 } catch ( Exception ex ) {
                   LOG.error( ex, ex );
