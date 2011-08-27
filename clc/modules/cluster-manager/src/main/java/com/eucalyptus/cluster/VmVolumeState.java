@@ -87,7 +87,7 @@ public class VmVolumeState {
   @Transient
   private static Logger    LOG = Logger.getLogger( VmVolumeState.class );
   @Parent
-  private final VmInstance vmInstance;
+  private VmInstance vmInstance;
   
   VmVolumeState( ) {
     super( );
@@ -226,6 +226,10 @@ public class VmVolumeState {
   
   Set<VmVolumeAttachment> getAttachments( ) {
     return this.attachments;
+  }
+
+  private void setVmInstance( VmInstance vmInstance ) {
+    this.vmInstance = vmInstance;
   }
   
 }
