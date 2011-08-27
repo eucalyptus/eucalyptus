@@ -88,7 +88,6 @@
   <endpoint name="VmControlWS" address="vm://VmControl" synchronous="false" />
   <endpoint name="AddressWS" address="vm://Address" synchronous="false" />
   <endpoint name="UpdateSystemWS" address="vm://UpdateSystemState" synchronous="false" />
-  <endpoint name="SystemStateWS" address="vm://SystemState" synchronous="false" />
   <endpoint name="TransformReplyWS" address="vm://TransformReply" synchronous="false" />
 
 </mule>

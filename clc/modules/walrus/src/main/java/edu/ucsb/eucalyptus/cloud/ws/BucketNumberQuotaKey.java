@@ -7,7 +7,6 @@ import com.eucalyptus.auth.policy.key.KeyUtils;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
-import com.eucalyptus.vm.SystemState;
 
 @PolicyKey( Keys.S3_QUOTA_BUCKET_NUMBER )
 public class BucketNumberQuotaKey extends QuotaKey {
