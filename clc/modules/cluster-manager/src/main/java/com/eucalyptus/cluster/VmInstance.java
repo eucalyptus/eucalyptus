@@ -231,6 +231,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       }
       
     },
+    EXPECTING_TEARDOWN( VmState.STOPPING, VmState.SHUTTING_DOWN ),
     STOP( VmState.STOPPING, VmState.STOPPED ),
     TERM( VmState.SHUTTING_DOWN, VmState.TERMINATED ),
     NOT_RUNNING( VmState.STOPPING, VmState.STOPPED, VmState.SHUTTING_DOWN, VmState.TERMINATED ),
@@ -451,13 +452,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     },
     TERMINATE {
       @Override
-      public VmInstance apply( final VmInstance vm ) {
-        if ( !Entities.isPersistent( vm ) ) {
-          throw new TransientEntityException( vm.toString( ) );
+      public VmInstance apply( final VmInstance v ) {
+        if ( !Entities.isPersistent( v ) ) {
+          throw new TransientEntityException( v.toString( ) );
         } else {
           final EntityTransaction db = Entities.get( VmInstance.class );
           try {
-            Entities.merge( vm );
+            VmInstance vm = Entities.merge( v );
             if ( VmStateSet.RUN.apply( vm ) ) {
               vm.setState( VmState.SHUTTING_DOWN, Reason.USER_TERMINATED );
             } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
@@ -470,7 +471,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           } catch ( final Exception ex ) {
             Logs.exhaust( ).trace( ex, ex );
             db.rollback( );
-            throw new NoSuchElementException( "Failed to lookup instance: " + vm );
+            throw new NoSuchElementException( "Failed to lookup instance: " + v );
           }
         }
       }
@@ -1465,7 +1466,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public void setNaturalId( final String naturalId ) {
     super.setNaturalId( naturalId );
   }
-
+  
   private VmVolumeState getTransientVolumeState( ) {
     return this.transientVolumeState;
   }

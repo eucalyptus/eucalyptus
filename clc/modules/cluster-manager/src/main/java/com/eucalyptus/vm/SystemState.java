@@ -139,10 +139,10 @@ public class SystemState {
         } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
           vm.setState( VmState.TERMINATED, Reason.EXPIRED );
         } else if ( VmState.TERMINATED.apply( vm ) && vm.getSplitTime( ) > VmInstances.BURY_TIME ) {
-          vm.setState( VmState.BURIED, Reason.EXPIRED );
+          VmInstance.Transitions.DELETE.apply( vm );
         } else if ( VmState.BURIED.apply( vm ) ) {
           VmInstance.Transitions.DELETE.apply( vm );
-        } else if ( vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
+        } else if ( VmStateSet.DONE.apply( vm ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
           VmInstance.Transitions.TERMINATE.apply( vm );
         }
         db.commit( );
@@ -228,16 +228,13 @@ public class SystemState {
       EntityTransaction db = Entities.get( VmInstance.class );
       try {
         VmInstance v = Entities.merge( vm );
-        if ( VmStateSet.DONE.apply( v ) && ( v.getState( ).ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
-          final long time = ( System.currentTimeMillis( ) - v.getLastUpdateTimestamp( ).getTime( ) );
-          if ( v.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
-            VmInstance.Transitions.TERMINATE.apply( v );
-          } else if ( v.getSplitTime( ) > VmInstances.BURY_TIME ) {
-            VmInstance.Transitions.DELETE.apply( v );
-          }
-          if ( !isVerbose ) {
-            continue;
-          }
+        if ( VmState.TERMINATED.apply( v ) && v.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
+          VmInstance.Transitions.TERMINATE.apply( v );
+        } else if ( VmState.BURIED.apply( v ) && v.getSplitTime( ) > VmInstances.BURY_TIME ) {
+          VmInstance.Transitions.DELETE.apply( v );
+        }
+        if ( VmState.BURIED.apply( v ) && !isVerbose ) {
+          continue;
         }
         if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) {
           continue;
