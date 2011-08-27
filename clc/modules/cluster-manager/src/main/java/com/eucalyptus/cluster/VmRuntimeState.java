@@ -103,7 +103,7 @@ public class VmRuntimeState {
   @Column( name = "metadata_vm_reason" )
   private Reason            reason;
   @Embedded
-  private Set<String>       reasonDetails;
+  private Set<String>       reasonDetails = Sets.newHashSet( );
   @Transient
   private StringBuffer      consoleOutput       = new StringBuffer( );
   @Lob
@@ -115,7 +115,6 @@ public class VmRuntimeState {
   VmRuntimeState( final VmInstance vmInstance ) {
     super( );
     this.vmInstance = vmInstance;
-    this.reasonDetails = Sets.newHashSet( );
   }
   
   VmRuntimeState( ) {
