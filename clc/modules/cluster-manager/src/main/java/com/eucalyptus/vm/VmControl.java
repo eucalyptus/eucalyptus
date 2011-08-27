@@ -191,8 +191,8 @@ public class VmControl {
               } catch ( NoSuchElementException ex ) {
                 vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.Lookup.TERMINATED );
               }
-              final int oldCode = vm.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
-              final String oldState = vm.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
+              final int oldCode = vm.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
+              final String oldState = vm.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
               if ( VmStateSet.DONE.apply( vm ) ) {
                 VmInstance.Transitions.DELETE.apply( vm );
               } else {
@@ -374,8 +374,8 @@ public class VmControl {
           try {
             final VmInstance v = VmInstance.Lookup.INSTANCE.apply( instanceId );
             if ( RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
-              final int oldCode = v.getRuntimeState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
-              final String oldState = v.getRuntimeState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
+              final int oldCode = v.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
+              final String oldState = v.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
               results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
               if ( VmState.RUNNING.equals( v.getState( ) ) || VmState.PENDING.equals( v.getState( ) ) ) {
                 v.setState( VmState.STOPPING, Reason.USER_STOPPED );
@@ -534,7 +534,7 @@ public class VmControl {
       final Context ctx = Contexts.lookup( );
       Cluster cluster = null;
       final VmInstance v = VmInstances.lookup( request.getInstanceId( ) );
-      if ( !VmState.RUNNING.equals( v.getRuntimeState( ) ) ) {
+      if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
         throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
       }
       if ( RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, request.getInstanceId( ), v.getOwner( ) ) ) {

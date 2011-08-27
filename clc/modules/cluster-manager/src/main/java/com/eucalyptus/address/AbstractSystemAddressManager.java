@@ -187,7 +187,7 @@ public abstract class AbstractSystemAddressManager {
       try {
         if ( !address.isPending( ) ) {
           for ( final VmInstance vm : VmInstances.listValues( ) ) {
-            if ( addrInfo.getInstanceIp( ).equals( vm.getPrivateAddress( ) ) && VmState.RUNNING.equals( vm.getRuntimeState( ) ) ) {
+            if ( addrInfo.getInstanceIp( ).equals( vm.getPrivateAddress( ) ) && VmState.RUNNING.equals( vm.getState( ) ) ) {
               LOG.warn( "Out of band address state change: " + LogUtil.dumpObject( addrInfo ) + " address=" + address + " vm=" + vm );
 //              if ( !address.isAllocated( ) ) {
 //                address.pendingAssignment( ).assign( vm ).clearPending( );
@@ -233,7 +233,7 @@ public abstract class AbstractSystemAddressManager {
         }
       }
       if ( vm != null ) {
-        LOG.trace( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getRuntimeState( ) + " " + publicIp );
+        LOG.trace( "Candidate vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
         if ( publicIp.equals( vm.getPublicAddress( ) ) ) {
           LOG.trace( "Found vm which claims this address: " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + publicIp );
         }

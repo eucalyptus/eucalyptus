@@ -102,7 +102,7 @@ public class VmRuntimeState {
   @Column( name = "metadata_vm_reason" )
   private Reason             reason;
   @Embedded
-  private final List<String> reasonDetails       = Lists.newArrayList( );
+  private List<String> reasonDetails       = Lists.newArrayList( );
   @Transient
   private StringBuffer consoleOutput       = new StringBuffer( );
   @Lob

@@ -439,14 +439,14 @@ public class ImageManager {
     VmInstance vm;
     try {
       vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.Lookup.INSTANCE );
-      if ( !VmState.RUNNING.equals( vm.getRuntimeState( ) ) && !VmState.STOPPED.equals( vm.getRuntimeState( ) ) ) {
+      if ( !VmState.RUNNING.equals( vm.getState( ) ) && !VmState.STOPPED.equals( vm.getState( ) ) ) {
         throw new EucalyptusCloudException( "Cannot create an image from an instance which is not in either the 'running' or 'stopped' state: "
-                                            + vm.getInstanceId( ) + " is in state " + vm.getRuntimeState( ).getName( ) );
+                                            + vm.getInstanceId( ) + " is in state " + vm.getState( ).getName( ) );
       }
       if ( vm.isBlockStorage( ) && !ctx.hasAdministrativePrivileges( ) ) {
         throw new EucalyptusCloudException( "Cannot create an image from an instance which is not booted from a volume: " + vm.getInstanceId( )
                                             + " is in state "
-                                            + vm.getRuntimeState( ).getName( ) );
+                                            + vm.getState( ).getName( ) );
       } else if ( vm.isBlockStorage( ) ) {
 
       } else {

@@ -167,7 +167,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Embedded
   private final VmLaunchRecord  launchRecord;
   @Embedded
-  private final VmRuntimeState  runtimeState;
+  private VmRuntimeState  runtimeState;
   @Embedded
   private final VmVolumeState   transientVolumeState;
   @Embedded
@@ -725,8 +725,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.networkConfig.updateDns( );
   }
   
-  public VmState getRuntimeState( ) {
-    return this.getState( );
+  public VmRuntimeState getRuntimeState( ) {
+    if ( this.runtimeState == null ) {
+      this.runtimeState = new VmRuntimeState( this ); 
+    }
+    return this.runtimeState;
   }
   
   private void setRuntimeState( final VmState state ) {
@@ -855,23 +858,23 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public Boolean isCreatingImage( ) {
-    return this.runtimeState.isCreatingImage( );
+    return this.getRuntimeState( ).isCreatingImage( );
   }
   
   public Boolean isBundling( ) {
-    return this.runtimeState.isBundling( );
+    return this.getRuntimeState( ).isBundling( );
   }
   
   public VmBundleTask resetBundleTask( ) {
-    return this.runtimeState.resetBundleTask( );
+    return this.getRuntimeState( ).resetBundleTask( );
   }
   
   BundleState getBundleTaskState( ) {
-    return this.runtimeState.getBundleTaskState( );
+    return this.getRuntimeState( ).getBundleTaskState( );
   }
   
   public void setBundleTaskState( final String state ) {
-    this.runtimeState.setBundleTaskState( state );
+    this.getRuntimeState( ).setBundleTaskState( state );
   }
   
   public String getImageId( ) {
@@ -888,11 +891,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public String getConsoleOutputString( ) {
-    return new String( Base64.encode( this.runtimeState.getConsoleOutput( ).toString( ).getBytes( ) ) );
+    return new String( Base64.encode( this.getRuntimeState( ).getConsoleOutput( ).toString( ).getBytes( ) ) );
   }
   
   public void setConsoleOutput( final StringBuffer consoleOutput ) {
-    this.runtimeState.setConsoleOutput( consoleOutput );
+    this.getRuntimeState( ).setConsoleOutput( consoleOutput );
   }
   
   public VmType getVmType( ) {
@@ -926,11 +929,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public String getPasswordData( ) {
-    return this.runtimeState.getPasswordData( );
+    return this.getRuntimeState( ).getPasswordData( );
   }
   
   public void setPasswordData( final String passwordData ) {
-    this.runtimeState.setPasswordData( passwordData );
+    this.getRuntimeState( ).setPasswordData( passwordData );
   }
   
   /**
@@ -944,7 +947,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @return the bundleTask
    */
   public BundleTask getBundleTask( ) {
-    return VmBundleTask.asBundleTask( this ).apply( this.runtimeState.getBundleTask( ) );
+    return VmBundleTask.asBundleTask( this ).apply( this.getRuntimeState( ).getBundleTask( ) );
   }
   
   /**
@@ -1211,7 +1214,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @return
    */
   public String getServiceTag( ) {
-    return this.runtimeState.getServiceTag( );
+    return this.getRuntimeState( ).getServiceTag( );
   }
   
   /**
@@ -1229,7 +1232,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public void clearPendingBundleTask( ) {
-    this.runtimeState.clearPendingBundleTask( );
+    this.getRuntimeState( ).clearPendingBundleTask( );
   }
   
   /**
@@ -1263,11 +1266,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           try {
             final VmState state = VmState.Mapper.get( runVm.getStateName( ) );
             final long splitTime = VmInstance.this.getSplitTime( );
-            final VmState oldState = VmInstance.this.getRuntimeState( );
+            final VmState oldState = VmInstance.this.getState( );
             if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
-                 && ( VmState.PENDING.equals( VmInstance.this.getRuntimeState( ) ) || VmState.RUNNING.equals( VmInstance.this.getRuntimeState( ) ) ) ) {
+                 && ( VmState.PENDING.equals( VmInstance.this.getState( ) ) || VmState.RUNNING.equals( VmInstance.this.getState( ) ) ) ) {
               VmInstance.this.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
-              VmInstance.this.runtimeState.setServiceTag( runVm.getServiceTag( ) );
+              VmInstance.this.getRuntimeState( ).setServiceTag( runVm.getServiceTag( ) );
               VmInstance.this.setBundleTaskState( runVm.getBundleTaskStateName( ) );
               VmInstance.this.setCreateImageTaskState( runVm.getBundleTaskStateName( ) );
               VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
@@ -1280,15 +1283,15 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               VmInstance.this.setState( VmState.BURIED, Reason.BURIED );
               VmInstances.deregister( VmInstance.this );
             } else {
-              VmInstance.this.runtimeState.setServiceTag( runVm.getServiceTag( ) );
+              VmInstance.this.getRuntimeState( ).setServiceTag( runVm.getServiceTag( ) );
               VmInstance.this.setBundleTaskState( runVm.getBundleTaskStateName( ) );
               VmInstance.this.setCreateImageTaskState( runVm.getBundleTaskStateName( ) );
               VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
               VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
-              if ( VmState.STOPPING.equals( VmInstance.this.getRuntimeState( ) )
+              if ( VmState.STOPPING.equals( VmInstance.this.getState( ) )
                           && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
                 VmInstance.this.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
-              } else if ( VmState.SHUTTING_DOWN.equals( VmInstance.this.getRuntimeState( ) )
+              } else if ( VmState.SHUTTING_DOWN.equals( VmInstance.this.getState( ) )
                           && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
                 VmInstance.this.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
               }
@@ -1308,7 +1311,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param bundleTaskStateName
    */
   protected void setCreateImageTaskState( final String createImageTaskStateName ) {
-    this.runtimeState.setCrateImageTaskState( createImageTaskStateName );
+    this.getRuntimeState( ).setCrateImageTaskState( createImageTaskStateName );
   }
   
   /**
@@ -1330,7 +1333,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param serviceTag
    */
   public void setServiceTag( final String serviceTag ) {
-    this.runtimeState.setServiceTag( serviceTag );
+    this.getRuntimeState( ).setServiceTag( serviceTag );
   }
   
   /**
@@ -1338,7 +1341,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @return
    */
   public boolean startBundleTask( final BundleTask bundleTask ) {
-    return this.runtimeState.startBundleTask( VmBundleTask.fromBundleTask( this ).apply( bundleTask ) );
+    return this.getRuntimeState( ).startBundleTask( VmBundleTask.fromBundleTask( this ).apply( bundleTask ) );
   }
   
   public void setNetworkIndex( final PrivateNetworkIndex networkIndex ) {

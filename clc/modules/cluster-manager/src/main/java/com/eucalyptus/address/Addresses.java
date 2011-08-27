@@ -228,7 +228,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   
   public static void system( VmInstance vm ) {
     try {
-      if( VmState.PENDING.equals( vm.getRuntimeState( ) ) || VmState.RUNNING.equals( vm.getRuntimeState( ) ) ) {
+      if( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) {
         Addresses.getInstance( ).getAddressManager( ).assignSystemAddress( vm );
       } 
     } catch ( NotEnoughResourcesException e ) {
