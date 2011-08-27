@@ -66,6 +66,7 @@ package com.eucalyptus.cluster;
 import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
+import javax.persistence.Lob;
 import org.hibernate.annotations.Parent;
 import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
@@ -78,6 +79,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   private String     volumeId;
   @Column( name = "metadata_vm_volume_device" )
   private String     device;
+  @Lob
   @Column( name = "metadata_vm_volume_remove_device" )
   private String     remoteDevice;
   @Column( name = "metadata_vm_volume_status" )
