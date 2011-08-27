@@ -104,7 +104,7 @@ public class VmRuntimeState {
   @Embedded
   private final List<String> reasonDetails       = Lists.newArrayList( );
   @Transient
-  private final StringBuffer consoleOutput       = new StringBuffer( );
+  private StringBuffer consoleOutput       = new StringBuffer( );
   @Lob
   @Column( name = "metadata_vm_password_data" )
   private String             passwordData;
