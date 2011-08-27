@@ -169,6 +169,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Embedded
   private final VmRuntimeState  runtimeState;
   @Embedded
+  private final VmVolumeState   transientVolumeState;
+  @Embedded
+  private final VmVolumeState   persistentVolumeState;
+  @Embedded
   private final VmPlacement     placement;
   
   @Column( name = "metadata_vm_private_networking" )
@@ -654,6 +658,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.privateNetwork = Boolean.FALSE;
     this.usageStats = new VmUsageStats( this );
     this.runtimeState = new VmRuntimeState( this );
+    this.transientVolumeState = new VmVolumeState( this );
+    this.persistentVolumeState = new VmVolumeState( this );
     this.networkConfig = new VmNetworkConfig( this );
     final Function<NetworkGroup, NetworkGroup> func = Entities.merge( );
     this.networkGroups.addAll( Collections2.transform( networkRulesGroups, func ) );
@@ -671,6 +677,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.privateNetwork = null;
     this.usageStats = null;
     this.networkConfig = null;
+    this.transientVolumeState = null;
+    this.persistentVolumeState = null;
   }
   
   protected VmInstance( ) {
@@ -683,14 +691,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.usageStats = null;
     this.runtimeState = null;
     this.networkConfig = null;
-  }
-  
-  @PrePersist
-  @PreUpdate
-  private void preLoad( ) {
-    for ( final VmVolumeAttachment vol : this.runtimeState.getTransientVolumeAttachments( ) ) {
-      this.runtimeState.getTransientVolumes( ).put( vol.getVolumeId( ), vol );
-    }
+    this.transientVolumeState = null;
+    this.persistentVolumeState = null;
   }
   
   public void updateBlockBytes( final long blkbytes ) {
@@ -1120,23 +1122,20 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   /**
    * @param predicate
    */
-  public void lookupVolumeAttachment( final Predicate<AttachedVolume> predicate ) {
-    
+  public void lookupVolumeAttachmentByDevice( final String volumeDevice ) {
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
       VmInstance entity = Entities.merge( this );
-      this.runtimeState.lookupVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
-        
-        @Override
-        public boolean apply( final VmVolumeAttachment vol ) {
-          return predicate.apply( VmVolumeAttachment.asAttachedVolume( VmInstance.this ).apply( vol ) );
-        }
-      } );
+      this.transientVolumeState.lookupVolumeAttachmentByDevice( volumeDevice );
       db.commit( );
+    } catch ( NoSuchElementException ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw ex;
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
-      throw new NoSuchElementException( "Failed to lookup volume satisfying the predicate: " + predicate.getClass( ) );
+      throw new NoSuchElementException( "Failed to lookup volume with device: " + volumeDevice );
     }
   }
   
@@ -1148,7 +1147,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
       VmInstance entity = Entities.merge( this );
-      AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( this.runtimeState.lookupVolumeAttachment( volumeId ) );
+      AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( this.transientVolumeState.lookupVolumeAttachment( volumeId ) );
       db.commit( );
       return ret;
     } catch ( Exception ex ) {
@@ -1165,13 +1164,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
       VmInstance entity = Entities.merge( this );
-      this.runtimeState.addVolumeAttachment( VmVolumeAttachment.fromAttachedVolume( entity ).apply( vol ) );
+      this.transientVolumeState.addVolumeAttachment( VmVolumeAttachment.fromAttachedVolume( entity ).apply( vol ) );
       db.commit( );
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
     }
-
+    
   }
   
   /**
@@ -1189,7 +1188,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
       VmInstance entity = Entities.merge( this );
-      boolean ret = this.runtimeState.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
+      boolean ret = this.transientVolumeState.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
         
         @Override
         public boolean apply( final VmVolumeAttachment arg0 ) {
@@ -1214,7 +1213,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
       VmInstance entity = Entities.merge( this );
-      AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( this.runtimeState.removeVolumeAttachment( volumeId ) );
+      AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( this.transientVolumeState.removeVolumeAttachment( volumeId ) );
       db.commit( );
       return ret;
     } catch ( Exception ex ) {
@@ -1257,7 +1256,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
       VmInstance entity = Entities.merge( this );
-      entity.runtimeState.updateVolumeAttachment( volumeId, newState );
+      entity.getTransientVolumeState( ).updateVolumeAttachment( volumeId, newState );
       db.commit( );
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
@@ -1335,7 +1334,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
       VmInstance entity = Entities.merge( this );
-      this.runtimeState.updateVolumeAttachments( Lists.transform( volumes, VmVolumeAttachment.fromAttachedVolume( this ) ) );
+      entity.getTransientVolumeState( ).updateVolumeAttachments( Lists.transform( volumes, VmVolumeAttachment.fromAttachedVolume( entity ) ) );
       db.commit( );
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
@@ -1439,7 +1438,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         runningInstance.setLaunchTime( input.getLaunchRecord( ).getLaunchTime( ) );
         
         runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( "/dev/sda1" ) );
-        for ( final VmVolumeAttachment attachedVol : input.runtimeState.getTransientVolumes( ).values( ) ) {
+        for ( final VmVolumeAttachment attachedVol : input.getTransientVolumeState( ).getAttachments( ) ) {
           runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),
                                                                                   attachedVol.getStatus( ),
                                                                                   attachedVol.getAttachTime( ) ) );
@@ -1465,5 +1464,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Override
   public void setNaturalId( final String naturalId ) {
     super.setNaturalId( naturalId );
+  }
+
+  private VmVolumeState getTransientVolumeState( ) {
+    return this.transientVolumeState;
   }
 }

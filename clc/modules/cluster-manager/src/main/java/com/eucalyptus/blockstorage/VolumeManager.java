@@ -301,12 +301,7 @@ public class VolumeManager {
     final String deviceName = request.getDevice( );
     final String volumeId = request.getVolumeId( );
     try {
-      vm.lookupVolumeAttachment( new Predicate<AttachedVolume>( ) {
-        @Override
-        public boolean apply( AttachedVolume arg0 ) {
-          return arg0.getDevice( ).replaceAll( "unknown,requested:", "" ).equals( deviceName );
-        }
-      } );
+      vm.lookupVolumeAttachmentByDevice( deviceName );
       throw new EucalyptusCloudException( "Already have a device attached to: " + request.getDevice( ) );
     } catch ( NoSuchElementException ex1 ) {
       /** no attachment **/

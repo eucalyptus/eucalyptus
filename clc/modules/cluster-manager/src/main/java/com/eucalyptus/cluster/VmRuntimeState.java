@@ -64,20 +64,11 @@
 package com.eucalyptus.cluster;
 
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
-import javax.persistence.CollectionTable;
 import javax.persistence.Column;
-import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
 import javax.persistence.Lob;
-import javax.persistence.PreRemove;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Parent;
@@ -87,46 +78,37 @@ import com.eucalyptus.cluster.VmInstance.VmState;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 @Embeddable
 public class VmRuntimeState {
   @Transient
-  private static String                             SEND_USER_TERMINATE        = "SIGTERM";
+  private static String     SEND_USER_TERMINATE = "SIGTERM";
   @Transient
-  private static String                             SEND_USER_STOP             = "SIGSTOP";
+  private static String     SEND_USER_STOP      = "SIGSTOP";
   @Transient
-  private static Logger                             LOG                        = Logger.getLogger( VmRuntimeState.class );
+  private static Logger     LOG                 = Logger.getLogger( VmRuntimeState.class );
   @Parent
-  private VmInstance                                vmInstance;
+  private VmInstance        vmInstance;
   @Embedded
-  private VmBundleTask                              bundleTask;
+  private VmBundleTask      bundleTask;
   @Embedded
-  private VmCreateImageTask                         createImageTask;
+  private VmCreateImageTask createImageTask;
   @Column( name = "metadata_vm_service_tag" )
-  private String                                    serviceTag;
+  private String            serviceTag;
   @Transient
-  private Reason                                    reason;
+  private Reason            reason;
   @Transient
-  private List<String>                              reasonDetails              = Lists.newArrayList( );
+  private List<String>      reasonDetails       = Lists.newArrayList( );
   @Transient
-  private StringBuffer                              consoleOutput              = new StringBuffer( );
+  private StringBuffer      consoleOutput       = new StringBuffer( );
 //  @Embedded
 //private Set<VmVolumeAttachment>             transientVolumes = Sets.newHashSet( );
-  @ElementCollection
-  @CollectionTable( name = "metadata_vm_transient_volume_attachments" )
-  private final Set<VmVolumeAttachment>                   transientVolumeAttachments = Sets.newHashSet( );
-  @Transient
-  private ConcurrentMap<String, VmVolumeAttachment> transientVolumes           = new ConcurrentSkipListMap<String, VmVolumeAttachment>( );
   @Lob
   @Column( name = "metadata_vm_password_data" )
-  private String                                    passwordData;
+  private String            passwordData;
   @Column( name = "metadata_vm_pending" )
-  private Boolean                                   pending;
+  private Boolean           pending;
   
   VmRuntimeState( final VmInstance vmInstance ) {
     super( );
@@ -135,12 +117,6 @@ public class VmRuntimeState {
   
   VmRuntimeState( ) {
     super( );
-  }
-  
-  @PreRemove
-  private void cleanUp( ) {
-    this.transientVolumeAttachments.clear( );
-    this.transientVolumes.clear( );
   }
   
   public String getReason( ) {
@@ -192,8 +168,8 @@ public class VmRuntimeState {
       }
       try {
         this.getVmInstance( ).store( );
-      } catch ( Exception ex1 ) {
-        LOG.error( ex1 , ex1 );
+      } catch ( final Exception ex1 ) {
+        LOG.error( ex1, ex1 );
       }
       if ( action != null ) {
         try {
@@ -364,104 +340,6 @@ public class VmRuntimeState {
     }
   }
   
-  private VmVolumeAttachment resolveVolumeId( final String volumeId ) throws NoSuchElementException {
-    final VmVolumeAttachment v = this.getTransientVolumes( ).get( volumeId );
-    if ( v == null ) {
-      throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getVmInstance( ).getInstanceId( ) + " and volume " + volumeId );
-    } else {
-      return v;
-    }
-  }
-  
-  public VmVolumeAttachment removeVolumeAttachment( final String volumeId ) throws NoSuchElementException {
-    final VmVolumeAttachment v = this.transientVolumes.remove( volumeId );
-    this.transientVolumeAttachments.remove( v );
-    if ( v == null ) {
-      throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getVmInstance( ).getInstanceId( ) + " and volume " + volumeId );
-    } else {
-      return v;
-    }
-  }
-  
-  public void updateVolumeAttachment( final String volumeId, final String state ) throws NoSuchElementException {
-    final VmVolumeAttachment v = this.resolveVolumeId( volumeId );
-    v.setStatus( state );
-  }
-  
-  public VmVolumeAttachment lookupVolumeAttachment( final String volumeId ) throws NoSuchElementException {
-    return this.resolveVolumeId( volumeId );
-  }
-  
-  public VmVolumeAttachment lookupVolumeAttachment( final Predicate<VmVolumeAttachment> pred ) throws NoSuchElementException {
-    final VmVolumeAttachment v = Iterables.find( this.getTransientVolumes( ).values( ), pred );
-    if ( v == null ) {
-      throw new NoSuchElementException( "Failed to find volume attachment for instance " + this.getVmInstance( ).getInstanceId( ) + " using predicate "
-                                        + pred.getClass( ).getCanonicalName( ) );
-    } else {
-      return v;
-    }
-  }
-  
-  public <T> Iterable<T> transformVolumeAttachments( final Function<? super VmVolumeAttachment, T> function ) throws NoSuchElementException {
-    return Iterables.transform( this.getTransientVolumes( ).values( ), function );
-  }
-  
-  public boolean eachVolumeAttachment( final Predicate<VmVolumeAttachment> pred ) throws NoSuchElementException {
-    return Iterables.all( this.getTransientVolumes( ).values( ), pred );
-  }
-  
-  public void addVolumeAttachment( final VmVolumeAttachment volume ) {
-    final String volumeId = volume.getVolumeId( );
-    volume.setStatus( "attaching" );
-    final VmVolumeAttachment v = this.getTransientVolumes( ).put( volumeId, volume );
-    if ( v != null ) {
-      this.getTransientVolumes( ).replace( volumeId, v );
-      this.transientVolumeAttachments.add( volume );
-    }
-  }
-  
-  public void updateVolumeAttachments( final List<VmVolumeAttachment> ncAttachedVols ) throws NoSuchElementException {
-    final Map<String, VmVolumeAttachment> ncAttachedVolMap = new HashMap<String, VmVolumeAttachment>( ) {
-      /**
-       * 
-       */
-      @Transient
-      private static final long serialVersionUID = 1L;
-      
-      {
-        for ( final VmVolumeAttachment v : ncAttachedVols ) {
-          this.put( v.getVolumeId( ), v );
-        }
-      }
-    };
-    this.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
-      @Override
-      public boolean apply( final VmVolumeAttachment arg0 ) {
-        final String volId = arg0.getVolumeId( );
-        if ( ncAttachedVolMap.containsKey( volId ) ) {
-          final VmVolumeAttachment ncVol = ncAttachedVolMap.get( volId );
-          if ( "detached".equals( ncVol.getStatus( ) ) ) {
-            VmRuntimeState.this.removeVolumeAttachment( volId );
-          } else if ( "attaching".equals( arg0.getStatus( ) ) || "attached".equals( arg0.getStatus( ) ) ) {
-            VmRuntimeState.this.updateVolumeAttachment( volId, arg0.getStatus( ) );
-          }
-        } else if ( "detaching".equals( arg0.getStatus( ) ) ) {//TODO:GRZE:remove this case when NC is updated to report "detached" state
-          VmRuntimeState.this.removeVolumeAttachment( volId );
-        }
-        ncAttachedVolMap.remove( volId );
-        return true;
-      }
-    } );
-    for ( final VmVolumeAttachment v : ncAttachedVolMap.values( ) ) {
-      LOG.warn( "Restoring volume attachment state for " + this.getVmInstance( ).getInstanceId( ) + " with " + v.toString( ) );
-      this.addVolumeAttachment( v );
-    }
-  }
-  
-  ConcurrentMap<String, VmVolumeAttachment> getTransientVolumes( ) {
-    return this.transientVolumes;
-  }
-  
   private void setBundleTask( final VmBundleTask bundleTask ) {
     this.bundleTask = bundleTask;
   }
@@ -470,16 +348,8 @@ public class VmRuntimeState {
     this.reasonDetails = reasonDetails;
   }
   
-  private void setTransientVolumes( final ConcurrentMap<String, VmVolumeAttachment> transientVolumes ) {
-    this.transientVolumes = transientVolumes;
-  }
-  
   private void setVmInstance( final VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
-  }
-  
-  Set<VmVolumeAttachment> getTransientVolumeAttachments( ) {
-    return this.transientVolumeAttachments;
   }
   
   public Boolean isCreatingImage( ) {
@@ -492,10 +362,10 @@ public class VmRuntimeState {
   public void setCrateImageTaskState( final String createImageTaskStateName ) {
     /** TODO:GRZE: FINISH BFE HERE **/
   }
-
+  
   @Override
   public String toString( ) {
-    StringBuilder builder = new StringBuilder( );
+    final StringBuilder builder = new StringBuilder( );
     builder.append( "VmRuntimeState:" );
     if ( this.bundleTask != null ) builder.append( "bundleTask=" ).append( this.bundleTask ).append( ":" );
     if ( this.createImageTask != null ) builder.append( "createImageTask=" ).append( this.createImageTask ).append( ":" );
@@ -503,8 +373,6 @@ public class VmRuntimeState {
     if ( this.reason != null ) builder.append( "reason=" ).append( this.reason ).append( ":" );
     if ( this.reasonDetails != null ) builder.append( "reasonDetails=" ).append( this.reasonDetails ).append( ":" );
     if ( this.consoleOutput != null ) builder.append( "consoleOutput=" ).append( this.consoleOutput ).append( ":" );
-    if ( this.transientVolumeAttachments != null ) builder.append( "transientVolumeAttachments=" ).append( this.transientVolumeAttachments ).append( ":" );
-    if ( this.transientVolumes != null ) builder.append( "transientVolumes=" ).append( this.transientVolumes ).append( ":" );
     if ( this.passwordData != null ) builder.append( "passwordData=" ).append( this.passwordData ).append( ":" );
     if ( this.pending != null ) builder.append( "pending=" ).append( this.pending );
     return builder.toString( );

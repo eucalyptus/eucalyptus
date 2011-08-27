@@ -71,7 +71,7 @@ import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 
 @Embeddable
-public class VmVolumeAttachment implements Comparable<VmVolumeAttachment>{
+public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   @Parent
   private VmInstance vmInstance;
   @Column( name = "metadata_vm_volume_id" )
@@ -197,6 +197,18 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment>{
   
   private void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
+  }
+
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "VmVolumeAttachment:" );
+    if ( this.volumeId != null ) builder.append( "volumeId=" ).append( this.volumeId ).append( ":" );
+    if ( this.device != null ) builder.append( "device=" ).append( this.device ).append( ":" );
+    if ( this.remoteDevice != null ) builder.append( "remoteDevice=" ).append( this.remoteDevice ).append( ":" );
+    if ( this.status != null ) builder.append( "status=" ).append( this.status ).append( ":" );
+    if ( this.attachTime != null ) builder.append( "attachTime=" ).append( this.attachTime );
+    return builder.toString( );
   }
   
 }
