@@ -121,6 +121,7 @@ import com.google.common.collect.MapMaker;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
@@ -148,12 +149,16 @@ public class VmInstances {
     }
   }
   
-  private static ConcurrentMap<String, VmInstance> terminateCache = new MapMaker( ).softKeys( )
-                                                                                   .softValues( )
-                                                                                   .expireAfterWrite( BURY_TIME, TimeUnit.MILLISECONDS )
-                                                                                   .makeMap( );
+  private static ConcurrentMap<String, VmInstance>               terminateCache         = new MapMaker( ).softKeys( )
+                                                                                                         .softValues( )
+                                                                                                         .expireAfterWrite( BURY_TIME, TimeUnit.MILLISECONDS )
+                                                                                                         .makeMap( );
+  private static ConcurrentMap<String, RunningInstancesItemType> terminateDescribeCache = new MapMaker( ).softKeys( )
+                                                                                                         .softValues( )
+                                                                                                         .expireAfterWrite( BURY_TIME, TimeUnit.MILLISECONDS )
+                                                                                                         .makeMap( );
   
-  private static Logger                            LOG            = Logger.getLogger( VmInstances.class );
+  private static Logger                                          LOG                    = Logger.getLogger( VmInstances.class );
   
   @QuantityMetricFunction( VmInstanceMetadata.class )
   public enum CountVmInstances implements Function<OwnerFullName, Long> {
@@ -345,11 +350,16 @@ public class VmInstances {
   }
   
   public static VmInstance delete( final VmInstance vm ) throws TransactionException {
-    VmInstance deadVm = VmInstance.Transitions.DELETE.apply( vm );
-    if ( VmStateSet.DONE.apply( deadVm ) ) {
-      terminateCache.put( deadVm.getInstanceId( ), deadVm );
+    try {
+      if ( VmStateSet.DONE.apply( vm ) ) {
+        RunningInstancesItemType ret = VmInstances.transform( vm );
+        terminateCache.put( vm.getInstanceId( ), vm );
+        terminateDescribeCache.put( vm.getInstanceId( ), ret );
+      }
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
     }
-    return deadVm;
+    return VmInstance.Transitions.DELETE.apply( vm );
   }
   
   public static VmInstance terminate( final VmInstance vm ) throws TransactionException {
@@ -388,6 +398,18 @@ public class VmInstances {
     } catch ( TransactionException ex ) {
       db.rollback( );
       return false;
+    }
+  }
+  
+  /**
+   * @param vm
+   * @return
+   */
+  public static RunningInstancesItemType transform( VmInstance vm ) {
+    if ( terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
+      return terminateDescribeCache.get( vm.getDisplayName( ) );
+    } else {
+      return VmInstance.Transform.INSTANCE.apply( vm );
     }
   }
   

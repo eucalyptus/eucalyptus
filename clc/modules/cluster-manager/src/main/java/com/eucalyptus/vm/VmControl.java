@@ -192,15 +192,15 @@ public class VmControl {
             final ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getNamespace( ), v.getNetworkNames( ) );
             rsvMap.put( reservation.getReservationId( ), reservation );
           }
-          rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstance.Transform.INSTANCE.apply( v ) );
+          rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstances.transform( v ) );
           db.commit( );
         } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex, ex );
           db.rollback( );
           try {
-            rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( VmInstance.Transform.INSTANCE.apply( vm ) );
+            rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( VmInstances.transform( vm ) );
           } catch ( Exception ex1 ) {
-            LOG.error( ex1, ex1 );
+            LOG.error( ex1 , ex1 );
           }
         }
       }

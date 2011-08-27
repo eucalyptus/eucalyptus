@@ -66,7 +66,7 @@ package com.eucalyptus.vm;
 import java.util.List;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.network.NetworkGroup;
@@ -94,7 +94,7 @@ public class VmReplyTransform {
                                                                Lists.newArrayList( networkNames ) );
     
     for ( ResourceToken allocToken : allocInfo.getAllocationTokens( ) ) {
-      reservation.getInstancesSet( ).add( VmInstance.Transform.INSTANCE.apply( allocToken.getVmInstance( ) ) );
+      reservation.getInstancesSet( ).add( VmInstances.transform( allocToken.getVmInstance( ) ) );
     }
     reply.setRsvInfo( reservation );
     return reply;
