@@ -134,7 +134,7 @@ public class SystemState {
       EntityTransaction db = Entities.get( VmInstance.class );
       try {
         final VmInstance vm = VmInstances.lookup( vmId );
-        if ( VmStateSet.RUN.apply( vm ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
+        if ( VmStateSet.RUN.apply( vm ) ) {
           //noop.
         } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
           vm.setState( VmState.TERMINATED, Reason.EXPIRED );
