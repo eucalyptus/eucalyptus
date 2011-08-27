@@ -66,8 +66,11 @@
 package com.eucalyptus.cluster;
 
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.Adler32;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
@@ -81,6 +84,7 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cluster.VmInstance.VmState;
+import com.eucalyptus.cluster.VmInstance.VmStateSet;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Partitions;
@@ -113,6 +117,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.MapMaker;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
@@ -143,17 +148,12 @@ public class VmInstances {
     }
   }
   
-  private static Logger LOG = Logger.getLogger( VmInstances.class );
+  private static ConcurrentMap<String, VmInstance> terminateCache = new MapMaker( ).softKeys( )
+                                                                                   .softValues( )
+                                                                                   .expireAfterWrite( BURY_TIME, TimeUnit.MILLISECONDS )
+                                                                                   .makeMap( );
   
-  enum VmIsOperational implements Predicate<VmInstance> {
-    INSTANCE;
-    
-    @Override
-    public boolean apply( VmInstance vm ) {
-      return VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) );
-    }
-    
-  }
+  private static Logger                            LOG            = Logger.getLogger( VmInstances.class );
   
   @QuantityMetricFunction( VmInstanceMetadata.class )
   public enum CountVmInstances implements Function<OwnerFullName, Long> {
@@ -196,7 +196,7 @@ public class VmInstances {
     return new Predicate<VmInstance>( ) {
       @Override
       public boolean apply( VmInstance vm ) {
-        return ip.equals( vm.getPrivateAddress( ) ) && VmIsOperational.INSTANCE.apply( vm );
+        return ip.equals( vm.getPrivateAddress( ) ) && VmStateSet.RUN.apply( vm );
       }
     };
   }
@@ -209,7 +209,7 @@ public class VmInstances {
     return new Predicate<VmInstance>( ) {
       @Override
       public boolean apply( VmInstance vm ) {
-        return ip.equals( vm.getPublicAddress( ) ) && VmIsOperational.INSTANCE.apply( vm );
+        return ip.equals( vm.getPublicAddress( ) ) && VmStateSet.RUN.apply( vm );
       }
     };
   }
@@ -333,7 +333,11 @@ public class VmInstances {
   }
   
   public static VmInstance lookup( final String name ) throws NoSuchElementException {
-    return VmInstance.Lookup.INSTANCE.apply( name );
+    if ( !terminateCache.containsKey( name ) ) {
+      return VmInstance.Lookup.INSTANCE.apply( name );
+    } else {
+      return terminateCache.get( name );
+    }
   }
   
   public static VmInstance register( final VmInstance vm ) {
@@ -341,9 +345,13 @@ public class VmInstances {
   }
   
   public static VmInstance delete( final VmInstance vm ) throws TransactionException {
-    return VmInstance.Transitions.DELETE.apply( vm );
+    VmInstance deadVm = VmInstance.Transitions.DELETE.apply( vm );
+    if ( VmStateSet.DONE.apply( deadVm ) ) {
+      terminateCache.put( deadVm.getInstanceId( ), deadVm );
+    }
+    return deadVm;
   }
-
+  
   public static VmInstance terminate( final VmInstance vm ) throws TransactionException {
     return VmInstance.Transitions.TERMINATE.apply( vm );
   }
@@ -358,7 +366,9 @@ public class VmInstances {
     try {
       final List<VmInstance> vms = Entities.query( VmInstance.named( null, null ) );
       db.commit( );
-      return Lists.newArrayList( vms );
+      List<VmInstance> ret = Lists.newArrayList( vms );
+      ret.addAll( terminateCache.values( ) );
+      return ret;
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       db.rollback( );
