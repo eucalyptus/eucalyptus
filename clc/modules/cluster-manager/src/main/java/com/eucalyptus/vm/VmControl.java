@@ -174,31 +174,34 @@ public class VmControl {
     Predicate<VmInstance> privileged = RestrictedTypes.filterPrivileged( );
     try {
       for ( final VmInstance vm : Iterables.filter( VmInstances.listValues( ), privileged ) ) {
-        
-        EntityTransaction db = Entities.get( VmInstance.class );
-        try {
-          VmInstance v = Entities.merge( vm );
-          if ( VmState.TERMINATED.apply( v ) && v.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
-            VmInstances.terminate( v );
-          } else if ( VmState.BURIED.apply( v ) && v.getSplitTime( ) > VmInstances.BURY_TIME ) {
-            VmInstances.delete( v );
+        if ( Entities.isPersistent( vm ) ) {
+          EntityTransaction db = Entities.get( VmInstance.class );
+          try {
+            VmInstance v = Entities.merge( vm );
+            if ( VmState.TERMINATED.apply( v ) && v.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
+              VmInstances.terminate( v );
+            } else if ( VmState.BURIED.apply( v ) && v.getSplitTime( ) > VmInstances.BURY_TIME ) {
+              VmInstances.delete( v );
+            }
+            if ( VmState.BURIED.apply( v ) && !isVerbose ) {
+              continue;
+            }
+            if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) {
+              continue;
+            }
+            if ( rsvMap.get( v.getReservationId( ) ) == null ) {
+              final ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getNamespace( ), v.getNetworkNames( ) );
+              rsvMap.put( reservation.getReservationId( ), reservation );
+            }
+            rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstance.Transform.INSTANCE.apply( v ) );
+            db.commit( );
+          } catch ( Exception ex ) {
+            Logs.exhaust( ).error( ex, ex );
+            db.rollback( );
+            throw ex;
           }
-          if ( VmState.BURIED.apply( v ) && !isVerbose ) {
-            continue;
-          }
-          if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) {
-            continue;
-          }
-          if ( rsvMap.get( v.getReservationId( ) ) == null ) {
-            final ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getNamespace( ), v.getNetworkNames( ) );
-            rsvMap.put( reservation.getReservationId( ), reservation );
-          }
-          rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstance.Transform.INSTANCE.apply( v ) );
-          db.commit( );
-        } catch ( Exception ex ) {
-          Logs.exhaust( ).error( ex, ex );
-          db.rollback( );
-          throw ex;
+        } else {
+          rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstance.Transform.INSTANCE.apply( vm ) );
         }
       }
       ArrayList<ReservationInfoType> vms = new ArrayList<ReservationInfoType>( rsvMap.values( ) );
