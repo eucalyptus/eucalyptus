@@ -167,7 +167,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Embedded
   private final VmLaunchRecord  launchRecord;
   @Embedded
-  private VmRuntimeState  runtimeState;
+  private VmRuntimeState        runtimeState;
   @Embedded
   private final VmVolumeState   transientVolumeState;
   @Embedded
@@ -458,7 +458,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         } else {
           final EntityTransaction db = Entities.get( VmInstance.class );
           try {
-            VmInstance vm = Entities.merge( v );
+            final VmInstance vm = Entities.merge( v );
             if ( VmStateSet.RUN.apply( vm ) ) {
               vm.setState( VmState.SHUTTING_DOWN, Reason.USER_TERMINATED );
             } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
@@ -727,7 +727,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   public VmRuntimeState getRuntimeState( ) {
     if ( this.runtimeState == null ) {
-      this.runtimeState = new VmRuntimeState( this ); 
+      this.runtimeState = new VmRuntimeState( this );
     }
     return this.runtimeState;
   }
@@ -873,7 +873,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.getRuntimeState( ).getBundleTaskState( );
   }
   
-  public void setBundleTaskState( final String state ) {
+  public void updateBundleTaskState( final String state ) {
     this.getRuntimeState( ).setBundleTaskState( state );
   }
   
@@ -1110,16 +1110,16 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param predicate
    */
   public void lookupVolumeAttachmentByDevice( final String volumeDevice ) {
-    EntityTransaction db = Entities.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      VmInstance entity = Entities.merge( this );
+      final VmInstance entity = Entities.merge( this );
       this.transientVolumeState.lookupVolumeAttachmentByDevice( volumeDevice );
       db.commit( );
-    } catch ( NoSuchElementException ex ) {
+    } catch ( final NoSuchElementException ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
       throw ex;
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
       throw new NoSuchElementException( "Failed to lookup volume with device: " + volumeDevice );
@@ -1131,13 +1131,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @return
    */
   public AttachedVolume lookupVolumeAttachment( final String volumeId ) {
-    EntityTransaction db = Entities.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      VmInstance entity = Entities.merge( this );
-      AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( this.transientVolumeState.lookupVolumeAttachment( volumeId ) );
+      final VmInstance entity = Entities.merge( this );
+      final AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( this.transientVolumeState.lookupVolumeAttachment( volumeId ) );
       db.commit( );
       return ret;
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
       throw new NoSuchElementException( "Failed to lookup volume: " + volumeId );
@@ -1148,12 +1148,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param attachVol
    */
   public void addVolumeAttachment( final AttachedVolume vol ) {
-    EntityTransaction db = Entities.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      VmInstance entity = Entities.merge( this );
+      final VmInstance entity = Entities.merge( this );
       this.transientVolumeState.addVolumeAttachment( VmVolumeAttachment.fromAttachedVolume( entity ).apply( vol ) );
       db.commit( );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
     }
@@ -1172,10 +1172,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @return
    */
   public boolean eachVolumeAttachment( final Predicate<AttachedVolume> predicate ) {
-    EntityTransaction db = Entities.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      VmInstance entity = Entities.merge( this );
-      boolean ret = this.transientVolumeState.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
+      final VmInstance entity = Entities.merge( this );
+      final boolean ret = this.transientVolumeState.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
         
         @Override
         public boolean apply( final VmVolumeAttachment arg0 ) {
@@ -1184,7 +1184,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       } );
       db.commit( );
       return ret;
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
       return false;
@@ -1197,13 +1197,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @return
    */
   public AttachedVolume removeVolumeAttachment( final String volumeId ) {
-    EntityTransaction db = Entities.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      VmInstance entity = Entities.merge( this );
-      AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( this.transientVolumeState.removeVolumeAttachment( volumeId ) );
+      final VmInstance entity = Entities.merge( this );
+      final AttachedVolume ret = VmVolumeAttachment.asAttachedVolume( entity ).apply( this.transientVolumeState.removeVolumeAttachment( volumeId ) );
       db.commit( );
       return ret;
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
       throw new NoSuchElementException( "Failed to lookup volume: " + volumeId );
@@ -1240,12 +1240,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param newState
    */
   public void updateVolumeAttachment( final String volumeId, final String newState ) {
-    EntityTransaction db = Entities.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      VmInstance entity = Entities.merge( this );
+      final VmInstance entity = Entities.merge( this );
       entity.getTransientVolumeState( ).updateVolumeAttachment( volumeId, newState );
       db.commit( );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
     }
@@ -1267,34 +1267,17 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             final VmState state = VmState.Mapper.get( runVm.getStateName( ) );
             final long splitTime = VmInstance.this.getSplitTime( );
             final VmState oldState = VmInstance.this.getState( );
-            if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
-                 && ( VmState.PENDING.equals( VmInstance.this.getState( ) ) || VmState.RUNNING.equals( VmInstance.this.getState( ) ) ) ) {
-              VmInstance.this.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
-              VmInstance.this.getRuntimeState( ).setServiceTag( runVm.getServiceTag( ) );
-              VmInstance.this.setBundleTaskState( runVm.getBundleTaskStateName( ) );
-              VmInstance.this.setCreateImageTaskState( runVm.getBundleTaskStateName( ) );
-              VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
-              VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
-            } else if ( VmStateSet.TERM.apply( VmInstance.this ) && ( VmInstance.this.getSplitTime( ) > VmInstances.BURY_TIME ) ) {
-              VmInstance.this.setState( VmState.TERMINATED, Reason.EXPIRED );
-            } else if ( VmStateSet.STOP.apply( VmInstance.this ) && ( VmInstance.this.getSplitTime( ) > VmInstances.BURY_TIME ) ) {
+            if ( VmStateSet.RUN.contains( state ) && VmStateSet.RUN.contains( VmInstance.this.getState( ) ) ) {
+              VmInstance.this.setState( state, Reason.APPEND, "UPDATE" );
+              this.updateState( runVm );
+            } else if ( VmState.STOPPING.equals( oldState ) && VmState.SHUTTING_DOWN.equals( state ) ) {
+              VmInstance.this.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
+            } else if ( VmState.SHUTTING_DOWN.equals( oldState ) && VmState.SHUTTING_DOWN.equals( state ) ) {
+              VmInstance.this.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
+            } else if ( VmStateSet.STOP.contains( oldState ) && ( splitTime > VmInstances.BURY_TIME ) ) {
               VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
-            } else if ( VmStateSet.NOT_RUNNING.apply( VmInstance.this ) && ( VmInstance.this.getSplitTime( ) > VmInstances.BURY_TIME ) ) {
-              VmInstance.this.setState( VmState.BURIED, Reason.BURIED );
-              VmInstances.deregister( VmInstance.this );
             } else {
-              VmInstance.this.getRuntimeState( ).setServiceTag( runVm.getServiceTag( ) );
-              VmInstance.this.setBundleTaskState( runVm.getBundleTaskStateName( ) );
-              VmInstance.this.setCreateImageTaskState( runVm.getBundleTaskStateName( ) );
-              VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
-              VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
-              if ( VmState.STOPPING.equals( VmInstance.this.getState( ) )
-                          && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
-                VmInstance.this.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
-              } else if ( VmState.SHUTTING_DOWN.equals( VmInstance.this.getState( ) )
-                          && VmState.SHUTTING_DOWN.equals( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
-                VmInstance.this.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
-              }
+              this.updateState( runVm );
             }
             db.commit( );
           } catch ( final Exception ex ) {
@@ -1304,13 +1287,23 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         }
         return true;
       }
+      
+      private void updateState( final VmInfo runVm ) {
+        VmInstance.this.getRuntimeState( ).setServiceTag( runVm.getServiceTag( ) );
+        VmInstance.this.updateBundleTaskState( runVm.getBundleTaskStateName( ) );
+        VmInstance.this.updateCreateImageTaskState( runVm.getBundleTaskStateName( ) );
+        VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
+        VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
+        VmInstance.this.updateBlockBytes( runVm.getBlockBytes( ) );
+        VmInstance.this.updateNetworkBytes( runVm.getNetworkBytes( ) );
+      }
     };
   }
   
   /**
    * @param bundleTaskStateName
    */
-  protected void setCreateImageTaskState( final String createImageTaskStateName ) {
+  protected void updateCreateImageTaskState( final String createImageTaskStateName ) {
     this.getRuntimeState( ).setCrateImageTaskState( createImageTaskStateName );
   }
   
@@ -1318,12 +1311,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @param volumes
    */
   public void updateVolumeAttachments( final List<AttachedVolume> volumes ) {
-    EntityTransaction db = Entities.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      VmInstance entity = Entities.merge( this );
+      final VmInstance entity = Entities.merge( this );
       entity.getTransientVolumeState( ).updateVolumeAttachments( Lists.transform( volumes, VmVolumeAttachment.fromAttachedVolume( entity ) ) );
       db.commit( );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
     }
@@ -1456,10 +1449,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private VmVolumeState getTransientVolumeState( ) {
     return this.transientVolumeState;
   }
-
+  
   @Override
   public String toString( ) {
-    StringBuilder builder2 = new StringBuilder( );
+    final StringBuilder builder2 = new StringBuilder( );
     builder2.append( "VmInstance:" );
     if ( this.networkConfig != null ) builder2.append( "networkConfig=" ).append( this.networkConfig ).append( ":" );
     if ( this.vmId != null ) builder2.append( "vmId=" ).append( this.vmId ).append( ":" );
@@ -1475,16 +1468,16 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     if ( this.networkIndex != null ) builder2.append( "networkIndex=" ).append( this.networkIndex );
     return builder2.toString( );
   }
-
+  
   private VmNetworkConfig getNetworkConfig( ) {
     return this.networkConfig;
   }
-
+  
   private VmVolumeState getPersistentVolumeState( ) {
     return this.persistentVolumeState;
   }
-
-  private void setNetworkGroups( Set<NetworkGroup> networkGroups ) {
+  
+  private void setNetworkGroups( final Set<NetworkGroup> networkGroups ) {
     this.networkGroups = networkGroups;
   }
 }
