@@ -353,8 +353,8 @@ public class VmInstances {
     try {
       if ( VmStateSet.DONE.apply( vm ) ) {
         RunningInstancesItemType ret = VmInstances.transform( vm );
-        terminateCache.put( vm.getInstanceId( ), vm );
-        terminateDescribeCache.put( vm.getInstanceId( ), ret );
+        terminateCache.put( vm.getDisplayName( ), vm );
+        terminateDescribeCache.put( vm.getDisplayName( ), ret );
       }
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
