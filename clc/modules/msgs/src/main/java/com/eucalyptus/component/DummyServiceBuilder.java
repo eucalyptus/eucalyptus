@@ -93,26 +93,26 @@ public class DummyServiceBuilder implements ServiceBuilder<ServiceConfiguration>
   
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
-    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_START, config.getFullName( ).toString( ), config.toString( ) ).debug( );
+    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_START, config.getFullName( ).toString( ), config.toString( ) ).exhaust( );
   }
   
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
-    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_STOP, config.getFullName( ).toString( ), config.toString( ) ).debug( );
+    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_STOP, config.getFullName( ).toString( ), config.toString( ) ).exhaust( );
   }
   
   @Override
   public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
-    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_ENABLE, config.getFullName( ).toString( ), config.toString( ) ).debug( );
+    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_ENABLE, config.getFullName( ).toString( ), config.toString( ) ).exhaust( );
   }
   
   @Override
   public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
-    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_DISABLE, config.getFullName( ).toString( ), config.toString( ) ).debug( );
+    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_DISABLE, config.getFullName( ).toString( ), config.toString( ) ).exhaust( );
   }
   
   @Override
   public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {
-    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_CHECK, config.getFullName( ).toString( ), config.toString( ) ).debug( );
+    EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_CHECK, config.getFullName( ).toString( ), config.toString( ) ).exhaust( );
   }
 }

@@ -57,20 +57,20 @@
  * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  * ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author: chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.cluster.callback;
 
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.network.ExtantNetwork;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.BroadcastCallback;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.msgs.StartNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
 
@@ -78,22 +78,32 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
   
   private static Logger      LOG = Logger.getLogger( StartNetworkCallback.class );
   
-  private final NetworkToken networkToken;
+  private ExtantNetwork extantNet;
   
-  public StartNetworkCallback( final NetworkToken networkToken ) {
-    this.networkToken = networkToken;
-    StartNetworkType msg = new StartNetworkType( networkToken.getUserFullName( ).getUserId( ), networkToken.getVlan( ), networkToken.getNetworkName( ),
-                                                 networkToken.getNetworkUuid( ) ).regarding( );
-    msg.setUserId( networkToken.getUserFullName( ).getUserId( ) );
+  public StartNetworkCallback( final ExtantNetwork extantNet ) {
+    this.extantNet = extantNet;
+    StartNetworkType msg = new StartNetworkType( extantNet.getOwnerAccountNumber( ),
+                                                 extantNet.getOwnerUserId( ),
+                                                 extantNet.getTag( ),
+                                                 extantNet.getNetworkGroup( ).getNaturalId( ),
+                                                 extantNet.getNetworkGroup( ).getNaturalId( ) );
+    msg.setUserId( this.extantNet.getOwnerUserId( ) );
+    msg.setAccountId( this.extantNet.getOwnerAccountNumber( ) );
     this.setRequest( msg );
   }
   
   @Override
   public void fire( StartNetworkResponseType msg ) {
+    EntityTransaction db = Entities.get( ExtantNetwork.class );
     try {
-      Networks.getInstance( ).setState( networkToken.getName( ), Networks.State.ACTIVE );
-    } catch ( Throwable e ) {
-      LOG.debug( e, e );
+      this.extantNet = Entities.merge( this.extantNet );
+      NetworkGroup net = this.extantNet.getNetworkGroup( );
+      net.setState( NetworkGroup.State.ACTIVE );
+      Entities.merge( net );
+      db.commit( );
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+      db.rollback( );
     }
   }
   
@@ -102,7 +112,7 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
     try {
       msg.setNameserver( edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getNameserverAddress( ) );
       msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( e, e );
     }
   }
@@ -115,7 +125,7 @@ public class StartNetworkCallback extends BroadcastCallback<StartNetworkType, St
   
   @Override
   public BroadcastCallback<StartNetworkType, StartNetworkResponseType> newInstance( ) {
-    return new StartNetworkCallback( this.networkToken );
+    return new StartNetworkCallback( this.extantNet );
   }
   
 }

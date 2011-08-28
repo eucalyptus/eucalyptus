@@ -395,6 +395,7 @@ public class WalrusManager {
 				storageManager.createBucket(bucketName);
 				if (WalrusProperties.trackUsageStatistics)
 					walrusStatistics.incrementBucketCount();
+		    db.commit();
 			} catch (IOException ex) {
 				LOG.error(ex);
 				db.rollback();
@@ -402,7 +403,6 @@ public class WalrusManager {
 						+ bucketName);
 			}
 		}
-		db.commit();
 
 		if(WalrusProperties.enableVirtualHosting) {
 			if(checkDNSNaming(bucketName)) {

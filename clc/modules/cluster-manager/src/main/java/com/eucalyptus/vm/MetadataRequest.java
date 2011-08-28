@@ -64,9 +64,13 @@
 package com.eucalyptus.vm;
 
 import java.util.NoSuchElementException;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
+import com.eucalyptus.address.Address;
+import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.entities.Entities;
 
 public class MetadataRequest {
   private static Logger LOG = Logger.getLogger( MetadataRequest.class );
@@ -93,12 +97,13 @@ public class MetadataRequest {
       }
       VmInstance findVm = null;
       try {
-        findVm = VmInstances.getInstance( ).lookupByPublicIp( requestIp );
-      } catch ( NoSuchElementException ex ) {
+        Address addr = Addresses.getInstance( ).lookup( requestIp );
         try {
-          findVm = VmInstances.getInstance( ).lookupByInstanceIp( requestIp );
-        } catch ( NoSuchElementException ex1 ) {
+          findVm = VmInstances.lookup( addr.getInstanceId( ) );
+        } catch ( Exception ex ) {
+          LOG.error( ex );
         }
+      } catch ( NoSuchElementException ex2 ) {
       }
       this.vm = findVm;
     } finally {

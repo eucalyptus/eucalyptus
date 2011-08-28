@@ -70,8 +70,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Joiner;
@@ -109,7 +109,7 @@ public class Automata {
     if ( index >= 0 && index < toStates.length ) {
       actualStates = Arrays.copyOfRange( toStates, index + 1, toStates.length );
     }
-    LOG.debug( "Preparing callback for " + hasFsm.getFullName( ) + " from state " + currentState + " followed by transition sequence: "
+    Logs.exhaust( ).debug( "Preparing callback for " + hasFsm.getFullName( ) + " from state " + currentState + " followed by transition sequence: "
                + Joiner.on( "->" ).join( actualStates ) );
     final List<Callable<CheckedListenableFuture<P>>> callables = makeTransitionCallables( hasFsm, actualStates );
     return Futures.sequence( callables.toArray( new Callable[] {} ) );

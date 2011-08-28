@@ -11,7 +11,7 @@ public class UpgradeScriptDiscovery extends ServiceJarDiscovery {
   }
   
   @Override
-  public boolean processClass( Class candidate ) throws Throwable {
+  public boolean processClass( Class candidate ) throws Exception {
     if( UpgradeScript.class.isAssignableFrom( candidate ) && !Modifier.isInterface( candidate.getModifiers( ) ) && !Modifier.isAbstract( candidate.getModifiers( ) ) ) {
       StandalonePersistence.registerUpgradeScript( ( UpgradeScript ) candidate.newInstance( ) );
       return true;

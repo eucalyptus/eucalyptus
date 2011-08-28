@@ -4,8 +4,8 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.entities.ConditionEntity;
 import com.eucalyptus.auth.principal.Condition;
+import com.eucalyptus.entities.Transactions;
 import java.util.concurrent.ExecutionException;
-import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Sets;
 
@@ -36,7 +36,7 @@ public class DatabaseConditionProxy implements Condition {
     final Set<String> results = Sets.newHashSet( );
     try {
       Transactions.one( ConditionEntity.newInstanceWithId( this.delegate.getConditionId( ) ), new Tx<ConditionEntity>( ) {
-        public void fire( ConditionEntity t ) throws Throwable {
+        public void fire( ConditionEntity t ) {
           results.addAll( t.getValues( ) );
         }
       } );
@@ -52,7 +52,7 @@ public class DatabaseConditionProxy implements Condition {
     final StringBuilder sb = new StringBuilder( );
     try {
       Transactions.one( ConditionEntity.newInstanceWithId( this.delegate.getConditionId( ) ), new Tx<ConditionEntity>( ) {
-        public void fire( ConditionEntity t ) throws Throwable {
+        public void fire( ConditionEntity t ) {
           sb.append( t.toString( ) );
         }
       } );

@@ -168,7 +168,7 @@ public class CompileBindings extends Task {
     } catch ( ClassNotFoundException e1 ) {
       e1.printStackTrace( );
       throw new RuntimeException( e1 );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       e.printStackTrace( );
       throw new RuntimeException( e );
     } 

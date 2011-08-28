@@ -82,10 +82,10 @@ public class BootstrapperDiscovery extends ServiceJarDiscovery {
    * @see com.eucalyptus.bootstrap.ServiceJarDiscovery#processClass(java.lang.Class)
    * @param candidate
    * @return
-   * @throws Throwable
+   * @throws Exception
    */
   @Override
-  public boolean processClass( Class candidate ) throws Throwable {
+  public boolean processClass( Class candidate ) throws Exception {
     String bc = candidate.getCanonicalName( );
     Class bootstrapper = this.getBootstrapper( candidate );
     if ( !Ats.from( candidate ).has( RunDuring.class ) ) {

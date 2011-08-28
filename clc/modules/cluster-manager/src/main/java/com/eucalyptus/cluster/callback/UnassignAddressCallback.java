@@ -69,6 +69,7 @@ import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 import com.eucalyptus.address.Address.Transition;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.cluster.VmNetworkConfig;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Expendable;
@@ -112,11 +113,11 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   
   public void clearVmAddress( ) {
     try {
-      VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( super.getRequest( ).getDestination( ) );
+      VmInstance vm = VmInstances.lookupByInstanceIp( super.getRequest( ).getDestination( ) );
       if ( vm.getPublicAddress( ).equals( super.getRequest( ).getSource( ) ) ) {
         vm.updatePublicAddress( vm.getPrivateAddress( ) );
       }
-    } catch ( NoSuchElementException e ) {} catch ( Throwable t ) {
+    } catch ( NoSuchElementException e ) {} catch ( Exception t ) {
       LOG.debug( t, t );
     }
   }
@@ -134,7 +135,7 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
         this.address.clearPending( );
       } catch ( IllegalStateException t ) {
         LOG.debug( t );
-      } catch ( Throwable t ) {
+      } catch ( Exception t ) {
         LOG.warn( t.getMessage( ) );
         EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_STATE, "broken", address.toString( ) ).warn( );
         LOG.trace( t, t );
@@ -142,7 +143,7 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
         if ( !this.address.isPending( ) && this.address.isSystemOwned( ) && Address.UNASSIGNED_INSTANCEID.equals( this.address.getInstanceId( ) ) ) {
           try {
             this.address.release( );
-          } catch ( Throwable t ) {
+          } catch ( Exception t ) {
             LOG.warn( "Failed to release orphan address: " + this.address );
           }
         }
@@ -153,9 +154,9 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   @Override
   public void fireException( Throwable e ) {
     try {
-      VmInstance vm = VmInstances.getInstance( ).lookupByInstanceIp( super.getRequest( ).getDestination( ) );
-      vm.updatePublicAddress( VmInstance.DEFAULT_IP );
-    } catch ( Throwable t ) {
+      VmInstance vm = VmInstances.lookupByInstanceIp( super.getRequest( ).getDestination( ) );
+      vm.updatePublicAddress( VmNetworkConfig.DEFAULT_IP );
+    } catch ( Exception t ) {
       LOG.debug( t, t );
     } finally {
       if ( this.address.isPending( ) ) {

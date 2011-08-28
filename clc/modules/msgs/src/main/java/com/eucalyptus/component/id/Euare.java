@@ -83,4 +83,8 @@ public class Euare extends ComponentId.Unpartioned {
     return true;
   }
   
+  @Override
+  public String getVendorName( ) {
+    return "iam";
+  }
 }

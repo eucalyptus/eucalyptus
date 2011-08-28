@@ -65,62 +65,61 @@ package com.eucalyptus.cloud.run;
 
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.Map.Entry;
+import javax.persistence.EntityTransaction;
+import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
-import com.eucalyptus.address.Address;
-import com.eucalyptus.address.Addresses;
-import com.eucalyptus.auth.principal.FakePrincipals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.cluster.ClusterNodeState;
-import com.eucalyptus.cluster.ClusterState;
-import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.Networks;
-import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.NoSuchContextException;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.network.NetworkRulesGroup;
+import com.eucalyptus.network.ExtantNetwork;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.util.Counters;
-import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.Network;
-import edu.ucsb.eucalyptus.cloud.NetworkToken;
-import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class Allocations {
+  private static Logger LOG = Logger.getLogger( Allocations.class );
+  
   public static class Allocation implements HasRequest {
-    private final Context                  context;
-    private final RunInstancesType         request;
-    private final UserFullName             ownerFullName;
-    private final List<ResourceToken>      allocationTokens  = Lists.newArrayList( );
-    private final List<String>             addresses         = Lists.newArrayList( );
-    private final List<Volume>             persistentVolumes = Lists.newArrayList( );
-    private final List<Volume>             transientVolumes  = Lists.newArrayList( );
-    private final List<Integer>            networkIndexList  = Lists.newArrayList( );
-    private final String                   reservationId;
-    private byte[]                         userData;
-    private Partition                      partition;
-    private Long                           reservationIndex;
-    private SshKeyPair                     sshKeyPair;
-    private BootableSet                    bootSet;
-    private VmType                         vmType;
-    private Map<String, NetworkRulesGroup> networkRulesGroups;
-    private final int minCount;
-    private final int maxCount;
+    /** to be eliminated **/
+    private final Context             context;
+    private final RunInstancesType    request;
+    /** values determined by the request **/
+    private final UserFullName        ownerFullName;
+    private byte[]                    userData;
+    private final int                 minCount;
+    private final int                 maxCount;
+    /** verified references determined by the request **/
+    private Partition                 partition;
+    private final List<Volume>        persistentVolumes = Lists.newArrayList( );
+    private final List<Volume>        transientVolumes  = Lists.newArrayList( );
+    private SshKeyPair                sshKeyPair;
+    private BootableSet               bootSet;
+    private VmType                    vmType;
+    private NetworkGroup              primaryNetwork;
+    private Map<String, NetworkGroup> networkGroups;
+    
+    /** intermediate allocation state **/
+    private final String              reservationId;
+    private final List<ResourceToken> allocationTokens  = Lists.newArrayList( );
+    private Long                      reservationIndex;
     
     private Allocation( RunInstancesType request ) {
       super( );
@@ -128,120 +127,63 @@ public class Allocations {
       this.request = request;
       this.minCount = request.getMinCount( );
       this.maxCount = request.getMaxCount( );
-      UserFullName temp = FakePrincipals.NOBODY_USER_ERN;
       try {
-        temp = Contexts.lookup( request.getCorrelationId( ) ).getUserFullName( );
-      } catch ( NoSuchContextException ex ) {}
-      this.ownerFullName = temp;
+        this.ownerFullName = Contexts.lookup( request.getCorrelationId( ) ).getUserFullName( );
+      } catch ( NoSuchContextException ex ) {
+        throw new IllegalContextAccessException( ex );
+      }
       if ( this.request.getInstanceType( ) == null || "".equals( this.request.getInstanceType( ) ) ) {
         this.request.setInstanceType( VmTypes.defaultTypeName( ) );
       }
       this.reservationIndex = Counters.getIdBlock( request.getMaxCount( ) );
       this.reservationId = VmInstances.getId( this.reservationIndex, 0 ).replaceAll( "i-", "r-" );
-      byte[] userData = new byte[0];
+      byte[] tmpData = new byte[0];
       if ( this.request.getUserData( ) != null ) {
         try {
           this.userData = Base64.decode( this.request.getUserData( ) );
+          this.request.setUserData( new String( Base64.encode( tmpData ) ) );
         } catch ( Exception e ) {}
+      } else {
+        try {
+          this.request.setUserData( new String( Base64.encode( tmpData ) ) );
+        } catch ( Exception ex ) {
+          LOG.error( ex , ex );
+        }
       }
-      this.request.setUserData( new String( Base64.encode( userData ) ) );
     }
     
     public RunInstancesType getRequest( ) {
       return this.request;
     }
     
-    public Network getPrimaryNetwork( ) {
-      if ( this.networkRulesGroups.size( ) < 1 ) {
-        throw new IllegalArgumentException( "At least one network group must be specified." );
-      } else {
-        NetworkRulesGroup firstRules = this.networkRulesGroups.values( ).iterator( ).next( );
-        return firstRules.getVmNetwork( );
+    public NetworkGroup getPrimaryNetwork( ) {
+      return this.primaryNetwork;
+    }
+
+    public ExtantNetwork getExtantNetwork( ) {
+      EntityTransaction db = Entities.get( ExtantNetwork.class );
+      try {
+        NetworkGroup net = Entities.merge( this.primaryNetwork );
+        ExtantNetwork ex = net.extantNetwork( );
+        db.commit( );
+        return ex;
+      } catch ( TransientEntityException ex ) {
+        LOG.error( ex , ex );
+        db.rollback( );
+        throw new RuntimeException( ex );
+      } catch ( NotEnoughResourcesException ex ) {
+        db.rollback( );
+        return ExtantNetwork.bogus( this.getPrimaryNetwork( ) );
       }
     }
-    
-    public void releaseNetworkAllocationTokens( ) {
+    public void abort( ) {
       for ( ResourceToken token : this.allocationTokens ) {
-        if ( token.getPrimaryNetwork( ) != null ) {
-          for ( NetworkToken networkToken : token.getNetworkTokens( ) ) {
-            Clusters.getInstance( ).lookup( token.getCluster( ) ).getState( ).releaseNetworkAllocation( networkToken );
-          }
-        }
+        token.abort( );
       }
     }
     
-    public void releaseNetworkIndexes( ) {
-      for ( ResourceToken token : this.allocationTokens ) {
-        if ( token.getPrimaryNetwork( ) != null ) {
-          for ( Integer net : token.getPrimaryNetwork( ).getIndexes( ) ) {
-            this.getPrimaryNetwork( ).returnNetworkIndex( net );
-          }
-          token.getPrimaryNetwork( ).getIndexes( ).clear( );
-        }
-      }
-    }
-    
-    public void releaseAllocationTokens( ) {
-      for ( ResourceToken token : this.allocationTokens ) {
-        Clusters.getInstance( ).lookup( token.getCluster( ) ).getNodeState( ).releaseToken( token );
-      }
-    }
-    
-    public List<Network> getNetworks( ) {
-      return Lists.newArrayList( Iterables.transform( this.networkRulesGroups.values( ), new Function<NetworkRulesGroup, Network>( ) {
-        
-        @Override
-        public Network apply( NetworkRulesGroup input ) {
-          return input.getVmNetwork( );
-        }
-      } ) );
-    }
-    
-    public ResourceToken requestResourceToken( ClusterNodeState state, String vmTypeName, int tryAmount, int maxAmount ) throws NotEnoughResourcesAvailable {
-      ResourceToken rscToken = state.getResourceAllocation( this.request.getCorrelationId( ), this.ownerFullName, vmTypeName, tryAmount, maxAmount );
-      this.allocationTokens.add( rscToken );
-      return rscToken;
-    }
-    
-    public void requestNetworkTokens( ) throws NotEnoughResourcesAvailable {
-      Network net = this.getPrimaryNetwork( );
-      for ( ResourceToken rscToken : this.allocationTokens ) {
-        ClusterState clusterState = Clusters.getInstance( ).lookup( rscToken.getCluster( ) ).getState( );
-        NetworkToken networkToken = clusterState.getNetworkAllocation( this.ownerFullName, rscToken, net.getName( ) );
-        rscToken.getNetworkTokens( ).add( networkToken );//TODO:GRZE:FIXME
-      }
-    }
-    
-    public void requestNetworkIndexes( ) throws NotEnoughResourcesAvailable {
-      Network net = this.getPrimaryNetwork( );
-      for ( ResourceToken rscToken : this.allocationTokens ) {
-        for ( int i = 0; i < rscToken.getAmount( ); i++ ) {
-          Integer addrIndex = net.allocateNetworkIndex( rscToken.getCluster( ) );
-          if ( addrIndex == null ) {
-            throw new NotEnoughResourcesAvailable( "Not enough addresses left in the network subnet assigned to requested group: " + net.getNetworkName( ) );
-          }
-          rscToken.getPrimaryNetwork( ).getIndexes( ).add( addrIndex );
-        }
-        ClusterState clusterState = Clusters.getInstance( ).lookup( rscToken.getCluster( ) ).getState( );
-        NetworkToken networkToken = clusterState.getNetworkAllocation( this.ownerFullName, rscToken, net.getName( ) );
-        rscToken.getNetworkTokens( ).add( networkToken );//TODO:GRZE:FIXME
-      }
-    }
-    
-    public void requestAddressTokens( ) throws NotEnoughResourcesAvailable {
-      for ( ResourceToken toke : this.allocationTokens ) {
-        for ( Address addr : Addresses.allocateSystemAddresses( toke.getCluster( ), toke.getAmount( ) ) ) {
-          toke.getAddresses( ).add( addr.getDisplayName( ) );
-        }
-      }
-    }
-    
-    public void releaseAddressTokens( ) {
-      for ( ResourceToken toke : this.allocationTokens ) {
-        for ( String addr : toke.getAddresses( ) ) {
-          Addresses.release( Addresses.getInstance( ).lookup( addr ) );
-        }
-      }
+    public List<NetworkGroup> getNetworkGroups( ) {
+      return Lists.newArrayList( this.networkGroups.values( ) );
     }
     
     public VmType getVmType( ) {
@@ -266,14 +208,6 @@ public class Allocations {
     
     public List<ResourceToken> getAllocationTokens( ) {
       return this.allocationTokens;
-    }
-    
-    public List<String> getAddresses( ) {
-      return this.addresses;
-    }
-    
-    public List<Integer> getNetworkIndexList( ) {
-      return this.networkIndexList;
     }
     
     public byte[] getUserData( ) {
@@ -316,18 +250,20 @@ public class Allocations {
       this.sshKeyPair = sshKeyPair;
     }
     
-    public void setNetworkRules( Map<String, NetworkRulesGroup> networkRuleGroups ) {
-      this.networkRulesGroups = networkRuleGroups;
+    public void setNetworkRules( Map<String, NetworkGroup> networkRuleGroups ) {
+      Entry<String, NetworkGroup> ent = networkRuleGroups.entrySet( ).iterator( ).next( );
+      this.primaryNetwork = ent.getValue( );
+      this.networkGroups = networkRuleGroups;
     }
     
     public VmTypeInfo getVmTypeInfo( ) throws MetadataException {
       return this.bootSet.populateVirtualBootRecord( vmType );
     }
-
+    
     public int getMinCount( ) {
       return this.minCount;
     }
-
+    
     public int getMaxCount( ) {
       return this.maxCount;
     }

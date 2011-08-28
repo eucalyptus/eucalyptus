@@ -148,7 +148,7 @@ public class BuildBindings extends Task {
           gen.close( );
         }
       }
-    } catch ( Throwable e1 ) {
+    } catch ( Exception e1 ) {
       e1.printStackTrace( );
     } finally {
       Thread.currentThread( ).setContextClassLoader( old );

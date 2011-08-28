@@ -125,7 +125,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       //throw by the policy engine implementation 
       LOG.debug( e, e );
       throw e;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new AuthException( "An error occurred while trying to evaluate policy for resource access", e );
     }    
@@ -149,7 +149,7 @@ public class PolicyEngineImpl implements PolicyEngine {
     } catch ( AuthException e ) {
       //throw by the policy engine implementation 
       throw e;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       throw new AuthException( "An error occurred while trying to evaluate policy for resource allocation.", e );
     }
   }

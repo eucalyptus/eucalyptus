@@ -123,18 +123,6 @@
       </outbound>
     </service>
 
-    <service name="SystemState">
-      <inbound>
-        <inbound-endpoint ref="SystemStateWS"/>
-      </inbound>
-      <component class="com.eucalyptus.vm.SystemState"/>
-      <outbound>
-        <outbound-pass-through-router>
-          <outbound-endpoint ref="ReplyQueueEndpoint"/>
-        </outbound-pass-through-router>
-      </outbound>
-    </service>
-
     <service name="UpdateSystemAndReply">
       <inbound>
         <inbound-endpoint ref="UpdateSystemWS"/>

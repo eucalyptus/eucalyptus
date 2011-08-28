@@ -92,7 +92,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.util.Logs;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.ws.ServiceNotReadyException;
 import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.util.PipelineRegistry;
@@ -131,7 +131,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
   private void lookupPipeline( final ChannelHandlerContext ctx, final MessageEvent e ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     try {
       final HttpRequest request = ( HttpRequest ) e.getMessage( );
-      if ( Logs.EXTREME && request instanceof MappingHttpMessage ) {
+      if ( Logs.isExtrrreeeme() && request instanceof MappingHttpMessage ) {
         ( ( MappingHttpMessage ) request ).logMessage( );
       }
       final ChannelPipeline pipeline = ctx.getPipeline( );
@@ -154,7 +154,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
       if ( ch != null ) {
         Contexts.clear( Contexts.lookup( ch ) );
       }
-    } catch ( Throwable ex ) {
+    } catch ( Exception ex ) {
       LOG.error( ex, ex );
     }
     if ( cause instanceof ReadTimeoutException ) {//TODO:ASAP:GRZE: wth are all these exception types?!?! ONLY WebServicesException caught; else wrap.
@@ -171,7 +171,8 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
     } else if ( cause instanceof LoginException ) {
       this.sendError( ctx, HttpResponseStatus.FORBIDDEN, cause );
     } else if ( e.getCause( ) instanceof WebServicesException ) {
-      LOG.error( "Internal Error.", cause );
+      LOG.error( "Internal Error: " + cause.getMessage( ) );
+      Logs.exhaust( ).error( cause, cause );
       this.sendError( ctx, ( ( WebServicesException ) e.getCause( ) ).getStatus( ), cause );
     } else {
       this.sendError( ctx, HttpResponseStatus.BAD_REQUEST, cause );
@@ -182,7 +183,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
     Logs.exhaust( ).error( t, t );
     final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, status );
     response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
-    if ( Logs.EXTREME ) {
+    if ( Logs.isExtrrreeeme() ) {
       ByteArrayOutputStream os = new ByteArrayOutputStream( );
       PrintWriter out = new PrintWriter( os );
       t.printStackTrace( out );

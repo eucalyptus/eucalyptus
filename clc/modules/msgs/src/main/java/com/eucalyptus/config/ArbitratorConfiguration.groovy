@@ -64,6 +64,7 @@
 package com.eucalyptus.config
 
 import java.io.Serializable
+import javax.persistence.DiscriminatorValue;
 import javax.persistence.PersistenceContext
 import javax.persistence.Table
 import javax.persistence.Transient

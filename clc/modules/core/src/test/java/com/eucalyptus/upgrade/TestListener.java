@@ -26,7 +26,7 @@ public class TestListener extends RunListener {
       String key = key( desc );
       LOG.info( "FAILED " + key );
       failedMap.put( key, failure );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.error( e, e );
     }
   }
@@ -37,7 +37,7 @@ public class TestListener extends RunListener {
         LOG.info( "PASSED " + key( description ) );        
       }
       passedMap.put( key( description ), description );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.error( e, e );
     }
   }
@@ -47,7 +47,7 @@ public class TestListener extends RunListener {
       timerMap.put( key( description ), System.currentTimeMillis( ) );
       LOG.info( "TEST_RUN" );
       LOG.info( "START  " + key( description ) );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.error( e, e );
     }
   }
@@ -57,7 +57,7 @@ public class TestListener extends RunListener {
       Class testClass = Class.forName( description.getClassName( ) );
       d = ( TestDescription ) testClass.getDeclaredMethod( description.getMethodName( ), new Class[] {} ).getAnnotation( TestDescription.class );
       return d;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.error( e, e );
       return null;
     }
@@ -68,7 +68,7 @@ public class TestListener extends RunListener {
       Class testClass = Class.forName( description.getClassName( ) );
       d = ( Test ) testClass.getDeclaredMethod( description.getMethodName( ), new Class[] {} ).getAnnotation( Test.class );
       return d;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.error( e, e );
       return null;
     }
@@ -80,7 +80,7 @@ public class TestListener extends RunListener {
         for ( String failed : failedMap.keySet( ) ) {
           errorLog( failedMap.get( failed ),  failed );
         }
-      } catch ( Throwable e ) {
+      } catch ( Exception e ) {
         e.printStackTrace( );
       }
     }
@@ -91,7 +91,7 @@ public class TestListener extends RunListener {
           LOG.info( description ) ;
         }
       }
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       e.printStackTrace( );
     }
     if ( !failedMap.isEmpty( ) ) {
@@ -100,7 +100,7 @@ public class TestListener extends RunListener {
           if( passedMap.containsKey( failed ) && timerMap.containsKey( failed ) ) {
             LOG.info( failed ) ;            
           }
-        } catch ( Throwable e ) {
+        } catch ( Exception e ) {
           e.printStackTrace( );
         }
       }
@@ -119,7 +119,7 @@ public class TestListener extends RunListener {
 	     LOG.error( "+-----------------------------------------------------------------------------+" );
 	     LOG.error(f.getTrace());
 	     LOG.error( "+-----------------------------------------------------------------------------+" );
-	   } catch ( Throwable e ) {
+	   } catch ( Exception e ) {
 	     e.printStackTrace( );
 	   }
 	 }

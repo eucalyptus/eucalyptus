@@ -80,9 +80,9 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.ws.EmpyreanService;
@@ -270,7 +270,7 @@ public class Bootstrap {
           if ( !result ) {
             throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " returned 'false' from load( ): terminating bootstrap." );
           }
-        } catch ( Throwable e ) {
+        } catch ( Exception e ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.name( ), b.getClass( ).getCanonicalName( ) ).info( );
           throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " threw an error in load( ): " + e.getMessage( ), e );
         }
@@ -287,7 +287,7 @@ public class Bootstrap {
           if ( !result ) {
             throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " returned 'false' from start( ): terminating bootstrap." );
           }
-        } catch ( Throwable e ) {
+        } catch ( Exception e ) {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_ERROR, this.name( ), b.getClass( ).getCanonicalName( ) ).info( );
           throw BootstrapException.throwFatal( b.getClass( ).getSimpleName( ) + " threw an error in start( ): " + e.getMessage( ), e );
         }
@@ -363,7 +363,7 @@ public class Bootstrap {
           EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, stage.name( ), bc, "component=" + compType.getSimpleName( ),
                             "localDepends=" + bootstrap.checkLocal( ), "remoteDepends=" + bootstrap.checkRemote( ) ).info( );
         }
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
     }
@@ -438,6 +438,10 @@ public class Bootstrap {
     return currentStage;
   }
   
+  public static Boolean isOperational( ) {
+    return isFinished( ) && !isShuttingDown( );
+  }
+  
   public static Boolean isFinished( ) {
     return finished;
   }
@@ -477,9 +481,9 @@ public class Bootstrap {
    * @see Bootstrap#loadConfigs
    * @see Bootstrap#doDiscovery()
    * 
-   * @throws Throwable
+   * @throws Exception
    */
-  public static void init( ) throws Throwable {
+  public static void init( ) throws Exception {
     
     Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
       
@@ -514,7 +518,7 @@ public class Bootstrap {
         comp.initService( );
       } catch ( ServiceRegistrationException ex ) {
         LOG.info( ex.getMessage( ) );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
     }
@@ -544,21 +548,22 @@ public class Bootstrap {
           fsm.transitionByName( transition ).get( );
           break;
         } catch ( ExistingTransitionException ex ) {
-          LOG.error( ex );
-        } catch ( Throwable ex ) {
-          LOG.error( ex );
+          Logs.extreme( ).error( ex );
+        } catch ( Exception ex ) {
+          Logs.extreme( ).error( ex );
         }
         try {
           TimeUnit.MILLISECONDS.sleep( 50 );
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );
+          throw new RuntimeException( ex );
         }
       }
     }
     
   }
   
-  static void initializeSystem( ) throws Throwable {
+  static void initializeSystem( ) throws Exception {
     Groovyness.run( "initialize_cloud.groovy" );
   }
 }

@@ -29,10 +29,12 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
 @ConfigurableClass( root = "system", description = "Parameters having to do with the system's state.  Mostly read-only." )
 public class ServiceContext {
@@ -46,7 +48,7 @@ public class ServiceContext {
   public static class HupListener implements PropertyChangeListener {
     @Override
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-      if( Bootstrap.isFinished( ) ) {
+      if ( Bootstrap.isFinished( ) ) {
         ServiceContextManager.restartSync( );
       }
     }
@@ -89,7 +91,9 @@ public class ServiceContext {
     }
     MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint, muleSession, false );
 //    LOG.debug( "ServiceContext.dispatch(" + dest + ":" + msg.getClass( ).getCanonicalName( )/*, Exceptions.filterStackTrace( new RuntimeException( ), 3 )*/ );
-    final Context ctx = msg instanceof BaseMessage ? Contexts.createWrapped( dest, ( BaseMessage ) msg ) : null;
+    final Context ctx = msg instanceof BaseMessage
+      ? Contexts.createWrapped( dest, ( BaseMessage ) msg )
+      : null;
     try {
       dispatcherFactory.create( endpoint ).dispatch( muleEvent );
     } catch ( DispatchException ex ) {
@@ -132,7 +136,7 @@ public class ServiceContext {
       } else {
         return ( T ) reply.getPayload( );
       }
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       throw Exceptions.trace( new ServiceDispatchException( "Failed to send message " + msg.getClass( ).getSimpleName( ) + " to service " + dest
                                                                   + " because: " + e.getMessage( ), e ) );
     } finally {
@@ -140,16 +144,19 @@ public class ServiceContext {
       RequestContext.setEvent( context );
     }
   }
-
+  
   @SuppressWarnings( "unchecked" )
   public static void response( BaseMessage responseMessage ) {
     EventRecord.here( ServiceContext.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ) ).debug( );
+    if ( responseMessage instanceof ExceptionResponseType ) {
+      Logs.exhaust( ).trace( responseMessage );
+    }
     String corrId = responseMessage.getCorrelationId( );
     try {
       Context context = Contexts.lookup( corrId );
       Channel channel = context.getChannel( );
       Channels.write( channel, responseMessage );
-      Contexts.clear(context);
+      Contexts.clear( context );
     } catch ( NoSuchContextException e ) {
       LOG.warn( "Received a reply for absent client:  No channel to write response message.", e );
       LOG.debug( responseMessage );

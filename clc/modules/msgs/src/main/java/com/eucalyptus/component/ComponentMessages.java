@@ -72,6 +72,7 @@ import com.eucalyptus.util.Classes;
 import com.google.common.base.Predicate;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class ComponentMessages {
@@ -87,10 +88,10 @@ public class ComponentMessages {
   }
   
   public static <T extends BaseMessage> Class<? extends ComponentId> lookup( T msg ) {
-    Class<? extends BaseMessage> msgType = Classes.findAncestor( msg, new Predicate<Class>( ) {
+    Class<?> msgType = Iterables.find( Classes.classAncestors( msg ), new Predicate<Class<?>>( ) {
       
       @Override
-      public boolean apply( Class arg0 ) {
+      public boolean apply( Class<?> arg0 ) {
         return Ats.from( arg0 ).has( ComponentMessage.class );
       }
     } );
@@ -102,6 +103,7 @@ public class ComponentMessages {
   }
   
   public static void register( Class<? extends BaseMessage> componentMsg ) {
+    @SuppressWarnings( "unchecked" )
     Class<? extends ComponentId> componentIdClass = Ats.from( componentMsg ).get( ComponentMessage.class ).value( );
     compIdMap.put( componentIdClass, componentMsg );
   }

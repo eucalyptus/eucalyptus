@@ -75,11 +75,10 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.RecoverablePersistenceException;
+import com.eucalyptus.records.Logs;
 
 @Entity
 @javax.persistence.Entity
@@ -88,22 +87,29 @@ import com.eucalyptus.entities.RecoverablePersistenceException;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass( root = "cloud.addresses", description = "Configuration options controlling the handling of public/elastic addresses." )
 public class AddressingConfiguration extends AbstractPersistent {
+  private static final long serialVersionUID     = 1L;
+  
   @Transient
-  private static Logger LOG = Logger.getLogger( AddressingConfiguration.class );
+  private static Logger     LOG                  = Logger.getLogger( AddressingConfiguration.class );
   
   @ConfigurableField( displayName = "max_addresses_per_user", changeListener = PropertyChangeListeners.IsPositiveInteger.class,
                       description = "The maximum number of addresses a user can have simultaneiously allocated before the next allocation will fail." )
   @Column( name = "config_addr_max_per_user", nullable = false )
-  private Integer       maxUserPublicAddresses;
+  private Integer           maxUserPublicAddresses;
   
   @ConfigurableField( displayName = "dynamic_public_addressing", description = "Public addresses are assigned to instances by the system as available." )
   @Column( name = "config_addr_do_dynamic_public_addresses", nullable = false, columnDefinition = "boolean default true" )
-  private Boolean       doDynamicPublicAddresses;
+  private Boolean           doDynamicPublicAddresses;
   
   @ConfigurableField( displayName = "static_address_pool", changeListener = PropertyChangeListeners.IsPositiveInteger.class,
                       description = "Public addresses are assigned to instances by the system only from a pool of reserved instances whose size is determined by this value." )
   @Column( name = "config_addr_reserved_public_addresses" )
-  private Integer       systemReservedPublicAddresses;
+  private Integer           systemReservedPublicAddresses;
+  
+  @ConfigurableField( displayName = "address_orphan_count", changeListener = PropertyChangeListeners.IsPositiveInteger.class,
+                      description = "Number of times an orphaned address is reported by a cluster before it is reclaimed by the system." )
+  @Column( name = "config_addr_orphan_ticks" )
+  public static final int   ADDRESS_ORPHAN_TICKS = 10;
   
   public AddressingConfiguration( ) {
     super( );
@@ -113,11 +119,11 @@ public class AddressingConfiguration extends AbstractPersistent {
     AddressingConfiguration ret = null;
     try {
       ret = EntityWrapper.get( AddressingConfiguration.class ).lookupAndClose( new AddressingConfiguration( ) );
-    } catch ( NoSuchElementException ex1 ) {
+    } catch ( final NoSuchElementException ex1 ) {
       try {
         ret = EntityWrapper.get( AddressingConfiguration.class ).mergeAndCommit( new AddressingConfiguration( ) );
-      } catch ( RecoverablePersistenceException ex ) {
-        LOG.error( ex, ex );
+      } catch ( final Exception ex ) {
+        Logs.extreme( ).error( ex, ex );
         ret = new AddressingConfiguration( );
       }
     }
@@ -141,7 +147,7 @@ public class AddressingConfiguration extends AbstractPersistent {
     return this.maxUserPublicAddresses;
   }
   
-  public void setMaxUserPublicAddresses( Integer maxUserPublicAddresses ) {
+  public void setMaxUserPublicAddresses( final Integer maxUserPublicAddresses ) {
     this.maxUserPublicAddresses = maxUserPublicAddresses;
   }
   
@@ -149,7 +155,7 @@ public class AddressingConfiguration extends AbstractPersistent {
     return this.doDynamicPublicAddresses;
   }
   
-  public void setDoDynamicPublicAddresses( Boolean doDynamicPublicAddresses ) {
+  public void setDoDynamicPublicAddresses( final Boolean doDynamicPublicAddresses ) {
     this.doDynamicPublicAddresses = doDynamicPublicAddresses;
   }
   
@@ -157,7 +163,7 @@ public class AddressingConfiguration extends AbstractPersistent {
     return this.systemReservedPublicAddresses;
   }
   
-  public void setSystemReservedPublicAddresses( Integer systemReservedPublicAddresses ) {
+  public void setSystemReservedPublicAddresses( final Integer systemReservedPublicAddresses ) {
     this.systemReservedPublicAddresses = systemReservedPublicAddresses;
   }
 }
