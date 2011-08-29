@@ -96,6 +96,10 @@ public class PolicyEngineImpl implements PolicyEngine {
     try {
       ContractKeyEvaluator contractEval = new ContractKeyEvaluator( contracts );
       CachedKeyEvaluator keyEval = new CachedKeyEvaluator( );
+      
+      // Case insensitive
+      resourceName = resourceName.toLowerCase( );
+      action = action.toLowerCase( );
 
       // System admin can do everything
       if ( !requestUser.isSystemAdmin( ) && !requestUser.isSystemInternal( ) ) {
