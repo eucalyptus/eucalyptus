@@ -17,11 +17,15 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.AddressingConfiguration;
 import com.eucalyptus.bootstrap.HttpServerBootstrapper;
 import com.eucalyptus.cluster.ClusterConfiguration;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
@@ -64,8 +68,10 @@ public class ConfigurationWebBackend {
   
   public static final String ID = "Id";
   public static final String NAME = "Name";
+  public static final String PARTITION = "Partition";
   public static final String TYPE = "Type";
   public static final String HOST = "Host";
+  public static final String STATE = "Status";
   
   public static final String CLOUD_NAME = "cloud";
   public static final String WALRUS_NAME = "walrus";
@@ -92,16 +98,19 @@ public class ConfigurationWebBackend {
   public static final String COMPONENT_PROPERTY_TYPE_KEY_VALUE_HIDDEN = "KEYVALUEHIDDEN";
   public static final String COMPONENT_PROPERTY_TYPE_BOOLEAN = "BOOLEAN";
   
-  public static final int TYPE_FIELD_INDEX = 2;
+  public static final int TYPE_FIELD_INDEX = 3;
+  public static final String UNKNOWN_STATE = "Unknown";
   
   // Common fields
   public static final ArrayList<SearchResultFieldDesc> COMMON_FIELD_DESCS = Lists.newArrayList( );
   static {
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, ID, false, "0px", TableDisplay.NONE, Type.TEXT, false, true ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, NAME, false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( TYPE, TYPE, false, "15%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( "hostName", HOST, false, "15%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( "port", PORT, false, "50%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( PARTITION, PARTITION, false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( TYPE, TYPE, false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( "hostName", HOST, false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( "port", PORT, false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( STATE, STATE, false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
   }
   // Cloud config extra fields
   public static final ArrayList<SearchResultFieldDesc> CLOUD_CONFIG_EXTRA_FIELD_DESCS = Lists.newArrayList( );
@@ -132,13 +141,15 @@ public class ConfigurationWebBackend {
     return type + "." + name;
   }
   
-  private static void serializeSystemConfiguration( SystemConfiguration sysConf, SearchResultRow result ) {
+  private static void serializeSystemConfiguration( SystemConfiguration sysConf, Component cloud, SearchResultRow result ) {
     // First fill in the common fields
     result.addField( makeConfigId( CLOUD_NAME, CLOUD_TYPE ) );// id
     result.addField( CLOUD_NAME );                            // name  
+    result.addField( CLOUD_NAME );                            // partition  
     result.addField( CLOUD_TYPE );                            // type
     result.addField( Internets.localHostAddress( ) );         // host
     result.addField( "8773" );                                // port, hardcoding for now
+    result.addField( cloud.getState( ).toString( ) );
     // Then fill in the specific fields
     result.addField( sysConf.getDnsDomain( ) );               // dns domain
     result.addField( sysConf.getNameserver( ) );              // dns nameserver
@@ -154,12 +165,13 @@ public class ConfigurationWebBackend {
    * @return the cloud configuration row with its own specific fields for UI display.
    */
   public static SearchResultRow getCloudConfiguration( ) {
+	Component cloud = Components.lookup(Eucalyptus.class);
     SystemConfiguration sysConf = SystemConfiguration.getSystemConfiguration( );
     SearchResultRow result = new SearchResultRow( );
     // Set the extra field descs
     result.setExtraFieldDescs( CLOUD_CONFIG_EXTRA_FIELD_DESCS );
     // Fill the fields
-    serializeSystemConfiguration( sysConf, result );    
+    serializeSystemConfiguration( sysConf, cloud, result );    
     return result;
   }
   
@@ -254,9 +266,11 @@ public class ConfigurationWebBackend {
     // Common
     result.addField( makeConfigId( clusterConf.getName( ), CLUSTER_TYPE ) );
     result.addField( clusterConf.getName( ) );
+    result.addField( clusterConf.getPartition( ) );
     result.addField( CLUSTER_TYPE );
     result.addField( clusterConf.getHostName( ) );
     result.addField( clusterConf.getPort( ) == null ? null : clusterConf.getPort( ).toString( ) );
+    result.addField( clusterConf.lookupState().toString( ) );
     // Specific
     result.addField( clusterConf.getMinNetworkTag( ) == null ? "0" : clusterConf.getMinNetworkTag( ).toString( ) );
     result.addField( clusterConf.getMaxNetworkTag( ) == null ? "0" : clusterConf.getMaxNetworkTag( ).toString( ) );
@@ -285,11 +299,11 @@ public class ConfigurationWebBackend {
     int i = COMMON_FIELD_DESCS.size( );
     try {
       Integer val = Integer.parseInt( input.getField( i++ ) );
-      clusterConf.setMaxNetworkTag( val );
+      clusterConf.setMinNetworkTag( val );
     } catch ( Exception e ) { }
     try {
       Integer val = Integer.parseInt( input.getField( i++ ) );
-      clusterConf.setMinNetworkTag( val );
+      clusterConf.setMaxNetworkTag( val );
     } catch ( Exception e ) { }
   }
   
@@ -332,13 +346,15 @@ public class ConfigurationWebBackend {
     return COMPONENT_PROPERTY_TYPE_KEY_VALUE;
   }
   
-  private static void serializeStorageConfiguration( String type, String name, String host, Integer port, List<ComponentProperty> properties, SearchResultRow result ) {
+  private static void serializeStorageConfiguration( String type, String name, String partition, String host, Integer port, List<ComponentProperty> properties, String state, SearchResultRow result ) {
     // Common fields
     result.addField( makeConfigId( name, type ) );
     result.addField( name );
+    result.addField( partition );
     result.addField( type );
     result.addField( host );
     result.addField( port == null ? null : port.toString( ) );
+    result.addField(state);
     // Dynamic fields
     serializeComponentProperties( properties, result );
   }
@@ -371,9 +387,9 @@ public class ConfigurationWebBackend {
     }
   }
   
-  private static SearchResultRow createStorageConfiguration( String type, String name, String host, Integer port, List<ComponentProperty> properties ) {
+  private static SearchResultRow createStorageConfiguration( String type, String name, String partition, String host, Integer port, List<ComponentProperty> properties, String state ) {
     SearchResultRow result = new SearchResultRow( );
-    serializeStorageConfiguration( type, name, host, port, properties, result );
+    serializeStorageConfiguration( type, name, partition, host, port, properties, state, result );
     return result;
   }
   
@@ -383,21 +399,13 @@ public class ConfigurationWebBackend {
   public static List<SearchResultRow> getStorageConfiguration( ) {
     List<SearchResultRow> results = Lists.newArrayList( );
     for ( final ServiceConfiguration cc : ServiceConfigurations.list( ClusterController.class ) ) {
-      try {
-        if ( Internets.testLocal( cc.getHostName( ) ) && !Components.lookup( "storage" ).isEnabledLocally( ) ) {
-          results.add( createStorageConfiguration( STORAGE_TYPE, SC_DEFAULT_NAME, SC_DEFAULT_HOST, SC_DEFAULT_PORT, new ArrayList<ComponentProperty>( ) ) );
-          continue;
-        }
-      } catch ( Exception e ) {
-        LOG.debug( "Got an error while trying to retrieving storage controller configuration list", e );
-      }
       StorageControllerConfiguration c;
       try {
-        c = ServiceConfigurations.lookup( new StorageControllerConfiguration( cc.getName( ) ) );
+    	c = Partitions.lookupService(Storage.class, cc.getPartition());  
         List<ComponentProperty> properties = Lists.newArrayList( );
         try {
           GetStorageConfigurationResponseType getStorageConfigResponse = sendForStorageInfo( cc, c );
-          if ( c.getName( ).equals( getStorageConfigResponse.getName( ) ) ) {
+          if ( c.getPartition( ).equals( getStorageConfigResponse.getName( ) ) ) {
             properties.addAll( getStorageConfigResponse.getStorageParams( ) );
           } else {
             LOG.debug( "Unexpected storage controller name: " + getStorageConfigResponse.getName( ), new Exception( ) );
@@ -407,9 +415,9 @@ public class ConfigurationWebBackend {
         } catch ( Exception e ) {
           LOG.debug( "Got an error while trying to communicate with remote storage controller", e );
         }
-        results.add( createStorageConfiguration( STORAGE_TYPE, c.getName( ), c.getHostName( ), c.getPort( ), properties ) );
+        results.add( createStorageConfiguration( STORAGE_TYPE, c.getName( ), c.getPartition( ), c.getHostName( ), c.getPort( ), properties, c.lookupState().toString() ) );
       } catch ( Exception e1 ) {
-        results.add( createStorageConfiguration( STORAGE_TYPE, SC_DEFAULT_NAME, SC_DEFAULT_HOST, SC_DEFAULT_PORT, new ArrayList<ComponentProperty>( ) ) );
+        results.add( createStorageConfiguration( STORAGE_TYPE, SC_DEFAULT_NAME, SC_DEFAULT_NAME, SC_DEFAULT_HOST, SC_DEFAULT_PORT, new ArrayList<ComponentProperty>( ), UNKNOWN_STATE ) );
       }
     }
     return results;
@@ -424,6 +432,7 @@ public class ConfigurationWebBackend {
     int i = 0;
     i++;//id
     String name = input.getField( i++ );
+    String partition = input.getField( i++ );
     i++;//type
     String host = input.getField( i++ );
     Integer port = null;
@@ -436,10 +445,11 @@ public class ConfigurationWebBackend {
     ArrayList<ComponentProperty> properties = Lists.newArrayList( );
     deserializeComponentProperties( properties, input, i );
     
-    StorageControllerConfiguration scConfig = new StorageControllerConfiguration( null/**ASAP: FIXME: GRZE **/, name, host, port);
+    ServiceConfiguration scConfig = ServiceConfigurations.lookupByName( Storage.class, name );
     final UpdateStorageConfigurationType updateStorageConfiguration = new UpdateStorageConfigurationType( );
-    updateStorageConfiguration.setName( scConfig.getName( ) );
+    updateStorageConfiguration.setName( scConfig.getPartition( ) );
     updateStorageConfiguration.setStorageParams( properties );
+
     Dispatcher scDispatch = ServiceDispatcher.lookup( scConfig );
     try {
       scDispatch.send( updateStorageConfiguration );
@@ -452,7 +462,7 @@ public class ConfigurationWebBackend {
   }
 
   private static GetStorageConfigurationResponseType sendForStorageInfo( ServiceConfiguration cc, ServiceConfiguration c ) throws EucalyptusCloudException {
-    GetStorageConfigurationType getStorageConfiguration = new GetStorageConfigurationType( c.getName( ) );
+    GetStorageConfigurationType getStorageConfiguration = new GetStorageConfigurationType( c.getPartition( ) );
     Dispatcher scDispatch = ServiceDispatcher.lookup( c );
     GetStorageConfigurationResponseType getStorageConfigResponse = scDispatch.send( getStorageConfiguration );
     return getStorageConfigResponse;
@@ -468,7 +478,7 @@ public class ConfigurationWebBackend {
         GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType( WalrusProperties.NAME );
         Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Components.lookup( WALRUS_NAME ) );
         GetWalrusConfigurationResponseType getWalrusConfigResponse = scDispatch.send( getWalrusConfiguration );
-        results.add( createStorageConfiguration( WALRUS_TYPE, c.getName( ), c.getHostName( ), c.getPort( ), getWalrusConfigResponse.getProperties( ) ) );
+        results.add( createStorageConfiguration( WALRUS_TYPE, c.getName( ), c.getPartition( ), c.getHostName( ), c.getPort( ), getWalrusConfigResponse.getProperties( ), c.lookupState().toString() ) );
       }
     } catch ( Exception ex ) {
       LOG.error( "Failed to retrieve walrus configuration", ex );
