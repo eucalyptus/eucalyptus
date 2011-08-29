@@ -134,7 +134,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
           }
         } );
         return true;
-      } catch ( Throwable t ) {
+      } catch ( Exception t ) {
         LOG.error( t, t );
         this.teardown( t );
         return false;
@@ -226,7 +226,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
             this.response.set( msg );
             e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
           }
-        } catch ( Throwable e1 ) {
+        } catch ( Exception e1 ) {
           LOG.error( e1, e1 );
           this.teardown( e1 );
         }
@@ -241,7 +241,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
         LOG.error( ex, ex );
         this.teardown( ex );
       }
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       LOG.error( t, t );
       this.teardown( t );
     }

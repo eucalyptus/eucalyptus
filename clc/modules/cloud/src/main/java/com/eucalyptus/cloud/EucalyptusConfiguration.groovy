@@ -70,6 +70,7 @@ import java.io.Serializable
 import javax.persistence.PersistenceContext
 import javax.persistence.Table
 import javax.persistence.Transient
+import javax.persistence.DiscriminatorValue
 import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.hibernate.annotations.Entity

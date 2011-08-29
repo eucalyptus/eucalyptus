@@ -19,13 +19,13 @@ public class BindingDiscovery extends ServiceJarDiscovery {
   }
   
   @Override
-  public boolean processClass( Class candidate ) throws Throwable {
+  public boolean processClass( Class candidate ) throws Exception {
     Field f;
     String bindingList;
     try {
       f = candidate.getDeclaredField( "JiBX_bindingList" );
       bindingList = ( String ) f.get( null );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       return false;
     }
     List<String> bindings = Lists.transform( Arrays.asList( bindingList.split( "\\|" ) ), new Function<String,String>() {

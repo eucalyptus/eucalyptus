@@ -6,7 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 
-@Target( { ElementType.TYPE, ElementType.FIELD } )
+@Target( { ElementType.FIELD } )
 @Retention( RetentionPolicy.RUNTIME )
 public @interface ConfigurableField {
   String description( ) default "None available.";

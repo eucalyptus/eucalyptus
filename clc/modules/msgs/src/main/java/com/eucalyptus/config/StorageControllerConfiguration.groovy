@@ -64,6 +64,7 @@
 package com.eucalyptus.config
 
 import java.io.Serializable
+import javax.persistence.DiscriminatorValue;
 import javax.persistence.PersistenceContext
 import javax.persistence.Table
 import javax.persistence.Transient
@@ -83,6 +84,9 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
   private static String DEFAULT_SERVICE_PATH = "/services/Storage";
   public StorageControllerConfiguration( ) {
     
+  }
+  public StorageControllerConfiguration( String name ) {
+    super.setName(name);
   }
   public StorageControllerConfiguration( String partition, String name, String hostName, Integer port ) {
     super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );

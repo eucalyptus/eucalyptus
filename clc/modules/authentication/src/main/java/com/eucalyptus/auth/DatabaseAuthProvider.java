@@ -110,7 +110,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       UserEntity user = db.getUnique( new UserEntity( userName ) );
       db.commit( );
       return new DatabaseUserProxy( user );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to find user by ID " + userName );
       throw new AuthException( AuthException.NO_SUCH_USER, e );
@@ -127,7 +127,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       UserEntity user = db.getUnique( UserEntity.newInstanceWithUserId( userId ) );
       db.commit( );
       return new DatabaseUserProxy( user );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to find user by ID " + userId );
       throw new AuthException( AuthException.NO_SUCH_USER, e );
@@ -160,7 +160,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       }
       db.commit( );
       return new DatabaseUserProxy( users.get( 0 ) );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to find user with access key ID : " + keyId );
       throw new AuthException( AuthException.NO_SUCH_USER, e );
@@ -196,7 +196,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       }
       db.commit( );
       return new DatabaseUserProxy( users.get( 0 ) );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to find user with certificate : " + cert );
       throw new AuthException( AuthException.NO_SUCH_USER, e );
@@ -213,7 +213,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       GroupEntity group = db.getUnique( GroupEntity.newInstanceWithGroupId( groupId ) );
       db.commit( );
       return new DatabaseGroupProxy( group );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to find group by ID " + groupId );
       throw new AuthException( AuthException.NO_SUCH_GROUP, e );
@@ -241,7 +241,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       db.add( account );
       db.commit( );
       return new DatabaseAccountProxy( account );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to add account " + accountName );
       throw new AuthException( AuthException.ACCOUNT_CREATE_FAILURE, e );
@@ -289,7 +289,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       }
       db.delete( accounts.get( 0 ) );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to delete account " + accountName );
       throw new AuthException( AuthException.NO_SUCH_ACCOUNT, e );
@@ -307,7 +307,7 @@ public class DatabaseAuthProvider implements AccountProvider {
         results.add( new DatabaseUserProxy( u ) );
       }
       return results;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get all users" );
       throw new AuthException( "Failed to get all users", e );
@@ -324,7 +324,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       }
       db.commit( );
       return results;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get accounts" );
       throw new AuthException( "Failed to accounts", e );
@@ -361,7 +361,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       CertificateEntity certEntity = db.getUnique( new CertificateEntity( X509CertHelper.fromCertificate( cert ) ) );
       db.commit( );
       return new DatabaseCertificateProxy( certEntity );
-    }  catch ( Throwable e ) {
+    }  catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to lookup cert " + cert );
       throw new AuthException( AuthException.NO_SUCH_CERTIFICATE, e );
@@ -385,7 +385,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       }
       db.commit( );
       return new DatabaseAccountProxy( accounts.get( 0 ) );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to find account " + accountName );
       throw new AuthException( "Failed to find account", e );
@@ -402,7 +402,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       AccountEntity account = db.getUnique( AccountEntity.newInstanceWithAccountNumber( accountId ) );
       db.commit( );
       return new DatabaseAccountProxy( account );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to find account " + accountId );
       throw new AuthException( "Failed to find account", e );
@@ -419,7 +419,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       AccessKeyEntity keyEntity = db.getUnique( AccessKeyEntity.newInstanceWithAccessKeyId( keyId ) );
       db.commit( );
       return new DatabaseAccessKeyProxy( keyEntity );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to find access key with ID " + keyId );
       throw new AuthException( "Failed to find access key", e );      
@@ -438,7 +438,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       UserEntity user = db.getUnique( example );
       db.commit( );
       return new DatabaseUserProxy( user );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to find user by confirmation code " + code );
       throw new AuthException( AuthException.NO_SUCH_USER, e );

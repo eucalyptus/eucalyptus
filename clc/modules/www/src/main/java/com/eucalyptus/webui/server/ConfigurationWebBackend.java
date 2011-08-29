@@ -26,17 +26,17 @@ import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.config.WalrusConfiguration;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.images.ImageConfiguration;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.WalrusProperties;
-import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.webui.client.service.CloudInfo;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
@@ -258,8 +258,8 @@ public class ConfigurationWebBackend {
     result.addField( clusterConf.getHostName( ) );
     result.addField( clusterConf.getPort( ) == null ? null : clusterConf.getPort( ).toString( ) );
     // Specific
-    result.addField( clusterConf.getMinVlan( ) == null ? "0" : clusterConf.getMinVlan( ).toString( ) );
-    result.addField( clusterConf.getMaxVlan( ) == null ? "0" : clusterConf.getMaxVlan( ).toString( ) );
+    result.addField( clusterConf.getMinNetworkTag( ) == null ? "0" : clusterConf.getMinNetworkTag( ).toString( ) );
+    result.addField( clusterConf.getMaxNetworkTag( ) == null ? "0" : clusterConf.getMaxNetworkTag( ).toString( ) );
   }
   
   /**
@@ -274,7 +274,7 @@ public class ConfigurationWebBackend {
         serializeClusterConfiguration( c, row );
         results.add( row );
       }
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( "Got an error while trying to retrieving storage controller configuration list", e );
     }    
     return results;
@@ -285,11 +285,11 @@ public class ConfigurationWebBackend {
     int i = COMMON_FIELD_DESCS.size( );
     try {
       Integer val = Integer.parseInt( input.getField( i++ ) );
-      clusterConf.setMaxVlan( val );
+      clusterConf.setMaxNetworkTag( val );
     } catch ( Exception e ) { }
     try {
       Integer val = Integer.parseInt( input.getField( i++ ) );
-      clusterConf.setMinVlan( val );
+      clusterConf.setMinNetworkTag( val );
     } catch ( Exception e ) { }
   }
   
@@ -393,7 +393,7 @@ public class ConfigurationWebBackend {
       }
       StorageControllerConfiguration c;
       try {
-        c = ServiceConfigurations.lookup( new StorageControllerConfiguration() {{ this.setName( cc.getName( ) ); }} );
+        c = ServiceConfigurations.lookup( new StorageControllerConfiguration( cc.getName( ) ) );
         List<ComponentProperty> properties = Lists.newArrayList( );
         try {
           GetStorageConfigurationResponseType getStorageConfigResponse = sendForStorageInfo( cc, c );
@@ -404,7 +404,7 @@ public class ConfigurationWebBackend {
             LOG.debug( "Expected configuration for SC related to CC: " + LogUtil.dumpObject( c ) );
             LOG.debug( "Received configuration for SC related to CC: " + LogUtil.dumpObject( getStorageConfigResponse ) );
           }
-        } catch ( Throwable e ) {
+        } catch ( Exception e ) {
           LOG.debug( "Got an error while trying to communicate with remote storage controller", e );
         }
         results.add( createStorageConfiguration( STORAGE_TYPE, c.getName( ), c.getHostName( ), c.getPort( ), properties ) );

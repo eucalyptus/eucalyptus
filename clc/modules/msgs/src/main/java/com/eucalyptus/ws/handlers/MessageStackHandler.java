@@ -72,8 +72,8 @@ import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.ws.WebServicesException;
 
 public abstract class MessageStackHandler implements ChannelDownstreamHandler, ChannelUpstreamHandler {
@@ -81,7 +81,7 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
   
   @Override
   public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent channelEvent ) throws Exception {
-    if ( Logs.EXTREME ) {
+    if ( Logs.isExtrrreeeme() ) {
       LOG.trace( LogUtil.dumpObject( channelEvent ) );
     }
     try {
@@ -94,7 +94,7 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
         }
       }
       ctx.sendDownstream( channelEvent );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.error( e, e );
       throw new WebServicesException( e.getMessage( ), HttpResponseStatus.BAD_REQUEST );
     }
@@ -119,7 +119,7 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
   
   @Override
   public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent channelEvent ) throws Exception {
-    if ( Logs.EXTREME ) {
+    if ( Logs.isExtrrreeeme() ) {
       LOG.trace( LogUtil.dumpObject( channelEvent ) );
     }
     if ( channelEvent instanceof MessageEvent ) {

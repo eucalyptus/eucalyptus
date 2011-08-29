@@ -73,7 +73,7 @@ public class ComponentDiscovery extends ServiceJarDiscovery {
   private static Logger LOG = Logger.getLogger( ComponentDiscovery.class );
   
   @Override
-  public boolean processClass( final Class candidate ) throws Throwable {
+  public boolean processClass( final Class candidate ) throws Exception {
     if ( ComponentId.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) )
          && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
       try {

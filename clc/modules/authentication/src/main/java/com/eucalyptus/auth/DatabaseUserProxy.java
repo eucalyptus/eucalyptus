@@ -28,8 +28,8 @@ import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Transactions;
 import java.util.concurrent.ExecutionException;
-import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -51,7 +51,7 @@ public class DatabaseUserProxy implements User {
     final StringBuilder sb = new StringBuilder( );
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
-        public void fire( UserEntity t ) throws Throwable {
+        public void fire( UserEntity t ) {
           sb.append( t.toString( ) );
         }
       } );
@@ -89,7 +89,7 @@ public class DatabaseUserProxy implements User {
           }
         }
         db.commit( );
-      } catch ( Throwable t ) {
+      } catch ( Exception t ) {
         Debugging.logError( LOG, t, "Failed to setName for " + this.delegate );
         db.rollback( );
         throw new AuthException( t );
@@ -109,7 +109,7 @@ public class DatabaseUserProxy implements User {
   public void setPath( final String path ) throws AuthException {
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
-        public void fire( UserEntity t ) throws Throwable {
+        public void fire( UserEntity t ) {
           t.setPath( path );
         }
       } );
@@ -128,7 +128,7 @@ public class DatabaseUserProxy implements User {
   public void setRegistrationStatus( final RegistrationStatus stat ) throws AuthException {
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
-        public void fire( UserEntity t ) throws Throwable {
+        public void fire( UserEntity t ) {
           t.setRegistrationStatus( stat );
         }
       } );
@@ -147,7 +147,7 @@ public class DatabaseUserProxy implements User {
   public void setEnabled( final Boolean enabled ) throws AuthException {
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
-        public void fire( UserEntity t ) throws Throwable {
+        public void fire( UserEntity t ) {
           t.setEnabled( enabled );
         }
       } );
@@ -166,7 +166,7 @@ public class DatabaseUserProxy implements User {
   public void setToken( final String token ) throws AuthException {
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
-        public void fire( UserEntity t ) throws Throwable {
+        public void fire( UserEntity t ) {
           t.setToken( token );
         }
       } );
@@ -190,7 +190,7 @@ public class DatabaseUserProxy implements User {
   public void setConfirmationCode( final String code ) throws AuthException {
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
-        public void fire( UserEntity t ) throws Throwable {
+        public void fire( UserEntity t ) {
           t.setConfirmationCode( code );
         }
       } );
@@ -214,7 +214,7 @@ public class DatabaseUserProxy implements User {
   public void setPassword( final String password ) throws AuthException {
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
-        public void fire( UserEntity t ) throws Throwable {
+        public void fire( UserEntity t ) {
           t.setPassword( password );
         }
       } );
@@ -238,7 +238,7 @@ public class DatabaseUserProxy implements User {
   public void setPasswordExpires( final Long time ) throws AuthException {
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
-        public void fire( UserEntity t ) throws Throwable {
+        public void fire( UserEntity t ) {
           t.setPasswordExpires( time );
         }
       } );
@@ -253,7 +253,7 @@ public class DatabaseUserProxy implements User {
     final List<String> results = Lists.newArrayList( );
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
-        public void fire( UserEntity t ) throws Throwable {
+        public void fire( UserEntity t ) {
           results.add( t.getInfo( ).get( key ) );
         }
       } );
@@ -269,7 +269,7 @@ public class DatabaseUserProxy implements User {
     final Map<String, String> results = Maps.newHashMap( );
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
-        public void fire( UserEntity t ) throws Throwable {
+        public void fire( UserEntity t ) {
           results.putAll( t.getInfo( ) );
         }
       } );
@@ -284,7 +284,7 @@ public class DatabaseUserProxy implements User {
   public void setInfo( final String key, final String value ) throws AuthException {
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
-        public void fire( UserEntity t ) throws Throwable {
+        public void fire( UserEntity t ) {
           t.getInfo( ).put( key, value );
         }
       } );
@@ -298,7 +298,7 @@ public class DatabaseUserProxy implements User {
   public void setInfo( final Map<String, String> newInfo ) throws AuthException {
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
-        public void fire( UserEntity t ) throws Throwable {
+        public void fire( UserEntity t ) {
           t.getInfo( ).clear( );
           t.getInfo( ).putAll( newInfo );
         }
@@ -314,7 +314,7 @@ public class DatabaseUserProxy implements User {
     final List<AccessKey> results = Lists.newArrayList( );
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
-        public void fire( UserEntity t ) throws Throwable {
+        public void fire( UserEntity t ) {
           for ( AccessKeyEntity k : t.getKeys( ) ) {
             results.add( new DatabaseAccessKeyProxy( k ) );
           }
@@ -334,7 +334,7 @@ public class DatabaseUserProxy implements User {
       AccessKeyEntity key = db.getUnique( AccessKeyEntity.newInstanceWithAccessKeyId( keyId ) );
       db.commit( );
       return new DatabaseAccessKeyProxy( key );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get access key " + keyId );
       throw new AuthException( e );
@@ -350,7 +350,7 @@ public class DatabaseUserProxy implements User {
       user.getKeys( ).remove( keyEntity );
       db.recast( AccessKeyEntity.class ).delete( keyEntity );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get delete key " + keyId );
       throw new AuthException( e );
@@ -367,7 +367,7 @@ public class DatabaseUserProxy implements User {
       db.recast( AccessKeyEntity.class ).add( keyEntity );
       db.commit( );
       return new DatabaseAccessKeyProxy( keyEntity );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get create new access key: " + e.getMessage( ) );
       throw new AuthException( e );
@@ -380,7 +380,7 @@ public class DatabaseUserProxy implements User {
     try {
       final UserEntity search = UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) );
       Transactions.one( search, new Tx<UserEntity>( ) {
-        public void fire( UserEntity t ) throws Throwable {
+        public void fire( UserEntity t ) {
           for ( CertificateEntity c : t.getCertificates( ) ) {
             results.add( new DatabaseCertificateProxy( c ) );
           }
@@ -401,7 +401,7 @@ public class DatabaseUserProxy implements User {
       CertificateEntity cert = db.getUnique( CertificateEntity.newInstanceWithId( certificateId ) );
       db.commit( );
       return new DatabaseCertificateProxy( cert );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get signing certificate " + certificateId );
       throw new AuthException( e );
@@ -420,7 +420,7 @@ public class DatabaseUserProxy implements User {
       certEntity.setUser( user );
       db.commit( );
       return new DatabaseCertificateProxy( certEntity );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get add certificate " + cert );
       throw new AuthException( e );
@@ -436,7 +436,7 @@ public class DatabaseUserProxy implements User {
       user.getCertificates( ).remove( certificateEntity );
       db.recast( CertificateEntity.class ).delete( certificateEntity );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get delete certificate " + certficateId );
       throw new AuthException( e );
@@ -448,7 +448,7 @@ public class DatabaseUserProxy implements User {
     final List<Group> results = Lists.newArrayList( );
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
-        public void fire( UserEntity t ) throws Throwable {
+        public void fire( UserEntity t ) {
           for ( GroupEntity g : t.getGroups( ) ) {
             results.add( new DatabaseGroupProxy( g ) );
           }
@@ -466,7 +466,7 @@ public class DatabaseUserProxy implements User {
     final List<Account> results = Lists.newArrayList( );
     try {
       Transactions.one( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ), new Tx<UserEntity>( ) {
-        public void fire( UserEntity t ) throws Throwable {
+        public void fire( UserEntity t ) {
           if ( t.getGroups( ).size( ) < 1 ) {
             throw new RuntimeException( "Unexpected group number of the user" );
           }
@@ -521,7 +521,7 @@ public class DatabaseUserProxy implements User {
       }
       db.commit( );
       return results;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to get policies for " + this.delegate );
       throw new AuthException( "Failed to get policies", e );
@@ -555,7 +555,7 @@ public class DatabaseUserProxy implements User {
       }
       db.commit( );
       return new DatabasePolicyProxy( parsedPolicy );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to attach policy for " + this.delegate.getName( ) );
       throw new AuthException( "Failed to attach policy", e );
@@ -579,7 +579,7 @@ public class DatabaseUserProxy implements User {
         db.recast( PolicyEntity.class ).delete( policy );
       }
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to remove policy " + name + " in " + this.delegate );
       throw new AuthException( "Failed to remove policy", e );
@@ -613,7 +613,7 @@ public class DatabaseUserProxy implements User {
         results.add( new DatabaseAuthorizationProxy( auth ) );
       }
       return results;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to lookup authorization for user with ID " + userId + ", type=" + resourceType);
       throw new AuthException( "Failed to lookup auth", e );
@@ -642,7 +642,7 @@ public class DatabaseUserProxy implements User {
         results.add( new DatabaseAuthorizationProxy( auth ) );
       }
       return results;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to lookup quotas for user with ID " + userId + ", type=" + resourceType);
       throw new AuthException( "Failed to lookup quota", e );

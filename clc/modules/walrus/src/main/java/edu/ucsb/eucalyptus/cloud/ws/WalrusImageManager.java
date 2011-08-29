@@ -377,7 +377,7 @@ public class WalrusImageManager {
 		BucketInfo bucket = null;
 		try {
 			bucket = db.getUnique(bucketInfo);
-		} catch(Throwable t) {
+		} catch(Exception t) {
 			throw new WalrusException("Unable to get bucket: " + bucketName, t);
 		}
 
@@ -594,7 +594,7 @@ public class WalrusImageManager {
 		BucketInfo bucket = null;
 		try {
 			bucket = db.getUnique(bucketInfo);
-		} catch(Throwable t) {
+		} catch(Exception t) {
 			throw new WalrusException("Unable to get bucket: " + bucketName, t);
 		}
 
@@ -998,7 +998,7 @@ public class WalrusImageManager {
 				output.start();
 				int exitVal = proc.waitFor();
 				output.join();
-			} catch (Throwable t) {
+			} catch (Exception t) {
 				LOG.error(t);
 			}
 		}
@@ -1213,7 +1213,7 @@ public class WalrusImageManager {
 		BucketInfo bucket = null;
 		try {
 			bucket = db.getUnique(bucketInfo);
-		} catch(Throwable t) {
+		} catch(Exception t) {
 			throw new WalrusException("Unable to get bucket", t);
 		}
 

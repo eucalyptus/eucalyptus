@@ -73,7 +73,7 @@ import java.util.List;
 public class XMLParserTest extends TestCase {
 
 
-    public void testParse() throws Throwable {
+    public void testParse() throws Exception {
         String parseTestString = "<AccessControlPolicy> <AccessControlList> <Grant> <Grantee> <DisplayName>nekro</DisplayName> </Grantee> <Permission>FULL_CONTROL</Permission> </Grant> <Grant> <Grantee> <DisplayName>lolwho</DisplayName> </Grantee> <Permission>NO_U</Permission> </Grant></AccessControlList> </AccessControlPolicy>";
 
         XMLParser xmlParser = new XMLParser(parseTestString);

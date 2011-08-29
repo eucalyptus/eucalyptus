@@ -283,7 +283,7 @@ int ncStubDestroy (ncStub * st)
 
 /************************** stubs **************************/
 
-int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
+int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
 {
   ncInstance *instance;
   loadNcStuff();
@@ -295,6 +295,7 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceI
 				instance_state_names[PENDING], 
 				PENDING, 
 				meta->userId, 
+				ownerId, accountId,
 				netparams, keyName,
 				userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize);
   myconfig->instanceidx++;

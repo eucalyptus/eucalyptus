@@ -437,7 +437,8 @@ int main (int argc, char **argv)
                                        &params, 
                                        image_id, image_url, 
                                        kernel_id, kernel_url, 
-                                       ramdisk_id, ramdisk_url, 
+                                       ramdisk_id, ramdisk_url,
+				       "eucalyptusUser", "eucalyptusAccount",
                                        "", /* key */
 									   &netparams,
 									   //                                       privMac, privIp, vlan, 

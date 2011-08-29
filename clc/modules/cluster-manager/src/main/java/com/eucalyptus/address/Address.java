@@ -75,28 +75,30 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.AccountMetadata;
+import com.eucalyptus.cloud.CloudMetadata.AddressMetadata;
+import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.AssignAddressCallback;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.entities.AddressMetadata;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.TypeMapping;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.async.NOOP;
 import com.eucalyptus.util.async.RemoteCallback;
 import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 
-@Entity @javax.persistence.Entity
+@Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_addresses" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -170,13 +172,11 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
                                                                   };
   @Transient
   private volatile SplitTransition        transition;
-  @Transient
-  private FullName                        owner;
   
   public Address( ) {}
   
   public Address( final String ipAddress ) {
-    super( FakePrincipals.NOBODY_USER_ERN, ipAddress );
+    super( Principals.nobodyFullName( ), ipAddress );
   }
   
   public Address( String ipAddress, String partition ) {
@@ -189,10 +189,10 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     this.init( );
   }
   
-  public Address( UserFullName userFullName, String address, String partition, String instanceId, String instanceAddress ) {
+  public Address( OwnerFullName ownerFullName, String address, String partition, String instanceId, String instanceAddress ) {
     this( address );
     this.partition = partition;
-    this.setOwner( userFullName );
+    this.setOwner( ownerFullName );
     this.instanceId = instanceId;
     this.instanceAddress = instanceAddress;
     this.transition = this.QUIESCENT;
@@ -208,7 +208,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
       this.instanceId = UNASSIGNED_INSTANCEID;
     }
-    if ( FakePrincipals.NOBODY_USER_ERN.equals( super.owner ) ) {
+    if ( Principals.nobodyFullName( ).equals( super.getOwner( ) ) ) {
       this.atomicState.set( State.unallocated, true );
       this.instanceAddress = UNASSIGNED_INSTANCEADDR;
       this.instanceId = UNASSIGNED_INSTANCEID;
@@ -222,7 +222,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       this.atomicState.set( State.allocated, true );
       if ( this.isSystemOwned( ) ) {
         Addresses.getInstance( ).registerDisabled( this );
-        this.setOwner( FakePrincipals.NOBODY_USER_ERN );
+        this.setOwner( Principals.nobodyFullName( ) );
         this.instanceAddress = UNASSIGNED_INSTANCEADDR;
         this.instanceId = UNASSIGNED_INSTANCEID;
         Address.removeAddress( this.getDisplayName( ) );
@@ -249,12 +249,12 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return true;
   }
   
-  public Address allocate( final UserFullName userFullName ) {
+  public Address allocate( final OwnerFullName ownerFullName ) {
     this.transition( State.unallocated, State.allocated, false, true, new SplitTransition( Transition.allocating ) {
       public void top( ) {
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
-        Address.this.setOwner( userFullName );
+        Address.this.setOwner( ownerFullName );
         Address.addAddress( Address.this );
         try {
           Addresses.getInstance( ).register( Address.this );
@@ -285,7 +285,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
                                                                                                         : "USER" ).info( );
         Address.this.instanceId = UNASSIGNED_INSTANCEID;
         Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
-        Address.this.setOwner( FakePrincipals.NOBODY_USER_ERN );
+        Address.this.setOwner( Principals.nobodyFullName( ) );
         Address.removeAddress( Address.this.getDisplayName( ) );
         Address.this.stateUuid = UUID.randomUUID( ).toString( );
         Address.this.atomicState.attemptMark( State.unallocated, false );
@@ -312,7 +312,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       Address dbAddr = db.getUnique( new Address( ipAddress ) );
       db.delete( dbAddr );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
     }
   }
@@ -321,7 +321,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     SplitTransition unassign = new SplitTransition( Transition.unassigning ) {
       public void top( ) {
         try {
-          VmInstance vm = VmInstances.getInstance( ).lookup( Address.this.getInstanceId( ) );
+          VmInstance vm = VmInstances.lookup( Address.this.getInstanceId( ) );
           EventRecord.here( Address.class, EventClass.ADDRESS, EventType.ADDRESS_UNASSIGNING )
                      .withDetails( vm.getOwner( ).toString( ), Address.this.getName( ), "instanceid", vm.getInstanceId( ) )
                      .withDetails( "type", Address.this.isSystemOwned( )
@@ -356,7 +356,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
                        public void top( ) {
                          Address.this.instanceId = PENDING_ASSIGNMENT;
                          Address.this.instanceAddress = UNASSIGNED_INSTANCEADDR;
-                         Address.this.setOwner( FakePrincipals.SYSTEM_USER_ERN );
+                         Address.this.setOwner( Principals.systemFullName( ) );
                          Address.this.stateUuid = UUID.randomUUID( ).toString( );
                          try {
                            Addresses.getInstance( ).register( Address.this );
@@ -444,7 +444,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   public boolean isSystemOwned( ) {
-    return FakePrincipals.SYSTEM_USER_ERN.equals( ( UserFullName ) this.getOwner( ) );
+    return Principals.systemFullName( ).equals( ( UserFullName ) this.getOwner( ) );
   }
   
   public boolean isAssigned( ) {
@@ -455,12 +455,15 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return this.atomicState.isMarked( );
   }
   
-  private static void addAddress( Address address ) {
+  private static void addAddress( final Address address ) {
     Address addr = address;
     EntityWrapper<Address> db = EntityWrapper.get( Address.class );
     try {
-      addr = db.getUnique( new Address( address.getName( ) ) );
-      addr.setOwner( address.getOwner( ) );
+      addr = db.getUnique( new Address( address.getName( ) ) {
+        {
+          this.setOwnerAccountNumber( address.getOwnerAccountNumber( ) );
+        }
+      } );
       db.commit( );
     } catch ( RuntimeException e ) {
       db.rollback( );
@@ -470,7 +473,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       try {
         db.add( addr );
         db.commit( );
-      } catch ( Throwable e1 ) {
+      } catch ( Exception e1 ) {
         db.rollback( );
       }
     }
@@ -485,7 +488,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   public String getUserId( ) {
-    return this.owner.getUniqueId( );
+    return this.getOwner( ).getUserId( );
   }
   
   public String getInstanceAddress( ) {
@@ -518,11 +521,6 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   @Override
-  public int compareTo( final AddressMetadata that ) {
-    return this.getName( ).compareTo( that.getName( ) );
-  }
-  
-  @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
     if ( !( o instanceof Address ) ) return false;
@@ -541,19 +539,6 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     String desc = String.format( "%s (%s)", this.getInstanceId( ), this.getOwner( ) );
     return new AddressInfoType( name, desc );
   }
-  
-  public static final TypeMapping<Address, AddressInfoType> //
-  describeAddressTypeMapping = 
-    new TypeMapping<Address, AddressInfoType>( ) {
-             @Override
-             public AddressInfoType apply( Address from ) {
-               return new AddressInfoType(
-                                                             from.getDisplayName( ),
-                                                             UNASSIGNED_INSTANCEID.equals( from.getInstanceId( ) )
-                                                               ? null
-                                                               : from.getInstanceId( ) );
-                                                                                                         }
-                                                                                                         };
   
   public AddressInfoType getDescription( ) {
     String name = this.getName( );
@@ -598,7 +583,16 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   @Override
   public FullName getFullName( ) {
     return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( ClusterController.class ).name( ) ).namespace( this.getPartition( ) ).relativeId( "public-address",
-                                                                                                                                               this.getName( ) );
+                                                                                                                                                           this.getName( ) );
+  }
+
+  @Override
+  public int compareTo( AccountMetadata that ) {
+    if ( that instanceof Address ) {
+      return this.getName( ).compareTo( that.getName( ) );
+    } else {
+      return super.compareTo( that );
+    }
   }
   
 }

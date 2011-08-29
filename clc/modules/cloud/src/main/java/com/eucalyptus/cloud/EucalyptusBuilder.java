@@ -95,7 +95,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   
   @Override
   public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException, CheckException {
-    EventRecord.here( EucalyptusBuilder.class, EventType.COMPONENT_SERVICE_CHECK, config.toString( ) ).info( );//TODO:GRZE: host checks here.
+//    EventRecord.here( EucalyptusBuilder.class, EventType.COMPONENT_SERVICE_CHECK, config.toString( ) ).exhaust( );//TODO:GRZE: host checks here.
     if( !Bootstrap.isFinished( ) ) {
       return;
     }
