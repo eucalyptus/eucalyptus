@@ -1045,13 +1045,20 @@ public class EuareWebBackend {
       String userName = policySerialized.getField( i++ );
       Account account = Accounts.lookupAccountByName( accountName );
       if ( !Strings.isNullOrEmpty( userName ) ) {
+        // delete user policy
         User user = account.lookupUserByName( userName );
         EuarePermission.authorizeDeleteUserPolicy( requestUser, account, user );
         user.removePolicy( policyName );
-      } else {
+      } else if ( !Strings.isNullOrEmpty( groupName ) ) {
+        // delete group policy
         Group group = account.lookupGroupByName( groupName );
         EuarePermission.authorizeDeleteGroupPolicy( requestUser, account, group );
         group.removePolicy( policyName );
+      } else {
+        // delete account policy
+        User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+        EuarePermission.authorizeDeleteAccountPolicy( requestUser );
+        admin.removePolicy( policyName );        
       }
     } catch ( EucalyptusServiceException e ) {
       LOG.debug( e, e );

@@ -146,6 +146,12 @@ public class EuarePermission {
       throw new EucalyptusServiceException( "Operation is not authorized" );
     }
   }
+
+  public static void authorizeDeleteAccountPolicy( User requestUser ) throws EucalyptusServiceException {
+    if ( !requestUser.isSystemAdmin( ) ) {
+      throw new EucalyptusServiceException( "Operation is not authorized" );
+    }
+  }
   
   public static void authorizeAddUserPolicy( User requestUser, Account account, User user ) throws EucalyptusServiceException {
     boolean allowed = false;

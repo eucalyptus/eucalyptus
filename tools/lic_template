@@ -75,14 +75,14 @@
     "base-dn":"ou=people,dc=foo,dc=com",
     "id-attribute":"uid",
     "user-info-attributes":{
-        "name":"Name",
+        "fullName":"Full Name",
         "email":"Email"
     },
     "selection":{
 
         "_comment":"This construct defines what entities to select from LDAP tree. <filter> is mandatory, which is an LDAP search filter. <select> and <not-select> are optional, which specify one-offs.",
 
-        "filter":"objectClass=inetOrgPersion",
+        "filter":"objectClass=inetOrgPerson",
         "select":["uid=john,ou=People,dc=foo,dc=com", "uid=jack,ou=People,dc=foo,dc=com"],
         "not-select":["uid=tom,ou=People,dc=foo,dc=com"],
     }

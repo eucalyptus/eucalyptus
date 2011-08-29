@@ -110,8 +110,6 @@ public class ShellActivity extends AbstractActivity
     shellView.getHeaderView( ).getUserSetting( ).setUser( user );
     shellView.getHeaderView( ).getUserSetting( ).setPresenter( this );
     shellView.getHeaderView( ).setSearchHandler( this );
-    shellView.getHeaderView( ).setLogoTitle( clientFactory.getSessionData( ).getStringProperty( SessionData.LOGO_TITLE, DEFAULT_LOGO_TITLE ),
-                                             clientFactory.getSessionData( ).getStringProperty( SessionData.LOGO_SUBTITLE, DEFAULT_LOGO_SUBTITLE ) );
     
     shellView.getDetailView( ).setController( this );
     
