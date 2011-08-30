@@ -98,7 +98,7 @@ class ModifyPropertyValue(AWSQueryRequest):
                                            prop['euca:oldValue'])
         
     def main(self, **args):
-        return self.send(**args)
+        return self.send(verb='POST', **args)
 
     def main_cli(self):
         self.do_cli()
