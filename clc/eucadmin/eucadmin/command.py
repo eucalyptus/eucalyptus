@@ -30,9 +30,7 @@
 
 import StringIO
 import subprocess
-import os
 import time
-import shlex
 
 class Command(object):
     """
@@ -49,22 +47,24 @@ class Command(object):
         self.test = test
         self.exit_code = 0
         self.error = None
+        self._stdout_fp = StringIO.StringIO()
+        self._stderr_fp = StringIO.StringIO()
         self.command = command
         self.run()
 
-    def run(self, input=None):
+    def run(self):
         if self.test:
             print self.command
             return 0
-        args = shlex.split(self.command)
-        self.process = subprocess.Popen(args, shell=False,
-                                        env=os.environ,
+        self.process = subprocess.Popen(self.command, shell=True,
                                         stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE)
-        t = self.process.communicate(input)
-        self._stdout = t[0]
-        self._stderr = t[1]
+        while self.process.poll() == None:
+            time.sleep(1)
+            t = self.process.communicate()
+            self._stdout_fp.write(t[0])
+            self._stderr_fp.write(t[1])
         self.exit_code = self.process.returncode
         return self.exit_code
 
@@ -74,10 +74,10 @@ class Command(object):
 
     @property
     def stdout(self):
-        return self._stdout
+        return self._stdout_fp.getvalue()
 
     @property
     def stderr(self):
-        return self._stderr
+        return self._stderr_fp.getvalue()
 
 
