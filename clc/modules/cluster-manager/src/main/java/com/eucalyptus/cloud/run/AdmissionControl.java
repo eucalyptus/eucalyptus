@@ -204,6 +204,9 @@ public class AdmissionControl {
           ? clusterName
           : "default";
         String action = PolicySpec.requestToAction( request );
+        if ( action == null ) {
+          action = PolicySpec.VENDOR_EC2 + ":" + ctx.getRequest( ).getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
+        }
         User requestUser = ctx.getUser( );
         List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName, action, requestUser );
         int remaining = maxAmount;
