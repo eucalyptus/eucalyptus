@@ -129,8 +129,6 @@ public class ImageManager {
     DescribeImagesResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
-    final User requestUser = ctx.getUser( );
-    final String action = PolicySpec.requestToAction( request );
     final Set<String> imageSelectionSet = request.getImagesSet( ) != null
       ? new HashSet<String>( request.getImagesSet( ) )
       : new HashSet<String>( );
