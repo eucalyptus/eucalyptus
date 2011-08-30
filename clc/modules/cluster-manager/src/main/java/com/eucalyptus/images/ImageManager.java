@@ -165,16 +165,15 @@ public class ImageManager {
         if ( exeByNonEmpty ) {
           if ( !( ( exeByHasAll && image.getImagePublic( ) ) || // public
                   ( exeByHasSelf && ( image.getOwner( ).isOwner( requestAccountId ) || image.hasPermission( requestAccountId ) ) ) || // implicit or explicit, but no public
-          ( !exeBySelectionSet.isEmpty( ) && ( image.getOwner( ).isOwner( requestAccountId ) && image.hasPermission( ( String[] ) exeBySelectionSet.toArray( ) ) ) )
-                                             ) ) {
-                                               return false;
-                                             }
-                                           }
-                                           return true;
-                                         }
+                  ( !exeBySelectionSet.isEmpty( ) && ( image.getOwner( ).isOwner( requestAccountId ) && image.hasPermission( ( String[] ) exeBySelectionSet.toArray( ) ) ) ) ) ) {
+            return false;
+          }
+        }
+        return true;
+      }
       
     };
-    Predicate<ImageInfo> filter = Predicates.and( imageFilter, RestrictedTypes.filterPrivileged( ) );
+    Predicate<ImageInfo> filter = Predicates.and( imageFilter, RestrictedTypes.filterPrivileged( false ) );
     List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), filter, Images.TO_IMAGE_DETAILS );
     reply.getImagesSet( ).addAll( imageDetailsList );
     ImageUtil.cleanDeregistered( );
