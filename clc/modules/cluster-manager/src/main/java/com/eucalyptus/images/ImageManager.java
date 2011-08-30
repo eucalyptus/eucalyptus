@@ -94,6 +94,7 @@ import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType;
@@ -129,11 +130,7 @@ public class ImageManager {
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
     final User requestUser = ctx.getUser( );
-    
-    // TODO(wenye): RESTORE this once the action mapping works again. IT IS A HACK!
-    //final String action = PolicySpec.requestToAction( request );
-    final String action = PolicySpec.EC2_DESCRIBEIMAGES;
-    
+    final String action = PolicySpec.requestToAction( request );
     final Set<String> imageSelectionSet = request.getImagesSet( ) != null
       ? new HashSet<String>( request.getImagesSet( ) )
       : new HashSet<String>( );
@@ -170,20 +167,17 @@ public class ImageManager {
         if ( exeByNonEmpty ) {
           if ( !( ( exeByHasAll && image.getImagePublic( ) ) || // public
                   ( exeByHasSelf && ( image.getOwner( ).isOwner( requestAccountId ) || image.hasPermission( requestAccountId ) ) ) || // implicit or explicit, but no public
-                  ( !exeBySelectionSet.isEmpty( ) && ( image.getOwner( ).isOwner( requestAccountId ) && image.hasPermission( ( String[] ) exeBySelectionSet.toArray( ) ) ) )
-                ) ) {
-            return false;
-          }
-        }
-        // Check IAM permission at the end
-        if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, image.getDisplayName( ), null, action, requestUser ) ) {
-          return false;
-        }
-        return true;
-      }
+          ( !exeBySelectionSet.isEmpty( ) && ( image.getOwner( ).isOwner( requestAccountId ) && image.hasPermission( ( String[] ) exeBySelectionSet.toArray( ) ) ) )
+                                             ) ) {
+                                               return false;
+                                             }
+                                           }
+                                           return true;
+                                         }
       
     };
-    List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), imageFilter, Images.TO_IMAGE_DETAILS );
+    Predicate<ImageInfo> filter = Predicates.and( imageFilter, RestrictedTypes.filterPrivileged( ) );
+    List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), filter, Images.TO_IMAGE_DETAILS );
     reply.getImagesSet( ).addAll( imageDetailsList );
     ImageUtil.cleanDeregistered( );
     return reply;
