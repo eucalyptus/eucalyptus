@@ -94,6 +94,7 @@ import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.LifecycleEvent;
+import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceChecks;
 import com.eucalyptus.component.ServiceChecks.CheckException;
@@ -112,15 +113,15 @@ import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.ConnectionException;
 import com.eucalyptus.util.async.FailedRequestException;
@@ -173,7 +174,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
         try {
           AsyncRequests.newRequest( new StartServiceCallback( input ) ).sendSync( input.configuration );
           return true;
-        } catch ( Throwable t ) {
+        } catch ( Exception t ) {
           return input.filterExceptions( t );
         }
       }
@@ -187,7 +188,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
           }
           Clusters.getInstance( ).register( input );
           return true;
-        } catch ( Throwable t ) {
+        } catch ( Exception t ) {
           if ( !input.filterExceptions( t ) ) {
             return false;
           } else {
@@ -205,7 +206,7 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             AsyncRequests.newRequest( new DisableServiceCallback( input ) ).sendSync( input.configuration );
           }
           return true;
-        } catch ( Throwable t ) {
+        } catch ( Exception t ) {
           return input.filterExceptions( t );
         } finally {
           Clusters.getInstance( ).registerDisabled( input );
@@ -234,7 +235,9 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             BaseMessage res = AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback )
                                            .sendSync( parent.getLogServiceConfiguration( ) );
             LOG.error( res );
-          } catch ( Throwable t ) {
+          } catch ( InterruptedException t ) {
+            Thread.currentThread( ).interrupt( );
+          } catch ( Exception t ) {
             parent.filterExceptions( t );
           }
         }
@@ -423,10 +426,10 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
             }
             break;
           case ENABLED:
-            if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_ENABLED ) && Component.State.ENABLED.isIn( this.configuration ) ) {
+            if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_ENABLED ) && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
               transition = Automata.sequenceTransitions( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
                                                          State.ENABLED_NET, State.ENABLED_VMS, State.ENABLED );
-            } else if ( initialized && Component.State.DISABLED.isIn( this.configuration ) || Component.State.NOTREADY.isIn( this.configuration ) ) {
+            } else if ( initialized && Component.State.DISABLED.equals( this.configuration.lookupState( ) ) || Component.State.NOTREADY.equals( this.configuration.lookupState( ) ) ) {
               transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
             }
             break;
@@ -949,6 +952,15 @@ public class Cluster implements HasFullName<Cluster>, EventListener, HasStateMac
   @Override
   public String getPartition( ) {
     return this.configuration.getPartition( );
+  }
+  
+  public Partition lookupPartition( ) {
+    try {
+      return Partitions.lookup( this.getConfiguration( ) );
+    } catch ( ServiceRegistrationException ex ) {
+      LOG.error( ex , ex );
+      throw new RuntimeException( "Failed to lookup partition for cluster: " + this.getConfiguration( ) + " due to " + ex.getMessage( ), ex );
+    }
   }
   
   @Override

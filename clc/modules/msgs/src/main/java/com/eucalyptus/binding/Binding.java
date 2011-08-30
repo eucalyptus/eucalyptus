@@ -66,6 +66,7 @@ package com.eucalyptus.binding;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -95,6 +96,7 @@ import org.jibx.runtime.impl.StAXWriter;
 import org.jibx.runtime.impl.UnmarshallingContext;
 import com.eucalyptus.ws.WebServicesException;
 import com.google.common.collect.Maps;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Binding {
   
@@ -149,6 +151,21 @@ public class Binding {
     } else {
       return this.bindingFactory;
     }
+  }
+  
+  public String toString( final Object param ) {
+    StringWriter out = new StringWriter( );
+    try {
+      IBindingFactory bindingFactory = BindingDirectory.getFactory( BindingManager.defaultBindingName( ), param.getClass( ) );
+      IMarshallingContext mctx = bindingFactory.createMarshallingContext( );
+      mctx.setIndent( 2 );
+      mctx.marshalDocument( this, "UTF-8", null, out );
+    } catch ( JiBXException e ) {
+      Logger.getLogger( BaseMessage.class ).debug( e, e );
+    } catch ( Exception e ) {
+      Logger.getLogger( BaseMessage.class ).error( e, e );
+    }
+    return out.toString( );
   }
   
   public OMElement toOM( final Object param ) throws BindingException {

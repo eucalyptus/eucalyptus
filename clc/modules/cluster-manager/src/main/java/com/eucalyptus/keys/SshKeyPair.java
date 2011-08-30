@@ -63,117 +63,75 @@
 
 package com.eucalyptus.keys;
 
-import java.io.Serializable;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.KeyPair;
+import org.hibernate.annotations.Entity;
+import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.cloud.CloudMetadata.KeyPairMetadata;
+import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.entities.UserMetadata;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
-import com.eucalyptus.util.HasOwningAccount;
+import com.eucalyptus.util.OwnerFullName;
 
-@Entity @javax.persistence.Entity
+@Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_keypairs" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPair {
-  enum State { available, removing }
-  @Column( name = "metadata_keypair_user_keyname", unique = true )
-  String                   uniqueName;                                                                 //bogus field to enforce uniqueness
+public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPairMetadata {
+  enum State {
+    available, removing
+  }
+  
   @Lob
   @Column( name = "metadata_keypair_public_key" )
-  String                   publicKey;
+  private String publicKey;
   @Column( name = "metadata_keypair_finger_print" )
-  String                   fingerPrint;
-  @Transient
-  private FullName          fullName;
-  public SshKeyPair( ) {}
+  private String fingerPrint;
   
-  public SshKeyPair( UserFullName userFullName, String keyName ) {
+  SshKeyPair( ) {}
+  
+  SshKeyPair( OwnerFullName userFullName, String keyName ) {
     super( userFullName, keyName );
-    this.uniqueName = this.getFullName( ).toString( );
   }
-
-  public SshKeyPair( UserFullName user ) {
+  
+  SshKeyPair( OwnerFullName user ) {
     super( user );
   }
   
-  public SshKeyPair( UserFullName user, String keyName, String publicKey, String fingerPrint ) {
+  SshKeyPair( OwnerFullName user, String keyName, String publicKey, String fingerPrint ) {
     this( user, keyName );
     this.publicKey = publicKey;
     this.fingerPrint = fingerPrint;
   }
   
-  public String getUniqueName( ) {
-    return this.uniqueName;
-  }
-
-  public void setUniqueName( String uniqueName ) {
-    this.uniqueName = uniqueName;
-  }
-
   public String getPublicKey( ) {
     return this.publicKey;
   }
-
+  
   public void setPublicKey( String publicKey ) {
     this.publicKey = publicKey;
   }
-
+  
   public String getFingerPrint( ) {
     return this.fingerPrint;
   }
-
+  
   public void setFingerPrint( String fingerPrint ) {
     this.fingerPrint = fingerPrint;
   }
-
+  
   @Override
   public String toString( ) {
-    return String.format( "SshKeyPair:%s:fingerPrint=%s", this.uniqueName, this.fingerPrint );
+    return String.format( "SshKeyPair:%s:fingerPrint=%s", this.getUniqueName( ), this.fingerPrint );
   }
-  
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = super.hashCode( );
-    result = prime * result + ( ( this.uniqueName == null )
-      ? 0
-      : this.uniqueName.hashCode( ) );
-    return result;
-  }
-  
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) {
-      return true;
-    }
-    if ( !super.equals( obj ) ) {
-      return false;
-    }
-    if ( getClass( ) != obj.getClass( ) ) {
-      return false;
-    }
-    SshKeyPair other = ( SshKeyPair ) obj;
-    if ( this.uniqueName == null ) {
-      if ( other.uniqueName != null ) {
-        return false;
-      }
-    } else if ( !this.uniqueName.equals( other.uniqueName ) ) {
-      return false;
-    }
-    return true;
-  }
-  
   
   @Override
   public String getPartition( ) {
@@ -182,14 +140,14 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPai
   
   @Override
   public FullName getFullName( ) {
-    return this.fullName == null ? this.fullName = FullName.create.vendor( "euca" )
-      .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
-      .namespace( this.getOwnerAccountId( ) )
-      .relativeId( "keypair", this.getDisplayName( ) ) : this.fullName;
+    return FullName.create.vendor( "euca" )
+                          .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
+                          .namespace( this.getOwnerAccountNumber( ) )
+                          .relativeId( "keypair", this.getDisplayName( ) );
   }
-  @Override
-  public int compareTo( KeyPair that ) {
-    return this.getFullName( ).toString( ).compareTo( that.getFullName( ).toString( ) );
+  
+  static SshKeyPair noKey( ) {
+    return new SshKeyPair( Principals.nobodyFullName( ), "nokey", "", "" );
   }
-
+  
 }

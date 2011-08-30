@@ -81,8 +81,8 @@ import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -93,7 +93,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   private static Logger        LOG                     = Logger.getLogger( RestfulMarshallingHandler.class );
   private String               namespace;
   private final String         namespacePattern;
-  private String               defaultBindingNamespace = BindingManager.DEFAULT_BINDING_NAMESPACE;
+  private String               defaultBindingNamespace = BindingManager.defaultBindingNamespace();
   private Binding              defaultBinding          = BindingManager.getDefaultBinding( );
   private Binding              binding;
   
@@ -118,7 +118,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       if ( bindingVersion.matches( "\\d\\d\\d\\d-\\d\\d-\\d\\d" ) ) {
         this.setNamespaceVersion( bindingVersion );
       } else {
-        this.setNamespace( BindingManager.DEFAULT_BINDING_NAME );
+        this.setNamespace( BindingManager.defaultBindingName() );
       }
       try {
         BaseMessage msg = ( BaseMessage ) this.bind( httpRequest );
@@ -167,7 +167,10 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
           httpResponse.setStatus( HttpResponseStatus.BAD_REQUEST );
         } else if ( httpResponse.getMessage( ) instanceof ExceptionResponseType ) {//handle error case specially
           ExceptionResponseType msg = ( ExceptionResponseType ) httpResponse.getMessage( );
-          String response = Binding.createRestFault( msg.getRequestType( ), msg.getMessage( ), Exceptions.string( msg.getException( ) ) );
+          if( msg.getException( ) != null ) {
+            Logs.extreme( ).debug( msg, msg.getException( ) );
+          }
+          String response = Binding.createRestFault( msg.getRequestType( ), msg.getMessage( ), msg.getError( ) );
           byteOut.write( response.getBytes( ) );
           httpResponse.setStatus( msg.getHttpStatus( ) );
         } else {//actually try to bind response

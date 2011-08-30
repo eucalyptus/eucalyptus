@@ -118,6 +118,7 @@ char * connect_iscsi_target (const char *dev_string)
     if (!pid) {
         close(filedes[0]);
         
+        logprintfl(EUCADEBUG, "connect_iscsi_target(): running command: %s\n", buf);
         if ((retval = system_output(buf)) == NULL) {
             logprintfl (EUCAERROR, "ERROR: connect_iscsi_target failed\n");
             len = 0;

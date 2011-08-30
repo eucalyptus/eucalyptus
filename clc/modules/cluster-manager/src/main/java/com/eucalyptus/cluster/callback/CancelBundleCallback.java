@@ -28,7 +28,7 @@ public class CancelBundleCallback extends MessageCallback<CancelBundleTaskType,C
       LOG.info( "Attempt to CancelBundleTask for instance " + this.getRequest( ).getBundleId( ) + " has failed." );
     } else {
       try {
-        VmInstance vm = VmInstances.getInstance( ).lookupByBundleId( this.getRequest().getBundleId( ) );
+        VmInstance vm = VmInstances.lookupByBundleId( this.getRequest().getBundleId( ) );
         EventRecord.here( CancelBundleCallback.class, EventType.BUNDLE_CANCELLED, this.getRequest( ).toSimpleString( ), vm.getBundleTask( ).getBundleId( ), vm.getInstanceId( ) ).info( );
         vm.resetBundleTask( );
       } catch ( NoSuchElementException e1 ) {

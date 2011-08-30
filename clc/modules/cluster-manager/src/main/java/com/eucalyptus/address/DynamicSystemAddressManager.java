@@ -1,13 +1,12 @@
 package com.eucalyptus.address;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.util.NotEnoughResourcesAvailable;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.Callback;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -17,49 +16,52 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   private static Logger LOG = Logger.getLogger( DynamicSystemAddressManager.class );
   
   @Override
-  public List<Address> allocateSystemAddresses( String cluster, int count ) throws NotEnoughResourcesAvailable {
-    List<Address> addressList = Lists.newArrayList( );
-    String partition;
-    try {
-      partition = Clusters.getInstance( ).lookup( cluster ).getPartition( );
-    } catch ( NoSuchElementException ex ) {
-      partition = cluster;//TODO:GRZE:RELEASE:OMGFIXME partition/cluster handling
-    }
-    if ( Addresses.getInstance( ).listDisabledValues( ).size( ) < count ) throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
-    for ( Address addr : Addresses.getInstance( ).listDisabledValues( ) ) {
-      try {
-        if ( partition.equals( addr.getPartition( ) ) && addressList.add( addr.pendingAssignment( ) ) && --count == 0 ) break;
-      } catch ( IllegalStateException e ) {
-        LOG.trace( e , e );
-      }
-    }
-    if ( count != 0 ) {
-      for( Address addr : addressList ) {
+  public List<Address> allocateSystemAddresses( final Partition partition, int count ) throws NotEnoughResourcesException {
+    if ( Addresses.getInstance( ).listDisabledValues( ).size( ) < count ) {
+      throw new NotEnoughResourcesException( "Not enough resources available: addresses (try --addressing private)" );
+    } else {
+      final List<Address> addressList = Lists.newArrayList( );
+      for ( final Address addr : Addresses.getInstance( ).listDisabledValues( ) ) {
         try {
-          addr.release( );
-        } catch ( IllegalStateException e ) {
-          LOG.error( e , e );
+          if ( partition.getName( ).equals( addr.getPartition( ) )
+               && addressList.add( addr.pendingAssignment( ) )
+               && ( --count == 0 ) ) {
+            break;
+          }
+        } catch ( final IllegalStateException e ) {
+          LOG.trace( e, e );
         }
       }
-      throw new NotEnoughResourcesAvailable( "Not enough resources available: addresses (try --addressing private)" );
-    } 
-    return addressList;
+      if ( count != 0 ) {
+        for ( final Address addr : addressList ) {
+          try {
+            addr.release( );
+          } catch ( final IllegalStateException e ) {
+            LOG.error( e, e );
+          }
+        }
+        throw new NotEnoughResourcesException( "Not enough resources available: addresses (try --addressing private)" );
+      }
+      return addressList;
+    }
   }
+  
   @Override
-  public void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesAvailable {
-    final Address addr = this.allocateSystemAddresses( vm.getClusterName( ), 1 ).get( 0 );
-    AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>() {
-      public void fire( BaseMessage response ) {
+  public void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesException {
+    final Address addr = this.allocateSystemAddress( vm.lookupPartition( ) );
+    AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>( ) {
+      @Override
+      public void fire( final BaseMessage response ) {
         vm.updatePublicAddress( addr.getName( ) );
       }
-    }).dispatch( addr.getPartition( ) );
+    } ).dispatch( addr.getPartition( ) );
   }
-    
+  
   @Override
   public List<Address> getReservedAddresses( ) {
     return Lists.newArrayList( Iterables.filter( Addresses.getInstance( ).listValues( ), new Predicate<Address>( ) {
       @Override
-      public boolean apply( Address arg0 ) {
+      public boolean apply( final Address arg0 ) {
         return arg0.isSystemOwned( );
       }
     } ) );
@@ -67,9 +69,9 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   
   @SuppressWarnings( "unchecked" )
   @Override
-  public void inheritReservedAddresses( List<Address> previouslyReservedAddresses ) {
+  public void inheritReservedAddresses( final List<Address> previouslyReservedAddresses ) {
     for ( final Address addr : previouslyReservedAddresses ) {
-      if( !addr.isAssigned( ) && !addr.isPending() && addr.isSystemOwned() && Address.UNASSIGNED_INSTANCEID.equals( addr.getInstanceId() ) ) {
+      if ( !addr.isAssigned( ) && !addr.isPending( ) && addr.isSystemOwned( ) && Address.UNASSIGNED_INSTANCEID.equals( addr.getInstanceId( ) ) ) {
         Addresses.release( addr );
       }
     }

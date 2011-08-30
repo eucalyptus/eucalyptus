@@ -27,12 +27,6 @@ public class HeaderViewImpl extends Composite implements HeaderView {
   @UiField
   SearchBox searchBox;
   
-  @UiField
-  Label logoTitle;
-  
-  @UiField
-  Label logoSubtitle;
-  
   private UserSettingViewImpl settingPopup;
   
   private SearchHandler searchHandler;
@@ -70,12 +64,6 @@ public class HeaderViewImpl extends Composite implements HeaderView {
   @Override
   public void setSearchHandler( SearchHandler handler ) {
     this.searchHandler = handler;
-  }
-
-  @Override
-  public void setLogoTitle( String title, String subtitle ) {
-    this.logoTitle.setText( title );
-    this.logoSubtitle.setText( subtitle );
   }
   
 }

@@ -72,7 +72,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
@@ -88,7 +88,7 @@ import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.network.NetworkGroups;
-import com.eucalyptus.network.NetworkRulesGroup;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Joiner;
@@ -194,7 +194,7 @@ public class VerifyMetadata {
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
       if ( allocInfo.getRequest( ).getKeyName( ) == null || "".equals( allocInfo.getRequest( ).getKeyName( ) ) ) {
-        if ( Image.Platform.windows.name( ).equals( allocInfo.getBootSet( ).getMachine( ).getPlatform( ) ) ) {
+        if ( ImageMetadata.Platform.windows.name( ).equals( allocInfo.getBootSet( ).getMachine( ).getPlatform( ) ) ) {
           throw new InvalidMetadataException( "You must specify a keypair when running a windows vm: " + allocInfo.getRequest( ).getImageId( ) );
         } else {
           allocInfo.setSshKeyPair( KeyPairs.noKey( ) );
@@ -220,7 +220,7 @@ public class VerifyMetadata {
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
       Context ctx = allocInfo.getContext( );
-      NetworkGroups.makeDefault( ctx.getUserFullName( ) );
+      NetworkGroups.lookup( ctx.getUserFullName( ), NetworkGroups.defaultNetworkName( ) );
       
       Set<String> networkNames = Sets.newHashSet( allocInfo.getRequest( ).getGroupSet( ) );
       if ( networkNames.isEmpty( ) ) {
@@ -235,9 +235,9 @@ public class VerifyMetadata {
         }
       }
       
-      Map<String, NetworkRulesGroup> networkRuleGroups = Maps.newHashMap( );
+      Map<String, NetworkGroup> networkRuleGroups = Maps.newHashMap( );
       for ( String groupName : networkNames ) {
-        NetworkRulesGroup group = NetworkGroups.lookup( ctx.getUserFullName( ), groupName );
+        NetworkGroup group = NetworkGroups.lookup( ctx.getUserFullName( ), groupName );
         networkRuleGroups.put( groupName, group );
       }
       Set<String> missingNets = Sets.difference( networkNames, networkRuleGroups.keySet( ) );

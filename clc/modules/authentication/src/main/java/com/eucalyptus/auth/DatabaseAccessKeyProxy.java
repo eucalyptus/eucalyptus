@@ -6,8 +6,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.entities.AccessKeyEntity;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.entities.Transactions;
 import java.util.concurrent.ExecutionException;
-import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 
@@ -32,7 +32,7 @@ public class DatabaseAccessKeyProxy implements AccessKey {
   public void setActive( final Boolean active ) throws AuthException {
     try {
       Transactions.one( AccessKeyEntity.newInstanceWithAccessKeyId( this.delegate.getAccessKey() ), new Tx<AccessKeyEntity>( ) {
-        public void fire( AccessKeyEntity t ) throws Throwable {
+        public void fire( AccessKeyEntity t ) {
           t.setActive( active );
         }
       } );
@@ -51,7 +51,7 @@ public class DatabaseAccessKeyProxy implements AccessKey {
   public void setSecretKey( final String key ) throws AuthException {
     try {
       Transactions.one( AccessKeyEntity.newInstanceWithAccessKeyId( this.delegate.getAccessKey() ), new Tx<AccessKeyEntity>( ) {
-        public void fire( AccessKeyEntity t ) throws Throwable {
+        public void fire( AccessKeyEntity t ) {
           t.setSecretKey( key );
         }
       } );
@@ -70,7 +70,7 @@ public class DatabaseAccessKeyProxy implements AccessKey {
   public void setCreateDate( final Date createDate ) throws AuthException {
     try {
       Transactions.one( AccessKeyEntity.newInstanceWithAccessKeyId( this.delegate.getAccessKey() ), new Tx<AccessKeyEntity>( ) {
-        public void fire( AccessKeyEntity t ) throws Throwable {
+        public void fire( AccessKeyEntity t ) {
           t.setCreateDate( createDate );
         }
       } );
@@ -85,7 +85,7 @@ public class DatabaseAccessKeyProxy implements AccessKey {
     final List<User> results = Lists.newArrayList( );
     try {
       Transactions.one( AccessKeyEntity.newInstanceWithAccessKeyId( this.delegate.getAccessKey() ), new Tx<AccessKeyEntity>( ) {
-        public void fire( AccessKeyEntity t ) throws Throwable {
+        public void fire( AccessKeyEntity t ) {
           results.add( new DatabaseUserProxy( t.getUser( ) ) );
         }
       } );

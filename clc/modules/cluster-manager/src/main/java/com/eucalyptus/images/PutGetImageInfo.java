@@ -69,10 +69,10 @@ import javax.persistence.Column;
 import javax.persistence.Lob;
 import javax.persistence.MappedSuperclass;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.ImageMetadata;
 
 @MappedSuperclass
-public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage {
+public class PutGetImageInfo extends ImageInfo implements ImageMetadata.StaticDiskImage {
   @Column( name = "metadata_image_manifest_path" )
   private String manifestLocation;
   
@@ -90,8 +90,8 @@ public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage 
   private Long   bundleSizeBytes;
   
   protected PutGetImageInfo( final UserFullName userFullName, final String imageId,
-                             final Image.Type imageType, final String imageName, final String imageDescription, final Long imageSizeBytes,
-                             final Image.Architecture arch, final Image.Platform platform,
+                             final ImageMetadata.Type imageType, final String imageName, final String imageDescription, final Long imageSizeBytes,
+                             final ImageMetadata.Architecture arch, final ImageMetadata.Platform platform,
                              final String manifestLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType ) {
     super( userFullName, imageId, imageType, imageName, imageDescription, imageSizeBytes, arch, platform );
     assertThat( manifestLocation, notNullValue( ) );
@@ -101,11 +101,11 @@ public class PutGetImageInfo extends ImageInfo implements Image.StaticDiskImage 
     this.checksumType = imageChecksumType;
   }
   
-  protected PutGetImageInfo( final Image.Type imageType ) {
+  protected PutGetImageInfo( final ImageMetadata.Type imageType ) {
     super( imageType );
   }
   
-  protected PutGetImageInfo( final Image.Type imageType, final String imageId ) {
+  protected PutGetImageInfo( final ImageMetadata.Type imageType, final String imageId ) {
     super( imageType, imageId );
   }
   

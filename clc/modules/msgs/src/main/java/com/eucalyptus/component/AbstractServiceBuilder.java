@@ -79,7 +79,7 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       return true;
     } catch ( PersistenceException e ) {
       throw new ServiceRegistrationException( e );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.error( e, e );
       return false;
     }

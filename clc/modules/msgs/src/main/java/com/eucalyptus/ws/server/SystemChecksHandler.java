@@ -64,6 +64,8 @@
 package com.eucalyptus.ws.server;
 
 import java.net.URI;
+import java.util.NoSuchElementException;
+import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -76,6 +78,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.mortbay.log.Log;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -86,9 +89,9 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.empyrean.ServiceTransitionType;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
-import com.eucalyptus.util.Logs;
 import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -109,6 +112,9 @@ public enum SystemChecksHandler implements ChannelUpstreamHandler {
           } else {
             this.sendError( ctx, e, comp, request.getServicePath( ) );
           }
+        } catch ( NoSuchElementException ex ) {
+          LOG.warn( "Failed to find reverse component mapping for message type: " + msg.getClass( ) );
+          ctx.sendUpstream( e );
         } catch ( Exception ex ) {
           Logs.extreme( ).error( ex, ex );
           ctx.sendUpstream( e );
@@ -144,6 +150,8 @@ public enum SystemChecksHandler implements ChannelUpstreamHandler {
       }
     }
   };
+  private static Logger LOG = Logger.getLogger( SystemChecksHandler.class );
+  
   protected void sendError( ChannelHandlerContext ctx, ChannelEvent e, Component comp, String originalPath ) {
     e.getFuture( ).cancel( );
     HttpResponse response = null;

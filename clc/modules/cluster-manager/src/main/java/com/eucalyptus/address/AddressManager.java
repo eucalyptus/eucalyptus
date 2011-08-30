@@ -70,16 +70,16 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressType;
@@ -103,7 +103,7 @@ public class AddressManager {
     Address address;
     try {
       address = Addresses.allocate( request );
-    } catch ( NotEnoughResourcesAvailable e ) {
+    } catch ( NotEnoughResourcesException e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e );
     }
@@ -131,9 +131,10 @@ public class AddressManager {
     for ( Address address : Addresses.getInstance( ).listValues( ) ) {
       //TODO:GRZE:FIXME this is not going to last this way.
       Account addrAccount = null;
-      if ( !FakePrincipals.NOBODY_ACCOUNT.getAccountNumber( ).equals( address.getOwnerAccountId( ) ) ) {
+      String addrAccountNumber = address.getOwnerAccountNumber( );
+      if ( !Principals.nobodyAccount().getAccountNumber( ).equals( addrAccountNumber ) ) {
         try {
-        addrAccount = Accounts.lookupAccountById( address.getOwnerAccountId( ) );
+        addrAccount = Accounts.lookupAccountById( addrAccountNumber );
         } catch ( AuthException e ) {}
       }
       if ( addrAccount != null
@@ -149,7 +150,7 @@ public class AddressManager {
     }
     if ( isAdmin ) {
       for ( Address address : Addresses.getInstance( ).listDisabledValues( ) ) {
-        reply.getAddressesSet( ).add( new AddressInfoType( address.getName( ), FakePrincipals.NOBODY_USER_ERN.getUserName( ) ) );
+        reply.getAddressesSet( ).add( new AddressInfoType( address.getName( ), Principals.nobodyFullName().getUserName( ) ) );
       }
     }
     return reply;
@@ -215,7 +216,7 @@ public class AddressManager {
     VmInstance oldVm = null;
     if ( address.isAssigned( ) && !address.isPending( ) ) {
       try {
-        oldVm = VmInstances.getInstance( ).lookup( address.getInstanceId( ) );
+        oldVm = VmInstances.lookup( address.getInstanceId( ) );
       } catch ( Exception e ) {
         LOG.error( e, e );
       }
@@ -239,7 +240,7 @@ public class AddressManager {
           AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
             public void fire( ) {
               try {
-                Addresses.system( VmInstances.getInstance( ).lookup( vmId ) );
+                Addresses.system( VmInstances.lookup( vmId ) );
               } catch ( Exception e ) {
                 LOG.debug( e, e );
               }
@@ -250,14 +251,14 @@ public class AddressManager {
             @Override
             public void fire( ) {
               try {
-                Addresses.system( VmInstances.getInstance( ).lookup( vmId ) );
+                Addresses.system( VmInstances.lookup( vmId ) );
               } catch ( Exception e ) {
                 LOG.debug( e, e );
               }
             }
           } ).dispatch( address.getPartition( ) );
         }
-      } catch ( Throwable e ) {
+      } catch ( Exception e ) {
         LOG.debug( e, e );
       }
     }

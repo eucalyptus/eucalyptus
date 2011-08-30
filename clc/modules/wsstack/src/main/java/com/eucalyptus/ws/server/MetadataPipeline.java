@@ -66,7 +66,7 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       } catch ( ServiceDispatchException e1 ) {
         LOG.debug( e1, e1 );
         reply = e1.getMessage( ).getBytes( );
-      } catch ( Throwable e1 ) {
+      } catch ( Exception e1 ) {
         LOG.debug( e1, e1 );
         reply = e1.getMessage( ).getBytes( );
       } finally {

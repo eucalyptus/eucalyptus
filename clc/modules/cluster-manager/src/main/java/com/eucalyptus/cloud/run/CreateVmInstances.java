@@ -63,34 +63,27 @@
  */
 package com.eucalyptus.cloud.run;
 
-import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Transactions;
-import com.eucalyptus.vm.VmTypes;
-import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class CreateVmInstances {
   private static Logger LOG = Logger.getLogger( CreateVmInstances.class );
   
-  public Allocation allocate( final Allocation allocInfo ) throws EucalyptusCloudException, MetadataException {
-    long quantity = getVmAllocationNumber( allocInfo );
-    Context ctx = allocInfo.getContext( );
-    User requestUser = ctx.getUser( );
-    UserFullName userFullName = ctx.getUserFullName( );
-    String action = PolicySpec.requestToAction( allocInfo.getRequest( ) );
-    String vmType = allocInfo.getVmType( ).getName( );
+  public Allocation allocate( final Allocation allocInfo ) throws Exception {
+    final long quantity = allocInfo.getAllocationTokens( ).size( );
+    final Context ctx = allocInfo.getContext( );
+    final User requestUser = ctx.getUser( );
+    final UserFullName userFullName = ctx.getUserFullName( );
+    final String action = PolicySpec.requestToAction( allocInfo.getRequest( ) );
+    final String vmType = allocInfo.getVmType( ).getName( );
     // Allocate VmType instances
     if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VMTYPE, vmType, action, requestUser, 1L ) ) {
       throw new EucalyptusCloudException( "Quota exceeded in allocating vm type " + vmType + " for " + requestUser.getName( ) );
@@ -99,64 +92,16 @@ public class CreateVmInstances {
     if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, "", action, requestUser, quantity ) ) {
       throw new EucalyptusCloudException( "Quota exceeded in allocating " + quantity + " vm instances for " + requestUser.getName( ) );
     }
-    String reservationId = VmInstances.getId( allocInfo.getReservationIndex( ), -1 ).replaceAll( "i-", "r-" );
-    int vmIndex = 0; /*<--- this corresponds to the first instance id CANT COLLIDE WITH RSVID             */
-    for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-      if ( Clusters.getInstance( ).hasNetworking( ) ) {
-        for ( Integer networkIndex : token.getPrimaryNetwork( ).getIndexes( ) ) {
-          VmInstance vmInst = getVmInstance( userFullName, allocInfo, reservationId, token, vmIndex++, networkIndex );
-          VmInstances.getInstance( ).register( vmInst );
-          try {
-            Transactions.save( vmInst );
-          } catch ( Throwable ex ) {
-            LOG.error( ex , ex );
-          }
-          token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
-        }
-      } else {
-        for ( int i = 0; i < token.getAmount( ); i++ ) {
-          VmInstance vmInst = getVmInstance( userFullName, allocInfo, reservationId, token, vmIndex++, -1 );
-          VmInstances.getInstance( ).register( vmInst );
-          try {
-            Transactions.save( vmInst );
-          } catch ( ExecutionException ex ) {
-            LOG.error( ex , ex );
-          }
-          token.getInstanceIds( ).add( vmInst.getInstanceId( ) );
-        }
+    for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+      try {
+        VmInstance vmInst = VmInstance.Create.INSTANCE.apply( token );
+        token.setVmInstance( vmInst );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+        throw new RuntimeException( ex );
       }
     }
     return allocInfo;
   }
   
-  private int getVmAllocationNumber( Allocation allocInfo ) {
-    int vmNum = 0;
-    for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-      if ( Clusters.getInstance( ).hasNetworking( ) ) {
-        vmNum += token.getPrimaryNetwork( ).getIndexes( ).size( );
-      } else {
-        vmNum += token.getAmount( );
-      }
-    }
-    return vmNum;
-  }
-  
-  private VmInstance getVmInstance( UserFullName userFullName, Allocation allocInfo, String reservationId, ResourceToken token, Integer index, Integer networkIndex ) {
-    VmTypeInfo vbr = null;//TODO:GRZE:this is crap.
-    try {
-      vbr = VmTypes.asVmTypeInfo( allocInfo.getVmType( ), allocInfo.getBootSet( ).getMachine( ) );
-    } catch ( MetadataException ex ) {
-      LOG.error( ex , ex );
-    }
-    VmInstance vmInst = new VmInstance( userFullName,  VmInstances.getId( allocInfo.getReservationIndex( ), index ), token.getInstanceUuids( ).get( index ), reservationId, 
-                                        index, token.getCluster( ),
-                                        allocInfo.getUserData( ),
-                                        vbr,
-                                        allocInfo.getSshKeyPair( ),
-                                        allocInfo.getVmType( ),
-                                        allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ),
-                                        allocInfo.getNetworks( ),
-                                        networkIndex.toString( ) );
-    return vmInst;
-  }
 }

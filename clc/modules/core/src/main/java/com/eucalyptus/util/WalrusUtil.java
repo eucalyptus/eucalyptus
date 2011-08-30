@@ -102,8 +102,8 @@ public class WalrusUtil {
 		}
 		return errMsg;
 	}
-  private static EucalyptusMessage convertException( String correlationId, Throwable ex ) {
-    EucalyptusMessage errMsg;
+  private static BaseMessage convertException( String correlationId, Throwable ex ) {
+    BaseMessage errMsg;
     if(ex instanceof WalrusException) {
 			WalrusException e = (WalrusException) ex;
 			errMsg = new WalrusErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId, Internets.localHostAddress( ), e.getLogData());
