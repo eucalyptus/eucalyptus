@@ -100,6 +100,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -203,9 +204,7 @@ public class AdmissionControl {
         String zoneName = ( clusterName != null )
           ? clusterName
           : "default";
-        String action = PolicySpec.requestToAction( request );
-        User requestUser = ctx.getUser( );
-        List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName, action, requestUser );
+        List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName );
         int remaining = maxAmount;
         int available = 0;
         LOG.info( "Found authorized clusters: " + Iterables.transform( authorizedClusters, new Function<Cluster, String>( ) {
@@ -263,17 +262,9 @@ public class AdmissionControl {
       return available;
     }
     
-    private List<Cluster> doPrivilegedLookup( String partitionName, String vmTypeName, final String action, final User requestUser ) throws NotEnoughResourcesException {
+    private List<Cluster> doPrivilegedLookup( String partitionName, String vmTypeName ) throws NotEnoughResourcesException {
       if ( "default".equals( partitionName ) ) {
-        Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
-          @Override
-          public boolean apply( final Cluster c ) {
-            try {
-              return Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_AVAILABILITYZONE, c.getName( ), null, action, requestUser );
-            } catch ( Exception e ) {}
-            return false;
-          }
-        } );
+        Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), RestrictedTypes.filterPrivileged( ) );
         Multimap<VmTypeAvailability, Cluster> sorted = TreeMultimap.create( );
         for ( Cluster c : authorizedClusters ) {
           sorted.put( c.getNodeState( ).getAvailability( vmTypeName ), c );
@@ -288,8 +279,8 @@ public class AdmissionControl {
         if ( cluster == null ) {
           throw new NotEnoughResourcesException( "Can't find cluster " + partitionName );
         }
-        if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_AVAILABILITYZONE, partitionName, null, action, requestUser ) ) {
-          throw new NotEnoughResourcesException( "Not authorized to use cluster " + partitionName + " for " + requestUser.getName( ) );
+        if ( ! RestrictedTypes.filterPrivileged( ).apply( cluster ) ) {
+          throw new NotEnoughResourcesException( "Not authorized to use cluster " + partitionName );
         }
         return Lists.newArrayList( cluster );
       }

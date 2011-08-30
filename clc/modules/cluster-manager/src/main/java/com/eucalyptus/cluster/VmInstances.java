@@ -107,6 +107,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
@@ -312,18 +313,10 @@ public class VmInstances {
     }
   }
   
-  public static VmInstance restrictedLookup( final BaseMessage request, final String instanceId ) throws EucalyptusCloudException {
-    final VmInstance vm = VmInstances.lookup( instanceId ); //TODO: test should throw error.
-    final Context ctx = Contexts.lookup( );
-    Account addrAccount = null;
-    try {
-      addrAccount = Accounts.lookupUserById( vm.getOwner( ).getUniqueId( ) ).getAccount( );
-    } catch ( final AuthException e ) {
-      throw new EucalyptusCloudException( e );
-    }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, addrAccount, PolicySpec.requestToAction( request ),
-                                    ctx.getUser( ) ) ) {
-      throw new EucalyptusCloudException( "Permission denied while trying to access instance " + instanceId + " by " + ctx.getUser( ) );
+  public static VmInstance restrictedLookup( final String instanceId ) throws EucalyptusCloudException {
+    final VmInstance vm = VmInstances.lookup( instanceId );
+    if ( ! RestrictedTypes.filterPrivileged( ).apply( vm ) ) {
+      throw new EucalyptusCloudException( "Permission denied while trying to access instance " + instanceId );
     }
     return vm;
   }

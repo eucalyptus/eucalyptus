@@ -115,7 +115,7 @@ public class AddressManager {
     ReleaseAddressResponseType reply = ( ReleaseAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    Address address = Addresses.restrictedLookup( request, request.getPublicIp( ) );
+    Address address = Addresses.restrictedLookup( request.getPublicIp( ) );
     Addresses.release( address );
     reply.set_return( true );
     return reply;
@@ -161,8 +161,8 @@ public class AddressManager {
     AssociateAddressResponseType reply = ( AssociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    final Address address = Addresses.restrictedLookup( request, request.getPublicIp( ) );//TODO: test should throw error.
-    final VmInstance vm = VmInstances.restrictedLookup( request, request.getInstanceId( ) );
+    final Address address = Addresses.restrictedLookup( request.getPublicIp( ) );
+    final VmInstance vm = VmInstances.restrictedLookup( request.getInstanceId( ) );
     final VmInstance oldVm = findCurrentAssignedVm( address );
     final Address oldAddr = findVmExistingAddress( vm );
     final boolean oldAddrSystem = oldAddr != null
@@ -229,7 +229,7 @@ public class AddressManager {
     reply.set_return( false );
     Addresses.updateAddressingMode( );
     Context ctx = Contexts.lookup( );
-    final Address address = Addresses.restrictedLookup( request, request.getPublicIp( ) );
+    final Address address = Addresses.restrictedLookup( request.getPublicIp( ) );
     reply.set_return( true );
     final String vmId = address.getInstanceId( );
     if ( address.isSystemOwned( ) && !ctx.hasAdministrativePrivileges( ) ) {

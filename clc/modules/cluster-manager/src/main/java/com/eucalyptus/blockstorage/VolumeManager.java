@@ -121,7 +121,7 @@ public class VolumeManager {
   public CreateVolumeResponseType CreateVolume( final CreateVolumeType request ) throws EucalyptusCloudException {
     Context ctx = Contexts.lookup( );
     String action = PolicySpec.requestToAction( request );
-    if ( !ctx.hasAdministrativePrivileges( )
+    if ( !ctx.hasAdministrativePrivileges( ) 
          && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VOLUME, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to create volume by " + ctx.getUser( ).getName( ) );
     }
@@ -283,7 +283,7 @@ public class VolumeManager {
     }
     VmInstance vm = null;
     try {
-      vm = VmInstances.lookup( request.getInstanceId( ) );
+      vm = VmInstances.restrictedLookup( request.getInstanceId( ) );
     } catch ( NoSuchElementException e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId( ) );
