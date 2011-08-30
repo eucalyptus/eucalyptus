@@ -72,7 +72,7 @@ import junit.framework.TestCase;
 public class ImageCacheTest extends TestCase {
 
 
-    public void testGetImage() throws Throwable {
+    public void testGetImage() throws Exception {
 
 		WalrusControl bukkit = new WalrusControl();
         String userId = "admin";

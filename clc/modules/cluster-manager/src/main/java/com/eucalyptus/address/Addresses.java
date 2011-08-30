@@ -66,21 +66,21 @@ package com.eucalyptus.address;
  */
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.euare.EuareException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstance.VmState;
 import com.eucalyptus.cluster.VmInstances;
+import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.event.AbstractNamedRegistry;
@@ -91,10 +91,8 @@ import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.NotEnoughResourcesAvailable;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
-import com.eucalyptus.vm.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
@@ -137,8 +135,8 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
                                                  }
                                                };
   
-  public static List<Address> allocateSystemAddresses( String cluster, int count ) throws NotEnoughResourcesAvailable {
-    return getAddressManager( ).allocateSystemAddresses( cluster, count );
+  public static Address allocateSystemAddress( Partition partition ) throws NotEnoughResourcesException {
+    return getAddressManager( ).allocateSystemAddresses( partition, 1 ).get( 0 );
   }
   
   private static AbstractSystemAddressManager getProvider( ) {
@@ -159,7 +157,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         Addresses.systemAddressManager.inheritReservedAddresses( oldMgr.getReservedAddresses( ) );
         LOG.info( "Setting the address manager to be: " + systemAddressManager.getClass( ).getSimpleName( ) );
       }
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( e, e );
     }
     return Addresses.systemAddressManager;
@@ -203,7 +201,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       }
       Account addrAccount = null;
       try {
-        addrAccount = Accounts.lookupAccountById( address.getOwnerAccountId( ) );
+        addrAccount = Accounts.lookupAccountById( address.getOwnerAccountNumber( ) );
       } catch ( AuthException e ) {
         throw new EucalyptusCloudException( e );
       }
@@ -214,7 +212,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     return address;
   }
   
-  public static Address allocate( BaseMessage request ) throws EucalyptusCloudException, NotEnoughResourcesAvailable {
+  public static Address allocate( BaseMessage request ) throws EucalyptusCloudException, NotEnoughResourcesException {
     Context ctx = Contexts.lookup( );
     String action = PolicySpec.requestToAction( request );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
@@ -225,18 +223,15 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         throw new EucalyptusCloudException( "Exceeded quota in allocating address by " + ctx.getUser( ).getName( ) );
       }
     }
-    //TODO(wenye): add quota restriction.
-//TODO:GRZE:FIXME    Addresses.policyLimits( userId, isAdministrator );
     return Addresses.getAddressManager( ).allocateNext( ctx.getUserFullName( ) );
   }
   
-  //TODO: add return of callback, use reassign, special case for now
   public static void system( VmInstance vm ) {
     try {
-      if( VmState.PENDING.equals( vm.getState() ) || VmState.RUNNING.equals( vm.getState() ) ) {
+      if( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) {
         Addresses.getInstance( ).getAddressManager( ).assignSystemAddress( vm );
       } 
-    } catch ( NotEnoughResourcesAvailable e ) {
+    } catch ( NotEnoughResourcesException e ) {
       LOG.warn( "No addresses are available to provide a system address for: " + LogUtil.dumpObject( vm ) );
       LOG.debug( e, e );
     }
@@ -250,7 +245,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
           @Override
           public void fire( ) {
             try {
-              final VmInstance vm = VmInstances.getInstance( ).lookup( instanceId );
+              final VmInstance vm = VmInstances.lookup( instanceId );
               Addresses.system( vm );
             } catch ( NoSuchElementException ex ) {}
           }

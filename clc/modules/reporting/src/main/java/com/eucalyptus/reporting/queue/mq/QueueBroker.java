@@ -145,8 +145,6 @@ public class QueueBroker
 	private static class JmsBrokerThread
 		extends Thread
 	{
-		private static Logger log = Logger.getLogger( JmsBrokerThread.class );
-
 		private final BrokerService brokerService;
 		private Exception exception = null;
 

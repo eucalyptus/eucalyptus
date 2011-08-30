@@ -63,6 +63,8 @@
 
 package com.eucalyptus.context;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Set;
@@ -71,7 +73,6 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -93,11 +94,9 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.Assertions;
-import com.eucalyptus.util.Logs;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Templates;
-import com.eucalyptus.util.async.Futures;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -122,7 +121,24 @@ public class ServiceContextManager {
   private ServiceContextManager( ) {
     this.canHasRead = this.canHas.readLock( );
     this.canHasWrite = this.canHas.writeLock( );
-    executor.submit( new Runnable( ) {
+    Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
+      
+      @Override
+      public void run( ) {
+        ServiceContextManager.this.running.set( false );
+        ServiceContextManager.this.queue.clear( );
+        if ( ServiceContextManager.this.context != null ) {
+          try {
+            ServiceContextManager.this.context.stop( );
+            ServiceContextManager.this.context.dispose( );
+          } catch ( MuleException ex ) {
+            LOG.error( ex, ex );
+          }
+        }
+      }
+      
+    } );
+    this.executor.submit( new Runnable( ) {
       public void run( ) {
         while ( ServiceContextManager.this.running.get( ) ) {
           ServiceConfiguration event;
@@ -132,7 +148,8 @@ public class ServiceContextManager {
                 if ( ServiceContextManager.this.canHasWrite.tryLock( ) ) {
                   try {
                     ServiceContextManager.this.update( );
-                  } catch ( Throwable ex ) {
+                  } catch ( Exception ex ) {
+                    LOG.error( Exceptions.causeString( ex ) );
                     LOG.error( ex, ex );
                   } finally {
                     ServiceContextManager.this.canHasWrite.unlock( );
@@ -177,12 +194,17 @@ public class ServiceContextManager {
     try {
       List<ComponentId> reloadComponentIds = this.shouldReload( );
       
-      if ( !reloadComponentIds.isEmpty( ) ) {
+      if ( !Bootstrap.isShuttingDown( ) && !reloadComponentIds.isEmpty( ) ) {
         if ( this.context != null ) {
-          this.shutdown( );
+          shutdown( );
         }
         this.context = this.createContext( reloadComponentIds );
-        Assertions.assertNotNull( this.context, "BUG: failed to build mule context for reasons unknown" );
+        if ( Bootstrap.isShuttingDown( ) ) {
+          this.running.set( false );
+          shutdown( );
+          return;
+        }
+        assertThat( this.context, notNullValue( ) );
         try {
           this.context.start( );
           this.client = new MuleClient( this.context );
@@ -196,13 +218,18 @@ public class ServiceContextManager {
               this.serviceToEndpoint.put( s.getName( ), in.getEndpointURI( ).toString( ) );
             }
           }
-        } catch ( Throwable e ) {
+        } catch ( Exception e ) {
           LOG.error( e, e );
           throw new ServiceInitializationException( "Failed to start service this.context.", e );
         }
       }
     } finally {
       this.canHasWrite.unlock( );
+    }
+    if ( Bootstrap.isShuttingDown( ) ) {
+      this.running.set( false );
+      shutdown( );
+      return;
     }
   }
   
@@ -215,6 +242,9 @@ public class ServiceContextManager {
       for ( ComponentId componentId : currentComponentIds ) {
         Component component = Components.lookup( componentId );
         String errMsg = "Failed to render model for: " + componentId + " because of: ";
+        if ( Bootstrap.isShuttingDown( ) ) {
+          return null;
+        }
         LOG.info( "-> Rendering configuration for " + componentId.name( ) );
         try {
           String outString = Templates.prepare( componentId.getServiceModelFileName( ) )
@@ -280,13 +310,14 @@ public class ServiceContextManager {
     try {
       if ( this.context != null ) {
         try {
-          for ( int i = 0; i < 10 && Contexts.hasOutstandingRequests( ); i++ ) {
-            try {
-              TimeUnit.SECONDS.sleep( 1 );
-            } catch ( InterruptedException ex ) {
-              Thread.currentThread( ).interrupt( );
-            }
-          }
+//TODO:GRZE: handle draining requests from context -- is it really needed?
+//          for ( int i = 0; i < 10 && Contexts.hasOutstandingRequests( ); i++ ) {
+//            try {
+//              TimeUnit.SECONDS.sleep( 1 );
+//            } catch ( InterruptedException ex ) {
+//              Thread.currentThread( ).interrupt( );
+//            }
+//          }
           this.context.stop( );
           this.context.dispose( );
         } catch ( MuleException ex ) {

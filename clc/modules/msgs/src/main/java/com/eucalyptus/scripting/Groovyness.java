@@ -1,7 +1,9 @@
 package com.eucalyptus.scripting;
 
+import groovy.lang.ExpandoMetaClassCreationHandle;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyObject;
+import groovy.lang.GroovySystem;
 import groovy.lang.ReadOnlyPropertyException;
 import java.io.BufferedReader;
 import java.io.File;
@@ -9,25 +11,36 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import javax.script.Bindings;
-import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 import javax.script.SimpleBindings;
 import javax.script.SimpleScriptContext;
 import org.apache.log4j.Logger;
+import org.codehaus.groovy.control.CompilerConfiguration;
 import com.eucalyptus.system.SubDirectory;
 
 public class Groovyness {
   private static Logger      LOG          = Logger.getLogger( Groovyness.class );
   public static ScriptEngine groovyEngine = getGroovyEngine( );
   
-  public static ScriptEngine getGroovyEngine( ) {
+  private static GroovyClassLoader getGroovyClassLoader( ) {
+    CompilerConfiguration config = new CompilerConfiguration( );
+    config.setDebug( true );
+    config.setVerbose( true );
+    ClassLoader parent = ClassLoader.getSystemClassLoader( );
+    GroovyClassLoader loader = new GroovyClassLoader( parent );
+    loader.setShouldRecompile( true );
+    return loader;
+  }
+  
+
+  private static ScriptEngine getGroovyEngine( ) {
     synchronized ( Groovyness.class ) {
       if ( groovyEngine == null ) {
-        ScriptEngineManager manager = new ScriptEngineManager( );
+        GroovySystem.getMetaClassRegistry( ).setMetaClassCreationHandle( new ExpandoMetaClassCreationHandle( ) );
+        ScriptEngineManager manager = new ScriptEngineManager( getGroovyClassLoader( ) );
         groovyEngine = manager.getEngineByName( "groovy" );
       }
       return groovyEngine;
@@ -37,17 +50,17 @@ public class Groovyness {
   public static <T> T newInstance( String fileName ) throws ScriptExecutionFailedException {
     GroovyObject groovyObject = null;
     try {
-      ClassLoader parent = ClassLoader.getSystemClassLoader( );
-      GroovyClassLoader loader = new GroovyClassLoader( parent );
       File f = new File( fileName );
       if ( !f.exists( ) ) {
         f = new File( SubDirectory.SCRIPTS + File.separator + fileName + ( fileName.endsWith( ".groovy" )
           ? ""
           : ".groovy" ) );
       }
+      GroovyClassLoader loader = getGroovyClassLoader( );
       Class groovyClass = loader.parseClass( f );
       groovyObject = ( GroovyObject ) groovyClass.newInstance( );
     } catch ( Exception e ) {
+      LOG.error( e, e );
       throw new ScriptExecutionFailedException( e );
     }
     try {
@@ -57,7 +70,7 @@ public class Groovyness {
       throw new ScriptExecutionFailedException( e.getMessage( ), e );
     }
   }
-  
+
   public static <T> T run( SubDirectory dir, String fileName ) {
     fileName = dir + File.separator + fileName;
     String fileNameWExt = fileName + ".groovy";
@@ -69,7 +82,7 @@ public class Groovyness {
       fileReader = new FileReader( fileName );
       T ret = ( T ) getGroovyEngine( ).eval( fileReader );
       return ret;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new RuntimeException( "Executing the requested script failed: " + fileName, e );
     } finally {
@@ -94,28 +107,28 @@ public class Groovyness {
                                                       setAttribute( "hi", code, ENGINE_SCOPE );
                                                     }
                                                   } );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new ScriptExecutionFailedException( "Executing the requested script failed: " + code, e );
     }
   }
   
-  public static Object eval( String code, Map context ) throws ScriptExecutionFailedException {
+  public static <T> T eval( String code, Map context ) throws ScriptExecutionFailedException {
     try {
       Bindings bindings = new SimpleBindings( context );
       SimpleScriptContext scriptContext = new SimpleScriptContext( );
       scriptContext.setBindings( bindings, SimpleScriptContext.ENGINE_SCOPE );
-      return getGroovyEngine( ).eval( code, scriptContext );
-    } catch ( Throwable e ) {
+      return ( T ) getGroovyEngine( ).eval( code, scriptContext );
+    } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new ScriptExecutionFailedException( "Executing the requested script failed: " + code, e );
     }
   }
   
-  public static Object eval( String code ) throws ScriptExecutionFailedException {
+  public static <T> T eval( String code ) throws ScriptExecutionFailedException {
     try {
-      return getGroovyEngine( ).eval( code );
-    } catch ( Throwable e ) {
+      return ( T ) getGroovyEngine( ).eval( code );
+    } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new ScriptExecutionFailedException( "Executing the requested script failed: " + code, e );
     }
@@ -147,7 +160,7 @@ public class Groovyness {
       } catch ( FileNotFoundException e ) {
         LOG.info( "-> No config file found." );
       }
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( e, e );
     }
   }

@@ -83,5 +83,10 @@ public class Walrus extends ComponentId.Unpartioned {
     return true;
   }
 
+  @Override
+  public String getVendorName( ) {
+    return "s3";
+  }
+
 
 }

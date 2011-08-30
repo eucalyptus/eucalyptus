@@ -80,6 +80,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapArgs;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.google.common.base.Function;
@@ -124,15 +125,17 @@ public class Internets {
   private static InetAddress lookupDefaultRoute( ) {
     InetAddress laddr = null;
     try {
-      String localAddr = ( String ) Groovyness.eval( "hi=\"ip -o route get 4.2.2.1\".execute();hi.waitFor();hi.text" );
+      String localAddr = ( String ) Groovyness.eval( "hi=\"/sbin/ip -o route get 4.2.2.1\".execute();hi.waitFor();hi.text" );
       String[] parts = localAddr.replaceAll( ".*src *", "" ).split( " " );
       if ( parts.length >= 1 ) {
         laddr = InetAddresses.forString( parts[0] );
       }
     } catch ( ScriptExecutionFailedException ex ) {
-      LOG.error( ex, ex );
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
     } catch ( Exception ex ) {
-      LOG.error( ex, ex );
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
     }
     return laddr;
   }

@@ -158,7 +158,7 @@ public class Reports extends HttpServlet {
               out.println( "ERROR getting log information for " + host );
               out.println( logInfo.toString( ) );
             }
-          } catch ( Throwable e ) {
+          } catch ( Exception e ) {
             LOG.debug( e, e );
             e.printStackTrace( out );
           }
@@ -178,14 +178,14 @@ public class Reports extends HttpServlet {
                 out.println( logInfo.toString( ) );
 	      }
             }
-          } catch ( Throwable e ) {
+          } catch ( Exception e ) {
             LOG.debug( e, e );
             e.printStackTrace( out );
           }
           
         }
         out.close( );
-      } catch ( Throwable e ) {
+      } catch ( Exception e ) {
         LOG.debug( e, e );
         e.printStackTrace( out );
         out.close( );
@@ -312,7 +312,7 @@ public class Reports extends HttpServlet {
         exporter.setParameter( JRExporterParameter.JASPER_PRINT, jasperPrint );
         //        exporter.setParameter( JRExporterParameter.PAGE_INDEX, new Integer( Param.page.get( ) ) );
         exporter.exportReport( );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
         res.setContentType( "text/plain" );
         LOG.error( "Could not create the report stream " + ex.getMessage( ) + " " + ex.getLocalizedMessage( ) );
@@ -488,7 +488,7 @@ public class Reports extends HttpServlet {
         reportCache.put( name, new ReportCache( name, jasperDesign ) );
       }
       return reportCache.get( name );
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       LOG.error( t, t );
       throw new JRException( t );
     }
@@ -537,7 +537,7 @@ public class Reports extends HttpServlet {
           put( "EUCA_USER_RESULTS", results );
           put( "EUCA_GROUP_RESULTS", groupResults );
         }}, data );
-      } catch ( Throwable e ) {
+      } catch ( Exception e ) {
         LOG.debug( e, e );
         throw new RuntimeException( e );
       } finally {

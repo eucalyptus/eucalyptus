@@ -96,7 +96,7 @@ public class LoginViewImpl extends Composite implements LoginView {
     Document.get( ).getElementById( LOGINFORM_PASSWORD_ID ).addClassName( formStyle.loginInput( ) );
     Document.get( ).getElementById( LOGINFORM_STAYSIGNEDINLABEL_ID ).addClassName( formStyle.checkLabel( ) );
     Document.get( ).getElementById( LOGINFORM_SIGNINLABEL_ID ).addClassName( formStyle.loginLabel( ) );
-    Document.get( ).getElementById( LOGINFORM_EUCALABEL_ID ).addClassName( formStyle.eucaLabel( ) );
+    Document.get( ).getElementById( LOGINFORM_EUCALABEL_ID ).addClassName( formStyle.loginLabel( ) );
   }
   
   private native void injectLoginFormAction( LoginView view ) /*-{

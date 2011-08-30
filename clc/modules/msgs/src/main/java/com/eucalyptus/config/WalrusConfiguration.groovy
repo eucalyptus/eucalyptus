@@ -67,6 +67,7 @@ import java.io.Serializable;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Entity;
 import java.io.Serializable
+import javax.persistence.DiscriminatorValue;
 import javax.persistence.PersistenceContext
 import javax.persistence.Table
 import javax.persistence.Transient

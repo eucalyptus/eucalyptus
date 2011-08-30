@@ -1000,8 +1000,8 @@ public class BlockStorage {
 				db.commit();
 
 				for(VolumeInfo volume : volumes) {
+					String volumeId = volume.getVolumeId();
 					try {
-						String volumeId = volume.getVolumeId();
 						LOG.info("Converting volume: " + volumeId + " please wait...");
 						String volumePath = fromBlockManager.getVolumePath(volumeId);
 						blockManager.importVolume(volumeId, volumePath, volume.getSize());
@@ -1009,13 +1009,18 @@ public class BlockStorage {
 						LOG.info("Done converting volume: " + volumeId);
 					} catch (Exception ex) {
 						LOG.error(ex);
+						try {
+							blockManager.deleteVolume(volumeId);
+						} catch (EucalyptusCloudException e1) {
+							LOG.error(e1);
+						}
 						//this one failed, continue processing the rest
 					}
 				}
 
 				for(SnapshotInfo snap : snapshots) {
+					String snapshotId = snap.getSnapshotId();
 					try {
-						String snapshotId = snap.getSnapshotId();
 						LOG.info("Converting snapshot: " + snapshotId + " please wait...");
 						String snapPath = fromBlockManager.getSnapshotPath(snapshotId);
 						int size = fromBlockManager.getSnapshotSize(snapshotId);
@@ -1024,6 +1029,11 @@ public class BlockStorage {
 						LOG.info("Done converting snapshot: " + snapshotId);
 					} catch (Exception ex) {
 						LOG.error(ex);
+						try {
+							blockManager.deleteSnapshot(snapshotId);
+						} catch (EucalyptusCloudException e1) {
+							LOG.error(e1);
+						}
 						//this one failed, continue processing the rest
 					}
 				}

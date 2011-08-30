@@ -41,12 +41,8 @@ if((length($ip) <= 0) || (length($store) <= 0) || length($encrypted_password) <=
     do_exit(1);
 }
 
-#$password = decrypt_password($encrypted_password, $sc_pk);
 
 $passwd = "not_required";
-#if(length($password) <= 0) {
- #   print STDERR "Unable to decrypt target password. Aborting.\n";
-#}
 
 if ((length($lun) > 0) && ($lun > -1)) {
     delete_lun($store, $lun);
@@ -163,7 +159,7 @@ sub logout_target {
     my ($ip, $store, $passwd) = @_;
 
 
-    if(!open DISCONNECT, "$ISCSIADM -m node -T $store -p $ip -u |") {
+    if(!open DISCONNECT, "$ISCSIADM -m node -T $store -u |") {
         print "Could not logout from target";
         do_exit(1);
     }

@@ -88,11 +88,14 @@ String pool_db_url = 'jdbc:ha-jdbc:eucalyptus';
 String db_pass = SystemIds.databasePassword( );
 
 default_pool_props = [
-      'proxool.simultaneous-build-throttle': '4',
-      'proxool.minimum-connection-count': '2',
-      'proxool.maximum-connection-count': '32',
+      'proxool.simultaneous-build-throttle': '16',
+      'proxool.minimum-connection-count': '16',
+      'proxool.maximum-connection-count': '128',
+      'proxool.prototype-count': '8',
       'proxool.house-keeping-test-sql': 'SELECT 1=1;',
       'proxool.house-keeping-sleep-time': '5000',
+      'proxool.test-before-use': 'false',
+      'proxool.test-after-use': 'true',
       'user': 'eucalyptus',
       'password': db_pass,
     ]

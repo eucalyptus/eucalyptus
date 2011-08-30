@@ -21,11 +21,11 @@ import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.AnonymousMessage;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.Logs;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -80,6 +80,10 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     this.externalUriPattern = "http://%s:%d/services/" + this.capitalizedName;
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
     this.modelContent = loadModel( );
+  }
+
+  public String getVendorName( ) {
+    return "euca";
   }
   
   private String loadModel( ) {
@@ -139,17 +143,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public FullName makeFullName( ServiceConfiguration config, String... parts ) {
     return new ComponentFullName( config, parts );
   }
-  
-//  public FullName makeFullName( String partition, String name, String... parts ) {
-//    if ( this.isPartitioned( ) ) {
-//      return new ComponentFullName( this, partition, name, parts );
-//    } else if ( this.isCloudLocal( ) ) {
-//      return new ComponentFullName( this, Eucalyptus.INCOGNITO.name( ), name, parts );
-//    } else {
-//      return new ComponentFullName( this, this.getName( ), name, parts );
-//    }
-//  }
-//  
+
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
     return Lists.newArrayList( );
   }

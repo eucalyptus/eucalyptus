@@ -215,7 +215,7 @@ public class EuareWebBackend {
   }
   
   private static void authenticateLocal( User user, String password ) throws EucalyptusServiceException {
-    if ( !user.getPassword( ).equals( Crypto.generateHashedPassword( password ) ) ) {
+    if ( !Strings.isNullOrEmpty( user.getPassword( ) ) && !user.getPassword( ).equals( Crypto.generateHashedPassword( password ) ) ) {
       throw new EucalyptusServiceException( "Incorrect password" );
     }    
   }
@@ -223,6 +223,9 @@ public class EuareWebBackend {
   public static User changeUserPassword( User requestUser, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
     try {
       User user = Accounts.lookupUserById( userId );
+      if ( authenticateWithLdap( user ) ) {
+    	throw new EucalyptusServiceException( "Currently authenticating with LDAP. Can not change password." );
+      }
       EuarePermission.authorizeModifyUserPassword( requestUser, user.getAccount( ), user );
       // Anyone want to change some other people's password must authenticate himself first
       if ( Strings.isNullOrEmpty( requestUser.getPassword( ) ) || !requestUser.getPassword( ).equals( Crypto.generateHashedPassword( oldPass ) ) ) {
@@ -842,7 +845,7 @@ public class EuareWebBackend {
     return result;
   }
 
-  public static String createAccount( User requestUser, String accountName ) throws EucalyptusServiceException {
+  public static String createAccount( User requestUser, String accountName, String password ) throws EucalyptusServiceException {
     if ( !requestUser.isSystemAdmin( ) ) {
       throw new EucalyptusServiceException( "Operation is not authorized" );
     }
@@ -851,7 +854,8 @@ public class EuareWebBackend {
       User admin = account.addUser( User.ACCOUNT_ADMIN, "/", true/*skipRegistration*/, true/*enabled*/, null/*info*/ );
       admin.createToken( );
       admin.createConfirmationCode( );
-      admin.createPassword( );
+      admin.setPassword( Crypto.generateHashedPassword( password ) );
+      admin.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
       return account.getAccountNumber( );
     } catch ( Exception e ) {
       LOG.error( "Failed to create account " + accountName, e );
@@ -968,12 +972,12 @@ public class EuareWebBackend {
     for ( String id : ids ) {
       try { 
         User user = Accounts.lookupUserById( id );
-        if ( !user.isSystemAdmin( ) ) {
+        if ( !( user.isSystemAdmin( ) && user.isAccountAdmin( ) ) ) {
           Account account = user.getAccount( );
           EuarePermission.authorizeDeleteUser( requestUser, account, user );
           account.deleteUser( user.getName( ), false, true );
         } else {
-          throw new IllegalArgumentException( "Can't delete system admin" );
+          throw new IllegalArgumentException( "Can't delete admin@eucalyptus" );
         }
       } catch ( Exception e ) {
         LOG.error( "Failed to delete user " + id, e );
@@ -1041,13 +1045,20 @@ public class EuareWebBackend {
       String userName = policySerialized.getField( i++ );
       Account account = Accounts.lookupAccountByName( accountName );
       if ( !Strings.isNullOrEmpty( userName ) ) {
+        // delete user policy
         User user = account.lookupUserByName( userName );
         EuarePermission.authorizeDeleteUserPolicy( requestUser, account, user );
         user.removePolicy( policyName );
-      } else {
+      } else if ( !Strings.isNullOrEmpty( groupName ) ) {
+        // delete group policy
         Group group = account.lookupGroupByName( groupName );
         EuarePermission.authorizeDeleteGroupPolicy( requestUser, account, group );
         group.removePolicy( policyName );
+      } else {
+        // delete account policy
+        User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+        EuarePermission.authorizeDeleteAccountPolicy( requestUser );
+        admin.removePolicy( policyName );        
       }
     } catch ( EucalyptusServiceException e ) {
       LOG.debug( e, e );
@@ -1302,8 +1313,8 @@ public class EuareWebBackend {
       }
       
       User user = Accounts.lookupUserById( userId );
-      if ( user.isSystemAdmin( ) ) {
-        throw new EucalyptusServiceException( "Can not modify system admin" );
+      if ( user.isSystemAdmin( ) && user.isAccountAdmin( ) ) {
+        throw new EucalyptusServiceException( "Can not modify admin@eucalyptus" );
       }
       EuarePermission.authorizeModifyUser( requestUser, user.getAccount( ), user );
       if ( !user.getName( ).equals( userName ) ) {

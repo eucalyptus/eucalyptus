@@ -165,10 +165,10 @@ public class TransientZone extends Zone {
           .append(tryIp[2]).append(".")
           .append(tryIp[3]).toString( );
         try {
-          VmInstances.getInstance( ).lookupByPublicIp( ipCandidate );
+          VmInstances.lookupByPublicIp( ipCandidate );
         } catch ( Exception e ) {
           try {
-            VmInstances.getInstance( ).lookupByInstanceIp( ipCandidate );
+            VmInstances.lookupByInstanceIp( ipCandidate );
           } catch ( Exception e1 ) {
             return super.findRecords( name, type );
           }
@@ -177,7 +177,7 @@ public class TransientZone extends Zone {
         SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
         resp.addRRset( new RRset( new ARecord( name, 1, ttl, ip ) ) );
         return resp;
-      } catch ( Throwable e ) {
+      } catch ( Exception e ) {
         return super.findRecords( name, type );
       }
     } else if (name.toString().endsWith(".in-addr.arpa.")) {
@@ -197,11 +197,11 @@ public class TransientZone extends Zone {
 		  return super.findRecords( name, type );
 		}
 		try {
-	      VmInstance instance = VmInstances.getInstance( ).lookupByPublicIp( ipCandidate );
+	      VmInstance instance = VmInstances.lookupByPublicIp( ipCandidate );
 	      target = new Name(instance.getPublicDnsName() + ".");
 	    } catch ( Exception e ) {
 	      try {
-	        VmInstance instance = VmInstances.getInstance( ).lookupByInstanceIp( ipCandidate );
+	        VmInstance instance = VmInstances.lookupByInstanceIp( ipCandidate );
 	        target = new Name(instance.getPrivateDnsName() + ".");
 	      } catch ( Exception e1 ) {
 	        return super.findRecords( name, type );

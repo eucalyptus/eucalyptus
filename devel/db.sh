@@ -10,7 +10,7 @@ PASS=$($(dirname $(readlink -f $0))/dbPass.sh)
 
 echo export PASS="${PASS}"
 echo
+MYSQL="mysql -u eucalyptus --password=${PASS} --port=8777 --protocol=TCP"
 echo mysql -u eucalyptus --password=${PASS} --port=8777 --protocol=TCP
-mysql -u eucalyptus --password=${PASS} --port=8777 --protocol=TCP ${@}
-
+${MYSQL} ${@} 
 

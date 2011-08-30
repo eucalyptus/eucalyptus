@@ -16,7 +16,7 @@ public class EventListenerDiscovery extends ServiceJarDiscovery {
   }
   
   @Override
-  public boolean processClass( Class candidate ) throws Throwable {
+  public boolean processClass( Class candidate ) throws Exception {
     if ( EventListener.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) ) && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
       try {
         this.getEventListener( candidate );

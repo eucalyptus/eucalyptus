@@ -62,19 +62,16 @@
  */
 package com.eucalyptus.cluster;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.config.RegisterClusterType;
 import com.eucalyptus.event.AbstractNamedRegistry;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class Clusters extends AbstractNamedRegistry<Cluster> {
@@ -88,27 +85,15 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     return singleton;
   }
   
-  public boolean hasNetworking( ) {
-    return Iterables.all( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
-      @Override
-      public boolean apply( Cluster arg0 ) {
-        return arg0.getState( ).getMode( ) == 1;
-      }
-    } );
-  }
-  
-  public List<RegisterClusterType> getClusters( ) {
-    List<RegisterClusterType> list = new ArrayList<RegisterClusterType>( );
-    for ( Cluster c : this.listValues( ) )
-      list.add( c.getWeb( ) );
-    return list;
-  }
-  
   public List<String> getClusterAddresses( ) {
     SortedSet<String> hostOrdered = new TreeSet<String>( );
     for ( Cluster c : this.listValues( ) )
       hostOrdered.add( c.getConfiguration( ).getHostName( ) );
     return Lists.newArrayList( hostOrdered );
+  }
+  
+  public static Cluster lookup( Partition partition ) {
+    return Clusters.lookup( Partitions.lookupService( ClusterController.class, partition ) );
   }
   
   public static Cluster lookup( ServiceConfiguration clusterConfig ) {

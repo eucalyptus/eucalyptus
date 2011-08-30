@@ -17,6 +17,7 @@ import com.eucalyptus.webui.client.view.FooterView;
 import com.eucalyptus.webui.client.view.InputField;
 import com.eucalyptus.webui.client.view.InputView;
 import com.eucalyptus.webui.client.view.FooterView.StatusType;
+import com.eucalyptus.webui.client.view.InputField.ValueType;
 import com.eucalyptus.webui.client.view.HasValueWidget;
 import com.eucalyptus.webui.client.view.LogView.LogType;
 import com.eucalyptus.webui.shared.checker.ValueChecker;
@@ -57,8 +58,11 @@ public class AccountActivity extends AbstractSearchActivity
   public static final String REJECT_ACCOUNTS_CAPTION = "Reject selected accounts";
   public static final String REJECT_ACCOUNTS_SUBJECT = "Are you sure to reject following selected accounts?";
 
-  private static final Logger LOG = Logger.getLogger( AccountActivity.class.getName( ) );
+  public static final String PASSWORD_INPUT_TITLE = "Admin password";
+  public static final String PASSWORD2_INPUT_TITLE = "Type again";
   
+  private static final Logger LOG = Logger.getLogger( AccountActivity.class.getName( ) );
+
   private Set<SearchResultRow> currentSelected;
     
   public AccountActivity( AccountPlace place, ClientFactory clientFactory ) {
@@ -168,6 +172,40 @@ public class AccountActivity extends AbstractSearchActivity
         return ValueCheckerFactory.createAccountNameChecker( );
       }
       
+    }, new InputField( ) {
+
+      @Override
+      public String getTitle( ) {
+        return PASSWORD_INPUT_TITLE;
+      }
+
+      @Override
+      public ValueType getType( ) {
+        return ValueType.NEWPASSWORD;
+      }
+
+      @Override
+      public ValueChecker getChecker( ) {
+        return ValueCheckerFactory.createPasswordChecker( );
+      }
+      
+    }, new InputField( ) {
+
+      @Override
+      public String getTitle( ) {
+        return PASSWORD2_INPUT_TITLE;
+      }
+
+      @Override
+      public ValueType getType( ) {
+        return ValueType.PASSWORD;
+      }
+
+      @Override
+      public ValueChecker getChecker( ) {
+        return null;
+      }
+      
     } ) ) );
   }
 
@@ -226,7 +264,7 @@ public class AccountActivity extends AbstractSearchActivity
   @Override
   public void process( String subject, ArrayList<String> values ) {
     if ( CREATE_ACCOUNT_SUBJECT.equals( subject ) ) {
-      doCreateAccount( values.get( 0 ) );
+      doCreateAccount( values.get( 0 ), values.get( 1 ) );
     } else if ( CREATE_USERS_SUBJECT.equals( subject ) ) {
       doCreateUsers( values.get( 0 ), values.get( 1 ) );
     } else if ( CREATE_GROUPS_SUBJECT.equals( subject ) ) {
@@ -236,15 +274,15 @@ public class AccountActivity extends AbstractSearchActivity
     }
   }
 
-  private void doCreateAccount( final String value ) {
-    this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Creating account " + value + " ...", 0 );
+  private void doCreateAccount( final String name, final String password ) {
+    this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Creating account " + name + " ...", 0 );
     
-    this.clientFactory.getBackendService( ).createAccount( this.clientFactory.getLocalSession( ).getSession( ), value, new AsyncCallback<String>( ) {
+    this.clientFactory.getBackendService( ).createAccount( this.clientFactory.getLocalSession( ).getSession( ), name, password, new AsyncCallback<String>( ) {
 
       @Override
       public void onFailure( Throwable caught ) {
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to create account", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
-        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Creating account " + value + " failed: " + caught.getMessage( ) );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Creating account " + name + " failed: " + caught.getMessage( ) );
       }
 
       @Override

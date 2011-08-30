@@ -63,60 +63,97 @@
 
 package com.eucalyptus.auth.principal;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.OwnerFullName;
+import com.google.common.collect.MapMaker;
+import com.google.common.collect.Maps;
 
-public class UserFullName extends AccountFullName implements FullName {
-  private static Logger LOG = Logger.getLogger( UserFullName.class );
-  private final String userId;
-  private final String userName;
-  private UserFullName( Account account, User user ) throws AuthException {
-    super( account, "user", user.getName( ) );
+public class UserFullName implements OwnerFullName {
+  private static final long serialVersionUID = 1L;
+  private static ConcurrentMap<String, UserFullName> userIdMap = new MapMaker( ).softValues( ).makeMap( );
+  private static Logger                              LOG       = Logger.getLogger( UserFullName.class );
+  private static final String                        VENDOR    = "euare";
+  private final String                               userId;
+  private final String                               userName;
+  private final String                               accountNumber;
+  private final String                               accountName;
+  private final String                                     authority;
+  private final String                                     relativeId;
+  String                                             qName;
+  
+  private UserFullName( final User user ) throws AuthException {
     this.userId = user.getUserId( );
+    assertThat( this.userId, notNullValue( ) );
     this.userName = user.getName( );
+    final Account account = user.getAccount( );
+    this.accountNumber = account.getAccountNumber( );
+    assertThat( this.accountNumber, notNullValue( ) );
+    this.accountName = account.getName( );
+    this.authority = new StringBuilder( ).append( FullName.PREFIX ).append( FullName.SEP ).append( VENDOR ).append( FullName.SEP ).append( FullName.SEP ).append( this.accountNumber ).append( FullName.SEP ).toString( );
+    this.relativeId = FullName.ASSEMBLE_PATH_PARTS.apply( new String[] { "user", user.getName( ) } );
+    this.qName = this.authority + this.relativeId;
   }
   
-  public static UserFullName getInstance( String userId ) {
-    try {
-      return getInstance( Accounts.lookupUserById( userId ) );
-    } catch ( AuthException ex ) {
-      throw new UndeclaredThrowableException( ex );
-    }
-    
-  }
-  public static UserFullName getInstance( User user ) {
-    try {
-      if( user == null ) {
-        return new UserFullName( FakePrincipals.NOBODY_ACCOUNT, FakePrincipals.NOBODY_USER );
-      } else if( FakePrincipals.SYSTEM_USER.equals( user ) ) {
-        return new UserFullName( FakePrincipals.SYSTEM_ACCOUNT, FakePrincipals.SYSTEM_USER );
-      } else if( FakePrincipals.NOBODY_USER.equals( user ) ) {
-        return new UserFullName( FakePrincipals.NOBODY_ACCOUNT, FakePrincipals.NOBODY_USER );
-      } else {
-        Account account = user.getAccount( );
-        return new UserFullName( account, user );
-      }
-    } catch ( AuthException ex ) {
-      LOG.error( ex.getMessage( ) );
+  public static UserFullName getInstance( final String userId, final String... relativePath ) {
+    if ( userIdMap.containsKey( userId ) ) {
+      return userIdMap.get( userId );
+    } else {
       try {
-        return new UserFullName( FakePrincipals.NOBODY_ACCOUNT, FakePrincipals.NOBODY_USER );
-      } catch ( AuthException ex1 ) {
-        LOG.error( ex1 , ex1 );
+        userIdMap.put( userId, getInstance( Accounts.lookupUserById( userId ), relativePath ) );
+        return userIdMap.get( userId );
+      } catch ( final AuthException ex ) {
         throw new UndeclaredThrowableException( ex );
       }
-    } catch ( Exception ex ) {
+    }
+  }
+  
+  public static UserFullName getInstance( final User user, final String... relativePath ) {
+    try {
+      if ( ( user != null ) && !Principals.isFakeIdentify( user.getUserId( ) ) ) {
+        if ( !userIdMap.containsKey( user.getUserId( ) ) ) {
+          userIdMap.put( user.getUserId( ), new UserFullName( user ) );
+        }
+        return userIdMap.get( user.getUserId( ) );
+      } else if ( Principals.systemUser( ).equals( user ) ) {
+        return new UserFullName( Principals.systemUser( ) );
+      } else {
+        return new UserFullName( Principals.nobodyUser( ) );
+      }
+    } catch ( final AuthException ex ) {
+      LOG.error( ex.getMessage( ) );
+      try {
+        return new UserFullName( Principals.nobodyUser( ) );
+      } catch ( final AuthException ex1 ) {
+        LOG.error( ex1, ex1 );
+        throw new UndeclaredThrowableException( ex );
+      }
+    } catch ( final Exception ex ) {
       throw new UndeclaredThrowableException( ex );
     }
   }
-
+  
   @Override
   public String getUniqueId( ) {
     return this.userId;
   }
-
+  
+  @Override
+  public String getUserId( ) {
+    return this.userId;
+  }
+  
+  @Override
+  public String getUserName( ) {
+    return this.userName;
+  }
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -126,24 +163,95 @@ public class UserFullName extends AccountFullName implements FullName {
       : this.userId.hashCode( ) );
     return result;
   }
-
+  
   @Override
-  public boolean equals( Object obj ) {
+  public boolean equals( final Object obj ) {
     if ( this == obj ) return true;
     if ( !super.equals( obj ) ) return false;
-    if ( getClass( ) != obj.getClass( ) ) return false;
-    UserFullName other = ( UserFullName ) obj;
-    if ( this.userId == null ) {
-      if ( other.userId != null ) return false;
-    } else if ( !this.userId.equals( other.userId ) ) return false;
+    if ( this.getClass( ) != obj.getClass( ) ) return false;
+    if ( obj instanceof UserFullName ) {
+      final UserFullName other = ( UserFullName ) obj;
+      if ( this.userId == null ) {
+        if ( other.userId != null ) return false;
+      } else if ( !this.userId.equals( other.userId ) ) return false;
+    } else if ( obj instanceof OwnerFullName ) {
+      final OwnerFullName that = ( OwnerFullName ) obj;
+      if ( this.getAccountNumber( ) != null ) {
+        if ( this.getUserId( ) != null ) {
+          return this.getAccountNumber( ).equals( that.getAccountNumber( ) ) && this.getUserId( ).equals( that.getUserId( ) );
+        } else if ( this.getUserName( ) != null ) {
+          return this.getAccountNumber( ).equals( that.getAccountNumber( ) ) && this.getUserName( ).equals( that.getUserName( ) );
+        }
+      } else {
+        if ( this.getUserId( ) != null ) {
+          return this.getAccountNumber( ).equals( that.getAccountNumber( ) ) && this.getUserId( ).equals( that.getUserId( ) );
+        } else if ( this.getUserName( ) != null ) {
+          return this.getAccountNumber( ).equals( that.getAccountNumber( ) ) && this.getUserName( ).equals( that.getUserName( ) );
+        }
+      }
+    }
     return true;
   }
-
-  public String getUserId( ) {
-    return this.userId;
+  
+  @Override
+  public String getNamespace( ) {
+    return this.accountNumber;
   }
-
-  public String getUserName( ) {
-    return this.userName;
+  
+  @Override
+  public String toString( ) {
+    return this.qName;
   }
+  
+  @Override
+  public String getAccountNumber( ) {
+    return this.accountNumber;
+  }
+  
+  @Override
+  public String getAccountName( ) {
+    return this.accountName;
+  }
+  
+  @Override
+  public String getAuthority( ) {
+    return this.authority;
+  }
+  
+  @Override
+  public final String getRelativeId( ) {
+    return this.relativeId;
+  }
+  
+  @Override
+  public final String getPartition( ) {
+    return this.accountNumber;
+  }
+  
+  @Override
+  public final String getVendor( ) {
+    return VENDOR;
+  }
+  
+  @Override
+  public final String getRegion( ) {
+    return EMPTY;
+  }
+  
+  /**
+   * @see com.eucalyptus.util.OwnerFullName#isOwner(java.lang.String)
+   */
+  @Override
+  public boolean isOwner( final String ownerId ) {
+    return this.userId.equals( ownerId ) || this.accountNumber.equals( ownerId );
+  }
+  
+  /**
+   * @see com.eucalyptus.util.OwnerFullName#isOwner(com.eucalyptus.util.OwnerFullName)
+   */
+  @Override
+  public boolean isOwner( final OwnerFullName ownerFullName ) {
+    return this.userId.equals( ownerFullName.getAccountNumber( ) ) || this.accountNumber.equals( ownerFullName.getAccountNumber( ) );
+  }
+  
 }

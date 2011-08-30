@@ -80,6 +80,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.crypto.Hmac;
+import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.util.Internets;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
@@ -125,7 +126,7 @@ public class Registration extends HttpServlet {
   }
   
   private static String publicAddressConfiguration( ) {
-    if ( Clusters.getInstance( ).hasNetworking( ) )/*TODO: fix this lame hack.*/{
+    if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       return "        <Resource>\n" + "          <Name>elastic_ips</Name>\n" + "        </Resource>\n";
     } else {
       return "";

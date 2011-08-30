@@ -79,12 +79,12 @@ import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Assertions;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.Automata;
@@ -103,10 +103,6 @@ public class Component implements HasName<Component> {
   
   public enum State implements Automata.State<State> {
     NONE, BROKEN, PRIMORDIAL, INITIALIZED, LOADED, STOPPED, NOTREADY, DISABLED, ENABLED;
-    
-    public boolean isIn( HasStateMachine<?, State, ?> arg0 ) {
-      return this.equals( arg0.getStateMachine( ).getState( ) );
-    }
   }
   
   public enum Transition implements Automata.Transition<Transition> {
@@ -325,11 +321,11 @@ public class Component implements HasName<Component> {
                                                                                           Component.State.LOADED ).call( );//.get( );
         ret.get( );
         return ret;
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         throw Exceptions.debug( new ServiceRegistrationException( "Failed to initialize service state: " + config + " because of: " + ex.getMessage( ), ex ) );
       }
     }
-    if ( State.LOADED.isIn( config ) ) {
+    if ( State.LOADED.equals( config.lookupState( ) ) ) {
       return Futures.predestinedFuture( config );
     } else {
       return Futures.predestinedFuture( config );
@@ -357,7 +353,7 @@ public class Component implements HasName<Component> {
         EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_DESTROY, this.getName( ), configuration.getFullName( ),
                             configuration.getUri( ).toString( ) ).info( );
         this.serviceRegistry.deregister( configuration );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         throw new ServiceRegistrationException( "Failed to destroy service: " + configuration + " because of: " + ex.getMessage( ), ex );
       }
     } catch ( NoSuchElementException ex ) {
@@ -381,13 +377,13 @@ public class Component implements HasName<Component> {
   }
   
   public NavigableSet<ServiceConfiguration> enabledServices( ) {
-    return Sets.newTreeSet( Iterables.filter( this.serviceRegistry.getServices( ), Services.enabledService( ) ) );
+    return Sets.newTreeSet( Iterables.filter( this.serviceRegistry.getServices( ), ServiceConfigurations.enabledService( ) ) );
   }
   
   NavigableSet<ServiceConfiguration> enabledPartitionServices( final Partition partition ) {
     Iterable<ServiceConfiguration> services = Iterables.filter( this.serviceRegistry.getServices( ),
-                                                                Predicates.and( Services.enabledService( ),
-                                                                                Services.serviceInPartition( partition ) ) );
+                                                                Predicates.and( ServiceConfigurations.enabledService( ),
+                                                                                ServiceConfigurations.serviceInPartition( partition ) ) );
     return Sets.newTreeSet( services );
   }
   

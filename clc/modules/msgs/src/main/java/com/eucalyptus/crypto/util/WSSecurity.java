@@ -152,7 +152,7 @@ public class WSSecurity {
         PEMReader in = new PEMReader( new InputStreamReader( pemByteIn ) );
         try {
           cert = ( X509Certificate ) in.readObject( );
-        } catch ( Throwable e ) {
+        } catch ( Exception e ) {
           LOG.error( e, e );
         }
       } else {

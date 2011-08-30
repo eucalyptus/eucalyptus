@@ -19,8 +19,8 @@ import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Transactions;
 import java.util.concurrent.ExecutionException;
-import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 
@@ -41,7 +41,7 @@ public class DatabaseGroupProxy implements Group {
     final StringBuilder sb = new StringBuilder( );
     try {
       Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
-        public void fire( GroupEntity t ) throws Throwable {
+        public void fire( GroupEntity t ) {
           sb.append( t.toString( ) );
         }
       } );
@@ -65,7 +65,7 @@ public class DatabaseGroupProxy implements Group {
       // not found
       try {
         Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
-          public void fire( GroupEntity t ) throws Throwable {
+          public void fire( GroupEntity t ) {
             t.setName( name );
           }
         } );
@@ -88,7 +88,7 @@ public class DatabaseGroupProxy implements Group {
   public void setPath( final String path ) throws AuthException {
     try {
       Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
-        public void fire( GroupEntity t ) throws Throwable {
+        public void fire( GroupEntity t ) {
           t.setPath( path );
         }
       } );
@@ -107,7 +107,7 @@ public class DatabaseGroupProxy implements Group {
   public void setUserGroup( final Boolean userGroup ) throws AuthException {
     try {
       Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
-        public void fire( GroupEntity t ) throws Throwable {
+        public void fire( GroupEntity t ) {
           t.setUserGroup( userGroup );
         }
       } );
@@ -126,7 +126,7 @@ public class DatabaseGroupProxy implements Group {
       groupEntity.getUsers( ).add( userEntity );
       //userEntity.addGroup( groupEntity );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to add user " + userName + " to group " + this.delegate );
       throw new AuthException( e );
@@ -142,7 +142,7 @@ public class DatabaseGroupProxy implements Group {
       groupEntity.getUsers( ).remove( userEntity );
       //userEntity.getGroups( ).remove( groupEntity );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to remove user " + userName + " from group " + this.delegate );
       throw new AuthException( e );
@@ -161,7 +161,7 @@ public class DatabaseGroupProxy implements Group {
           .list( );
       db.commit( );
       return users.size( ) > 0;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to check membership for group " + this.delegate );
       throw new AuthException( e );
@@ -173,7 +173,7 @@ public class DatabaseGroupProxy implements Group {
     final List<Policy> results = Lists.newArrayList( );
     try {
       Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
-        public void fire( GroupEntity t ) throws Throwable {
+        public void fire( GroupEntity t ) {
           for ( PolicyEntity p : t.getPolicies( ) ) {
             results.add( new DatabasePolicyProxy( p ) );
           }
@@ -208,7 +208,7 @@ public class DatabaseGroupProxy implements Group {
       }
       db.commit( );
       return new DatabasePolicyProxy( parsedPolicy );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to attach policy for " + this.delegate.getName( ) );
       throw new AuthException( "Failed to attach policy", e );
@@ -228,7 +228,7 @@ public class DatabaseGroupProxy implements Group {
         db.recast( PolicyEntity.class ).delete( policy );
       }
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to remove policy " + name + " in " + this.delegate );
       throw new AuthException( "Failed to remove policy", e );
@@ -240,7 +240,7 @@ public class DatabaseGroupProxy implements Group {
     final List<User> results = Lists.newArrayList( );
     try {
       Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
-        public void fire( GroupEntity t ) throws Throwable {
+        public void fire( GroupEntity t ) {
           for ( UserEntity u : t.getUsers( ) ) {
             results.add( new DatabaseUserProxy( u ) );
           }
@@ -257,7 +257,7 @@ public class DatabaseGroupProxy implements Group {
     final List<DatabaseAccountProxy> results = Lists.newArrayList( );
     try {
       Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId( ) ), new Tx<GroupEntity>( ) {
-        public void fire( GroupEntity t ) throws Throwable {
+        public void fire( GroupEntity t ) {
           results.add( new DatabaseAccountProxy( ( AccountEntity) t.getAccount( ) ) );
         }
       } );

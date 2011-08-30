@@ -256,6 +256,8 @@ typedef struct ncInstance_t {
     char instanceId[CHAR_BUFFER_SIZE];
     char reservationId[CHAR_BUFFER_SIZE];
     char userId[CHAR_BUFFER_SIZE];
+    char ownerId[CHAR_BUFFER_SIZE];
+    char accountId[CHAR_BUFFER_SIZE];
     char imageId[SMALL_CHAR_BUFFER_SIZE];
     char kernelId[SMALL_CHAR_BUFFER_SIZE];
     char ramdiskId[SMALL_CHAR_BUFFER_SIZE];
@@ -357,6 +359,8 @@ ncInstance * allocate_instance(char *uuid,
                                char *stateName, 
                                int stateCode, 
                                char *userId, 
+                               char *ownerId,
+                               char *accountId,
                                netConfig *ncnet, 
                                char *keyName,
                                char *userData, 

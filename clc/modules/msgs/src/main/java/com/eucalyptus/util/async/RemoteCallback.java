@@ -1,5 +1,6 @@
 package com.eucalyptus.util.async;
 
+import com.eucalyptus.util.Callback;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 /**

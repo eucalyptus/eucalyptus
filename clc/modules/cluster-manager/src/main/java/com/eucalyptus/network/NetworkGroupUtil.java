@@ -6,10 +6,23 @@ import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicyResourceType;
+import com.eucalyptus.auth.policy.PolicyVendor;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.CloudMetadata;
+import com.eucalyptus.cloud.CloudMetadata.AddressMetadata;
+import com.eucalyptus.cloud.util.DuplicateMetadataException;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
@@ -19,30 +32,24 @@ import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 public class NetworkGroupUtil {
   
   @Deprecated
-  public static EntityWrapper<NetworkRulesGroup> getEntityWrapper( ) {
-    EntityWrapper<NetworkRulesGroup> db = EntityWrapper.get( NetworkRulesGroup.class );
-    return db;
-  }
-  
-  @Deprecated
-  public static List<NetworkRulesGroup> getUserNetworkRulesGroup( UserFullName userFullName ) {
-    EntityWrapper<NetworkRulesGroup> db = NetworkGroupUtil.getEntityWrapper( );
-    List<NetworkRulesGroup> networkGroups = Lists.newArrayList( );
+  public static List<NetworkGroup> getUserNetworkRulesGroup( OwnerFullName ownerFullName ) {
+    EntityWrapper<NetworkGroup> db = EntityWrapper.get( NetworkGroup.class );
+    List<NetworkGroup> networkGroups = Lists.newArrayList( );
     try {
-      networkGroups = db.query( new NetworkRulesGroup( userFullName ) );
+      networkGroups = db.query( new NetworkGroup( ownerFullName ) );
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
     }
     return networkGroups;
   }
   
   @Deprecated
-  public static NetworkRulesGroup getUserNetworkRulesGroup( UserFullName userFullName, String groupName ) throws EucalyptusCloudException {
-    EntityWrapper<NetworkRulesGroup> db = NetworkGroupUtil.getEntityWrapper( );
-    NetworkRulesGroup group = null;
+  public static NetworkGroup getUserNetworkRulesGroup( OwnerFullName ownerFullName, String groupName ) throws EucalyptusCloudException {
+    EntityWrapper<NetworkGroup> db = EntityWrapper.get( NetworkGroup.class );
+    NetworkGroup group = null;
     try {
-      group = db.getUnique( new NetworkRulesGroup( userFullName, groupName ) );
+      group = db.getUnique( new NetworkGroup( ownerFullName, groupName ) );
       db.commit( );
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
@@ -52,17 +59,17 @@ public class NetworkGroupUtil {
   }
   
   @Deprecated
-  public static NetworkRulesGroup deleteUserNetworkRulesGroup( UserFullName userFullName, String groupName ) throws EucalyptusCloudException {
-    EntityWrapper<NetworkRulesGroup> db = NetworkGroupUtil.getEntityWrapper( );
-    NetworkRulesGroup group = null;
+  public static NetworkGroup deleteUserNetworkRulesGroup( UserFullName ownerFullName, String groupName ) throws EucalyptusCloudException {
+    EntityWrapper<NetworkGroup> db = EntityWrapper.get( NetworkGroup.class );
+    NetworkGroup group = null;
     try {
-      group = db.getUnique( new NetworkRulesGroup( userFullName, groupName ) );
+      group = db.getUnique( new NetworkGroup( ownerFullName, groupName ) );
       db.delete( group );
       db.commit( );
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
       throw e;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
       throw new EucalyptusCloudException( e );
     }
@@ -70,83 +77,11 @@ public class NetworkGroupUtil {
   }
   
   @Deprecated
-  public static NetworkRulesGroup createUserNetworkRulesGroup( UserFullName userFullName, String groupName, String groupDescription ) throws EucalyptusCloudException {
-    EntityWrapper<NetworkRulesGroup> db = NetworkGroupUtil.getEntityWrapper( );
-    NetworkRulesGroup group = new NetworkRulesGroup( userFullName, groupName, groupDescription );
-    try {
-      db.getUnique( NetworkRulesGroup.named( userFullName, groupName ) );
-      db.rollback( );
-      throw new EucalyptusCloudException( "Error adding network group: group named " + groupName + " already exists" );
-    } catch ( Throwable e ) {
-      try {
-        db.add( group );
-        db.commit( );
-      } catch ( Throwable e1 ) {
-        throw new EucalyptusCloudException( "Error adding network group: group named " + groupName + " already exists", e );
-      }
-    }
-    return group;
-  }
-  
-  @Deprecated
-  public static List<SecurityGroupItemType> getUserNetworksAdmin( UserFullName userFullName, List<String> groupNames ) throws EucalyptusCloudException {
-    List<SecurityGroupItemType> groupInfoList = Lists.newArrayList( );
-    if ( groupNames.isEmpty( ) ) {
-      try {
-        for ( User u : Accounts.listAllUsers( ) ) {
-          groupInfoList.addAll( NetworkGroupUtil.getUserNetworks( UserFullName.getInstance( u.getUserId( ) ), groupNames ) );
-        }
-      } catch ( AuthException ex ) {
-        throw new EucalyptusCloudException( "Fail to get all users", ex );
-      }
-    } else {
-      for ( String groupName : groupNames ) {
-        if ( !NetworkGroupUtil.isUserGroupRef( groupName ) ) {
-          groupInfoList.addAll( NetworkGroupUtil.getUserNetworks( userFullName, Lists.newArrayList( groupName ) ) );
-        } else {
-          groupInfoList.addAll( NetworkGroupUtil.getUserNetworksAdmin( groupName ) );
-        }
-      }
-    }
-    return groupInfoList;
-  }
-  
-  @Deprecated
-  public static boolean isUserGroupRef( String adminGroupName ) {
-    return adminGroupName.indexOf( "::" ) != -1;
-  }
-  
-  @Deprecated
-  public static List<SecurityGroupItemType> getUserNetworksAdmin( String adminGroupName ) throws EucalyptusCloudException {
-    return getUserNetworks( UserFullName.getInstance( adminGroupName.replaceAll( "::\\w*", "" ) ),
-                            Lists.newArrayList( adminGroupName.replaceFirst( "\\w*::", "" ) ) );
-  }
-  
-  @Deprecated
-  public static List<SecurityGroupItemType> getUserNetworks( UserFullName userFullName, List<String> groupNames ) throws EucalyptusCloudException {
-    List<SecurityGroupItemType> groupInfoList = Lists.newArrayList( );
-    List<NetworkRulesGroup> userGroups = Lists.newArrayList( );
-    if ( groupNames.isEmpty( ) ) {
-      userGroups.addAll( NetworkGroupUtil.getUserNetworkRulesGroup( userFullName ) );
-    } else {
-      for ( String groupName : groupNames ) {
-        try {
-          userGroups.add( NetworkGroupUtil.getUserNetworkRulesGroup( userFullName, groupName ) );
-        } catch ( Exception e ) {}
-      }
-    }
-    for ( NetworkRulesGroup group : NetworkGroupUtil.getUserNetworkRulesGroup( userFullName ) ) {
-      groupInfoList.add( getAsSecurityGroupItemType( userFullName, group ) );
-    }
-    return groupInfoList;
-  }
-  
-  @Deprecated
-  public static SecurityGroupItemType getAsSecurityGroupItemType( UserFullName userFullName, NetworkRulesGroup group ) {
+  public static SecurityGroupItemType getAsSecurityGroupItemType( OwnerFullName ownerFullName, NetworkGroup group ) {
     SecurityGroupItemType groupInfo = new SecurityGroupItemType( );
     groupInfo.setGroupName( group.getDisplayName( ) );
     groupInfo.setGroupDescription( group.getDescription( ) );
-    groupInfo.setAccountId( userFullName.getAccountNumber( ) );
+    groupInfo.setAccountId( ownerFullName.getAccountNumber( ) );
     for ( NetworkRule rule : group.getNetworkRules( ) ) {
       IpPermissionType ipPerm = new IpPermissionType( rule.getProtocol( ), rule.getLowPort( ), rule.getHighPort( ) );
       for ( IpRange ipRange : rule.getIpRanges( ) )
