@@ -19,6 +19,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -42,19 +43,14 @@ public class NetworkGroupManager {
   
   public CreateSecurityGroupResponseType create( final CreateSecurityGroupType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
-    
-    /**
-     * GRZE:WARN: do this /first/, ensure the default group exists to cover some old broken installs
-     **/
-    final String action = PolicySpec.requestToAction( request );
-    if ( !ctx.hasAdministrativePrivileges( ) ) {
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
-        throw new EucalyptusCloudException( "Not authorized to create network group for " + ctx.getUser( ) );
-      }
-      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, "", action, ctx.getUser( ), 1L ) ) {
-        throw new EucalyptusCloudException( "Quota exceeded to create network group for " + ctx.getUser( ) );
-      }
-    }
+//    if ( !ctx.hasAdministrativePrivileges( ) ) {
+//      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+//        throw new EucalyptusCloudException( "Not authorized to create network group for " + ctx.getUser( ) );
+//      }
+//      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, "", action, ctx.getUser( ), 1L ) ) {
+//        throw new EucalyptusCloudException( "Quota exceeded to create network group for " + ctx.getUser( ) );
+//      }
+//    }
     final CreateSecurityGroupResponseType reply = ( CreateSecurityGroupResponseType ) request.getReply( );
     try {
       NetworkGroups.create( ctx.getUserFullName( ), request.getGroupName( ), request.getGroupDescription( ) );
@@ -209,9 +205,7 @@ public class NetworkGroupManager {
     final Context ctx = Contexts.lookup( );
     final AuthorizeSecurityGroupIngressResponseType reply = ( AuthorizeSecurityGroupIngressResponseType ) request.getReply( );
     final NetworkGroup ruleGroup = NetworkGroups.lookup( ctx.getUserFullName( ), request.getGroupName( ) );
-    if ( !ctx.hasAdministrativePrivileges( )
-         && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, request.getGroupName( ), ctx.getAccount( ),
-                                       PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+    if ( !ctx.hasAdministrativePrivileges( ) && !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
       throw new EucalyptusCloudException( "Not authorized to authorize network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
     }
     final List<NetworkRule> ruleList = Lists.newArrayList( );

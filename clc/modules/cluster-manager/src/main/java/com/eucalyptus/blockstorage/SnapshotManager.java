@@ -113,15 +113,14 @@ public class SnapshotManager {
   
   public CreateSnapshotResponseType create( CreateSnapshotType request ) throws EucalyptusCloudException, NoSuchComponentException, DuplicateMetadataException {
     Context ctx = Contexts.lookup( );
-    String action = PolicySpec.requestToAction( request );
-    if ( !ctx.hasAdministrativePrivileges( ) ) {
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
-        throw new EucalyptusCloudException( "Not authorized to create snapshot by " + ctx.getUser( ).getName( ) );
-      }
-      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, "", action, ctx.getUser( ), 1L ) ) {
-        throw new EucalyptusCloudException( "Quota exceeded in creating snapshot by " + ctx.getUser( ).getName( ) );
-      }
-    }
+//    if ( !ctx.hasAdministrativePrivileges( ) ) {
+//      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+//        throw new EucalyptusCloudException( "Not authorized to create snapshot by " + ctx.getUser( ).getName( ) );
+//      }
+//      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, "", action, ctx.getUser( ), 1L ) ) {
+//        throw new EucalyptusCloudException( "Quota exceeded in creating snapshot by " + ctx.getUser( ).getName( ) );
+//      }
+//    }
     EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
     Volume vol;
     try {

@@ -87,8 +87,10 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.KeyPairs;
+import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Joiner;
@@ -125,17 +127,11 @@ public class VerifyMetadata {
       Context ctx = allocInfo.getContext( );
       User user = ctx.getUser( );
       String instanceType = allocInfo.getRequest( ).getInstanceType( );
-      String action = PolicySpec.requestToAction( allocInfo.getRequest( ) );
-      try {
-        if ( !ctx.hasAdministrativePrivileges( )
-             && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VMTYPE, instanceType, user.getAccount( ), action, user ) ) {
-          throw new IllegalMetadataAccessException( "Not authorized to allocate vm type " + instanceType + " for " + ctx.getUserFullName( ) );
-        }
-      } catch ( AuthException ex ) {
-        LOG.error( ex, ex );
+      VmType vmType = VmTypes.getVmType( instanceType ); 
+      if ( !ctx.hasAdministrativePrivileges( ) && !RestrictedTypes.filterPrivileged( ).apply( vmType ) ) {
         throw new IllegalMetadataAccessException( "Not authorized to allocate vm type " + instanceType + " for " + ctx.getUserFullName( ) );
       }
-      allocInfo.setVmType( VmTypes.getVmType( instanceType ) );
+      allocInfo.setVmType( vmType );
       return true;
     }
   }
@@ -204,9 +200,8 @@ public class VerifyMetadata {
       Context ctx = allocInfo.getContext( );
       RunInstancesType request = allocInfo.getRequest( );
       String keyName = request.getKeyName( );
-      if ( !ctx.hasAdministrativePrivileges( )
-           && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, keyName, ctx.getAccount( ),
-                                         PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+      SshKeyPair key = KeyPairs.lookup( ctx.getUserFullName( ), keyName );
+      if ( !ctx.hasAdministrativePrivileges( ) && !RestrictedTypes.filterPrivileged( ).apply( key ) ) {
         throw new IllegalMetadataAccessException( "Not authorized to use keypair " + keyName + " by " + ctx.getUser( ).getName( ) );
       }
       allocInfo.setSshKeyPair( KeyPairs.lookup( ctx.getUserFullName( ), keyName ) );
