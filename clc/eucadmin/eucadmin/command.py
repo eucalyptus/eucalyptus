@@ -28,18 +28,18 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-import StringIO
 import subprocess
 import os
 import time
 import shlex
+
+# See https://github.com/kennethreitz/envoy
 
 class Response(object):
     """A command's response"""
 
     def __init__(self, process=None):
         super(Response, self).__init__()
-
         self._process = process
         self.command = None
         self.std_err = None
@@ -104,7 +104,11 @@ class Command(object):
 
     @property
     def stdout(self):
-        return ''.join([r.std_out for r in self.history])
+        if len(self.history):
+            rslt = self.history[-1].std_out
+        else:
+            rslt = ''
+        return rslt
 
     @property
     def stderr(self):
