@@ -63,27 +63,12 @@ public class NetworkGroupManager {
   public DeleteSecurityGroupResponseType delete( final DeleteSecurityGroupType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
     final DeleteSecurityGroupResponseType reply = ( DeleteSecurityGroupResponseType ) request.getReply( );
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, request.getGroupName( ), ctx.getAccount( ),
-                                    PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+    if ( ! RestrictedTypes.filterPrivileged( ).apply( NetworkGroups.lookup( request.getGroupName( ) ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to delete network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
     }
     NetworkGroupUtil.deleteUserNetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ) );
     reply.set_return( true );
     return reply;
-  }
-  
-  enum UserAuthGroupFilter implements Predicate<NetworkGroup> {
-    INSTANCE;
-    @Override
-    public boolean apply( NetworkGroup arg0 ) {
-      final Context ctx = Contexts.lookup( );
-      return Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, arg0.getName( ), ctx.getAccount( ),
-                                       PolicySpec.requestToAction( ctx.getRequest( ) ), ctx.getUser( ) );
-    }
-  }
-  
-  public static Predicate<NetworkGroup> userAuthFilter( ) {
-    return UserAuthGroupFilter.INSTANCE;
   }
   
   public DescribeSecurityGroupsResponseType describe( final DescribeSecurityGroupsType request ) throws EucalyptusCloudException, MetadataException {
@@ -125,8 +110,7 @@ public class NetworkGroupManager {
     final RevokeSecurityGroupIngressResponseType reply = ( RevokeSecurityGroupIngressResponseType ) request.getReply( );
     NetworkGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ) );
     if ( !ctx.hasAdministrativePrivileges( )
-         && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, request.getGroupName( ), ctx.getAccount( ),
-                                       PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+         && !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
       throw new EucalyptusCloudException( "Not authorized to revoke network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
     }
     final List<NetworkRule> ruleList = Lists.newArrayList( );
