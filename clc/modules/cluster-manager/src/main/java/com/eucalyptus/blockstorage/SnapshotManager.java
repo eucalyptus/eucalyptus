@@ -161,7 +161,7 @@ public class SnapshotManager {
         public boolean apply( Snapshot snap ) {
           if ( !State.EXTANT.equals( snap.getState( ) ) ) {
             return false;
-          } else if ( !RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, request.getSnapshotId( ), snap.getOwner( ) ) ) {
+          } else if ( !RestrictedTypes.filterPrivileged( ).apply( snap ) ) {
             throw Exceptions.toUndeclared( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ),
                                            new EucalyptusCloudException( ) );
           } else {

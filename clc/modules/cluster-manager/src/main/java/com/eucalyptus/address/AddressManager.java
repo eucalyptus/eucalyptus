@@ -79,6 +79,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
@@ -137,8 +138,7 @@ public class AddressManager {
         addrAccount = Accounts.lookupAccountById( addrAccountNumber );
         } catch ( AuthException e ) {}
       }
-      if ( addrAccount != null
-           && ( isAdmin || Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, address.getName( ), addrAccount, action, requestUser ) ) ) {
+      if ( addrAccount != null && ( isAdmin || RestrictedTypes.filterPrivileged( ).apply( address ) ) ) {
         reply.getAddressesSet( ).add( isAdmin
             ? address.getAdminDescription( )
             : address.getDescription( ) );

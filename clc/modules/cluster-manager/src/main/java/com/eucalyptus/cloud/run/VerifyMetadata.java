@@ -127,7 +127,7 @@ public class VerifyMetadata {
       Context ctx = allocInfo.getContext( );
       User user = ctx.getUser( );
       String instanceType = allocInfo.getRequest( ).getInstanceType( );
-      VmType vmType = VmTypes.getVmType( instanceType ); 
+      VmType vmType = VmTypes.getVmType( instanceType );
       if ( !ctx.hasAdministrativePrivileges( ) && !RestrictedTypes.filterPrivileged( ).apply( vmType ) ) {
         throw new IllegalMetadataAccessException( "Not authorized to allocate vm type " + instanceType + " for " + ctx.getUserFullName( ) );
       }
@@ -222,17 +222,12 @@ public class VerifyMetadata {
         networkNames.add( NetworkGroups.defaultNetworkName( ) );
       }
       
-      for ( String groupName : networkNames ) {
-        if ( !ctx.hasAdministrativePrivileges( )
-             && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, groupName, ctx.getAccount( ),
-                                           PolicySpec.requestToAction( allocInfo.getRequest( ) ), ctx.getUser( ) ) ) {
-          throw new IllegalMetadataAccessException( "Not authorized to use network group " + groupName + " for " + ctx.getUser( ).getName( ) );
-        }
-      }
-      
       Map<String, NetworkGroup> networkRuleGroups = Maps.newHashMap( );
       for ( String groupName : networkNames ) {
         NetworkGroup group = NetworkGroups.lookup( ctx.getUserFullName( ), groupName );
+        if ( !ctx.hasAdministrativePrivileges( ) && !RestrictedTypes.filterPrivileged( ).apply( group ) ) {
+          throw new IllegalMetadataAccessException( "Not authorized to use network group " + groupName + " for " + ctx.getUser( ).getName( ) );
+        }
         networkRuleGroups.put( groupName, group );
       }
       Set<String> missingNets = Sets.difference( networkNames, networkRuleGroups.keySet( ) );
