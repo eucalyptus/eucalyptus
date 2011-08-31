@@ -364,7 +364,7 @@ public class ImageUtil {
       db.rollback( );
       return false;
     }
-    if ( RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, imageId, imgInfo.getOwner( ) ) ) {
+    if ( RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) {
       return false;
     }
     try {

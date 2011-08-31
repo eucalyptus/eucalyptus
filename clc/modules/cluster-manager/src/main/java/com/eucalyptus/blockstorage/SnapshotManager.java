@@ -68,8 +68,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.component.NoSuchComponentException;
 import com.eucalyptus.component.Partitions;
@@ -87,6 +85,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotType;
@@ -203,11 +202,7 @@ public class SnapshotManager {
     try {
       List<Snapshot> snapshots = db.query( Snapshots.named( ctx.getUserFullName( ), null ) );
       
-      for ( Snapshot snap : snapshots ) {
-        if ( !RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, snap.getDisplayName( ), snap.getOwner( ) ) ) {
-          LOG.debug( "Skip snapshot " + snap.getDisplayName( ) + " due to access right" );
-          continue;
-        }
+      for ( Snapshot snap : Iterables.filter( snapshots, RestrictedTypes.filterPrivileged( ) ) ) {
         DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( snap.getDisplayName( ) ) );
         if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( snap.getDisplayName( ) ) ) {
           try {

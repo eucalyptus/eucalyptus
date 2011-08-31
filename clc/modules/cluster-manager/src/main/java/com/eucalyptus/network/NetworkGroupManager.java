@@ -63,36 +63,11 @@ public class NetworkGroupManager {
   public DeleteSecurityGroupResponseType delete( final DeleteSecurityGroupType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
     final DeleteSecurityGroupResponseType reply = ( DeleteSecurityGroupResponseType ) request.getReply( );
-    if ( Contexts.lookup( ).hasAdministrativePrivileges( ) && ( request.getGroupName( ).indexOf( "::" ) != -1 ) ) {
-      final String[] nameParts = request.getGroupName( ).split( "::" );
-      if ( nameParts.length != 2 ) {
-        throw new EucalyptusCloudException( "Request to delete group named: " + request.getGroupName( ) + " is malformed." );
-      } else {
-        final String accountId = nameParts[0];
-        final String groupName = nameParts[1];
-        try {
-          final Account account = Accounts.lookupAccountById( accountId );
-          for ( final User user : account.getUsers( ) ) {
-            final UserFullName userFullName = UserFullName.getInstance( user );
-            try {
-              NetworkGroupUtil.getUserNetworkRulesGroup( userFullName, groupName );
-              NetworkGroupUtil.deleteUserNetworkRulesGroup( userFullName, groupName );
-            } catch ( final EucalyptusCloudException ex ) {
-              //need to iterate over all users in the account and check each of their security groups
-            }
-          }
-        } catch ( final AuthException ex ) {
-          LOG.error( ex.getMessage( ) );
-          throw new EucalyptusCloudException( "Deleting security failed because of: " + ex.getMessage( ) + " for request " + request.toSimpleString( ) );
-        }
-      }
-    } else {
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, request.getGroupName( ), ctx.getAccount( ),
-                                      PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
-        throw new EucalyptusCloudException( "Not authorized to delete network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
-      }
-      NetworkGroupUtil.deleteUserNetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ) );
+    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SECURITYGROUP, request.getGroupName( ), ctx.getAccount( ),
+                                    PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+      throw new EucalyptusCloudException( "Not authorized to delete network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
     }
+    NetworkGroupUtil.deleteUserNetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ) );
     reply.set_return( true );
     return reply;
   }
@@ -124,7 +99,7 @@ public class NetworkGroupManager {
       }
     };
     
-    Predicate<NetworkGroup> netFilter = Predicates.and( argListFilter, userAuthFilter( ) );
+    Predicate<NetworkGroup> netFilter = Predicates.and( argListFilter, RestrictedTypes.filterPrivileged( ) );
     OwnerFullName ownerFn = AccountFullName.getInstance( ctx.getAccount( ) );
     if ( Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
       ownerFn = null;
