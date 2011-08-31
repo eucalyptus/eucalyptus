@@ -825,7 +825,13 @@ public class WalrusManager {
 										//ok we are done here
 										if(fileIO != null)
 											fileIO.finish();
-										ObjectDeleter objectDeleter = new ObjectDeleter(bucketName, tempObjectName, -1L, ctx.getUser().getName(), ctx.getAccount().getName());
+										ObjectDeleter objectDeleter = new ObjectDeleter(bucketName,
+												tempObjectName,
+												-1L,
+												ctx.getUser().getName(),
+												ctx.getUser().getUserId(),
+												ctx.getAccount().getName(),
+												ctx.getAccount().getAccountNumber());
 										objectDeleter.start();
 										LOG.info("Transfer interrupted: "+ key);
 										messenger.removeQueue(key, randomKey);
@@ -1419,7 +1425,13 @@ public class WalrusManager {
 										.getBucketSize()
 										- size);
 								ObjectDeleter objectDeleter = new ObjectDeleter(
-										bucketName, objectName, size, ctx.getUser().getName(), ctx.getAccount().getName());
+										bucketName, 
+										objectName, 
+										size, 
+										ctx.getUser().getName(),
+										ctx.getUser().getUserId(),
+										ctx.getAccount().getName(),
+										ctx.getAccount().getAccountNumber());
 								objectDeleter.start();
 								reply.setCode("200");
 								reply.setDescription("OK");
@@ -1460,12 +1472,18 @@ public class WalrusManager {
 		String objectName;
 		Long size;
 		String user;
+		String userId;
 		String account;
+		String accountNumber;
 
-		public ObjectDeleter(String bucketName, String objectName, Long size, String user, String account) {
+		public ObjectDeleter(String bucketName, String objectName, Long size, String user, String userId, String account, String accountNumber) {
 			this.bucketName = bucketName;
 			this.objectName = objectName;
 			this.size = size;
+			this.user = user;
+			this.userId = userId;
+			this.account = account;
+			this.accountNumber = accountNumber;
 		}
 
 		public void run() {
@@ -1477,8 +1495,8 @@ public class WalrusManager {
 					QueueFactory.getInstance()
 					.getSender(QueueIdentifier.S3);
 				queueSender.send(new S3Event(false,
-						size / WalrusProperties.M, user,
-						null, account, null));			
+						size / WalrusProperties.M, userId, user,
+						accountNumber, account));			
 			} catch (IOException ex) {
 				LOG.error(ex, ex);
 			}
@@ -3180,7 +3198,12 @@ public class WalrusManager {
 								Long size = foundObject.getSize();
 								bucketInfo.setBucketSize(bucketInfo.getBucketSize() - size);
 								ObjectDeleter objectDeleter = new ObjectDeleter(bucketName,
-										objectName, size, ctx.getUser().getName(), ctx.getAccount().getName());
+										objectName, 
+										size, 
+										ctx.getUser().getName(),
+										ctx.getUser().getUserId(),
+										ctx.getAccount().getName(),
+										ctx.getAccount().getAccountNumber());
 								objectDeleter.start();
 							}
 							reply.setCode("200");
