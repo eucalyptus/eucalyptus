@@ -10,6 +10,7 @@ CCWSDL=$(WSDLPATH)/$(CCWSDLNAME)
 NCWSDLNAME=eucalyptus_nc.wsdl
 NCWSDL=$(WSDLPATH)/$(NCWSDLNAME)
 SERVICE_SO=libEucalyptusCC.so
+SERVICE_SO_FAKE=libEucalyptusCCFake.so
 SERVICE_NAME=EucalyptusCC
 CLIENT=CCclient
 CLIENTKILLALL=euca_killall
@@ -51,11 +52,26 @@ generated/stubs: $(CCWSDL) $(NCWSDL)
 .c.o:
 	$(CC) -c $(CFLAGS) $(INCLUDES) $<
 
-server: $(SERVICE_SO)
+../node/client-marshal-fake.o:
+	make -C ../node fake
+
+$(VNLIBS):
+	make -C ../net
+	make -C ../util
+	make -C ../storage
+
+$(NCLIBS):
+	make -C ../node
+
+server: $(NCLIBS) $(VNLIBS) $(SERVICE_SO)
+
+fake: all $(NC_FAKE_LIBS) $(SERVICE_SO_FAKE)
 
 $(SERVICE_SO): generated/stubs ../storage/storage.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o ../util/windows-bundle.o
 	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o ../util/windows-bundle.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
-	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o ../util/windows-bundle.o $(SCLIBS) $(NC_FAKE_LIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o libEucalyptusCCFake.so
+
+$(SERVICE_SO_FAKE):
+	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o ../util/windows-bundle.o $(SCLIBS) $(NC_FAKE_LIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO_FAKE)
 
 client: $(CLIENT)_full $(CLIENTKILLALL)
 
@@ -64,6 +80,9 @@ $(CLIENT)_full: generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o h
 
 $(CLIENTKILLALL): generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o handlers-state.o
 	$(CC) -o $(CLIENTKILLALL) $(CFLAGS) $(INCLUDES) $(CLIENT).c cc-client-marshal-adb.c -DMODE=0 generated/adb_*.o generated/axis2_stub_*.o ../util/misc.o ../storage/diskutil.o ../util/ipc.o $(WSSECLIBS) $(CC_LIBS)
+
+fakedeploy:
+	$(INSTALL) $(SERVICE_SO_FAKE) $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/$(SERVICE_SO)
 
 deploy:
 	$(INSTALL) -d $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/
@@ -84,7 +103,7 @@ deploy:
 #	cp $(AXIS2C_SERVICES)/$(SERVICE_NAME)/services_noWS.xml $(AXIS2C_SERVICES)/$(SERVICE_NAME)/services.xml
 
 clean:
-	rm -f $(SERVICE_SO) *.o $(CLIENTKILLALL) $(CLIENT)_full *~* *#*
+	rm -f $(SERVICE_SO) $(SERVICE_SO_FAKE) *.o $(CLIENTKILLALL) $(CLIENT)_full *~* *#*
 
 distclean: clean
 	rm -rf generated cc-client-policy.xml
