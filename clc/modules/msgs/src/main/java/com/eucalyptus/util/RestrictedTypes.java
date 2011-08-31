@@ -273,6 +273,10 @@ public class RestrictedTypes {
   }
   
   public static <T extends RestrictedType> Predicate<T> filterPrivileged( ) {
+    return filterPrivileged( true );
+  }
+  
+  public static <T extends RestrictedType> Predicate<T> filterPrivileged( final boolean forceAccountCheck ) {
     return new Predicate<T>( ) {
       
       @Override
@@ -299,7 +303,10 @@ public class RestrictedTypes {
           }
           User requestUser = ctx.getUser( );
           try {
-            Account owningAccount = Accounts.lookupAccountById( arg0.getOwner( ).getAccountNumber( ) );
+            Account owningAccount = null;
+            if ( forceAccountCheck ) {
+              owningAccount = Accounts.lookupAccountById( arg0.getOwner( ).getAccountNumber( ) );
+            }
             return Permissions.isAuthorized( vendor.value( ), type.value( ), arg0.getDisplayName( ), owningAccount, action, requestUser );
           } catch ( AuthException ex ) {
             return false;
