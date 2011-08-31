@@ -101,7 +101,7 @@ public class WalrusProperties {
 
 	public static int IO_CHUNK_SIZE = 102400;
 	public static boolean shouldEnforceUsageLimits = true;
-	public static boolean trackUsageStatistics = true;
+	public static boolean trackUsageStatistics = false;
 	public static boolean enableTorrents = false;
 	public static boolean enableVirtualHosting = true;
 	public static long CACHE_PROGRESS_TIMEOUT = 600000L; //ten minutes

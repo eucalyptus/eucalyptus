@@ -152,6 +152,11 @@ public class WalrusStatistics {
 					totalSpaceUsed);
 			db.add(walrusStats);
 		}
-		db.commit();
+		try {
+		    db.commit();
+		} catch(Exception ex) {
+			//log it and ignore it
+			LOG.error(ex);
+		}
 	}
 }
