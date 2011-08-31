@@ -825,7 +825,7 @@ public class WalrusManager {
 										//ok we are done here
 										if(fileIO != null)
 											fileIO.finish();
-										ObjectDeleter objectDeleter = new ObjectDeleter(bucketName, tempObjectName, -1L, ctx);
+										ObjectDeleter objectDeleter = new ObjectDeleter(bucketName, tempObjectName, -1L, ctx.getUser().getName(), ctx.getAccount().getName());
 										objectDeleter.start();
 										LOG.info("Transfer interrupted: "+ key);
 										messenger.removeQueue(key, randomKey);
@@ -1419,7 +1419,7 @@ public class WalrusManager {
 										.getBucketSize()
 										- size);
 								ObjectDeleter objectDeleter = new ObjectDeleter(
-										bucketName, objectName, size, ctx);
+										bucketName, objectName, size, ctx.getUser().getName(), ctx.getAccount().getName());
 								objectDeleter.start();
 								reply.setCode("200");
 								reply.setDescription("OK");
@@ -1459,13 +1459,13 @@ public class WalrusManager {
 		String bucketName;
 		String objectName;
 		Long size;
-		Context ctx;
+		String user;
+		String account;
 
-		public ObjectDeleter(String bucketName, String objectName, Long size, Context ctx) {
+		public ObjectDeleter(String bucketName, String objectName, Long size, String user, String account) {
 			this.bucketName = bucketName;
 			this.objectName = objectName;
 			this.size = size;
-			this.ctx = ctx;
 		}
 
 		public void run() {
@@ -1477,8 +1477,8 @@ public class WalrusManager {
 					QueueFactory.getInstance()
 					.getSender(QueueIdentifier.S3);
 				queueSender.send(new S3Event(false,
-						size / WalrusProperties.M, ctx.getUser().getName(),
-						null, ctx.getAccount().getName(), null));			
+						size / WalrusProperties.M, user,
+						null, account, null));			
 			} catch (IOException ex) {
 				LOG.error(ex, ex);
 			}
@@ -3180,7 +3180,7 @@ public class WalrusManager {
 								Long size = foundObject.getSize();
 								bucketInfo.setBucketSize(bucketInfo.getBucketSize() - size);
 								ObjectDeleter objectDeleter = new ObjectDeleter(bucketName,
-										objectName, size, ctx);
+										objectName, size, ctx.getUser().getName(), ctx.getAccount().getName());
 								objectDeleter.start();
 							}
 							reply.setCode("200");
