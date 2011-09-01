@@ -174,37 +174,40 @@ public class ImageManifests {
       this.virtualName = virtualName;
       this.deviceName = deviceName;
     }
+    
     DeviceMappingType type;
-    String virtualName;
-    String deviceName;
+    String            virtualName;
+    String            deviceName;
+    
     public DeviceMapping generateRealMapping( ImageInfo parent ) {
-      if( DeviceMappingType.ephemeral.equals( type ) ) {
+      if ( DeviceMappingType.ephemeral.equals( type ) ) {
         return new EphemeralDeviceMapping( parent, deviceName, virtualName );
       } else {//if( DeviceMappingType.root.equals( type ) || DeviceMappingType.swap.equals( type ) ) {
         return new DeviceMapping( parent, type, deviceName, virtualName );
-      } 
+      }
     }
   }
+  
   public static class ImageManifest {
-    private final String                    imageLocation;
-    private final ImageMetadata.Architecture        architecture;
-    private final String                    kernelId;
-    private final String                    ramdiskId;
-    private final ImageMetadata.Type                imageType;
-    private final ImageMetadata.Platform            platform;
-    private final String                    signature;
-    private final String                    checksum;
-    private final String                    checksumType;
-    private final String                    manifest;
-    private final Document                  inputSource;
-    private final String                    name;
-    private final Long                      size;
-    private final Long                      bundledSize;
-    private XPath                           xpath;
-    private Function<String, String>        xpathHelper;
-    private String                          encryptedKey;
-    private String                          encryptedIV;
-    private List<ManifestDeviceMapping> deviceMappings = Lists.newArrayList( );
+    private final String                     imageLocation;
+    private final ImageMetadata.Architecture architecture;
+    private final String                     kernelId;
+    private final String                     ramdiskId;
+    private final ImageMetadata.Type         imageType;
+    private final ImageMetadata.Platform     platform;
+    private final String                     signature;
+    private final String                     checksum;
+    private final String                     checksumType;
+    private final String                     manifest;
+    private final Document                   inputSource;
+    private final String                     name;
+    private final Long                       size;
+    private final Long                       bundledSize;
+    private XPath                            xpath;
+    private Function<String, String>         xpathHelper;
+    private String                           encryptedKey;
+    private String                           encryptedIV;
+    private List<ManifestDeviceMapping>      deviceMappings = Lists.newArrayList( );
     
     ImageManifest( String imageLocation ) throws EucalyptusCloudException {
       Context ctx = Contexts.lookup( );
@@ -276,42 +279,43 @@ public class ImageManifests {
         ? Long.parseLong( temp )
         : -1l;
       
-        String arch = this.xpathHelper.apply( "/manifest/machine_configuration/architecture/text()" );
+      String arch = this.xpathHelper.apply( "/manifest/machine_configuration/architecture/text()" );
       this.architecture = ImageMetadata.Architecture.valueOf( ( ( arch == null )
           ? "i386"
             : arch ) );
       try {
-        NodeList devMapList = ( NodeList ) this.xpath.evaluate( "/manifest/machine_configuration/block_device_mapping/mapping", inputSource, XPathConstants.NODESET );
-        for( int i = 0; i < devMapList.getLength( ); i++ ) {
+        NodeList devMapList = ( NodeList ) this.xpath.evaluate( "/manifest/machine_configuration/block_device_mapping/mapping", inputSource,
+                                                                XPathConstants.NODESET );
+        for ( int i = 0; i < devMapList.getLength( ); i++ ) {
           Node node = devMapList.item( i );
           NodeList children = node.getChildNodes( );
           String virtualName = null;
           String device = null;
-          for( int j = 0; j < children.getLength( ); j++ ) {
+          for ( int j = 0; j < children.getLength( ); j++ ) {
             Node childNode = children.item( j );
             String nodeType = childNode.getNodeName( );
-            if( "virtual".equals( nodeType ) && childNode.getTextContent( ) != null ) {
+            if ( "virtual".equals( nodeType ) && childNode.getTextContent( ) != null ) {
               virtualName = childNode.getTextContent( );
-            } else if( "device".equals( nodeType ) && childNode.getTextContent( ) != null ) {
+            } else if ( "device".equals( nodeType ) && childNode.getTextContent( ) != null ) {
               device = childNode.getTextContent( );
             }
           }
-          if( virtualName != null && device != null ) {
-            if( "ami".equals( virtualName ) ) {
+          if ( virtualName != null && device != null ) {
+            if ( "ami".equals( virtualName ) ) {
               continue;
-            } else if( "root".equals( virtualName ) ) {
+            } else if ( "root".equals( virtualName ) ) {
               this.deviceMappings.add( new ManifestDeviceMapping( DeviceMappingType.root, virtualName, device ) );
-            } else if( "swap".equals( virtualName ) ) {
+            } else if ( "swap".equals( virtualName ) ) {
               this.deviceMappings.add( new ManifestDeviceMapping( DeviceMappingType.swap, virtualName, device ) );
-            } else if( virtualName.startsWith( "ephemeral" ) ) {
+            } else if ( virtualName.startsWith( "ephemeral" ) ) {
               this.deviceMappings.add( new ManifestDeviceMapping( DeviceMappingType.ephemeral, virtualName, device ) );
             }
           }
         }
       } catch ( XPathExpressionException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
-
+      
       if ( ( checkIdType.apply( ImageMetadata.Type.kernel ) || checkIdType.apply( ImageMetadata.Type.ramdisk ) ) && !ctx.hasAdministrativePrivileges( ) ) {
         throw new EucalyptusCloudException( "Only administrators can register kernel images." );
       } else {
@@ -452,7 +456,7 @@ public class ImageManifests {
     public String getChecksum( ) {
       return this.checksum;
     }
-
+    
     public String getChecksumType( ) {
       return this.checksumType;
     }
@@ -473,7 +477,7 @@ public class ImageManifests {
         LOG.error( ex, ex );
         throw new EucalyptusCloudException( "Referenced image id is invalid: " + diskId, ex );
       }
-      if ( !RestrictedTypes.checkPrivilege( ctx.getRequest( ), PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, diskId, disk.getOwner( ) ) ) {
+      if ( !RestrictedTypes.filterPrivileged( ).apply( disk ) ) {
         throw new EucalyptusCloudException( "Access to " + disk.getImageType( ).toString( ) + " image " + diskId + " is denied for " + ctx.getUser( ).getName( ) );
       }
     }
