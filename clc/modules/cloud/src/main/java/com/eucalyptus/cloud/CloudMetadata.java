@@ -80,6 +80,9 @@ import com.eucalyptus.util.RestrictedType;
 @PolicyVendor( "ec2" )
 public interface CloudMetadata extends RestrictedType {
   
+  @PolicyResourceType( "availabilityzone" )
+  public interface AvailabilityZoneMetadata extends CloudMetadata {}
+
   @PolicyResourceType( "keypair" )
   public interface KeyPairMetadata extends CloudMetadata {}
   
