@@ -165,15 +165,16 @@ public class ImageManager {
         if ( exeByNonEmpty ) {
           if ( !( ( exeByHasAll && image.getImagePublic( ) ) || // public
                   ( exeByHasSelf && ( image.getOwner( ).isOwner( requestAccountId ) || image.hasPermission( requestAccountId ) ) ) || // implicit or explicit, but no public
-                  ( !exeBySelectionSet.isEmpty( ) && ( image.getOwner( ).isOwner( requestAccountId ) && image.hasPermission( ( String[] ) exeBySelectionSet.toArray( ) ) ) ) ) ) {
-            return false;
-          }
-        }
-        return true;
-      }
+          ( !exeBySelectionSet.isEmpty( ) && ( image.getOwner( ).isOwner( requestAccountId ) && image.hasPermission( ( String[] ) exeBySelectionSet.toArray( ) ) ) )
+                                             ) ) {
+                                               return false;
+                                             }
+                                           }
+                                           return true;
+                                         }
       
     };
-    Predicate<ImageInfo> filter = Predicates.and( imageFilter, RestrictedTypes.filterPrivileged( false ) );
+    Predicate<ImageInfo> filter = Predicates.and( imageFilter, RestrictedTypes.filterPrivileged( ) );
     List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), filter, Images.TO_IMAGE_DETAILS );
     reply.getImagesSet( ).addAll( imageDetailsList );
     ImageUtil.cleanDeregistered( );
@@ -184,14 +185,14 @@ public class ImageManager {
     final Context ctx = Contexts.lookup( );
     final User requestUser = Contexts.lookup( ).getUser( );
     final String action = PolicySpec.requestToAction( request );
-    if ( !ctx.hasAdministrativePrivileges( ) ) {
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, "", ctx.getAccount( ), action, requestUser ) ) {
-        throw new EucalyptusCloudException( "Register image is not allowed for " + requestUser.getName( ) );
-      }
-      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, "", action, requestUser, 1L ) ) {
-        throw new EucalyptusCloudException( "Quota exceeded in registering image for " + requestUser.getName( ) );
-      }
-    }
+//    if ( !ctx.hasAdministrativePrivileges( ) ) {
+//      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, "", ctx.getAccount( ), action, requestUser ) ) {
+//        throw new EucalyptusCloudException( "Register image is not allowed for " + requestUser.getName( ) );
+//      }
+//      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, "", action, requestUser, 1L ) ) {
+//        throw new EucalyptusCloudException( "Quota exceeded in registering image for " + requestUser.getName( ) );
+//      }
+//    }
     ImageInfo imageInfo = null;
     final String rootDevName = ( request.getRootDeviceName( ) != null )
       ? request.getRootDeviceName( )
@@ -250,7 +251,7 @@ public class ImageManager {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
            ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
-            !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), null, action, requestUser ) ) ) {
+               !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to deregister image" );
       }
       Images.deregisterImage( imgInfo.getDisplayName( ) );
@@ -304,8 +305,7 @@ public class ImageManager {
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
-           ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
-            !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), null, action, requestUser ) ) ) {
+           ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) || !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to describe image attribute" );
       }
       if ( request.getKernel( ) != null ) {
@@ -366,7 +366,7 @@ public class ImageManager {
       imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
            ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
-             !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), null, action, requestUser ) ) ) {
+               !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to modify image attribute" );
       }
       // Product codes
@@ -412,7 +412,7 @@ public class ImageManager {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( ctx.hasAdministrativePrivileges( ) ||
            ( imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) &&
-             Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, request.getImageId( ), null, action, requestUser ) ) ) {
+               !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
         imgInfo.resetPermission( );
         db.commit( );
       } else {

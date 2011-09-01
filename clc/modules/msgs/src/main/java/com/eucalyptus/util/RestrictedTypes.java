@@ -163,30 +163,6 @@ public class RestrictedTypes {
     throw new NoSuchElementException( "Failed to lookup function (@" + Threads.currentStackFrame( 1 ).getMethodName( ) + ") for type: " + type );
   }
   
-  enum UserAuthFilter implements Predicate<RestrictedType<?>> {
-    INSTANCE;
-    @Override
-    public boolean apply( RestrictedType<?> arg0 ) {
-      final Context ctx = Contexts.lookup( );
-      final String resourceName = arg0.getDisplayName( );
-      final Ats ats = Ats.inClassHierarchy( arg0 );
-      final PolicyVendor vendor = ats.get( PolicyVendor.class );
-      final PolicyResourceType resourceType = ats.get( PolicyResourceType.class );
-      final String policyAction = RestrictedTypes.findPolicyAction( arg0 );
-      return Permissions.isAuthorized( vendor.value( ),
-                                       resourceType.value( ),
-                                       resourceName,
-                                       ctx.getAccount( ),
-                                       policyAction,
-                                       ctx.getUser( ) );
-    }
-  }
-  
-  @SuppressWarnings( "unchecked" )
-  public static Predicate<?> filterUserAuthorization( ) {
-    return ( Predicate<?> ) UserAuthFilter.INSTANCE;
-  }
-  
   /**
    * Uses the provided {@code lookupFunction} to resolve the {@code identifier} to the underlying
    * object {@code T} with privileges determined by the current messaging context.
@@ -273,10 +249,6 @@ public class RestrictedTypes {
   }
   
   public static <T extends RestrictedType> Predicate<T> filterPrivileged( ) {
-    return filterPrivileged( true );
-  }
-  
-  public static <T extends RestrictedType> Predicate<T> filterPrivileged( final boolean forceAccountCheck ) {
     return new Predicate<T>( ) {
       
       @Override
@@ -303,10 +275,7 @@ public class RestrictedTypes {
           }
           User requestUser = ctx.getUser( );
           try {
-            Account owningAccount = null;
-            if ( forceAccountCheck ) {
-              owningAccount = Accounts.lookupAccountById( arg0.getOwner( ).getAccountNumber( ) );
-            }
+            Account owningAccount = Accounts.lookupAccountById( arg0.getOwner( ).getAccountNumber( ) );
             return Permissions.isAuthorized( vendor.value( ), type.value( ), arg0.getDisplayName( ), owningAccount, action, requestUser );
           } catch ( AuthException ex ) {
             return false;

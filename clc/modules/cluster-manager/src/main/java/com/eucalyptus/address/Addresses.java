@@ -91,6 +91,7 @@ import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.google.common.base.Predicate;
@@ -124,7 +125,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     }
     return systemAddressManager;
   }
-    
+  
   @SuppressWarnings( { "unchecked" } )
   private static Map<String, Class> managerMap = new HashMap<String, Class>( ) {
                                                  { //TODO: this is primitive and temporary.
@@ -144,7 +145,9 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
                       + Iterables.all( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
                         @Override
                         public boolean apply( Cluster arg0 ) {
-                          return arg0.getState( ).isAddressingInitialized( ) ? arg0.getState( ).hasPublicAddressing( ) : true;
+                          return arg0.getState( ).isAddressingInitialized( )
+                            ? arg0.getState( ).hasPublicAddressing( )
+                            : true;
                         }
                       } );
     try {
@@ -186,51 +189,41 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     }
     
   }
-  public static Address restrictedLookup( BaseMessage request, String addr ) throws EucalyptusCloudException {
+  
+  public static Address restrictedLookup( String addr ) throws EucalyptusCloudException {
     Address address = null;
     try {
       address = Addresses.getInstance( ).lookup( addr );
     } catch ( NoSuchElementException e ) {
       throw new EucalyptusCloudException( "Permission denied while trying to release address: " + addr );
     }
-    Context ctx = Contexts.lookup( );
-    boolean isAdmin = ctx.hasAdministrativePrivileges( );
-    if ( !isAdmin ) {
-      if ( address.isSystemOwned( ) ) {
-        throw new EucalyptusCloudException( "Non admin user cannot manipulate system owned address " + addr );
-      }
-      Account addrAccount = null;
-      try {
-        addrAccount = Accounts.lookupAccountById( address.getOwnerAccountNumber( ) );
-      } catch ( AuthException e ) {
-        throw new EucalyptusCloudException( e );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, addr, addrAccount, PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
-        throw new EucalyptusCloudException( "Permission denied while trying to access address " + addr + " by " + ctx.getUser( ) );
-      }
+    if ( address.isSystemOwned( ) ) {
+      throw new EucalyptusCloudException( "Non admin user cannot manipulate system owned address " + addr );
+    }
+    if ( !RestrictedTypes.filterPrivileged( ).apply( address ) ) {
+      throw new EucalyptusCloudException( "Permission denied while trying to access address " + addr );
     }
     return address;
   }
   
   public static Address allocate( BaseMessage request ) throws EucalyptusCloudException, NotEnoughResourcesException {
     Context ctx = Contexts.lookup( );
-    String action = PolicySpec.requestToAction( request );
-    if ( !ctx.hasAdministrativePrivileges( ) ) {
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
-        throw new EucalyptusCloudException( "Not authorized to allocate address by " + ctx.getUser( ).getName( ) );
-      }
-      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, "", action, ctx.getUser( ), 1L ) ) {
-        throw new EucalyptusCloudException( "Exceeded quota in allocating address by " + ctx.getUser( ).getName( ) );
-      }
-    }
+//    if ( !ctx.hasAdministrativePrivileges( ) ) {
+//      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+//        throw new EucalyptusCloudException( "Not authorized to allocate address by " + ctx.getUser( ).getName( ) );
+//      }
+//      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, "", action, ctx.getUser( ), 1L ) ) {
+//        throw new EucalyptusCloudException( "Exceeded quota in allocating address by " + ctx.getUser( ).getName( ) );
+//      }
+//    }
     return Addresses.getAddressManager( ).allocateNext( ctx.getUserFullName( ) );
   }
   
   public static void system( VmInstance vm ) {
     try {
-      if( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) {
+      if ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) {
         Addresses.getInstance( ).getAddressManager( ).assignSystemAddress( vm );
-      } 
+      }
     } catch ( NotEnoughResourcesException e ) {
       LOG.warn( "No addresses are available to provide a system address for: " + LogUtil.dumpObject( vm ) );
       LOG.debug( e, e );
@@ -258,8 +251,9 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     }
   }
   
-  @Override public void fireEvent( Event event ) {
-    if( event instanceof SystemConfigurationEvent ) {
+  @Override
+  public void fireEvent( Event event ) {
+    if ( event instanceof SystemConfigurationEvent ) {
       Addresses.systemAddressManager = Addresses.getProvider( );
     }
   }
