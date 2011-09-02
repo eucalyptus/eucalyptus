@@ -674,7 +674,6 @@ public class OverlayManager implements LogicalStorageManager {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 		if(foundLVMVolumeInfo != null) {
-			//remove aoe export
 			String loDevName = foundLVMVolumeInfo.getLoDevName();
 			String vgName = foundLVMVolumeInfo.getVgName();
 			String lvName = foundLVMVolumeInfo.getLvName();
@@ -691,6 +690,13 @@ public class OverlayManager implements LogicalStorageManager {
 				}
 				volumeManager.remove(foundLVMVolumeInfo);
 				volumeManager.finish();
+	                        File volFile = new File (DirectStorageInfo.getStorageInfo().getVolumesDir() + File.separator + volumeId);
+         	                if (volFile.exists()) {
+                	                if(!volFile.delete()) {
+                                        	LOG.error("Unable to delete: " + volFile.getAbsolutePath());
+                                	}
+                        	}
+
 			} catch(EucalyptusCloudException ex) {
 				volumeManager.abort();
 				String error = "Unable to run command: " + ex.getMessage();
