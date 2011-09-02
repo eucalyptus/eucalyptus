@@ -469,8 +469,12 @@ public class ShellActivity extends AbstractActivity
     // This happens when we enter a new search by url or by manual search,
     // and the new search matches a quick link. The quick link will be selected
     // programatically. In this case, don't need to change search anymore.
-    if ( search != null && search.equals( ActivityUtil.getCurrentSearch( clientFactory ) ) ) {
-      return;
+    if ( search != null ) {
+      String currentSearch = ActivityUtil.getCurrentSearch( clientFactory );
+      LOG.info( "Switching quick link: search = " + search + ", current = " + currentSearch );
+      if ( search.equals( currentSearch ) ) {
+        return;
+      }
     }
     this.search( search );
   }

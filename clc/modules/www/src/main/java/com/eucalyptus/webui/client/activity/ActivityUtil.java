@@ -16,7 +16,9 @@ public class ActivityUtil {
    */
   public static void updateDirectorySelection( ClientFactory clientFactory ) {
     String currentSearch = getCurrentSearch( clientFactory );
+    LOG.info( "Updating directory selection: current search is " + currentSearch );
     QuickLink link = clientFactory.getSessionData( ).lookupQuickLink( currentSearch );
+    LOG.info( "Updating directory selection: found quick link " + ( link == null ? "NONE" : link.getName( ) ) );
     clientFactory.getShellView( ).getDirectoryView( ).changeSelection( link );
   }
   
