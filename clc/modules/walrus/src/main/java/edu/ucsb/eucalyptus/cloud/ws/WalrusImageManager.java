@@ -207,12 +207,12 @@ public class WalrusImageManager {
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
 				if(isAdministrator || (
-				      objectInfo.canRead(account.getAccountNumber()) &&
-				      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
-				                             PolicySpec.VENDOR_S3,
-				                             PolicySpec.S3_RESOURCE_OBJECT,
-				                             PolicySpec.objectFullName(bucketName, objectKey),
-				                             objectInfo.getOwnerId()))) {
+						objectInfo.canRead(account.getAccountNumber()) &&
+						Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
+								PolicySpec.VENDOR_S3,
+								PolicySpec.S3_RESOURCE_OBJECT,
+								PolicySpec.objectFullName(bucketName, objectKey),
+								objectInfo.getOwnerId()))) {
 					String objectName = objectInfo.getObjectName();
 					File file = new File(storageManager.getObjectPath(bucketName, objectName));
 					XMLParser parser = new XMLParser(file);
@@ -241,7 +241,7 @@ public class WalrusImageManager {
 							boolean verified = false;
 							for(User u:Accounts.listAllUsers( )) {
 								for (Certificate c : u.getCertificates()) {
-								  X509Certificate cert = c.getX509Certificate( );
+									X509Certificate cert = c.getX509Certificate( );
 									if(cert != null)
 										verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
 									if(verified)
@@ -265,17 +265,17 @@ public class WalrusImageManager {
 					} else {
 						boolean signatureVerified = false;
 						try {
-						  for(User user: account.getUsers()) {
-  							for(Certificate c : user.getCertificates()) {
-  							  X509Certificate cert = c.getX509Certificate( );
-  								if(cert != null) {
-  									signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
-  								}
-  								if(signatureVerified)
-  									break;
-  							}
-  							if(signatureVerified) break;
-						  }
+							for(User user: account.getUsers()) {
+								for(Certificate c : user.getCertificates()) {
+									X509Certificate cert = c.getX509Certificate( );
+									if(cert != null) {
+										signatureVerified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+									}
+									if(signatureVerified)
+										break;
+								}
+								if(signatureVerified) break;
+							}
 						} catch(Exception ex) {
 							db.rollback();
 							LOG.error(ex, ex);
@@ -312,7 +312,7 @@ public class WalrusImageManager {
 						}
 					}
 					//Assemble parts
-					String encryptedImageKey = UUID.randomUUID().toString() + ".crypt.gz";//imageKey + "-" + Hashes.getRandom(5) + ".crypt.gz";
+					String encryptedImageKey = UUID.randomUUID().toString() + ".crypt.gz";
 					String encryptedImageName = storageManager.getObjectPath(bucketName, encryptedImageKey);
 					String decryptedImageKey = encryptedImageKey.substring(0, encryptedImageKey.lastIndexOf("crypt.gz")) + "tgz";
 
@@ -333,13 +333,19 @@ public class WalrusImageManager {
 						iv = Hashes.hexToBytes(ivString);
 					} catch(Exception ex) {
 						db.rollback();
-						LOG.error(ex, ex);
+						LOG.error(ex);
+						try {
+							storageManager.deleteAbsoluteObject(encryptedImageName);
+						} catch (Exception e) {
+							LOG.error(e);
+							throw new WalrusException("Unable to delete: " + encryptedImageKey);
+						}
 						throw new DecryptionFailedException("AES params");
 					}
 
 					//Unencrypt image
 					try {
-                                                db.commit();
+						db.commit();
 						Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding", "BC");
 						IvParameterSpec salt = new IvParameterSpec(iv);
 						SecretKey keySpec = new SecretKeySpec(key, "AES");
@@ -347,7 +353,14 @@ public class WalrusImageManager {
 						decryptImage(encryptedImageName, decryptedImageName, cipher);
 					} catch (Exception ex) {
 						db.rollback();
-						LOG.error(ex, ex);
+						LOG.error(ex);
+						try {
+							storageManager.deleteAbsoluteObject(encryptedImageName);
+							storageManager.deleteAbsoluteObject(decryptedImageName);
+						} catch (Exception e) {
+							LOG.error(e);
+							throw new WalrusException("Unable to delete: " + encryptedImageKey);
+						}
 						throw new DecryptionFailedException("decryption failed");
 					}
 					try {
@@ -411,45 +424,45 @@ public class WalrusImageManager {
 					}
 
 					try {
-	          for(User u:Accounts.listAllUsers( )) {
-	            for (Certificate cert : u.getCertificates()) {
-	              if(cert != null&&cert instanceof X509Certificate)
-	                signatureVerified = canVerifySignature(sigVerifier, ( X509Certificate ) cert, signature, (machineConfiguration + image));
-	              if(signatureVerified)
-	                break;
-	            }
-	          }
-	          if(!signatureVerified) {
-	            X509Certificate cert = SystemCredentials.getCredentialProvider(Eucalyptus.class).getCertificate();
-	            if(cert != null)
-	              signatureVerified = canVerifySignature(sigVerifier, cert, signature, (machineConfiguration + image));
-	          }
-//					  X509Certificate cert = user.getX509Certificate( );
-//						PublicKey publicKey = cert.getPublicKey();
-//						sigVerifier.initVerify(publicKey);
-//						sigVerifier.update((machineConfiguration + image).getBytes());
-//						signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
+						for(User u:Accounts.listAllUsers( )) {
+							for (Certificate cert : u.getCertificates()) {
+								if(cert != null&&cert instanceof X509Certificate)
+									signatureVerified = canVerifySignature(sigVerifier, ( X509Certificate ) cert, signature, (machineConfiguration + image));
+								if(signatureVerified)
+									break;
+							}
+						}
+						if(!signatureVerified) {
+							X509Certificate cert = SystemCredentials.getCredentialProvider(Eucalyptus.class).getCertificate();
+							if(cert != null)
+								signatureVerified = canVerifySignature(sigVerifier, cert, signature, (machineConfiguration + image));
+						}
+						//					  X509Certificate cert = user.getX509Certificate( );
+						//						PublicKey publicKey = cert.getPublicKey();
+						//						sigVerifier.initVerify(publicKey);
+						//						sigVerifier.update((machineConfiguration + image).getBytes());
+						//						signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
 					} catch(Exception ex) {
 						db.rollback();
 						LOG.error(ex, ex);
 						throw new DecryptionFailedException("signature verification");
 					}
 
-//					//check if Eucalyptus signed it
-//					if(!signatureVerified) {
-//						try {
-//							X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate();
-//							PublicKey publicKey = cert.getPublicKey();
-//							sigVerifier.initVerify(publicKey);
-//							sigVerifier.update((machineConfiguration + image).getBytes());
-//							signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
-//						} catch(Exception ex) {
-//							db.rollback();
-//							LOG.error(ex, ex);
-//							throw new DecryptionFailedException("signature verification");
-//						}
+					//					//check if Eucalyptus signed it
+					//					if(!signatureVerified) {
+					//						try {
+					//							X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate();
+					//							PublicKey publicKey = cert.getPublicKey();
+					//							sigVerifier.initVerify(publicKey);
+					//							sigVerifier.update((machineConfiguration + image).getBytes());
+					//							signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
+					//						} catch(Exception ex) {
+					//							db.rollback();
+					//							LOG.error(ex, ex);
+					//							throw new DecryptionFailedException("signature verification");
+					//						}
 
-//					}
+					//					}
 					if(!signatureVerified) {
 						throw new NotAuthorizedException("Invalid signature");
 					}
@@ -538,7 +551,7 @@ public class WalrusImageManager {
 			if(decryptedImageKey == null) {
 				try {
 					decryptedImageKey = decryptImage(bucketName, manifestKey, account, isAdministrator);
-				} catch(WalrusException ex) {
+				} catch(EucalyptusCloudException ex) {
 					imageCachers.remove(bucketName + manifestKey);
 					throw ex;
 				}
@@ -1079,12 +1092,12 @@ public class WalrusImageManager {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
 				if(ctx.hasAdministrativePrivileges() || (
-				      objectInfo.canRead(account.getAccountNumber()) &&
-				      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
-				                             PolicySpec.VENDOR_S3,
-				                             PolicySpec.S3_RESOURCE_OBJECT,
-				                             PolicySpec.objectFullName(bucketName, objectKey),
-				                             objectInfo.getOwnerId()))) {
+						objectInfo.canRead(account.getAccountNumber()) &&
+						Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
+								PolicySpec.VENDOR_S3,
+								PolicySpec.S3_RESOURCE_OBJECT,
+								PolicySpec.objectFullName(bucketName, objectKey),
+								objectInfo.getOwnerId()))) {
 					db.commit();
 					EucaSemaphore semaphore = EucaSemaphoreDirectory.getSemaphore(bucketName + "/" + objectKey);
 					try {
@@ -1207,7 +1220,7 @@ public class WalrusImageManager {
 		String objectKey = request.getKey();
 		Context ctx = Contexts.lookup();
 		Account account = ctx.getAccount();
-		
+
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		BucketInfo bucket = null;
@@ -1224,12 +1237,12 @@ public class WalrusImageManager {
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
 				if(ctx.hasAdministrativePrivileges() || (
-				      objectInfo.canRead(account.getAccountNumber()) &&
-				      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
-				                             PolicySpec.VENDOR_S3,
-				                             PolicySpec.S3_RESOURCE_OBJECT,
-				                             PolicySpec.objectFullName(bucketName, objectKey),
-				                             objectInfo.getOwnerId()))) {
+						objectInfo.canRead(account.getAccountNumber()) &&
+						Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
+								PolicySpec.VENDOR_S3,
+								PolicySpec.S3_RESOURCE_OBJECT,
+								PolicySpec.objectFullName(bucketName, objectKey),
+								objectInfo.getOwnerId()))) {
 					db.commit();
 					checkManifest(bucketName, objectKey, account);
 					reply.setSuccess(true);
@@ -1268,12 +1281,12 @@ public class WalrusImageManager {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
 				if(ctx.hasAdministrativePrivileges() || (
-				      objectInfo.canRead(account.getAccountNumber()) &&
-				      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
-				                             PolicySpec.VENDOR_S3,
-				                             PolicySpec.S3_RESOURCE_OBJECT,
-				                             PolicySpec.objectFullName( bucketName, manifestKey ),
-				                             objectInfo.getOwnerId()))) {
+						objectInfo.canRead(account.getAccountNumber()) &&
+						Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
+								PolicySpec.VENDOR_S3,
+								PolicySpec.S3_RESOURCE_OBJECT,
+								PolicySpec.objectFullName( bucketName, manifestKey ),
+								objectInfo.getOwnerId()))) {
 					EntityWrapper<ImageCacheInfo> db2 = EntityWrapper.get(ImageCacheInfo.class);
 					ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 					List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
@@ -1348,12 +1361,12 @@ public class WalrusImageManager {
 					if (objectInfos.size() > 0) {
 						ObjectInfo objectInfo = objectInfos.get(0);
 						if (ctx.hasAdministrativePrivileges() || (
-						      objectInfo.canRead(account.getAccountNumber()) &&
-						      Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
-						                             PolicySpec.VENDOR_S3,
-						                             PolicySpec.S3_RESOURCE_OBJECT,
-						                             PolicySpec.objectFullName(bucketName, manifestKey),
-						                             objectInfo.getOwnerId()))) {
+								objectInfo.canRead(account.getAccountNumber()) &&
+								Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
+										PolicySpec.VENDOR_S3,
+										PolicySpec.S3_RESOURCE_OBJECT,
+										PolicySpec.objectFullName(bucketName, manifestKey),
+										objectInfo.getOwnerId()))) {
 							//validate manifest
 							validateManifest(bucketName, manifestKey, account.getAccountNumber());
 							db.commit();
