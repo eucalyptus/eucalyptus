@@ -437,32 +437,11 @@ public class WalrusImageManager {
 							if(cert != null)
 								signatureVerified = canVerifySignature(sigVerifier, cert, signature, (machineConfiguration + image));
 						}
-						//					  X509Certificate cert = user.getX509Certificate( );
-						//						PublicKey publicKey = cert.getPublicKey();
-						//						sigVerifier.initVerify(publicKey);
-						//						sigVerifier.update((machineConfiguration + image).getBytes());
-						//						signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
 					} catch(Exception ex) {
 						db.rollback();
 						LOG.error(ex, ex);
 						throw new DecryptionFailedException("signature verification");
 					}
-
-					//					//check if Eucalyptus signed it
-					//					if(!signatureVerified) {
-					//						try {
-					//							X509Certificate cert = SystemCredentialProvider.getCredentialProvider(Eucalyptus.class).getCertificate();
-					//							PublicKey publicKey = cert.getPublicKey();
-					//							sigVerifier.initVerify(publicKey);
-					//							sigVerifier.update((machineConfiguration + image).getBytes());
-					//							signatureVerified = sigVerifier.verify(Hashes.hexToBytes(signature));
-					//						} catch(Exception ex) {
-					//							db.rollback();
-					//							LOG.error(ex, ex);
-					//							throw new DecryptionFailedException("signature verification");
-					//						}
-
-					//					}
 					if(!signatureVerified) {
 						throw new NotAuthorizedException("Invalid signature");
 					}
