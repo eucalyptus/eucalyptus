@@ -10,7 +10,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.webui.client.service.CategoryTag;
+import com.eucalyptus.webui.client.service.QuickLinkTag;
 import com.eucalyptus.webui.client.service.CloudInfo;
 import com.eucalyptus.webui.client.service.DownloadInfo;
 import com.eucalyptus.webui.client.service.EucalyptusService;
@@ -118,9 +118,9 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   }
 
   @Override
-  public ArrayList<CategoryTag> getCategory( Session session ) throws EucalyptusServiceException {
+  public ArrayList<QuickLinkTag> getQuickLinks( Session session ) throws EucalyptusServiceException {
     User user = verifySession( session );
-    return Categories.getTags( user );
+    return QuickLinks.getTags( user );
   }
   
   @Override

@@ -158,6 +158,7 @@ public class EuarePermission {
     try {
       allowed = requestUser.isSystemAdmin( ) ||
                 ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) &&
+                  !user.isAccountAdmin( ) &&
                   ( requestUser.isAccountAdmin( ) ||
                     Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_PUTUSERPOLICY, requestUser ) ) );
     } catch ( Exception e ) {
