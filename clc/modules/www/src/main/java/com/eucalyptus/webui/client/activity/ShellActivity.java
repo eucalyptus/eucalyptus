@@ -12,17 +12,18 @@ import com.eucalyptus.webui.client.ExPlaceHistoryHandler;
 import com.eucalyptus.webui.client.place.LoginPlace;
 import com.eucalyptus.webui.client.place.LogoutPlace;
 import com.eucalyptus.webui.client.place.ShellPlace;
-import com.eucalyptus.webui.client.service.CategoryTag;
+import com.eucalyptus.webui.client.service.QuickLinkTag;
 import com.eucalyptus.webui.client.service.LoginUserProfile;
 import com.eucalyptus.webui.client.session.SessionData;
 import com.eucalyptus.webui.client.view.DetailView;
+import com.eucalyptus.webui.client.view.DirectoryView;
 import com.eucalyptus.webui.client.view.FooterView;
+import com.eucalyptus.webui.client.view.HeaderView;
 import com.eucalyptus.webui.client.view.InputField;
 import com.eucalyptus.webui.client.view.InputView;
 import com.eucalyptus.webui.client.view.LoadingProgressView;
 import com.eucalyptus.webui.client.view.FooterView.StatusType;
 import com.eucalyptus.webui.client.view.LogView.LogType;
-import com.eucalyptus.webui.client.view.SearchHandler;
 import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.UserSettingView;
 import com.eucalyptus.webui.shared.checker.ValueChecker;
@@ -42,7 +43,7 @@ import com.google.gwt.user.client.ui.AcceptsOneWidget;
  *
  */
 public class ShellActivity extends AbstractActivity
-    implements FooterView.Presenter, UserSettingView.Presenter, DetailView.Controller, SearchHandler, InputView.Presenter {
+    implements FooterView.Presenter, UserSettingView.Presenter, DetailView.Controller, InputView.Presenter, DirectoryView.Presenter, HeaderView.Presenter {
   
   private static final Logger LOG = Logger.getLogger( ShellActivity.class.getName( ) );
   
@@ -65,7 +66,7 @@ public class ShellActivity extends AbstractActivity
   
   private AcceptsOneWidget container;
   
-  private ArrayList<CategoryTag> category;
+  private ArrayList<QuickLinkTag> quicklinks;
   
   public ShellActivity( ShellPlace place, ClientFactory clientFactory ) {
     this.place = place;
@@ -99,8 +100,8 @@ public class ShellActivity extends AbstractActivity
   private void loadShellView( AcceptsOneWidget container ) {
     ShellView shellView = this.clientFactory.getShellView( );
     
-    shellView.getDirectoryView( ).buildTree( this.category );
-    shellView.getDirectoryView( ).setSearchHandler( this );
+    shellView.getDirectoryView( ).buildTree( this.quicklinks );
+    shellView.getDirectoryView( ).setPresenter( this );
     
     shellView.getFooterView( ).setPresenter( this );
     shellView.getFooterView( ).setVersion( clientFactory.getSessionData( ).getStringProperty( SessionData.VERSION, DEFAULT_VERSION ) );
@@ -109,7 +110,7 @@ public class ShellActivity extends AbstractActivity
     shellView.getHeaderView( ).setUser( user );
     shellView.getHeaderView( ).getUserSetting( ).setUser( user );
     shellView.getHeaderView( ).getUserSetting( ).setPresenter( this );
-    shellView.getHeaderView( ).setSearchHandler( this );
+    shellView.getHeaderView( ).setPresenter( this );
     
     shellView.getDetailView( ).setController( this );
     
@@ -181,8 +182,8 @@ public class ShellActivity extends AbstractActivity
   }
   
   private void getCategory( ) {
-    this.clientFactory.getBackendService( ).getCategory( this.clientFactory.getLocalSession( ).getSession( ),
-                                                         new AsyncCallback<ArrayList<CategoryTag>>( ) {
+    this.clientFactory.getBackendService( ).getQuickLinks( this.clientFactory.getLocalSession( ).getSession( ),
+                                                         new AsyncCallback<ArrayList<QuickLinkTag>>( ) {
       
       @Override
       public void onFailure( Throwable caught ) {
@@ -192,12 +193,13 @@ public class ShellActivity extends AbstractActivity
       }
       
       @Override
-      public void onSuccess( ArrayList<CategoryTag> result ) {
+      public void onSuccess( ArrayList<QuickLinkTag> result ) {
         if ( result == null ) {
           LOG.log( Level.WARNING, "Got empty category" );
           clientFactory.getLifecyclePlaceController( ).goTo( new LoginPlace( LoginPlace.LOADING_FAILURE_PROMPT ) );          
         } else {
-          category = result;
+          quicklinks = result;
+          clientFactory.getSessionData( ).setQuickLinks( result );
           clientFactory.getLoadingProgressView( ).setProgress( 100 );
           startMain( );
         }
@@ -231,7 +233,6 @@ public class ShellActivity extends AbstractActivity
     this.clientFactory.getMainPlaceController( ).goTo( new LogoutPlace( ) );
   }
 
-  @Override
   public void search( String search ) {
     if ( search != null ) {
       LOG.log( Level.INFO, "New search: " + search );
@@ -455,6 +456,27 @@ public class ShellActivity extends AbstractActivity
   @Override
   public void onShowKey( ) {
     this.search( clientFactory.getSessionData( ).getLoginUser( ).getUserKeySearch( ) );
+  }
+
+  @Override
+  public void runManualSearch( String search ) {
+    this.search( search );
+  }
+
+  @Override
+  public void switchQuickLink( String search ) {
+    // If we are already doing this search, do nothing.
+    // This happens when we enter a new search by url or by manual search,
+    // and the new search matches a quick link. The quick link will be selected
+    // programatically. In this case, don't need to change search anymore.
+    if ( search != null ) {
+      String currentSearch = ActivityUtil.getCurrentSearch( clientFactory );
+      LOG.info( "Switching quick link: search = " + search + ", current = " + currentSearch );
+      if ( search.equals( currentSearch ) ) {
+        return;
+      }
+    }
+    this.search( search );
   }
 
   

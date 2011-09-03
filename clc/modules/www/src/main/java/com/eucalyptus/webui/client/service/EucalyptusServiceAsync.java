@@ -15,7 +15,7 @@ public interface EucalyptusServiceAsync {
   
   void getSystemProperties( Session session, AsyncCallback<HashMap<String, String>> callback );
   
-  void getCategory( Session session, AsyncCallback<ArrayList<CategoryTag>> callback );
+  void getQuickLinks( Session session, AsyncCallback<ArrayList<QuickLinkTag>> callback );
   
   void lookupAccount( Session session, String search, SearchRange range, AsyncCallback<SearchResult> callback );
 
