@@ -65,11 +65,8 @@ package com.eucalyptus.network;
 
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.persistence.EntityTransaction;
-import javax.persistence.PersistenceException;
-import javax.persistence.RollbackException;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
@@ -84,7 +81,6 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.Numbers;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
@@ -212,7 +208,7 @@ public class NetworkGroups {
   }
   
   public static NetworkGroup lookup( final String groupId ) throws NoSuchMetadataException {
-    EntityTransaction db = Entities.get( NetworkGroups.class );
+    EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
       NetworkGroup entity = Entities.uniqueResult( NetworkGroup.named( null, groupId ) );
       db.commit( );
