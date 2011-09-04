@@ -65,21 +65,6 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
         }
       }
-      final EntityTransaction db1 = Entities.get( VmInstance.class );
-      try {
-        try {
-          final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, runVm.getInstanceId( ) ) );
-          vm.doUpdate( ).apply( runVm );
-        } catch ( final Exception ex ) {
-          if ( VmStateSet.RUN.contains( state ) ) {
-            VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
-          }
-        }
-        db1.commit( );
-      } catch ( final Exception ex ) {
-        Logs.exhaust( ).error( ex, ex );
-        db1.rollback( );
-      }
     }
 
     final List<String> unreportedVms = Lists.transform( VmInstances.listValues( ), new Function<VmInstance, String>( ) {
