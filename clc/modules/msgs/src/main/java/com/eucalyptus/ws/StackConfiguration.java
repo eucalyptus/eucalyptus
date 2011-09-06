@@ -139,7 +139,7 @@ public class StackConfiguration extends AbstractPersistent {
   public static Long          PIPELINE_WRITE_TIMEOUT_SECONDS    = 20l;
   
   @ConfigurableField( initial = "1048576000", description = "Server http chunk max." )
-  public static int           CLIENT_HTTP_CHUNK_BUFFER_MAX      = 1048576000;
+  public static Integer       CLIENT_HTTP_CHUNK_BUFFER_MAX      = 1048576000;
   
   @ConfigurableField( initial = "40", description = "Server worker thread pool max." )
   public static Integer       CLIENT_POOL_MAX_THREADS           = 40;
