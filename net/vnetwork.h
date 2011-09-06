@@ -73,7 +73,7 @@ permission notice:
 #define NUMBER_OF_VLANS 4096
 #define NUMBER_OF_HOSTS_PER_VLAN 2048
 #define NUMBER_OF_PUBLIC_IPS 2048
-#define NUMBER_OF_CCS 2
+#define NUMBER_OF_CCS 8
 
 typedef struct netEntry_t {
   unsigned char mac[6];
