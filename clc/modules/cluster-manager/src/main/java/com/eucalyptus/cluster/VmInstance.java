@@ -1371,8 +1371,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         //ASAP:FIXME:GRZE: restore.
         runningInstance.setProductCodes( new ArrayList<String>( ) );
         runningInstance.setImageId( input.getBootRecord( ).getMachine( ).getDisplayName( ) );
-        runningInstance.setKernel( input.getBootRecord( ).getKernel( ).getDisplayName( ) );
-        runningInstance.setRamdisk( input.getBootRecord( ).getRamdisk( ).getDisplayName( ) );
+        if( input.getBootRecord( ).getKernel( ) != null ) {
+          runningInstance.setKernel( input.getBootRecord( ).getKernel( ).getDisplayName( ) );
+        }
+        if( input.getBootRecord( ).getRamdisk( ) != null ) {
+          runningInstance.setRamdisk( input.getBootRecord( ).getRamdisk( ).getDisplayName( ) );
+        }
         if ( dns ) {
           String publicDnsName = input.getPublicDnsName( );
           String privateDnsName = input.getPrivateDnsName( );
