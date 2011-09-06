@@ -53,15 +53,18 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       EntityTransaction db = Entities.get( VmInstance.class );
       try {
         try {
-          VmInstance vm = VmInstance.Lookup.INSTANCE.apply( runVm.getInstanceId( ) );
+          VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
           try {
-            if ( VmStateSet.RUN.contains( VmState.Mapper.get( runVm.getStateName( ) ) ) ) {
+            if ( VmStateSet.RUN.apply( vm ) ) {
               vm.doUpdate( ).apply( runVm );
+            } else {
+              continue;
             }
           } catch ( Exception ex ) {
             LOG.error( ex , ex );
           }
         } catch ( Exception ex1 ) {
+          VmInstance vm = VmInstance.Lookup.INSTANCE.apply( runVm.getInstanceId( ) );
           if ( VmStateSet.RUN.contains( state ) ) {
             VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
           }

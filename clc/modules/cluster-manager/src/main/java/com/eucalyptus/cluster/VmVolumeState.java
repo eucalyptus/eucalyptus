@@ -163,11 +163,6 @@ public class VmVolumeState {
   
   public void updateVolumeAttachments( final List<VmVolumeAttachment> ncAttachedVols ) throws NoSuchElementException {
     final Map<String, VmVolumeAttachment> ncAttachedVolMap = new HashMap<String, VmVolumeAttachment>( ) {
-      /**
-       * 
-       */
-      @Transient
-      private static final long serialVersionUID = 1L;
       
       {
         for ( final VmVolumeAttachment v : ncAttachedVols ) {
@@ -194,8 +189,10 @@ public class VmVolumeState {
       }
     } );
     for ( final VmVolumeAttachment v : ncAttachedVolMap.values( ) ) {
-      LOG.warn( "Restoring volume attachment state for " + this.getVmInstance( ).getInstanceId( ) + " with " + v.toString( ) );
-      this.addVolumeAttachment( v );
+      if( "attached".equals( v.getStatus( ) ) ) {
+        LOG.warn( "Restoring volume attachment state for " + this.getVmInstance( ).getInstanceId( ) + " with " + v.toString( ) );
+        this.addVolumeAttachment( v );
+      }
     }
   }
   
