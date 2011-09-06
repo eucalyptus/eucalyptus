@@ -111,15 +111,26 @@ public class Emis {
     INSTANCE;
     @Override
     public BlockStorageImageInfo apply( String identifier ) {
-      return EntityWrapper.get( BlockStorageImageInfo.class ).lookupAndClose( Images.exampleBlockStorageWithImageId( identifier ) );
-    }
+      //Added check to ensure image is available
+      BlockStorageImageInfo ret = EntityWrapper.get( BlockStorageImageInfo.class ).lookupAndClose( Images.exampleBlockStorageWithImageId( identifier ) );
+      if (!ImageMetadata.State.available.equals(ret.getState())) {
+	      throw new NoSuchElementException("Unable to start instance with deregistered image : " + ret);
+      } else { 
+        return ret;
+      }
   }
   
   public enum LookupMachine implements Function<String, MachineImageInfo> {
     INSTANCE;
     @Override
     public MachineImageInfo apply( String identifier ) {
-      return EntityWrapper.get( MachineImageInfo.class ).lookupAndClose( Images.exampleMachineWithImageId( identifier ) );
+      //Added check to ensure image is availabe
+      MachineImageInfo ret = EntityWrapper.get( MachineImageInfo.class ).lookupAndClose( Images.exampleMachineWithImageId( identifier ) );
+      if (!ImageMetadata.State.available.equals(ret.getState())) {
+	      throw new NoSuchElementException("Unable to start instance with deregistered image : " + ret);
+      } else {
+        return ret;
+      }
     }
   }
   
@@ -127,15 +138,27 @@ public class Emis {
     INSTANCE;
     @Override
     public KernelImageInfo apply( String identifier ) {
-      return EntityWrapper.get( KernelImageInfo.class ).lookupAndClose( Images.exampleKernelWithImageId( identifier ) );
+     //Added check to ensure the image is available
+     KernelImageInfo ret = EntityWrapper.get( KernelImageInfo.class ).lookupAndClose( Images.exampleKernelWithImageId( identifier ) );
+     if (!ImageMetadata.State.available.equals(ret.getState())) {
+	      throw new NoSuchElementException("Unable to start instance with deregistered image : " + ret);
+     } else {
+       return ret;
+     }	
     }
   }
   
   public enum LookupRamdisk implements Function<String, RamdiskImageInfo> {
     INSTANCE;
     @Override
-    public RamdiskImageInfo apply( String identifier ) {
-      return EntityWrapper.get( RamdiskImageInfo.class ).lookupAndClose( Images.exampleRamdiskWithImageId( identifier ) );
+    public RamdiskImageInfo apply( String identifier ) { 
+     //Added check to ensure the image is available 
+     RamdiskImageInfo ret = EntityWrapper.get( RamdiskImageInfo.class ).lookupAndClose( Images.exampleRamdiskWithImageId( identifier ) );
+     if (!ImageMetadata.State.available.equals(ret.getState())) {
+	      throw new NoSuchElementException("Unable to start instance with deregistered image : " + ret);
+     } else {
+       return ret;
+     }
     }
   }
   
