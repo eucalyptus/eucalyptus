@@ -199,9 +199,11 @@ public class VmControl {
           Logs.exhaust( ).error( ex, ex );
           db.rollback( );
           try {
-            RunningInstancesItemType ret = VmInstances.transform( vm );
-            if ( ret != null ) {
-              rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( ret );
+            if ( vm != null ) {
+              RunningInstancesItemType ret = VmInstances.transform( vm );
+              if ( ret != null ) {
+                rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( ret );
+              }
             }
           } catch ( Exception ex1 ) {
             LOG.error( ex1 , ex1 );
