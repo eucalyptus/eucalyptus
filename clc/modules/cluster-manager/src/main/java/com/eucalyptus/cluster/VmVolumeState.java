@@ -175,10 +175,9 @@ public class VmVolumeState {
       public boolean apply( final VmVolumeAttachment arg0 ) {
         final String volId = arg0.getVolumeId( );
         if ( ncAttachedVolMap.containsKey( volId ) ) {
-          final VmVolumeAttachment ncVol = ncAttachedVolMap.get( volId );
-          if ( "detached".equals( ncVol.getStatus( ) ) || "attaching failed".equals( ncVol.getStatus( ) ) ) {
+          if ( "detached".equals( arg0.getStatus( ) ) || "attaching failed".equals( arg0.getStatus( ) ) ) {
             VmVolumeState.this.removeVolumeAttachment( volId );
-          } else if ( "attaching".equals( arg0.getStatus( ) ) || "attached".equals( arg0.getStatus( ) ) ) {
+          } else if ( "attaching".equals( arg0.getStatus( ) ) || "attached".equals( arg0.getStatus( ) ) || "detach failed".equals( arg0.getStatus( ) ) ) {
             VmVolumeState.this.updateVolumeAttachment( volId, arg0.getStatus( ) );
           }
         }

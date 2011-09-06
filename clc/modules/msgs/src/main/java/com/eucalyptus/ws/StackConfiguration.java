@@ -108,8 +108,8 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( initial = "500", description = "Service socket select timeout (ms)." )
   public static Long          SERVER_POOL_TIMEOUT_MILLIS        = 500l;
   
-  @ConfigurableField( initial = "17", description = "Server selector thread pool max." )
-  public static Integer       SERVER_BOSS_POOL_MAX_THREADS      = Runtime.getRuntime( ).availableProcessors( ) + 1;
+  @ConfigurableField( initial = "128", description = "Server selector thread pool max." )
+  public static Integer       SERVER_BOSS_POOL_MAX_THREADS      = 128;
   
   @ConfigurableField( initial = "0", description = "Server max selector memory per connection." )
   public static Long          SERVER_BOSS_POOL_MAX_MEM_PER_CONN = 0l;
