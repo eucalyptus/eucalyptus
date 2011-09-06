@@ -118,6 +118,7 @@ public class Emis {
       } else { 
         return ret;
       }
+    }
   }
   
   public enum LookupMachine implements Function<String, MachineImageInfo> {
