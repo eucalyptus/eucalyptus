@@ -296,7 +296,8 @@ public class Images {
     
     } catch ( ConstraintViolationException cve ) {
       db.rollback( );
-      throw new ConstraintViolationException("Unable to delete an image registration with associated instances in the running state.", cve);
+      // Need to add message that the image is associated with running instances.
+      throw cve;
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
       throw new NoSuchImageException( "Failed to lookup image: " + imageId, e );
