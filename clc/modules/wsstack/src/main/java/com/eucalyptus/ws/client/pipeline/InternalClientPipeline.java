@@ -73,8 +73,6 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.handlers.InternalWsSecHandler;
-import com.eucalyptus.ws.handlers.ResponseHandler;
-import com.google.common.base.Supplier;
 
 public class InternalClientPipeline implements ChannelPipelineFactory {
   private static Logger         LOG = Logger.getLogger( InternalClientPipeline.class );
@@ -97,7 +95,7 @@ public class InternalClientPipeline implements ChannelPipelineFactory {
       pipeline.addLast( e.getKey( ), e.getValue( ) );
     }
     pipeline.addLast( "decoder", Handlers.newHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( ) ); // TODO:GRZE: configurable
+    pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( ) );
     pipeline.addLast( "encoder", Handlers.httpRequestEncoder( ) );
     pipeline.addLast( "serializer", Handlers.soapMarshalling( ) );
     pipeline.addLast( "wssec", InternalClientPipeline.wssecHandler );
