@@ -167,8 +167,6 @@ public class VmControl {
   
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
     final DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
-    final Context ctx = Contexts.lookup( );
-    final boolean isAdmin = ctx.hasAdministrativePrivileges( );
     final boolean isVerbose = msg.getInstancesSet( ).remove( "verbose" );
     final ArrayList<String> instancesSet = msg.getInstancesSet( );
     final Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
@@ -201,7 +199,7 @@ public class VmControl {
           try {
             if ( vm != null ) {
               RunningInstancesItemType ret = VmInstances.transform( vm );
-              if ( ret != null ) {
+              if ( ret != null && vm.getReservationId( ) != null ) {
                 rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( ret );
               }
             }
