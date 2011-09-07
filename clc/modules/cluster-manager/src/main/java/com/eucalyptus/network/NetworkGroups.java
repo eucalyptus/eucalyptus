@@ -99,13 +99,13 @@ public class NetworkGroups {
   private static Logger       LOG                       = Logger.getLogger( NetworkGroups.class );
   private static String       NETWORK_DEFAULT_NAME      = "default";
   
-  @ConfigurableField( initial = "" + 2048l, description = "Default max network index." )
-  public static Long          DEFAULT_MAX_NETWORK_INDEX = 128l;
-  @ConfigurableField( initial = "" + 9, description = "Default min network index." )
+  @ConfigurableField( initial = "4096", description = "Default max network index." )
+  public static Long          DEFAULT_MAX_NETWORK_INDEX = 4096l;
+  @ConfigurableField( initial = "1", description = "Default min network index." )
   public static Long          DEFAULT_MIN_NETWORK_INDEX = 2l;
   @ConfigurableField( initial = "" + 4096, description = "Default max vlan tag." )
   public static Integer       DEFAULT_MAX_NETWORK_TAG   = 4096;
-  @ConfigurableField( initial = "" + 9, description = "Default min vlan tag." )
+  @ConfigurableField( initial = "1", description = "Default min vlan tag." )
   public static Integer       DEFAULT_MIN_NETWORK_TAG   = 1;
   
   public static class NetworkRangeConfiguration {
