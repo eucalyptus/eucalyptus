@@ -191,16 +191,14 @@ public class NetworkGroups {
     for ( Long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
       interval.add( i );
     }
-//    Collections.shuffle( interval );
     return interval;
   }
   
   public static List<Integer> networkTagInterval( ) {
     final List<Integer> interval = Lists.newArrayList( );
-    for ( int i = NetworkGroups.networkingConfiguration( ).getMinNetworkTag( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkTag( ); i++ ) {
+    for ( Integer i = NetworkGroups.networkingConfiguration( ).getMinNetworkTag( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkTag( ); i++ ) {
       interval.add( i );
     }
-//    Collections.shuffle( interval );
     return interval;
   }
   
