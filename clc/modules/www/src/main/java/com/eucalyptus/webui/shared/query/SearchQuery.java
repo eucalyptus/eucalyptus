@@ -165,4 +165,21 @@ public class SearchQuery {
     return null;
   }
   
+  @Override
+  public boolean equals( Object other ) {
+    if ( other == null ) {
+      return false;
+    }
+    if ( !( other instanceof SearchQuery ) ) {
+      return false;
+    }
+    SearchQuery otherQuery = ( SearchQuery )other;
+    if ( this.type == otherQuery.type &&
+         ( ( this.termMap == null && otherQuery.termMap == null ) ||
+           ( this.termMap != null && this.termMap.equals( otherQuery.termMap ) ) ) ) {
+      return true;
+    }
+    return false;
+  }
+  
 }

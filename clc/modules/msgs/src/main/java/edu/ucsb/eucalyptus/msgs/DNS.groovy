@@ -63,11 +63,12 @@ package edu.ucsb.eucalyptus.msgs
  *
  * Author: Neil Soman neil@eucalyptus.com
  */
-public class DNSResponseType extends EucalyptusMessage {
+public class DnsMessage extends BaseMessage {}
+public class DNSResponseType extends DnsMessage {
   def DNSResponseType() {}
 }
 
-public class DNSRequestType extends EucalyptusMessage {
+public class DNSRequestType extends DnsMessage {
 
   def DNSRequestType() {}
 }

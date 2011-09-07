@@ -63,12 +63,13 @@
 
 package com.eucalyptus.util;
 
+import java.io.Serializable;
 import java.util.Map;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 
-public interface FullName/* TODO:ASAP:GRZE <T extends HasId> */{
+public interface FullName extends Serializable {
   
   public final static String EMPTY     = "";
   public final static String SEP_PATH  = "/";
@@ -90,10 +91,6 @@ public interface FullName/* TODO:ASAP:GRZE <T extends HasId> */{
   public abstract String getRelativeId( );
   
   public abstract String getPartition( );
-  
-  public abstract String getName( );
-  
-  public abstract String getFullyQualifiedName( );
   
   public abstract String toString( );
   
@@ -183,11 +180,6 @@ public interface FullName/* TODO:ASAP:GRZE <T extends HasId> */{
         }
         
         @Override
-        public String getFullyQualifiedName( ) {
-          return create.this.buf.toString( );
-        }
-        
-        @Override
         public String getVendor( ) {
           return create.this.partMap.get( part.VENDOR );
         }
@@ -215,11 +207,6 @@ public interface FullName/* TODO:ASAP:GRZE <T extends HasId> */{
         @Override
         public String getPartition( ) {
           return create.this.partMap.get( part.REGION );
-        }
-        
-        @Override
-        public String getName( ) {
-          return create.this.buf.toString( );
         }
         
         @Override

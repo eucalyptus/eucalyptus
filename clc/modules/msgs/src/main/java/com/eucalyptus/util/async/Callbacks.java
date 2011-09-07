@@ -7,8 +7,9 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.async.Callback.Checked;
+import com.eucalyptus.util.Callback.Checked;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Callbacks {
@@ -54,12 +55,12 @@ public class Callbacks {
   static class BasicCallbackProcessor<R extends BaseMessage> implements Runnable {
     private final Callback<R> callback;
     private final Future<R>   future;
-    private final Logger      LOG;
+    private final Logger      log;
     
     private BasicCallbackProcessor( final Future<R> future, final Callback<R> callback ) {
       this.callback = callback;
       this.future = future;
-      this.LOG = Logger.getLogger( this.callback.getClass( ) );
+      this.log = Logger.getLogger( this.callback.getClass( ) );
     }
     
     @Override
@@ -68,27 +69,28 @@ public class Callbacks {
       try {
         reply = this.future.get( );
         if ( reply == null ) {
-          this.LOG.warn( "Application of callback resulted in null value: " + this.getClass( ).getSimpleName( ) );
+          this.log.warn( "Application of callback resulted in null value: " + this.getClass( ).getSimpleName( ) );
           Exceptions.eat( "Callback marked as done has null valued response: " + reply );
         }
         try {
-          this.LOG.trace( EventRecord.here( this.getClass( ), EventType.CALLBACK, "fire(" + reply.getClass( ).getSimpleName( ) + ")" ).toString( ) );
+          EventRecord.here( this.getClass( ), EventType.CALLBACK, "fire(" + reply.getClass( ).getSimpleName( ) + ")" ).exhaust( );
           this.callback.fire( reply );
         } catch ( final Throwable ex ) {
-          this.LOG.error( EventRecord.here( this.getClass( ), EventType.CALLBACK, "FAILED", "fire(" + reply.getClass( ).getSimpleName( ) + ")", ex.getMessage( ) ).toString( ) );
+          EventRecord.here( this.getClass( ), EventType.CALLBACK, "FAILED", "fire(" + reply.getClass( ).getSimpleName( ) + ")", ex.getMessage( ) ).exhaust( );
           this.doFail( ex );
         }
       } catch ( final Throwable e ) {
-        this.LOG.error( EventRecord.here( this.getClass( ), EventType.FUTURE, "FAILED", "get()", e.getMessage( ) ).toString( ) );
+        EventRecord.here( this.getClass( ), EventType.FUTURE, "FAILED", "get()", e.getMessage( ) ).exhaust( );
         this.doFail( e );
       }
     }
     
     private final void doFail( Throwable failure ) {
-      this.LOG.trace( EventRecord.here( BasicCallbackProcessor.class, EventType.CALLBACK, this.callback.getClass( ).toString( ), "fireException(" + failure.getClass( ).getSimpleName( ) + ")" ) );
-      this.LOG.trace( failure.getMessage( ), failure );
+      EventRecord.here( BasicCallbackProcessor.class, EventType.CALLBACK, this.callback.getClass( ).toString( ),
+                        "fireException(" + failure.getClass( ).getSimpleName( ) + ")" ).exhaust( );
+      this.log.trace( failure.getMessage( ), failure );
       if ( this.callback instanceof Callback.Checked ) {
-          ( ( Checked ) this.callback ).fireException( failure );
+        ( ( Checked ) this.callback ).fireException( failure );
       } else if ( this.callback instanceof Callback.Completion ) {
         ( ( Callback.Completion ) this.callback ).fireException( failure );
       }

@@ -63,66 +63,79 @@
  */
 package com.eucalyptus.cluster.callback;
 
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.principal.FakePrincipals;
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.Networks;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
-import com.eucalyptus.util.EucalyptusClusterException;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.network.ExtantNetwork;
+import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.BroadcastCallback;
-import edu.ucsb.eucalyptus.cloud.Network;
-import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.msgs.StopNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StopNetworkType;
 
-public class StopNetworkCallback extends BroadcastCallback<StopNetworkType,StopNetworkResponseType> implements Expendable<StopNetworkCallback>{
-  private static Logger LOG = Logger.getLogger( StopNetworkCallback.class );
-  private NetworkToken  token;
-
-  public StopNetworkCallback( final NetworkToken networkToken ) {
-    this.token = networkToken;
-    StopNetworkType msg = new StopNetworkType( this.token.getUserFullName( ).getUserId( ), this.token.getNetworkName(), this.token.getVlan() ).regarding( );
-    msg.setUserId( this.token.getUserFullName( ).getUserId( ) );
+public class StopNetworkCallback extends BroadcastCallback<StopNetworkType, StopNetworkResponseType> implements Expendable<StopNetworkCallback> {
+  private static Logger      LOG = Logger.getLogger( StopNetworkCallback.class );
+  private final NetworkGroup networkGroup;
+  private Integer            tag;
+  
+  @SuppressWarnings( "deprecation" )
+  public StopNetworkCallback( final NetworkGroup networkGroup ) {
+    this.networkGroup = networkGroup;
+    
+    EntityTransaction db = Entities.get( NetworkGroup.class );
+    try {
+      NetworkGroup entity = Entities.merge( this.networkGroup );
+      this.tag = this.networkGroup.extantNetwork( ).getTag( );
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      this.tag = -1;
+    }
+    StopNetworkType msg = new StopNetworkType( this.networkGroup.getOwnerAccountNumber( ),
+                                               this.networkGroup.getOwnerUserId( ),
+                                               this.networkGroup.getNaturalId( ),
+                                               this.tag ).regarding( );
+    msg.setUserId( this.networkGroup.getOwnerUserId( ) );
+    msg.setAccountId( this.networkGroup.getOwnerAccountNumber( ) );
     this.setRequest( msg );
   }
-
+  
   @Override
   public void fire( StopNetworkResponseType msg ) {}
-
+  
   @Override
   public void initialize( StopNetworkType msg ) throws Exception {
-    try {
-      Network net = Networks.getInstance( ).lookup( token.getName( ) );
-      Cluster cluster = Clusters.getInstance( ).lookup( token.getCluster( ) );
-      LOG.debug( "Releasing network token back to cluster: " + token );
-      if( net.hasTokens( ) ) throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
-      cluster.getState( ).releaseNetworkAllocation( token );
-    } catch ( EucalyptusClusterException e ) {
-      LOG.debug( "Aborting stop network for network with live instances: " + e.getMessage( ), e );
-      throw e;
-    } catch ( Exception e ) {
-      LOG.debug( e );
-    }
+//    try {
+//      NetworkGroup net = NetworkGroups.lookup( this.networkGroup.getNaturalId( ) );
+//      ExtantNetwork exNet = net.getExtantNetwork( );
+//      if ( !net.extantNetwork( ).hasIndexes( ) ) {
+//        LOG.debug( "Aborting stop network for network with live instances: " + net.extantNetwork( ) );
+//        throw new EucalyptusClusterException( "Returning stop network event since it still exists." );
+//      } else {
+//        LOG.debug( "Releasing network token back to cluster: " + net.extantNetwork( ) );
+//      }
+//    } catch ( Exception e ) {
+//      LOG.debug( e );
+//    }
   }
-
+  
   @Override
-  public BroadcastCallback<StopNetworkType,StopNetworkResponseType> newInstance( ) {
-    return new StopNetworkCallback( token );
+  public BroadcastCallback<StopNetworkType, StopNetworkResponseType> newInstance( ) {
+    return new StopNetworkCallback( this.networkGroup );
   }
-
+  
   @Override
   public void fireException( Throwable e ) {
-    LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
-    LOG.debug( e, e );
+    LOG.debug( "Request failed: " + LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
+    Logs.extreme( ).error( e, e );
   }
-
+  
   @Override
   public boolean duplicateOf( StopNetworkCallback that ) {
     return this.getRequest( ).getNetName( ).equals( that.getRequest( ).getNetName( ) );
   }
-
+  
 }

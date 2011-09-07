@@ -40,9 +40,10 @@ public abstract class ServiceDispatcher implements Dispatcher {
   public static Dispatcher lookupSingle( Component c ) throws NoSuchElementException {
     try {
       ServiceConfiguration first = c.lookupServiceConfigurations( ).first( );
-      if ( !Component.State.ENABLED.isIn( first ) ) {
+      if ( !Component.State.ENABLED.equals( first.lookupState( ) ) ) {
         LOG.error( "Failed to find service dispatcher for component=" + c );
-        throw new NoSuchElementException( "Failed to find ENABLED service for component=" + c.getName( ) + " existing services are: " + c.lookupServiceConfigurations( ) );
+        throw new NoSuchElementException( "Failed to find ENABLED service for component=" + c.getName( ) + " existing services are: "
+                                          + c.lookupServiceConfigurations( ) );
       } else {
         return first.lookupService( ).getDispatcher( );
       }
@@ -56,7 +57,7 @@ public abstract class ServiceDispatcher implements Dispatcher {
     try {
       return config.lookupService( ).getDispatcher( );
     } catch ( NoSuchServiceException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       throw new NoSuchElementException( "Failed to lookup dispatcher for: " + config.toString( ) );
     }
   }
@@ -95,7 +96,8 @@ public abstract class ServiceDispatcher implements Dispatcher {
     }
     
     protected final NioClient getNioClient( ) throws Exception {
-      return new NioClient( this.address.getHost( ), this.address.getPort( ), this.address.getPath( ), ComponentIds.lookup( Empyrean.class ).getClientPipeline( ) );
+      return new NioClient( this.address.getHost( ), this.address.getPort( ), this.address.getPath( ),
+                            ComponentIds.lookup( Empyrean.class ).getClientPipeline( ) );
     }
     
     protected final ServiceConfiguration getServiceConfiguration( ) {

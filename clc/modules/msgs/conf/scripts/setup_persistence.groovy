@@ -78,6 +78,7 @@ String db_pass = SystemIds.databasePassword( );
 
 default_hiber_config = [
       'hibernate.archive.autodetection': 'jar, class, hbm',
+      'hibernate.ejb.interceptor.session_scoped': 'com.eucalyptus.entities.DelegatingInterceptor',
       'hibernate.show_sql': 'false',
       'hibernate.format_sql': 'false',
       'hibernate.connection.autocommit': 'false',
@@ -143,7 +144,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
   // Register the context
   try {
     PersistenceContexts.registerPersistenceContext("${ctx_simplename}", config)
-  } catch( Throwable t ) {
+  } catch( Exception t ) {
     t.printStackTrace();
     System.exit(1)
   }

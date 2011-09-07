@@ -220,7 +220,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	vnetconfig->numaddrs = atoi(numberofaddrs);
       }
     }
-    vnetconfig->addrIndexMin = NUMBER_OF_CCS;
+    vnetconfig->addrIndexMin = NUMBER_OF_CCS+1;
     vnetconfig->addrIndexMax = vnetconfig->numaddrs-2;
     
     if (network) vnetconfig->nw = dot2hex(network);
@@ -308,7 +308,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	  if (vnetconfig->numaddrs > NUMBER_OF_PUBLIC_IPS) {
 	    vnetconfig->numaddrs = NUMBER_OF_PUBLIC_IPS;
 	  }
-	  vnetconfig->addrIndexMin = NUMBER_OF_CCS;
+	  vnetconfig->addrIndexMin = NUMBER_OF_CCS+1;
 	  vnetconfig->addrIndexMax = vnetconfig->numaddrs-2;
 	}
       }
@@ -1023,7 +1023,7 @@ int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *uuid, char *user, char *
   if (param_check("vnetSetVlan", vnetconfig, vlan, user, network)) return(1);
 
   safe_strncpy(vnetconfig->users[vlan].userName, user, 48);
-  safe_strncpy(vnetconfig->users[vlan].netName, network, 32);
+  safe_strncpy(vnetconfig->users[vlan].netName, network, 64);
   if (uuid) safe_strncpy(vnetconfig->users[vlan].uuid, uuid, 48);
   
   return(0);

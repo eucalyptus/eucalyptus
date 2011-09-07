@@ -95,7 +95,9 @@ public class Contexts {
     } else {
       LOG.debug( "Context.clear() failed for correlationId=" + corrId, new RuntimeException( "Missing reference to channel for the request." ) );
     }
-    ctx.clear( );
+    if ( ctx != null ) {
+      ctx.clear( );
+    }
   }
 
   public static void clear( Context context ) {

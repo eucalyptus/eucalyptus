@@ -69,7 +69,7 @@ import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.component.ServiceChecks.Severity;
 import com.eucalyptus.component.Topology.ServiceKey;
-import com.eucalyptus.util.Logs;
+import com.eucalyptus.records.Logs;
 import com.google.common.base.Predicate;
 
 public class ServiceExceptions {
@@ -141,7 +141,7 @@ public class ServiceExceptions {
       
       @Override
       public boolean apply( final Throwable ex ) {
-        if ( State.ENABLED.isIn( parent ) && ( parent.isVmLocal( ) || ( BootstrapArgs.isCloudController( ) && parent.isHostLocal( ) ) ) ) {
+        if ( State.ENABLED.equals( parent.lookupState( ) ) && ( parent.isVmLocal( ) || ( BootstrapArgs.isCloudController( ) && parent.isHostLocal( ) ) ) ) {
           try {
             Topology.disable( parent );
           } catch ( ServiceRegistrationException ex1 ) {

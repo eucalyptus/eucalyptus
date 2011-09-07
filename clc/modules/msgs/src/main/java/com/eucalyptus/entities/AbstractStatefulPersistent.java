@@ -66,29 +66,36 @@ package com.eucalyptus.entities;
 import javax.persistence.Column;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.Lob;
 import javax.persistence.MappedSuperclass;
-import org.hibernate.annotations.NaturalId;
+import javax.persistence.Transient;
+import com.eucalyptus.system.Threads;
 
 @MappedSuperclass
 public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> extends AbstractPersistent {
+  @Transient 
+  private static final long serialVersionUID = 1L;
+
   @Column( name = "metadata_state" )
   @Enumerated( EnumType.STRING )
-  STATE            state;
-  @NaturalId
+  STATE                     state;
+  @Lob
+  @Column( name = "metadata_state_change_stack" )
+  protected String          stateChangeStack;
   @Column( name = "metadata_display_name" )
-  protected String displayName;
+  protected String          displayName;
   
-  public AbstractStatefulPersistent( ) {
+  protected AbstractStatefulPersistent( ) {
     super( );
   }
   
-  public AbstractStatefulPersistent( STATE state, String displayName ) {
+  protected AbstractStatefulPersistent( final STATE state, final String displayName ) {
     super( );
     this.state = state;
     this.displayName = displayName;
   }
   
-  public AbstractStatefulPersistent( String displayName ) {
+  protected AbstractStatefulPersistent( final String displayName ) {
     super( );
     this.displayName = displayName;
   }
@@ -97,7 +104,8 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
     return this.state;
   }
   
-  public void setState( STATE state ) {
+  public void setState( final STATE state ) {
+    this.stateChangeStack = Threads.currentStackString( );
     this.state = state;
   }
   
@@ -105,28 +113,17 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
   public int hashCode( ) {
     final int prime = 31;
     int result = super.hashCode( );
-    result = prime * result + ( ( displayName == null )
+    result = prime * result + ( ( this.displayName == null )
       ? 0
-      : displayName.hashCode( ) );
+      : this.displayName.hashCode( ) );
     return result;
-  }
-  
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) return true;
-    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
-    AbstractStatefulPersistent other = ( AbstractStatefulPersistent ) obj;
-    if ( displayName == null ) {
-      if ( other.displayName != null ) return false;
-    } else if ( !displayName.equals( other.displayName ) ) return false;
-    return true;
   }
   
   public String getDisplayName( ) {
     return this.displayName;
   }
   
-  public void setDisplayName( String displayName ) {
+  public void setDisplayName( final String displayName ) {
     this.displayName = displayName;
   }
   
@@ -134,4 +131,12 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
     return this.getDisplayName( );
   }
 
+  private String getStateChangeStack( ) {
+    return this.stateChangeStack;
+  }
+
+  private void setStateChangeStack( String stateChangeStack ) {
+    this.stateChangeStack = stateChangeStack;
+  }
+  
 }

@@ -1,42 +1,42 @@
-/*******************************************************************************
+/*
  * Copyright (c) 2009  Eucalyptus Systems, Inc.
- * 
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, only version 3 of the License.
- * 
- * 
+ *
+ *
  *  This file is distributed in the hope that it will be useful, but WITHOUT
  *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  *  for more details.
- * 
+ *
  *  You should have received a copy of the GNU General Public License along
  *  with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  *  Please contact Eucalyptus Systems, Inc., 130 Castilian
  *  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
  *  if you need additional information or have any questions.
- * 
+ *
  *  This file may incorporate work covered under the following copyright and
  *  permission notice:
- * 
+ *
  *    Software License Agreement (BSD License)
- * 
+ *
  *    Copyright (c) 2008, Regents of the University of California
  *    All rights reserved.
- * 
+ *
  *    Redistribution and use of this software in source and binary forms, with
  *    or without modification, are permitted provided that the following
  *    conditions are met:
- * 
+ *
  *      Redistributions of source code must retain the above copyright notice,
  *      this list of conditions and the following disclaimer.
- * 
+ *
  *      Redistributions in binary form must reproduce the above copyright
  *      notice, this list of conditions and the following disclaimer in the
  *      documentation and/or other materials provided with the distribution.
- * 
+ *
  *    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
  *    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  *    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
@@ -65,6 +65,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.lang.Runtime;
 import java.lang.Process;
+import java.lang.ProcessBuilder;
 import org.apache.log4j.Logger;
 import java.net.Socket;
 import java.io.File;
@@ -81,10 +82,7 @@ import com.eucalyptus.component.id.Database;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.system.SubDirectory;
 
-
-
-/* DISCLAIMER : This is prototype code.  Not all the functionality is properly working at this time.
- *
+/*
  * REQUIREMENTS : Postgres 8.4 and Postgres jdbc driver
  *
  * SUMMARY : The PostgresqlBootstrapper class attempts to control the postgres database.  The methods
@@ -97,22 +95,19 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 
 	// Static definitions of postgres commands and options
 
-	private static String EUCA_DB_DIR  = SubDirectory.DB.getFile().getPath() + "/data";
-	private static String PG_PATH = "/usr/bin/"
-	private static String PG_BIN = "pg_ctl";
-	private static String PG_STOP = " -mf stop";
+	private static String EUCA_DB_DIR  = SubDirectory.DB.getFile().getPath() + "/data/";
+	private static String PG_BIN = "/usr/bin/pg_ctl";
 	private static String PG_START = "start";
-	private static String PG_PORT_OPTS2 = "-o \"-p8777 -i\"";
-	private static String PG_DB_OPT = "-D ";
+	private static String PG_STOP_OPTS = "-mf"
+	private static String PG_STOP = "stop";
+	private static String PG_PORT_OPTS2 = "-o -h0.0.0.0/0 -p8777 -i";
+	private static String PG_DB_OPT = "-D";
 	private static String PG_INITDB = "initdb ";
-	private static String PG_CREATE_DB = "createdb ";
-	private static String PG_CREATE_OPTS = "-Oeucalyptus -Ueucalyptus ";
 	private static String PG_X_OPT = " -X ";
 	private static String PG_X_DIR =  SubDirectory.TX.getFile().getPath();
 	private static String PG_USER_OPT = " -Ueucalyptus ";
-	private static String PG_TRUST_OPT = " --auth=md5 --pwfile=";
+	private static String PG_TRUST_OPT = " --auth=password --pwfile=";
 	private static String PG_PWD_FILE = " --pwfile= ";
-	private static int    PG_PORT	   = 8777;
 	private static int    PG_MAX_RETRY = 5;
 
 	//Default constructor
@@ -128,8 +123,8 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 				System.exit(1);
 			}
 
-			if (!start()) {
-				LOG.fatal("Uable to start the postgres database");
+			if (!startResource()) {
+				LOG.fatal("Unable to start the postgres database");
 				System.exit(1);
 			}
 
@@ -137,7 +132,6 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 				LOG.fatal("Unable to create the eucalyptus database");
 				System.exit(1);
 			}
-
 
 			Component dbComp = Components.lookup( Database.class );
 			dbComp.initService( );
@@ -156,11 +150,9 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 		File f = new File(SubDirectory.DB.getFile().getPath() + File.separator +  'pass.txt')
 
 		f.write(pass);
-
 		String command = PG_INITDB + PG_USER_OPT + PG_TRUST_OPT + f + " " + PG_DB_OPT + " " + EUCA_DB_DIR + PG_X_OPT + PG_X_DIR;
-
 		try {
-			if(!runProc(command)) {
+			if (!runProc(command)) {
 				LOG.debug("Database server did not init.");
 				return false;
 			} else {
@@ -177,167 +169,149 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 	}
 
 	private void initDBFile(File f) {
-
 		f.delete();
 
-		String cmdTouch = "/bin/touch " + EUCA_DB_DIR +  "/ibdata1";
+		String chmodCmd = "/bin/chmod -R 700 " + EUCA_DB_DIR;
+
+		Process chmodProc = chmodCmd.execute();
+		int chmodValue = chmodProc.waitFor();
+
+		if (chmodValue != 0 ) {
+			LOG.debug("chmod didn't worked");
+			System.exit(1);
+		} else {
+			LOG.debug("chmod successfulled executed.");
+		}
+
+		String cmdTouch = "/bin/touch " + EUCA_DB_DIR +  "ibdata1";
 
 		try {
 			cmdTouch.execute();
+			initPGHBA();
 		} catch (Exception e ) {
-			LOG.debug("Unable to create the ibdata1 file");
+			LOG.debug("Unable to create the configuration files");
 			System.exit(1);
 		}
 	}
 
-	public boolean createDB() throws Exception {
+	private void initPGHBA() throws Exception {
 
-		if (!isRunning()) {
-			LOG.error("Unable to create the database");
+		try {
+			LOG.debug("EUCA_DB_DIR " + EUCA_DB_DIR);
+			File orgPGHBA = new File(EUCA_DB_DIR + File.separator +  "pg_hba.conf");
+			File tmpPGHBA = new File(EUCA_DB_DIR + File.separator + "pg_hba.conf.org");
+			orgPGHBA.renameTo(tmpPGHBA);
+			File newPGHBA = new File(EUCA_DB_DIR + File.separator + "pg_hba.conf");
+			newPGHBA.append("local\tall\tall\t\tpassword\n");
+			newPGHBA.append("host\tall\tall\t0.0.0.0/0\tpassword\n");
+			newPGHBA.append("host\tall\tall\t::1/128\tpassword\n");
+		} catch (Exception e) {
+			LOG.debug("Unable to create the pg_hba.conf file", e);
 		}
-
-		for ( String contextName : PersistenceContexts.list() ) {
-
-			if(!contextName.startsWith("eucalyptus_")) {
-				contextName = "eucalyptus_" + contextName;
-			}
-
-			String command = PG_CREATE_DB + PG_CREATE_OPTS + contextName;
-
-			try {
-				if (!runProc(command)) {
-					LOG.debug(" FAILED : Did not create the eucalyptus database");
-					return false;
-				} else {
-					LOG.debug("Database creation complete : " + contextName);
-				}
-			} catch (Exception e) {
-				LOG.error("Unable to create the database.", e);
-				System.exit(1);
-			}
-		}
-
-		return true;
 	}
-
 
 	public boolean createDBSql() throws Exception {
 
 		if (!isRunning()) {
 			LOG.error("Unable to create the database");
+			System.exit(1);
 		}
 
 		Connection conn = null;
 
 		for ( String contextName : PersistenceContexts.list() ) {
 
-			if(!contextName.startsWith("eucalyptus_")) {
+			if (!contextName.startsWith("eucalyptus_")) {
 				contextName = "eucalyptus_" + contextName;
 			}
 
 			try {
-
 				String url = "jdbc:postgresql://127.0.0.1:8777/postgres";
-				conn = DriverManager.getConnection(url, Databases.getUserName(), Databases.getPassword());
+				conn = DriverManager.getConnection(url, Databases.getUserName(),Databases.getPassword());
 				Statement createSchema = conn.createStatement();
-
 				String dbName = "CREATE DATABASE " + contextName + " OWNER " + Databases.getUserName();
-				LOG.debug("contextName : " + contextName);
 				createSchema.execute(dbName);
+				LOG.debug("executed sql command : " + dbName + " within the schema : " + contextName);
+				conn.close();
+
+				String userUrl = "jdbc:postgresql://127.0.0.1:8777/" + contextName;
+
+				conn = DriverManager.getConnection(userUrl, Databases.getUserName(), Databases.getPassword());
+
+				String alterUser = "ALTER ROLE " + Databases.getUserName() + " WITH LOGIN PASSWORD \'" + Databases.getPassword() + "\'";
+
+				Statement alterSchema = conn.createStatement();
+
+				LOG.debug("executed successfully = ALTER ROLE "
+						+ Databases.getUserName() + " within schema " + contextName);
+				alterSchema.execute(alterUser);
 				conn.close();
 			} catch (Exception e) {
 				LOG.error("Unable to create the database.", e);
-				e.printStackTrace();
 				return false;
 			}
 		}
 		return true;
 	}
 
-	@Override
-	public boolean start() throws Exception {
 
-		if(isRunning()) {
+	private boolean startResource() throws Exception {
+
+		if ( isRunning()) {
 			LOG.debug("Postgresql is already started, no action taken");
 			return true;
 		}
 
-		String cmdtwo = "chmod -R 700 " + EUCA_DB_DIR;
+		LOG.debug("Entered the startResource method");
 
-		if (!runProc(cmdtwo)) {
-			LOG.fatal("Unable to chmod the database directory : " + EUCA_DB_DIR);
-			System.exit(1);
+		ProcessBuilder pb = new ProcessBuilder(PG_BIN, PG_START, "-w", "-s", PG_DB_OPT + EUCA_DB_DIR, PG_PORT_OPTS2);
+
+		LOG.debug("The pb contents : " + pb.command().toArray().toString());
+
+		Process p = pb.start();
+
+		int value = p.waitFor();
+
+		LOG.debug("waitFor value : " + value);
+
+		if (value == 0) {
+			LOG.debug("The database has started");
+			return true;
+		} else {
+			LOG.debug("The database hasn't started");
 		}
 
-		File tmp = new File("/usr/bin/");
-
-		Process worknow  = [
-			PG_BIN,
-			PG_PORT_OPTS2,
-			PG_DB_OPT,
-			EUCA_DB_DIR,
-			PG_START
-		].execute(null,tmp);
-
-		int value = worknow.waitFor();
-
-		def sout = new StringBuffer(), serr = new StringBuffer()
-		worknow.consumeProcessOutput(sout, serr)
-
-		LOG.debug("process output : " + sout.toString());
-		LOG.debug("process error : " + serr.toString());
-
-		LOG.debug("Postgres start value : " + value);
-
-		if (value == 0)
-			return true;
-		else
-			return false;
-
-		/* Leaving this section of code for further investigation.
-		 LOG.debug("command : " + list);
-		 try {
-		 if(!runProc(command)) {
-		 LOG.debug("Database server did not start.");
-		 return false;
-		 } else {
-		 LOG.debug("Database server started.");
-		 return true;
-		 }
-		 } catch (Exception e) {
-		 LOG.error("Unable to start the database.", e);
-		 System.exit(1);
-		 }
-		 return false;
-		 */
+		return false;
 	}
 
 	@Override
 	public boolean load() throws Exception {
 
-		if(isRunning()) {
+		LOG.debug("The load method is being executed");
+		if (isRunning()) {
 			return true;
 		}
 
+		// TODO : Determine if the SSL is required.
+		//try {
+		//   LOG.debug( "Initializing SSL just in case: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.crypto.util.SslSetup" ) );
+		//} catch ( Exception essl  ) {
+		//   LOG.debug("Unable to load the ssl setup", essl);
+		//}
 		try {
-			LOG.debug( "Initializing SSL just in case: " + ClassLoader.getSystemClassLoader( ).loadClass( "com.eucalyptus.crypto.util.SslSetup" ) );
-		} catch ( Exception essl  ) {
-			LOG.debug("Unable to load the ssl setup", essl);
-		}
-
-		try {
-			if (!start()) {
+			if (!startResource()) {
 				LOG.debug("Unable to start postgresql");
-				System.exit(1);
+				return false;
 			}
 		} catch ( Exception e ) {
 			LOG.debug( "Failed to start the database.", e );
-			System.exit(1);
+			return false;
 		}
+
 		return true;
 	}
 
-	public void prepareService() throws Exception {
+	private void prepareService() throws Exception {
 		for ( String persistCtx : PersistenceContexts.list() ) {
 			testContext(persistCtx);
 		}
@@ -359,21 +333,13 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 
 			conn = DriverManager.getConnection(url, Databases.getUserName(), Databases.getPassword());
 
-			if (conn != null) {
-				LOG.debug("Connection made via jdbc to postgres");
-			} else {
-				LOG.debug("Unable to connect to postgres via jdbc");
-			}
-
 			Statement testEucaDB = conn.createStatement();
-			String pgPing = "SELECT 1;"
-			LOG.debug("pgPing : " + pgPing);
-
+			String pgPing = "SELECT USER;"
 			if(!testEucaDB.execute(pgPing)) {
 				LOG.debug("Unable to ping the database : " + url);
 			}
 		} catch (Exception exception) {
-			LOG.debug("Failed test each context : ", exception);
+			LOG.debug("Failed to test the context : ", exception);
 			System.exit(1);
 		} finally {
 
@@ -383,25 +349,37 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 		}
 	}
 
-	@Override
 	public boolean isRunning() throws Exception {
 
+		String chmodCmd = "/bin/chmod -R 700 " + EUCA_DB_DIR;
+
+		Process chmodProc = chmodCmd.execute();
+		int chmodValue = chmodProc.waitFor();
+
+		if (chmodValue != 0 ) {
+			LOG.debug("chmod didn't worked");
+			return false;
+		}
+
 		for ( int x = 0 ; x < PG_MAX_RETRY; x++) {
+
 			try {
-				Socket connection = new Socket("127.0.0.1", PG_PORT);
-				connection.close();
-				return true;
+
+				File pidFile = new File(EUCA_DB_DIR + "postmaster.pid");
+
+				if ( pidFile.size() > 0 ) {
+					LOG.debug("Found the postmaster.pid file");
+					return true;
+				}
 			} catch (Exception e) {
-				LOG.debug("Unable to open port : " + PG_PORT + " : Retry : " + x);
+				LOG.debug("The postmaster.pid file was not found");
 				sleep(1000);
 			}
 		}
 
-		LOG.debug("Retry limit reached : Unable to Connect to port " + PG_PORT);
 		return false;
 	}
 
-	@Override
 	public void hup() {
 
 		if(!stop()) {
@@ -409,7 +387,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 			System.exit(1);
 		}
 
-		if (!start()) {
+		if (!startResource()) {
 			LOG.fatal("Unable to start the postgresql server");
 			System.exit(1);
 		}
@@ -418,7 +396,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 	@Override
 	public boolean stop() throws Exception {
 
-		String command = PG_BIN + PG_DB_OPT + EUCA_DB_DIR + PG_STOP;
+		String command = PG_BIN + " " + PG_DB_OPT + " " + EUCA_DB_DIR + " " + PG_STOP_OPTS + " " +  PG_STOP;
 
 		try {
 			if(!runProc(command)) {
@@ -444,41 +422,15 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 		if (isRunning()) {
 			status = stop();
 		} else {
-			LOG.debug("Database is stopped");
+			LOG.debug("Database is not running");
 		}
 
 		LOG.debug("Final status after destroy : " + status );
 	}
 
-	@Override
-	public String getDriverName() {
-		return "org.postgresql.Driver";
-	}
+	public boolean runProc(String command) throws Exception {
 
-	@Override
-	public String getHibernateDialect() {
-		return "org.hibernate.dialect.PostgreSQLDialect";
-	}
-
-	@Override
-	public String getJdbcDialect() {
-		return "net.sf.hajdbc.dialect.PostgreSQLDialect";
-	}
-
-	@Override
-	public String getUriPattern() {
-		return "postgresql://%s:%d/eucalyptus";
-	}
-
-	public boolean runProc(String command) throws IOException {
-
-		String cmd = null;
-
-		if (command.contains("chmod")) {
-			cmd = "/bin/" + command;
-		} else {
-			cmd = PG_PATH + command;
-		}
+		String cmd = command;
 
 		try {
 			LOG.debug("Running command: " + cmd);
@@ -500,23 +452,44 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 			Process proc = rt.exec(cmd);
 			int returnValue = proc.waitFor();
 			int exitValue = proc.exitValue();
-			def sout = new StringBuffer(), serr = new StringBuffer()
+			def sout = new StringBuffer(2000), serr = new StringBuffer(2000)
 			proc.consumeProcessOutput(sout, serr)
 
 			LOG.debug("process output : " + sout.toString());
 			LOG.debug("process error : " + serr.toString());
 
-			LOG.debug("exitValue = " + exitValue + " : returnValue = " + returnValue);
+			LOG.debug("cmd = " + cmd + " : exitValue = " + exitValue + " : returnValue = " + returnValue);
 
-			if(returnValue != 0) {
+			if (returnValue != 0) {
 				return false;
 			} else {
 				return true;
 			}
-		} catch (Throwable t) {
-			LOG.error("Unable to execute cmd : " + cmd, t);
+		} catch (Exception e) {
+			LOG.error("Unable to execute cmd : " + cmd, e);
 		}
 
 		return false;
 	}
+
+	@Override
+	public String getDriverName() {
+		return "org.postgresql.Driver";
+	}
+
+	@Override
+	public String getHibernateDialect() {
+		return "org.hibernate.dialect.PostgreSQLDialect";
+	}
+
+	@Override
+	public String getJdbcDialect() {
+		return "net.sf.hajdbc.dialect.PostgreSQLDialect";
+	}
+
+	@Override
+	public String getUriPattern() {
+		return "postgresql://%s:%d/eucalyptus";
+	}
 }
+

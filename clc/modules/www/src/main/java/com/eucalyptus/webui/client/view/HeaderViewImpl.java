@@ -27,15 +27,9 @@ public class HeaderViewImpl extends Composite implements HeaderView {
   @UiField
   SearchBox searchBox;
   
-  @UiField
-  Label logoTitle;
-  
-  @UiField
-  Label logoSubtitle;
-  
   private UserSettingViewImpl settingPopup;
   
-  private SearchHandler searchHandler;
+  private Presenter presenter;
     
   public HeaderViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
@@ -53,7 +47,7 @@ public class HeaderViewImpl extends Composite implements HeaderView {
   @UiHandler( "searchBox" )
   void handleSearchBoxKeyPressed( KeyPressEvent e ) {
     if ( KeyCodes.KEY_ENTER == e.getNativeEvent( ).getKeyCode( ) ) {
-      searchHandler.search( searchBox.getInput( ) );
+      presenter.runManualSearch( searchBox.getInput( ) );
     }
   }
   
@@ -68,14 +62,8 @@ public class HeaderViewImpl extends Composite implements HeaderView {
   }
 
   @Override
-  public void setSearchHandler( SearchHandler handler ) {
-    this.searchHandler = handler;
-  }
-
-  @Override
-  public void setLogoTitle( String title, String subtitle ) {
-    this.logoTitle.setText( title );
-    this.logoSubtitle.setText( subtitle );
+  public void setPresenter( Presenter presenter ) {
+    this.presenter = presenter;
   }
   
 }

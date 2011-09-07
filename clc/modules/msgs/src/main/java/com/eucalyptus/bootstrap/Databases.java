@@ -183,5 +183,14 @@ public class Databases {
   public static String getUriPattern( ) {
     return singleton.getUriPattern( );
   }
+
+  public static boolean isRunning( ) {
+    try {
+      return singleton.check( );
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+      return false;
+    }
+  }
   
 }

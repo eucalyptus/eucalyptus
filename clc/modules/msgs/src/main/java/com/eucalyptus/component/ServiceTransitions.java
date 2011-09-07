@@ -91,11 +91,12 @@ import com.eucalyptus.empyrean.StopServiceResponseType;
 import com.eucalyptus.empyrean.StopServiceType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.Callback.Completion;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.Callback;
-import com.eucalyptus.util.async.Callback.Completion;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.Automata;
@@ -108,7 +109,7 @@ public class ServiceTransitions {
   static Logger LOG = Logger.getLogger( ServiceTransitions.class );
   
   interface ServiceTransitionCallback {
-    public void fire( ServiceConfiguration parent ) throws Throwable;
+    public void fire( ServiceConfiguration parent ) throws Exception;
   }
   
   public static CheckedListenableFuture<ServiceConfiguration> transitionChain( final ServiceConfiguration configuration, final State goalState ) {
@@ -130,18 +131,18 @@ public class ServiceTransitions {
   static final CheckedListenableFuture<ServiceConfiguration> startTransitionChain( final ServiceConfiguration config ) {
     Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
     if ( !State.NOTREADY.equals( config.lookupState( ) ) && !State.DISABLED.equals( config.lookupState( ) ) && !State.ENABLED.equals( config.lookupState( ) ) ) {
-      if ( State.STOPPED.isIn( config ) ) {
+      if ( State.STOPPED.equals( config.lookupState( ) ) ) {
         transition = Automata.sequenceTransitions( config,
                                                    Component.State.INITIALIZED,
                                                    Component.State.LOADED,
                                                    Component.State.NOTREADY,
                                                    Component.State.DISABLED );
-      } else if ( State.INITIALIZED.isIn( config ) ) {
+      } else if ( State.INITIALIZED.equals( config.lookupState( ) ) ) {
         transition = Automata.sequenceTransitions( config,
                                                    Component.State.LOADED,
                                                    Component.State.NOTREADY,
                                                    Component.State.DISABLED );
-      } else if ( State.BROKEN.isIn( config ) ) {
+      } else if ( State.BROKEN.equals( config.lookupState( ) ) ) {
         transition = Automata.sequenceTransitions( config,
                                                      Component.State.BROKEN,
                                                      Component.State.INITIALIZED,
@@ -176,11 +177,11 @@ public class ServiceTransitions {
   
   static final CheckedListenableFuture<ServiceConfiguration> disableTransitionChain( final ServiceConfiguration config ) {
     Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
-    if ( State.ENABLED.isIn( config ) ) {
+    if ( State.ENABLED.equals( config.lookupState( ) ) ) {
       transition = Automata.sequenceTransitions( config,
                                                  Component.State.ENABLED,
                                                  Component.State.DISABLED );
-    } else if ( !State.DISABLED.isIn( config ) && !State.NOTREADY.isIn( config ) ) {
+    } else if ( !State.DISABLED.equals( config.lookupState( ) ) && !State.NOTREADY.equals( config.lookupState( ) ) ) {
       transition = Automata.sequenceTransitions( config,
                                                  Component.State.BROKEN,
                                                  Component.State.INITIALIZED,
@@ -188,11 +189,11 @@ public class ServiceTransitions {
                                                  Component.State.NOTREADY,
                                                  Component.State.DISABLED,
                                                  Component.State.DISABLED );
-    } else if ( State.DISABLED.isIn( config ) ) {
+    } else if ( State.DISABLED.equals( config.lookupState( ) ) ) {
       transition = Automata.sequenceTransitions( config,
                                                  Component.State.DISABLED,
                                                  Component.State.DISABLED );
-    } else if ( State.NOTREADY.isIn( config ) ) {
+    } else if ( State.NOTREADY.equals( config.lookupState( ) ) ) {
       transition = Automata.sequenceTransitions( config,
                                                  Component.State.NOTREADY,
                                                  Component.State.DISABLED );
@@ -220,7 +221,7 @@ public class ServiceTransitions {
   
   static final CheckedListenableFuture<ServiceConfiguration> destroyTransitionChain( final ServiceConfiguration config ) {
     Callable<CheckedListenableFuture<ServiceConfiguration>> transition = null;
-    if ( !State.INITIALIZED.isIn( config ) ) {
+    if ( !State.INITIALIZED.equals( config.lookupState( ) ) ) {
       transition = Automata.sequenceTransitions( config,
                                                  Component.State.ENABLED,
                                                  Component.State.DISABLED,
@@ -235,7 +236,7 @@ public class ServiceTransitions {
     if ( transition != null ) {
       try {
         return transition.call( );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
         return Futures.predestinedFailedFuture( ex );
       }
@@ -244,14 +245,14 @@ public class ServiceTransitions {
     }
   }
   
-  private static <T extends EmpyreanMessage> T sendEmpyreanRequest( final ServiceConfiguration parent, final EmpyreanMessage msg ) throws Throwable {
+  private static <T extends EmpyreanMessage> T sendEmpyreanRequest( final ServiceConfiguration parent, final EmpyreanMessage msg ) throws Exception {
     ServiceConfiguration config = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, parent.getInetAddress( ) );
     LOG.debug( "Sending request " + msg.getClass( ).getSimpleName( ) + " to " + parent.getFullName( ) );
     Throwable lastEx = null;
     try {
       T reply = ( T ) AsyncRequests.sendSync( config, msg );
       return reply;
-    } catch ( Throwable ex ) {
+    } catch ( Exception ex ) {
       LOG.error( ex, ex );
       throw ex;
     }
@@ -285,11 +286,11 @@ public class ServiceTransitions {
         LOG.debug( "Silentlty accepting remotely inferred state transition for " + parent );
       }
       if ( trans != null ) {
-        LOG.debug( "Executing transition: " + trans.getClass( ) + "." + transitionAction.name( ) + " for " + parent );
+        Logs.exhaust( ).debug( "Executing transition: " + trans.getClass( ) + "." + transitionAction.name( ) + " for " + parent );
         trans.fire( parent );
       }
       transitionCallback.fire( );
-    } catch ( Throwable ex ) {
+    } catch ( Exception ex ) {
       if ( ServiceExceptions.filterExceptions( parent, ex ) ) {
         transitionCallback.fireException( ex );
         throw new UndeclaredThrowableException( ex );
@@ -310,7 +311,7 @@ public class ServiceTransitions {
                           this.name( ),
                           parent.lookupState( ).toString( ),
                           parent.getFullName( ).toString( ),
-                          parent.toString( ) ).debug( );
+                          parent.toString( ) ).exhaust( );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
@@ -324,7 +325,7 @@ public class ServiceTransitions {
                         this.name( ),
                         parent.lookupState( ).toString( ),
                         parent.getFullName( ).toString( ),
-                        parent.toString( ) ).debug( );
+                        parent.toString( ) ).exhaust( );
       ServiceTransitions.processTransition( parent, transitionCallback, this );
     }
     
@@ -336,7 +337,7 @@ public class ServiceTransitions {
                           this.name( ),
                           parent.lookupState( ).toString( ),
                           parent.getFullName( ).toString( ),
-                          parent.toString( ) ).debug( );
+                          parent.toString( ) ).exhaust( );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
@@ -350,7 +351,7 @@ public class ServiceTransitions {
                           this.name( ),
                           parent.lookupState( ).toString( ),
                           parent.getFullName( ).toString( ),
-                          parent.toString( ) ).debug( );
+                          parent.toString( ) ).exhaust( );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
       }
@@ -363,17 +364,17 @@ public class ServiceTransitions {
     LOAD {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {}
+      public void fire( final ServiceConfiguration parent ) throws Exception {}
     },
     DESTROY {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {}
+      public void fire( final ServiceConfiguration parent ) throws Exception {}
     },
     CHECK {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         DescribeServicesResponseType response = ServiceTransitions.sendEmpyreanRequest( parent, new DescribeServicesType( ) );
         ServiceStatusType status = Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>( ) {
           
@@ -400,7 +401,7 @@ public class ServiceTransitions {
     START {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         StartServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new StartServiceType( ) {
           {
             this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
@@ -416,7 +417,7 @@ public class ServiceTransitions {
     ENABLE {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         EnableServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new EnableServiceType( ) {
           {
             this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
@@ -433,7 +434,7 @@ public class ServiceTransitions {
     DISABLE {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         DisableServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new DisableServiceType( ) {
           {
             this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
@@ -449,7 +450,7 @@ public class ServiceTransitions {
     STOP {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         StopServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new StopServiceType( ) {
           {
             this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
@@ -469,7 +470,7 @@ public class ServiceTransitions {
     LOAD {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         parent.lookupComponent( ).getBootstrapper( ).load( );
       }
       
@@ -477,18 +478,18 @@ public class ServiceTransitions {
     DESTROY {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         parent.lookupComponent( ).getBootstrapper( ).destroy( );
       }
     },
     CHECK {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
           parent.lookupComponent( ).getBootstrapper( ).check( );
           parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex, ex );
           throw ex;
         }
@@ -497,7 +498,7 @@ public class ServiceTransitions {
     START {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         parent.lookupComponent( ).getBootstrapper( ).start( );
         parent.lookupComponent( ).getBuilder( ).fireStart( parent );
       }
@@ -505,7 +506,7 @@ public class ServiceTransitions {
     ENABLE {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         CHECK.fire( parent );
         parent.lookupComponent( ).getBootstrapper( ).enable( );
         parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
@@ -514,7 +515,7 @@ public class ServiceTransitions {
     DISABLE {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
 //        if ( State.NOTREADY.equals( parent.lookupComponent( ).getState( ) ) ) {
 //          parent.lookupComponent( ).getBootstrapper( ).check( );
 //          parent.lookupComponent( ).getBuilder( ).fireCheck( parent );
@@ -526,7 +527,7 @@ public class ServiceTransitions {
     STOP {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         parent.lookupComponent( ).getBootstrapper( ).stop( );
         parent.lookupComponent( ).getBuilder( ).fireStop( parent );
       }
@@ -538,17 +539,17 @@ public class ServiceTransitions {
     LOAD {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {}
+      public void fire( final ServiceConfiguration parent ) throws Exception {}
     },
     DESTROY {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {}
+      public void fire( final ServiceConfiguration parent ) throws Exception {}
     },
     CHECK {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
           parent.lookupBuilder( ).fireCheck( parent );
         } catch ( Exception ex ) {
@@ -560,7 +561,7 @@ public class ServiceTransitions {
     START {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
           parent.lookupComponent( ).getBuilder( ).fireStart( parent );
         } catch ( Exception ex ) {
@@ -571,7 +572,7 @@ public class ServiceTransitions {
     ENABLE {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
           parent.lookupComponent( ).getBuilder( ).fireEnable( parent );
         } catch ( Exception ex ) {
@@ -583,7 +584,7 @@ public class ServiceTransitions {
     DISABLE {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
           parent.lookupComponent( ).getBuilder( ).fireDisable( parent );
         } catch ( Exception ex ) {
@@ -594,7 +595,7 @@ public class ServiceTransitions {
     STOP {
       
       @Override
-      public void fire( final ServiceConfiguration parent ) throws Throwable {
+      public void fire( final ServiceConfiguration parent ) throws Exception {
         try {
           parent.lookupComponent( ).getBuilder( ).fireStop( parent );
         } catch ( Exception ex ) {
@@ -612,7 +613,7 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration config ) {
         EventRecord.here( ServiceBuilder.class,
                           EventType.COMPONENT_SERVICE_START,
-                          config.getFullName( ).toString( ), config.toString( ) ).debug( );
+                          config.getFullName( ).toString( ), config.toString( ) ).extreme( );
         LifecycleEvents.start( config );
       }
     },
@@ -621,7 +622,7 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration config ) {
         EventRecord.here( ServiceBuilder.class,
                                          EventType.COMPONENT_SERVICE_STOP,
-                                         config.getFullName( ).toString( ), config.toString( ) ).debug( );
+                                         config.getFullName( ).toString( ), config.toString( ) ).extreme( );
         LifecycleEvents.stop( config );
       }
     },
@@ -630,7 +631,7 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration config ) {
         EventRecord.here( ServiceBuilder.class,
                                          EventType.COMPONENT_SERVICE_ENABLE,
-                                         config.getFullName( ).toString( ), config.toString( ) ).debug( );
+                                         config.getFullName( ).toString( ), config.toString( ) ).extreme( );
         LifecycleEvents.enable( config );
       }
     },
@@ -639,7 +640,7 @@ public class ServiceTransitions {
       public void fire( final ServiceConfiguration config ) {
         EventRecord.here( ServiceBuilder.class,
                                          EventType.COMPONENT_SERVICE_DISABLE,
-                                         config.getFullName( ).toString( ), config.toString( ) ).debug( );
+                                         config.getFullName( ).toString( ), config.toString( ) ).extreme( );
         LifecycleEvents.disable( config );
       }
       
@@ -700,7 +701,7 @@ public class ServiceTransitions {
             }
             PropertyDirectory.addProperty( addProp );
           }
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
       }
@@ -718,7 +719,7 @@ public class ServiceTransitions {
               PropertyDirectory.removeProperty( prop );
             }
           }
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
       }

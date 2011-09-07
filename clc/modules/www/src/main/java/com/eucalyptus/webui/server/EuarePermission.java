@@ -146,12 +146,19 @@ public class EuarePermission {
       throw new EucalyptusServiceException( "Operation is not authorized" );
     }
   }
+
+  public static void authorizeDeleteAccountPolicy( User requestUser ) throws EucalyptusServiceException {
+    if ( !requestUser.isSystemAdmin( ) ) {
+      throw new EucalyptusServiceException( "Operation is not authorized" );
+    }
+  }
   
   public static void authorizeAddUserPolicy( User requestUser, Account account, User user ) throws EucalyptusServiceException {
     boolean allowed = false;
     try {
       allowed = requestUser.isSystemAdmin( ) ||
                 ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) &&
+                  !user.isAccountAdmin( ) &&
                   ( requestUser.isAccountAdmin( ) ||
                     Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_PUTUSERPOLICY, requestUser ) ) );
     } catch ( Exception e ) {

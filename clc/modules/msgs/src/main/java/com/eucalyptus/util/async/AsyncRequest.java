@@ -14,9 +14,10 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceEndpoint;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.Logs;
-import com.eucalyptus.util.async.Callback.TwiceChecked;
+import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Callback.TwiceChecked;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implements Request<Q, R> {
@@ -43,7 +44,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
         try {
           cb.fireException( t );
           AsyncRequest.this.result.setException( t );
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           AsyncRequest.this.result.setException( t );
           LOG.error( ex, ex );
         }
@@ -57,14 +58,14 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       @Override
       public void fire( R r ) {
         try {
-          if ( Logs.EXTREME ) {
-            Logs.extreme( ).debug( cb.getClass( ).getCanonicalName( ) + ".fire():\n" + r );
+          if ( Logs.isExtrrreeeme() ) {
+            Logs.exhaust( ).debug( cb.getClass( ).getCanonicalName( ) + ".fire():\n" + r );
           }
           cb.fire( r );
           AsyncRequest.this.result.set( r );
           try {
             AsyncRequest.this.callbackSequence.fire( r );
-          } catch ( Throwable ex ) {
+          } catch ( Exception ex ) {
             LOG.error( ex, ex );
             AsyncRequest.this.result.setException( ex );
           }
@@ -81,8 +82,8 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       
       @Override
       public void initialize( Q request ) throws Exception {
-        if ( Logs.EXTREME ) {
-          Logs.extreme( ).debug( cb.getClass( ).getCanonicalName( ) + ".initialize():\n" + request );
+        if ( Logs.isExtrrreeeme() ) {
+          Logs.exhaust( ).debug( cb.getClass( ).getCanonicalName( ) + ".initialize():\n" + request );
         }
         try {
           cb.initialize( request );
@@ -160,14 +161,14 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   public Request<Q, R> execute( ServiceConfiguration config ) {
     this.doInitializeCallback( config );
     try {
-      Logger.getLogger( this.cb.getClass( ) ).debug( "fire: endpoint " + config );
+      Logs.exhaust( ).debug( "fire: endpoint " + config );
       if ( !this.handler.fire( config, this.request ) ) {
         LOG.error( "Error occurred while trying to send request: " + this.request );
         if ( !this.requestResult.isDone( ) ) {
           RequestException ex = new RequestException( "Error occured attempting to fire the request.", this.getRequest( ) );
           try {
             this.result.setException( ex );
-          } catch ( Throwable t ) {}
+          } catch ( Exception t ) {}
         }
       } else {
         try {
@@ -190,11 +191,11 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   }
   
   private void doInitializeCallback( ServiceConfiguration config ) throws RequestException {
-    Logger.getLogger( this.wrapperCallback.getClass( ) ).trace( "initialize: endpoint " + config );
+    Logs.exhaust( ).trace( "initialize: endpoint " + config );
     try {
       this.wrapperCallback.initialize( this.request );
-    } catch ( Throwable e ) {
-      Logger.getLogger( this.wrapperCallback.getClass( ) ).error( e.getMessage( ), e );
+    } catch ( Exception e ) {
+      Logs.exhaust( ).error( e.getMessage( ), e );
       RequestException ex = ( e instanceof RequestException )
         ? ( RequestException ) e
         : new RequestInitializationException( this.wrapperCallback.getClass( ).getSimpleName( ) + " failed: " + e.getMessage( ), e, this.getRequest( ) );
@@ -215,7 +216,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   }
   
   /**
-   * @see com.eucalyptus.util.async.Request#then(com.eucalyptus.util.async.Callback.Completion)
+   * @see com.eucalyptus.util.async.Request#then(com.eucalyptus.util.Callback.Completion)
    * @param callback
    * @return
    */
@@ -226,7 +227,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   }
   
   /**
-   * @see com.eucalyptus.util.async.Request#then(com.eucalyptus.util.async.Callback.Failure)
+   * @see com.eucalyptus.util.async.Request#then(com.eucalyptus.util.Callback.Failure)
    * @param callback
    * @return
    */
@@ -237,7 +238,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   }
   
   /**
-   * @see com.eucalyptus.util.async.Request#then(com.eucalyptus.util.async.Callback.Success)
+   * @see com.eucalyptus.util.async.Request#then(com.eucalyptus.util.Callback.Success)
    * @param callback
    * @return
    */

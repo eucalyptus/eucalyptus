@@ -74,7 +74,7 @@ public class DNSControlTest extends TestCase {
 
     private static DNSControl dnsControl;
 
-	public void testAddARecord() throws Throwable {
+	public void testAddARecord() throws Exception {
         String userId = "admin";
         UpdateARecordType request = new UpdateARecordType();
         request.setUserId(userId);

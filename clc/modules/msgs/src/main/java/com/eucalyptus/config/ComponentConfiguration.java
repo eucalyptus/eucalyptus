@@ -68,9 +68,20 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Collection;
 import javax.persistence.Column;
+import javax.persistence.DiscriminatorColumn;
+import javax.persistence.DiscriminatorType;
+import javax.persistence.DiscriminatorValue;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
 import javax.persistence.MappedSuperclass;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
+import org.hibernate.annotations.NaturalId;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
@@ -96,26 +107,34 @@ import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.fsm.StateMachine;
 import com.google.common.collect.Lists;
 
-@MappedSuperclass
+@Entity
+@javax.persistence.Entity
+@PersistenceContext( name = "eucalyptus_cloud" )
+@Table( name = "config_component_base" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Inheritance( strategy = InheritanceType.SINGLE_TABLE )
 public class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration {
   @Transient
-  private static Logger LOG = Logger.getLogger( ComponentConfiguration.class );
-  @Column( name = "config_component_partition", nullable = false )
-  private String  partition;
-  @Column( name = "config_component_name", unique = true, nullable = false )
-  private String  name;
-  @Column( name = "config_component_hostname", nullable = false )
-  private String  hostName;
+  private static final long serialVersionUID = 1L;
+  @Transient
+  private static Logger     LOG              = Logger.getLogger( ComponentConfiguration.class );
+  @Column( name = "config_component_partition" )
+  private String            partition;
+  @NaturalId
+  @Column( name = "config_component_name", updatable = false, unique = true, nullable = false )
+  private String            name;
+  @Column( name = "config_component_hostname" )
+  private String            hostName;
   @Column( name = "config_component_port" )
-  private Integer port;
+  private Integer           port;
   @Column( name = "config_component_service_path" )
-  private String  servicePath;
+  private String            servicePath;
   
-  public ComponentConfiguration( ) {
+  protected ComponentConfiguration( ) {
 
   }
   
-  public ComponentConfiguration( String partition, String name, String hostName, String servicePath ) {
+  protected ComponentConfiguration( String partition, String name, String hostName, String servicePath ) {
     super( );
     this.partition = partition;
     this.name = name;
@@ -123,7 +142,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     this.servicePath = servicePath;
   }
   
-  public ComponentConfiguration( String partition, String name, String hostName, Integer port, String servicePath ) {
+  protected ComponentConfiguration( String partition, String name, String hostName, Integer port, String servicePath ) {
     this.partition = partition;
     this.name = name;
     this.hostName = hostName;
@@ -328,7 +347,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     try {
       return this.lookupService( ).getDetails( );
     } catch ( NoSuchServiceException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       return Lists.newArrayList( );
     }
   }
@@ -368,7 +387,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     try {
       return this.lookupService( ).getStateMachine( );
     } catch ( NoSuchServiceException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       throw new IllegalStateException( "Failed to lookup state machine for: " + this.getName( ), ex );
     }
   }
@@ -380,7 +399,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   
   @Override
   public Component.State lookupState( ) {
-    if( !this.lookupComponent( ).hasService( this ) ) {
+    if ( !this.lookupComponent( ).hasService( this ) ) {
       return Component.State.NONE;
     } else {
       try {

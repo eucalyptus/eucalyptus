@@ -15,12 +15,13 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.OwnerFullName;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -44,7 +45,7 @@ public class Context {
       this.message = msg;
     }};
     this.channel = new DefaultLocalClientChannelFactory( ).newChannel( Channels.pipeline( ) );
-    this.user = FakePrincipals.SYSTEM_USER;
+    this.user = Principals.systemUser();
     EventRecord.caller( Context.class, EventType.CONTEXT_CREATE, this.correlationId, this.channel.toString( ) ).debug( );
   }
   
@@ -98,13 +99,13 @@ public class Context {
     return UserFullName.getInstance( this.getUser( ) );
   }
   
-  public UserFullName getEffectiveUserFullName( ) {
+  public OwnerFullName getEffectiveUserFullName( ) {
     String effectiveUserId = this.getRequest( ).getEffectiveUserId( );
-    if ( this.getRequest( ) != null && FakePrincipals.SYSTEM_USER_ERN.getUserName( ).equals( effectiveUserId ) ) {
-      return FakePrincipals.SYSTEM_USER_ERN;
+    if ( this.getRequest( ) != null && Principals.systemFullName().getUserName( ).equals( effectiveUserId ) ) {
+      return Principals.systemFullName();
       /** system **/
     } else if ( this.getRequest( ) == null || effectiveUserId == null ) {
-      return FakePrincipals.NOBODY_USER_ERN;
+      return Principals.nobodyFullName();
       /** unset **/
     } else if ( !effectiveUserId.equals( this.getUserFullName( ).getUserName( ) ) ) {
       try {
@@ -122,7 +123,7 @@ public class Context {
   }
   
   public boolean hasAdministrativePrivileges( ) {
-    return this.getUser( ).isSystemInternal( ) || FakePrincipals.SYSTEM_USER_ERN.equals( this.getEffectiveUserFullName( ) ) || this.getUser( ).isSystemAdmin( );
+    return this.getUser( ).isSystemInternal( ) || Principals.systemFullName().equals( this.getEffectiveUserFullName( ) ) || this.getUser( ).isSystemAdmin( );
   }
   
   public User getUser( ) {
@@ -158,8 +159,11 @@ public class Context {
   
   void clear( ) {
     EventRecord.caller( Context.class, EventType.CONTEXT_CLEAR, this.correlationId, this.channel.toString( ) ).debug( );
-    this.muleEvent.clear( );
-    this.muleEvent = null;
+    if ( this.muleEvent != null ) { 
+        this.muleEvent.clear( );
+        this.muleEvent = null;
+    }
+    this.contracts.clear( );
   }
   
   private final static <TYPE> TYPE check( final TYPE obj ) {

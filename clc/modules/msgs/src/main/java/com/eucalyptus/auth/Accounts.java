@@ -8,7 +8,7 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
@@ -157,26 +157,4 @@ public class Accounts {
     }
   }
   
-  /**
-   * @deprecated TEMPORARY
-   */
-  @Deprecated
-  public static AccountFullName lookupAccountFullNameByUserId( String userId ) {
-    try {
-      return AccountFullName.getInstance( Accounts.lookupUserById( userId ).getAccount( ) );
-    } catch ( AuthException ex ) {
-      throw new RuntimeException( "Failed to identify user with id " + userId + " something has gone seriously wrong.", ex );
-    }
-  }
-  /**
-   * @deprecated TEMPORARY
-   */
-  @Deprecated
-  public static AccountFullName lookupAccountFullNameById( String accountId ) {
-    try {
-      return AccountFullName.getInstance( Accounts.lookupAccountById( accountId ) );
-    } catch ( AuthException ex ) {
-      throw new RuntimeException( "Failed to identify user with id " + accountId + " something has gone seriously wrong.", ex );
-    }
-  }
 }

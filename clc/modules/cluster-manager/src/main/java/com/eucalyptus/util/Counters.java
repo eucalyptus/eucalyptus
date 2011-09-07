@@ -78,8 +78,8 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 
 @Entity @javax.persistence.Entity
@@ -152,7 +152,7 @@ public class Counters extends AbstractPersistent implements Serializable {
         try {
           Transactions.one( Counters.uninitialized( ), new Tx<Counters>( ) {
             @Override
-            public void fire( Counters t ) throws Throwable {
+            public void fire( Counters t ) {
               t.setMessageId( idStart );
             }
           } );
