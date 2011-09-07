@@ -104,14 +104,14 @@ public class NetworkGroups {
   @ConfigurableField( initial = "1", description = "Default min network index." )
   public static Long          DEFAULT_MIN_NETWORK_INDEX = 2l;
   @ConfigurableField( initial = "" + 4096, description = "Default max vlan tag." )
-  public static Integer       DEFAULT_MAX_NETWORK_TAG   = 4096;
+  public static Integer       GLOBAL_MAX_NETWORK_TAG   = 4096;
   @ConfigurableField( initial = "1", description = "Default min vlan tag." )
-  public static Integer       DEFAULT_MIN_NETWORK_TAG   = 1;
+  public static Integer       GLOBAL_MIN_NETWORK_TAG   = 1;
   
   public static class NetworkRangeConfiguration {
     private Boolean useNetworkTags  = Boolean.TRUE;
-    private Integer minNetworkTag   = DEFAULT_MIN_NETWORK_TAG;
-    private Integer maxNetworkTag   = DEFAULT_MAX_NETWORK_TAG;
+    private Integer minNetworkTag   = GLOBAL_MIN_NETWORK_TAG;
+    private Integer maxNetworkTag   = GLOBAL_MAX_NETWORK_TAG;
     private Long    minNetworkIndex = DEFAULT_MIN_NETWORK_INDEX;
     private Long    maxNetworkIndex = DEFAULT_MAX_NETWORK_INDEX;
     
@@ -161,9 +161,10 @@ public class NetworkGroups {
     
   }
   
-  static final NetworkRangeConfiguration netConfig = new NetworkRangeConfiguration( );
+  static NetworkRangeConfiguration netConfig = new NetworkRangeConfiguration( );
   
   public static synchronized void updateNetworkRangeConfiguration( ) {
+    netConfig = new NetworkRangeConfiguration( );
     final AtomicBoolean netTagging = new AtomicBoolean( true );
     try {
       Transactions.each( new ClusterConfiguration( ), new Callback<ClusterConfiguration>( ) {
