@@ -133,7 +133,7 @@ public class AddressManager {
       //TODO:GRZE:FIXME this is not going to last this way.
       Account addrAccount = null;
       String addrAccountNumber = address.getOwnerAccountNumber( );
-      if ( !Principals.nobodyAccount().getAccountNumber( ).equals( addrAccountNumber ) ) {
+      if ( !Principals.nobodyAccount().getAccountNumber( ).equals( addrAccountNumber ) && !Principals.systemAccount().getAccountNumber( ).equals( addrAccountNumber )) {
         try {
         addrAccount = Accounts.lookupAccountById( addrAccountNumber );
         } catch ( AuthException e ) {}

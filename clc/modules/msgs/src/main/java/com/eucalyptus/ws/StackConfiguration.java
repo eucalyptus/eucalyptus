@@ -100,22 +100,22 @@ public class StackConfiguration extends AbstractPersistent {
   public static final Boolean CHANNEL_NODELAY                   = true;
   @ConfigurableField( initial = "128", description = "Server worker thread pool max." )
   public static Integer       SERVER_POOL_MAX_THREADS           = 128;
-  @ConfigurableField( initial = "104857600", description = "Server max worker memory per connection." )
-  public static Long          SERVER_POOL_MAX_MEM_PER_CONN      = 104857600l;
-  @ConfigurableField( initial = "1073741824", description = "Server max worker memory total." )
-  public static Long          SERVER_POOL_TOTAL_MEM             = 1073741824l;
+  @ConfigurableField( initial = "0", description = "Server max worker memory per connection." )
+  public static Long          SERVER_POOL_MAX_MEM_PER_CONN      = 0l;
+  @ConfigurableField( initial = "0", description = "Server max worker memory total." )
+  public static Long          SERVER_POOL_TOTAL_MEM             = 0l;
   
   @ConfigurableField( initial = "500", description = "Service socket select timeout (ms)." )
   public static Long          SERVER_POOL_TIMEOUT_MILLIS        = 500l;
   
-  @ConfigurableField( initial = "17", description = "Server selector thread pool max." )
-  public static Integer       SERVER_BOSS_POOL_MAX_THREADS      = Runtime.getRuntime( ).availableProcessors( ) + 1;
+  @ConfigurableField( initial = "128", description = "Server selector thread pool max." )
+  public static Integer       SERVER_BOSS_POOL_MAX_THREADS      = 128;
   
-  @ConfigurableField( initial = "1048576", description = "Server max selector memory per connection." )
-  public static Long          SERVER_BOSS_POOL_MAX_MEM_PER_CONN = 1048576l;
+  @ConfigurableField( initial = "0", description = "Server max selector memory per connection." )
+  public static Long          SERVER_BOSS_POOL_MAX_MEM_PER_CONN = 0l;
   
-  @ConfigurableField( initial = "1073741824", description = "Server worker thread pool max." )
-  public static Long          SERVER_BOSS_POOL_TOTAL_MEM        = 1073741824l;
+  @ConfigurableField( initial = "0", description = "Server worker thread pool max." )
+  public static Long          SERVER_BOSS_POOL_TOTAL_MEM        = 0l;
   
   @ConfigurableField( initial = "500", description = "Service socket select timeout (ms)." )
   public static Long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500l;
@@ -138,17 +138,17 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( initial = "20", description = "Server socket write time-out." )
   public static Long          PIPELINE_WRITE_TIMEOUT_SECONDS    = 20l;
   
-  @ConfigurableField( initial = "10485760", description = "Server worker thread pool max." )
-  public static Long          CLIENT_HTTP_CHUNK_BUFFER_MAX      = 10485760l;
+  @ConfigurableField( initial = "1048576000", description = "Server http chunk max." )
+  public static Integer       CLIENT_HTTP_CHUNK_BUFFER_MAX      = 1048576000;
   
   @ConfigurableField( initial = "40", description = "Server worker thread pool max." )
   public static Integer       CLIENT_POOL_MAX_THREADS           = 40;
   
-  @ConfigurableField( initial = "10485760", description = "Server worker thread pool max." )
-  public static Long          CLIENT_POOL_MAX_MEM_PER_CONN      = 10485760l;
+  @ConfigurableField( initial = "0", description = "Server worker thread pool max." )
+  public static Long          CLIENT_POOL_MAX_MEM_PER_CONN      = 0l;
   
-  @ConfigurableField( initial = "1073741824", description = "Server worker thread pool max." )
-  public static Long          CLIENT_POOL_TOTAL_MEM             = 1073741824l;
+  @ConfigurableField( initial = "0", description = "Server worker thread pool max." )
+  public static Long          CLIENT_POOL_TOTAL_MEM             = 0l;
   
   @ConfigurableField( initial = "500", description = "Client socket select timeout (ms)." )
   public static Long          CLIENT_POOL_TIMEOUT_MILLIS        = 500l;
