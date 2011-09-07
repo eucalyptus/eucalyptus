@@ -75,10 +75,10 @@ import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ConfigurationService;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.Logs;
 import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 
 public class ComponentRegistrationHandler {
@@ -156,11 +156,11 @@ public class ComponentRegistrationHandler {
       Logs.exhaust( ).info( p.getNodeCertificate( ) );
       try {
         doServiceStart( newComponent );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         LOG.info( builder.getClass( ).getSimpleName( ) + ": enable failed because of: " + ex.getMessage( ) );
       }
       return true;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       e = Exceptions.filterStackTrace( e );
       LOG.info( builder.getClass( ).getSimpleName( ) + ": registration failed because of: " + e.getMessage( ) );
       LOG.error( e, e );
@@ -238,7 +238,7 @@ public class ComponentRegistrationHandler {
       Threads.lookup( ConfigurationService.class, ComponentRegistrationHandler.class, conf.getFullName( ).toString( ) ).submit( followRunner );
       builder.remove( conf );
       return true;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.info( builder.getClass( ).getSimpleName( ) + ": remove failed." );
       LOG.info( e.getMessage( ) );
       LOG.error( e, e );

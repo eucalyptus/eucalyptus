@@ -75,8 +75,8 @@ import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.Logs;
 import com.eucalyptus.ws.WebServicesException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -109,7 +109,7 @@ public class BindingHandler extends MessageStackHandler {
         namespace = omNs.getNamespaceURI( );
         this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
         msgType = this.binding.getElementClass( httpMessage.getOmMessage( ).getLocalName( ) );
-      } catch ( Throwable e1 ) {
+      } catch ( Exception e1 ) {
         LOG.error( httpMessage.getSoapEnvelope( ).toString( ), e1 );
         if ( this.binding == null ) {
           throw new WebServicesException( e1 );

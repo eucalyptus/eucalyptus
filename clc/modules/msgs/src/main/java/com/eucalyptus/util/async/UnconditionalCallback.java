@@ -1,5 +1,7 @@
 package com.eucalyptus.util.async;
 
+import com.eucalyptus.util.Callback;
+
 
 public abstract class UnconditionalCallback implements Callback {
   

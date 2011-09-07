@@ -69,12 +69,14 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.auth.principal.FakePrincipals;
-import com.eucalyptus.cloud.VirtualMachineType;
+import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.cloud.CloudMetadata.VmTypeMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasFullName;
+import com.eucalyptus.util.OwnerFullName;
 
 @Entity
 @javax.persistence.Entity
@@ -82,19 +84,23 @@ import com.eucalyptus.util.FullName;
 @Table( name = "cloud_vm_types" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 //@ConfigurableClass(root="eucalyptus",alias="vmtypes",deferred=true,singleton=false,description="Virtual Machine type definitions")
-public class VmType extends AbstractPersistent implements VirtualMachineType {
-//  @ConfigurableIdentifier
+public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFullName<VmTypeMetadata> {
+  /**
+   * 
+   */
+  private static final long serialVersionUID = 1L;
+  //  @ConfigurableIdentifier
   @Column( name = "metadata_vm_type_name" )
-  private String       name;
+  private String            name;
 //  @ConfigurableField( description = "Number of CPUs per instance.", displayName = "CPUs" )
   @Column( name = "metadata_vm_type_cpu" )
-  private Integer      cpu;
+  private Integer           cpu;
 //  @ConfigurableField( description = "Gigabytes of disk per instance.", displayName = "Disk (GB)" )
   @Column( name = "metadata_vm_type_disk" )
-  private Integer      disk;
+  private Integer           disk;
 //  @ConfigurableField( description = "Gigabytes of RAM per instance.", displayName = "RAM (GB)" )
   @Column( name = "metadata_vm_type_memory" )
-  private Integer      memory;
+  private Integer           memory;
   
   public VmType( ) {}
   
@@ -109,32 +115,41 @@ public class VmType extends AbstractPersistent implements VirtualMachineType {
     this.memory = memory;
   }
   
+  @Override
+  public String getDisplayName( ) {
+    return this.name;
+  }
+  
+  @Override
   public String getName( ) {
-    return name;
+    return this.name;
   }
   
   public void setName( final String name ) {
     this.name = name;
   }
   
+  @Override
   public Integer getCpu( ) {
-    return cpu;
+    return this.cpu;
   }
   
   public void setCpu( final Integer cpu ) {
     this.cpu = cpu;
   }
   
+  @Override
   public Integer getDisk( ) {
-    return disk;
+    return this.disk;
   }
   
   public void setDisk( final Integer disk ) {
     this.disk = disk;
   }
   
+  @Override
   public Integer getMemory( ) {
-    return memory;
+    return this.memory;
   }
   
   public void setMemory( final Integer memory ) {
@@ -144,29 +159,29 @@ public class VmType extends AbstractPersistent implements VirtualMachineType {
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
-    if ( o == null || getClass( ) != o.getClass( ) ) return false;
+    if ( ( o == null ) || ( this.getClass( ) != o.getClass( ) ) ) return false;
     
-    VmType vmType = ( VmType ) o;
+    final VmType vmType = ( VmType ) o;
     
-    if ( !cpu.equals( vmType.cpu ) ) return false;
-    if ( !disk.equals( vmType.disk ) ) return false;
-    if ( !memory.equals( vmType.memory ) ) return false;
-    if ( !name.equals( vmType.name ) ) return false;
+    if ( !this.cpu.equals( vmType.cpu ) ) return false;
+    if ( !this.disk.equals( vmType.disk ) ) return false;
+    if ( !this.memory.equals( vmType.memory ) ) return false;
+    if ( !this.name.equals( vmType.name ) ) return false;
     
     return true;
   }
   
   @Override
   public int hashCode( ) {
-    int result = name.hashCode( );
-    result = 31 * result + cpu.hashCode( );
-    result = 31 * result + disk.hashCode( );
-    result = 31 * result + memory.hashCode( );
+    int result = this.name.hashCode( );
+    result = 31 * result + this.cpu.hashCode( );
+    result = 31 * result + this.disk.hashCode( );
+    result = 31 * result + this.memory.hashCode( );
     return result;
   }
   
   @Override
-  public int compareTo( VirtualMachineType that ) {
+  public int compareTo( final VmTypeMetadata that ) {
     if ( this.equals( that ) ) return 0;
     if ( ( this.getCpu( ) <= that.getCpu( ) ) && ( this.getDisk( ) <= that.getDisk( ) ) && ( this.getMemory( ) <= that.getMemory( ) ) ) return -1;
     if ( ( this.getCpu( ) >= that.getCpu( ) ) && ( this.getDisk( ) >= that.getDisk( ) ) && ( this.getMemory( ) >= that.getMemory( ) ) ) return 1;
@@ -175,7 +190,7 @@ public class VmType extends AbstractPersistent implements VirtualMachineType {
   
   @Override
   public String toString( ) {
-    return "VmType " + name + " cores=" + cpu + " disk=" + disk + " mem=" + memory;
+    return "VmType " + this.name + " cores=" + this.cpu + " disk=" + this.disk + " mem=" + this.memory;
   }
   
   @Override
@@ -184,21 +199,16 @@ public class VmType extends AbstractPersistent implements VirtualMachineType {
   }
   
   @Override
-  public String getOwnerAccountId( ) {
-    return FakePrincipals.SYSTEM_USER_ERN.getAccountNumber( );
-  }
-  
-  @Override
-  public FullName getOwner( ) {
-    return FakePrincipals.SYSTEM_USER_ERN;
-  }
-  
-  @Override
   public FullName getFullName( ) {
     return FullName.create.vendor( "euca" )
                           .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
-                          .namespace( FakePrincipals.SYSTEM_USER_ERN.getAccountNumber( ) )
+                          .namespace( Principals.systemFullName( ).getAccountNumber( ) )
                           .relativeId( "vm-type", this.getName( ) );
+  }
+  
+  @Override
+  public OwnerFullName getOwner( ) {
+    return Principals.systemFullName( );
   }
   
 }

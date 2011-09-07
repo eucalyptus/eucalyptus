@@ -66,7 +66,7 @@ package com.eucalyptus.system;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.spi.LoggingEvent;
 import org.hibernate.exception.GenericJDBCException;
-import com.eucalyptus.util.Logs;
+import com.eucalyptus.records.Logs;
 
 public class EucaLayout extends PatternLayout {
   public static int LINE_BYTES = 100;
@@ -75,7 +75,7 @@ public class EucaLayout extends PatternLayout {
       LINE_BYTES = Integer.parseInt( System.getenv( "COLUMNS" ) );
     } catch ( NumberFormatException e ) {}
   }
-  public static String PATTERN = "%d{EEE MMM d HH:mm:ss yyyy} %5p "+(Logs.EXTREME?"%C{1}.%M(%F):%L":"%-23.23c{1}")+" | %m%n";
+  public static String PATTERN = "%d{EEE MMM d HH:mm:ss yyyy} %5p "+(Logs.isExtrrreeeme()?"%C{1}.%M(%F):%L":"%-23.23c{1}")+" | %m%n";
   private String CONTINUATION = "%m%n";
   private PatternLayout continuation = null;
   

@@ -66,19 +66,20 @@
 package edu.ucsb.eucalyptus.ic;
 
 import org.apache.log4j.Logger;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.UnimplementedMessage;
 
 public class Eucalyptus {
   
   private static Logger LOG = Logger.getLogger( Eucalyptus.class );
   
-  public EucalyptusMessage handle( EucalyptusMessage msg ) {
+  public BaseMessage handle( BaseMessage msg ) {
     if ( msg instanceof UnimplementedMessage ) {
       return msg.getReply( );
     }
-    return new EucalyptusErrorMessageType( "Eucalyptus", msg, "Unknown request of type: " + msg.getClass( ).getSimpleName( ) );
+    return new ExceptionResponseType( msg, "Unknown request of type: " + msg.getClass( ).getSimpleName( ), HttpResponseStatus.NOT_FOUND, new IllegalAccessException( ) );
   }
   
 }

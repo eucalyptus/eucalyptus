@@ -84,8 +84,8 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.cloud.Image;
-import com.eucalyptus.cloud.Image.DeviceMappingType;
+import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.cloud.ImageMetadata.DeviceMappingType;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -95,7 +95,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.Lookups;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -174,37 +174,40 @@ public class ImageManifests {
       this.virtualName = virtualName;
       this.deviceName = deviceName;
     }
+    
     DeviceMappingType type;
-    String virtualName;
-    String deviceName;
+    String            virtualName;
+    String            deviceName;
+    
     public DeviceMapping generateRealMapping( ImageInfo parent ) {
-      if( DeviceMappingType.ephemeral.equals( type ) ) {
+      if ( DeviceMappingType.ephemeral.equals( type ) ) {
         return new EphemeralDeviceMapping( parent, deviceName, virtualName );
       } else {//if( DeviceMappingType.root.equals( type ) || DeviceMappingType.swap.equals( type ) ) {
         return new DeviceMapping( parent, type, deviceName, virtualName );
-      } 
+      }
     }
   }
+  
   public static class ImageManifest {
-    private final String                    imageLocation;
-    private final Image.Architecture        architecture;
-    private final String                    kernelId;
-    private final String                    ramdiskId;
-    private final Image.Type                imageType;
-    private final Image.Platform            platform;
-    private final String                    signature;
-    private final String                    checksum;
-    private final String                    checksumType;
-    private final String                    manifest;
-    private final Document                  inputSource;
-    private final String                    name;
-    private final Long                      size;
-    private final Long                      bundledSize;
-    private XPath                           xpath;
-    private Function<String, String>        xpathHelper;
-    private String                          encryptedKey;
-    private String                          encryptedIV;
-    private List<ManifestDeviceMapping> deviceMappings = Lists.newArrayList( );
+    private final String                     imageLocation;
+    private final ImageMetadata.Architecture architecture;
+    private final String                     kernelId;
+    private final String                     ramdiskId;
+    private final ImageMetadata.Type         imageType;
+    private final ImageMetadata.Platform     platform;
+    private final String                     signature;
+    private final String                     checksum;
+    private final String                     checksumType;
+    private final String                     manifest;
+    private final Document                   inputSource;
+    private final String                     name;
+    private final Long                       size;
+    private final Long                       bundledSize;
+    private XPath                            xpath;
+    private Function<String, String>         xpathHelper;
+    private String                           encryptedKey;
+    private String                           encryptedIV;
+    private List<ManifestDeviceMapping>      deviceMappings = Lists.newArrayList( );
     
     ImageManifest( String imageLocation ) throws EucalyptusCloudException {
       Context ctx = Contexts.lookup( );
@@ -255,10 +258,10 @@ public class ImageManifests {
         : null;
       this.encryptedKey = this.xpathHelper.apply( "//ec2_encrypted_key" );
       this.encryptedIV = this.xpathHelper.apply( "//ec2_encrypted_iv" );
-      Predicate<Image.Type> checkIdType = new Predicate<Image.Type>( ) {
+      Predicate<ImageMetadata.Type> checkIdType = new Predicate<ImageMetadata.Type>( ) {
         
         @Override
-        public boolean apply( Image.Type input ) {
+        public boolean apply( ImageMetadata.Type input ) {
           String value = ImageManifest.this.xpathHelper.apply( input.getManifestPath( ) );
           if ( "yes".equals( value ) || "true".equals( value ) || manifestName.startsWith( input.getNamePrefix( ) ) ) {
             return true;
@@ -267,7 +270,7 @@ public class ImageManifests {
           }
         }
       };
-      String typeInManifest = this.xpathHelper.apply( Image.TYPE_MANIFEST_XPATH );
+      String typeInManifest = this.xpathHelper.apply( ImageMetadata.TYPE_MANIFEST_XPATH );
       
       this.size = ( ( temp = this.xpathHelper.apply( "/manifest/image/size/text()" ) ) != null )
         ? Long.parseLong( temp )
@@ -276,75 +279,76 @@ public class ImageManifests {
         ? Long.parseLong( temp )
         : -1l;
       
-        String arch = this.xpathHelper.apply( "/manifest/machine_configuration/architecture/text()" );
-      this.architecture = Image.Architecture.valueOf( ( ( arch == null )
+      String arch = this.xpathHelper.apply( "/manifest/machine_configuration/architecture/text()" );
+      this.architecture = ImageMetadata.Architecture.valueOf( ( ( arch == null )
           ? "i386"
             : arch ) );
       try {
-        NodeList devMapList = ( NodeList ) this.xpath.evaluate( "/manifest/machine_configuration/block_device_mapping/mapping", inputSource, XPathConstants.NODESET );
-        for( int i = 0; i < devMapList.getLength( ); i++ ) {
+        NodeList devMapList = ( NodeList ) this.xpath.evaluate( "/manifest/machine_configuration/block_device_mapping/mapping", inputSource,
+                                                                XPathConstants.NODESET );
+        for ( int i = 0; i < devMapList.getLength( ); i++ ) {
           Node node = devMapList.item( i );
           NodeList children = node.getChildNodes( );
           String virtualName = null;
           String device = null;
-          for( int j = 0; j < children.getLength( ); j++ ) {
+          for ( int j = 0; j < children.getLength( ); j++ ) {
             Node childNode = children.item( j );
             String nodeType = childNode.getNodeName( );
-            if( "virtual".equals( nodeType ) && childNode.getTextContent( ) != null ) {
+            if ( "virtual".equals( nodeType ) && childNode.getTextContent( ) != null ) {
               virtualName = childNode.getTextContent( );
-            } else if( "device".equals( nodeType ) && childNode.getTextContent( ) != null ) {
+            } else if ( "device".equals( nodeType ) && childNode.getTextContent( ) != null ) {
               device = childNode.getTextContent( );
             }
           }
-          if( virtualName != null && device != null ) {
-            if( "ami".equals( virtualName ) ) {
+          if ( virtualName != null && device != null ) {
+            if ( "ami".equals( virtualName ) ) {
               continue;
-            } else if( "root".equals( virtualName ) ) {
+            } else if ( "root".equals( virtualName ) ) {
               this.deviceMappings.add( new ManifestDeviceMapping( DeviceMappingType.root, virtualName, device ) );
-            } else if( "swap".equals( virtualName ) ) {
+            } else if ( "swap".equals( virtualName ) ) {
               this.deviceMappings.add( new ManifestDeviceMapping( DeviceMappingType.swap, virtualName, device ) );
-            } else if( virtualName.startsWith( "ephemeral" ) ) {
+            } else if ( virtualName.startsWith( "ephemeral" ) ) {
               this.deviceMappings.add( new ManifestDeviceMapping( DeviceMappingType.ephemeral, virtualName, device ) );
             }
           }
         }
       } catch ( XPathExpressionException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
-
-      if ( ( checkIdType.apply( Image.Type.kernel ) || checkIdType.apply( Image.Type.ramdisk ) ) && !ctx.hasAdministrativePrivileges( ) ) {
+      
+      if ( ( checkIdType.apply( ImageMetadata.Type.kernel ) || checkIdType.apply( ImageMetadata.Type.ramdisk ) ) && !ctx.hasAdministrativePrivileges( ) ) {
         throw new EucalyptusCloudException( "Only administrators can register kernel images." );
       } else {
-        if ( checkIdType.apply( Image.Type.kernel ) ) {
-          this.imageType = Image.Type.kernel;
-          this.platform = Image.Platform.linux;
+        if ( checkIdType.apply( ImageMetadata.Type.kernel ) ) {
+          this.imageType = ImageMetadata.Type.kernel;
+          this.platform = ImageMetadata.Platform.linux;
           this.kernelId = null;
           this.ramdiskId = null;
-        } else if ( checkIdType.apply( Image.Type.ramdisk ) ) {
-          this.imageType = Image.Type.ramdisk;
-          this.platform = Image.Platform.linux;
+        } else if ( checkIdType.apply( ImageMetadata.Type.ramdisk ) ) {
+          this.imageType = ImageMetadata.Type.ramdisk;
+          this.platform = ImageMetadata.Platform.linux;
           this.kernelId = null;
           this.ramdiskId = null;
         } else {
-          String kId = this.xpathHelper.apply( Image.Type.kernel.getManifestPath( ) );
-          String rId = this.xpathHelper.apply( Image.Type.ramdisk.getManifestPath( ) );
-          this.imageType = Image.Type.machine;
-          if ( !manifestName.startsWith( Image.Platform.windows.toString( ) ) ) {
-            this.platform = Image.Platform.linux;
-            if ( kId != null && kId.startsWith( Image.Type.kernel.getTypePrefix( ) ) ) {
+          String kId = this.xpathHelper.apply( ImageMetadata.Type.kernel.getManifestPath( ) );
+          String rId = this.xpathHelper.apply( ImageMetadata.Type.ramdisk.getManifestPath( ) );
+          this.imageType = ImageMetadata.Type.machine;
+          if ( !manifestName.startsWith( ImageMetadata.Platform.windows.toString( ) ) ) {
+            this.platform = ImageMetadata.Platform.linux;
+            if ( kId != null && kId.startsWith( ImageMetadata.Type.kernel.getTypePrefix( ) ) ) {
               ImageManifests.checkPrivileges( this.kernelId );
               this.kernelId = kId;
             } else {
               this.kernelId = null;
             }
-            if ( kId != null && kId.startsWith( Image.Type.kernel.getTypePrefix( ) ) ) {
+            if ( kId != null && kId.startsWith( ImageMetadata.Type.kernel.getTypePrefix( ) ) ) {
               ImageManifests.checkPrivileges( this.ramdiskId );
               this.ramdiskId = rId;
             } else {
               this.ramdiskId = null;
             }
           } else {
-            this.platform = Image.Platform.windows;
+            this.platform = ImageMetadata.Platform.windows;
             this.kernelId = null;
             this.ramdiskId = null;
           }
@@ -409,11 +413,11 @@ public class ImageManifests {
       return this.signature;
     }
     
-    public Image.Platform getPlatform( ) {
+    public ImageMetadata.Platform getPlatform( ) {
       return this.platform;
     }
     
-    public Image.Architecture getArchitecture( ) {
+    public ImageMetadata.Architecture getArchitecture( ) {
       return this.architecture;
     }
     
@@ -425,7 +429,7 @@ public class ImageManifests {
       return this.ramdiskId;
     }
     
-    public Image.Type getImageType( ) {
+    public ImageMetadata.Type getImageType( ) {
       return this.imageType;
     }
     
@@ -452,7 +456,7 @@ public class ImageManifests {
     public String getChecksum( ) {
       return this.checksum;
     }
-
+    
     public String getChecksumType( ) {
       return this.checksumType;
     }
@@ -473,7 +477,7 @@ public class ImageManifests {
         LOG.error( ex, ex );
         throw new EucalyptusCloudException( "Referenced image id is invalid: " + diskId, ex );
       }
-      if ( !Lookups.checkPrivilege( ctx.getRequest( ), PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, diskId, disk.getOwner( ) ) ) {
+      if ( !RestrictedTypes.filterPrivileged( ).apply( disk ) ) {
         throw new EucalyptusCloudException( "Access to " + disk.getImageType( ).toString( ) + " image " + diskId + " is denied for " + ctx.getUser( ).getName( ) );
       }
     }

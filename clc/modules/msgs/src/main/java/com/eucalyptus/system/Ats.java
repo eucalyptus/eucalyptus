@@ -68,9 +68,15 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import com.eucalyptus.util.Classes;
+import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+import com.google.common.collect.MapMaker;
+import com.google.common.collect.Maps;
 
 /**
  * A builder-like utility for interrogating the {@link Annotation}s that may be present on instances
@@ -79,7 +85,7 @@ import com.google.common.collect.Lists;
 public class Ats {
   private final List<AnnotatedElement> ancestry = Lists.newArrayList( );
   
-  public Ats( AnnotatedElement... ancestry ) {
+  private Ats( AnnotatedElement... ancestry ) {
     for ( AnnotatedElement c : ancestry ) {
       if ( c instanceof AnnotatedElement ) {
         this.ancestry.add( c );
@@ -103,18 +109,25 @@ public class Ats {
   }
   
   public <A extends Annotation> A get( Class<A> annotation ) {
-    for ( AnnotatedElement a : this.ancestry ) {
+    AnnotatedElement decl = find( annotation );
+    return decl == null
+      ? null
+      : decl.getAnnotation( annotation );
+  }
+  
+  public <A extends Annotation> AnnotatedElement find( final Class<A> annotation ) {
+    for ( final AnnotatedElement a : this.ancestry ) {
       if ( a.isAnnotationPresent( annotation ) ) {
-        return ( A ) a.getAnnotation( annotation );
+        return a;
       } else if ( a instanceof Class ) {
-        for ( Class inter : ( ( Class ) a ).getInterfaces( ) ) {
+        for ( Class<?> inter : ( ( Class<?> ) a ).getInterfaces( ) ) {
           if ( inter.isAnnotationPresent( annotation ) ) {
-            return ( A ) inter.getAnnotation( annotation );
+            return inter;
           }
         }
       }
     }
-    return ( A ) this.ancestry.get( 0 ).getAnnotation( annotation );
+    return this.ancestry.get( 0 );
   }
   
   public static Ats from( Object o ) {
@@ -129,10 +142,28 @@ public class Ats {
   
   public static Ats inClassHierarchy( Object o ) {
     if ( o instanceof AnnotatedElement ) {
-      return new Ats( Classes.ancestry( o ).toArray( new Class[] {} ) );
+      return new Ats( Classes.ancestors( o ).toArray( new Class[] {} ) );
     } else {
-      return new Ats( Classes.ancestry( o ).toArray( new Class[] {} ) );
+      return new Ats( Classes.ancestors( o ).toArray( new Class[] {} ) );
     }
   }
   
+  List<AnnotatedElement> getAncestry( ) {
+    return this.ancestry;
+  }
+  
+  enum AnnotatedElementToString implements Function<AnnotatedElement, String> {
+    INSTANCE;
+    
+    @Override
+    public String apply( AnnotatedElement input ) {
+      return input.toString( ) + ":" + "[" + Joiner.on( "," ).join( input.getAnnotations( ) ) + "]";
+    }
+  }
+  
+  @Override
+  public String toString( ) {
+    return String.format( "Ats:class=%s\nAts:ancestor=%s", this.ancestry.get( 0 ),
+                          Joiner.on( "Ats:ancestor=" ).join( Lists.transform( this.ancestry, AnnotatedElementToString.INSTANCE ) ) );
+  }
 }

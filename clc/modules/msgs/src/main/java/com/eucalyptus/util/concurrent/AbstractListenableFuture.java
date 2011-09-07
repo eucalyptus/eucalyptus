@@ -83,11 +83,11 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
   protected <T> void add( ExecPair<T> pair ) {
     this.listeners.add( pair );
     if ( this.finished.get( ) ) {
-      EventRecord.here( pair.getClass( ), EventType.FUTURE, "run(" + pair.toString( ) + ")" ).debug( );
+      EventRecord.here( pair.getClass( ), EventType.FUTURE, "run(" + pair.toString( ) + ")" ).exhaust( );
       this.listeners.remove( pair );
       pair.run( );
     } else {
-      EventRecord.here( pair.getClass( ), EventType.FUTURE, "add(" + pair.toString( ) + ")" ).debug( );
+      EventRecord.here( pair.getClass( ), EventType.FUTURE, "add(" + pair.toString( ) + ")" ).exhaust( );
     }
   }
   
@@ -105,8 +105,8 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
    *      ExecutorService)
    */
   @Override
-  public <V> CheckedListenableFuture<V> addListener( Callable<V> listener, ExecutorService executor ) {
-    ExecPair<V> pair = new ExecPair<V>( listener, executor );
+  public <T> CheckedListenableFuture<T> addListener( Callable<T> listener, ExecutorService executor ) {
+    ExecPair<T> pair = new ExecPair<T>( listener, executor );
     this.add( pair );
     return pair.getFuture( );
   }
@@ -122,7 +122,7 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
   @Override
   protected void done( ) {
     this.listeners.add( DONE );
-    if( this.finished.compareAndSet( false, true ) ) {
+    if ( this.finished.compareAndSet( false, true ) ) {
       while ( this.listeners.peek( ) != DONE ) {
         this.listeners.poll( ).run( );
       }
@@ -139,10 +139,10 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
     return super.setException( throwable );
   }
   
-  class ExecPair<V> implements Runnable {
-    private Callable<V>                      callable;
+  class ExecPair<C> implements Runnable {
+    private Callable<C>                      callable;
     private Runnable                         runnable;
-    private final CheckedListenableFuture<V> future = Futures.newGenericeFuture( );
+    private final CheckedListenableFuture<C> future = Futures.newGenericeFuture( );
     private final ExecutorService            executor;
     
     ExecPair( Callable callable, ExecutorService executor ) {
@@ -165,11 +165,11 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
     public void run( ) {
       try {
         if ( this.runnable != null ) {
-          EventRecord.here( runnable.getClass( ), EventType.FUTURE, "run(" + runnable.toString( ) + ")" ).debug( );
+          EventRecord.here( runnable.getClass( ), EventType.FUTURE, "run(" + runnable.toString( ) + ")" ).exhaust( );
           this.executor.submit( this.runnable, null ).get( );
           this.future.set( null );
         } else {
-          EventRecord.here( callable.getClass( ), EventType.FUTURE, "call(" + callable.toString( ) + ")" ).debug( );
+          EventRecord.here( callable.getClass( ), EventType.FUTURE, "call(" + callable.toString( ) + ")" ).exhaust( );
           this.future.set( this.executor.submit( callable ).get( ) );
         }
       } catch ( InterruptedException ex ) {
@@ -179,13 +179,13 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
       } catch ( ExecutionException ex ) {
         LOG.error( ex, ex );
         this.future.setException( ex.getCause( ) );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex, ex );
         this.future.setException( ex.getCause( ) );
       }
     }
     
-    CheckedListenableFuture<V> getFuture( ) {
+    CheckedListenableFuture<C> getFuture( ) {
       return this.future;
     }
     

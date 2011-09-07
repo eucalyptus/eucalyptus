@@ -34,17 +34,14 @@
 
 package com.eucalyptus.cloud.ws;
 
-import java.net.InetAddress;
 import org.apache.log4j.Logger;
-import org.mule.RequestContext;
-import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ComponentIds; 
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.async.AsyncRequests;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ComponentMessageType;
 
@@ -56,31 +53,30 @@ public class ComponentService {
 		String component = request.getComponent();
 		String host = request.getHost();
 		String name = request.getName();
-
 		ServiceConfiguration service = this.lookupService(component,host,name);
-		LOG.info("Component: "+service);
-		try {
-			BaseMessage reply = null;
-			if(service.isVmLocal()) {//send direct to local component using mule registry directly
-				reply = ServiceContext.send(service.getComponentId().getLocalEndpointName(),request);
-			} else {//send remote
-				reply = service.lookupService().getDispatcher().send(request);
-			}
-			return reply;
-		} catch (Exception e) {
-			LOG.error(e);
-			throw new EucalyptusCloudException("Unable to dispatch message to: "+service.getName());
-		}
+    LOG.info("Component: "+service);
+    try {
+      BaseMessage reply = null;
+  		if(service.isVmLocal()) {//send direct to local component using mule registry directly
+        reply = ServiceContext.send(service.getComponentId().getLocalEndpointName(),request);
+   		} else {//send remote
+        reply = AsyncRequests.sendSync(service,request);
+   		}
+      return reply;
+    } catch (Exception e) {
+      LOG.error(e);
+      throw new EucalyptusCloudException("Unable to dispatch message to: "+service.getName());
+    }
 	}
 
-	private ServiceConfiguration lookupService(String component,String name,String host) throws EucalyptusCloudException {
-		ComponentId destCompId = ComponentIds.lookup(component);
-		if(name != null) {
-			return ServiceConfigurations.lookupByName(destCompId.getClass(),name);
-		} else if (host != null) {
-			return ServiceConfigurations.lookupByHost(destCompId.getClass(),name);
-		} else {
-			throw new EucalyptusCloudException("Unable to dispatch message to: "+component+"@"+host);
-		}
-	}
+  private ServiceConfiguration lookupService(String component,String name,String host) throws EucalyptusCloudException {
+    ComponentId destCompId = ComponentIds.lookup(component);
+    if(name != null) {
+      return ServiceConfigurations.lookupByName(destCompId.getClass(),name);
+    } else if (host != null) {
+      return ServiceConfigurations.lookupByHost(destCompId.getClass(),name);
+    } else {
+      throw new EucalyptusCloudException("Unable to dispatch message to: "+component+"@"+host);
+    }
+  }
 }

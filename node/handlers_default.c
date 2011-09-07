@@ -114,6 +114,7 @@ doRunInstance(	struct nc_state_t *nc,
                 char *imageId, char *imageURL,  // ignored
                 char *kernelId, char *kernelURL, // ignored
                 char *ramdiskId, char *ramdiskURL, // ignored
+                char *ownerId, char *accountId,
                 char *keyName, 
                 netConfig *netparams,
                 char *userData, char *launchIndex, char *platform, int expiryTime,
@@ -142,6 +143,7 @@ doRunInstance(	struct nc_state_t *nc,
                                         instance_state_names[PENDING], 
                                         PENDING, 
                                         meta->userId, 
+                                        ownerId, accountId,
                                         &ncnet, keyName,
                                         userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize))) {
         logprintfl (EUCAERROR, "[%s] error: could not allocate instance struct\n", instanceId);

@@ -67,6 +67,7 @@ import com.google.common.base.Function;
  */
 
 public interface HasName<T> extends Mappable<T,String> {
+  public abstract String getName( );
   public final Function<HasName<?>,String> GET_NAME = new Function<HasName<?>,String>() {
 
     @Override

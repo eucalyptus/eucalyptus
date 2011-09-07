@@ -4,7 +4,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.records.Logs;
+import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -16,20 +21,48 @@ public class Exceptions {
   private static final Integer             DEFAULT_FILTER_MAX_DEPTH = 10;
   private static final StackTraceElement[] steArrayType             = new StackTraceElement[1];
   
+  enum ExceptionCauses implements Function<Throwable, List<Throwable>> {
+    INSTANCE;
+    
+    @Override
+    public List<Throwable> apply( Throwable input ) {
+      if ( input == null || input.getClass( ).equals( Exception.class ) || input.getClass( ).equals( Exception.class )
+           || input.getClass( ).equals( Exception.class ) ) {
+        return Lists.newArrayList( );
+      } else {
+        List<Throwable> ret = Lists.newArrayList( input );
+        ret.addAll( this.apply( input.getCause( ) ) );
+        return ret;
+      }
+    }
+    
+  }
+  
+  public static List<Throwable> causes( Throwable ex ) {
+    return ExceptionCauses.INSTANCE.apply( ex );
+  }
+  
   public static <T extends Throwable> String string( String message, T ex ) {
     return message + "\n" + string( ex );
   }
   
   public static <T extends Throwable> String createFaultDetails( T ex ) {
-    return Logs.EXTREME ? string( ex ) : ex.getMessage( ); 
+    return Logs.isExtrrreeeme( )
+      ? string( ex )
+      : ex.getMessage( );
   }
+  
   public static <T extends Throwable> String string( T ex ) {
-    Throwable t = ( ex == null ? new RuntimeException() : ex );
+    Throwable t = ( ex == null
+      ? new RuntimeException( )
+      : ex );
+    String allMessages = causeString( ex );
     ByteArrayOutputStream os = new ByteArrayOutputStream( );
     PrintWriter p = new PrintWriter( os );
+    p.println( allMessages );
     t.printStackTrace( p );
     p.flush( );
-    for( Throwable cause = t.getCause( ); cause != null; cause = cause.getCause( ) ) {
+    for ( Throwable cause = t.getCause( ); cause != null; cause = cause.getCause( ) ) {
       p.print( "Caused by: " );
       cause.printStackTrace( p );
     }
@@ -37,8 +70,62 @@ public class Exceptions {
     return os.toString( );
   }
   
-  public static <T extends Throwable> UndeclaredThrowableException undeclared( String message, T ex ) {
-    return new UndeclaredThrowableException( ex, message );
+  public static <T extends Throwable> String causeString( T ex ) {
+    return Joiner.on( "\nCaused by: " ).join( Exceptions.causes( ex ) );
+  }
+  
+  /**
+   * Convert the argument {@link Throwable} into a suitable {@link RuntimeException} either by type
+   * casting or wrapping in an {@link UndeclaredThrowableException}.
+   * 
+   * @param <T>
+   * @param message
+   * @param ex
+   * @return
+   */
+  public static <T extends Throwable> RuntimeException toUndeclared( String message, T ex ) {
+    if ( ex instanceof RuntimeException ) {
+      return ( RuntimeException ) ex;
+    } else {
+      return new UndeclaredThrowableException( ex, message );
+    }
+  }
+  
+  /**
+   * {@inheritDoc #toUndeclared(String, Throwable)}
+   * 
+   * @param cause
+   * @return
+   */
+  public static RuntimeException toUndeclared( Throwable cause ) {
+    return toUndeclared( cause.getMessage( ), cause );
+  }
+
+  /**
+   * Convert the argument {@link Throwable} into a suitable {@link Exception} (possibly a checked
+   * type) either by type casting or wrapping in an {@link UndeclaredThrowableException}.
+   * 
+   * @param <T>
+   * @param message
+   * @param ex
+   * @return
+   */
+  public static <T extends Throwable> Exception toCatchable( String message, T ex ) {
+    if ( ex instanceof Exception ) {
+      return ( Exception ) ex;
+    } else {
+      return new UndeclaredThrowableException( ex, message );
+    }
+  }
+  
+  /**
+   * {@inheritDoc #toCatchable(String, Throwable)}
+   * 
+   * @param cause
+   * @return
+   */
+  public static Exception toCatchable( Throwable cause ) {
+    return toCatchable( cause.getMessage( ), cause );
   }
   
   public static <T extends Throwable> T filterStackTrace( T ex, int maxDepth, List<String> fqClassPrefixes, List<String> matchPatterns ) {
@@ -160,7 +247,7 @@ public class Exceptions {
       : ex );
     return false;
   }
-
+  
   public static RuntimeException debug( String message ) {
     return debug( new RuntimeException( message ) );
   }
@@ -175,7 +262,6 @@ public class Exceptions {
     LOG.debug( message, filtered );
     return t;
   }
-
   
   public static RuntimeException trace( String message ) {
     return trace( new RuntimeException( message ) );
@@ -191,7 +277,7 @@ public class Exceptions {
     LOG.trace( message, filtered );
     return t;
   }
-
+  
   public static <T extends Throwable> T error( T t ) {
     return error( t.getMessage( ), t );
   }
@@ -202,4 +288,20 @@ public class Exceptions {
     LOG.error( message, filtered );
     return t;
   }
+  
+  @SuppressWarnings( "unchecked" )
+  public static <T extends Throwable> T causedBy( Throwable ex, final Class<T> class1 ) {
+    try {
+      return ( T ) Iterables.find( Exceptions.causes( ex ), new Predicate<Throwable>( ) {
+        
+        @Override
+        public boolean apply( Throwable input ) {
+          return class1.isAssignableFrom( input.getClass( ) );
+        }
+      } );
+    } catch ( NoSuchElementException ex1 ) {
+      return null;
+    }
+  }
+  
 }

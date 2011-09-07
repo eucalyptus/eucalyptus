@@ -1,22 +1,18 @@
 package com.eucalyptus.cluster.callback;
 
-import java.util.List;
-import java.util.NoSuchElementException;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.Networks;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.network.NetworkGroups;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.Network;
-import edu.ucsb.eucalyptus.cloud.NetworkToken;
 import edu.ucsb.eucalyptus.msgs.DescribeNetworksResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeNetworksType;
-import edu.ucsb.eucalyptus.msgs.NetworkInfoType;
 
 public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, DescribeNetworksType, DescribeNetworksResponseType> {
   private static Logger LOG = Logger.getLogger( NetworkStateCallback.class );
@@ -36,43 +32,29 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
    * @param reply
    */
   @Override
-  public void fire( DescribeNetworksResponseType reply ) {
-    for ( Network net : Networks.getInstance( ).listValues( ) ) {
-      net.trim( reply.getAddrIndexMax( ), reply.getAddrIndexMax( ) );
+  public void fire( final DescribeNetworksResponseType reply ) {
+    NetworkStateCallback.this.updateClusterConfiguration( reply );
+    NetworkGroups.updateNetworkRangeConfiguration( );
+  }
+  
+  private void updateClusterConfiguration( final DescribeNetworksResponseType reply ) {
+    EntityTransaction db = Entities.get( ClusterConfiguration.class );
+    try {
+      ClusterConfiguration config = Entities.uniqueResult( this.getSubject( ).getConfiguration( ) );
+      config.setNetworkMode( reply.getMode( ) );
+      config.setUseNetworkTags( reply.getUseVlans( ) == 1 );
+      config.setMinNetworkTag( reply.getVlanMin( ) );
+      config.setMaxNetworkTag( reply.getVlanMax( ) );
+      config.setMinNetworkIndex( ( long ) reply.getAddrIndexMin( ).intValue( ) );
+      config.setMaxNetworkIndex( ( long ) reply.getAddrIndexMax( ).intValue( ) );
+      config.setAddressesPerNetwork( reply.getAddrsPerNet( ) );
+      config.setVnetNetmask( reply.getVnetNetmask( ) );
+      config.setVnetSubnet( reply.getVnetSubnet( ) );
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
     }
-    this.getSubject( ).getState( ).setAddressCapacity( reply.getAddrsPerNet( ) );
-    this.getSubject( ).getState( ).setMode( reply.getUseVlans( ) );
-    for ( NetworkInfoType netInfo : reply.getActiveNetworks( ) ) {
-      try {
-        UserFullName userFn = UserFullName.getInstance( netInfo.getUserId( ) );
-        Network net = null;
-        try {
-          net = Networks.getInstance( ).lookup( netInfo.getUserId( ) + "-" + netInfo.getNetworkName( ) );
-          if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
-            NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), userFn, netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
-            netToken = net.addTokenIfAbsent( netToken );
-          }
-        } catch ( NoSuchElementException e1 ) {
-          net = new Network( userFn, netInfo.getNetworkName( ), netInfo.getUuid( ) );
-          if ( net.getVlan( ).equals( Integer.valueOf( 0 ) ) && net.initVlan( netInfo.getVlan( ) ) ) {
-            NetworkToken netToken = new NetworkToken( this.getSubject( ).getName( ), userFn, netInfo.getNetworkName( ), netInfo.getUuid( ), netInfo.getVlan( ) );
-            netToken = net.addTokenIfAbsent( netToken );
-          }
-        }
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
-      }
-    }
-    
-    for ( Network net : Networks.getInstance( ).listValues( Networks.State.ACTIVE ) ) {
-      net.trim( reply.getAddrIndexMax( ), reply.getAddrIndexMax( ) );
-    }
-    List<Cluster> ccList = Clusters.getInstance( ).listValues( );
-    int ccNum = ccList.size( );
-    for ( Cluster c : ccList ) {
-      ccNum -= c.getState( ).getMode( );
-    }
-    
   }
   
   /**

@@ -68,8 +68,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.component.NoSuchComponentException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -77,15 +76,16 @@ import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.Lookups;
-import com.eucalyptus.util.Transactions;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotType;
@@ -110,17 +110,16 @@ public class SnapshotManager {
   static Logger LOG       = Logger.getLogger( SnapshotManager.class );
   static String ID_PREFIX = "snap";
   
-  public CreateSnapshotResponseType create( CreateSnapshotType request ) throws EucalyptusCloudException, NoSuchComponentException {
+  public CreateSnapshotResponseType create( CreateSnapshotType request ) throws EucalyptusCloudException, NoSuchComponentException, DuplicateMetadataException {
     Context ctx = Contexts.lookup( );
-    String action = PolicySpec.requestToAction( request );
-    if ( !ctx.hasAdministrativePrivileges( ) ) {
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
-        throw new EucalyptusCloudException( "Not authorized to create snapshot by " + ctx.getUser( ).getName( ) );
-      }
-      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, "", action, ctx.getUser( ), 1L ) ) {
-        throw new EucalyptusCloudException( "Quota exceeded in creating snapshot by " + ctx.getUser( ).getName( ) );
-      }
-    }
+//    if ( !ctx.hasAdministrativePrivileges( ) ) {
+//      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+//        throw new EucalyptusCloudException( "Not authorized to create snapshot by " + ctx.getUser( ).getName( ) );
+//      }
+//      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, "", action, ctx.getUser( ), 1L ) ) {
+//        throw new EucalyptusCloudException( "Quota exceeded in creating snapshot by " + ctx.getUser( ).getName( ) );
+//      }
+//    }
     EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
     Volume vol;
     try {
@@ -136,16 +135,17 @@ public class SnapshotManager {
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
     edu.ucsb.eucalyptus.msgs.Snapshot snapMsg = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
     snapMsg.setProgress( "0%" );
-    snapMsg.setOwnerId( snap.getOwnerAccountId( ) );
+    snapMsg.setOwnerId( snap.getOwnerAccountNumber( ) );
     snapMsg.setVolumeSize( vol.getSize( ).toString( ) );
     reply.setSnapshot( snapMsg );
     return reply;
   }
   
   /**
+   * @throws DuplicateMetadataException
    * @deprecated Use {@link Snapshots#startCreateSnapshot(Volume,Snapshot)} instead
    */
-  private static Snapshot startCreateSnapshot( final Volume vol, final Snapshot snap ) throws EucalyptusCloudException {
+  private static Snapshot startCreateSnapshot( final Volume vol, final Snapshot snap ) throws EucalyptusCloudException, DuplicateMetadataException {
     return Snapshots.startCreateSnapshot( vol, snap );
   }
   
@@ -154,15 +154,15 @@ public class SnapshotManager {
     final Context ctx = Contexts.lookup( );
     boolean result = false;
     try {
-      result = Transactions.delete( Snapshot.named( ctx.getUserFullName( ), request.getSnapshotId( ) ), new Predicate<Snapshot>( ) {
+      result = Transactions.delete( Snapshots.named( ctx.getUserFullName( ), request.getSnapshotId( ) ), new Predicate<Snapshot>( ) {
         
         @Override
         public boolean apply( Snapshot snap ) {
           if ( !State.EXTANT.equals( snap.getState( ) ) ) {
             return false;
-          } else if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, request.getSnapshotId( ), snap.getOwner( ) ) ) {
-            throw Exceptions.undeclared( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ),
-                                         new EucalyptusCloudException( ) );
+          } else if ( !RestrictedTypes.filterPrivileged( ).apply( snap ) ) {
+            throw Exceptions.toUndeclared( "Not authorized to delete snapshot " + request.getSnapshotId( ) + " by " + ctx.getUser( ).getName( ),
+                                           new EucalyptusCloudException( ) );
           } else {
             ServiceConfiguration sc = Partitions.lookupService( Storage.class, snap.getVolumePartition( ) );
             try {
@@ -170,18 +170,18 @@ public class SnapshotManager {
               if ( scReply.get_return( ) ) {
                 StorageUtil.dispatchAll( new DeleteStorageSnapshotType( snap.getDisplayName( ) ) );
                 try {
-                	//TODO: GRZE!!!! 1111oneoneone1111111oneoneone
                   ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsSnapshot, false, snap.getVolumeSize( ),
-                                                                               snap.getOwnerUserId( ), snap.getOwnerUserName(),
-                                                                               snap.getOwnerAccountId( ), null, snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
+                                                                               snap.getOwnerUserId( ), snap.getOwnerUserName( ),
+                                                                               snap.getOwnerAccountNumber( ), snap.getOwnerAccountName( ),
+                                                                               snap.getVolumeCluster( ), snap.getVolumePartition( ) ) );
                 } catch ( EventFailedException ex ) {
                   LOG.error( ex, ex );
                 }
               } else {
-                throw Exceptions.undeclared( "Unable to delete snapshot: " + snap, new EucalyptusCloudException( ) );
+                throw Exceptions.toUndeclared( "Unable to delete snapshot: " + snap, new EucalyptusCloudException( ) );
               }
             } catch ( EucalyptusCloudException ex1 ) {
-              throw Exceptions.undeclared( ex1.getMessage( ), ex1 );
+              throw Exceptions.toUndeclared( ex1.getMessage( ), ex1 );
             }
             return true;
           }
@@ -200,13 +200,9 @@ public class SnapshotManager {
     
     EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
     try {
-      List<Snapshot> snapshots = db.query( Snapshot.ownedBy( ctx.getUserFullName( ) ) );
+      List<Snapshot> snapshots = db.query( Snapshots.named( ctx.getUserFullName( ), null ) );
       
-      for ( Snapshot snap : snapshots ) {
-        if ( !Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, snap.getDisplayName( ), snap.getOwner( ) ) ) {
-          LOG.debug( "Skip snapshot " + snap.getDisplayName( ) + " due to access right" );
-          continue;
-        }
+      for ( Snapshot snap : Iterables.filter( snapshots, RestrictedTypes.filterPrivileged( ) ) ) {
         DescribeStorageSnapshotsType scRequest = new DescribeStorageSnapshotsType( Lists.newArrayList( snap.getDisplayName( ) ) );
         if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( snap.getDisplayName( ) ) ) {
           try {
@@ -217,7 +213,7 @@ public class SnapshotManager {
               edu.ucsb.eucalyptus.msgs.Snapshot snapReply = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
               if ( storageSnapshot.getProgress( ) != null ) snapReply.setProgress( storageSnapshot.getProgress( ) );
               snapReply.setVolumeId( storageSnapshot.getVolumeId( ) );
-              snapReply.setOwnerId( snap.getOwnerAccountId( ) );
+              snapReply.setOwnerId( snap.getOwnerAccountNumber( ) );
               reply.getSnapshotSet( ).add( snapReply );
             }
           } catch ( NoSuchElementException e ) {
@@ -230,7 +226,7 @@ public class SnapshotManager {
         }
       }
       db.commit( );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       db.rollback( );
     }
     return reply;

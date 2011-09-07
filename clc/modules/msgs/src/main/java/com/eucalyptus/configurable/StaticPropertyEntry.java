@@ -64,10 +64,11 @@ package com.eucalyptus.configurable;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.nio.charset.CoderMalfunctionError;
+import javax.activation.UnsupportedDataTypeException;
+import org.apache.commons.lang.ClassUtils;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
-import com.eucalyptus.util.Logs;
 
 public class StaticPropertyEntry extends AbstractConfigurableProperty {
   static Logger LOG = Logger.getLogger( StaticPropertyEntry.class );
@@ -77,10 +78,10 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
                               Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias, PropertyChangeListener changeListener ) {
     super( definingClass, entrySetName, field, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias, changeListener );
     this.field = field;
-  }
-  
-  private String getFieldCanonicalName( ) {
-    return this.getField( ).getDeclaringClass( ).getCanonicalName( ) + "." + this.getFieldName( );
+    if ( this.field.getType( ).isPrimitive( ) ) {
+      throw new CoderMalfunctionError( new UnsupportedDataTypeException( "Unsupported usage of @Configurable on a primitive field: "
+                                                                         + field.getDeclaringClass( ) + "." + field.getName( ) ) );
+    }
   }
   
   public Field getField( ) {
@@ -89,51 +90,29 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
   
   @Override
   public String getValue( ) {
-    if ( Bootstrap.isFinished( ) ) {
-      try {
-        String dbValue = StaticDatabasePropertyEntry.lookup( this.getFieldCanonicalName( ), this.getQualifiedName( ), this.safeGetFieldValue( ) ).getValue( );
-        Object o = super.getTypeParser( ).parse( dbValue );
-        this.field.set( null, o );
-        return dbValue;
-      } catch ( Exception e ) {
-        LOG.warn( "Failed to get property: " + super.getQualifiedName( ) + " because of " + e.getMessage( ) );
-        Logs.extreme( ).debug( e, e );
-        return super.getDefaultValue( );
-      }
-    } else {
-      return super.getDefaultValue( );
-    }
-  }
-  
-  private String safeGetFieldValue( ) {
     try {
-      Object o = this.field.get( null );
-      if ( o == null ) {
-        return super.getDefaultValue( );
-      } else {
-        return o.toString( );
-      }
-    } catch ( Exception ex ) {
+      return "" + this.field.get( null );
+    } catch ( Exception e ) {
+      LOG.debug( e, e );
       return super.getDefaultValue( );
     }
   }
   
   @Override
   public String setValue( String s ) {
-    if ( Bootstrap.isFinished( ) ) {
+    if ( Modifier.isFinal( this.field.getModifiers( ) ) ) {
+      return "failed to assign final field: " + super.getQualifiedName( );
+    } else {
       try {
-        Object o = super.getTypeParser( ).parse( s );
+        Object o = super.getTypeParser( ).apply( s );
         this.fireChange( s );
-        StaticDatabasePropertyEntry.update( this.getFieldCanonicalName( ), this.getQualifiedName( ), s );
         this.field.set( null, o );
         LOG.info( "--> Set property value:  " + super.getQualifiedName( ) + " to " + s );
-      } catch ( Exception e ) {
-        LOG.warn( "Failed to set property: " + super.getQualifiedName( ) + " because of " + e.getMessage( ) );
-        Logs.extreme( ).debug( e, e );
+      } catch ( Exception t ) {
+        LOG.warn( "Failed to set property: " + super.getQualifiedName( ) + " because of " + t.getMessage( ) );
+        LOG.debug( t, t );
       }
       return this.getValue( );
-    } else {
-      return super.getDefaultValue( );
     }
   }
   
@@ -158,12 +137,9 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
         Class<? extends PropertyChangeListener> changeListenerClass = annote.changeListener( );
         PropertyChangeListener changeListener;
         if ( !changeListenerClass.equals( NoopEventListener.class ) ) {
-          if ( changeListenerClass.isEnum( ) ) {
-            changeListener = changeListenerClass.getEnumConstants( )[0];
-          }
           try {
             changeListener = changeListenerClass.newInstance( );
-          } catch ( Throwable e ) {
+          } catch ( Exception e ) {
             changeListener = NoopEventListener.NOOP;
           }
         } else {
@@ -173,7 +149,7 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
         if ( Modifier.isPublic( modifiers ) && Modifier.isStatic( modifiers ) ) {
           entry = new StaticPropertyEntry( c, fqPrefix, field, description, defaultValue, p, annote.readonly( ), annote.displayName( ), annote.type( ), alias,
                                            changeListener );
-//          entry.setValue( defaultValue );
+          entry.setValue( defaultValue );
           return entry;
         }
       }
@@ -187,5 +163,17 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
   @Override
   protected Object getQueryObject( ) throws Exception {
     return null;
+  }
+  
+  /**
+   * @see java.lang.Comparable#compareTo(java.lang.Object)
+   */
+  @Override
+  public int compareTo( ConfigurableProperty that ) {
+    return this.getQualifiedName( ) != null
+      ? this.getQualifiedName( ).compareTo( that.getQualifiedName( ) )
+      : ( that.getQualifiedName( ) == null
+        ? 0
+        : -1 );
   }
 }

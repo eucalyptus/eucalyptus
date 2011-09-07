@@ -167,7 +167,6 @@ public class SslSetup {
   }
   
   public static class SimpleTrustManager extends TrustManagerFactorySpi {
-    private static Logger             LOG       = Logger.getLogger( SslSetup.SimpleTrustManager.class );
     
     private static final TrustManager singleton = new SimpleX509TrustManager( );
     

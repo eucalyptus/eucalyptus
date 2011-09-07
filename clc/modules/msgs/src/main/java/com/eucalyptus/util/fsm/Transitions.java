@@ -3,9 +3,9 @@ package com.eucalyptus.util.fsm;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.HasName;
-import com.eucalyptus.util.async.Callback;
-import com.eucalyptus.util.async.Callback.Completion;
+import com.eucalyptus.util.Callback.Completion;
 import com.eucalyptus.util.async.Callbacks;
 import com.google.common.base.Predicate;
 import com.google.common.util.concurrent.Callables;
@@ -29,7 +29,7 @@ public class Transitions {
       public void leave( P parent ) {
         try {
           p.fire( parent );
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
       }
@@ -115,7 +115,7 @@ public class Transitions {
         try {
           callback.fire( parent );
           transitionCallback.fire( );
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex );
           transitionCallback.fireException( ex );
         }
@@ -142,7 +142,7 @@ public class Transitions {
           } else {
             transitionCallback.fire( );
           }
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex );
           transitionCallback.fireException( ex );
         }

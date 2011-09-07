@@ -21,7 +21,6 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
   }
   
   public static class DatabasePropertyBuilder implements ConfigurablePropertyBuilder {
-    private static Logger LOG = Logger.getLogger( SingletonDatabasePropertyEntry.DatabasePropertyBuilder.class );
     
     @Override
     public ConfigurableProperty buildProperty( Class c, Field f ) throws ConfigurablePropertyException {
@@ -42,7 +41,7 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
                                                                             annote.displayName( ), annote.type( ), alias );
             return prop;
           }
-        } catch ( Throwable e ) {
+        } catch ( Exception e ) {
           LOG.debug( e, e );
           return null;
         }
@@ -52,6 +51,18 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
       return null;
     }
     
+  }
+  
+  /**
+   * @see java.lang.Comparable#compareTo(java.lang.Object)
+   */
+  @Override
+  public int compareTo( ConfigurableProperty that ) {
+    return this.getQualifiedName( ) != null
+      ? this.getQualifiedName( ).compareTo( that.getQualifiedName( ) )
+      : ( that.getQualifiedName( ) == null
+        ? 0
+        : -1 );
   }
   
 }
