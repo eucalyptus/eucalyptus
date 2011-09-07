@@ -65,11 +65,8 @@ package com.eucalyptus.network;
 
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.persistence.EntityTransaction;
-import javax.persistence.PersistenceException;
-import javax.persistence.RollbackException;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
@@ -84,7 +81,6 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.Numbers;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
@@ -211,20 +207,16 @@ public class NetworkGroups {
     return netConfig;
   }
   
-  public static NetworkGroup lookup( final String uuid ) throws NoSuchMetadataException {
+  public static NetworkGroup lookup( final String groupId ) throws NoSuchMetadataException {
+    EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
-      return Transactions.find( new NetworkGroup( ) {
-        /**
-         * 
-         */
-        private static final long serialVersionUID = 1L;
-
-        {
-          this.setNaturalId( uuid );
-        }
-      } );
-    } catch ( final Exception ex ) {
-      throw new NoSuchMetadataException( "Failed to find security group: " + uuid, ex );
+      NetworkGroup entity = Entities.uniqueResult( NetworkGroup.named( null, groupId ) );
+      db.commit( );
+      return entity;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new NoSuchMetadataException( "Failed to find security group: " + groupId, ex );
     }
   }
   
@@ -264,8 +256,8 @@ public class NetworkGroups {
   static void createDefault( final OwnerFullName ownerFullName ) throws MetadataException {
     try {
       try {
-        NetworkGroup net = Transactions.find( new NetworkGroup( ownerFullName, NETWORK_DEFAULT_NAME  ) );
-        if( net == null ) {
+        NetworkGroup net = Transactions.find( new NetworkGroup( ownerFullName, NETWORK_DEFAULT_NAME ) );
+        if ( net == null ) {
           create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
         }
       } catch ( NoSuchElementException ex ) {
@@ -273,8 +265,7 @@ public class NetworkGroups {
       } catch ( TransactionException ex ) {
         create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
       }
-    } catch ( DuplicateMetadataException ex ) {
-    }
+    } catch ( DuplicateMetadataException ex ) {}
   }
   
   public static String defaultNetworkName( ) {
@@ -325,7 +316,8 @@ public class NetworkGroups {
     @Override
     public IpPermissionType apply( final NetworkRule rule ) {
       final IpPermissionType ipPerm = new IpPermissionType( rule.getProtocol( ), rule.getLowPort( ), rule.getHighPort( ) );
-      final Iterable<UserIdGroupPairType> peers = Iterables.transform( rule.getNetworkPeers( ), TypeMappers.lookup( NetworkPeer.class, UserIdGroupPairType.class ) );
+      final Iterable<UserIdGroupPairType> peers = Iterables.transform( rule.getNetworkPeers( ),
+                                                                       TypeMappers.lookup( NetworkPeer.class, UserIdGroupPairType.class ) );
       Iterables.addAll( ipPerm.getGroups( ), peers );
       final Iterable<String> ipRanges = Iterables.transform( rule.getIpRanges( ), TypeMappers.lookup( IpRange.class, String.class ) );
       Iterables.addAll( ipPerm.getIpRanges( ), ipRanges );
@@ -341,8 +333,10 @@ public class NetworkGroups {
       final EntityTransaction db = Entities.get( NetworkGroup.class );
       try {
         final NetworkGroup netGroup = Entities.merge( input );
-        final SecurityGroupItemType groupInfo = new SecurityGroupItemType( netGroup.getOwnerAccountNumber( ), netGroup.getDisplayName( ), netGroup.getDescription( ) );
-        final Iterable<IpPermissionType> ipPerms = Iterables.transform( netGroup.getNetworkRules( ), TypeMappers.lookup( NetworkRule.class, IpPermissionType.class ) );
+        final SecurityGroupItemType groupInfo = new SecurityGroupItemType( netGroup.getOwnerAccountNumber( ), netGroup.getDisplayName( ),
+                                                                           netGroup.getDescription( ) );
+        final Iterable<IpPermissionType> ipPerms = Iterables.transform( netGroup.getNetworkRules( ),
+                                                                        TypeMappers.lookup( NetworkRule.class, IpPermissionType.class ) );
         Iterables.addAll( groupInfo.getIpPermissions( ), ipPerms );
         return groupInfo;
       } finally {

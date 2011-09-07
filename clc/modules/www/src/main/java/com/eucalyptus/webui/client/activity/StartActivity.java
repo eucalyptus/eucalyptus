@@ -40,6 +40,7 @@ public class StartActivity extends AbstractActivity {
     StartView startView = this.clientFactory.getStartView( );
     container.setWidget( startView );
     loadSnippets( startView, eventBus );
+    ActivityUtil.updateDirectorySelection( clientFactory );
   }
   
   private void loadSnippets( StartView view, EventBus eventBus ) {

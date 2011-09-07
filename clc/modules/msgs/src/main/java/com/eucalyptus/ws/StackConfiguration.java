@@ -92,7 +92,7 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( initial = "300",
       description = "A max clock skew value (in seconds) between client and server accepted when validating timestamps in Query/REST protocol.",
       changeListener = TimeChangeListener.class )
-  public static Integer       CLOCK_SKEW_SEC                    = 5 * 60;
+  public static Integer       CLOCK_SKEW_SEC                    = 20;
   public static final Boolean SERVER_CHANNEL_REUSE_ADDRESS      = true;
   public static final Boolean SERVER_CHANNEL_NODELAY            = true;
   public static final Boolean CHANNEL_REUSE_ADDRESS             = true;
