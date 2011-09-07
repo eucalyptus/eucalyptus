@@ -70,6 +70,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import com.eucalyptus.ws.Handlers;
+import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.handlers.ClusterWsSecHandler;
 
 public final class ClusterClientPipelineFactory implements ChannelPipelineFactory {
@@ -99,7 +100,7 @@ public final class ClusterClientPipelineFactory implements ChannelPipelineFactor
       pipeline.addLast( e.getKey( ), e.getValue( ) );
     }
     pipeline.addLast( "decoder", Handlers.newHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( 1024 * 1024 * 20 /** TODO:GRZE: configurable **/ ) );
+    pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( ) );
     pipeline.addLast( "encoder", Handlers.httpRequestEncoder( ) );
     pipeline.addLast( "serializer", Handlers.soapMarshalling( ) );
     pipeline.addLast( "wssec", ClusterClientPipelineFactory.wssecHandler );

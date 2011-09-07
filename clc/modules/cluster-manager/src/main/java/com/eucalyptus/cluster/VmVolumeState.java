@@ -163,11 +163,6 @@ public class VmVolumeState {
   
   public void updateVolumeAttachments( final List<VmVolumeAttachment> ncAttachedVols ) throws NoSuchElementException {
     final Map<String, VmVolumeAttachment> ncAttachedVolMap = new HashMap<String, VmVolumeAttachment>( ) {
-      /**
-       * 
-       */
-      @Transient
-      private static final long serialVersionUID = 1L;
       
       {
         for ( final VmVolumeAttachment v : ncAttachedVols ) {
@@ -181,21 +176,21 @@ public class VmVolumeState {
         final String volId = arg0.getVolumeId( );
         if ( ncAttachedVolMap.containsKey( volId ) ) {
           final VmVolumeAttachment ncVol = ncAttachedVolMap.get( volId );
-          if ( "detached".equals( ncVol.getStatus( ) ) ) {
+          if ( "detached".equals( ncVol.getStatus( ) ) || "attaching failed".equals( ncVol.getStatus( ) ) ) {
             VmVolumeState.this.removeVolumeAttachment( volId );
-          } else if ( "attaching".equals( arg0.getStatus( ) ) || "attached".equals( arg0.getStatus( ) ) ) {
+          } else if ( "attaching".equals( arg0.getStatus( ) ) || "attached".equals( ncVol.getStatus( ) ) || "detach failed".equals( ncVol.getStatus( ) ) ) {
             VmVolumeState.this.updateVolumeAttachment( volId, arg0.getStatus( ) );
           }
-        } else if ( "detaching".equals( arg0.getStatus( ) ) ) {//TODO:GRZE:remove this case when NC is updated to report "detached" state
-          VmVolumeState.this.removeVolumeAttachment( volId );
         }
         ncAttachedVolMap.remove( volId );
         return true;
       }
     } );
     for ( final VmVolumeAttachment v : ncAttachedVolMap.values( ) ) {
-      LOG.warn( "Restoring volume attachment state for " + this.getVmInstance( ).getInstanceId( ) + " with " + v.toString( ) );
-      this.addVolumeAttachment( v );
+      if( "attached".equals( v.getStatus( ) ) || "detach failed".equals( v.getStatus( ) ) ) {
+        LOG.warn( "Restoring volume attachment state for " + this.getVmInstance( ).getInstanceId( ) + " with " + v.toString( ) );
+        this.addVolumeAttachment( v );
+      }
     }
   }
   

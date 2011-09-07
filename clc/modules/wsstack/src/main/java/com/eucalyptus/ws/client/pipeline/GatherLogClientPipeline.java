@@ -69,16 +69,7 @@ import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
-import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.ws.Handlers;
-import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.handlers.NioHttpResponseDecoder;
-import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
-import com.eucalyptus.ws.handlers.http.NioHttpRequestEncoder;
-import com.eucalyptus.ws.protocol.AddressingHandler;
-import com.eucalyptus.ws.protocol.SoapHandler;
-import com.eucalyptus.ws.util.ChannelUtil;
 
 public final class GatherLogClientPipeline implements ChannelPipelineFactory {
   @Override
@@ -88,7 +79,7 @@ public final class GatherLogClientPipeline implements ChannelPipelineFactory {
       pipeline.addLast( e.getKey( ), e.getValue( ) );
     }
     pipeline.addLast( "decoder", Handlers.newHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( 1024 * 1024 * 20 ) ); // TODO:GRZE: configurable
+    pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( ) ); // TODO:GRZE: configurable
     pipeline.addLast( "encoder", Handlers.httpRequestEncoder( ) );
     pipeline.addLast( "serializer", Handlers.soapMarshalling( ) );
     pipeline.addLast( "addressing", Handlers.newAddressingHandler( "EucalyptusGL#" ) );
