@@ -339,7 +339,11 @@ public class VmInstances {
   }
   
   public static VmInstance register( final VmInstance vm ) {
-    return VmInstance.Transitions.REGISTER.apply( vm );
+    if ( !terminateCache.containsKey( vm.getInstanceId( ) ) ) {
+      return VmInstance.Transitions.REGISTER.apply( vm );
+    } else {
+      throw new IllegalArgumentException( "Attempt to register instance which is already terminated." );
+    }
   }
   
   public static VmInstance delete( final VmInstance vm ) throws TransactionException {

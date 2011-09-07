@@ -658,37 +658,28 @@ public class EuareWebBackend {
         }        
       } else {
         for ( Account account : getAccounts( query ) ) {
-          if ( query.has( USER ) || query.has( USERID ) ) {
-            for ( User user : getUsers( account, query ) ) {
-              if ( user.isAccountAdmin( ) ) continue;
-              for ( Policy policy : user.getPolicies( ) ) {
-                if ( policyMatchQuery( policy, query ) ) {
-                  if ( EuarePermission.allowReadUserPolicy( requestUser, account, user ) ) {
+          for ( User user : getUsers( account, query ) ) {
+            for ( Policy policy : user.getPolicies( ) ) {
+              if ( policyMatchQuery( policy, query ) ) {
+                if ( EuarePermission.allowReadUserPolicy( requestUser, account, user ) ) {
+                  if ( user.isAccountAdmin( ) ) {
+                    results.add( serializePolicy( policy, account, null, null ) );
+                  } else {
                     results.add( serializePolicy( policy, account, null, user ) );
                   }
                 }
               }
             }
-          } else if ( query.has( GROUP ) || query.has( GROUPID ) ) {
-            for ( Group group : getGroups( account, query ) ) {
-              for ( Policy policy : group.getPolicies( ) ) {
-                if ( policyMatchQuery( policy, query ) ) {
-                  if ( EuarePermission.allowReadGroupPolicy( requestUser, account, group ) ) {
-                    results.add( serializePolicy( policy, account, group, null ) );
-                  }
-                }
-              }
-            }          
-          } else {
-            User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
-            for ( Policy policy : admin.getPolicies( ) ) {
-              if ( policyMatchQuery( policy, query ) ) {
-                if ( EuarePermission.allowReadAccountPolicy( requestUser, account ) ) {
-                  results.add( serializePolicy( policy, account, null, null ) );
-                }
-              }
-            }          
           }
+          for ( Group group : getGroups( account, query ) ) {
+            for ( Policy policy : group.getPolicies( ) ) {
+              if ( policyMatchQuery( policy, query ) ) {
+                if ( EuarePermission.allowReadGroupPolicy( requestUser, account, group ) ) {
+                  results.add( serializePolicy( policy, account, group, null ) );
+                }
+              }
+            }
+          }          
         }
       }
     } catch ( Exception e ) {
@@ -753,7 +744,7 @@ public class EuareWebBackend {
         }        
       } else {
         for ( Account account : getAccounts( query ) ) {
-          for ( User user : account.getUsers( ) ) {
+          for ( User user : getUsers( account, query ) ) {
             for ( Certificate cert : user.getCertificates( ) ) {
               if ( certMatchQuery( cert, query ) ) {
                 if ( EuarePermission.allowReadUserCertificate( requestUser, account, user ) ) {
@@ -814,7 +805,7 @@ public class EuareWebBackend {
         }
       } else {
         for ( Account account : getAccounts( query ) ) {
-          for ( User user : account.getUsers( ) ) {
+          for ( User user : getUsers( account, query ) ) {
             for ( AccessKey key : user.getKeys( ) ) {
               if ( keyMatchQuery( key, query ) ) {
                 if ( EuarePermission.allowReadUserKey( requestUser, account, user ) ) {

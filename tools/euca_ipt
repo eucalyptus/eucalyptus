@@ -337,7 +337,7 @@ sub rule_convert() {
     }
 
     if ($rule =~ /-P (\S+)/) {
-	$prot = $1;
+	$prot = lc($1);
     }
     if ($rule =~ /-p (\S+)/) {
 	$port = $1;

@@ -154,7 +154,11 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   public static NetworkGroup named( final OwnerFullName ownerFullName, final String groupName ) {
     return new NetworkGroup( ownerFullName, groupName );
   }
-  
+
+  public static NetworkGroup withNaturalId( final String naturalId ) {
+    return new NetworkGroup( naturalId );
+  }
+
   /**
    * @param naturalId
    */
