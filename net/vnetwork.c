@@ -214,13 +214,16 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
     vnetconfig->max_vlan = NUMBER_OF_VLANS;
     if (numberofaddrs) {
       if (atoi(numberofaddrs) > NUMBER_OF_HOSTS_PER_VLAN) {
-	logprintfl(EUCAWARN, "vnetInit(): specified ADDRSPERNET exceeds maximum addresses per network (%d), setting to max\n", NUMBER_OF_HOSTS_PER_VLAN);
+	logprintfl(EUCAWARN, "vnetInit(): specified ADDRSPERNET exceeds maximum addresses per network (%d), setting to maximum.\n", NUMBER_OF_HOSTS_PER_VLAN);
 	vnetconfig->numaddrs = NUMBER_OF_HOSTS_PER_VLAN;
+      } else if (atoi(numberofaddrs) <= NUMBER_OF_CCS) {
+	logprintfl(EUCAWARN, "vnetInit(): specified ADDRSPERNET lower than absolute minimum (16) setting to minimum.\n");
+	vnetconfig->numaddrs = 16;
       } else {
 	vnetconfig->numaddrs = atoi(numberofaddrs);
       }
     }
-    vnetconfig->addrIndexMin = NUMBER_OF_CCS;
+    vnetconfig->addrIndexMin = NUMBER_OF_CCS+1;
     vnetconfig->addrIndexMax = vnetconfig->numaddrs-2;
     
     if (network) vnetconfig->nw = dot2hex(network);
@@ -308,7 +311,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	  if (vnetconfig->numaddrs > NUMBER_OF_PUBLIC_IPS) {
 	    vnetconfig->numaddrs = NUMBER_OF_PUBLIC_IPS;
 	  }
-	  vnetconfig->addrIndexMin = NUMBER_OF_CCS;
+	  vnetconfig->addrIndexMin = NUMBER_OF_CCS+1;
 	  vnetconfig->addrIndexMax = vnetconfig->numaddrs-2;
 	}
       }
@@ -1731,7 +1734,7 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *
   } else if (vlan > 0 && (vnetconfig->role == CC || vnetconfig->role == CLC)) {
 
     vnetconfig->networks[vlan].active = 1;
-    for (i=0; i<NUMBER_OF_CCS; i++) {
+    for (i=0; i<=NUMBER_OF_CCS; i++) {
       vnetconfig->networks[vlan].addrs[i].active = 1;
     }
     vnetconfig->networks[vlan].addrs[vnetconfig->numaddrs-1].active = 1;

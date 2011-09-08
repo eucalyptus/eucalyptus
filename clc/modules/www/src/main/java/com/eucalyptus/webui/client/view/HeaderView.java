@@ -8,6 +8,9 @@ public interface HeaderView extends IsWidget {
   
   UserSettingView getUserSetting( );
   
-  void setSearchHandler( SearchHandler handler );
+  void setPresenter( Presenter presenter );
   
+  public interface Presenter {
+    void runManualSearch( String search );
+  }
 }
