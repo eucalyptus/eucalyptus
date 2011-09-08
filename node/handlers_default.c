@@ -245,6 +245,7 @@ find_and_terminate_instance (
         else
             ret = nc_state->D->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
 
+        // do our best to detach, then proceed
         //if ((ret != OK) && (force == 0))
         //            return ret;
 	}
