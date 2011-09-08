@@ -178,11 +178,6 @@ public class VmControl {
         EntityTransaction db = Entities.get( VmInstance.class );
         try {
           VmInstance v = Entities.merge( vm );
-          if ( VmState.TERMINATED.apply( v ) && v.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
-            VmInstances.terminate( v );
-          } else if ( VmState.BURIED.apply( v ) && v.getSplitTime( ) > VmInstances.BURY_TIME ) {
-            VmInstances.delete( v );
-          }
           if ( VmState.BURIED.apply( v ) && !isVerbose ) {
             continue;
           }

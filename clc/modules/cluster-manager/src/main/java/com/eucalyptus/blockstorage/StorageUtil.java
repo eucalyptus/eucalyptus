@@ -172,28 +172,4 @@ public class StorageUtil {
     return reply;
   }
 
-  public static long countVolumeByAccount( String accountId ) throws AuthException {
-    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
-    try {
-      List<Volume> vols = db.query( new Volume( accountId, null/* displayName */ ) );
-      db.commit( );
-      return vols.size( );
-    } catch ( Exception e ) {
-      db.rollback( );
-      throw new AuthException( "Failed to search volume info", e );
-    }
-  }
-
-  public static long countVolumeByUser( String userId ) throws AuthException {
-    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
-    try {
-      List<Volume> vols = db.query( new Volume( UserFullName.getInstance( Accounts.lookupUserById( userId ) ), null/* displayName */ ) );
-      db.commit( );
-      return vols.size( );
-    } catch ( Exception e ) {
-      db.rollback( );
-      throw new AuthException( "Failed to search volume info", e );
-    }
-  }
-  
 }
