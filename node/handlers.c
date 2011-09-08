@@ -876,8 +876,10 @@ static int init (void)
     GET_VAR_INT(cache_size_mb, CONFIG_NC_CACHE_SIZE);
     GET_VAR_INT(work_size_mb, CONFIG_NC_WORK_SIZE);
     char * instance_path = getConfString(configFiles, 2, INSTANCE_PATH);
-    if (init_backing_store (instance_path, work_size_mb, cache_size_mb)) {
+
+    if (instance_path == NULL || init_backing_store (instance_path, work_size_mb, cache_size_mb)) {
         logprintfl (EUCAFATAL, "error: failed to initialize backing store\n");
+        if(instance_path) free(instance_path);
         return ERROR_FATAL;
 	}
 	if (statfs (instance_path, &fs) == -1) { // TODO: get the values from instance backing code
