@@ -244,8 +244,9 @@ find_and_terminate_instance (
             ret = nc_state->H->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
         else
             ret = nc_state->D->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
-        if ((ret != OK) && (force == 0))
-            return ret;
+
+        //if ((ret != OK) && (force == 0))
+        //            return ret;
 	}
 
 	// try stopping the domain
@@ -867,6 +868,9 @@ doDetachVolume (	struct nc_state_t *nc,
     if (ret==OK)
         logprintfl (EUCAINFO, "[%s] detached '%s' as host device '%s' and guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
     
+    if (force) {
+        return(OK);
+    }
     return ret;
 }
 
