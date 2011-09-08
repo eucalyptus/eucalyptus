@@ -145,15 +145,15 @@ public class ConfigurationWebBackend {
 		return type + "." + name;
 	}
 
-	private static void serializeSystemConfiguration( SystemConfiguration sysConf, Component cloud, SearchResultRow result ) {
+	private static void serializeSystemConfiguration( SystemConfiguration sysConf, ServiceConfiguration cloud, SearchResultRow result ) {
 		// First fill in the common fields
-		result.addField( makeConfigId( CLOUD_NAME, CLOUD_TYPE ) );// id
-		result.addField( CLOUD_NAME );                            // name  
-		result.addField( CLOUD_NAME );                            // partition  
+		result.addField( makeConfigId( cloud.getName(), CLOUD_TYPE ) );// id
+		result.addField( cloud.getName() );                            // name  
+		result.addField( cloud.getPartition() );                            // partition  
 		result.addField( CLOUD_TYPE );                            // type
-		result.addField( Internets.localHostAddress( ) );         // host
-		result.addField( "8773" );                                // port, hardcoding for now
-		result.addField( cloud.getState( ).toString( ) );
+		result.addField( cloud.getHostName() );         // host
+		result.addField( cloud.getPort( ) == null ? null : cloud.getPort( ).toString( ) );
+		result.addField( cloud.lookupState().toString( ) );
 		// Then fill in the specific fields
 		result.addField( sysConf.getDnsDomain( ) );               // dns domain
 		result.addField( sysConf.getNameserver( ) );              // dns nameserver
@@ -168,15 +168,19 @@ public class ConfigurationWebBackend {
 	/**
 	 * @return the cloud configuration row with its own specific fields for UI display.
 	 */
-	public static SearchResultRow getCloudConfiguration( ) {
-		Component cloud = Components.lookup(Eucalyptus.class);
+	public static List<SearchResultRow> getCloudConfigurations( ) {
+		List<SearchResultRow> results = Lists.newArrayList( );
 		SystemConfiguration sysConf = SystemConfiguration.getSystemConfiguration( );
-		SearchResultRow result = new SearchResultRow( );
-		// Set the extra field descs
-		result.setExtraFieldDescs( CLOUD_CONFIG_EXTRA_FIELD_DESCS );
-		// Fill the fields
-		serializeSystemConfiguration( sysConf, cloud, result );    
-		return result;
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(Eucalyptus.class).lookupServiceConfigurations();
+		for ( ServiceConfiguration c : configs ) {
+			SearchResultRow row = new SearchResultRow( );
+			// Set the extra field descs
+			row.setExtraFieldDescs( CLOUD_CONFIG_EXTRA_FIELD_DESCS );
+			// Fill the fields
+			serializeSystemConfiguration( sysConf, c, row ); 
+			results.add(row);
+		}
+		return results;
 	}
 
 	private static void deserializeSystemConfiguration( SystemConfiguration sysConf, SearchResultRow input, int index ) {
@@ -421,7 +425,7 @@ public class ConfigurationWebBackend {
 	/**
 	 * @return the storage configurations for UI display.
 	 */
-	public static List<SearchResultRow> getStorageConfiguration( ) {
+	public static List<SearchResultRow> getStorageConfigurations( ) {
 		List<SearchResultRow> results = Lists.newArrayList( );
 		//StorageControllerConfiguration c;
 		HashMap<String, List<ComponentProperty>> configMap = new HashMap<String, List<ComponentProperty>> (); 
@@ -512,7 +516,7 @@ public class ConfigurationWebBackend {
 	/**
 	 * @return the list of Walrus configurations for UI display.
 	 */
-	public static List<SearchResultRow> getWalrusConfiguration( ) {
+	public static List<SearchResultRow> getWalrusConfigurations( ) {
 		List<SearchResultRow> results = new ArrayList<SearchResultRow>( );
 		HashMap<String, List<ComponentProperty>> configMap = new HashMap<String, List<ComponentProperty>> (); 
 		NavigableSet<ServiceConfiguration> configs = Components.lookup(Walrus.class).lookupServiceConfigurations();
@@ -520,12 +524,12 @@ public class ConfigurationWebBackend {
 			if(Component.State.ENABLED.equals(c.lookupState())) {
 				//send for config and add result row
 				List<ComponentProperty> properties = Lists.newArrayList( );
-				
+
 				try {
-						GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType( WalrusProperties.NAME );
-						Dispatcher walrusDispatch = ServiceDispatcher.lookup( c );
-						GetWalrusConfigurationResponseType getWalrusConfigResponse = walrusDispatch.send( getWalrusConfiguration );
-						configMap.put( c.getPartition(), getWalrusConfigResponse.getProperties( ));
+					GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType( WalrusProperties.NAME );
+					Dispatcher walrusDispatch = ServiceDispatcher.lookup( c );
+					GetWalrusConfigurationResponseType getWalrusConfigResponse = walrusDispatch.send( getWalrusConfiguration );
+					configMap.put( c.getPartition(), getWalrusConfigResponse.getProperties( ));
 				} catch ( Exception ex ) {
 					LOG.error( "Failed to retrieve walrus configuration", ex );
 					LOG.debug( ex , ex );
@@ -551,8 +555,8 @@ public class ConfigurationWebBackend {
 		ArrayList<ComponentProperty> properties = Lists.newArrayList( );
 		deserializeComponentProperties( properties, input, COMMON_FIELD_DESCS.size( ) );
 
-	        NavigableSet<ServiceConfiguration> configs = Components.lookup(Walrus.class).lookupServiceConfigurations();
-                for ( ServiceConfiguration c : configs ) {
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(Walrus.class).lookupServiceConfigurations();
+		for ( ServiceConfiguration c : configs ) {
 			if ( input.getField(2).equals(c.getPartition()) && Component.State.ENABLED.equals(c.lookupState())) {
 				UpdateWalrusConfigurationType updateWalrusConfiguration = new UpdateWalrusConfigurationType( );
 				updateWalrusConfiguration.setName( c.getPartition() );
@@ -567,7 +571,7 @@ public class ConfigurationWebBackend {
 				}
 			}
 		}
-	
+
 	}
 
 	private static String getExternalIpAddress ( ) {
