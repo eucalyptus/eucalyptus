@@ -100,7 +100,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         } else if ( VmState.BURIED.apply( vm ) ) {
           VmInstances.delete( vm );
         } else if ( VmStateSet.DONE.apply( vm ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
-          VmInstances.terminate( vm );
+          VmInstances.delete( vm );
         }
         db1.commit( );
       } catch ( final Exception ex ) {

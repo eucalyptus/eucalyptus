@@ -230,14 +230,14 @@ public class VmControl {
               } catch ( NoSuchElementException ex ) {
                 vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.Lookup.TERMINATED );
               }
-              final int oldCode = vm.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
-              final String oldState = vm.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
               if ( VmStateSet.DONE.apply( vm ) ) {
                 VmInstances.delete( vm );
               } else {
+                final int oldCode = vm.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
+                final String oldState = vm.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
                 VmInstances.terminate( vm );
+                results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
               }
-              results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
               db.commit( );
               return true;
             } catch ( final NoSuchElementException e ) {

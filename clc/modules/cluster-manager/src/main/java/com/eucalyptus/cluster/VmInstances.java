@@ -345,16 +345,21 @@ public class VmInstances {
   public static VmInstance delete( final VmInstance vm ) throws TransactionException {
     try {
       if ( VmStateSet.DONE.apply( vm ) ) {
-        RunningInstancesItemType ret = VmInstances.transform( vm );
-        terminateCache.put( vm.getDisplayName( ), vm );
-        terminateDescribeCache.put( vm.getDisplayName( ), ret );
+        if ( terminateCache.containsKey( vm.getDisplayName( ) ) ) {
+          terminateCache.remove( vm.getDisplayName( ) );
+          terminateDescribeCache.remove( vm.getDisplayName( ) );
+        } else {
+          RunningInstancesItemType ret = VmInstances.transform( vm );
+          terminateCache.put( vm.getDisplayName( ), vm );
+          terminateDescribeCache.put( vm.getDisplayName( ), ret );
+        }
       }
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
     }
     return VmInstance.Transitions.DELETE.apply( vm );
   }
-  
+
   public static VmInstance terminate( final VmInstance vm ) throws TransactionException {
     return VmInstance.Transitions.TERMINATE.apply( vm );
   }
