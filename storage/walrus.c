@@ -258,7 +258,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
 #endif
 
         result = curl_easy_perform (curl); /* do it */
-        logprintfl (EUCADEBUG, "{%u} walrus_request: wrote %ld bytes in %ld writes\n", (unsigned int)pthread_self(), params.total_wrote, params.total_calls);
+        logprintfl (EUCADEBUG, "{%u} walrus_request: wrote %lld bytes in %ld writes\n", (unsigned int)pthread_self(), params.total_wrote, params.total_calls);
 
 #if defined(CAN_GZIP)
         if (do_compress) {
