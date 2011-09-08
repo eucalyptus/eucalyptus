@@ -583,6 +583,21 @@ void *startup_thread (void * arg)
     safe_strncpy (instance->hypervisorType, nc_state.H->name, sizeof (instance->hypervisorType)); // set the hypervisor type
 
     instance->hypervisorCapability = nc_state.capability; // set the cap (xen/hw/hw+xen)
+    char *s = system_output("getconf LONG_BIT");
+    if (s){
+         int bitness = atoi(s);
+         if(bitness == 32 || bitness == 64)
+            instance->hypervisorBitness = bitness;
+         else{
+            logprintfl(EUCAWARN, "[%s] can't determine the host's bitness (%s, assuming 64)\n", instance->instanceId, s);
+	    instance->hypervisorBitness = 64;
+         }
+         free(s);
+    }else{
+            logprintfl(EUCAWARN, "[%s] can't determine the host's bitness (assuming 64)\n", instance->instanceId);
+            instance->hypervisorBitness = 64;
+    }
+
     instance->combinePartitions = nc_state.convert_to_disk; 
     instance->do_inject_key = nc_state.do_inject_key;
 
