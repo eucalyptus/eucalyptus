@@ -514,39 +514,60 @@ public class ConfigurationWebBackend {
 	 */
 	public static List<SearchResultRow> getWalrusConfiguration( ) {
 		List<SearchResultRow> results = new ArrayList<SearchResultRow>( );
-		try {
-			for ( ServiceConfiguration c : ServiceConfigurations.list( Walrus.class ) ) {
-				GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType( WalrusProperties.NAME );
-				Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Components.lookup( WALRUS_NAME ) );
-				GetWalrusConfigurationResponseType getWalrusConfigResponse = scDispatch.send( getWalrusConfiguration );
-				results.add( createStorageConfiguration( WALRUS_TYPE, c.getName( ), c.getPartition( ), c.getHostName( ), c.getPort( ), getWalrusConfigResponse.getProperties( ), c.lookupState().toString() ) );
+		HashMap<String, List<ComponentProperty>> configMap = new HashMap<String, List<ComponentProperty>> (); 
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(Walrus.class).lookupServiceConfigurations();
+		for ( ServiceConfiguration c : configs ) {
+			if(Component.State.ENABLED.equals(c.lookupState())) {
+				//send for config and add result row
+				List<ComponentProperty> properties = Lists.newArrayList( );
+				
+				try {
+						GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType( WalrusProperties.NAME );
+						Dispatcher walrusDispatch = ServiceDispatcher.lookup( c );
+						GetWalrusConfigurationResponseType getWalrusConfigResponse = walrusDispatch.send( getWalrusConfiguration );
+						configMap.put( c.getPartition(), getWalrusConfigResponse.getProperties( ));
+				} catch ( Exception ex ) {
+					LOG.error( "Failed to retrieve walrus configuration", ex );
+					LOG.debug( ex , ex );
+				}
 			}
-		} catch ( Exception ex ) {
-			LOG.error( "Failed to retrieve walrus configuration", ex );
-			LOG.debug( ex , ex );
+		}
+
+		for ( ServiceConfiguration c : configs ) {
+			List<ComponentProperty> properties = configMap.get(c.getPartition()); 
+			if (properties != null) {
+				results.add( createStorageConfiguration( WALRUS_TYPE, c.getName( ), c.getPartition( ), c.getHostName( ), c.getPort( ), properties, c.lookupState().toString() ) );
+			}
 		}
 		return results;    
 	}
 
 	/**
 	 * Set Walrus configuration using UI input.
-	 * 
+	 *	 
 	 * @param input
 	 */
 	public static void setWalrusConfiguration( SearchResultRow input ) throws EucalyptusServiceException  {
 		ArrayList<ComponentProperty> properties = Lists.newArrayList( );
 		deserializeComponentProperties( properties, input, COMMON_FIELD_DESCS.size( ) );
-		UpdateWalrusConfigurationType updateWalrusConfiguration = new UpdateWalrusConfigurationType( );
-		updateWalrusConfiguration.setName( WalrusProperties.NAME );
-		updateWalrusConfiguration.setProperties( properties );
-		Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Components.lookup( WALRUS_NAME ) );
-		try {
-			scDispatch.send( updateWalrusConfiguration );
-		} catch ( Exception e ) {
-			LOG.error( "Failed to set Walrus configuration", e );
-			LOG.debug( e, e );
-			throw new EucalyptusServiceException( "Failed to set Walrus configuration", e );
+
+	        NavigableSet<ServiceConfiguration> configs = Components.lookup(Walrus.class).lookupServiceConfigurations();
+                for ( ServiceConfiguration c : configs ) {
+			if ( input.getField(2).equals(c.getPartition()) && Component.State.ENABLED.equals(c.lookupState())) {
+				UpdateWalrusConfigurationType updateWalrusConfiguration = new UpdateWalrusConfigurationType( );
+				updateWalrusConfiguration.setName( c.getPartition() );
+				updateWalrusConfiguration.setProperties( properties );
+				Dispatcher scDispatch = ServiceDispatcher.lookup( c );
+				try {
+					scDispatch.send( updateWalrusConfiguration );
+				} catch ( Exception e ) {
+					LOG.error( "Failed to set Walrus configuration", e );
+					LOG.debug( e, e );
+					throw new EucalyptusServiceException( "Failed to set Walrus configuration", e );
+				}
+			}
 		}
+	
 	}
 
 	private static String getExternalIpAddress ( ) {
