@@ -240,14 +240,25 @@ find_and_terminate_instance (
 
         int ret;
         logprintfl (EUCAINFO, "[%s] detaching volume %s, force=%d on termination\n", instanceId, volume->volumeId, force);
-        if (nc_state->H->doDetachVolume) 
+        if (nc_state->H->doDetachVolume) {
             ret = nc_state->H->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
-        else
+        } else {
             ret = nc_state->D->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
+        }
 
         // do our best to detach, then proceed
-        //if ((ret != OK) && (force == 0))
-        //            return ret;
+        if ((ret != OK)) {
+            if (nc_state->H->doDetachVolume) {
+                ret = nc_state->H->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 1, 0);
+            } else {
+                ret = nc_state->D->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 1, 0);
+            }
+        }
+        
+        if ((ret != OK) && (force == 0)) {
+            logprintfl(EUCAWARN, "[%s] detaching of volume on terminate failed\n", instanceId);
+            //            return ret;
+        }
 	}
 
 	// try stopping the domain
