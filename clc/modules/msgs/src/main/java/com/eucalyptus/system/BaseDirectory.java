@@ -126,7 +126,6 @@ public enum BaseDirectory {
       LOGG.error( ex, ex );
     }
     try {
-      Groovyness.exec( "chmod 700 " + this.toString( ) );
       Groovyness.exec( "chmod og-rwX " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOGG.error( ex, ex );
