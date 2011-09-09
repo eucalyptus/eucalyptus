@@ -99,19 +99,19 @@ public class NetworkGroups {
   private static Logger       LOG                       = Logger.getLogger( NetworkGroups.class );
   private static String       NETWORK_DEFAULT_NAME      = "default";
   
-  @ConfigurableField( initial = "4096", description = "Default max network index." )
-  public static Long          DEFAULT_MAX_NETWORK_INDEX = 4096l;
-  @ConfigurableField( initial = "1", description = "Default min network index." )
+  @ConfigurableField( initial = "" + 2048l, description = "Default max network index." )
+  public static Long          DEFAULT_MAX_NETWORK_INDEX = 128l;
+  @ConfigurableField( initial = "" + 9, description = "Default min network index." )
   public static Long          DEFAULT_MIN_NETWORK_INDEX = 2l;
   @ConfigurableField( initial = "" + 4096, description = "Default max vlan tag." )
-  public static Integer       GLOBAL_MAX_NETWORK_TAG   = 4096;
-  @ConfigurableField( initial = "1", description = "Default min vlan tag." )
-  public static Integer       GLOBAL_MIN_NETWORK_TAG   = 1;
+  public static Integer       DEFAULT_MAX_NETWORK_TAG   = 4096;
+  @ConfigurableField( initial = "" + 9, description = "Default min vlan tag." )
+  public static Integer       DEFAULT_MIN_NETWORK_TAG   = 1;
   
   public static class NetworkRangeConfiguration {
     private Boolean useNetworkTags  = Boolean.TRUE;
-    private Integer minNetworkTag   = GLOBAL_MIN_NETWORK_TAG;
-    private Integer maxNetworkTag   = GLOBAL_MAX_NETWORK_TAG;
+    private Integer minNetworkTag   = DEFAULT_MIN_NETWORK_TAG;
+    private Integer maxNetworkTag   = DEFAULT_MAX_NETWORK_TAG;
     private Long    minNetworkIndex = DEFAULT_MIN_NETWORK_INDEX;
     private Long    maxNetworkIndex = DEFAULT_MAX_NETWORK_INDEX;
     
@@ -161,10 +161,9 @@ public class NetworkGroups {
     
   }
   
-  static NetworkRangeConfiguration netConfig = new NetworkRangeConfiguration( );
+  static final NetworkRangeConfiguration netConfig = new NetworkRangeConfiguration( );
   
   public static synchronized void updateNetworkRangeConfiguration( ) {
-    netConfig = new NetworkRangeConfiguration( );
     final AtomicBoolean netTagging = new AtomicBoolean( true );
     try {
       Transactions.each( new ClusterConfiguration( ), new Callback<ClusterConfiguration>( ) {
@@ -191,14 +190,16 @@ public class NetworkGroups {
     for ( Long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
       interval.add( i );
     }
+//    Collections.shuffle( interval );
     return interval;
   }
   
   public static List<Integer> networkTagInterval( ) {
     final List<Integer> interval = Lists.newArrayList( );
-    for ( Integer i = NetworkGroups.networkingConfiguration( ).getMinNetworkTag( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkTag( ); i++ ) {
+    for ( int i = NetworkGroups.networkingConfiguration( ).getMinNetworkTag( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkTag( ); i++ ) {
       interval.add( i );
     }
+//    Collections.shuffle( interval );
     return interval;
   }
   

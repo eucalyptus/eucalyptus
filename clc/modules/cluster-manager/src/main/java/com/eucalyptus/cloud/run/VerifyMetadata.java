@@ -173,11 +173,6 @@ public class VerifyMetadata {
       try {
         BootableSet bootSet = Emis.newBootableSet( vmType, partition, imageId );
         allocInfo.setBootableSet( bootSet );
-        if ( bootSet.getMachine( ).getImageSizeBytes( ) > ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) ) {
-            throw new VerificationException("Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) + 
-        	    " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) + 
-        	    " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) + " size " + vmType.getDisk( ) + " GB." );
-        }
       } catch ( AuthException ex ) {
         LOG.error( ex );
         throw new VerificationException( ex );

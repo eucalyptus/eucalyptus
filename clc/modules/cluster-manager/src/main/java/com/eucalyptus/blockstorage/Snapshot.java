@@ -111,7 +111,6 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   public String mapState( ) {
     switch ( this.getState( ) ) {
       case GENERATING:
-      case NIHIL:
         return "pending";
       case EXTANT:
         return "completed";

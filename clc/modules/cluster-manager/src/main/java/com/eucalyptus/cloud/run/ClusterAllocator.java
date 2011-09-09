@@ -186,7 +186,8 @@ public class ClusterAllocator implements Runnable {
   private void setupNetworkMessages( ) throws NotEnoughResourcesException {
     NetworkGroup net = this.allocInfo.getPrimaryNetwork( );
     if ( net != null ) {
-      final Request callback = AsyncRequests.newRequest( new StartNetworkCallback( this.allocInfo.getExtantNetwork( ) ) );
+      final Request<StartNetworkType, StartNetworkResponseType> callback = AsyncRequests.newRequest( new StartNetworkCallback(
+                                                                                                                               this.allocInfo.getExtantNetwork( ) ) );
       this.messages.addRequest( State.CREATE_NETWORK, callback );
       EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ), net.toString( ) ).debug( );
     }
@@ -291,7 +292,7 @@ public class ClusterAllocator implements Runnable {
                          .then( vmUpdateCallback )
                          .dispatch( addr.getPartition( ) );
           } catch ( Exception ex ) {
-            LOG.error( ex, ex );
+            LOG.error( ex , ex );
           }
         }
       };

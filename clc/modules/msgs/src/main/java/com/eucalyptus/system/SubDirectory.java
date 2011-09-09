@@ -76,7 +76,7 @@ public enum SubDirectory {
   TX( BaseDirectory.HOME, "/var/run/eucalyptus/tx" ),
   CLASSCACHE( BaseDirectory.HOME, "/var/run/eucalyptus/classcache" ),
   WWW( BaseDirectory.CONF, "www" ),
-  WEBAPPS( BaseDirectory.HOME, "/var/run/eucalyptus/webapp" ),
+  WEBAPPS( BaseDirectory.VAR, "webapps" ),
   KEYS( BaseDirectory.VAR, "keys" ),
   SCRIPTS( BaseDirectory.CONF, "scripts" ),
   MANAGEMENT( BaseDirectory.CONF, "jmx" ),
@@ -138,8 +138,7 @@ public enum SubDirectory {
       LOG.error( ex , ex );
     }
     try {
-      Groovyness.exec( "chmod 700 " + this.toString( ) );
-      Groovyness.exec( "chmod og-rwX " + this.toString( ) );
+      Groovyness.exec( "chmod -R +rwX " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOG.error( ex , ex );
     }

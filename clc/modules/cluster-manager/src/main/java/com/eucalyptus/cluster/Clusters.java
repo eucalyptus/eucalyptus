@@ -87,9 +87,8 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
   
   public List<String> getClusterAddresses( ) {
     SortedSet<String> hostOrdered = new TreeSet<String>( );
-    for ( Cluster c : this.listValues( ) ) {
+    for ( Cluster c : this.listValues( ) )
       hostOrdered.add( c.getConfiguration( ).getHostName( ) );
-    }
     return Lists.newArrayList( hostOrdered );
   }
   
