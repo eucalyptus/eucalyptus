@@ -157,6 +157,11 @@ public class StorageUtil {
           if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
             aVolume.setStatus( v.mapState( ) );
             aVolume.getAttachmentSet().add( attachedVolumes.get( aVolume.getVolumeId() ) );
+            
+            for ( AttachedVolume attachedVolume : aVolume.getAttachmentSet( ) ) {
+        	attachedVolume.setDevice("/dev/" + attachedVolume.getDevice( ) );
+            }	
+            
           }
           if ( "invalid".equals( v.getRemoteDevice( ) ) && !State.FAIL.equals( v.getState( ) ) ) {
             aVolume.setStatus( "creating" );
