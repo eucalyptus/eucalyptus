@@ -3,8 +3,8 @@ package com.eucalyptus.webui.client.view;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import com.eucalyptus.webui.client.service.CategoryItem;
-import com.eucalyptus.webui.client.service.CategoryTag;
+import com.eucalyptus.webui.client.service.QuickLink;
+import com.eucalyptus.webui.client.service.QuickLinkTag;
 import com.google.gwt.cell.client.AbstractCell;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.resources.client.ClientBundle;
@@ -15,7 +15,7 @@ import com.google.gwt.view.client.ListDataProvider;
 import com.google.gwt.view.client.SelectionModel;
 import com.google.gwt.view.client.TreeViewModel;
 
-public class CategoryTreeModel implements TreeViewModel {
+public class QuickLinkTreeModel implements TreeViewModel {
   
   /*
    * Tree icons
@@ -54,13 +54,13 @@ public class CategoryTreeModel implements TreeViewModel {
     
   }
   
-  private static class CategoryTagCell extends AbstractCell<CategoryTag> {
+  private static class QuickLinkTagCell extends AbstractCell<QuickLinkTag> {
 
-    public CategoryTagCell( ) {
+    public QuickLinkTagCell( ) {
     }
     
     @Override
-    public void render( Context context, CategoryTag value, SafeHtmlBuilder sb ) {
+    public void render( Context context, QuickLinkTag value, SafeHtmlBuilder sb ) {
       if ( value != null ) {
         sb.appendHtmlConstant( getImageHtml( images.tag( ).getName( ) ) )
           .appendEscaped( " " )
@@ -69,13 +69,13 @@ public class CategoryTreeModel implements TreeViewModel {
     }
   }
   
-  private static class CategoryItemCell extends AbstractCell<CategoryItem> {
+  private static class QuickLinkCell extends AbstractCell<QuickLink> {
     
-    public CategoryItemCell( ) {
+    public QuickLinkCell( ) {
     }
     
     @Override
-    public void render( Context context, CategoryItem value, SafeHtmlBuilder sb ) {
+    public void render( Context context, QuickLink value, SafeHtmlBuilder sb ) {
       if ( value != null ) {
         sb.appendHtmlConstant( getImageHtml( value.getImage( ) ) )
           .appendEscaped( " " )
@@ -84,14 +84,14 @@ public class CategoryTreeModel implements TreeViewModel {
     }
   }
   
-  private ArrayList<CategoryTag> tags;
+  private ArrayList<QuickLinkTag> tags;
   
-  private SelectionModel<CategoryItem> selectionModel;
+  private SelectionModel<QuickLink> selectionModel;
   
   private static Images images;
   private static HashMap<String, String> imageMap = new HashMap<String, String>( );
   
-  public CategoryTreeModel( ArrayList<CategoryTag> tags, SelectionModel<CategoryItem> selectionModel ) {
+  public QuickLinkTreeModel( ArrayList<QuickLinkTag> tags, SelectionModel<QuickLink> selectionModel ) {
     this.tags = tags;
     this.selectionModel = selectionModel;
     
@@ -134,19 +134,19 @@ public class CategoryTreeModel implements TreeViewModel {
   public <T> NodeInfo<?> getNodeInfo( T value ) {
     if ( value == null ) {
       // Level 0
-      ListDataProvider<CategoryTag> dataProvider = new ListDataProvider<CategoryTag>( this.tags );
-      return new DefaultNodeInfo<CategoryTag>( dataProvider, new CategoryTagCell( ) );
-    } else if ( value instanceof CategoryTag ) {
+      ListDataProvider<QuickLinkTag> dataProvider = new ListDataProvider<QuickLinkTag>( this.tags );
+      return new DefaultNodeInfo<QuickLinkTag>( dataProvider, new QuickLinkTagCell( ) );
+    } else if ( value instanceof QuickLinkTag ) {
       // Level 1
-      ListDataProvider<CategoryItem> dataProvider = new ListDataProvider<CategoryItem>( ( ( CategoryTag ) value ).getItems( ) );
-      return new DefaultNodeInfo<CategoryItem>( dataProvider, new CategoryItemCell( ), selectionModel, null );
+      ListDataProvider<QuickLink> dataProvider = new ListDataProvider<QuickLink>( ( ( QuickLinkTag ) value ).getItems( ) );
+      return new DefaultNodeInfo<QuickLink>( dataProvider, new QuickLinkCell( ), selectionModel, null );
     }
     return null;
   }
 
   @Override
   public boolean isLeaf( Object value ) {
-    if ( value != null && value instanceof CategoryItem ) {
+    if ( value != null && value instanceof QuickLink ) {
       return true;
     }
     return false;

@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import com.eucalyptus.webui.client.service.CategoryItem;
-import com.eucalyptus.webui.client.service.CategoryTag;
+import com.eucalyptus.webui.client.service.QuickLink;
+import com.eucalyptus.webui.client.service.QuickLinkTag;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
@@ -38,35 +38,36 @@ public class DirectoryViewImpl extends Composite implements DirectoryView {
   @UiField
   ScrollPanel treePanel;
 
-  private SearchHandler searchHandler;
+  private Presenter presenter;
+  
+  private final SingleSelectionModel<QuickLink> selectionModel = new SingleSelectionModel<QuickLink>( QuickLink.KEY_PROVIDER );
   
   public DirectoryViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
   }
 
   @Override
-  public void buildTree( ArrayList<CategoryTag> data ) {
+  public void buildTree( ArrayList<QuickLinkTag> data ) {
     if ( data == null || data.size( ) < 1 ) {
       LOG.log( Level.WARNING, "Can not build category tree: data is empty." );
       return;
     }
     
-    final SingleSelectionModel<CategoryItem> selectionModel = new SingleSelectionModel<CategoryItem>( CategoryItem.KEY_PROVIDER );
     selectionModel.addSelectionChangeHandler( new SelectionChangeEvent.Handler( ) {
       
       @Override
       public void onSelectionChange( SelectionChangeEvent event ) {
-        CategoryItem selected = selectionModel.getSelectedObject( );
+        QuickLink selected = selectionModel.getSelectedObject( );
         if ( selected != null ) {
           LOG.log( Level.INFO, "Selected: " + selected.getName( ) );
-          searchHandler.search( selected.getQuery( ) );
+          presenter.switchQuickLink( selected.getQuery( ) );
         }
       }
     } );
     
     CellTree.Resources resource = GWT.create( TreeResources.class );
     
-    CellTree tree = new CellTree( new CategoryTreeModel( data, selectionModel ), null, resource );
+    CellTree tree = new CellTree( new QuickLinkTreeModel( data, selectionModel ), null, resource );
     tree.setKeyboardSelectionPolicy( KeyboardSelectionPolicy.DISABLED );
     tree.setAnimationEnabled( false );
     tree.setDefaultNodeSize( TREENODE_SIZE );
@@ -83,7 +84,17 @@ public class DirectoryViewImpl extends Composite implements DirectoryView {
   }
 
   @Override
-  public void setSearchHandler( SearchHandler handler ) {
-    this.searchHandler = handler;
+  public void setPresenter( Presenter presenter ) {
+    this.presenter = presenter;
+  }
+
+  @Override
+  public void changeSelection( QuickLink link ) {
+    if ( link != null ) {
+      selectionModel.setSelected( link, true );
+    } else {
+      // deselect current
+      selectionModel.setSelected( selectionModel.getSelectedObject( ), false );
+    }
   }
 }

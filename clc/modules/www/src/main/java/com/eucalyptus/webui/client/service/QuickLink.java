@@ -3,14 +3,14 @@ package com.eucalyptus.webui.client.service;
 import java.io.Serializable;
 import com.google.gwt.view.client.ProvidesKey;
 
-public class CategoryItem implements Serializable {
+public class QuickLink implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
-  public static final ProvidesKey<CategoryItem> KEY_PROVIDER = new ProvidesKey<CategoryItem>( ) {
+  public static final ProvidesKey<QuickLink> KEY_PROVIDER = new ProvidesKey<QuickLink>( ) {
 
     @Override
-    public Object getKey( CategoryItem item ) {
+    public Object getKey( QuickLink item ) {
       if ( item != null ) {
         return item.getName( );
       }
@@ -24,10 +24,10 @@ public class CategoryItem implements Serializable {
   private String image;
   private String query;
   
-  public CategoryItem( ) {
+  public QuickLink( ) {
   }
   
-  public CategoryItem( String name, String desc, String image, String query ) {
+  public QuickLink( String name, String desc, String image, String query ) {
     this.setName( name );
     this.setDesc( desc );
     this.setImage( image );

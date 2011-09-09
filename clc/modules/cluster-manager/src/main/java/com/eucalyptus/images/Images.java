@@ -7,6 +7,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.zip.Adler32;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
+import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.blockstorage.Snapshots;
@@ -280,7 +281,7 @@ public class Images {
     }
   }
   
-  public static void deregisterImage( String imageId ) throws NoSuchImageException {
+  public static void deregisterImage( String imageId ) throws ConstraintViolationException, NoSuchImageException {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo img = db.getUnique( Images.exampleWithImageId( imageId ) );
@@ -293,6 +294,11 @@ public class Images {
       if ( img instanceof ImageMetadata.StaticDiskImage ) {
         WalrusUtil.invalidate( ( StaticDiskImage ) img );
       }
+    
+    } catch ( ConstraintViolationException cve ) {
+      db.rollback( );
+      // Need to add message that the image is associated with running instances.
+      throw cve;
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
       throw new NoSuchImageException( "Failed to lookup image: " + imageId, e );

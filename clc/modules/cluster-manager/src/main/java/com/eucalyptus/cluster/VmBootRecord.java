@@ -123,8 +123,10 @@ public class VmBootRecord {
   VmBootRecord( BootableSet bootSet, byte[] userData, SshKeyPair sshKeyPair, VmType vmType ) {
     super( );
     this.machineImage = ( ImageInfo ) bootSet.getMachine( );
-    this.kernel = bootSet.getKernel( );
-    this.ramdisk = bootSet.getRamdisk( );
+    if(bootSet.hasKernel())
+    	this.kernel = bootSet.getKernel( );
+    if(bootSet.hasRamdisk())
+    	this.ramdisk = bootSet.getRamdisk( ); 
     this.platform = bootSet.getMachine( ).getPlatform( ).name( );
     this.userData = userData;
     this.sshKeyPair = KeyPairs.noKey( ).equals( sshKeyPair ) || ( sshKeyPair == null )

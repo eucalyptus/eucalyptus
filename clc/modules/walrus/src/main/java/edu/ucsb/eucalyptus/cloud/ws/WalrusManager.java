@@ -1252,17 +1252,28 @@ public class WalrusManager {
 					foundObject.setEtag(md5);
 					Long size = (long) base64Data.length;
 					foundObject.setSize(size);
-					if (WalrusProperties.shouldEnforceUsageLimits
-							&& !Contexts.lookup().hasAdministrativePrivileges()) {
-						Long bucketSize = bucket.getBucketSize();
-						long newSize = bucketSize + oldBucketSize + size;
-						if (newSize > (WalrusInfo.getWalrusInfo().getStorageMaxBucketSizeInMB() * WalrusProperties.M)) {
+					
+					boolean success = false;
+					int retryCount = 0;
+					do {
+						try {
+							incrementBucketSize(bucketName, objectKey, oldBucketSize, size);
+							success = true;
+						} catch (EntityTooLargeException ex) {
 							db.rollback();
-							throw new EntityTooLargeException("Key", objectKey,
-									logData);
+							throw ex;
+						} catch (NoSuchBucketException ex) {
+							db.rollback();
+							throw ex;
+						} catch (RollbackException ex) {
+							retryCount++;
+							LOG.trace("retrying update: " + bucketName);
+						} catch (EucalyptusCloudException ex) {
+							db.rollback();
+							throw ex;
 						}
-						bucket.setBucketSize(newSize);
-					}
+					} while(!success && (retryCount < 5));
+
 					if (Permissions.canAllocate(PolicySpec.VENDOR_S3,
 							PolicySpec.S3_RESOURCE_BUCKET,
 							bucketName,
@@ -3267,7 +3278,25 @@ public class WalrusManager {
 									db.delete(grantInfo);
 								}
 								Long size = foundObject.getSize();
-								bucketInfo.setBucketSize(bucketInfo.getBucketSize() - size);
+								
+								boolean success = false;
+								int retryCount = 0;
+								do {
+									try {
+										decrementBucketSize(bucketName, size);
+										success = true;
+									} catch (NoSuchBucketException ex) {
+										db.rollback();
+										throw ex;
+									} catch (RollbackException ex) {
+										retryCount++;
+										LOG.trace("retrying update: " + bucketName);
+									} catch (EucalyptusCloudException ex) {
+										db.rollback();
+										throw ex;
+									}
+								} while(!success && (retryCount < 5));
+
 								ObjectDeleter objectDeleter = new ObjectDeleter(bucketName,
 										objectName, 
 										size, 

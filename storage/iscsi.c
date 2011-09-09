@@ -118,7 +118,7 @@ char * connect_iscsi_target (const char *dev_string)
     if (!pid) {
         close(filedes[0]);
         
-        logprintfl(EUCADEBUG, "connect_iscsi_target(): running command: %s\n", buf);
+        if (strlen(buf)) logprintfl(EUCADEBUG, "connect_iscsi_target(): running command: %s\n", buf);
         if ((retval = system_output(buf)) == NULL) {
             logprintfl (EUCAERROR, "ERROR: connect_iscsi_target failed\n");
             len = 0;
@@ -169,6 +169,7 @@ int disconnect_iscsi_target (const char *dev_string)
     logprintfl (EUCAINFO, "disconnect_iscsi_target invoked (dev_string=%s)\n", dev_string);
     pid = fork();
     if (!pid) {
+        if ( dev_string && strlen(dev_string) ) logprintfl(EUCADEBUG, "disconnect_iscsi_target(): running command: %s %s,%s\n", disconnect_storage_cmd_path, home, dev_string);
         if (vrun("%s %s,%s", disconnect_storage_cmd_path, home, dev_string) != 0) {
             logprintfl (EUCAERROR, "ERROR: disconnect_iscsi_target failed\n");
             exit(1);
@@ -205,7 +206,8 @@ char * get_iscsi_target (const char *dev_string)
     pid = fork();
     if (!pid) {
         close(filedes[0]);
-        
+        if (strlen(buf)) logprintfl(EUCADEBUG, "get_iscsi_target(): running command: %s\n", buf);
+
         if ((retval = system_output(buf)) == NULL) {
             logprintfl (EUCAERROR, "ERROR: get_iscsi_target failed\n");
             len = 0;
