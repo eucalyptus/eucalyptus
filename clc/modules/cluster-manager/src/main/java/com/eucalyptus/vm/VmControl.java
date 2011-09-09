@@ -167,8 +167,6 @@ public class VmControl {
   
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
     final DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
-    final Context ctx = Contexts.lookup( );
-    final boolean isAdmin = ctx.hasAdministrativePrivileges( );
     final boolean isVerbose = msg.getInstancesSet( ).remove( "verbose" );
     final ArrayList<String> instancesSet = msg.getInstancesSet( );
     final Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
@@ -178,6 +176,11 @@ public class VmControl {
         EntityTransaction db = Entities.get( VmInstance.class );
         try {
           VmInstance v = Entities.merge( vm );
+          if ( VmState.TERMINATED.apply( v ) && v.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
+            VmInstances.terminate( v );
+          } else if ( VmState.BURIED.apply( v ) && v.getSplitTime( ) > VmInstances.BURY_TIME ) {
+            VmInstances.delete( v );
+          }
           if ( VmState.BURIED.apply( v ) && !isVerbose ) {
             continue;
           }
@@ -194,9 +197,11 @@ public class VmControl {
           Logs.exhaust( ).error( ex, ex );
           db.rollback( );
           try {
-            RunningInstancesItemType ret = VmInstances.transform( vm );
-            if ( ret != null ) {
-              rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( ret );
+            if ( vm != null ) {
+              RunningInstancesItemType ret = VmInstances.transform( vm );
+              if ( ret != null && vm.getReservationId( ) != null ) {
+                rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( ret );
+              }
             }
           } catch ( Exception ex1 ) {
             LOG.error( ex1 , ex1 );
@@ -230,14 +235,14 @@ public class VmControl {
               } catch ( NoSuchElementException ex ) {
                 vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.Lookup.TERMINATED );
               }
+              final int oldCode = vm.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
+              final String oldState = vm.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
               if ( VmStateSet.DONE.apply( vm ) ) {
                 VmInstances.delete( vm );
               } else {
-                final int oldCode = vm.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
-                final String oldState = vm.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
                 VmInstances.terminate( vm );
-                results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
               }
+              results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
               db.commit( );
               return true;
             } catch ( final NoSuchElementException e ) {

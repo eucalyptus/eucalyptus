@@ -339,27 +339,26 @@ public class VmInstances {
   }
   
   public static VmInstance register( final VmInstance vm ) {
-    return VmInstance.Transitions.REGISTER.apply( vm );
+    if ( !terminateCache.containsKey( vm.getInstanceId( ) ) ) {
+      return VmInstance.Transitions.REGISTER.apply( vm );
+    } else {
+      throw new IllegalArgumentException( "Attempt to register instance which is already terminated." );
+    }
   }
   
   public static VmInstance delete( final VmInstance vm ) throws TransactionException {
     try {
       if ( VmStateSet.DONE.apply( vm ) ) {
-        if ( terminateCache.containsKey( vm.getDisplayName( ) ) ) {
-          terminateCache.remove( vm.getDisplayName( ) );
-          terminateDescribeCache.remove( vm.getDisplayName( ) );
-        } else {
-          RunningInstancesItemType ret = VmInstances.transform( vm );
-          terminateCache.put( vm.getDisplayName( ), vm );
-          terminateDescribeCache.put( vm.getDisplayName( ), ret );
-        }
+        RunningInstancesItemType ret = VmInstances.transform( vm );
+        terminateCache.put( vm.getDisplayName( ), vm );
+        terminateDescribeCache.put( vm.getDisplayName( ), ret );
       }
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
     }
     return VmInstance.Transitions.DELETE.apply( vm );
   }
-
+  
   public static VmInstance terminate( final VmInstance vm ) throws TransactionException {
     return VmInstance.Transitions.TERMINATE.apply( vm );
   }
