@@ -141,6 +141,9 @@ int gen_instance_xml (const ncInstance * instance)
         xmlNodePtr hypervisor = xmlNewChild (instanceNode, NULL, BAD_CAST "hypervisor", NULL);
         _ATTRIBUTE(hypervisor, "type", instance->hypervisorType);
         _ATTRIBUTE(hypervisor, "capability", hypervsorCapabilityTypeNames[instance->hypervisorCapability]);
+        char bitness[4];
+        snprintf(bitness, 4,"%d", instance->hypervisorBitness);
+        _ATTRIBUTE(hypervisor, "bitness", bitness);
     }
     _ELEMENT(instanceNode, "name", instance->instanceId);
     _ELEMENT(instanceNode, "uuid", instance->uuid);
