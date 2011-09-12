@@ -28,6 +28,7 @@ import com.eucalyptus.webui.client.view.ShellView;
 import com.eucalyptus.webui.client.view.UserSettingView;
 import com.eucalyptus.webui.shared.checker.ValueChecker;
 import com.eucalyptus.webui.shared.checker.ValueCheckerFactory;
+import com.google.common.base.Strings;
 import com.google.gwt.activity.shared.AbstractActivity;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.shared.EventBus;
@@ -445,12 +446,31 @@ public class ShellActivity extends AbstractActivity
   
   @Override
   public void onDownloadCredential( ) {
-    LoginUserProfile user = clientFactory.getSessionData( ).getLoginUser( );
-    Window.open( GWT.getModuleBaseURL( ) + "getX509?" +
-                "account=" + user.getAccountName( ) +
-                "&user=" + user.getUserName( ) +
-                "&code=" + user.getUserToken( ),
-                "_self", "" );
+    final LoginUserProfile user = clientFactory.getSessionData( ).getLoginUser( );
+    this.clientFactory.getBackendService( ).getUserToken( this.clientFactory.getLocalSession( ).getSession( ), new AsyncCallback<String>( ) {
+
+      @Override
+      public void onFailure( Throwable caught ) {
+        clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to initiate credential download", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+        clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to initiate credential download: " + caught.getMessage( ) );
+      }
+
+      @Override
+      public void onSuccess( final String code ) {
+        if ( Strings.isNullOrEmpty( code ) ) {
+          clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to initiate credential download", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+          clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to initiate credential download: can't find user security code" );          
+        } else {
+          Window.open( GWT.getModuleBaseURL( ) + "getX509?" +
+                       "account=" + user.getAccountName( ) +
+                       "&user=" + user.getUserName( ) +
+                       "&code=" + code,
+                       "_self", "" );
+        }
+      }
+      
+    } );
+    
   }
 
   @Override

@@ -560,5 +560,11 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     User user = verifySession( session );
     return StartGuideWebBackend.getGuide( user, snippet );
   }
+
+  @Override
+  public String getUserToken( Session session ) throws EucalyptusServiceException {
+    User user = verifySession( session ); // request user
+    return EuareWebBackend.getUserToken( user );
+  }
     
 }

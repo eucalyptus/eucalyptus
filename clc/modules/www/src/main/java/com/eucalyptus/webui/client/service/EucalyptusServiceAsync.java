@@ -112,5 +112,7 @@ public interface EucalyptusServiceAsync {
   void getToolDownloads( Session session, AsyncCallback<ArrayList<DownloadInfo>> callback );
 
   void getGuide( Session session, String snippet, AsyncCallback<ArrayList<GuideItem>> callback );
+
+  void getUserToken( Session session, AsyncCallback<String> callback );
   
 }
