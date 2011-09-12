@@ -872,7 +872,6 @@ static int copy_creator (artifact * a)
         if (diskutil_ch (bbfile, NULL, NULL, 0664) != OK) {
             logprintfl (EUCAINFO, "[%s] error: failed to change user and/or permissions for '%s' '%s'\n", a->instanceId, vbr->typeName, bbfile);
         }
-        
     }
     
     if (strlen (a->sshkey)) {
