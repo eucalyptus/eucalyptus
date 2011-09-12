@@ -65,11 +65,8 @@ package com.eucalyptus.network;
 
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.persistence.EntityTransaction;
-import javax.persistence.PersistenceException;
-import javax.persistence.RollbackException;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
@@ -84,7 +81,6 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.Numbers;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
@@ -103,19 +99,19 @@ public class NetworkGroups {
   private static Logger       LOG                       = Logger.getLogger( NetworkGroups.class );
   private static String       NETWORK_DEFAULT_NAME      = "default";
   
-  @ConfigurableField( initial = "" + 2048l, description = "Default max network index." )
-  public static Long          DEFAULT_MAX_NETWORK_INDEX = 128l;
-  @ConfigurableField( initial = "" + 9, description = "Default min network index." )
+  @ConfigurableField( initial = "4096", description = "Default max network index." )
+  public static Long          DEFAULT_MAX_NETWORK_INDEX = 4096l;
+  @ConfigurableField( initial = "1", description = "Default min network index." )
   public static Long          DEFAULT_MIN_NETWORK_INDEX = 2l;
   @ConfigurableField( initial = "" + 4096, description = "Default max vlan tag." )
-  public static Integer       DEFAULT_MAX_NETWORK_TAG   = 4096;
-  @ConfigurableField( initial = "" + 9, description = "Default min vlan tag." )
-  public static Integer       DEFAULT_MIN_NETWORK_TAG   = 1;
+  public static Integer       GLOBAL_MAX_NETWORK_TAG   = 4096;
+  @ConfigurableField( initial = "1", description = "Default min vlan tag." )
+  public static Integer       GLOBAL_MIN_NETWORK_TAG   = 1;
   
   public static class NetworkRangeConfiguration {
     private Boolean useNetworkTags  = Boolean.TRUE;
-    private Integer minNetworkTag   = DEFAULT_MIN_NETWORK_TAG;
-    private Integer maxNetworkTag   = DEFAULT_MAX_NETWORK_TAG;
+    private Integer minNetworkTag   = GLOBAL_MIN_NETWORK_TAG;
+    private Integer maxNetworkTag   = GLOBAL_MAX_NETWORK_TAG;
     private Long    minNetworkIndex = DEFAULT_MIN_NETWORK_INDEX;
     private Long    maxNetworkIndex = DEFAULT_MAX_NETWORK_INDEX;
     
@@ -165,9 +161,10 @@ public class NetworkGroups {
     
   }
   
-  static final NetworkRangeConfiguration netConfig = new NetworkRangeConfiguration( );
+  static NetworkRangeConfiguration netConfig = new NetworkRangeConfiguration( );
   
   public static synchronized void updateNetworkRangeConfiguration( ) {
+    netConfig = new NetworkRangeConfiguration( );
     final AtomicBoolean netTagging = new AtomicBoolean( true );
     try {
       Transactions.each( new ClusterConfiguration( ), new Callback<ClusterConfiguration>( ) {
@@ -194,16 +191,14 @@ public class NetworkGroups {
     for ( Long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
       interval.add( i );
     }
-//    Collections.shuffle( interval );
     return interval;
   }
   
   public static List<Integer> networkTagInterval( ) {
     final List<Integer> interval = Lists.newArrayList( );
-    for ( int i = NetworkGroups.networkingConfiguration( ).getMinNetworkTag( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkTag( ); i++ ) {
+    for ( Integer i = NetworkGroups.networkingConfiguration( ).getMinNetworkTag( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkTag( ); i++ ) {
       interval.add( i );
     }
-//    Collections.shuffle( interval );
     return interval;
   }
   
@@ -211,20 +206,16 @@ public class NetworkGroups {
     return netConfig;
   }
   
-  public static NetworkGroup lookup( final String uuid ) throws NoSuchMetadataException {
+  public static NetworkGroup lookup( final String groupId ) throws NoSuchMetadataException {
+    EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
-      return Transactions.find( new NetworkGroup( ) {
-        /**
-         * 
-         */
-        private static final long serialVersionUID = 1L;
-
-        {
-          this.setNaturalId( uuid );
-        }
-      } );
-    } catch ( final Exception ex ) {
-      throw new NoSuchMetadataException( "Failed to find security group: " + uuid, ex );
+      NetworkGroup entity = Entities.uniqueResult( NetworkGroup.named( null, groupId ) );
+      db.commit( );
+      return entity;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new NoSuchMetadataException( "Failed to find security group: " + groupId, ex );
     }
   }
   
@@ -264,8 +255,8 @@ public class NetworkGroups {
   static void createDefault( final OwnerFullName ownerFullName ) throws MetadataException {
     try {
       try {
-        NetworkGroup net = Transactions.find( new NetworkGroup( ownerFullName, NETWORK_DEFAULT_NAME  ) );
-        if( net == null ) {
+        NetworkGroup net = Transactions.find( new NetworkGroup( ownerFullName, NETWORK_DEFAULT_NAME ) );
+        if ( net == null ) {
           create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
         }
       } catch ( NoSuchElementException ex ) {
@@ -273,8 +264,7 @@ public class NetworkGroups {
       } catch ( TransactionException ex ) {
         create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
       }
-    } catch ( DuplicateMetadataException ex ) {
-    }
+    } catch ( DuplicateMetadataException ex ) {}
   }
   
   public static String defaultNetworkName( ) {
@@ -325,7 +315,8 @@ public class NetworkGroups {
     @Override
     public IpPermissionType apply( final NetworkRule rule ) {
       final IpPermissionType ipPerm = new IpPermissionType( rule.getProtocol( ), rule.getLowPort( ), rule.getHighPort( ) );
-      final Iterable<UserIdGroupPairType> peers = Iterables.transform( rule.getNetworkPeers( ), TypeMappers.lookup( NetworkPeer.class, UserIdGroupPairType.class ) );
+      final Iterable<UserIdGroupPairType> peers = Iterables.transform( rule.getNetworkPeers( ),
+                                                                       TypeMappers.lookup( NetworkPeer.class, UserIdGroupPairType.class ) );
       Iterables.addAll( ipPerm.getGroups( ), peers );
       final Iterable<String> ipRanges = Iterables.transform( rule.getIpRanges( ), TypeMappers.lookup( IpRange.class, String.class ) );
       Iterables.addAll( ipPerm.getIpRanges( ), ipRanges );
@@ -341,8 +332,10 @@ public class NetworkGroups {
       final EntityTransaction db = Entities.get( NetworkGroup.class );
       try {
         final NetworkGroup netGroup = Entities.merge( input );
-        final SecurityGroupItemType groupInfo = new SecurityGroupItemType( netGroup.getOwnerAccountNumber( ), netGroup.getDisplayName( ), netGroup.getDescription( ) );
-        final Iterable<IpPermissionType> ipPerms = Iterables.transform( netGroup.getNetworkRules( ), TypeMappers.lookup( NetworkRule.class, IpPermissionType.class ) );
+        final SecurityGroupItemType groupInfo = new SecurityGroupItemType( netGroup.getOwnerAccountNumber( ), netGroup.getDisplayName( ),
+                                                                           netGroup.getDescription( ) );
+        final Iterable<IpPermissionType> ipPerms = Iterables.transform( netGroup.getNetworkRules( ),
+                                                                        TypeMappers.lookup( NetworkRule.class, IpPermissionType.class ) );
         Iterables.addAll( groupInfo.getIpPermissions( ), ipPerms );
         return groupInfo;
       } finally {

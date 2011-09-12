@@ -29,7 +29,7 @@ public class HeaderViewImpl extends Composite implements HeaderView {
   
   private UserSettingViewImpl settingPopup;
   
-  private SearchHandler searchHandler;
+  private Presenter presenter;
     
   public HeaderViewImpl( ) {
     initWidget( uiBinder.createAndBindUi( this ) );
@@ -47,7 +47,7 @@ public class HeaderViewImpl extends Composite implements HeaderView {
   @UiHandler( "searchBox" )
   void handleSearchBoxKeyPressed( KeyPressEvent e ) {
     if ( KeyCodes.KEY_ENTER == e.getNativeEvent( ).getKeyCode( ) ) {
-      searchHandler.search( searchBox.getInput( ) );
+      presenter.runManualSearch( searchBox.getInput( ) );
     }
   }
   
@@ -62,8 +62,8 @@ public class HeaderViewImpl extends Composite implements HeaderView {
   }
 
   @Override
-  public void setSearchHandler( SearchHandler handler ) {
-    this.searchHandler = handler;
+  public void setPresenter( Presenter presenter ) {
+    this.presenter = presenter;
   }
   
 }

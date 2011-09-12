@@ -34,6 +34,8 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
                      new String[] {"None","Account","Cluster","Availability Zone"},
                      new String[] {"Instance","Storage","S3"});
     container.setWidget( reportView );
+    
+    ActivityUtil.updateDirectorySelection( clientFactory );
   }
 
   

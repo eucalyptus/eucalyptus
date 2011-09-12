@@ -70,6 +70,8 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
     // At the beginning, don't sort
     range = new SearchRange( 0, pageSize, -1/*sortField*/, true );
     doSearch( place.getSearch( ), range );
+    
+    ActivityUtil.updateDirectorySelection( clientFactory );
   }
   
   @Override

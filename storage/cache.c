@@ -245,7 +245,7 @@ long long scan_cache (void)
 
     logprintfl (EUCAINFO, "scanning the cache directory (%s)\n", cache_path);
 
-    if (cache_path==NULL) {
+    if (strlen(cache_path) == 0) {
         logprintfl (EUCAINFO, "no cache directory yet\n");
         return total_size;
     }

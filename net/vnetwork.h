@@ -73,7 +73,8 @@ permission notice:
 #define NUMBER_OF_VLANS 4096
 #define NUMBER_OF_HOSTS_PER_VLAN 2048
 #define NUMBER_OF_PUBLIC_IPS 2048
-#define NUMBER_OF_CCS 2
+#define NUMBER_OF_CCS 8
+#define MAX_ETH_DEV_PATH 16
 
 typedef struct netEntry_t {
   unsigned char mac[6];
@@ -132,7 +133,7 @@ typedef struct vnetConfig_t {
   int addrIndexMax;
   int max_vlan;
   tunnelData tunnels;
-  char etherdevs[NUMBER_OF_VLANS][16];
+  char etherdevs[NUMBER_OF_VLANS][MAX_ETH_DEV_PATH];
   userEntry users[NUMBER_OF_VLANS];
   networkEntry networks[NUMBER_OF_VLANS];
   publicip publicips[NUMBER_OF_PUBLIC_IPS];

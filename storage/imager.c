@@ -175,11 +175,13 @@ int main (int argc, char * argv[])
 
     // save the command line into a buffer so it's easier to rerun it by hand
     char argv_str [4096];
+    argv_str[0] = '\0';
     for (int i=0; i<argc; i++) {
-        strncat (argv_str, "\"", sizeof (argv_str));
-        strncat (argv_str, argv[i], sizeof (argv_str));
-        strncat (argv_str, "\" ", sizeof (argv_str));
+        strncat (argv_str, "\"", sizeof (argv_str) - strlen(argv_str) - 1);
+        strncat (argv_str, argv[i], sizeof (argv_str) - strlen(argv_str) - 1);
+        strncat (argv_str, "\" ", sizeof (argv_str) - strlen(argv_str) - 1);
     }
+    
 
     // parse command-line parameters
     char * cmd_name = NULL;
