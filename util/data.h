@@ -300,6 +300,7 @@ typedef struct ncInstance_t {
     char floppyFilePath [CHAR_BUFFER_SIZE];
     char hypervisorType [SMALL_CHAR_BUFFER_SIZE];
     hypervisorCapabilityType hypervisorCapability;
+    int hypervisorBitness;
     boolean combinePartitions; // hypervisor works only with disks (all except Xen)
     boolean do_inject_key; // whether or not NC injects SSH key into this instance (eucalyptus.conf option)
 

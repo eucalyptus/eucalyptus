@@ -2168,10 +2168,13 @@ int blockblob_copy ( blockblob * src_bb, // source blob to copy data from
     // do the copy (with block devices dd will silently omit to copy bytes outside the block boundary, so we use paths for uncloned blobs)
     const char * src_path = (src_bb->snapshot_type == BLOBSTORE_SNAPSHOT_DM)?(blockblob_get_dev (src_bb)):(blockblob_get_file (src_bb));
     const char * dst_path = (dst_bb->snapshot_type == BLOBSTORE_SNAPSHOT_DM)?(blockblob_get_dev (dst_bb)):(blockblob_get_file (dst_bb));
-    if (diskutil_dd2 (src_path, dst_path, granularity, copy_len_bytes/granularity, dst_offset_bytes/granularity, src_offset_bytes/granularity)) {
+    mode_t old_umask = umask (~BLOBSTORE_FILE_PERM);
+    int error = diskutil_dd2 (src_path, dst_path, granularity, copy_len_bytes/granularity, dst_offset_bytes/granularity, src_offset_bytes/granularity);
+    umask (old_umask);
+    if (error) {
         ERR (BLOBSTORE_ERROR_INVAL, "failed to copy a section");
         return -1;
-    }    
+    }
 
     return ret;
 }
@@ -2246,12 +2249,11 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
             break;
         } 
         case BLOBSTORE_ZERO:
-            if (m->relation_type!=BLOBSTORE_COPY) {
-                zero_dev = dm_get_zero ();
-                if (zero_dev == NULL) {
-                    return -1;
-                }
+            zero_dev = dm_get_zero ();
+            if (zero_dev == NULL) {
+                return -1;
             }
+
             break;
         default:
             ERR (BLOBSTORE_ERROR_INVAL, "invalid map entry type");
@@ -2417,6 +2419,8 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
                 goto cleanup; // ditto
             }
         }
+    } else {
+        free (main_dm_table);
     }
 
     goto free;
@@ -2928,7 +2932,7 @@ static int do_copy_test (const char * base, const char * name)
     return errors;
 }
 
-static int do_clone_test (const char * base, const char * name, blobstore_format_t format, blobstore_revocation_t revocation, blobstore_snapshot_t snapshot)
+static int do_clone_test (const char * base, const char * name, blobstore_format_t format, blobstore_revocation_t revocation, blobstore_snapshot_t snapshot, int copy_or_snapshot)
 {
     int ret;
     int errors = 0;
@@ -2983,21 +2987,27 @@ static int do_clone_test (const char * base, const char * name, blobstore_format
     }
 
     blockmap bm2 [] = { 
-        {BLOBSTORE_SNAPSHOT, BLOBSTORE_BLOCKBLOB, {blob:bb3}, 0, 0, CBB_SIZE},
-        {BLOBSTORE_SNAPSHOT, BLOBSTORE_ZERO,      {blob:NULL}, 0, CBB_SIZE, CBB_SIZE},
-        //        {BLOBSTORE_SNAPSHOT,      BLOBSTORE_DEVICE,    {device_path:"/dev/sda2"}, 0, CBB_SIZE*2, CBB_SIZE}
+        {copy_or_snapshot, BLOBSTORE_BLOCKBLOB, {blob:bb3}, 0, 0, CBB_SIZE},
+        {copy_or_snapshot, BLOBSTORE_ZERO,      {blob:NULL}, 0, CBB_SIZE, CBB_SIZE},
+        //        {copy_or_snapshot,      BLOBSTORE_DEVICE,    {device_path:"/dev/sda2"}, 0, CBB_SIZE*2, CBB_SIZE}
     };
     _CLONBB(bb5,B5,bm2,0);
-    
-    _DELEBB(bb3,B3,-1); // referenced, so not deletable
-    _CLOSBB(bb3,B3);
-    _OPENBB(bb3,B3,0,NULL,0,0,0); // re-open so we can try to delete it
-    _DELEBB(bb3,B3,-1); // ditto
-    _CLOSBB(bb3,B3);
-    sleep (1); // otherwise the next delete occasionally fails with 'device busy'
+
+    if (copy_or_snapshot==BLOBSTORE_SNAPSHOT) {
+        _DELEBB(bb3,B3,-1); // referenced, so not deletable
+        _CLOSBB(bb3,B3);
+        _OPENBB(bb3,B3,0,NULL,0,0,0); // re-open so we can try to delete it
+        _DELEBB(bb3,B3,-1); // ditto
+        _CLOSBB(bb3,B3);
+        sleep (1); // otherwise the next delete occasionally fails with 'device busy'
+    } else {
+        _DELEBB(bb3,B3,0); // NOT referenced in case of _COPY, thus deletable
+    }
     _DELEBB(bb5,B5,0); // delete #5
-    _OPENBB(bb3,B3,0,NULL,0,0,0); // re-open so we can finally delete it
-    _DELEBB(bb3,B3,0); // should work now
+    if (copy_or_snapshot==BLOBSTORE_SNAPSHOT) {
+        _OPENBB(bb3,B3,0,NULL,0,0,0); // re-open so we can finally delete it
+        _DELEBB(bb3,B3,0); // should work now
+    }
 
     blobstore_close (bs);
     blobstore_close (bs2);
@@ -3194,7 +3204,7 @@ static void * competitor_function (void * ptr)
     int nfiles = (sizeof(_farray)/sizeof(char *));
 
     printf ("%u/%u: competitor running with timeout=%lld\n", (unsigned int)pthread_self(), (int)getpid(), timeout_usec);
-    int * fsuccesses = calloc (nfiles, sizeof (int *));
+    int * fsuccesses = calloc (nfiles, sizeof (int));
     
     for (int i=0; i<COMPETITIVE_ITERATIONS; i++) {
         int findex = (int)(nfiles*((double)random()/RAND_MAX)); // pick random file
@@ -3469,7 +3479,10 @@ int main (int argc, char ** argv)
     errors += do_copy_test (cwd, "copy");
     if (errors) goto done; // no point in doing clone test if above isn't working
 
-    errors += do_clone_test (cwd, "clone", BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_DM);
+    errors += do_clone_test (cwd, "clone-with-snapshot", BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_DM, BLOBSTORE_SNAPSHOT);
+    if (errors) goto done; // no point in doing clone stress test test if above isn't working
+
+    errors += do_clone_test (cwd, "clone-with-copy", BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_DM, BLOBSTORE_COPY);
     if (errors) goto done; // no point in doing clone stress test test if above isn't working
 
     errors += do_clone_stresstest (cwd, "clonestress", BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_DM);
