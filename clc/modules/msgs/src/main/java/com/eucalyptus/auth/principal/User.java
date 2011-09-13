@@ -109,7 +109,7 @@ public interface User extends /*HasId, */BasePrincipal, Serializable {
   
   public String getToken( );
   public void setToken( String token ) throws AuthException;
-  public void createToken( ) throws AuthException;
+  public String resetToken( ) throws AuthException;
   
   public String getConfirmationCode( );
   public void setConfirmationCode( String code ) throws AuthException;
