@@ -35,7 +35,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   @Override
   public void fire( VmDescribeResponseType reply ) {
     reply.setOriginCluster( this.getSubject( ).getConfiguration( ).getName( ) );
-
+    
     for ( VmInfo vmInfo : reply.getVms( ) ) {
       vmInfo.setPlacement( this.getSubject( ).getConfiguration( ).getName( ) );
       VmTypeInfo typeInfo = vmInfo.getInstanceType( );
@@ -75,7 +75,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         db.rollback( );
       }
     }
-
+    
     final List<String> unreportedVms = Lists.transform( VmInstances.listValues( ), new Function<VmInstance, String>( ) {
       
       @Override
@@ -97,8 +97,8 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       EntityTransaction db1 = Entities.get( VmInstance.class );
       try {
         VmInstance vm = VmInstances.lookup( vmId );
-        if ( VmStateSet.RUN.apply( vm ) ) {
-          //noop.
+        if ( VmStateSet.RUN.apply( vm ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
+          VmInstances.terminate( vm );
         } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
           vm.setState( VmState.TERMINATED, Reason.EXPIRED );
           vm = VmInstances.delete( vm );//TODO:GRZE:OMG:TEMPORARYA!!?@!!@!11
