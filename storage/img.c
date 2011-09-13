@@ -155,7 +155,7 @@ int parse_img_spec (img_loc * loc, const char * str)
 
 int img_init_spec (img_spec * spec, const char * id, const char * loc, const img_creds * creds)
 {
-    bzero (spec, sizeof(spec));
+    bzero (spec, sizeof(*spec));
 
     if (id && strlen(id)) 
         strncpy (spec->id, id, sizeof(spec->id) - 1); 
