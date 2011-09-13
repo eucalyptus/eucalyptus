@@ -52,7 +52,8 @@ public class KeyPairManager {
       }
       reply.set_return( true );
     } catch ( Exception e1 ) {
-      reply.set_return( true );
+      LOG.error( e1 );
+      reply.set_return( false );
     }
     return reply;
   }
