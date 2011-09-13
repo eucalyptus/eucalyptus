@@ -103,7 +103,7 @@ public class ServiceContext {
       LOG.error( ex, ex );
       throw new ServiceDispatchException( "Failed to dispatch message to " + dest + " caused by failure to obtain service dispatcher reference: "
                                           + ex.getMessage( ), ex );
-    } finally {
+    } /*finally {
       Threads.lookup( Empyrean.class, ServiceContext.class ).submit( new Runnable( ) {
         @Override
         public void run( ) {
@@ -116,7 +116,7 @@ public class ServiceContext {
           }
         }
       } );
-    }
+    }*/
   }
   
   public static <T> T send( String dest, Object msg ) throws ServiceDispatchException {
