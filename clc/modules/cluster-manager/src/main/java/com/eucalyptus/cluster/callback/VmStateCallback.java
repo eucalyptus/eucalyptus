@@ -101,8 +101,6 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           VmInstances.terminate( vm );
         } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
           vm.setState( VmState.TERMINATED, Reason.EXPIRED );
-          vm = VmInstances.delete( vm );//TODO:GRZE:OMG:TEMPORARYA!!?@!!@!11
-          
         } else if ( VmState.TERMINATED.apply( vm ) && vm.getSplitTime( ) > VmInstances.BURY_TIME ) {
           VmInstances.delete( vm );
         } else if ( VmState.BURIED.apply( vm ) ) {
