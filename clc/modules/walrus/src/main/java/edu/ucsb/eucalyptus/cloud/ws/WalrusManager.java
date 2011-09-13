@@ -272,48 +272,60 @@ public class WalrusManager {
 		if (account == null) {
 			throw new AccessDeniedException("no such account");
 		}
-
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
-		BucketInfo searchBucket = new BucketInfo();
-		searchBucket.setOwnerId(account.getAccountNumber());
-		searchBucket.setHidden(false);
-		List<BucketInfo> bucketInfoList = db.query(searchBucket);
-
-		ArrayList<BucketListEntry> buckets = new ArrayList<BucketListEntry>();
-
-		for (BucketInfo bucketInfo : bucketInfoList) {
-			if (ctx.hasAdministrativePrivileges() ||
-					Lookups.checkPrivilege(PolicySpec.S3_LISTALLMYBUCKETS,
-							PolicySpec.VENDOR_S3,
-							PolicySpec.S3_RESOURCE_BUCKET,
-							bucketInfo.getBucketName(),
-							bucketInfo.getOwnerId())) {
-				EntityWrapper<WalrusSnapshotInfo> dbSnap = db
-				.recast(WalrusSnapshotInfo.class);
-				WalrusSnapshotInfo walrusSnapInfo = new WalrusSnapshotInfo();
-				walrusSnapInfo.setSnapshotBucket(bucketInfo.getBucketName());
-				List<WalrusSnapshotInfo> walrusSnaps = dbSnap
-				.query(walrusSnapInfo);
-				if (walrusSnaps.size() > 0)
-					continue;
-			}
-			buckets.add(new BucketListEntry(bucketInfo.getBucketName(),
-					DateUtils.format(bucketInfo.getCreationDate().getTime(),
-							DateUtils.ISO8601_DATETIME_PATTERN)
-							+ ".000Z"));
-		}
 		try {
-			CanonicalUserType owner = new CanonicalUserType(account.getName(), account.getAccountNumber());
-			ListAllMyBucketsList bucketList = new ListAllMyBucketsList();
-			reply.setOwner(owner);
-			bucketList.setBuckets(buckets);
-			reply.setBucketList(bucketList);
-		} catch (Exception ex) {
+			BucketInfo searchBucket = new BucketInfo();
+			searchBucket.setOwnerId(account.getAccountNumber());
+			searchBucket.setHidden(false);
+			List<BucketInfo> bucketInfoList = db.query(searchBucket);
+
+			ArrayList<BucketListEntry> buckets = new ArrayList<BucketListEntry>();
+
+			for (BucketInfo bucketInfo : bucketInfoList) {
+				if (ctx.hasAdministrativePrivileges() ||
+						Lookups.checkPrivilege(PolicySpec.S3_LISTALLMYBUCKETS,
+								PolicySpec.VENDOR_S3,
+								PolicySpec.S3_RESOURCE_BUCKET,
+								bucketInfo.getBucketName(),
+								bucketInfo.getOwnerId())) {						
+					EntityWrapper<WalrusSnapshotInfo> dbSnap = EntityWrapper.get(WalrusSnapshotInfo.class);
+					try {
+						WalrusSnapshotInfo walrusSnapInfo = new WalrusSnapshotInfo();
+						walrusSnapInfo.setSnapshotBucket(bucketInfo.getBucketName());
+						List<WalrusSnapshotInfo> walrusSnaps = dbSnap
+						.query(walrusSnapInfo);
+						dbSnap.commit();
+						if (walrusSnaps.size() > 0)
+							continue;
+					} catch (Exception eee) {
+						LOG.debug(eee, eee);
+						dbSnap.rollback();
+					}
+				}
+				buckets.add(new BucketListEntry(bucketInfo.getBucketName(),
+						DateUtils.format(bucketInfo.getCreationDate().getTime(),
+								DateUtils.ISO8601_DATETIME_PATTERN)
+								+ ".000Z"));
+			}
+			try {
+				CanonicalUserType owner = new CanonicalUserType(account.getName(), account.getAccountNumber());
+				ListAllMyBucketsList bucketList = new ListAllMyBucketsList();
+				reply.setOwner(owner);
+				bucketList.setBuckets(buckets);
+				reply.setBucketList(bucketList);
+			} catch (Exception ex) {
+				db.rollback();
+				LOG.error(ex);
+				throw new AccessDeniedException("Account: " + account.getName() + " not found", ex);
+			}
+			db.commit();
+		} catch (EucalyptusCloudException e) {
 			db.rollback();
-			LOG.error(ex);
-			throw new AccessDeniedException("Account: " + account.getName() + " not found", ex);
+			throw e;
+		} catch (Exception e) {
+			LOG.debug(e, e);
+			db.rollback();
 		}
-		db.commit();
 		return reply;
 	}
 
@@ -1252,7 +1264,7 @@ public class WalrusManager {
 					foundObject.setEtag(md5);
 					Long size = (long) base64Data.length;
 					foundObject.setSize(size);
-					
+
 					boolean success = false;
 					int retryCount = 0;
 					do {
@@ -3278,7 +3290,7 @@ public class WalrusManager {
 									db.delete(grantInfo);
 								}
 								Long size = foundObject.getSize();
-								
+
 								boolean success = false;
 								int retryCount = 0;
 								do {
