@@ -49,7 +49,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     }
     
     for ( final VmInfo runVm : reply.getVms( ) ) {
-      final VmState state = VmState.Mapper.get( runVm.getStateName( ) );
+      final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
       EntityTransaction db = Entities.get( VmInstance.class );
       try {
         try {
@@ -65,7 +65,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           }
         } catch ( Exception ex1 ) {
           VmInstance vm = VmInstance.Lookup.INSTANCE.apply( runVm.getInstanceId( ) );
-          if ( VmStateSet.RUN.contains( state ) ) {
+          if ( VmStateSet.RUN.contains( runVmState ) ) {
             VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
           }
         }
@@ -100,7 +100,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         if ( VmStateSet.RUN.apply( vm ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
           VmInstances.terminate( vm );
         } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
-          vm.setState( VmState.TERMINATED, Reason.EXPIRED );
+          VmInstances.terminate( vm );
         } else if ( VmState.TERMINATED.apply( vm ) && vm.getSplitTime( ) > VmInstances.BURY_TIME ) {
           VmInstances.delete( vm );
         } else if ( VmState.BURIED.apply( vm ) ) {
