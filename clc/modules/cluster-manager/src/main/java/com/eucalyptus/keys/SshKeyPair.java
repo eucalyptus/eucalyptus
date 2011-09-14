@@ -72,13 +72,12 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata.KeyPairMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
 
 @Entity
@@ -155,8 +154,8 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPai
     return new SshKeyPair( AccountFullName.getInstance( ownerFullName.getAccountNumber( ), keyName ) );
   }
   
-  public static SshKeyPair create( OwnerFullName ownerFullName, String keyName ) {
-    return new SshKeyPair( ownerFullName, keyName );
+  public static SshKeyPair create( UserFullName userFullName, String keyName ) {
+    return new SshKeyPair( userFullName, keyName );
   }
 
   public static SshKeyPair withPublicKey( OwnerFullName ownerFullName, String keyValue ) {
