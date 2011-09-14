@@ -783,7 +783,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private Map<String, String> getMetadataMap( ) {
     final boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     final Map<String, String> m = new HashMap<String, String>( );
-    m.put( "ami-id", this.bootRecord.getMachine( ).getDisplayName( ) );
+//    m.put( "ami-id", this.getImageInfo( ).getImageId( ) );
     m.put( "product-codes", this.bootRecord.getMachine( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
     m.put( "ami-launch-index", "" + this.launchRecord.getLaunchIndex( ) );
 //ASAP: FIXME: GRZE:
