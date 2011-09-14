@@ -260,11 +260,16 @@ public class NetworkGroups {
         if ( net == null ) {
           create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
         }
-      } catch ( ConstraintViolationException ex ) {
       } catch ( NoSuchElementException ex ) {
-        create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
+        try {
+          create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
+        } catch ( ConstraintViolationException ex1 ) {
+        }
       } catch ( TransactionException ex ) {
-        create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
+        try {
+          create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
+        } catch ( ConstraintViolationException ex1 ) {
+        }
       }
     } catch ( DuplicateMetadataException ex ) {}
   }
