@@ -134,7 +134,7 @@ public class EuareService {
     try {
       Account newAccount = Accounts.addAccount( request.getAccountName( ) );
       User admin = newAccount.addUser( User.ACCOUNT_ADMIN, "/", true/*skipRegistration*/, true/*enabled*/, null/*info*/ );
-      admin.createToken( );
+      admin.resetToken( );
       admin.createConfirmationCode( );
       //admin.createPassword( );
       AccountType account = reply.getCreateAccountResult( ).getAccount( );
@@ -464,9 +464,11 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                "Not authorized to get user policies for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                  "Not authorized to get user policies for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+      }
     }
     try {
       Policy policy = null;
@@ -873,9 +875,11 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                "Not authorized to list user policies for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                  "Not authorized to list user policies for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+      }
     }
     // TODO(Ye Wen, 01/26/2011): support pagination
     ListUserPoliciesResultType result = reply.getListUserPoliciesResult( );

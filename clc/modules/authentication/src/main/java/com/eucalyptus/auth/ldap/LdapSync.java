@@ -551,9 +551,9 @@ public class LdapSync {
     Attribute membersAttr = attrs.get( memberAttrName );
     if ( membersAttr != null ) {
       NamingEnumeration<?> names = membersAttr.getAll( );
-	  while ( names.hasMore( ) ) {
-	    members.add( parseMemberName( idAttrName, ( String ) names.next( ) ).toLowerCase( ) );
-	  }
+      while ( names.hasMore( ) ) {
+        members.add( parseMemberName( idAttrName, ( ( String ) names.next( ) ).toLowerCase( ) ).toLowerCase( ) );
+      }
     }
     return members;
   }
@@ -643,7 +643,7 @@ public class LdapSync {
           String infoKey = lic.getUserInfoAttributes( ).get( attrName );
           String infoVal = getAttrWithNullCheck( attrs, attrName );
           if ( infoVal != null ) {
-        	infoMap.put( infoKey, infoVal );
+            infoMap.put( infoKey, infoVal );
           }
         }
         infoMap.put( User.DN, dn );
@@ -655,11 +655,11 @@ public class LdapSync {
   }
 
   private static String getAttrWithNullCheck( Attributes attrs, String attrName ) throws NamingException {
-	Attribute attr = attrs.get( attrName );
-	if ( attr != null ) {
-      return ( String ) attr.get( );
-	}
-	return null;
+    Attribute attr = attrs.get( attrName );
+    if ( attr != null ) {
+      return ( ( String ) attr.get( ) ).toLowerCase( );
+    }
+    return null;
   }
   
 }

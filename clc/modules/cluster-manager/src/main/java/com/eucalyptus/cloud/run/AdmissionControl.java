@@ -70,9 +70,6 @@ import java.util.List;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Addresses;
-import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
@@ -100,8 +97,8 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
@@ -145,7 +142,7 @@ public class AdmissionControl {
     }
     return allocInfo;
   }
-
+  
   public static void rollbackAllocations( Allocation allocInfo, List<ResourceAllocator> finished, Exception e ) {
     for ( ResourceAllocator rollback : Iterables.reverse( finished ) ) {
       try {
@@ -155,7 +152,7 @@ public class AdmissionControl {
       }
     }
   }
-
+  
   public static void runAllocatorSafely( Allocation allocInfo, ResourceAllocator allocator ) throws Exception {
     try {
       allocator.allocate( allocInfo );
@@ -187,7 +184,6 @@ public class AdmissionControl {
       return rscToken;
     }
     
-
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
       RunInstancesType request = allocInfo.getRequest( );
@@ -196,56 +192,49 @@ public class AdmissionControl {
       final int minAmount = allocInfo.getMinCount( );
       final int maxAmount = allocInfo.getMaxCount( );
       Context ctx = Contexts.lookup( );
-      //if ( ctx.getGroups( ).isEmpty( ) ) {
-      if ( false ) {
-        throw new NotEnoughResourcesException( "Not authorized: you do not have sufficient permission to use " + clusterName );
+      String zoneName = ( clusterName != null )
+        ? clusterName
+        : "default";
+      List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName );
+      int remaining = maxAmount;
+      int available = 0;
+      LOG.info( "Found authorized clusters: " + Iterables.transform( authorizedClusters, new Function<Cluster, String>( ) {
+        @Override
+        public String apply( Cluster arg0 ) {
+          return arg0.getName( );
+        }
+      } ) );
+      if ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < minAmount ) {
+        throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
       } else {
-        String zoneName = ( clusterName != null )
-          ? clusterName
-          : "default";
-        String action = PolicySpec.requestToAction( request );
-        User requestUser = ctx.getUser( );
-        List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName, action, requestUser );
-        int remaining = maxAmount;
-        int available = 0;
-        LOG.info( "Found authorized clusters: " + Iterables.transform( authorizedClusters, new Function<Cluster, String>( ) {
-          @Override
-          public String apply( Cluster arg0 ) {
-            return arg0.getName( );
-          }
-        } ) );
-        if ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < minAmount ) {
-          throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
-        } else {
-          for ( Cluster cluster : authorizedClusters ) {
-            if ( remaining <= 0 ) {
-              break;
-            } else {
-              ClusterNodeState state = cluster.getNodeState( );
-              Partition partition = cluster.getConfiguration( ).lookupPartition( );
-              if ( allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {
-                try {
-                  ServiceConfiguration sc = Partitions.lookupService( Storage.class, partition );
-                } catch ( Exception ex ) {
-                  throw new NotEnoughResourcesException( "Not enough resources: " + ex.getMessage( ), ex );
-                }
-              }
+        for ( Cluster cluster : authorizedClusters ) {
+          if ( remaining <= 0 ) {
+            break;
+          } else {
+            ClusterNodeState state = cluster.getNodeState( );
+            Partition partition = cluster.getConfiguration( ).lookupPartition( );
+            if ( allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {
               try {
-                int tryAmount = ( remaining > state.getAvailability( vmTypeName ).getAvailable( ) )
-                  ? state.getAvailability( vmTypeName ).getAvailable( )
-                  : remaining;
-                
-                List<ResourceToken> tokens = this.requestResourceToken( allocInfo, tryAmount, maxAmount );
-                remaining -= tokens.size( );
-                allocInfo.setPartition( partition );
-              } catch ( Exception t ) {
-                if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) || remaining > 0 ) {
-                  allocInfo.abort( );
-                  throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
-                } else {
-                  LOG.error( t, t );
-                  throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
-                }
+                ServiceConfiguration sc = Partitions.lookupService( Storage.class, partition );
+              } catch ( Exception ex ) {
+                throw new NotEnoughResourcesException( "Not enough resources: " + ex.getMessage( ), ex );
+              }
+            }
+            try {
+              int tryAmount = ( remaining > state.getAvailability( vmTypeName ).getAvailable( ) )
+                ? state.getAvailability( vmTypeName ).getAvailable( )
+                : remaining;
+              
+              List<ResourceToken> tokens = this.requestResourceToken( allocInfo, tryAmount, maxAmount );
+              remaining -= tokens.size( );
+              allocInfo.setPartition( partition );
+            } catch ( Exception t ) {
+              if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) || remaining > 0 ) {
+                allocInfo.abort( );
+                throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
+              } else {
+                LOG.error( t, t );
+                throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
               }
             }
           }
@@ -263,17 +252,9 @@ public class AdmissionControl {
       return available;
     }
     
-    private List<Cluster> doPrivilegedLookup( String partitionName, String vmTypeName, final String action, final User requestUser ) throws NotEnoughResourcesException {
+    private List<Cluster> doPrivilegedLookup( String partitionName, String vmTypeName ) throws NotEnoughResourcesException {
       if ( "default".equals( partitionName ) ) {
-        Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
-          @Override
-          public boolean apply( final Cluster c ) {
-            try {
-              return Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_AVAILABILITYZONE, c.getName( ), null, action, requestUser );
-            } catch ( Exception e ) {}
-            return false;
-          }
-        } );
+        Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), RestrictedTypes.filterPrivileged( ) );
         Multimap<VmTypeAvailability, Cluster> sorted = TreeMultimap.create( );
         for ( Cluster c : authorizedClusters ) {
           sorted.put( c.getNodeState( ).getAvailability( vmTypeName ), c );
@@ -288,9 +269,9 @@ public class AdmissionControl {
         if ( cluster == null ) {
           throw new NotEnoughResourcesException( "Can't find cluster " + partitionName );
         }
-        if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_AVAILABILITYZONE, partitionName, null, action, requestUser ) ) {
-          throw new NotEnoughResourcesException( "Not authorized to use cluster " + partitionName + " for " + requestUser.getName( ) );
-        }
+//        if ( ! RestrictedTypes.filterPrivileged( ).apply( cluster ) ) {
+//          throw new NotEnoughResourcesException( "Not authorized to use cluster " + partitionName );
+//        }
         return Lists.newArrayList( cluster );
       }
     }

@@ -167,8 +167,6 @@ public class VmControl {
   
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
     final DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
-    final Context ctx = Contexts.lookup( );
-    final boolean isAdmin = ctx.hasAdministrativePrivileges( );
     final boolean isVerbose = msg.getInstancesSet( ).remove( "verbose" );
     final ArrayList<String> instancesSet = msg.getInstancesSet( );
     final Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
@@ -199,9 +197,11 @@ public class VmControl {
           Logs.exhaust( ).error( ex, ex );
           db.rollback( );
           try {
-            RunningInstancesItemType ret = VmInstances.transform( vm );
-            if ( ret != null ) {
-              rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( ret );
+            if ( vm != null ) {
+              RunningInstancesItemType ret = VmInstances.transform( vm );
+              if ( ret != null && vm.getReservationId( ) != null ) {
+                rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( ret );
+              }
             }
           } catch ( Exception ex1 ) {
             LOG.error( ex1 , ex1 );
@@ -283,7 +283,7 @@ public class VmControl {
         public boolean apply( final String instanceId ) {
           try {
             final VmInstance v = VmInstances.lookup( instanceId );
-            if ( RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
+            if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
               final Request<RebootInstancesType, RebootInstancesResponseType> req = AsyncRequests.newRequest( new RebootCallback( v.getInstanceId( ) ) );
               req.getRequest( ).regarding( request );
               req.dispatch( v.lookupClusterConfiguration( ) );
@@ -321,7 +321,7 @@ public class VmControl {
         throw new EucalyptusCloudException( "No such instance: " + request.getInstanceId( ) );
       }
     }
-    if ( !RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, request.getInstanceId( ), v.getOwner( ) ) ) {
+    if ( !RestrictedTypes.filterPrivileged( ).apply( v ) ) {
       throw new EucalyptusCloudException( "Permission denied for vm: " + request.getInstanceId( ) );
     } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
       final GetConsoleOutputResponseType reply = request.getReply( );
@@ -346,7 +346,7 @@ public class VmControl {
     final DescribeBundleTasksResponseType reply = request.getReply( );
     if ( request.getBundleIds( ).isEmpty( ) ) {
       for ( final VmInstance v : Iterables.filter( VmInstances.listValues( ), VmInstance.Filters.BUNDLING ) ) {
-        if ( RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), v.getOwner( ) ) ) {
+        if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
           reply.getBundleTasks( ).add( v.getBundleTask( ) );
         }
       }
@@ -355,7 +355,7 @@ public class VmControl {
         try {
           final VmInstance v = VmInstances.lookupByBundleId( bundleId );
           if ( v.isBundling( )
-               && ( RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), v.getOwner( ) ) ) ) {
+               && ( RestrictedTypes.filterPrivileged( ).apply( v ) ) ) {
             reply.getBundleTasks( ).add( v.getBundleTask( ) );
           }
         } catch ( final NoSuchElementException e ) {}
@@ -417,7 +417,7 @@ public class VmControl {
         public boolean apply( final String instanceId ) {
           try {
             final VmInstance v = VmInstances.lookup( instanceId );
-            if ( RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
+            if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
               final int oldCode = v.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
               final String oldState = v.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
               results.add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
@@ -501,7 +501,7 @@ public class VmControl {
     final Context ctx = Contexts.lookup( );
     try {
       final VmInstance v = VmInstances.lookupByBundleId( request.getBundleId( ) );
-      if ( RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, v.getInstanceId( ), v.getOwner( ) ) ) {
+      if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
         v.getBundleTask( ).setState( "canceling" );
         LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, ctx.getUserFullName( ).toString( ), v.getBundleTask( ).getBundleId( ),
                                     v.getInstanceId( ) ) );
@@ -542,7 +542,7 @@ public class VmControl {
         throw new EucalyptusCloudException( "Failed to bundle requested vm because the platform is not 'windows': " + request.getInstanceId( ) );
       } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
         throw new EucalyptusCloudException( "Failed to bundle requested vm because it is not currently 'running': " + request.getInstanceId( ) );
-      } else if ( RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, v.getOwner( ) ) ) {
+      } else if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
         BundleInstanceChecker.check( request );
         final BundleTask bundleTask = new BundleTask( v.getInstanceId( ).replaceFirst( "i-", "bun-" ), v.getInstanceId( ), request.getBucket( ),
                                                       request.getPrefix( ) );
@@ -581,7 +581,7 @@ public class VmControl {
       if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
         throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
       }
-      if ( RestrictedTypes.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, request.getInstanceId( ), v.getOwner( ) ) ) {
+      if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
         cluster = Clusters.lookup( v.lookupClusterConfiguration( ) );
       } else {
         throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " does not exist." );

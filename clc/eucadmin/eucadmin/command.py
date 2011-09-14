@@ -28,10 +28,30 @@
 #
 # Author: Mitch Garnaat mgarnaat@eucalyptus.com
 
-import StringIO
 import subprocess
+import os
 import time
+import shlex
 
+# See https://github.com/kennethreitz/envoy
+
+class Response(object):
+    """A command's response"""
+
+    def __init__(self, process=None):
+        super(Response, self).__init__()
+        self._process = process
+        self.command = None
+        self.std_err = None
+        self.std_out = None
+        self.status_code = None
+
+    def __repr__(self):
+        if len(self.command):
+            return '<Response [{0}]>'.format(self.command[0])
+        else:
+            return '<Response>'
+        
 class Command(object):
     """
     A little utility class to wrap calls to shell commands.
@@ -43,41 +63,55 @@ class Command(object):
     was not successful.
     """
 
-    def __init__(self, command, test=False):
-        self.test = test
-        self.exit_code = 0
-        self.error = None
-        self._stdout_fp = StringIO.StringIO()
-        self._stderr_fp = StringIO.StringIO()
-        self.command = command
-        self.run()
+    def __init__(self, command):
+        self.history = []
+        self.run(command)
 
-    def run(self):
-        if self.test:
-            print self.command
-            return 0
-        self.process = subprocess.Popen(self.command, shell=True,
-                                        stdin=subprocess.PIPE,
-                                        stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE)
-        while self.process.poll() == None:
-            time.sleep(1)
-            t = self.process.communicate()
-            self._stdout_fp.write(t[0])
-            self._stderr_fp.write(t[1])
-        self.exit_code = self.process.returncode
-        return self.exit_code
+    def run(self, command, data=None):
+        command = command.split('|')
+        command = map(shlex.split, command)
 
+        for c in command:
+
+            if len(self.history):
+                data = self.history[-1].std_out
+
+            p = subprocess.Popen(c,
+                universal_newlines=True,
+                shell=False,
+                env=os.environ,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+
+            out, err = p.communicate(input=data)
+
+            r = Response(process=p)
+
+            r.command = c
+            r.std_out = out
+            r.std_err = err
+            r.status_code = p.returncode
+
+            self.history.append(r)
+
+        return self.status
+            
     @property
     def status(self):
-        return self.exit_code
+        return sum([r.status_code for r in self.history])
 
     @property
     def stdout(self):
-        return self._stdout_fp.getvalue()
+        if len(self.history):
+            rslt = self.history[-1].std_out
+        else:
+            rslt = ''
+        return rslt
 
     @property
     def stderr(self):
-        return self._stderr_fp.getvalue()
+        return ''.join([r.std_err for r in self.history])
 
 

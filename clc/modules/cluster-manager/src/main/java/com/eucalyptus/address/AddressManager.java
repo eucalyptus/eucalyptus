@@ -79,6 +79,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
@@ -115,7 +116,7 @@ public class AddressManager {
     ReleaseAddressResponseType reply = ( ReleaseAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    Address address = Addresses.restrictedLookup( request, request.getPublicIp( ) );
+    Address address = Addresses.restrictedLookup( request.getPublicIp( ) );
     Addresses.release( address );
     reply.set_return( true );
     return reply;
@@ -132,13 +133,12 @@ public class AddressManager {
       //TODO:GRZE:FIXME this is not going to last this way.
       Account addrAccount = null;
       String addrAccountNumber = address.getOwnerAccountNumber( );
-      if ( !Principals.nobodyAccount().getAccountNumber( ).equals( addrAccountNumber ) ) {
+      if ( !Principals.nobodyAccount().getAccountNumber( ).equals( addrAccountNumber ) && !Principals.systemAccount().getAccountNumber( ).equals( addrAccountNumber )) {
         try {
         addrAccount = Accounts.lookupAccountById( addrAccountNumber );
         } catch ( AuthException e ) {}
       }
-      if ( addrAccount != null
-           && ( isAdmin || Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, address.getName( ), addrAccount, action, requestUser ) ) ) {
+      if ( addrAccount != null && ( isAdmin || RestrictedTypes.filterPrivileged( ).apply( address ) ) ) {
         reply.getAddressesSet( ).add( isAdmin
             ? address.getAdminDescription( )
             : address.getDescription( ) );
@@ -161,8 +161,8 @@ public class AddressManager {
     AssociateAddressResponseType reply = ( AssociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    final Address address = Addresses.restrictedLookup( request, request.getPublicIp( ) );//TODO: test should throw error.
-    final VmInstance vm = VmInstances.restrictedLookup( request, request.getInstanceId( ) );
+    final Address address = Addresses.restrictedLookup( request.getPublicIp( ) );
+    final VmInstance vm = VmInstances.restrictedLookup( request.getInstanceId( ) );
     final VmInstance oldVm = findCurrentAssignedVm( address );
     final Address oldAddr = findVmExistingAddress( vm );
     final boolean oldAddrSystem = oldAddr != null
@@ -229,7 +229,7 @@ public class AddressManager {
     reply.set_return( false );
     Addresses.updateAddressingMode( );
     Context ctx = Contexts.lookup( );
-    final Address address = Addresses.restrictedLookup( request, request.getPublicIp( ) );
+    final Address address = Addresses.restrictedLookup( request.getPublicIp( ) );
     reply.set_return( true );
     final String vmId = address.getInstanceId( );
     if ( address.isSystemOwned( ) && !ctx.hasAdministrativePrivileges( ) ) {

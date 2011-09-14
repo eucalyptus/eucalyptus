@@ -83,9 +83,7 @@ import javax.persistence.ManyToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
-import javax.persistence.PrePersist;
 import javax.persistence.PreRemove;
-import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
@@ -1371,8 +1369,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         //ASAP:FIXME:GRZE: restore.
         runningInstance.setProductCodes( new ArrayList<String>( ) );
         runningInstance.setImageId( input.getBootRecord( ).getMachine( ).getDisplayName( ) );
-        runningInstance.setKernel( input.getBootRecord( ).getKernel( ).getDisplayName( ) );
-        runningInstance.setRamdisk( input.getBootRecord( ).getRamdisk( ).getDisplayName( ) );
+        if( input.getBootRecord( ).getKernel( ) != null ) {
+          runningInstance.setKernel( input.getBootRecord( ).getKernel( ).getDisplayName( ) );
+        }
+        if( input.getBootRecord( ).getRamdisk( ) != null ) {
+          runningInstance.setRamdisk( input.getBootRecord( ).getRamdisk( ).getDisplayName( ) );
+        }
         if ( dns ) {
           String publicDnsName = input.getPublicDnsName( );
           String privateDnsName = input.getPrivateDnsName( );

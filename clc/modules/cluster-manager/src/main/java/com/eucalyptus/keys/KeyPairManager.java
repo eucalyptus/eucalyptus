@@ -7,19 +7,18 @@ import java.math.BigInteger;
 import java.security.PrivateKey;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMWriter;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.CreateKeyPairResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateKeyPairType;
 import edu.ucsb.eucalyptus.msgs.DeleteKeyPairResponseType;
@@ -35,13 +34,9 @@ public class KeyPairManager {
   
   public DescribeKeyPairsResponseType describe( DescribeKeyPairsType request ) throws Exception {
     DescribeKeyPairsResponseType reply = request.getReply( );
-    Context ctx = Contexts.lookup( );
-    for ( SshKeyPair kp : KeyPairUtil.getUserKeyPairs( ctx.getUserFullName( ) ) ) {
+    for ( SshKeyPair kp : Iterables.filter( KeyPairUtil.getUserKeyPairs( Contexts.lookup( ).getUserFullName( ) ), RestrictedTypes.filterPrivileged( ) ) ) {
       if ( request.getKeySet( ).isEmpty( ) || request.getKeySet( ).contains( kp.getDisplayName( ) ) ) {
-        if ( Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, kp.getDisplayName( ), ctx.getAccount( ),
-                                       PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
-          reply.getKeySet( ).add( new DescribeKeyPairsResponseItemType( kp.getDisplayName( ), kp.getFingerPrint( ) ) );
-        }
+        reply.getKeySet( ).add( new DescribeKeyPairsResponseItemType( kp.getDisplayName( ), kp.getFingerPrint( ) ) );
       }
     }
     return reply;
@@ -52,14 +47,7 @@ public class KeyPairManager {
     Context ctx = Contexts.lookup( );
     try {
       SshKeyPair key = KeyPairUtil.deleteUserKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
-      Account keyAccount = null;
-      try {
-        keyAccount = Accounts.lookupAccountById( key.getOwnerAccountNumber( ) );
-      } catch ( AuthException e ) {
-        throw new EucalyptusCloudException( e );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, request.getKeyName( ), keyAccount,
-                                      PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
+      if ( ! RestrictedTypes.filterPrivileged( ).apply( key ) ) {
         throw new EucalyptusCloudException( "Permission denied while trying to delete keypair " + key.getName( ) + " by " + ctx.getUser( ) );
       }
       reply.set_return( true );
@@ -72,15 +60,14 @@ public class KeyPairManager {
   public CreateKeyPairResponseType create( CreateKeyPairType request ) throws EucalyptusCloudException, TransactionException, MetadataException {
     CreateKeyPairResponseType reply = request.getReply( );
     Context ctx = Contexts.lookup( );
-    String action = PolicySpec.requestToAction( request );
-    if ( !ctx.hasAdministrativePrivileges( ) ) {
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
-        throw new EucalyptusCloudException( "Permission denied while trying to create keypair by " + ctx.getUser( ) );
-      }
-      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, "", action, ctx.getUser( ), 1L ) ) {
-        throw new EucalyptusCloudException( "Quota exceeded while trying to create keypair by " + ctx.getUser( ) );
-      }
-    }
+//    if ( !ctx.hasAdministrativePrivileges( ) ) {
+//      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+//        throw new EucalyptusCloudException( "Permission denied while trying to create keypair by " + ctx.getUser( ) );
+//      }
+//      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, "", action, ctx.getUser( ), 1L ) ) {
+//        throw new EucalyptusCloudException( "Quota exceeded while trying to create keypair by " + ctx.getUser( ) );
+//      }
+//    }
     PrivateKey pk = KeyPairs.create( ctx.getUserFullName( ), request.getKeyName( ) );
     reply.setKeyFingerprint( Certs.getFingerPrint( pk ) );
     ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
@@ -101,14 +88,14 @@ public class KeyPairManager {
     ImportKeyPairResponseType reply = request.getReply( );
     Context ctx = Contexts.lookup( );
     String action = PolicySpec.requestToAction( request );
-    if ( !ctx.hasAdministrativePrivileges( ) ) {
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
-        throw new AuthException( "Permission denied while trying to create keypair by " + ctx.getUser( ) );
-      }
-      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, "", action, ctx.getUser( ), 1L ) ) {
-        throw new AuthException( "Quota exceeded while trying to create keypair by " + ctx.getUser( ) );
-      }
-    }
+//    if ( !ctx.hasAdministrativePrivileges( ) ) {
+//      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+//        throw new AuthException( "Permission denied while trying to create keypair by " + ctx.getUser( ) );
+//      }
+//      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, "", action, ctx.getUser( ), 1L ) ) {
+//        throw new AuthException( "Quota exceeded while trying to create keypair by " + ctx.getUser( ) );
+//      }
+//    }
     try {
       KeyPairs.lookup( ctx.getUserFullName( ), request.getKeyName( ) );
     } catch ( Exception e1 ) {

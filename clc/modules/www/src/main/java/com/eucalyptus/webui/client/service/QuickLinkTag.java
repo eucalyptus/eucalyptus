@@ -4,17 +4,17 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CategoryTag implements Serializable {
+public class QuickLinkTag implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
   private String name;
-  private ArrayList<CategoryItem> items;
+  private ArrayList<QuickLink> items;
   
-  public CategoryTag( ) {
+  public QuickLinkTag( ) {
   }
   
-  public CategoryTag( String name, ArrayList<CategoryItem> items ) {
+  public QuickLinkTag( String name, ArrayList<QuickLink> items ) {
     this.setName( name );
     this.setItems( items );
   }
@@ -27,11 +27,11 @@ public class CategoryTag implements Serializable {
     return name;
   }
 
-  public void setItems( ArrayList<CategoryItem> items ) {
+  public void setItems( ArrayList<QuickLink> items ) {
     this.items = items;
   }
 
-  public List<CategoryItem> getItems( ) {
+  public List<QuickLink> getItems( ) {
     return items;
   }
   
