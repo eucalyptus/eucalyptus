@@ -151,7 +151,7 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPai
   }
 
   public static SshKeyPair named( OwnerFullName ownerFullName, String keyName ) {
-    return new SshKeyPair( AccountFullName.getInstance( ownerFullName.getAccountNumber( ), keyName ) );
+    return new SshKeyPair( ownerFullName, keyName );
   }
   
   public static SshKeyPair create( UserFullName userFullName, String keyName ) {
