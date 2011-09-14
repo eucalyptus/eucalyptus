@@ -69,6 +69,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
@@ -255,7 +256,7 @@ public class NetworkGroups {
   static void createDefault( final OwnerFullName ownerFullName ) throws MetadataException {
     try {
       try {
-        NetworkGroup net = Transactions.find( new NetworkGroup( ownerFullName, NETWORK_DEFAULT_NAME ) );
+        NetworkGroup net = Transactions.find( new NetworkGroup( AccountFullName.getInstance( ownerFullName.getAccountNumber( ) ), NETWORK_DEFAULT_NAME ) );
         if ( net == null ) {
           create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
         }
@@ -274,17 +275,27 @@ public class NetworkGroups {
   public static NetworkGroup create( final OwnerFullName ownerFullName, final String groupName, final String groupDescription ) throws MetadataException {
     final EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
+      NetworkGroup net = Entities.uniqueResult( new NetworkGroup( AccountFullName.getInstance( ownerFullName.getAccountNumber( ) ), NETWORK_DEFAULT_NAME ) );
+      if ( net == null ) {
+        final NetworkGroup entity = Entities.persist( new NetworkGroup( ownerFullName, groupName, groupDescription ) );
+        db.commit( );
+        return entity;
+      } else {
+        db.rollback( );
+        throw new DuplicateMetadataException( "Failed to create group: " + groupName + " for " + ownerFullName.toString( ) );
+      }
+    } catch ( final NoSuchElementException ex ) {
       final NetworkGroup entity = Entities.persist( new NetworkGroup( ownerFullName, groupName, groupDescription ) );
       db.commit( );
       return entity;
     } catch ( final ConstraintViolationException ex ) {
       Logs.exhaust( ).error( ex );
       db.rollback( );
-      throw new DuplicateMetadataException( "Failed to create default group: " + ownerFullName.toString( ), ex );
+      throw new DuplicateMetadataException( "Failed to create group: " + groupName + " for " + ownerFullName.toString( ), ex );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
-      throw new MetadataException( "Failed to create default group: " + ownerFullName.toString( ), PersistenceExceptions.transform( ex ) );
+      throw new MetadataException( "Failed to create group: " + groupName + " for " + ownerFullName.toString( ), PersistenceExceptions.transform( ex ) );
     }
   }
   
@@ -345,7 +356,4 @@ public class NetworkGroups {
     
   }
   
-  public static List<NetworkGroup> userNetworkGroups( final OwnerFullName owner ) throws MetadataException {
-    return lookupAll( owner, null );
-  }
 }
