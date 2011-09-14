@@ -210,6 +210,23 @@ public class NetworkGroups {
     return netConfig;
   }
   
+  public static NetworkGroup delete( final OwnerFullName ownerFullName, final String groupName ) throws MetadataException {
+    if ( defaultNetworkName( ).equals( groupName ) ) {
+      createDefault( ownerFullName );
+    }
+    final EntityTransaction db = Entities.get( NetworkGroup.class );
+    try {
+      final NetworkGroup ret = Entities.uniqueResult( new NetworkGroup( ownerFullName, groupName ) );
+      Entities.delete( ret );
+      db.commit( );
+      return ret;
+    } catch ( final Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new NoSuchMetadataException( "Failed to find security group: " + groupName + " for " + ownerFullName, ex );
+    }
+  }
+
   public static NetworkGroup lookup( final String groupId ) throws NoSuchMetadataException {
     EntityTransaction db = Entities.get( NetworkGroup.class );
     try {

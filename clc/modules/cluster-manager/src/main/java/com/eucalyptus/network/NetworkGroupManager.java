@@ -59,7 +59,7 @@ public class NetworkGroupManager {
     if ( ! RestrictedTypes.filterPrivileged( ).apply( NetworkGroups.lookup( request.getGroupName( ) ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to delete network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
     }
-    NetworkGroupUtil.deleteUserNetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ) );
+    NetworkGroups.delete( ctx.getUserFullName( ), request.getGroupName( ) );
     reply.set_return( true );
     return reply;
   }
