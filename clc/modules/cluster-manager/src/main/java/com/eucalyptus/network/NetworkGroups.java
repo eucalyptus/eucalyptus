@@ -63,6 +63,9 @@
 
 package com.eucalyptus.network;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -105,9 +108,9 @@ public class NetworkGroups {
   @ConfigurableField( initial = "1", description = "Default min network index." )
   public static Long          DEFAULT_MIN_NETWORK_INDEX = 2l;
   @ConfigurableField( initial = "" + 4096, description = "Default max vlan tag." )
-  public static Integer       GLOBAL_MAX_NETWORK_TAG   = 4096;
+  public static Integer       GLOBAL_MAX_NETWORK_TAG    = 4096;
   @ConfigurableField( initial = "1", description = "Default min vlan tag." )
-  public static Integer       GLOBAL_MIN_NETWORK_TAG   = 1;
+  public static Integer       GLOBAL_MIN_NETWORK_TAG    = 1;
   
   public static class NetworkRangeConfiguration {
     private Boolean useNetworkTags  = Boolean.TRUE;
@@ -263,13 +266,11 @@ public class NetworkGroups {
       } catch ( NoSuchElementException ex ) {
         try {
           create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
-        } catch ( ConstraintViolationException ex1 ) {
-        }
+        } catch ( ConstraintViolationException ex1 ) {}
       } catch ( TransactionException ex ) {
         try {
           create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
-        } catch ( ConstraintViolationException ex1 ) {
-        }
+        } catch ( ConstraintViolationException ex1 ) {}
       }
     } catch ( DuplicateMetadataException ex ) {}
   }
@@ -362,4 +363,69 @@ public class NetworkGroups {
     
   }
   
+  @TypeMapper
+  public enum IpPermissionTypeExtractNetworkPeers implements Function<IpPermissionType, List<NetworkPeer>> {
+    INSTANCE;
+    
+    @Override
+    public List<NetworkPeer> apply( IpPermissionType ipPerm ) {
+      List<NetworkPeer> networkPeers = new ArrayList<NetworkPeer>( );
+      for ( UserIdGroupPairType peerInfo : ipPerm.getGroups( ) ) {
+        networkPeers.add( new NetworkPeer( peerInfo.getSourceUserId( ), peerInfo.getSourceGroupName( ) ) );
+      }
+      return networkPeers;
+    }
+  }
+  
+  @TypeMapper
+  public enum IpPermissionTypeAsNetworkRule implements Function<IpPermissionType, List<NetworkRule>> {
+    INSTANCE;
+    
+    /**
+     * @see com.google.common.base.Function#apply(java.lang.Object)
+     */
+    @Override
+    public List<NetworkRule> apply( IpPermissionType ipPerm ) {
+      List<NetworkRule> ruleList = new ArrayList<NetworkRule>( );
+      if ( !ipPerm.getGroups( ).isEmpty( ) ) {
+        if ( ipPerm.getFromPort( ) == 0 && ipPerm.getToPort( ) == 0 ) {
+          ipPerm.setToPort( 65535 );
+        }
+        //:: fixes handling of under-specified named-network rules sent by some clients :://
+        if ( ipPerm.getIpProtocol( ) == null ) {
+          NetworkRule rule = new NetworkRule( "tcp", ipPerm.getFromPort( ), ipPerm.getToPort( ) );
+          rule.getNetworkPeers( ).addAll( IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ) );
+          ruleList.add( rule );
+          NetworkRule rule1 = new NetworkRule( "udp", ipPerm.getFromPort( ), ipPerm.getToPort( ) );
+          rule1.getNetworkPeers( ).addAll( IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ) );
+          ruleList.add( rule1 );
+          NetworkRule rule2 = new NetworkRule( "icmp", -1, -1 );
+          rule2.getNetworkPeers( ).addAll( IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ) );
+          ruleList.add( rule2 );
+        } else {
+          NetworkRule rule = new NetworkRule( ipPerm.getIpProtocol( ), ipPerm.getFromPort( ), ipPerm.getToPort( ) );
+          rule.getNetworkPeers( ).addAll( IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ) );
+          ruleList.add( rule );
+        }
+      } else if ( !ipPerm.getIpRanges( ).isEmpty( ) ) {
+        List<IpRange> ipRanges = new ArrayList<IpRange>( );
+        for ( String range : ipPerm.getIpRanges( ) ) {
+          String[] rangeParts = range.split( "/" );
+          try {
+            if ( Integer.parseInt( rangeParts[1] ) > 32 || Integer.parseInt( rangeParts[1] ) < 0 ) continue;
+            if ( rangeParts.length != 2 ) continue;
+            if ( InetAddress.getByName( rangeParts[0] ) != null ) {
+              ipRanges.add( new IpRange( range ) );
+            }
+          } catch ( NumberFormatException e ) {} catch ( UnknownHostException e ) {}
+        }
+        NetworkRule rule = new NetworkRule( ipPerm.getIpProtocol( ), ipPerm.getFromPort( ), ipPerm.getToPort( ), ipRanges );
+        ruleList.add( rule );
+      } else {
+        throw new IllegalArgumentException( "Invalid Ip Permissions:  must specify either a source cidr or user" );
+      }
+      return ruleList;
+    }
+    
+  }
 }
