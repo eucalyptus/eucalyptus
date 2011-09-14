@@ -260,6 +260,7 @@ public class NetworkGroups {
         if ( net == null ) {
           create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
         }
+      } catch ( ConstraintViolationException ex ) {
       } catch ( NoSuchElementException ex ) {
         create( ownerFullName, NETWORK_DEFAULT_NAME, "default group" );
       } catch ( TransactionException ex ) {
