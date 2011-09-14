@@ -34,7 +34,7 @@ public class KeyPairManager {
   
   public DescribeKeyPairsResponseType describe( DescribeKeyPairsType request ) throws Exception {
     DescribeKeyPairsResponseType reply = request.getReply( );
-    for ( SshKeyPair kp : Iterables.filter( KeyPairUtil.getUserKeyPairs( Contexts.lookup( ).getUserFullName( ) ), RestrictedTypes.filterPrivileged( ) ) ) {
+    for ( SshKeyPair kp : Iterables.filter( KeyPairs.list( Contexts.lookup( ).getUserFullName( ).asAccountFullName( ) ), RestrictedTypes.filterPrivileged( ) ) ) {
       if ( request.getKeySet( ).isEmpty( ) || request.getKeySet( ).contains( kp.getDisplayName( ) ) ) {
         reply.getKeySet( ).add( new DescribeKeyPairsResponseItemType( kp.getDisplayName( ), kp.getFingerPrint( ) ) );
       }

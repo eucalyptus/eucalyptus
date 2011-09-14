@@ -70,6 +70,7 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloud.CloudMetadata.KeyPairMetadata;
 import com.eucalyptus.cloud.UserMetadata;
@@ -149,5 +150,16 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPai
   static SshKeyPair noKey( ) {
     return new SshKeyPair( Principals.nobodyFullName( ), "nokey", "", "" );
   }
+
+  public static SshKeyPair named( OwnerFullName ownerFullName, String keyName ) {
+    return new SshKeyPair( AccountFullName.getInstance( ownerFullName.getAccountNumber( ), keyName ) );
+  }
   
+  public static SshKeyPair create( OwnerFullName ownerFullName, String keyName ) {
+    return new SshKeyPair( AccountFullName.getInstance( ownerFullName.getAccountNumber( ), keyName ) );
+  }
+
+  public static SshKeyPair withPublicKey( OwnerFullName ownerFullName, String keyValue ) {
+    return new SshKeyPair( ownerFullName, null, keyValue, null );
+  }
 }

@@ -67,6 +67,7 @@ import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.util.List;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.exception.ConstraintViolationException;
@@ -89,6 +90,14 @@ public class KeyPairs {
     return NO_KEY;
   }
   
+  public static List<SshKeyPair> list( OwnerFullName ownerFullName ) throws NoSuchMetadataException {
+    try {
+      return Transactions.findAll( SshKeyPair.named( ownerFullName, null ) );
+    } catch ( Exception e ) {
+      throw new NoSuchMetadataException( "Failed to find key pairs for " + ownerFullName, e );
+    }
+  }
+
   public static SshKeyPair lookup( OwnerFullName ownerFullName, String keyName ) throws NoSuchMetadataException {
     try {
       return Transactions.find( new SshKeyPair( ownerFullName, keyName ) );
@@ -99,7 +108,7 @@ public class KeyPairs {
   
   public static SshKeyPair fromPublicKey( OwnerFullName ownerFullName, String keyValue ) throws NoSuchMetadataException {
     try {
-      return Transactions.find( new SshKeyPair( ownerFullName, keyValue ) );
+      return Transactions.find( SshKeyPair.withPublicKey( ownerFullName, keyValue ) );
     } catch ( Exception e ) {
       throw new NoSuchMetadataException( "Failed to find key pair with public key: " + keyValue + " for " + ownerFullName, e );
     }
@@ -107,7 +116,7 @@ public class KeyPairs {
   }
   
   public static PrivateKey create( UserFullName userName, String keyName ) throws MetadataException, TransactionException {
-    SshKeyPair newKey = new SshKeyPair( userName, keyName );
+    SshKeyPair newKey = SshKeyPair.create( userName, keyName );
     KeyPair newKeys = null;
     try {
       newKeys = Certs.generateKeyPair( );
@@ -148,4 +157,5 @@ public class KeyPairs {
     String authKeyString = String.format( "%s %s %s@eucalyptus", new String( keyType ), new String( Base64.encode( authKeyBlob ) ), userName.toString( ) );
     return authKeyString;
   }
+
 }
