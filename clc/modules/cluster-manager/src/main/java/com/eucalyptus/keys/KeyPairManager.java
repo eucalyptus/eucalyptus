@@ -46,10 +46,11 @@ public class KeyPairManager {
     DeleteKeyPairResponseType reply = ( DeleteKeyPairResponseType ) request.getReply( );
     Context ctx = Contexts.lookup( );
     try {
-      SshKeyPair key = KeyPairUtil.deleteUserKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
+      SshKeyPair key = KeyPairs.lookup( ctx.getUserFullName( ).asAccountFullName( ), request.getKeyName( ) );
       if ( ! RestrictedTypes.filterPrivileged( ).apply( key ) ) {
         throw new EucalyptusCloudException( "Permission denied while trying to delete keypair " + key.getName( ) + " by " + ctx.getUser( ) );
       }
+      KeyPairs.delete( ctx.getUserFullName( ).asAccountFullName( ), request.getKeyName( ) );
       reply.set_return( true );
     } catch ( Exception e1 ) {
       LOG.error( e1 );

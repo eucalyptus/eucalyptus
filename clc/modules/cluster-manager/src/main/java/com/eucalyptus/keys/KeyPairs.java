@@ -68,17 +68,21 @@ import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.List;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.cloud.util.MetadataCreationException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.crypto.Certs;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.OwnerFullName;
 
 public class KeyPairs {
@@ -105,7 +109,20 @@ public class KeyPairs {
       throw new NoSuchMetadataException( "Failed to find key pair: " + keyName + " for " + ownerFullName, e );
     }
   }
-  
+
+  public static void delete( OwnerFullName ownerFullName, String keyName ) throws NoSuchMetadataException {
+    EntityTransaction db = Entities.get( SshKeyPair.class );
+    try {
+      SshKeyPair entity = Entities.uniqueResult( SshKeyPair.named( ownerFullName, keyName ) );
+      Entities.delete( entity );
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new NoSuchMetadataException( "Failed to find key pair: " + keyName + " for " + ownerFullName, ex );
+    }
+  }
+
   public static SshKeyPair fromPublicKey( OwnerFullName ownerFullName, String keyValue ) throws NoSuchMetadataException {
     try {
       return Transactions.find( SshKeyPair.withPublicKey( ownerFullName, keyValue ) );
