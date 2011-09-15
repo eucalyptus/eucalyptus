@@ -87,8 +87,7 @@ public class Properties {
       ConfigurableField annote = ( ConfigurableField ) f.getAnnotation( ConfigurableField.class );
       String description = annote.description( );
       String defaultValue = annote.initial( );
-      String fq = classAnnote.root( ) + "." + f.getName( ).toLowerCase( );
-      return fq.replaceAll( "\\..*", "" ) + f.getName( ).toLowerCase( );
+      return classAnnote.root( ) + "." + f.getName( ).toLowerCase( );
     } else {
       throw new NoSuchElementException( Ats.from( f ).toString( ) );
     }
