@@ -781,7 +781,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     final Map<String, String> m = new HashMap<String, String>( );
     //ASAP: FIXME: GRZE:
-//    m.put( "ami-id", this.getImageInfo( ).getImageId( ) );
+     m.put( "ami-id", this.getImageId( ) );
 //    m.put( "product-codes", this.getImageInfo( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
     m.put( "ami-launch-index", "" + this.launchRecord.getLaunchIndex( ) );
 //    m.put( "ancestor-ami-ids", this.getImageInfo( ).getAncestorIds( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
