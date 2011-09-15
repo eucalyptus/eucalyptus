@@ -460,4 +460,12 @@ public class NetworkGroups {
     }
     
   }
+
+  static List<NetworkRule> ipPermissionsAsNetworkRules( final List<IpPermissionType> ipPermissions ) {
+    final List<NetworkRule> ruleList = Lists.newArrayList( );
+    for ( final IpPermissionType ipPerm : ipPermissions ) {
+      ruleList.addAll( IpPermissionTypeAsNetworkRule.INSTANCE.apply( ipPerm ) );
+    }
+    return ruleList;
+  }
 }

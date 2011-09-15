@@ -1,5 +1,6 @@
 package com.eucalyptus.network;
 
+import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
@@ -56,7 +57,7 @@ public class NetworkGroupManager {
   public DeleteSecurityGroupResponseType delete( final DeleteSecurityGroupType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
     final DeleteSecurityGroupResponseType reply = ( DeleteSecurityGroupResponseType ) request.getReply( );
-    if ( ! RestrictedTypes.filterPrivileged( ).apply( NetworkGroups.lookup( request.getGroupName( ) ) ) ) {
+    if ( !RestrictedTypes.filterPrivileged( ).apply( NetworkGroups.lookup( request.getGroupName( ) ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to delete network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
     }
     NetworkGroups.delete( ctx.getUserFullName( ), request.getGroupName( ) );
@@ -86,15 +87,15 @@ public class NetworkGroupManager {
     
     final EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
-      List<NetworkGroup> networks = Entities.query( NetworkGroup.named( ownerFn, null) );      
-      final Iterable<NetworkGroup> matches = Iterables.filter( networks , netFilter );
+      List<NetworkGroup> networks = Entities.query( NetworkGroup.named( ownerFn, null ) );
+      final Iterable<NetworkGroup> matches = Iterables.filter( networks, netFilter );
       final Iterable<SecurityGroupItemType> transformed = Iterables.transform( matches, TypeMappers.lookup( NetworkGroup.class, SecurityGroupItemType.class ) );
       Iterables.addAll( reply.getSecurityGroupInfo( ), transformed );
       db.commit( );
     } catch ( Exception ex ) {
       db.rollback( );
     }
-  
+    
     return reply;
   }
   
@@ -102,15 +103,13 @@ public class NetworkGroupManager {
     final Context ctx = Contexts.lookup( );
     final RevokeSecurityGroupIngressResponseType reply = ( RevokeSecurityGroupIngressResponseType ) request.getReply( );
     NetworkGroup ruleGroup = NetworkGroups.lookup( ctx.getUserFullName( ), request.getGroupName( ) );
-    if ( !ctx.hasAdministrativePrivileges( )
-         && !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
+    if ( !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
       throw new EucalyptusCloudException( "Not authorized to revoke network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
     }
-    final List<NetworkRule> ruleList = Lists.newArrayList( );
-    for ( final IpPermissionType ipPerm : request.getIpPermissions( ) ) {
-      ruleList.addAll( NetworkGroups.IpPermissionTypeAsNetworkRule.INSTANCE.apply( ipPerm ) );
-    }
-    final List<NetworkRule> filtered = Lists.newArrayList( Iterables.filter( ruleGroup.getNetworkRules( ), new Predicate<NetworkRule>( ) {
+
+    final List<IpPermissionType> ipPermissions = request.getIpPermissions( );
+    final List<NetworkRule> ruleList = NetworkGroups.ipPermissionsAsNetworkRules( ipPermissions );
+    final Predicate<NetworkRule> filterContainsRule = new Predicate<NetworkRule>( ) {
       @Override
       public boolean apply( final NetworkRule rule ) {
         for ( final NetworkRule r : ruleList ) {
@@ -120,7 +119,9 @@ public class NetworkGroupManager {
         }
         return false;
       }
-    } ) );
+    };
+    
+    final List<NetworkRule> filtered = Lists.newArrayList( Iterables.filter( ruleGroup.getNetworkRules( ),  ) );
     if ( filtered.size( ) == ruleList.size( ) ) {
       try {
         for ( final NetworkRule r : filtered ) {
@@ -132,7 +133,7 @@ public class NetworkGroupManager {
         throw new EucalyptusCloudException( "RevokeSecurityGroupIngress failed because: " + ex.getMessage( ), ex );
       }
       return reply;
-    } else if ( ( request.getIpPermissions( ).size( ) == 1 ) && ( request.getIpPermissions( ).get( 0 ).getIpProtocol( ) == null ) ) {
+    } else if ( ( ipPermissions.size( ) == 1 ) && ( ipPermissions.get( 0 ).getIpProtocol( ) == null ) ) {
       //LAME: this is for the query-based clients which send incomplete named-network requests.
       for ( final NetworkRule rule : ruleList ) {
         if ( ruleGroup.getNetworkRules( ).remove( rule ) ) {
