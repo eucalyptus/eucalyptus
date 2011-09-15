@@ -117,6 +117,8 @@ import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.Emis;
+import com.eucalyptus.images.MachineImageInfo;
+import com.eucalyptus.images.PutGetImageInfo;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
@@ -483,6 +485,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           final EntityTransaction db = Entities.get( VmInstance.class );
           try {
             vm.cleanUp( );
+            vm.setState( VmState.BURIED );
             Entities.delete( vm );
             db.commit( );
             return vm;
@@ -780,13 +783,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private Map<String, String> getMetadataMap( ) {
     final boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     final Map<String, String> m = new HashMap<String, String>( );
-    //ASAP: FIXME: GRZE:
      m.put( "ami-id", this.getImageId( ) );
-//    m.put( "product-codes", this.getImageInfo( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
+    m.put( "product-codes", this.bootRecord.getMachine( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
     m.put( "ami-launch-index", "" + this.launchRecord.getLaunchIndex( ) );
+//ASAP: FIXME: GRZE:
 //    m.put( "ancestor-ami-ids", this.getImageInfo( ).getAncestorIds( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
-    
-//    m.put( "ami-manifest-path", this.getImageInfo( ).getImageLocation( ) );
+    if( this.bootRecord.getMachine( ) instanceof MachineImageInfo ) {
+      m.put( "ami-manifest-path", ( ( MachineImageInfo ) this.bootRecord.getMachine( ) ).getManifestLocation( ) );
+    }
     m.put( "hostname", this.getPublicAddress( ) );
     m.put( "instance-id", this.getInstanceId( ) );
     m.put( "instance-type", this.getVmType( ).getName( ) );

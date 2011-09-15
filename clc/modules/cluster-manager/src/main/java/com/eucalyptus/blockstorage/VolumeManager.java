@@ -71,6 +71,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
@@ -84,6 +85,7 @@ import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.EventClass;
@@ -142,7 +144,7 @@ public class VolumeManager {
     
     if ( snapId != null ) {
       try {
-        Snapshots.lookup( snapId );
+        Transactions.find( Snapshot.named( null, snapId ) );
       } catch ( ExecutionException ex ) {
         throw new EucalyptusCloudException( "Failed to create volume because the referenced snapshot id is invalid: " + snapId );
       }
@@ -239,7 +241,7 @@ public class VolumeManager {
         } );
       }
       
-      List<Volume> volumes = db.query( Volume.ownedBy( ctx.getUserFullName( ) ) );
+      List<Volume> volumes = db.query( Volume.named( AccountFullName.getInstance( ctx.getAccount( ) ), null ) );
       List<Volume> describeVolumes = Lists.newArrayList( );
       for ( Volume v : Iterables.filter( volumes, RestrictedTypes.filterPrivileged( ) ) ) {
         if ( !State.ANNIHILATED.equals( v.getState( ) ) ) {

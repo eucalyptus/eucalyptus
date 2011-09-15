@@ -108,6 +108,16 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     super.setState( State.NIHIL );
   }
   
+
+  /**
+   * @param accountFullName
+   * @param snapshotId
+   * @return
+   */
+  public static Snapshot named( final OwnerFullName ownerFullName, String snapshotId ) {
+    return new Snapshot( ownerFullName, snapshotId );
+  }
+
   public String mapState( ) {
     switch ( this.getState( ) ) {
       case GENERATING:

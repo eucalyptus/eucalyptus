@@ -18,6 +18,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionExecutionException;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -52,7 +53,7 @@ public class Images {
       return ( long ) i;
     }
   }
-
+  
   private static String generateImageId( final String imagePrefix, final String imageLocation ) {
     Adler32 hash = new Adler32( );
     String key = imageLocation + System.currentTimeMillis( );
@@ -226,7 +227,7 @@ public class Images {
           Snapshot snap;
           Integer size;
           try {
-            snap = Snapshots.lookup( ebsInfo.getSnapshotId( ) );
+            snap = Transactions.find( Snapshot.named( null, ebsInfo.getSnapshotId( ) ) );
             size = snap.getVolumeSize( );
             if ( ebsInfo.getVolumeSize( ) != null && ebsInfo.getVolumeSize( ) >= snap.getVolumeSize( ) ) {
               size = ebsInfo.getVolumeSize( );
@@ -376,7 +377,7 @@ public class Images {
     BlockDeviceMappingItemType rootBlockDevice = Iterables.find( blockDeviceMappings, findEbsRoot( rootDeviceName ) );
     String snapshotId = rootBlockDevice.getEbs( ).getSnapshotId( );
     try {
-      Snapshot snap = Snapshots.lookup( userFullName, snapshotId );
+      Snapshot snap = Transactions.find( Snapshot.named( userFullName, snapshotId ) );
       if ( !userFullName.getUserId( ).equals( snap.getOwnerUserId( ) ) ) {
         throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice
                                             + " because of: you must the owner of the source snapshot." );

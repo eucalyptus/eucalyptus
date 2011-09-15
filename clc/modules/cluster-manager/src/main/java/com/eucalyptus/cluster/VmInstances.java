@@ -348,15 +348,19 @@ public class VmInstances {
   
   public static VmInstance delete( final VmInstance vm ) throws TransactionException {
     try {
-      if ( VmStateSet.DONE.apply( vm ) ) {
+      if ( VmState.BURIED.apply( vm ) ) {
+        terminateCache.remove( vm.getDisplayName( ) );
+        terminateDescribeCache.remove( vm.getDisplayName( ) );
+      } else if ( VmStateSet.DONE.apply( vm ) ) {
         RunningInstancesItemType ret = VmInstances.transform( vm );
         terminateCache.put( vm.getDisplayName( ), vm );
         terminateDescribeCache.put( vm.getDisplayName( ), ret );
+        return VmInstance.Transitions.DELETE.apply( vm );
       }
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
     }
-    return VmInstance.Transitions.DELETE.apply( vm );
+    return vm;
   }
   
   public static VmInstance terminate( final VmInstance vm ) throws TransactionException {
