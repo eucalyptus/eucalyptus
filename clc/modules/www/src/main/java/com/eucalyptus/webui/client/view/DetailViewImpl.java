@@ -436,7 +436,10 @@ public class DetailViewImpl extends Composite implements DetailView {
   }
   
   private void closeSelf( ) {
+    // Ask ShellView to close me
     this.controller.hideDetail( );
+    // Tell the content view to clear selection
+    this.presenter.onHide( );
   }
   
   private void clearRows( ) {
