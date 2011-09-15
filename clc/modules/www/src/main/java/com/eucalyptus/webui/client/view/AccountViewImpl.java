@@ -37,7 +37,7 @@ public class AccountViewImpl extends Composite implements AccountView {
   @UiField
   Anchor delButton;
   
-  final MultiSelectionModel<SearchResultRow> selectionModel = new MultiSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );
+  private MultiSelectionModel<SearchResultRow> selectionModel;
   
   private SearchResultTable table;
   
@@ -84,7 +84,7 @@ public class AccountViewImpl extends Composite implements AccountView {
 
   public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs ) {
     tablePanel.clear( );
-    
+    selectionModel = new MultiSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );
     selectionModel.addSelectionChangeHandler( new Handler( ) {
       @Override
       public void onSelectionChange( SelectionChangeEvent event ) {
