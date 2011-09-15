@@ -27,7 +27,7 @@ public class ConfigViewImpl extends Composite implements ConfigView {
   @UiField
   LayoutPanel tablePanel;
   
-  final SingleSelectionModel<SearchResultRow> selectionModel = new SingleSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );
+  private SingleSelectionModel<SearchResultRow> selectionModel;
   
   private SearchResultTable table;
   
@@ -39,7 +39,7 @@ public class ConfigViewImpl extends Composite implements ConfigView {
   
   public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs ) {
     tablePanel.clear( );
-    
+    selectionModel = new SingleSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );
     selectionModel.addSelectionChangeHandler( new Handler( ) {
       @Override
       public void onSelectionChange( SelectionChangeEvent event ) {
