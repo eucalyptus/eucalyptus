@@ -76,7 +76,7 @@ public class Properties {
   
   public static ConfigurableProperty lookup( Class<?> declaringClass, String fieldName ) throws IllegalAccessException, NoSuchFieldException {
     Field f = Fields.get( declaringClass, fieldName );
-    return lookup( Properties.propertyName( f ) );
+    return lookup( propertyName( f ) );
     
   }
   
@@ -88,7 +88,7 @@ public class Properties {
       String description = annote.description( );
       String defaultValue = annote.initial( );
       String fq = classAnnote.root( ) + "." + f.getName( ).toLowerCase( );
-      return fq.replaceAll( "\\..*", "" );
+      return fq.replaceAll( "\\..*", "" ) + f.getName( ).toLowerCase( );
     } else {
       throw new NoSuchElementException( Ats.from( f ).toString( ) );
     }
