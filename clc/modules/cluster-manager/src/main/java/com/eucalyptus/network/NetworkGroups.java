@@ -196,8 +196,8 @@ public class NetworkGroups {
     try {
       Properties.lookup( NetworkGroups.class, "GLOBAL_MAX_NETWORK_INDEX" ).setValue( netConfig.getMaxNetworkIndex( ).toString( ) );
       Properties.lookup( NetworkGroups.class, "GLOBAL_MIN_NETWORK_INDEX" ).setValue( netConfig.getMinNetworkIndex( ).toString( ) );
-      Properties.lookup( NetworkGroups.class, "GLOBAL_MAX_NETWORK_TAG " ).setValue( netConfig.getMaxNetworkTag( ).toString( ) );
-      Properties.lookup( NetworkGroups.class, "GLOBAL_MIN_NETWORK_TAG " ).setValue( netConfig.getMinNetworkTag( ).toString( ) );
+      Properties.lookup( NetworkGroups.class, "GLOBAL_MAX_NETWORK_TAG" ).setValue( netConfig.getMaxNetworkTag( ).toString( ) );
+      Properties.lookup( NetworkGroups.class, "GLOBAL_MIN_NETWORK_TAG" ).setValue( netConfig.getMinNetworkTag( ).toString( ) );
     } catch ( IllegalAccessException ex ) {
       LOG.error( ex , ex );
     } catch ( NoSuchFieldException ex ) {
