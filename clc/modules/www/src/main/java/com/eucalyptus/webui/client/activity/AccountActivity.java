@@ -67,6 +67,7 @@ public class AccountActivity extends AbstractSearchActivity
     
   public AccountActivity( AccountPlace place, ClientFactory clientFactory ) {
     super( place, clientFactory );
+    this.selectionControl = clientFactory.getAccountView( );
   }
 
   protected void doSearch( final String search, SearchRange range ) {    
@@ -596,5 +597,5 @@ public class AccountActivity extends AbstractSearchActivity
       
     } );
   }
-  
+
 }

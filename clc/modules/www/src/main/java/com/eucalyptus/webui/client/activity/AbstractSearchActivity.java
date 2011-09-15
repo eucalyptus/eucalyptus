@@ -16,6 +16,7 @@ import com.eucalyptus.webui.client.view.ErrorSinkView;
 import com.eucalyptus.webui.client.view.KnowsPageSize;
 import com.eucalyptus.webui.client.view.LoadingAnimationView;
 import com.eucalyptus.webui.client.view.SearchRangeChangeHandler;
+import com.eucalyptus.webui.client.view.SelectionController;
 import com.google.gwt.activity.shared.AbstractActivity;
 import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.http.client.URL;
@@ -45,6 +46,7 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
   
   protected AcceptsOneWidget container;
   protected IsWidget view;
+  protected SelectionController selectionControl = null;
     
   public AbstractSearchActivity( SearchPlace place, ClientFactory clientFactory ) {
     this.place = place;
@@ -135,6 +137,12 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
  
   public void onAction( String key ) {
     //Nothing to do.
+  }
+  
+  public void onHide( ) {
+    if ( selectionControl != null ) {
+      selectionControl.clearSelection( );
+    }
   }
   
   public void cancel( String subject ) {
