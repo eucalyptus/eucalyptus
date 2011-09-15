@@ -70,6 +70,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Fields;
 
 public class StaticPropertyEntry extends AbstractConfigurableProperty {
   static Logger LOG = Logger.getLogger( StaticPropertyEntry.class );
@@ -97,7 +98,10 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
   public String getValue( ) {
     if ( Bootstrap.isFinished( ) ) {
       try {
-        String dbValue = StaticDatabasePropertyEntry.lookup( this.getFieldCanonicalName( ), this.getQualifiedName( ), this.safeGetFieldValue( ) ).getValue( );
+        String dbValue = StaticDatabasePropertyEntry.lookup( Fields.canonicalName( this.getField( ) ),
+                                                             this.getQualifiedName( ),
+                                                             this.safeGetFieldValue( )
+                                                             ).getValue( );
         Object o = super.getTypeParser( ).apply( dbValue );
         this.field.set( null, o );
         return dbValue;
@@ -144,7 +148,6 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
       return super.getDefaultValue( );
     }
   }
-
   
   /**
    * @see java.lang.Comparable#compareTo(java.lang.Object)
@@ -157,7 +160,7 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
         ? 0
         : -1 );
   }
-
+  
   public static class StaticPropertyBuilder implements ConfigurablePropertyBuilder {
     private static String qualifiedName( Class c, Field f ) {
       ConfigurableClass annote = ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class );
@@ -200,7 +203,7 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
       return null;
     }
   }
-
+  
   /**
    * @see com.eucalyptus.configurable.AbstractConfigurableProperty#getQueryObject()
    */

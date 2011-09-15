@@ -79,12 +79,16 @@ import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.Properties;
+import com.eucalyptus.configurable.StaticDatabasePropertyEntry;
+import com.eucalyptus.configurable.StaticPropertyEntry;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.PersistenceExceptions;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Fields;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
@@ -104,9 +108,9 @@ public class NetworkGroups {
   private static String       NETWORK_DEFAULT_NAME      = "default";
   
   @ConfigurableField( initial = "4096", description = "Default max network index." )
-  public static Long          DEFAULT_MAX_NETWORK_INDEX = 4096l;
+  public static Long          GLOBAL_MAX_NETWORK_INDEX = 4096l;
   @ConfigurableField( initial = "1", description = "Default min network index." )
-  public static Long          DEFAULT_MIN_NETWORK_INDEX = 2l;
+  public static Long          GLOBAL_MIN_NETWORK_INDEX = 2l;
   @ConfigurableField( initial = "" + 4096, description = "Default max vlan tag." )
   public static Integer       GLOBAL_MAX_NETWORK_TAG    = 4096;
   @ConfigurableField( initial = "1", description = "Default min vlan tag." )
@@ -116,8 +120,8 @@ public class NetworkGroups {
     private Boolean useNetworkTags  = Boolean.TRUE;
     private Integer minNetworkTag   = GLOBAL_MIN_NETWORK_TAG;
     private Integer maxNetworkTag   = GLOBAL_MAX_NETWORK_TAG;
-    private Long    minNetworkIndex = DEFAULT_MIN_NETWORK_INDEX;
-    private Long    maxNetworkIndex = DEFAULT_MAX_NETWORK_INDEX;
+    private Long    minNetworkIndex = GLOBAL_MIN_NETWORK_INDEX;
+    private Long    maxNetworkIndex = GLOBAL_MAX_NETWORK_INDEX;
     
     public Boolean hasNetworking( ) {
       return this.useNetworkTags;
@@ -136,6 +140,7 @@ public class NetworkGroups {
     }
     
     public void setMinNetworkTag( final Integer minNetworkTag ) {
+      
       this.minNetworkTag = minNetworkTag;
     }
     
@@ -188,6 +193,16 @@ public class NetworkGroups {
     } catch ( final TransactionException ex ) {
       Logs.extreme( ).error( ex, ex );
     }
+    try {
+      Properties.lookup( NetworkGroups.class, "GLOBAL_MAX_NETWORK_INDEX" ).setValue( netConfig.getMaxNetworkIndex( ).toString( ) );
+      Properties.lookup( NetworkGroups.class, "GLOBAL_MIN_NETWORK_INDEX" ).setValue( netConfig.getMinNetworkIndex( ).toString( ) );
+      Properties.lookup( NetworkGroups.class, "GLOBAL_MAX_NETWORK_TAG " ).setValue( netConfig.getMaxNetworkTag( ).toString( ) );
+      Properties.lookup( NetworkGroups.class, "GLOBAL_MIN_NETWORK_TAG " ).setValue( netConfig.getMinNetworkTag( ).toString( ) );
+    } catch ( IllegalAccessException ex ) {
+      LOG.error( ex , ex );
+    } catch ( NoSuchFieldException ex ) {
+      LOG.error( ex , ex );
+    }    
   }
   
   public static List<Long> networkIndexInterval( ) {
