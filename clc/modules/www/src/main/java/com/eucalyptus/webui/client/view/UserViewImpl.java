@@ -30,6 +30,8 @@ public class UserViewImpl extends Composite implements UserView {
   @UiField
   LayoutPanel tablePanel;
   
+  final MultiSelectionModel<SearchResultRow> selectionModel = new MultiSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );
+  
   private SearchResultTable table;
   
   private Presenter presenter;
@@ -80,7 +82,7 @@ public class UserViewImpl extends Composite implements UserView {
 
   public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs ) {
     tablePanel.clear( );
-    final MultiSelectionModel<SearchResultRow> selectionModel = new MultiSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );
+    
     selectionModel.addSelectionChangeHandler( new Handler( ) {
       @Override
       public void onSelectionChange( SelectionChangeEvent event ) {
@@ -111,6 +113,11 @@ public class UserViewImpl extends Composite implements UserView {
   @Override
   public void setPresenter( Presenter presenter ) {
     this.presenter = presenter;
+  }
+
+  @Override
+  public void clearSelection( ) {
+    this.selectionModel.clear( );
   }
   
 }

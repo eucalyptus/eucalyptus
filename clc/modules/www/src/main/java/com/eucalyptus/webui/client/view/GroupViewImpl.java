@@ -30,6 +30,8 @@ public class GroupViewImpl extends Composite implements GroupView {
   @UiField
   LayoutPanel tablePanel;
   
+  final MultiSelectionModel<SearchResultRow> selectionModel = new MultiSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );
+  
   private SearchResultTable table;
   
   private Presenter presenter;
@@ -60,7 +62,7 @@ public class GroupViewImpl extends Composite implements GroupView {
 
   public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs ) {
     tablePanel.clear( );
-    final MultiSelectionModel<SearchResultRow> selectionModel = new MultiSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );
+    
     selectionModel.addSelectionChangeHandler( new Handler( ) {
       @Override
       public void onSelectionChange( SelectionChangeEvent event ) {
@@ -91,6 +93,11 @@ public class GroupViewImpl extends Composite implements GroupView {
   @Override
   public void setPresenter( Presenter presenter ) {
     this.presenter = presenter;
+  }
+
+  @Override
+  public void clearSelection( ) {
+    this.selectionModel.clear( );
   }
   
 }
