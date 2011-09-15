@@ -596,5 +596,5 @@ public class AccountActivity extends AbstractSearchActivity
       
     } );
   }
-  
+
 }

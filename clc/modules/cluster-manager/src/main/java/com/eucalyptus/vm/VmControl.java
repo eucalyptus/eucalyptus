@@ -187,7 +187,7 @@ public class VmControl {
           if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) {
             continue;
           }
-          if ( rsvMap.get( v.getReservationId( ) ) == null ) {
+          if ( !rsvMap.containsKey( v.getReservationId( ) ) ) {
             final ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getNamespace( ), v.getNetworkNames( ) );
             rsvMap.put( reservation.getReservationId( ), reservation );
           }
@@ -197,9 +197,13 @@ public class VmControl {
           Logs.exhaust( ).error( ex, ex );
           db.rollback( );
           try {
-            if ( vm != null ) {
+            if ( vm != null && !VmState.BURIED.apply( vm ) ) {
               RunningInstancesItemType ret = VmInstances.transform( vm );
               if ( ret != null && vm.getReservationId( ) != null ) {
+                if ( !rsvMap.containsKey( vm.getReservationId( ) ) ) {
+                  final ReservationInfoType reservation = new ReservationInfoType( vm.getReservationId( ), vm.getOwner( ).getNamespace( ), vm.getNetworkNames( ) );
+                  rsvMap.put( reservation.getReservationId( ), reservation );
+                }
                 rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( ret );
               }
             }

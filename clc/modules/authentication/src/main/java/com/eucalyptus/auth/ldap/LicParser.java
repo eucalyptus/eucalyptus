@@ -10,8 +10,8 @@ import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.LicParseException;
 import com.eucalyptus.auth.json.JsonUtils;
 import com.eucalyptus.auth.lic.LicSpec;
+import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
-import com.google.gwt.thirdparty.guava.common.base.Strings;
 
 /**
  * Parser of ldap integration configuration (LIC). LIC is in JSON format.
