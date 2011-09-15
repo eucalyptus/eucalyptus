@@ -177,12 +177,16 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *i
   char *newInstName;
   FILE *FH;
 
-  if (!keyName || !strlen(keyName) || !strlen(instName)) {
-    return(0);
-  }
-  
   if (!euca_home || !rundir_path || !strlen(euca_home) || !strlen(rundir_path)) {
     return(1);
+  }
+
+  snprintf(source_path, 1024, "%s/usr/share/eucalyptus/floppy", euca_home);
+  snprintf(dest_path, 1024, "%s/floppy", rundir_path);
+  if (!keyName || !strlen(keyName) || !strlen(instName)) {
+    char cmd[MAX_PATH];
+    snprintf(cmd, MAX_PATH, "cp -a %s %s", source_path, dest_path);
+    return(system(cmd));
   }
 
   bzero(password, sizeof(char)*16);
@@ -192,8 +196,8 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *i
     while(c[0] == '0' || c[0] == 'O') snprintf(c, 2, "%c", RANDALPHANUM);
     strcat(password, c);
   }
-  snprintf(source_path, 1024, "%s/usr/share/eucalyptus/floppy", euca_home);
-  snprintf(dest_path, 1024, "%s/floppy", rundir_path);
+  //  snprintf(source_path, 1024, "%s/usr/share/eucalyptus/floppy", euca_home);
+  //  snprintf(dest_path, 1024, "%s/floppy", rundir_path);
 
   buf = malloc(1024 * 2048);
   if (!buf) {

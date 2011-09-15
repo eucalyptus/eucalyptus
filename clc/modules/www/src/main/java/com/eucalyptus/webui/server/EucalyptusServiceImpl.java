@@ -132,10 +132,10 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     }
     SearchResult result = new SearchResult( );
     result.setDescs( ConfigurationWebBackend.COMMON_FIELD_DESCS );
-    result.addRow( ConfigurationWebBackend.getCloudConfiguration( ) );
+    result.addRows( ConfigurationWebBackend.getCloudConfigurations( ) );
     result.addRows( ConfigurationWebBackend.getClusterConfigurations( ) );
-    result.addRows( ConfigurationWebBackend.getStorageConfiguration( ) );
-    result.addRows( ConfigurationWebBackend.getWalrusConfiguration( ) );
+    result.addRows( ConfigurationWebBackend.getStorageConfigurations( ) );
+    result.addRows( ConfigurationWebBackend.getWalrusConfigurations( ) );
     result.setTotalSize( result.length( ) );
     result.setRange( range );
     return result;
@@ -559,6 +559,12 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
   public ArrayList<GuideItem> getGuide( Session session, String snippet ) throws EucalyptusServiceException {
     User user = verifySession( session );
     return StartGuideWebBackend.getGuide( user, snippet );
+  }
+
+  @Override
+  public String getUserToken( Session session ) throws EucalyptusServiceException {
+    User user = verifySession( session ); // request user
+    return EuareWebBackend.getUserToken( user );
   }
     
 }

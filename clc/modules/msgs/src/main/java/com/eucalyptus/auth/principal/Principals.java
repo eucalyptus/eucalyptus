@@ -413,7 +413,7 @@ public class Principals {
                                                 public void setToken( String token ) throws AuthException {}
                                                 
                                                 @Override
-                                                public void createToken( ) throws AuthException {}
+                                                public String resetToken( ) throws AuthException { return null; }
                                                 
                                                 @Override
                                                 public void setConfirmationCode( String code ) throws AuthException {}
@@ -648,7 +648,7 @@ public class Principals {
                                                 public void setToken( String token ) throws AuthException {}
                                                 
                                                 @Override
-                                                public void createToken( ) throws AuthException {}
+                                                public String resetToken( ) throws AuthException { return null; }
                                                 
                                                 @Override
                                                 public void setConfirmationCode( String code ) throws AuthException {}
