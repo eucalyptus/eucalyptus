@@ -46,7 +46,6 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
   
   protected AcceptsOneWidget container;
   protected IsWidget view;
-  protected SelectionController selectionControl = null;
     
   public AbstractSearchActivity( SearchPlace place, ClientFactory clientFactory ) {
     this.place = place;
@@ -135,13 +134,15 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
     this.clientFactory.getShellView( ).getDetailView( ).showData( descs, selected.getRow( ) );          
   }
  
+  @Override
   public void onAction( String key ) {
     //Nothing to do.
   }
   
+  @Override
   public void onHide( ) {
-    if ( selectionControl != null ) {
-      selectionControl.clearSelection( );
+    if ( this.view != null && this.view instanceof SelectionController ) {
+      ( ( SelectionController )this.view ).clearSelection( );
     }
   }
   
