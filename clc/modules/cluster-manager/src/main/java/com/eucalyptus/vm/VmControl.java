@@ -208,7 +208,7 @@ public class VmControl {
               }
             }
           } catch ( Exception ex1 ) {
-            LOG.error( ex1 , ex1 );
+            LOG.error( ex1, ex1 );
           }
         }
       }
@@ -537,11 +537,11 @@ public class VmControl {
     final Context ctx = Contexts.lookup( );
     final User user = ctx.getUser( );
     
+    EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance v = VmInstances.lookup( instanceId );
       if ( v.isBundling( ) ) {
         reply.setTask( v.getBundleTask( ) );
-        return reply;
       } else if ( !"windows".equals( v.getPlatform( ) ) ) {
         throw new EucalyptusCloudException( "Failed to bundle requested vm because the platform is not 'windows': " + request.getInstanceId( ) );
       } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
@@ -559,22 +559,29 @@ public class VmControl {
         } else {
           throw new EucalyptusCloudException( "Instance is already being bundled: " + v.getBundleTask( ).getBundleId( ) );
         }
-        LOG.info( EventRecord
-                             .here( BundleCallback.class, EventType.BUNDLE_PENDING, ctx.getUserFullName( ).toString( ), v.getBundleTask( ).getBundleId( ),
-                                    v.getInstanceId( ) ) );
+        EventRecord.here( BundleCallback.class, 
+                          EventType.BUNDLE_PENDING, 
+                          ctx.getUserFullName( ).toString( ), 
+                          v.getBundleTask( ).getBundleId( ),
+                          v.getInstanceId( ) ).debug( );
         final BundleCallback callback = new BundleCallback( request );
         request.setUrl( walrusUrl );
         request.setAwsAccessKeyId( Accounts.getFirstActiveAccessKeyId( user ) );
         AsyncRequests.newRequest( callback ).dispatch( v.lookupClusterConfiguration( ) );
-        return reply;
       } else {
         throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
       }
-    } catch ( EucalyptusCloudException e ) {
-      throw e;
-    } catch ( final Exception e ) {
-      throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
+    } catch ( EucalyptusCloudException ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw ex;
+    } catch ( final Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ), ex );
     }
+    return reply;
+    
   }
   
   public void getPasswordData( final GetPasswordDataType request ) throws Exception {
