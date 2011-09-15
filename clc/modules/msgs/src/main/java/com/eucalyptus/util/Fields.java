@@ -66,6 +66,7 @@ package com.eucalyptus.util;
 import java.lang.reflect.Field;
 
 public class Fields {
+  
   public static String canonicalName( Field f ) {
     return f.getDeclaringClass( ).getCanonicalName( ) + "." + f.getName( );
   }

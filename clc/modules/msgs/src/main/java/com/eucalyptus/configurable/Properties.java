@@ -64,6 +64,10 @@
 package com.eucalyptus.configurable;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.NoSuchElementException;
+import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
+import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Fields;
 
 public class Properties {
@@ -77,8 +81,19 @@ public class Properties {
     return lookup( Properties.propertyName( f ) );
     
   }
-
+  
   public static String propertyName( Field f ) {
-    return Fields.canonicalName( f ).toLowerCase( );
+    Class c = f.getDeclaringClass( );
+    if ( c.isAnnotationPresent( ConfigurableClass.class ) && f.isAnnotationPresent( ConfigurableField.class ) ) {
+      ConfigurableClass classAnnote = ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class );
+      ConfigurableField annote = ( ConfigurableField ) f.getAnnotation( ConfigurableField.class );
+      String description = annote.description( );
+      String defaultValue = annote.initial( );
+      String fq = classAnnote.root( ) + "." + f.getName( ).toLowerCase( );
+      return fq.replaceAll( "\\..*", "" );
+    } else {
+      throw new NoSuchElementException( Ats.from( f ).toString( ) );
+    }
   }
+  
 }
