@@ -84,9 +84,6 @@ public class Properties {
     Class c = f.getDeclaringClass( );
     if ( c.isAnnotationPresent( ConfigurableClass.class ) && f.isAnnotationPresent( ConfigurableField.class ) ) {
       ConfigurableClass classAnnote = ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class );
-      ConfigurableField annote = ( ConfigurableField ) f.getAnnotation( ConfigurableField.class );
-      String description = annote.description( );
-      String defaultValue = annote.initial( );
       return classAnnote.root( ) + "." + f.getName( ).toLowerCase( );
     } else {
       throw new NoSuchElementException( Ats.from( f ).toString( ) );
