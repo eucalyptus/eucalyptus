@@ -1,5 +1,6 @@
 package com.eucalyptus.scripting;
 
+import groovy.lang.ExpandoMetaClass;
 import groovy.lang.ExpandoMetaClassCreationHandle;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyObject;
@@ -25,7 +26,15 @@ public class Groovyness {
   private static Logger      LOG          = Logger.getLogger( Groovyness.class );
   public static ScriptEngine groovyEngine = getGroovyEngine( );
   
+  public static <T extends GroovyObject> T expandoMetaClass( T obj ) {
+    ExpandoMetaClass emc = new ExpandoMetaClass( obj.getClass( ), false );
+    emc.initialize();
+    obj.setMetaClass( emc );
+    return obj;
+  }
+  
   private static GroovyClassLoader getGroovyClassLoader( ) {
+    GroovySystem.getMetaClassRegistry( ).setMetaClassCreationHandle( new ExpandoMetaClassCreationHandle( ) );
     CompilerConfiguration config = new CompilerConfiguration( );
     config.setDebug( true );
     config.setVerbose( true );

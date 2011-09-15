@@ -3,14 +3,7 @@ package com.eucalyptus.network;
 import java.util.List;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -66,7 +59,7 @@ public class NetworkGroupManager {
     if ( ! RestrictedTypes.filterPrivileged( ).apply( NetworkGroups.lookup( request.getGroupName( ) ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to delete network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
     }
-    NetworkGroupUtil.deleteUserNetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ) );
+    NetworkGroups.delete( ctx.getUserFullName( ), request.getGroupName( ) );
     reply.set_return( true );
     return reply;
   }
@@ -108,14 +101,14 @@ public class NetworkGroupManager {
   public RevokeSecurityGroupIngressResponseType revoke( final RevokeSecurityGroupIngressType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
     final RevokeSecurityGroupIngressResponseType reply = ( RevokeSecurityGroupIngressResponseType ) request.getReply( );
-    NetworkGroup ruleGroup = NetworkGroupUtil.getUserNetworkRulesGroup( ctx.getUserFullName( ), request.getGroupName( ) );
+    NetworkGroup ruleGroup = NetworkGroups.lookup( ctx.getUserFullName( ), request.getGroupName( ) );
     if ( !ctx.hasAdministrativePrivileges( )
          && !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
       throw new EucalyptusCloudException( "Not authorized to revoke network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
     }
     final List<NetworkRule> ruleList = Lists.newArrayList( );
     for ( final IpPermissionType ipPerm : request.getIpPermissions( ) ) {
-      ruleList.addAll( NetworkGroupUtil.getNetworkRules( ipPerm ) );
+      ruleList.addAll( NetworkGroups.IpPermissionTypeAsNetworkRule.INSTANCE.apply( ipPerm ) );
     }
     final List<NetworkRule> filtered = Lists.newArrayList( Iterables.filter( ruleGroup.getNetworkRules( ), new Predicate<NetworkRule>( ) {
       @Override
@@ -170,7 +163,7 @@ public class NetworkGroupManager {
     final List<NetworkRule> ruleList = Lists.newArrayList( );
     for ( final IpPermissionType ipPerm : request.getIpPermissions( ) ) {
       try {
-        ruleList.addAll( NetworkGroupUtil.getNetworkRules( ipPerm ) );
+        ruleList.addAll( NetworkGroups.IpPermissionTypeAsNetworkRule.INSTANCE.apply( ipPerm ) );
       } catch ( final IllegalArgumentException ex ) {
         LOG.error( ex.getMessage( ) );
         reply.set_return( false );

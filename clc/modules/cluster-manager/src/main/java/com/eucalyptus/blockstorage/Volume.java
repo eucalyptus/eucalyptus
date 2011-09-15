@@ -76,8 +76,10 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.StorageProperties;
 
 @Entity
@@ -102,12 +104,12 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   @Transient
   private FullName fullName;
   
-  public Volume( ) {
+  private Volume( ) {
     super( );
   }
   
-  public Volume( final UserFullName userFullName, final String displayName, final Integer size, final String scName, final String partitionName,
-                 final String parentSnapshot ) {
+  private Volume( final UserFullName userFullName, final String displayName, final Integer size, final String scName, final String partitionName,
+                  final String parentSnapshot ) {
     super( userFullName, displayName );
     this.size = size;
     this.scName = scName;
@@ -117,37 +119,16 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
     super.setCreationTimestamp( new Date( ) );
   }
   
-  public Volume( final UserFullName userFullName, String displayName ) {
+  private Volume( final OwnerFullName userFullName, String displayName ) {
     super( userFullName, displayName );
   }
   
-  public Volume( final String accountId, String displayName ) {
-    this.setOwnerAccountNumber( accountId );
-    this.setDisplayName( displayName );
+  public static Volume create( final ServiceConfiguration sc, final UserFullName owner, final String snapId, final Integer newSize, final String newId ) {
+    return new Volume( owner, newId, newSize, sc.getName( ), sc.getPartition( ), snapId );
   }
   
-  public static Volume named( String volumeId ) {
-    return named( null, volumeId );
-  }
-  
-  public static Volume named( final FullName fullName, String volumeId ) {
-    //Volume v = new Volume( userFullName, volumeId );
-    String accountId = null;
-    if ( fullName != null ) {
-      accountId = fullName.getNamespace( );
-    }
-    Volume v = new Volume( accountId, volumeId );
-    return v;
-  }
-  
-  public static Volume ownedBy( final FullName userFullName ) {
-    //Volume v = new Volume( userFullName, null );
-    String accountId = null;
-    if ( userFullName != null ) {
-      accountId = userFullName.getNamespace( );
-    }
-    Volume v = new Volume( accountId, null );
-    return v;
+  public static Volume named( final OwnerFullName fullName, String volumeId ) {
+    return new Volume( fullName, volumeId );
   }
   
   public String mapState( ) {

@@ -34,7 +34,7 @@ public class KeyPairManager {
   
   public DescribeKeyPairsResponseType describe( DescribeKeyPairsType request ) throws Exception {
     DescribeKeyPairsResponseType reply = request.getReply( );
-    for ( SshKeyPair kp : Iterables.filter( KeyPairUtil.getUserKeyPairs( Contexts.lookup( ).getUserFullName( ) ), RestrictedTypes.filterPrivileged( ) ) ) {
+    for ( SshKeyPair kp : Iterables.filter( KeyPairs.list( Contexts.lookup( ).getUserFullName( ).asAccountFullName( ) ), RestrictedTypes.filterPrivileged( ) ) ) {
       if ( request.getKeySet( ).isEmpty( ) || request.getKeySet( ).contains( kp.getDisplayName( ) ) ) {
         reply.getKeySet( ).add( new DescribeKeyPairsResponseItemType( kp.getDisplayName( ), kp.getFingerPrint( ) ) );
       }
@@ -46,13 +46,15 @@ public class KeyPairManager {
     DeleteKeyPairResponseType reply = ( DeleteKeyPairResponseType ) request.getReply( );
     Context ctx = Contexts.lookup( );
     try {
-      SshKeyPair key = KeyPairUtil.deleteUserKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
+      SshKeyPair key = KeyPairs.lookup( ctx.getUserFullName( ).asAccountFullName( ), request.getKeyName( ) );
       if ( ! RestrictedTypes.filterPrivileged( ).apply( key ) ) {
         throw new EucalyptusCloudException( "Permission denied while trying to delete keypair " + key.getName( ) + " by " + ctx.getUser( ) );
       }
+      KeyPairs.delete( ctx.getUserFullName( ).asAccountFullName( ), request.getKeyName( ) );
       reply.set_return( true );
     } catch ( Exception e1 ) {
-      reply.set_return( true );
+      LOG.error( e1 );
+      reply.set_return( false );
     }
     return reply;
   }

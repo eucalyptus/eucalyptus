@@ -137,7 +137,7 @@ public class Volumes {
       final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
       final DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );
       try {
-        Transactions.one( Volume.named( vol.getDisplayName( ) ), new Callback<Volume>( ) {
+        Transactions.one( Volume.named( null, vol.getDisplayName( ) ), new Callback<Volume>( ) {
           
           @Override
           public void fire( final Volume t ) {
@@ -164,7 +164,7 @@ public class Volumes {
   
   public static Volume createStorageVolume( final ServiceConfiguration sc, final UserFullName owner, final String snapId, final Integer newSize, final BaseMessage request ) throws ExecutionException {
     final String newId = Crypto.generateId( owner.getAccountNumber( ), ID_PREFIX );
-    final Volume newVol = Transactions.save( new Volume( owner, newId, newSize, sc.getName( ), sc.getPartition( ), snapId ), new Callback<Volume>( ) {
+    final Volume newVol = Transactions.save( Volume.create( sc, owner, snapId, newSize, newId ), new Callback<Volume>( ) {
       
       @Override
       public void fire( final Volume t ) {
@@ -184,4 +184,5 @@ public class Volumes {
     } );
     return newVol;
   }
+
 }
