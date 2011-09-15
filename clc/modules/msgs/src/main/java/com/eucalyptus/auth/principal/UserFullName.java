@@ -254,4 +254,7 @@ public class UserFullName implements OwnerFullName {
     return this.userId.equals( ownerFullName.getAccountNumber( ) ) || this.accountNumber.equals( ownerFullName.getAccountNumber( ) );
   }
   
+  public AccountFullName asAccountFullName( ) {
+    return AccountFullName.getInstance( this.getAccountNumber( ) );
+  }
 }

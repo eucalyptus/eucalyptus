@@ -326,7 +326,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
     return this;
   }
   
-  Set<String> getProductCodes( ) {
+  public Set<String> getProductCodes( ) {
     return this.productCodes;
   }
   
