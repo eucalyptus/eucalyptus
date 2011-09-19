@@ -10,8 +10,8 @@ import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.LicParseException;
 import com.eucalyptus.auth.json.JsonUtils;
 import com.eucalyptus.auth.lic.LicSpec;
+import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
-import com.google.gwt.thirdparty.guava.common.base.Strings;
 
 /**
  * Parser of ldap integration configuration (LIC). LIC is in JSON format.
@@ -75,6 +75,7 @@ public class LicParser {
   private void parseLdapService( JSONObject licJson, LdapIntegrationConfiguration lic ) throws JSONException {
     JSONObject ldapServiceObj = JsonUtils.getRequiredByType( JSONObject.class, licJson, LicSpec.LDAP_SERVICE );
     lic.setServerUrl( validateServerUrl( JsonUtils.getRequiredByType( String.class, ldapServiceObj, LicSpec.SERVER_URL ) ) );
+    // case sensitive
     lic.setAuthMethod( validateAuthMethod( JsonUtils.getRequiredByType( String.class, ldapServiceObj, LicSpec.AUTH_METHOD ), false ) );
     lic.setAuthPrincipal( validateNonEmpty( JsonUtils.getRequiredByType( String.class, ldapServiceObj, LicSpec.AUTH_PRINCIPAL ) ) );
     lic.setAuthCredentials( validateNonEmpty( JsonUtils.getRequiredByType( String.class, ldapServiceObj, LicSpec.AUTH_CREDENTIALS ) ) );
@@ -143,7 +144,7 @@ public class LicParser {
     JSONObject accountingGroups = JsonUtils.getByType( JSONObject.class, licJson, LicSpec.ACCOUNTING_GROUPS );
     lic.setAccountingGroupBaseDn( validateNonEmpty( JsonUtils.getRequiredByType( String.class, accountingGroups, LicSpec.ACCOUNTING_GROUP_BASE_DN ) ) );
     lic.setAccountingGroupsSelection( parseSelection( JsonUtils.getByType( JSONObject.class, accountingGroups, LicSpec.SELECTION ) ) );
-    lic.setAccountingGroupIdAttribute( JsonUtils.getRequiredByType( String.class, accountingGroups, LicSpec.ID_ATTRIBUTE ) );
+    lic.setAccountingGroupIdAttribute( JsonUtils.getRequiredByType( String.class, accountingGroups, LicSpec.ID_ATTRIBUTE ).toLowerCase( ) );
     lic.setGroupsAttribute( JsonUtils.getRequiredByType( String.class, accountingGroups, LicSpec.GROUPS_ATTRIBUTE ) );
   }
 
@@ -151,7 +152,7 @@ public class LicParser {
     JSONObject groups = JsonUtils.getRequiredByType( JSONObject.class, licJson, LicSpec.GROUPS );
     lic.setGroupBaseDn( validateNonEmpty( JsonUtils.getRequiredByType( String.class, groups, LicSpec.GROUP_BASE_DN ) ) );
     lic.setGroupsSelection( parseSelection( JsonUtils.getByType( JSONObject.class, groups, LicSpec.SELECTION ) ) );
-    lic.setGroupIdAttribute( JsonUtils.getRequiredByType( String.class, groups, LicSpec.ID_ATTRIBUTE ) );
+    lic.setGroupIdAttribute( JsonUtils.getRequiredByType( String.class, groups, LicSpec.ID_ATTRIBUTE ).toLowerCase( ) );
     lic.setUsersAttribute( JsonUtils.getRequiredByType( String.class, groups, LicSpec.USERS_ATTRIBUTE ) );
   }
   
@@ -159,7 +160,7 @@ public class LicParser {
     JSONObject users = JsonUtils.getRequiredByType( JSONObject.class, licJson, LicSpec.USERS );
     lic.setUserBaseDn( validateNonEmpty( JsonUtils.getRequiredByType( String.class, users, LicSpec.USER_BASE_DN ) ) );
     lic.setUsersSelection( parseSelection( JsonUtils.getByType( JSONObject.class, users, LicSpec.SELECTION ) ) );
-    lic.setUserIdAttribute( JsonUtils.getRequiredByType( String.class, users, LicSpec.ID_ATTRIBUTE ) );
+    lic.setUserIdAttribute( JsonUtils.getRequiredByType( String.class, users, LicSpec.ID_ATTRIBUTE ).toLowerCase( ) );
     parseUserInfoMap( ( JSONObject ) JsonUtils.getByType( JSONObject.class, users, LicSpec.USER_INFO_ATTRIBUTES ), lic );
   }
   

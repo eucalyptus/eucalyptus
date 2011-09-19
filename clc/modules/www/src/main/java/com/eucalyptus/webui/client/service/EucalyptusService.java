@@ -515,6 +515,23 @@ public interface EucalyptusService extends RemoteService {
    */
   public ArrayList<DownloadInfo> getToolDownloads( Session session ) throws EucalyptusServiceException;
   
+  /**
+   * Get Start Guide snippet.
+   * 
+   * @param session
+   * @param snippet
+   * @return
+   * @throws EucalyptusServiceException
+   */
   public ArrayList<GuideItem> getGuide( Session session, String snippet ) throws EucalyptusServiceException;
+  
+  /**
+   * Get user's security code.
+   * 
+   * @param session
+   * @return
+   * @throws EucalyptusServiceException
+   */
+  public String getUserToken( Session session ) throws EucalyptusServiceException;
   
 }

@@ -177,8 +177,10 @@ public class DatabaseUserProxy implements User {
   }
 
   @Override
-  public void createToken( ) throws AuthException {
+  public String resetToken( ) throws AuthException {
+    String original = this.delegate.getToken( );
     this.setToken( Crypto.generateSessionToken( this.delegate.getName( ) ) );
+    return original;
   }
 
   @Override

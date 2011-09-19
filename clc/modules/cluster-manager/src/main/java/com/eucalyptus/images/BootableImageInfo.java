@@ -63,6 +63,7 @@
 
 package com.eucalyptus.images;
 
+import java.util.Set;
 import com.eucalyptus.cloud.ImageMetadata;
 
 public interface BootableImageInfo {
@@ -80,5 +81,7 @@ public interface BootableImageInfo {
   public abstract Long getImageSizeBytes( );
 
   public abstract String getDisplayName( );
+
+  public abstract Set<String> getProductCodes( );
   
 }

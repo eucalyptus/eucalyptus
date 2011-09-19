@@ -115,7 +115,7 @@ public class X509Download extends HttpServlet {
       return;
     }
     if ( code == null || "".equals( code ) ) {
-      hasError( "Wrong confirmation code", response );
+      hasError( "Wrong user security code", response );
       return;
     }
     
@@ -130,8 +130,13 @@ public class X509Download extends HttpServlet {
       hasError( "User does not exist", response );
       return;
     }
-    if ( !code.equals( user.getToken( ) ) ) {
-      hasError( "Token is invalid", response );
+    try {
+      if ( !code.equals( user.resetToken( ) ) ) {
+        hasError( "Token is invalid", response );
+        return;
+      }
+    } catch ( Exception e ) {
+      hasError( "Can not reset user security code", response );
       return;
     }
     response.setContentType( mimetype );

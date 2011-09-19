@@ -205,7 +205,7 @@ public class VerifyMetadata {
       Context ctx = allocInfo.getContext( );
       RunInstancesType request = allocInfo.getRequest( );
       String keyName = request.getKeyName( );
-      SshKeyPair key = KeyPairs.lookup( ctx.getUserFullName( ), keyName );
+      SshKeyPair key = KeyPairs.lookup( ctx.getUserFullName( ).asAccountFullName( ), keyName );
       if ( !ctx.hasAdministrativePrivileges( ) && !RestrictedTypes.filterPrivileged( ).apply( key ) ) {
         throw new IllegalMetadataAccessException( "Not authorized to use keypair " + keyName + " by " + ctx.getUser( ).getName( ) );
       }
@@ -220,7 +220,7 @@ public class VerifyMetadata {
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
       Context ctx = allocInfo.getContext( );
-      NetworkGroups.lookup( ctx.getUserFullName( ), NetworkGroups.defaultNetworkName( ) );
+      NetworkGroups.lookup( ctx.getUserFullName( ).asAccountFullName( ), NetworkGroups.defaultNetworkName( ) );
       
       Set<String> networkNames = Sets.newHashSet( allocInfo.getRequest( ).getGroupSet( ) );
       if ( networkNames.isEmpty( ) ) {
@@ -229,7 +229,7 @@ public class VerifyMetadata {
       
       Map<String, NetworkGroup> networkRuleGroups = Maps.newHashMap( );
       for ( String groupName : networkNames ) {
-        NetworkGroup group = NetworkGroups.lookup( ctx.getUserFullName( ), groupName );
+        NetworkGroup group = NetworkGroups.lookup( ctx.getUserFullName( ).asAccountFullName( ), groupName );
         if ( !ctx.hasAdministrativePrivileges( ) && !RestrictedTypes.filterPrivileged( ).apply( group ) ) {
           throw new IllegalMetadataAccessException( "Not authorized to use network group " + groupName + " for " + ctx.getUser( ).getName( ) );
         }
