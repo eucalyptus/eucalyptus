@@ -174,13 +174,13 @@ public class NetworkGroups {
   
   public static synchronized void updateNetworkRangeConfiguration( ) {
     netConfig = new NetworkRangeConfiguration( );
-    final AtomicBoolean netTagging = new AtomicBoolean( netConfig.getUseNetworkTags( ) );
+    final AtomicBoolean netTagging = new AtomicBoolean( true );
     try {
       Transactions.each( new ClusterConfiguration( ), new Callback<ClusterConfiguration>( ) {
         
         @Override
         public void fire( final ClusterConfiguration input ) {
-          netConfig.setUseNetworkTags( netTagging.compareAndSet( true, input.getUseNetworkTags( ) ) );
+          netTagging.compareAndSet( true, input.getUseNetworkTags( ) );
           
           netConfig.setMinNetworkTag( Ints.max( netConfig.getMinNetworkTag( ), input.getMinNetworkTag( ) ) );
           netConfig.setMaxNetworkTag( Ints.min( netConfig.getMaxNetworkTag( ), input.getMaxNetworkTag( ) ) );
@@ -193,6 +193,7 @@ public class NetworkGroups {
     } catch ( final TransactionException ex ) {
       Logs.extreme( ).error( ex, ex );
     }
+    netConfig.setUseNetworkTags( netTagging.get( ) ); 
     try {
       Properties.lookup( NetworkGroups.class, "GLOBAL_MAX_NETWORK_INDEX" ).setValue( netConfig.getMaxNetworkIndex( ).toString( ) );
       Properties.lookup( NetworkGroups.class, "GLOBAL_MIN_NETWORK_INDEX" ).setValue( netConfig.getMinNetworkIndex( ).toString( ) );
