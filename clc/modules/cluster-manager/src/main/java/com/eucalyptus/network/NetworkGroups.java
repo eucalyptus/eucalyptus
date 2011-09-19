@@ -174,7 +174,7 @@ public class NetworkGroups {
   
   public static synchronized void updateNetworkRangeConfiguration( ) {
     netConfig = new NetworkRangeConfiguration( );
-    final AtomicBoolean netTagging = new AtomicBoolean( true );
+    final AtomicBoolean netTagging = new AtomicBoolean( netConfig.getUseNetworkTags( ) );
     try {
       Transactions.each( new ClusterConfiguration( ), new Callback<ClusterConfiguration>( ) {
         
