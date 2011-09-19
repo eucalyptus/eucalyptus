@@ -143,7 +143,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
       }
       buf.append( rulesToString( rules ) );
       buf.append( groupsToString( networks ) );
-      db.commit( );
+      db.rollback( );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
       db.rollback( );
