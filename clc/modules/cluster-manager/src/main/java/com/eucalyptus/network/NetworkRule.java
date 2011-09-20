@@ -64,24 +64,18 @@
 package com.eucalyptus.network;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.notNullValue;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.FetchType;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
@@ -99,6 +93,7 @@ public class NetworkRule extends AbstractPersistent {
     icmp, tcp, udp;
   }
   
+  @Transient
   private static final long serialVersionUID = 1L;
   @Enumerated( EnumType.STRING )
   @Column( name = "metadata_network_rule_protocol" )
@@ -109,12 +104,12 @@ public class NetworkRule extends AbstractPersistent {
   private Integer           highPort;
   
   @ElementCollection
-  @CollectionTable( name = "metadata_network_group_rule_ip_ranges" )
+  @CollectionTable( name = "metadata_network_rule_ip_ranges" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<String>       ipRanges         = Sets.newHashSet( );
-
+  
   @ElementCollection
-  @CollectionTable( name = "metadata_network_group_rule_peers" )
+//  @CollectionTable( name = "metadata_network_group_rule_peers" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkPeer>  networkPeers     = Sets.newHashSet( );
   
