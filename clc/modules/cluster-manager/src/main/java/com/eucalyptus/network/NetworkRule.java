@@ -110,8 +110,6 @@ public class NetworkRule extends AbstractPersistent {
   @CollectionTable( name = "metadata_network_group_rule_ip_ranges" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<String>       ipRanges         = new HashSet<String>( );
-  @OneToMany( cascade = { CascadeType.REMOVE, CascadeType.MERGE, CascadeType.PERSIST }, fetch = FetchType.EAGER )
-  @JoinTable( name = "metadata_network_rule_has_peer_network", joinColumns = { @JoinColumn( name = "metadata_network_rule_id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_rule_peer_network_id" ) } )
   @ElementCollection
   @CollectionTable( name = "metadata_network_group_rule_peers" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
