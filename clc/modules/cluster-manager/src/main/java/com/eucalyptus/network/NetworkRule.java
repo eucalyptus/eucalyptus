@@ -109,7 +109,7 @@ public class NetworkRule extends AbstractPersistent {
   private Set<String>       ipRanges         = Sets.newHashSet( );
   
   @ElementCollection
-//  @CollectionTable( name = "metadata_network_group_rule_peers" )
+  @CollectionTable( name = "metadata_network_group_rule_peers" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkPeer>  networkPeers     = Sets.newHashSet( );
   
