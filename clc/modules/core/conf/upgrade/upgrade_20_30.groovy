@@ -97,7 +97,6 @@ import com.eucalyptus.network.IpRange;
 import com.eucalyptus.network.NetworkPeer;
 import com.eucalyptus.network.NetworkRule;
 import com.eucalyptus.network.NetworkGroup;
-import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.vm.VmType;
 
