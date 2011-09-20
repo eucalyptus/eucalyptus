@@ -82,6 +82,7 @@ permission notice:
 #include "euca_auth.h"
 #include "backing.h"
 #include "xml.h"
+#include "diskutil.h"
 
 /* coming from handlers.c */
 extern sem * hyp_sem;
@@ -152,8 +153,10 @@ static void * rebooting_thread (void *arg)
         free (xml);
         return NULL;
     }
-    
+
+    sem_p (hyp_sem);
     virDomainPtr dom = virDomainLookupByName(*conn, instance->instanceId);
+    sem_v (hyp_sem);
     if (dom == NULL) {
         free (xml);
         return NULL;
