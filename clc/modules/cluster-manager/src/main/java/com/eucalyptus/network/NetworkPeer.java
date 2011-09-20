@@ -74,9 +74,9 @@ public class NetworkPeer extends AbstractPersistent {
   @Parent
   private NetworkRule       networkRule;
   @Column( name = "network_rule_peer_network_user_query_key" )
-  String                    otherAccountId;
+  private String            otherAccountId;
   @Column( name = "network_rule_peer_network_user_group" )
-  String                    groupName;
+  private String            groupName;
   
   NetworkPeer( ) {}
   
