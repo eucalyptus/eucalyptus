@@ -126,7 +126,7 @@ public class NetworkRule extends AbstractPersistent {
       this.ipRanges.addAll( ipRanges );
     }
     if ( peers != null ) {
-      for ( Entry<String, String> entry : peers.entries( ) ) {
+      for ( final Entry<String, String> entry : peers.entries( ) ) {
         this.networkPeers.add( new NetworkPeer( this, entry.getKey( ), entry.getValue( ) ) );
       }
     }
@@ -200,25 +200,51 @@ public class NetworkRule extends AbstractPersistent {
   
   @Override
   public boolean equals( final Object obj ) {
-    if ( this == obj ) return true;
-    if ( obj == null ) return false;
-    if ( !this.getClass( ).equals( obj.getClass( ) ) ) return false;
+    if ( this == obj ) {
+      return true;
+    }
+    if ( obj == null ) {
+      return false;
+    }
+    if ( !this.getClass( ).equals( obj.getClass( ) ) ) {
+      return false;
+    }
     final NetworkRule other = ( NetworkRule ) obj;
     if ( this.highPort == null ) {
-      if ( other.highPort != null ) return false;
-    } else if ( !this.highPort.equals( other.highPort ) ) return false;
+      if ( other.highPort != null ) {
+        return false;
+      }
+    } else if ( !this.highPort.equals( other.highPort ) ) {
+      return false;
+    }
     if ( this.lowPort == null ) {
-      if ( other.lowPort != null ) return false;
-    } else if ( !this.lowPort.equals( other.lowPort ) ) return false;
+      if ( other.lowPort != null ) {
+        return false;
+      }
+    } else if ( !this.lowPort.equals( other.lowPort ) ) {
+      return false;
+    }
     if ( this.protocol == null ) {
-      if ( other.protocol != null ) return false;
-    } else if ( !this.protocol.equals( other.protocol ) ) return false;
-    if ( this.ipRanges == null ) {
-      if ( other.ipRanges != null ) return false;
-    } else if ( !this.ipRanges.equals( other.ipRanges ) ) return false;
-    if ( this.networkPeers == null ) {
-      if ( other.networkPeers != null ) return false;
-    } else if ( !this.networkPeers.equals( other.networkPeers ) ) return false;
+      if ( other.protocol != null ) {
+        return false;
+      }
+    } else if ( !this.protocol.equals( other.protocol ) ) {
+      return false;
+    }
+    if ( this.ipRanges == null || this.ipRanges.isEmpty( ) ) {
+      if ( other.ipRanges != null && !other.ipRanges.isEmpty( ) ) {
+        return false;
+      }
+    } else if ( !this.ipRanges.equals( other.ipRanges ) ) {
+      return false;
+    }
+    if ( this.networkPeers == null || this.networkPeers.isEmpty( ) ) {
+      if ( other.networkPeers != null && !other.networkPeers.isEmpty( ) ) {
+        return false;
+      }
+    } else if ( !this.networkPeers.equals( other.networkPeers ) ) {
+      return false;
+    }
     return true;
   }
   
