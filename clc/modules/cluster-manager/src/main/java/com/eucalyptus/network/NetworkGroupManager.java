@@ -74,7 +74,7 @@ public class NetworkGroupManager {
     final Predicate<NetworkGroup> argListFilter = new Predicate<NetworkGroup>( ) {
       @Override
       public boolean apply( final NetworkGroup arg0 ) {
-        return groupNames.isEmpty( ) || groupNames.contains( arg0.getName( ) );
+        return groupNames.isEmpty( ) || groupNames.contains( arg0.getDisplayName( ) );
       }
     };
     
@@ -109,6 +109,7 @@ public class NetworkGroupManager {
       @Override
       public boolean apply( final NetworkRule rule ) {
         for ( final NetworkRule r : ruleList ) {
+          
           if ( r.equals( rule ) && r.getNetworkPeers( ).equals( rule.getNetworkPeers( ) ) && r.getIpRanges( ).equals( rule.getIpRanges( ) ) ) {
             return true;
           }
@@ -164,12 +165,7 @@ public class NetworkGroupManager {
     if ( Iterables.any( ruleGroup.getNetworkRules( ), new Predicate<NetworkRule>( ) {
       @Override
       public boolean apply( final NetworkRule rule ) {
-        for ( final NetworkRule r : ruleList ) {
-          if ( r.equals( rule ) && r.getNetworkPeers( ).equals( rule.getNetworkPeers( ) ) && r.getIpRanges( ).equals( rule.getIpRanges( ) ) ) {
-            return true || !r.isValid( );
-          }
-        }
-        return false;
+        return Iterables.any( ruleList, Predicates.equalTo( rule ) );
       }
     } ) ) {
       reply.set_return( false );

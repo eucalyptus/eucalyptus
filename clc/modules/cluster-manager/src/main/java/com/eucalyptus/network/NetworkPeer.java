@@ -63,33 +63,25 @@
 
 package com.eucalyptus.network;
 
-import java.util.ArrayList;
-import java.util.List;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
+import javax.persistence.Embeddable;
+import org.hibernate.annotations.Parent;
 import com.eucalyptus.entities.AbstractPersistent;
 
-@Entity
-@javax.persistence.Entity
-@PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_network_rule_peer_network" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Embeddable
 public class NetworkPeer extends AbstractPersistent {
   private static final long serialVersionUID = 1L;
+  @Parent
+  private NetworkRule       networkRule;
   @Column( name = "network_rule_peer_network_user_query_key" )
-  String otherAccountId;
+  String                    otherAccountId;
   @Column( name = "network_rule_peer_network_user_group" )
-  String groupName;
+  String                    groupName;
   
-  public NetworkPeer( ) {}
+  NetworkPeer( ) {}
   
-  public NetworkPeer( final String userQueryKey, final String groupName ) {
+  NetworkPeer( final NetworkRule networkRule, final String userQueryKey, final String groupName ) {
+    this.networkRule = networkRule;
     this.otherAccountId = userQueryKey;
     this.groupName = groupName;
   }
@@ -131,17 +123,17 @@ public class NetworkPeer extends AbstractPersistent {
     return result;
   }
   
-  public List<NetworkRule> getAsNetworkRules( ) {
-    final List<NetworkRule> ruleList = new ArrayList<NetworkRule>( );
-    ruleList.add( new NetworkRule( "tcp", 0, 65535, new NetworkPeer( this.getUserQueryKey( ), this.getGroupName( ) ) ) );
-    ruleList.add( new NetworkRule( "udp", 0, 65535, new NetworkPeer( this.getUserQueryKey( ), this.getGroupName( ) ) ) );
-    ruleList.add( new NetworkRule( "icmp", -1, -1, new NetworkPeer( this.getUserQueryKey( ), this.getGroupName( ) ) ) );
-    return ruleList;
-  }
-  
   @Override
   public String toString( ) {
     return String.format( "NetworkPeer:userQueryKey=%s:groupName=%s", this.otherAccountId, this.groupName );
+  }
+  
+  private NetworkRule getNetworkRule( ) {
+    return this.networkRule;
+  }
+  
+  private void setNetworkRule( final NetworkRule networkRule ) {
+    this.networkRule = networkRule;
   }
   
 }

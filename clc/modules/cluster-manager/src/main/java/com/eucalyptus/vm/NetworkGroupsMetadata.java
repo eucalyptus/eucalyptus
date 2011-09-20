@@ -125,8 +125,8 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
                       rules.put( ruleGroup.getClusterNetworkName( ), ruleString );
                     }
                   }
-                  for ( IpRange cidr : netRule.getIpRanges( ) ) {
-                    String ruleString = String.format( "%s -s %s", rule, cidr.getValue( ) );
+                  for ( String cidr : netRule.getIpRanges( ) ) {
+                    String ruleString = String.format( "%s -s %s", rule, cidr );
                     if ( !rules.get( ruleGroup.getClusterNetworkName( ) ).contains( ruleString ) ) {
                       rules.put( ruleGroup.getClusterNetworkName( ), ruleString );
                     }

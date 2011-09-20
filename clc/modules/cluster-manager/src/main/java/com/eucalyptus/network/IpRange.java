@@ -83,6 +83,7 @@ public class IpRange extends AbstractPersistent {
   @Column( name = "metadata_network_rule_ip_range_value" )
   String value;
   
+  
   public IpRange( ) {}
   
   public IpRange( final String value ) {
