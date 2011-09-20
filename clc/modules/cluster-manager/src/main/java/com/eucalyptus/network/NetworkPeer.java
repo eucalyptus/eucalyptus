@@ -65,11 +65,12 @@ package com.eucalyptus.network;
 
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
+import javax.persistence.Transient;
 import org.hibernate.annotations.Parent;
-import com.eucalyptus.entities.AbstractPersistent;
 
 @Embeddable
-public class NetworkPeer extends AbstractPersistent {
+public class NetworkPeer {
+  @Transient
   private static final long serialVersionUID = 1L;
   @Parent
   private NetworkRule       networkRule;
