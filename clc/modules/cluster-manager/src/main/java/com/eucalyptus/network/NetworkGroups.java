@@ -352,16 +352,6 @@ public class NetworkGroups {
   }
   
   @TypeMapper
-  public enum IpRangeAsString implements Function<IpRange, String> {
-    INSTANCE;
-    
-    @Override
-    public String apply( final IpRange range ) {
-      return range.getValue( );
-    }
-  }
-  
-  @TypeMapper
   public enum NetworkRuleAsIpPerm implements Function<NetworkRule, IpPermissionType> {
     INSTANCE;
     
