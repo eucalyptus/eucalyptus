@@ -101,20 +101,14 @@ public class NetworkGroupManager {
   
   public RevokeSecurityGroupIngressResponseType revoke( final RevokeSecurityGroupIngressType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
-    final RevokeSecurityGroupIngressResponseType reply = ( RevokeSecurityGroupIngressResponseType ) request.getReply( );
+    final RevokeSecurityGroupIngressResponseType reply = request.getReply( );
     reply.markFailed( );
     final List<IpPermissionType> ipPermissions = request.getIpPermissions( );
     final List<NetworkRule> ruleList = NetworkGroups.ipPermissionsAsNetworkRules( ipPermissions );
     final Predicate<NetworkRule> filterContainsRule = new Predicate<NetworkRule>( ) {
       @Override
       public boolean apply( final NetworkRule rule ) {
-        for ( final NetworkRule r : ruleList ) {
-          
-          if ( r.equals( rule ) && r.getNetworkPeers( ).equals( rule.getNetworkPeers( ) ) && r.getIpRanges( ).equals( rule.getIpRanges( ) ) ) {
-            return true;
-          }
-        }
-        return false;
+        return ruleList.contains( rule );
       }
     };
     EntityTransaction db = Entities.get( NetworkGroup.class );
@@ -147,34 +141,45 @@ public class NetworkGroupManager {
   
   public AuthorizeSecurityGroupIngressResponseType authorize( final AuthorizeSecurityGroupIngressType request ) throws Exception {
     final Context ctx = Contexts.lookup( );
-    final AuthorizeSecurityGroupIngressResponseType reply = ( AuthorizeSecurityGroupIngressResponseType ) request.getReply( );
-    final NetworkGroup ruleGroup = NetworkGroups.lookup( ctx.getUserFullName( ).asAccountFullName( ), request.getGroupName( ) );
-    if ( !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
-      throw new EucalyptusCloudException( "Not authorized to authorize network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
-    }
-    final List<NetworkRule> ruleList = Lists.newArrayList( );
-    for ( final IpPermissionType ipPerm : request.getIpPermissions( ) ) {
-      try {
-        ruleList.addAll( NetworkGroups.IpPermissionTypeAsNetworkRule.INSTANCE.apply( ipPerm ) );
-      } catch ( final IllegalArgumentException ex ) {
-        LOG.error( ex.getMessage( ) );
+    final AuthorizeSecurityGroupIngressResponseType reply = request.getReply( );
+    
+    EntityTransaction db = Entities.get( NetworkGroup.class );
+    try {
+      final NetworkGroup ruleGroup = NetworkGroups.lookup( ctx.getUserFullName( ).asAccountFullName( ), request.getGroupName( ) );
+      if ( !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
+        throw new EucalyptusCloudException( "Not authorized to authorize network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
+      }
+      final List<NetworkRule> ruleList = Lists.newArrayList( );
+      for ( final IpPermissionType ipPerm : request.getIpPermissions( ) ) {
+        try {
+          ruleList.addAll( NetworkGroups.IpPermissionTypeAsNetworkRule.INSTANCE.apply( ipPerm ) );
+        } catch ( final IllegalArgumentException ex ) {
+          LOG.error( ex.getMessage( ) );
+          reply.set_return( false );
+          db.rollback( );
+          return reply;
+        }
+      }
+      if ( Iterables.any( ruleGroup.getNetworkRules( ), new Predicate<NetworkRule>( ) {
+        @Override
+        public boolean apply( final NetworkRule rule ) {
+          return Iterables.any( ruleList, Predicates.equalTo( rule ) );
+        }
+      } ) ) {
         reply.set_return( false );
+        db.rollback( );
         return reply;
+      } else {
+        ruleGroup.getNetworkRules( ).addAll( ruleList );
+        EntityWrapper.get( ruleGroup ).mergeAndCommit( ruleGroup );
+        reply.set_return( true );
       }
-    }
-    if ( Iterables.any( ruleGroup.getNetworkRules( ), new Predicate<NetworkRule>( ) {
-      @Override
-      public boolean apply( final NetworkRule rule ) {
-        return Iterables.any( ruleList, Predicates.equalTo( rule ) );
-      }
-    } ) ) {
-      reply.set_return( false );
+      db.commit( );
       return reply;
-    } else {
-      ruleGroup.getNetworkRules( ).addAll( ruleList );
-      EntityWrapper.get( ruleGroup ).mergeAndCommit( ruleGroup );
-      reply.set_return( true );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw ex;
     }
-    return reply;
   }
 }
