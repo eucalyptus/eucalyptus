@@ -65,6 +65,7 @@ package com.eucalyptus.cluster;
 
 import java.util.Date;
 import java.util.Set;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
@@ -74,6 +75,8 @@ import javax.persistence.Enumerated;
 import javax.persistence.Lob;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import com.eucalyptus.cluster.VmInstance.BundleState;
 import com.eucalyptus.cluster.VmInstance.Reason;
@@ -103,6 +106,8 @@ public class VmRuntimeState {
   @Column( name = "metadata_vm_reason" )
   private Reason            reason;
   @ElementCollection
+  @CollectionTable(name="metadata_instances_state_reasons")
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<String>       reasonDetails = Sets.newHashSet( );
   @Transient
   private StringBuffer      consoleOutput       = new StringBuffer( );

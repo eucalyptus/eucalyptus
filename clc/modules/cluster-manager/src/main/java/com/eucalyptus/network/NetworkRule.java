@@ -87,6 +87,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 
 @Entity
 @javax.persistence.Entity
@@ -106,14 +107,16 @@ public class NetworkRule extends AbstractPersistent {
   private Integer           lowPort;
   @Column( name = "metadata_network_rule_high_port" )
   private Integer           highPort;
+  
   @ElementCollection
   @CollectionTable( name = "metadata_network_group_rule_ip_ranges" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<String>       ipRanges         = new HashSet<String>( );
+  private Set<String>       ipRanges         = Sets.newHashSet( );
+
   @ElementCollection
   @CollectionTable( name = "metadata_network_group_rule_peers" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<NetworkPeer>  networkPeers     = new HashSet<NetworkPeer>( );
+  private Set<NetworkPeer>  networkPeers     = Sets.newHashSet( );
   
   private NetworkRule( ) {}
   
