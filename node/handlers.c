@@ -60,6 +60,7 @@ permission notice:
   WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
   ANY SUCH LICENSES OR RIGHTS.
 */
+
 #define _FILE_OFFSET_BITS 64 // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
@@ -94,6 +95,7 @@ permission notice:
 #include "xml.h"
 #include "vbr.h"
 #include "iscsi.h"
+#include "hooks.h"
 
 #include "windows-bundle.h"
 #define MONITORING_PERIOD (5)
@@ -289,29 +291,32 @@ static void
 refresh_instance_info(	struct nc_state_t *nc,
                         ncInstance *instance)
 {
-    int now = instance->state;
+    int old_state = instance->state;
     
     if (! check_hypervisor_conn ())
 	    return;
     
-    /* no need to bug for domains without state on Hypervisor */
-    if (now==TEARDOWN || now==STAGING || now==BUNDLING_SHUTOFF || now==CREATEIMAGE_SHUTOFF)
+    // no need to bug for domains without state on Hypervisor
+    if (old_state==TEARDOWN || 
+        old_state==STAGING || 
+        old_state==BUNDLING_SHUTOFF || 
+        old_state==CREATEIMAGE_SHUTOFF)
         return;
     
     sem_p(hyp_sem);
     virDomainPtr dom = virDomainLookupByName (nc_state.conn, instance->instanceId);
     sem_v(hyp_sem);
-    if (dom == NULL) { /* hypervisor doesn't know about it */
-        if (now==BUNDLING_SHUTDOWN) {
+    if (dom == NULL) { // hypervisor doesn't know about it
+        if (old_state==BUNDLING_SHUTDOWN) {
             logprintfl (EUCAINFO, "[%s] detected disappearance of bundled domain\n", instance->instanceId);
             change_state (instance, BUNDLING_SHUTOFF);
-        } else if (now==CREATEIMAGE_SHUTDOWN) {
+        } else if (old_state==CREATEIMAGE_SHUTDOWN) {
             logprintfl (EUCAINFO, "[%s] detected disappearance of createImage domain\n", instance->instanceId);
             change_state (instance, CREATEIMAGE_SHUTOFF);
-        } else if (now==RUNNING ||
-                   now==BLOCKED ||
-                   now==PAUSED ||
-                   now==SHUTDOWN) {
+        } else if (old_state==RUNNING ||
+                   old_state==BLOCKED ||
+                   old_state==PAUSED ||
+                   old_state==SHUTDOWN) {
             // most likely the user has shut it down from the inside
             if (instance->retries) {
                 instance->retries--;
@@ -321,7 +326,7 @@ refresh_instance_info(	struct nc_state_t *nc,
             	change_state (instance, SHUTOFF);
             }
         }
-        // else 'now' stays in SHUTFOFF, BOOTING, CANCELED, or CRASHED
+        // else 'old_state' stays in SHUTFOFF, BOOTING, CANCELED, or CRASHED
         return;
     }
     
@@ -343,37 +348,42 @@ refresh_instance_info(	struct nc_state_t *nc,
         sem_v(hyp_sem);
         return;
     } 
-    int xen = info.state;
+    int new_state = info.state;
     
-    switch (now) {
+    switch (old_state) {
     case BOOTING:
     case RUNNING:
     case BLOCKED:
     case PAUSED:
+        if (new_state==SHUTOFF ||
+            new_state==SHUTDOWN ||
+            new_state==CRASHED) {
+            logprintfl (EUCAWARN, "[%s] warning: hypervisor reported previously running domain as %s\n", instance->instanceId, instance_state_names [new_state]);
+        }
         // change to state, whatever it happens to be
-        change_state (instance, xen);
+        change_state (instance, new_state);
         break;
     case SHUTDOWN:
     case SHUTOFF:
     case CRASHED:
-        if (xen==RUNNING ||
-            xen==BLOCKED ||
-            xen==PAUSED) {
+        if (new_state==RUNNING ||
+            new_state==BLOCKED ||
+            new_state==PAUSED) {
             // cannot go back!
             logprintfl (EUCAWARN, "[%s] warning: detected prodigal domain, terminating it\n", instance->instanceId);
             sem_p (hyp_sem);
             virDomainDestroy (dom);
             sem_v (hyp_sem);
         } else {
-            change_state (instance, xen);
+            change_state (instance, new_state);
         }
         break;
     case BUNDLING_SHUTDOWN:
     case CREATEIMAGE_SHUTDOWN:
-        logprintfl (EUCADEBUG, "[%s] hypervisor state for bundle/createImage domain is %s\n", instance->instanceId, instance_state_names [xen]);
+        logprintfl (EUCADEBUG, "[%s] hypervisor state for bundle/createImage domain is %s\n", instance->instanceId, instance_state_names [new_state]);
         break;
     default:
-        logprintfl (EUCAERROR, "[%s] error: refresh...(): unexpected state (%d)\n", instance->instanceId, now);
+        logprintfl (EUCAERROR, "[%s] error: refresh...(): unexpected state (%d)\n", instance->instanceId, old_state);
         return;
     }
     sem_p(hyp_sem);
@@ -490,6 +500,12 @@ monitoring_thread (void *arg)
             
             // ok, it's been condemned => destroy the files
             int destroy_files = !nc_state.save_instance_files;
+            if (call_hooks (NC_EVENT_PRE_CLEAN, instance->instancePath)) {
+                if (destroy_files) {
+                    logprintfl (EUCAERROR, "[%s] cancelled instance cleanup via hooks\n", instance->instanceId);
+                    destroy_files = 0;
+                }
+            }
             logprintfl (EUCAINFO, "[%s] cleaning up state for instance%s\n", instance->instanceId, (destroy_files)?(""):(" (but keeping the files)"));
             if (destroy_instance_backing (instance, destroy_files)) {
                 logprintfl (EUCAWARN, "[%s] warning: failed to cleanup instance state\n", instance->instanceId);
@@ -567,6 +583,21 @@ void *startup_thread (void * arg)
     safe_strncpy (instance->hypervisorType, nc_state.H->name, sizeof (instance->hypervisorType)); // set the hypervisor type
 
     instance->hypervisorCapability = nc_state.capability; // set the cap (xen/hw/hw+xen)
+    char *s = system_output("getconf LONG_BIT");
+    if (s){
+         int bitness = atoi(s);
+         if(bitness == 32 || bitness == 64)
+            instance->hypervisorBitness = bitness;
+         else{
+            logprintfl(EUCAWARN, "[%s] can't determine the host's bitness (%s, assuming 64)\n", instance->instanceId, s);
+	    instance->hypervisorBitness = 64;
+         }
+         free(s);
+    }else{
+            logprintfl(EUCAWARN, "[%s] can't determine the host's bitness (assuming 64)\n", instance->instanceId);
+            instance->hypervisorBitness = 64;
+    }
+
     instance->combinePartitions = nc_state.convert_to_disk; 
     instance->do_inject_key = nc_state.do_inject_key;
 
@@ -586,7 +617,12 @@ void *startup_thread (void * arg)
         goto free;
     }
     if (instance->state==CANCELED) {
-        logprintfl (EUCAERROR, "[%s] startup of instance was cancelled\n", instance->instanceId);
+        logprintfl (EUCAERROR, "[%s] cancelled instance startup\n", instance->instanceId);
+        change_state (instance, SHUTOFF);
+        goto free;
+    }
+    if (call_hooks (NC_EVENT_PRE_BOOT, instance->instancePath)) {
+        logprintfl (EUCAERROR, "[%s] cancelled instance startup via hooks\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         goto free;
     }
@@ -703,6 +739,12 @@ void adopt_instances()
 			continue;
 		}
 
+        if (call_hooks (NC_EVENT_ADOPTING, instance->instancePath)) {
+            logprintfl (EUCAINFO, "ignoring running domain %s due to hooks\n", instance->instanceId);
+            free_instance (&instance);
+            continue;
+        }
+
 		change_state (instance, info.state);                    
 		sem_p (inst_sem);
 		int err = add_instance (&global_instances, instance);
@@ -712,8 +754,7 @@ void adopt_instances()
 			continue;
 		}
 
-		logprintfl (EUCAINFO, "- adopted running domain %s from user %s\n", instance->instanceId, instance->userId);
-		/* TODO: try to look up IPs? */
+		logprintfl (EUCAINFO, "- adopted running domain %s from user %s\n", instance->instanceId, instance->userId); // TODO: try to re-check IPs?
 
 		sem_p(hyp_sem);
 		virDomainFree (dom);
@@ -781,9 +822,18 @@ static int init (void)
 		else if (!strcmp(tmp,"WARN")) {i=EUCAWARN;}
 		else if (!strcmp(tmp,"ERROR")) {i=EUCAERROR;}
 		else if (!strcmp(tmp,"FATAL")) {i=EUCAFATAL;}
+        else if (!strcmp(tmp,"DEBUG2")) {i=EUCADEBUG2;}
 		free(tmp);
 	}
 	logfile(log, i);
+
+    { // initialize hooks if their directory looks ok
+        char dir [MAX_PATH];
+        snprintf (dir, sizeof (dir), EUCALYPTUS_NC_HOOKS_DIR, nc_state.home);
+        // if 'dir' does not exist, init_hooks() will silently fail, 
+        // and all future call_hooks() will silently succeed
+        init_hooks (nc_state.home, dir); 
+    }
 
 #define GET_VAR_INT(var,name) \
         s = getConfString(configFiles, 2, name); \
@@ -791,7 +841,6 @@ static int init (void)
 		var = atoi(s);\
 		free (s);\
 	}
-
 	GET_VAR_INT(nc_state.config_max_mem,      CONFIG_MAX_MEM);
 	GET_VAR_INT(nc_state.config_max_disk,     CONFIG_MAX_DISK);
 	GET_VAR_INT(nc_state.config_max_cores,    CONFIG_MAX_CORES);
@@ -842,8 +891,10 @@ static int init (void)
     GET_VAR_INT(cache_size_mb, CONFIG_NC_CACHE_SIZE);
     GET_VAR_INT(work_size_mb, CONFIG_NC_WORK_SIZE);
     char * instance_path = getConfString(configFiles, 2, INSTANCE_PATH);
-    if (init_backing_store (instance_path, work_size_mb, cache_size_mb)) {
+
+    if (instance_path == NULL || init_backing_store (instance_path, work_size_mb, cache_size_mb)) {
         logprintfl (EUCAFATAL, "error: failed to initialize backing store\n");
+        if(instance_path) free(instance_path);
         return ERROR_FATAL;
 	}
 	if (statfs (instance_path, &fs) == -1) { // TODO: get the values from instance backing code
@@ -990,7 +1041,12 @@ static int init (void)
 	}
     
     if (pthread_detach(tcb)) {
-        logprintfl(EUCAFATAL, "failed to detach the monitoring thread\n");
+        logprintfl (EUCAFATAL, "failed to detach the monitoring thread\n");
+        return ERROR_FATAL;
+    }
+
+    if (call_hooks (NC_EVENT_INIT, NULL)) {
+        logprintfl (EUCAFATAL, "hooks prevented initialization\n");
         return ERROR_FATAL;
     }
     
@@ -1001,7 +1057,7 @@ static int init (void)
 
 int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen)
 {
-    int ret, len, i;
+    int ret, len;
 	char *file_name;
 	FILE *f;
 	long long used_mem, used_disk, used_cores;
@@ -1020,10 +1076,37 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 	if (ret)
 		return ret;
     
-    
-	for (i=0; i < (*outInstsLen); i++) {
+	for (int i=0; i < (*outInstsLen); i++) {
         ncInstance *instance = (*outInsts)[i];
-        logprintfl(EUCADEBUG, "[%s] %s publicIp=%s privateIp=%s mac=%s vlan=%d networkIndex=%d platform=%s\n", 
+
+        // construct a string summarizing the volumes attached to the instance
+        char vols_str [128] = "";
+        unsigned int vols_count = 0;
+        for (int j=0; j < EUCA_MAX_VOLUMES; ++j) {
+            ncVolume * volume = &instance->volumes[j];
+            if (strlen (volume->volumeId)==0)
+                continue;
+            vols_count++;
+            
+            char * s;
+            if (! strcmp(volume->stateName, VOL_STATE_ATTACHING))        s = "a";
+            if (! strcmp(volume->stateName, VOL_STATE_ATTACHED))         s = "A";
+            if (! strcmp(volume->stateName, VOL_STATE_ATTACHING_FAILED)) s = "af";
+            if (! strcmp(volume->stateName, VOL_STATE_DETACHING))        s = "d";
+            if (! strcmp(volume->stateName, VOL_STATE_DETACHED))         s = "D";
+            if (! strcmp(volume->stateName, VOL_STATE_DETACHING_FAILED)) s = "df";
+            
+            char vol_str [16];
+            snprintf (vol_str, sizeof (vol_str), "%s%s:%s", 
+                      (vols_count>1)?(","):(""),
+                      volume->volumeId, 
+                      s);
+            if ((strlen (vols_str) + strlen (vol_str)) < sizeof (vols_str)) {
+                strcat (vols_str, vol_str);
+            }
+        }
+    
+        logprintfl(EUCADEBUG, "[%s] %s pub=%s priv=%s mac=%s vlan=%d net=%d plat=%s vols=%s\n", 
                    instance->instanceId,
                    instance->stateName,
                    instance->ncnet.publicIp, 
@@ -1031,7 +1114,8 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
                    instance->ncnet.privateMac, 
                    instance->ncnet.vlan, 
                    instance->ncnet.networkIndex, 
-                   instance->platform);
+                   instance->platform,
+                   vols_str);
 	}
     
 	// allocate enough memory
@@ -1133,7 +1217,7 @@ int doPowerDown(ncMetadata *meta) {
 	return ret;
 }
 
-int doRunInstance (ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInst)
+int doRunInstance (ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInst)
 {
     int ret;
     
@@ -1147,9 +1231,9 @@ int doRunInstance (ncMetadata *meta, char *uuid, char *instanceId, char *reserva
         return ERROR;
     
     if (nc_state.H->doRunInstance)
-        ret = nc_state.H->doRunInstance (&nc_state, meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, outInst);
+        ret = nc_state.H->doRunInstance (&nc_state, meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId, accountId, keyName, netparams, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, outInst);
     else
-        ret = nc_state.D->doRunInstance (&nc_state, meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, keyName, netparams, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, outInst);
+        ret = nc_state.D->doRunInstance (&nc_state, meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId, accountId, keyName, netparams, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, outInst);
     
     return ret;
 }

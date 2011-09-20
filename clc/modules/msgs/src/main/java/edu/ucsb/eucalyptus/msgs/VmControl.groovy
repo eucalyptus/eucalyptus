@@ -1,63 +1,63 @@
 /*******************************************************************************
-*Copyright (c) 2009  Eucalyptus Systems, Inc.
-* 
-*  This program is free software: you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation, only version 3 of the License.
-* 
-* 
-*  This file is distributed in the hope that it will be useful, but WITHOUT
-*  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-*  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-*  for more details.
-* 
-*  You should have received a copy of the GNU General Public License along
-*  with this program.  If not, see <http://www.gnu.org/licenses/>.
-* 
-*  Please contact Eucalyptus Systems, Inc., 130 Castilian
-*  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
-*  if you need additional information or have any questions.
-* 
-*  This file may incorporate work covered under the following copyright and
-*  permission notice:
-* 
-*    Software License Agreement (BSD License)
-* 
-*    Copyright (c) 2008, Regents of the University of California
-*    All rights reserved.
-* 
-*    Redistribution and use of this software in source and binary forms, with
-*    or without modification, are permitted provided that the following
-*    conditions are met:
-* 
-*      Redistributions of source code must retain the above copyright notice,
-*      this list of conditions and the following disclaimer.
-* 
-*      Redistributions in binary form must reproduce the above copyright
-*      notice, this list of conditions and the following disclaimer in the
-*      documentation and/or other materials provided with the distribution.
-* 
-*    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
-*    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-*    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-*    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
-*    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-*    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-*    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-*    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-*    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-*    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-*    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
-*    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
-*    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
-*    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
-*    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
-*    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-*    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
-*    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
-*    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
-*    ANY SUCH LICENSES OR RIGHTS.
-*******************************************************************************/
+ *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, only version 3 of the License.
+ * 
+ * 
+ *  This file is distributed in the hope that it will be useful, but WITHOUT
+ *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ *  for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ *  Please contact Eucalyptus Systems, Inc., 130 Castilian
+ *  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+ *  if you need additional information or have any questions.
+ * 
+ *  This file may incorporate work covered under the following copyright and
+ *  permission notice:
+ * 
+ *    Software License Agreement (BSD License)
+ * 
+ *    Copyright (c) 2008, Regents of the University of California
+ *    All rights reserved.
+ * 
+ *    Redistribution and use of this software in source and binary forms, with
+ *    or without modification, are permitted provided that the following
+ *    conditions are met:
+ * 
+ *      Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ * 
+ *      Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
+ * 
+ *    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ *    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ *    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ *    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ *    OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ *    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ *    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ *    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ *    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+ *    THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+ *    LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+ *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+ *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+ *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+ *    ANY SUCH LICENSES OR RIGHTS.
+ *******************************************************************************/
 /*
  * Author: chris grzegorczyk <grze@eucalyptus.com>
  */
@@ -68,64 +68,104 @@ import com.eucalyptus.auth.policy.PolicySpec
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
 
-public class VmControlMessage extends EucalyptusMessage {}
-public class ResourceTagMessage extends EucalyptusMessage {}
-public class VmPlacementMessage extends EucalyptusMessage {}
+public class VmControlMessage extends EucalyptusMessage {
+  
+  public VmControlMessage( ) {
+    super( );
+  }
+  
+  public VmControlMessage( EucalyptusMessage msg ) {
+    super( msg );
+  }
+  
+  public VmControlMessage( String userId ) {
+    super( userId );
+  }
+}
+public class ResourceTagMessage extends EucalyptusMessage {
+  
+  public ResourceTagMessage( ) {
+    super( );
+  }
+  
+  public ResourceTagMessage( EucalyptusMessage msg ) {
+    super( msg );
+  }
+  
+  public ResourceTagMessage( String userId ) {
+    super( userId );
+  }
+}
+public class VmPlacementMessage extends EucalyptusMessage {
+  
+  public VmPlacementMessage( ) {
+    super( );
+  }
+  
+  public VmPlacementMessage( EucalyptusMessage msg ) {
+    super( msg );
+  }
+  
+  public VmPlacementMessage( String userId ) {
+    super( userId );
+  }
+}
 /** *******************************************************************************/
 public class TerminateInstancesResponseType extends VmControlMessage {
   boolean terminated = false;
   ArrayList<TerminateInstancesItemType> instancesSet = new ArrayList<TerminateInstancesItemType>();
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_TERMINATEINSTANCES )
 public class TerminateInstancesType extends VmControlMessage {
-
+  
   @HttpParameterMapping (parameter = "InstanceId")
   ArrayList<String> instancesSet = new ArrayList<String>();
-
-  def TerminateInstancesType() {}
- 
+  
+  def TerminateInstancesType() {
+    
+  }
+  
   def TerminateInstancesType(String instanceId) {
     this.instancesSet.add(instanceId);
   }
-
 }
 /** *******************************************************************************/
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBEINSTANCES )
-public class DescribeInstancesType extends VmControlMessage {
 
+public class DescribeInstancesType extends VmControlMessage {
+  
   @HttpParameterMapping (parameter = "InstanceId")
   ArrayList<String> instancesSet = new ArrayList<String>();
   @HttpParameterMapping (parameter = "FilterSet")
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }
 public class DescribeInstancesResponseType extends VmControlMessage {
-
+  
   ArrayList<ReservationInfoType> reservationSet = new ArrayList<ReservationInfoType>();
 }
 /** *******************************************************************************/
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_REBOOTINSTANCES )
-public class RebootInstancesType extends VmControlMessage {
 
+public class RebootInstancesType extends VmControlMessage {
+  
   @HttpParameterMapping (parameter = "InstanceId")
   ArrayList<String> instancesSet = new ArrayList<String>();
-
-  def RebootInstancesType() {}
+  
+  def RebootInstancesType() {
+    
+  }
   def RebootInstancesType(String instanceId) {
     this.instancesSet.add(instanceId);
   }
-
 }
 public class RebootInstancesResponseType extends VmControlMessage {
 }
 /** *******************************************************************************/
 public class RunInstancesResponseType extends VmControlMessage {
-
+  
   ReservationInfoType rsvInfo;
 }
 
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_RUNINSTANCES )
-public class RunInstancesType extends VmControlMessage {
 
+public class RunInstancesType extends VmControlMessage {
+  
   String imageId;
   String reservationId;
   int minCount;
@@ -155,45 +195,45 @@ public class RunInstancesType extends VmControlMessage {
   /** InstanceLicenseRequest license; **/
   String privateIpAddress = "";
   String clientToken = "";
-
+  
   ArrayList<Integer> networkIndexList = new ArrayList<Integer>();
   String privateMacBase;
   String publicMacBase;
   int macLimit;
   int vlan;
   VmTypeInfo vmType = new VmTypeInfo();
-
-
+  
+  
   public Object clone() {
     RunInstancesType c = (RunInstancesType) super.clone();
     c.instanceIds = new ArrayList<String>();
     if ( this.instanceIds != null )
-    for ( String b: this.instanceIds )
-      c.instanceIds.add((String) b.clone());
+      for ( String b: this.instanceIds )
+        c.instanceIds.add((String) b.clone());
     c.blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>();
     if ( this.blockDeviceMapping != null )
-    for ( BlockDeviceMappingItemType b: this.blockDeviceMapping )
-      c.blockDeviceMapping.add((BlockDeviceMappingItemType) b.clone());
+      for ( BlockDeviceMappingItemType b: this.blockDeviceMapping )
+        c.blockDeviceMapping.add((BlockDeviceMappingItemType) b.clone());
     if ( this.vmType != null )
-    c.vmType = (VmTypeInfo) this.vmType.clone();
+      c.vmType = (VmTypeInfo) this.vmType.clone();
     c.networkIndexList = this.networkIndexList.clone( );
     return c;
   }
-
+  
 }
 /** *******************************************************************************/
 public class GetConsoleOutputResponseType extends VmControlMessage {
-
+  
   String instanceId;
   Date timestamp;
   String output;
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_GETCONSOLEOUTPUT )
+
 public class GetConsoleOutputType extends VmControlMessage {
   @HttpParameterMapping (parameter = "InstanceId.1")
   String instanceId;
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_GETPASSWORDDATA )
+
 public class GetPasswordDataType extends VmControlMessage {
   String instanceId;
 }
@@ -209,13 +249,13 @@ public class ReservationInfoType extends EucalyptusData {
   String ownerId;
   ArrayList<String> groupSet = new ArrayList<String>();
   ArrayList<RunningInstancesItemType> instancesSet = new ArrayList<RunningInstancesItemType>();
-
+  
   def ReservationInfoType(final reservationId, final ownerId, final groupSet) {
     this.reservationId = reservationId;
     this.ownerId = ownerId;
-    this.groupSet = groupSet;
+    this.groupSet.addAll( groupSet );
   }
-
+  
   def ReservationInfoType() {
   }
 }
@@ -288,7 +328,7 @@ public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 200
     this.virtualName = virtualName;
     this.deviceName = deviceName;
   }
-
+  
   def BlockDeviceMappingItemType() {
   }
 }
@@ -302,7 +342,7 @@ public class TerminateInstancesItemType extends EucalyptusData {
   String previousStateName;
   String shutdownStateCode;
   String shutdownStateName;
-
+  
   def TerminateInstancesItemType(final instanceId, final previousStateCode, final previousStateName, final shutdownStateCode, final shutdownStateName) {
     this.instanceId = instanceId;
     this.previousStateCode = previousStateCode;
@@ -310,7 +350,7 @@ public class TerminateInstancesItemType extends EucalyptusData {
     this.shutdownStateCode = shutdownStateCode;
     this.shutdownStateName = shutdownStateName;
   }
-
+  
   def TerminateInstancesItemType() {
   }
 }
@@ -319,7 +359,7 @@ public class StopInstancesResponseType extends VmControlMessage{
   ArrayList<TerminateInstancesItemType> instancesSet = new ArrayList<TerminateInstancesItemType>();
   public StopInstancesResponseType() {  }
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_STOPINSTANCES )
+
 public class StopInstancesType extends VmControlMessage{
   ArrayList<String> instancesSet = new ArrayList<String>();
   Boolean force;
@@ -329,12 +369,12 @@ public class StartInstancesResponseType extends VmControlMessage{
   ArrayList<TerminateInstancesItemType> instancesSet = new ArrayList<TerminateInstancesItemType>();
   public StartInstancesResponseType() {  }
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_STARTINSTANCES )
+
 public class StartInstancesType extends VmControlMessage{
   ArrayList<String> instancesSet = new ArrayList<String>();
   public StartInstancesType() {  }
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_MODIFYINSTANCEATTRIBUTE )
+
 public class ModifyInstanceAttributeType extends VmControlMessage {
   String instanceId;
   Attr element;
@@ -352,7 +392,7 @@ public class ModifyInstanceAttributeType extends VmControlMessage {
 public class ModifyInstanceAttributeResponseType extends VmControlMessage {
   public ModifyInstanceAttributeResponseType() {  }
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_RESETINSTANCEATTRIBUTE )
+
 public class ResetInstanceAttributeType extends VmControlMessage {
   String instanceId;
   public ResetInstanceAttributeType() {  }
@@ -360,7 +400,7 @@ public class ResetInstanceAttributeType extends VmControlMessage {
 public class ResetInstanceAttributeResponseType extends VmControlMessage {
   public ResetInstanceAttributeResponseType() {  }
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_DESCRIBEINSTANCEATTRIBUTE )
+
 public class DescribeInstanceAttributeType extends VmControlMessage {
   String instanceId;
   public DescribeInstanceAttributeType() {  }
@@ -387,7 +427,7 @@ public class MonitorInstancesResponseType extends VmControlMessage {
   ArrayList<MonitorInstanceState> instancesSet = new ArrayList<MonitorInstanceState>();
   public MonitorInstancesResponseType() {  }
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_MONITORINSTANCES )
+
 public class MonitorInstancesType extends VmControlMessage {
   ArrayList<String> instancesSet = new ArrayList<String>();
   public MonitorInstancesType() {  }
@@ -396,7 +436,7 @@ public class UnmonitorInstancesResponseType extends VmControlMessage {
   ArrayList<MonitorInstanceState> instancesSet = new ArrayList<MonitorInstanceState>();
   public UnmonitorInstancesResponseType() {  }
 }
-@PolicyAction( vendor = PolicySpec.VENDOR_EC2, action = PolicySpec.EC2_UNMONITORINSTANCES )
+
 public class UnmonitorInstancesType extends VmControlMessage {
   ArrayList<String> instancesSet = new ArrayList<String>();
   public MonitorInstancesType() {  }

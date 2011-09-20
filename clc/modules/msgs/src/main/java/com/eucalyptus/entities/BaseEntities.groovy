@@ -13,10 +13,12 @@ import javax.persistence.TemporalType
 import javax.persistence.Transient
 import javax.persistence.Version
 import org.hibernate.annotations.GenericGenerator
+import org.hibernate.annotations.NaturalId
+import com.eucalyptus.util.HasNaturalId
 
 
 @MappedSuperclass
-public class AbstractPersistent implements Serializable {
+public class AbstractPersistent implements Serializable, HasNaturalId {
   @Transient
   private static final long serialVersionUID = 1;
   @Id
@@ -33,6 +35,9 @@ public class AbstractPersistent implements Serializable {
   @Temporal(TemporalType.TIMESTAMP)
   @Column(name = "last_update_timestamp")
   Date lastUpdateTimestamp;
+  @NaturalId
+  @Column( name = "metadata_perm_uuid", unique = true, updatable = false, nullable = false )
+  private String   naturalId;
   
   public AbstractPersistent( ) {
     super( );
@@ -52,10 +57,13 @@ public class AbstractPersistent implements Serializable {
     if ( obj == null ) return false;
     if ( !getClass( ).is( obj.getClass( ) ) ) return false;
     AbstractPersistent other = ( AbstractPersistent ) obj;
-    if ( id == null ) {
-      if ( other.id != null ) return false;
-    } else if ( !id.equals( other.id ) ) return false;
-    return true;
+    if ( this.naturalId == null ) {
+      return other.naturalId != null;
+    } else if ( !naturalId.equals( other.naturalId ) ) {
+      return false;
+    } else {
+      return true;
+    }
   }
   
   @PreUpdate
@@ -65,6 +73,18 @@ public class AbstractPersistent implements Serializable {
     if ( creationTimestamp == null ) {
       this.creationTimestamp = new Date();
     }
+    if ( this.naturalId == null ) {
+      this.naturalId = UUID.randomUUID( ).toString( );
+    }
+  }
+  
+  @Override
+  public String getNaturalId( ) {
+    return this.naturalId;
+  }
+  
+  protected void setNaturalId( String naturalId ) {
+    this.naturalId = naturalId;
   }
   
   /**

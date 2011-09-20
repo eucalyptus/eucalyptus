@@ -18,4 +18,26 @@ public class StringValue implements QueryValue {
     return this.value;
   }
   
+  @Override
+  public boolean equals( Object other ) {
+    if ( other == null ) {
+      return false;
+    }
+    if ( !(other instanceof StringValue) ) {
+      return false;
+    }
+    StringValue otherValue = ( StringValue )other;
+    if ( this.value == null && otherValue.getValue( ) == null ) {
+      return true;
+    }
+    if ( this.value != null && this.value.equals( otherValue.getValue( ) ) ) {
+      return true;
+    }
+    return false;
+  }
+
+  @Override
+  public int hashCode( ) {
+    return this.value.hashCode( );
+  }
 }

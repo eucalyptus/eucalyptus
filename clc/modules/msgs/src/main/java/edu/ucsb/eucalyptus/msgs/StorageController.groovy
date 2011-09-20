@@ -265,7 +265,13 @@ public class DescribeStorageSnapshotsResponseType extends StorageResponseType {
 	ArrayList<StorageSnapshot> snapshotSet = new ArrayList<StorageSnapshot>();
 }
 
-public class StorageComponentMessageType extends ComponentMessageType {       
+public class StorageComponentMessageType extends ComponentMessageType {
+
+  @Override
+  public String getComponent( ) {
+    return "storage";
+  }       
+  
 }
 
 public class StorageComponentMessageResponseType extends ComponentMessageResponseType {

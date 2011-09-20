@@ -49,13 +49,20 @@ public class PolicyEngineImpl implements PolicyEngine {
   private static final Matcher PATTERN_MATCHER = new Matcher( ) {
     @Override
     public boolean match( String pattern, String instance ) {
-      return Pattern.matches( PatternUtils.toJavaPattern( pattern ), instance );
+      pattern = PatternUtils.toJavaPattern( pattern );
+      if ( pattern == null ) {
+        return false;
+      }
+      return Pattern.matches( pattern, instance );
     }
   };
   
   private static final Matcher ADDRESS_MATCHER = new Matcher( ) {
     @Override
     public boolean match( String pattern, String instance ) {
+      if ( pattern == null ) {
+        return false;
+      }
       return AddressUtil.addressRangeMatch( pattern, instance );
     }
   };
@@ -89,6 +96,10 @@ public class PolicyEngineImpl implements PolicyEngine {
     try {
       ContractKeyEvaluator contractEval = new ContractKeyEvaluator( contracts );
       CachedKeyEvaluator keyEval = new CachedKeyEvaluator( );
+      
+      // Case insensitive
+      resourceName = resourceName.toLowerCase( );
+      action = action.toLowerCase( );
 
       // System admin can do everything
       if ( !requestUser.isSystemAdmin( ) && !requestUser.isSystemInternal( ) ) {
@@ -118,7 +129,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       //throw by the policy engine implementation 
       LOG.debug( e, e );
       throw e;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new AuthException( "An error occurred while trying to evaluate policy for resource access", e );
     }    
@@ -142,7 +153,7 @@ public class PolicyEngineImpl implements PolicyEngine {
     } catch ( AuthException e ) {
       //throw by the policy engine implementation 
       throw e;
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       throw new AuthException( "An error occurred while trying to evaluate policy for resource allocation.", e );
     }
   }

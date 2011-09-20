@@ -157,6 +157,11 @@ public class StorageUtil {
           if ( attachedVolumes.containsKey( v.getDisplayName() ) ) {
             aVolume.setStatus( v.mapState( ) );
             aVolume.getAttachmentSet().add( attachedVolumes.get( aVolume.getVolumeId() ) );
+            
+            for ( AttachedVolume attachedVolume : aVolume.getAttachmentSet( ) ) {
+        	attachedVolume.setDevice("/dev/" + attachedVolume.getDevice( ) );
+            }	
+            
           }
           if ( "invalid".equals( v.getRemoteDevice( ) ) && !State.FAIL.equals( v.getState( ) ) ) {
             aVolume.setStatus( "creating" );
@@ -171,83 +176,5 @@ public class StorageUtil {
     }
     return reply;
   }
-  public static long countVolumeByAccount( String accountId ) throws AuthException {
-    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
-    try {
-      List<Volume> vols = db.query( new Volume( accountId, null/* displayName */ ) );
-      db.commit( );
-      return vols.size( );
-    } catch ( Exception e ) {
-      db.rollback( );
-      throw new AuthException( "Failed to search volume info", e );
-    }
-  }
 
-  public static long countVolumeByUser( String userId ) throws AuthException {
-    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
-    try {
-      List<Volume> vols = db.query( new Volume( UserFullName.getInstance( Accounts.lookupUserById( userId ) ), null/* displayName */ ) );
-      db.commit( );
-      return vols.size( );
-    } catch ( Exception e ) {
-      db.rollback( );
-      throw new AuthException( "Failed to search volume info", e );
-    }
-  }
-  
-  public static long countSnapshotByAccount( String accountId ) throws AuthException {
-    EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
-    try {
-      List<Snapshot> vols = db.query( new Snapshot( accountId, null/* displayName */ ) );
-      db.commit( );
-      return vols.size( );
-    } catch ( Exception e ) {
-      db.rollback( );
-      throw new AuthException( "Failed to search snapshot info", e );
-    }
-  }
-  
-  public static long countSnapshotByUser( String userId ) throws AuthException {
-    EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
-    try {
-      List<Snapshot> vols = db.query( new Snapshot( UserFullName.getInstance( Accounts.lookupUserById( userId ) ), null/* displayName */ ) );
-      db.commit( );
-      return vols.size( );
-    } catch ( Exception e ) {
-      db.rollback( );
-      throw new AuthException( "Failed to search snapshot info", e );
-    }
-  }
-
-  public static long countVolumeSizeByAccount( String accountId ) throws AuthException {
-    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
-    try {
-      List<Volume> vols = db.query( new Volume( accountId, null/* displayName */ ) );
-      long size = 0;
-      for ( Volume v : vols ) {
-        size += v.getSize( );
-      }
-      db.commit( );
-      return size;
-    } catch ( Exception e ) {
-      db.rollback( );
-      throw new AuthException( "Failed to search volume info", e );
-    }
-  }
-
-  public static long countVolumeSizeByUser( String userId ) throws AuthException {
-    EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
-    try {
-      List<Volume> vols = db.query( new Volume( UserFullName.getInstance( Accounts.lookupUserById( userId ) ), null/* displayName */ ) );
-      long size = 0;
-      for ( Volume v : vols ) {
-        size += v.getSize( );
-      }
-      db.commit( );
-      return size;
-    } catch ( Exception e ) {
-      db.rollback( );
-      throw new AuthException( "Failed to search volume info", e );
-    }
-  }
 }

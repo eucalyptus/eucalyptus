@@ -256,6 +256,8 @@ typedef struct ncInstance_t {
     char instanceId[CHAR_BUFFER_SIZE];
     char reservationId[CHAR_BUFFER_SIZE];
     char userId[CHAR_BUFFER_SIZE];
+    char ownerId[CHAR_BUFFER_SIZE];
+    char accountId[CHAR_BUFFER_SIZE];
     char imageId[SMALL_CHAR_BUFFER_SIZE];
     char kernelId[SMALL_CHAR_BUFFER_SIZE];
     char ramdiskId[SMALL_CHAR_BUFFER_SIZE];
@@ -298,6 +300,7 @@ typedef struct ncInstance_t {
     char floppyFilePath [CHAR_BUFFER_SIZE];
     char hypervisorType [SMALL_CHAR_BUFFER_SIZE];
     hypervisorCapabilityType hypervisorCapability;
+    int hypervisorBitness;
     boolean combinePartitions; // hypervisor works only with disks (all except Xen)
     boolean do_inject_key; // whether or not NC injects SSH key into this instance (eucalyptus.conf option)
 
@@ -357,6 +360,8 @@ ncInstance * allocate_instance(char *uuid,
                                char *stateName, 
                                int stateCode, 
                                char *userId, 
+                               char *ownerId,
+                               char *accountId,
                                netConfig *ncnet, 
                                char *keyName,
                                char *userData, 
@@ -375,7 +380,7 @@ ncResource * allocate_resource(char *nodeStatus,
                                char *publicSubnets);
 void free_resource(ncResource ** res);
 
-int is_volume_used (ncVolume * v);
+int is_volume_used (const ncVolume * v);
 ncVolume * save_volume (ncInstance * instance, const char *volumeId, const char *remoteDev, const char *localDev, const char *localDevReal, const char *stateName);
 ncVolume * free_volume (ncInstance * instance, const char *volumeId);
 

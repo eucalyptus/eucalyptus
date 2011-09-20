@@ -16,6 +16,7 @@ import com.eucalyptus.webui.client.view.ErrorSinkView;
 import com.eucalyptus.webui.client.view.KnowsPageSize;
 import com.eucalyptus.webui.client.view.LoadingAnimationView;
 import com.eucalyptus.webui.client.view.SearchRangeChangeHandler;
+import com.eucalyptus.webui.client.view.SelectionController;
 import com.google.gwt.activity.shared.AbstractActivity;
 import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.http.client.URL;
@@ -70,6 +71,8 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
     // At the beginning, don't sort
     range = new SearchRange( 0, pageSize, -1/*sortField*/, true );
     doSearch( place.getSearch( ), range );
+    
+    ActivityUtil.updateDirectorySelection( clientFactory );
   }
   
   @Override
@@ -131,8 +134,16 @@ public abstract class AbstractSearchActivity extends AbstractActivity implements
     this.clientFactory.getShellView( ).getDetailView( ).showData( descs, selected.getRow( ) );          
   }
  
+  @Override
   public void onAction( String key ) {
     //Nothing to do.
+  }
+  
+  @Override
+  public void onHide( ) {
+    if ( this.view != null && this.view instanceof SelectionController ) {
+      ( ( SelectionController )this.view ).clearSelection( );
+    }
   }
   
   public void cancel( String subject ) {

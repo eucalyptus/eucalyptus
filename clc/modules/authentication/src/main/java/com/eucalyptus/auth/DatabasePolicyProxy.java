@@ -5,8 +5,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.entities.PolicyEntity;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.entities.Transactions;
 import java.util.concurrent.ExecutionException;
-import com.eucalyptus.util.Transactions;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 
@@ -47,7 +47,7 @@ public class DatabasePolicyProxy implements Policy {
     final List<Group> results = Lists.newArrayList( );
     try {
       Transactions.one( PolicyEntity.newInstanceWithId( this.delegate.getPolicyId( ) ), new Tx<PolicyEntity>( ) {
-        public void fire( PolicyEntity t ) throws Throwable {
+        public void fire( PolicyEntity t ) {
           results.add( new DatabaseGroupProxy( t.getGroup( ) ) );
         }
       } );

@@ -73,6 +73,7 @@ import com.eucalyptus.component.LifecycleEvents.ServiceStateEvent;
 import com.eucalyptus.component.LifecycleEvents.Start;
 import com.eucalyptus.component.LifecycleEvents.Stop;
 import com.eucalyptus.event.Event;
+import com.eucalyptus.records.Logs;
 import com.google.common.collect.SortedSetMultimap;
 import com.google.common.collect.TreeMultimap;
 
@@ -130,7 +131,7 @@ public class AbstractService {
   }
   
   protected void doState( ServiceStateEvent event ) {
-    LOG.debug( event );
+    Logs.exhaust( ).debug( event );
     for ( ServiceCheckRecord record : event.getDetails( ) ) {
       submitRecord( record );
     }

@@ -872,7 +872,6 @@ static int copy_creator (artifact * a)
         if (diskutil_ch (bbfile, NULL, NULL, 0664) != OK) {
             logprintfl (EUCAINFO, "[%s] error: failed to change user and/or permissions for '%s' '%s'\n", a->instanceId, vbr->typeName, bbfile);
         }
-        
     }
     
     if (strlen (a->sshkey)) {
@@ -1111,8 +1110,6 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean do_make_work_c
         return NULL;
 
     case NC_LOCATION_URL: {
-        logprintfl(EUCADEBUG, "MEH: %s\n", vbr->preparedResourceLocation);
-        
         // get the digest for size and signature
         char manifestURL[MAX_PATH];
         char * blob_sig = NULL;
@@ -1824,7 +1821,7 @@ static int provision_vm (const char * id, const char * sshkey, const char * eki,
     next_instances_slot++;
     pthread_mutex_unlock (&competitors_mutex);
 
-    bzero   (vm, sizeof (vm));
+    bzero   (vm, sizeof (*vm));
     add_vbr (vm, VBR_SIZE, NC_FORMAT_NONE, "none", eki,    NC_RESOURCE_KERNEL,    NC_LOCATION_NONE, 0, 0, 0, NULL);
     add_vbr (vm, VBR_SIZE, NC_FORMAT_NONE, "none", eri,    NC_RESOURCE_RAMDISK,   NC_LOCATION_NONE, 0, 0, 0, NULL);
     add_vbr (vm, VBR_SIZE, NC_FORMAT_EXT3, "ext3", emi,    NC_RESOURCE_IMAGE,     NC_LOCATION_NONE, 0, 1, BUS_TYPE_SCSI, NULL);

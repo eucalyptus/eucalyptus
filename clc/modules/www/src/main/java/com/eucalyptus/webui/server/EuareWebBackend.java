@@ -190,7 +190,7 @@ public class EuareWebBackend {
 	        action = LoginAction.EXPIRATION;
 	      }
       }
-      return new LoginUserProfile( user.getUserId( ), user.getName( ), user.getAccount( ).getName( ), user.getToken( ), userProfileSearch, userKeySearch, action );
+      return new LoginUserProfile( user.getUserId( ), user.getName( ), user.getAccount( ).getName( ), userProfileSearch, userKeySearch, action );
     } catch ( Exception e ) {
       LOG.error( "Exception in retrieving user profile", e );
       LOG.debug( e, e );
@@ -215,14 +215,17 @@ public class EuareWebBackend {
   }
   
   private static void authenticateLocal( User user, String password ) throws EucalyptusServiceException {
-    if ( !user.getPassword( ).equals( Crypto.generateHashedPassword( password ) ) ) {
+    if ( !Strings.isNullOrEmpty( user.getPassword( ) ) && !user.getPassword( ).equals( Crypto.generateHashedPassword( password ) ) ) {
       throw new EucalyptusServiceException( "Incorrect password" );
     }    
   }
   
-  public static void changeUserPassword( User requestUser, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
+  public static User changeUserPassword( User requestUser, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
     try {
       User user = Accounts.lookupUserById( userId );
+      if ( authenticateWithLdap( user ) ) {
+    	throw new EucalyptusServiceException( "Currently authenticating with LDAP. Can not change password." );
+      }
       EuarePermission.authorizeModifyUserPassword( requestUser, user.getAccount( ), user );
       // Anyone want to change some other people's password must authenticate himself first
       if ( Strings.isNullOrEmpty( requestUser.getPassword( ) ) || !requestUser.getPassword( ).equals( Crypto.generateHashedPassword( oldPass ) ) ) {
@@ -240,6 +243,7 @@ public class EuareWebBackend {
       if ( !Strings.isNullOrEmpty( email ) ) {
         user.setInfo( User.EMAIL, email );
       }
+      return user;
     } catch ( EucalyptusServiceException e ) {
       LOG.debug( e, e );
       throw e;
@@ -529,7 +533,7 @@ public class EuareWebBackend {
         // Optimization for a single user search
         User user = Accounts.lookupUserById( query.getSingle( ID ).getValue( ) );
         Account account = user.getAccount( );
-        if ( EuarePermission.allowReadUser( requestUser, account, user ) ) {
+        if ( EuarePermission.allowListAndReadUser( requestUser, account, user ) ) {
           results.add( serializeUser( account, user ) );
         }
       } else if ( query.hasOnlySingle( GROUPID ) ) {
@@ -537,7 +541,7 @@ public class EuareWebBackend {
         Group group = Accounts.lookupGroupById( query.getSingle( GROUPID ).getValue( ) );
         Account account = group.getAccount( );
         for ( User user : group.getUsers( ) ) {
-          if ( EuarePermission.allowReadUser( requestUser, account, user ) ) {
+          if ( EuarePermission.allowListAndReadUser( requestUser, account, user ) ) {
             results.add( serializeUser( account, user ) );
           }
         }
@@ -545,7 +549,7 @@ public class EuareWebBackend {
         // Optimization for users of a single account
         Account account = Accounts.lookupAccountById( query.getSingle( ACCOUNTID ).getValue( ) );
         for ( User user : account.getUsers( ) ) {
-          if ( EuarePermission.allowReadUser( requestUser, account, user ) ) {
+          if ( EuarePermission.allowListAndReadUser( requestUser, account, user ) ) {
             results.add( serializeUser( account, user ) );
           }
         }        
@@ -553,7 +557,7 @@ public class EuareWebBackend {
         for ( Account account : getAccounts( query ) ) {
           for ( User user : account.getUsers( ) ) {
             if ( userMatchQuery( user, query ) ) {
-              if ( EuarePermission.allowReadUser( requestUser, account, user ) ) {
+              if ( EuarePermission.allowListAndReadUser( requestUser, account, user ) ) {
                 results.add( serializeUser( account, user ) );
               }
             }
@@ -654,37 +658,28 @@ public class EuareWebBackend {
         }        
       } else {
         for ( Account account : getAccounts( query ) ) {
-          if ( query.has( USER ) || query.has( USERID ) ) {
-            for ( User user : getUsers( account, query ) ) {
-              if ( user.isAccountAdmin( ) ) continue;
-              for ( Policy policy : user.getPolicies( ) ) {
-                if ( policyMatchQuery( policy, query ) ) {
-                  if ( EuarePermission.allowReadUserPolicy( requestUser, account, user ) ) {
+          for ( User user : getUsers( account, query ) ) {
+            for ( Policy policy : user.getPolicies( ) ) {
+              if ( policyMatchQuery( policy, query ) ) {
+                if ( EuarePermission.allowReadUserPolicy( requestUser, account, user ) ) {
+                  if ( user.isAccountAdmin( ) ) {
+                    results.add( serializePolicy( policy, account, null, null ) );
+                  } else {
                     results.add( serializePolicy( policy, account, null, user ) );
                   }
                 }
               }
             }
-          } else if ( query.has( GROUP ) || query.has( GROUPID ) ) {
-            for ( Group group : getGroups( account, query ) ) {
-              for ( Policy policy : group.getPolicies( ) ) {
-                if ( policyMatchQuery( policy, query ) ) {
-                  if ( EuarePermission.allowReadGroupPolicy( requestUser, account, group ) ) {
-                    results.add( serializePolicy( policy, account, group, null ) );
-                  }
-                }
-              }
-            }          
-          } else {
-            User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
-            for ( Policy policy : admin.getPolicies( ) ) {
-              if ( policyMatchQuery( policy, query ) ) {
-                if ( EuarePermission.allowReadAccountPolicy( requestUser, account ) ) {
-                  results.add( serializePolicy( policy, account, null, null ) );
-                }
-              }
-            }          
           }
+          for ( Group group : getGroups( account, query ) ) {
+            for ( Policy policy : group.getPolicies( ) ) {
+              if ( policyMatchQuery( policy, query ) ) {
+                if ( EuarePermission.allowReadGroupPolicy( requestUser, account, group ) ) {
+                  results.add( serializePolicy( policy, account, group, null ) );
+                }
+              }
+            }
+          }          
         }
       }
     } catch ( Exception e ) {
@@ -749,7 +744,7 @@ public class EuareWebBackend {
         }        
       } else {
         for ( Account account : getAccounts( query ) ) {
-          for ( User user : account.getUsers( ) ) {
+          for ( User user : getUsers( account, query ) ) {
             for ( Certificate cert : user.getCertificates( ) ) {
               if ( certMatchQuery( cert, query ) ) {
                 if ( EuarePermission.allowReadUserCertificate( requestUser, account, user ) ) {
@@ -810,7 +805,7 @@ public class EuareWebBackend {
         }
       } else {
         for ( Account account : getAccounts( query ) ) {
-          for ( User user : account.getUsers( ) ) {
+          for ( User user : getUsers( account, query ) ) {
             for ( AccessKey key : user.getKeys( ) ) {
               if ( keyMatchQuery( key, query ) ) {
                 if ( EuarePermission.allowReadUserKey( requestUser, account, user ) ) {
@@ -841,16 +836,17 @@ public class EuareWebBackend {
     return result;
   }
 
-  public static String createAccount( User requestUser, String accountName ) throws EucalyptusServiceException {
+  public static String createAccount( User requestUser, String accountName, String password ) throws EucalyptusServiceException {
     if ( !requestUser.isSystemAdmin( ) ) {
       throw new EucalyptusServiceException( "Operation is not authorized" );
     }
     try {
       Account account = Accounts.addAccount( accountName );
       User admin = account.addUser( User.ACCOUNT_ADMIN, "/", true/*skipRegistration*/, true/*enabled*/, null/*info*/ );
-      admin.createToken( );
+      admin.resetToken( );
       admin.createConfirmationCode( );
-      admin.createPassword( );
+      admin.setPassword( Crypto.generateHashedPassword( password ) );
+      admin.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
       return account.getAccountNumber( );
     } catch ( Exception e ) {
       LOG.error( "Failed to create account " + accountName, e );
@@ -865,7 +861,7 @@ public class EuareWebBackend {
       Map<String, String> info = Maps.newHashMap( );
       info.put( User.EMAIL, email );
       User admin = account.addUser( User.ACCOUNT_ADMIN, "/", false/*skipRegistration*/, true/*enabled*/, info );
-      admin.createToken( );
+      admin.resetToken( );
       admin.createConfirmationCode( );
       admin.setPassword( Crypto.generateHashedPassword( password ) );
       admin.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
@@ -967,9 +963,13 @@ public class EuareWebBackend {
     for ( String id : ids ) {
       try { 
         User user = Accounts.lookupUserById( id );
-        Account account = user.getAccount( );
-        EuarePermission.authorizeDeleteUser( requestUser, account, user );
-        account.deleteUser( user.getName( ), false, true );
+        if ( !( user.isSystemAdmin( ) && user.isAccountAdmin( ) ) ) {
+          Account account = user.getAccount( );
+          EuarePermission.authorizeDeleteUser( requestUser, account, user );
+          account.deleteUser( user.getName( ), false, true );
+        } else {
+          throw new IllegalArgumentException( "Can't delete admin@eucalyptus" );
+        }
       } catch ( Exception e ) {
         LOG.error( "Failed to delete user " + id, e );
         LOG.debug( e, e );
@@ -1036,13 +1036,20 @@ public class EuareWebBackend {
       String userName = policySerialized.getField( i++ );
       Account account = Accounts.lookupAccountByName( accountName );
       if ( !Strings.isNullOrEmpty( userName ) ) {
+        // delete user policy
         User user = account.lookupUserByName( userName );
         EuarePermission.authorizeDeleteUserPolicy( requestUser, account, user );
         user.removePolicy( policyName );
-      } else {
+      } else if ( !Strings.isNullOrEmpty( groupName ) ) {
+        // delete group policy
         Group group = account.lookupGroupByName( groupName );
         EuarePermission.authorizeDeleteGroupPolicy( requestUser, account, group );
         group.removePolicy( policyName );
+      } else {
+        // delete account policy
+        User admin = account.lookupUserByName( User.ACCOUNT_ADMIN );
+        EuarePermission.authorizeDeleteAccountPolicy( requestUser );
+        admin.removePolicy( policyName );        
       }
     } catch ( EucalyptusServiceException e ) {
       LOG.debug( e, e );
@@ -1059,6 +1066,7 @@ public class EuareWebBackend {
       // Deserialize
       int i = 0;
       String keyId = keySerialized.getField( i++ );
+      i++;//Secret key
       i++;//Active
       String accountName = keySerialized.getField( i++ );
       String userName = keySerialized.getField( i++ );
@@ -1088,7 +1096,7 @@ public class EuareWebBackend {
       Account account = Accounts.lookupAccountByName( accountName );
       User user = account.lookupUserByName( userName );
       EuarePermission.authorizeDeleteUserCertificate( requestUser, account, user );
-      user.removeKey( certId );
+      user.removeCertificate( certId );
     } catch ( EucalyptusServiceException e ) {
       LOG.debug( e, e );
       throw e;
@@ -1256,7 +1264,7 @@ public class EuareWebBackend {
         group.setName( ValueCheckerFactory.createUserAndGroupNameChecker( ).check( groupName ) );
       }
       if ( !group.getPath( ).equals( path ) ) {
-        group.setPath( path );
+        group.setPath( ValueCheckerFactory.createPathChecker( ).check( path ) );
       }
     } catch ( EucalyptusServiceException e ) {
       LOG.debug( e, e );
@@ -1296,12 +1304,15 @@ public class EuareWebBackend {
       }
       
       User user = Accounts.lookupUserById( userId );
+      if ( user.isSystemAdmin( ) && user.isAccountAdmin( ) ) {
+        throw new EucalyptusServiceException( "Can not modify admin@eucalyptus" );
+      }
       EuarePermission.authorizeModifyUser( requestUser, user.getAccount( ), user );
       if ( !user.getName( ).equals( userName ) ) {
         user.setName( ValueCheckerFactory.createUserAndGroupNameChecker( ).check( userName ) );
       }
       if ( user.getPath( ) != null && !user.getPath( ).equals( path ) ) {
-        user.setPath( path );
+        user.setPath( ValueCheckerFactory.createPathChecker( ).check( path ) );
       }
       if ( !user.isEnabled( ).toString( ).equalsIgnoreCase( enabled ) ) {
         user.setEnabled( !user.isEnabled( ) );
@@ -1482,7 +1493,7 @@ public class EuareWebBackend {
       Map<String, String> info = Maps.newHashMap( );
       info.put( User.EMAIL, email );
       User user = account.addUser( userName, "/", false/*skipRegistration*/, true/*enabled*/, info );
-      user.createToken( );
+      user.resetToken( );
       user.createConfirmationCode( );
       user.setPassword( Crypto.generateHashedPassword( password ) );
       user.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
@@ -1581,7 +1592,7 @@ public class EuareWebBackend {
     }
   }
 
-  public static void resetPassword( String confirmationCode, String password ) throws EucalyptusServiceException {
+  public static User resetPassword( String confirmationCode, String password ) throws EucalyptusServiceException {
     try {
       User user = Accounts.lookupUserByConfirmationCode( confirmationCode );
       long expires = Long.parseLong( confirmationCode.substring( 0, 15 ) );
@@ -1592,10 +1603,21 @@ public class EuareWebBackend {
       user.setConfirmationCode( null );
       user.setPassword( Crypto.generateHashedPassword( password ) );
       user.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
+      return user;
     } catch ( Exception e ) {
       LOG.error( "Failed to reset password", e );
       LOG.debug( e , e );
       throw new EucalyptusServiceException( "Failed to reset password" );
+    }
+  }
+
+  public static String getUserToken( User requestUser ) throws EucalyptusServiceException {
+    try {
+      return requestUser.getToken( );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to get user security code", e );
+      LOG.debug( e , e );
+      throw new EucalyptusServiceException( "Failed to get user security code" );
     }
   }
 

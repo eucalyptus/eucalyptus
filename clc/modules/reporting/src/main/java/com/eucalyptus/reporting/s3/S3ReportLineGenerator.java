@@ -2,14 +2,22 @@ package com.eucalyptus.reporting.s3;
 
 import java.util.*;
 
+import org.apache.log4j.Logger;
 import org.mortbay.log.Log;
 
+import com.eucalyptus.reporting.ReportLineGenerator;
 import com.eucalyptus.reporting.ReportingCriterion;
 import com.eucalyptus.reporting.Period;
+import com.eucalyptus.reporting.instance.InstanceReportLineGenerator;
 import com.eucalyptus.reporting.units.Units;
+import com.eucalyptus.reporting.user.ReportingAccountDao;
+import com.eucalyptus.reporting.user.ReportingUserDao;
 
 public class S3ReportLineGenerator
+	implements ReportLineGenerator<S3ReportLine>
 {
+	private static Logger log = Logger.getLogger( S3ReportLineGenerator.class );
+
 	private static S3ReportLineGenerator instance;
 	
 	public static S3ReportLineGenerator getInstance()
@@ -67,13 +75,15 @@ public class S3ReportLineGenerator
 	private static String getAttributeValue(ReportingCriterion criterion,
 			S3SummaryKey key)
 	{
+		log.debug("owner id:" + key.getOwnerId() + " account id:" + key.getAccountId());
+
 		switch (criterion) {
 			case ACCOUNT:
-				return key.getAccountId();
+				return ReportingAccountDao.getInstance().getAccountName(key.getAccountId());
 			case USER:
-				return key.getOwnerId();
+				return ReportingUserDao.getInstance().getUserName(key.getOwnerId());
 			default:
-				return key.getOwnerId();
+				return ReportingUserDao.getInstance().getUserName(key.getOwnerId());
 		}
 	}
 	

@@ -220,7 +220,7 @@ public class GetObjectAccessControlPolicyType extends WalrusRequestType {
 	String versionId;
 }
 
-public class WalrusErrorMessageType extends EucalyptusMessage {
+public class WalrusErrorMessageType extends BaseMessage {
 	protected String message;
 	protected String code;
 	protected HttpResponseStatus status;
@@ -296,7 +296,7 @@ public class ListAllMyBucketsType extends WalrusRequestType {
 }
 
 
-public class ListAllMyBucketsResponseType extends EucalyptusMessage {
+public class ListAllMyBucketsResponseType extends BaseMessage {
 	CanonicalUserType owner;
 	ListAllMyBucketsList bucketList;
 }
@@ -797,7 +797,11 @@ public class GetWalrusSnapshotResponseType extends WalrusDataGetResponseType {
 public class GetWalrusSnapshotSizeType extends WalrusDataGetRequestType {
 }
 
-public class WalrusComponentMessageType extends ComponentMessageType {	
+public class WalrusComponentMessageType extends ComponentMessageType {
+  @Override
+  public String getComponent( ) {
+    return "walrus";
+  }
 }
 
 public class GetWalrusSnapshotSizeResponseType extends WalrusDataGetResponseType {

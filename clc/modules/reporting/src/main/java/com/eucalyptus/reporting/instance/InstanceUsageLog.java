@@ -143,14 +143,9 @@ public class InstanceUsageLog
 		final Map<InstanceSummaryKey, InstanceUsageSummary> usageMap =
     		new HashMap<InstanceSummaryKey, InstanceUsageSummary>();
 
-		//Key is uuid
-		Map<String,InstanceDataAccumulator> dataAccumulatorMap =
-			new HashMap<String,InstanceDataAccumulator>();
-
 		EntityWrapper<InstanceUsageSnapshot> entityWrapper =
 			EntityWrapper.get(InstanceUsageSnapshot.class);
 		try {
-			
 
 			/* Start query from last snapshot before report beginning, and
 			 * iterate through the data until after the end. We'll truncate and
@@ -172,19 +167,28 @@ public class InstanceUsageLog
 					.setLong(1, afterEnd)
 					.list();
 			
+
+			
+			/* Accumulate data over timeline, by instance, keyed by instance uuid.
+			 * Accumulated data consists of the instance running time, network
+			 * io megs, and disk io megs for each instance.
+			 */
+			Map<String,InstanceDataAccumulator> dataAccumulatorMap =
+				new HashMap<String,InstanceDataAccumulator>();
+			
 			for (Object obj: list) {
 
 				Object[] row = (Object[]) obj;
 				InstanceAttributes insAttrs = (InstanceAttributes) row[0];
 				InstanceUsageSnapshot snapshot = (InstanceUsageSnapshot) row[1];
 
-				//log.info("Found row attrs:" + insAttrs + " snapshot:" + snapshot);
+				log.debug("Found row attrs:" + insAttrs + " snapshot:" + snapshot);
 				
 				String uuid = insAttrs.getUuid();
 				if ( !dataAccumulatorMap.containsKey( uuid ) ) {
 					InstanceDataAccumulator accumulator =
-						new InstanceDataAccumulator(insAttrs, snapshot, period);
-					dataAccumulatorMap.put(uuid, accumulator);
+						new InstanceDataAccumulator( insAttrs, snapshot, period );
+					dataAccumulatorMap.put( uuid, accumulator );
 				} else {
 					InstanceDataAccumulator accumulator =
 						dataAccumulatorMap.get( uuid );
@@ -193,6 +197,11 @@ public class InstanceUsageLog
 
 			}
 
+			
+			/* Summarize usage for each (zone,cluster,acct,user) key, by
+			 * summing all usage for all instances for each key. Populate
+			 * the usageMap, which is what we return.
+			 */
 			for (String uuid: dataAccumulatorMap.keySet()) {
 				//log.info("Instance uuid:" + uuid);
 				InstanceDataAccumulator accumulator =
@@ -207,7 +216,6 @@ public class InstanceUsageLog
 				ius.addNetworkIoMegs(accumulator.getNetIoMegs());
 				ius.sumFromPeriodType(accumulator.getDurationPeriod(),
 						accumulator.getInstanceAttributes().getInstanceType());
-				
 			}
 
 			entityWrapper.commit();
@@ -218,15 +226,23 @@ public class InstanceUsageLog
 		}
 
 		
-//		log.info("Printing usageMap");
-//		for (InstanceSummaryKey key: usageMap.keySet()) {
-//			log.info("key:" + key + " summary:" + usageMap.get(key));
-//		}
-//		
+		if (log.isDebugEnabled()) {
+			log.debug("Printing usageMap");
+			for (InstanceSummaryKey key: usageMap.keySet()) {
+				log.debug("key:" + key + " summary:" + usageMap.get(key));
+			}
+		}
+
         return usageMap;
     }
 
-	
+
+    /**
+     * InstanceDataAccumulator will accumulate a series of
+     * InstanceUsageSnapshot if you call the <code>update</code> method with
+     * each snapshot, after which it can return the total duration of the
+     * instance, disk io usage, and net io usage for the instance.
+     */
     private class InstanceDataAccumulator
     {
     	private final InstanceAttributes insAttrs;

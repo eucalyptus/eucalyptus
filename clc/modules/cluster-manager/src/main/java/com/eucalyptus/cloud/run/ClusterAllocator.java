@@ -63,65 +63,63 @@
  */
 package com.eucalyptus.cloud.run;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutionException;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
-import com.eucalyptus.address.Addresses;
-import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.cloud.ResourceToken;
+import com.eucalyptus.cloud.VmRunType;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.Networks;
-import com.eucalyptus.cluster.NoSuchTokenException;
 import com.eucalyptus.cluster.VmInstance;
+import com.eucalyptus.cluster.VmInstance.Reason;
+import com.eucalyptus.cluster.VmInstance.VmState;
 import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.StartNetworkCallback;
 import com.eucalyptus.cluster.callback.VmRunCallback;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.keys.SshKeyPair;
+import com.eucalyptus.network.ExtantNetwork;
+import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Callback.Success;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.Callback;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.StatefulMessageSet;
-import com.eucalyptus.vm.SystemState.Reason;
-import com.eucalyptus.vm.VmState;
 import com.eucalyptus.ws.client.ServiceDispatcher;
-import com.google.common.base.Function;
-import com.google.common.base.Functions;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
-import edu.ucsb.eucalyptus.cloud.Network;
-import edu.ucsb.eucalyptus.cloud.NetworkToken;
-import edu.ucsb.eucalyptus.cloud.ResourceToken;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
-import edu.ucsb.eucalyptus.cloud.VmRunType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkResponseType;
 import edu.ucsb.eucalyptus.msgs.StartNetworkType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
-public class ClusterAllocator extends Thread {
+public class ClusterAllocator implements Runnable {
   private static Logger LOG = Logger.getLogger( ClusterAllocator.class );
   
   enum State {
@@ -130,75 +128,54 @@ public class ClusterAllocator extends Thread {
   
   public static Boolean             SPLIT_REQUESTS = true; //TODO:GRZE:@Configurable
   private StatefulMessageSet<State> messages;
+  private final Allocation          allocInfo;
   private Cluster                   cluster;
-  private Allocation                allocInfo;
   
-  public static void create( ResourceToken t, Allocation allocInfo ) {
-    Clusters.getInstance( ).lookup( t.getCluster( ) ).getThreadFactory( ).newThread( new ClusterAllocator( t, allocInfo ) ).start( );
+  public static void create( final Allocation allocInfo ) {
+    Threads.lookup( ClusterController.class, ClusterAllocator.class ).submit( new ClusterAllocator( allocInfo ) );
   }
   
-  private ClusterAllocator( ResourceToken vmToken, Allocation allocInfo ) {
+  private ClusterAllocator( final Allocation allocInfo ) {
     this.allocInfo = allocInfo;
-    if ( vmToken != null ) {
-      try {
-        this.cluster = Clusters.getInstance( ).lookup( vmToken.getCluster( ) );
-        this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
-        
-        if ( this.allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {
-          ServiceConfiguration sc = Partitions.lookupService( Storage.class, this.cluster.getPartition( ) );
-          VirtualBootRecord root = allocInfo.getVmTypeInfo( ).lookupRoot( );
-          if ( root.isBlockStorage( ) ) {
-            for ( int i = 0; i < vmToken.getAmount( ); i++ ) {
-              BlockStorageImageInfo imgInfo = ( ( BlockStorageImageInfo ) this.allocInfo.getBootSet( ).getMachine( ) );
-              int sizeGb = ( int ) Math.ceil( imgInfo.getImageSizeBytes( ) / ( 1024l * 1024l * 1024l ) );
-              LOG.debug( "About to prepare root volume using bootable block storage: " + imgInfo + " and vbr: " + root );
-              Volume vol = Volumes.createStorageVolume( sc, this.allocInfo.getOwnerFullName( ), imgInfo.getSnapshotId( ), sizeGb, allocInfo.getRequest( ) );
-              if ( imgInfo.getDeleteOnTerminate( ) ) {
-                this.allocInfo.getTransientVolumes( ).add( vol );
-              } else {
-                this.allocInfo.getPersistentVolumes( ).add( vol );
-              }
-            }
-          }
-        }
-        
-        for ( NetworkToken networkToken : vmToken.getNetworkTokens( ) )
-          this.setupNetworkMessages( networkToken );
-        this.setupVmMessages( vmToken );
-      } catch ( Throwable e ) {
-        LOG.debug( e, e );
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      this.cluster = Clusters.lookup( allocInfo.getPartition( ) );
+      this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
+      this.setupVolumeMessages( );
+      this.setupNetworkMessages( );
+      for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+        this.setupVmMessages( token );
+      }
+      db.commit( );
+    } catch ( final Exception e ) {
+      db.rollback( );
+      LOG.debug( e, e );
+      this.allocInfo.abort( );
+      for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
         try {
-          Clusters.getInstance( ).lookup( vmToken.getCluster( ) ).getNodeState( ).releaseToken( vmToken );
-        } catch ( Throwable e1 ) {
-          LOG.debug( e1 );
-          LOG.trace( e1, e1 );
+          final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
+          vm.setState( VmState.TERMINATED, Reason.FAILED, e.getMessage( ) );
+        } catch ( final Exception e1 ) {
+          LOG.debug( e1, e1 );
         }
-        for ( String addr : vmToken.getAddresses( ) ) {
-          try {
-            Addresses.release( Addresses.getInstance( ).lookup( addr ) );
-          } catch ( Throwable e1 ) {
-            LOG.debug( e1 );
-            LOG.trace( e1, e1 );
-          }
-        }
-        try {
-          if ( vmToken.getPrimaryNetwork( ) != null ) {
-            Network net = Networks.getInstance( ).lookup( vmToken.getPrimaryNetwork( ).getName( ) );
-            for ( Integer i : vmToken.getPrimaryNetwork( ).getIndexes( ) ) {
-              net.returnNetworkIndex( i );
-            }
-          }
-        } catch ( Throwable e1 ) {
-          LOG.debug( e1 );
-          LOG.trace( e1, e1 );
-        }
-        for ( String vmId : vmToken.getInstanceIds( ) ) {
-          try {
-            VmInstance vm = VmInstances.getInstance( ).lookup( vmId );
-            vm.setState( VmState.TERMINATED, Reason.FAILED, e.getMessage( ) );
-            VmInstances.getInstance( ).disable( vmId );
-          } catch ( Exception e1 ) {
-            LOG.debug( e1, e1 );
+      }
+    }
+  }
+  
+  private void setupVolumeMessages( ) throws NoSuchElementException, MetadataException, ExecutionException {
+    if ( this.allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {
+      final ServiceConfiguration sc = Partitions.lookupService( Storage.class, this.cluster.getPartition( ) );
+      final VirtualBootRecord root = this.allocInfo.getVmTypeInfo( ).lookupRoot( );
+      if ( root.isBlockStorage( ) ) {
+        for ( int i = 0; i < this.allocInfo.getAllocationTokens( ).size( ); i++ ) {
+          final BlockStorageImageInfo imgInfo = ( ( BlockStorageImageInfo ) this.allocInfo.getBootSet( ).getMachine( ) );
+          final int sizeGb = ( int ) Math.ceil( imgInfo.getImageSizeBytes( ) / ( 1024l * 1024l * 1024l ) );
+          LOG.debug( "About to prepare root volume using bootable block storage: " + imgInfo + " and vbr: " + root );
+          final Volume vol = Volumes.createStorageVolume( sc, this.allocInfo.getOwnerFullName( ), imgInfo.getSnapshotId( ), sizeGb, this.allocInfo.getRequest( ) );
+          if ( imgInfo.getDeleteOnTerminate( ) ) {
+            this.allocInfo.getTransientVolumes( ).add( vol );
+          } else {
+            this.allocInfo.getPersistentVolumes( ).add( vol );
           }
         }
       }
@@ -206,123 +183,124 @@ public class ClusterAllocator extends Thread {
   }
   
   @SuppressWarnings( "unchecked" )
-  private void setupNetworkMessages( NetworkToken networkToken ) {
-    if ( networkToken != null ) {
-      Request<StartNetworkType, StartNetworkResponseType> callback = AsyncRequests.newRequest( new StartNetworkCallback( networkToken ) );
+  private void setupNetworkMessages( ) throws NotEnoughResourcesException {
+    NetworkGroup net = this.allocInfo.getPrimaryNetwork( );
+    if ( net != null ) {
+      final Request callback = AsyncRequests.newRequest( new StartNetworkCallback( this.allocInfo.getExtantNetwork( ) ) );
       this.messages.addRequest( State.CREATE_NETWORK, callback );
-      EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ), networkToken.toString( ) ).debug( );
+      EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ), net.toString( ) ).debug( );
     }
   }
   
-  private void setupVmMessages( final ResourceToken token ) throws MetadataException {
-    Integer vlan = null;
-    List<String> networkNames = null;
-    ArrayList<String> networkIndexes = Lists.newArrayList( );
-    if ( token.getPrimaryNetwork( ) != null ) {
-      vlan = token.getPrimaryNetwork( ).getVlan( );
-      if ( vlan < 0 ) vlan = 9;//FIXME: general vlan, should be min-1?
-      networkNames = Lists.newArrayList( token.getPrimaryNetwork( ).getNetworkName( ) );
-      for ( Integer index : token.getPrimaryNetwork( ).getIndexes( ) ) {
-        networkIndexes.add( index.toString( ) );
-      }
-    } else {
-      vlan = -1;
-      networkNames = Lists.newArrayList( Collections.nCopies( token.getAmount( ), "default" ) );
-      networkIndexes = Lists.newArrayList( Collections.nCopies( token.getAmount( ), "-1" ) );
-    }
+  private void setupVmMessages( final ResourceToken token ) throws Exception {
+    final String networkName = NetworkGroups.networkingConfiguration( ).hasNetworking( )
+      ? this.allocInfo.getPrimaryNetwork( ).getNaturalId( )
+      : NetworkGroups.lookup( this.allocInfo.getOwnerFullName( ), NetworkGroups.defaultNetworkName( ) ).getNaturalId( );
     
-    final List<String> addresses = Lists.newArrayList( token.getAddresses( ) );
-    BaseMessage request = this.allocInfo.getRequest( );
-    String rsvId = this.allocInfo.getReservationId( );
-    SshKeyPair keyInfo = this.allocInfo.getSshKeyPair( );
-    VmTypeInfo vmInfo = this.allocInfo.getVmTypeInfo( );
-    String userData = this.allocInfo.getRequest( ).getUserData( );
+    final SshKeyPair keyInfo = this.allocInfo.getSshKeyPair( );
+    final VmTypeInfo vmInfo = this.allocInfo.getVmTypeInfo( );
     Request cb = null;
-    int index = 0;
     try {
-      for ( ResourceToken childToken : this.cluster.getNodeState( ).splitToken( token ) ) {
-        VirtualBootRecord root = vmInfo.lookupRoot( );
-        VmTypeInfo childVmInfo = vmInfo;
-        if( root.isBlockStorage( ) ) {
-          childVmInfo = vmInfo.child( );
-          Volume vol = this.allocInfo.getPersistentVolumes( ).get( index );
-          Dispatcher sc = ServiceDispatcher.lookup( Partitions.lookupService( Storage.class, vol.getPartition( ) ) );
-          for( int i = 0; i < 60; i++ ) { 
-            try {
-              DescribeStorageVolumesResponseType volState = sc.send( new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) ) );    
-              if( "available".equals( volState.getVolumeSet( ).get( 0 ).getStatus( ) ) ) {
-                break;
-              } else {
-                TimeUnit.SECONDS.sleep( 1 );
-              }
-            } catch ( InterruptedException ex ) {
-              Thread.currentThread( ).interrupt( );
-            } catch ( Exception ex ) {
-              LOG.error( ex , ex );
-            }
-          }
-          for( String nodeTag : this.cluster.getNodeTags( ) ) {
-            try {
-              AttachStorageVolumeResponseType scAttachResponse = sc.send( new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ), vol.getDisplayName( ) ) );
-              childVmInfo.lookupRoot( ).setResourceLocation( scAttachResponse.getRemoteDeviceString( ) );
-            } catch ( Exception ex ) {
-              LOG.error( ex , ex );
-            }
-          }
-        }//TODO:GRZE:OMGFIXME: move this for bfe to later stage.
-        cb = makeRunRequest( request, childToken, this.allocInfo.getOwnerFullName( ), rsvId, keyInfo, childVmInfo,
-                             this.allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ), vlan, networkNames,
-                             userData );
-        this.messages.addRequest( State.CREATE_VMS, cb );
-        index++;
-      }
-    } catch ( NoSuchTokenException ex ) {
-      throw new RuntimeException( ex );
+      final VirtualBootRecord root = vmInfo.lookupRoot( );
+      final VmTypeInfo childVmInfo = this.makeVmTypeInfo( vmInfo, token.getLaunchIndex( ), root );
+      cb = this.makeRunRequest( token, childVmInfo, networkName );
+      this.messages.addRequest( State.CREATE_VMS, cb );
+    } catch ( final Exception ex ) {
+      Logs.extreme( ).error( ex, ex );
+      throw ex;
     }
   }
   
-  private Request makeRunRequest( BaseMessage request, final ResourceToken childToken, UserFullName userFullName, String rsvId,
-                                  SshKeyPair keyPair, VmTypeInfo vmInfo, String platform, Integer vlan, List<String> networkNames, String userData ) {
-    List<String> macs = Lists.transform( childToken.getInstanceIds( ), new Function<String, String>( ) {
-      @Override
-      public String apply( String instanceId ) {
-        return VmInstances.getAsMAC( instanceId );
+  private VmTypeInfo makeVmTypeInfo( final VmTypeInfo vmInfo, final int index, final VirtualBootRecord root ) {
+    VmTypeInfo childVmInfo = vmInfo;
+    if ( root.isBlockStorage( ) ) {
+      childVmInfo = vmInfo.child( );
+      final Volume vol = this.allocInfo.getPersistentVolumes( ).get( index );
+      final Dispatcher sc = ServiceDispatcher.lookup( Partitions.lookupService( Storage.class, vol.getPartition( ) ) );
+      for ( int i = 0; i < 60; i++ ) {
+        try {
+          final DescribeStorageVolumesResponseType volState = sc.send( new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) ) );
+          if ( "available".equals( volState.getVolumeSet( ).get( 0 ).getStatus( ) ) ) {
+            break;
+          } else {
+            TimeUnit.SECONDS.sleep( 1 );
+          }
+        } catch ( final InterruptedException ex ) {
+          Thread.currentThread( ).interrupt( );
+        } catch ( final Exception ex ) {
+          LOG.error( ex, ex );
+        }
       }
-    } );
-    
-    List<String> networkIndexes = ( childToken.getPrimaryNetwork( ) == null )
-      ? new ArrayList<String>( )
-      : Lists.newArrayList( Iterables.transform( childToken.getPrimaryNetwork( ).getIndexes( ), Functions.toStringFunction( ) ) );
-    //TODO:GRZE:ASAP use ern here instead of string name -- see KeyPairManager.resolve()
-
-    VmRunType run = new VmRunType( rsvId, userData, childToken.getAmount( ),
-                                   vmInfo, new VmKeyInfo(keyPair.getName( ), keyPair.getPublicKey( ), keyPair.getFingerPrint( )), platform != null
-                                     ? platform
-                                     : "linux", /** ASAP:FIXME:GRZE **/
-                                   childToken.getInstanceIds( ), macs,
-                                   vlan, networkNames, networkIndexes, childToken.getInstanceUuids( ) ).regarding( request );
-    run.setUserId( userFullName.getUserId( ) );
-    Request<VmRunType, VmRunResponseType> req = AsyncRequests.newRequest( new VmRunCallback( run, childToken ) );
-    if ( !childToken.getAddresses( ).isEmpty( ) ) {
-      req.then( new Callback.Success<VmRunResponseType>( ) {
+      for ( final String nodeTag : this.cluster.getNodeTags( ) ) {
+        try {
+          final AttachStorageVolumeResponseType scAttachResponse = sc.send( new AttachStorageVolumeType( this.cluster.getNode( nodeTag ).getIqn( ),
+                                                                                                         vol.getDisplayName( ) ) );
+          childVmInfo.lookupRoot( ).setResourceLocation( scAttachResponse.getRemoteDeviceString( ) );
+        } catch ( final Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+    }//TODO:GRZE:OMGFIXME: move this for bfe to later stage.
+    return childVmInfo;
+  }
+  
+  private Request makeRunRequest( final ResourceToken childToken, final VmTypeInfo vmInfo, final String networkName ) {
+    final SshKeyPair keyPair = this.allocInfo.getSshKeyPair( );
+    final VmKeyInfo vmKeyInfo = new VmKeyInfo( keyPair.getName( ), keyPair.getPublicKey( ), keyPair.getFingerPrint( ) );
+    final String platform = this.allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ) != null
+      ? this.allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( )
+      : "linux"; // ASAP:FIXME:GRZE
+    ExtantNetwork exNet;
+    try {
+      exNet = this.allocInfo.getExtantNetwork( );
+    } catch ( Exception ex ) {
+      Logs.extreme( ).error( ex, ex );
+      exNet = ExtantNetwork.bogus( this.allocInfo.getPrimaryNetwork( ) );
+    }
+//TODO:GRZE:FINISH THIS.    Date date = Contexts.lookup( ).getContracts( ).get( Contract.Type.EXPIRATION ); 
+    final VmRunType run = VmRunType.builder( )
+                                   .instanceId( childToken.getInstanceId( ) )
+                                   .naturalId( childToken.getInstanceUuid( ) )
+                                   .keyInfo( vmKeyInfo )
+                                   .launchIndex( childToken.getLaunchIndex( ) )
+                                   .networkIndex( childToken.getNetworkIndex( ).getIndex( ) )
+                                   .networkNames( this.allocInfo.getNetworkGroups( ) )
+                                   .platform( platform )
+                                   .reservationId( childToken.getAllocationInfo( ).getReservationId( ) )
+                                   .userData( this.allocInfo.getRequest( ).getUserData( ) )
+                                   .vlan( exNet.getTag( ) )
+                                   .vmTypeInfo( vmInfo )
+                                   .owner( this.allocInfo.getOwnerFullName( ) )
+                                   .create( );
+    final Request<VmRunType, VmRunResponseType> req = AsyncRequests.newRequest( new VmRunCallback( run, childToken ) );
+    final Address addr = childToken.getAddress( );
+    if ( childToken.getAddress( ) != null ) {
+      Success<VmRunResponseType> addrCallback = new Callback.Success<VmRunResponseType>( ) {
+        @SuppressWarnings( "unchecked" )
         @Override
-        public void fire( VmRunResponseType response ) {
-          Iterator<String> addrs = childToken.getAddresses( ).iterator( );
-          for ( VmInfo vmInfo : response.getVms( ) ) {//TODO: this will have some funny failure characteristics
-            final Address addr = Addresses.getInstance( ).lookup( addrs.next( ) );
-            final VmInstance vm = VmInstances.getInstance( ).lookup( vmInfo.getInstanceId( ) );
-            AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>( ) {
-              public void fire( BaseMessage response ) {
-                vm.updatePublicAddress( addr.getName( ) );
+        public void fire( final VmRunResponseType response ) {
+          try {
+            final VmInstance vm = VmInstances.lookup( response.getVms( ).iterator( ).next( ).getInstanceId( ) );
+            Success<BaseMessage> vmUpdateCallback = new Callback.Success<BaseMessage>( ) {
+              @Override
+              public void fire( final BaseMessage response ) {
+                vm.updateAddresses( addr.getInstanceAddress( ), addr.getName( ) );
               }
-            } ).dispatch( addr.getPartition( ) );
+            };
+            AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) )
+                         .then( vmUpdateCallback )
+                         .dispatch( addr.getPartition( ) );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
           }
         }
-      } );
+      };
+      req.then( addrCallback );
     }
     return req;
   }
   
+  @Override
   public void run( ) {
     this.messages.run( );
   }

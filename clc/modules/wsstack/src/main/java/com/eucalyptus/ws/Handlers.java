@@ -114,8 +114,8 @@ public class Handlers {
     return new NioHttpResponseDecoder( );
   }
   
-  public static ChannelHandler newHttpChunkAggregator( int maxContentLength ) {//caching
-    return new HttpChunkAggregator( 1024 * 1024 * 20 );
+  public static ChannelHandler newHttpChunkAggregator( ) {
+    return new HttpChunkAggregator( StackConfiguration.CLIENT_HTTP_CHUNK_BUFFER_MAX );
   }
   
   public static ChannelHandler addressingHandler( ) {//caching

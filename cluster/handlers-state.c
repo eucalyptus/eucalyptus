@@ -114,6 +114,18 @@ int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serv
     return(1);
   }
 
+  for (i=0; i<16; i++) {
+    int j;
+    if (strlen(config->services[i].type)) {
+      logprintfl(EUCADEBUG, "DescribeServices(): internal serviceInfos type=%s name=%s urisLen=%d\n", config->services[i].type, config->services[i].name, config->services[i].urisLen);
+      for (j=0; j<8; j++) {
+	if (strlen(config->services[i].uris[j])) {
+	  logprintfl(EUCADEBUG, "DescribeServices(): internal serviceInfos\t uri[%d]:%s\n", j, config->services[i].uris[j]);
+	}
+      }
+    }
+  }
+  
   *outStatusesLen = 1;
   *outStatuses = malloc(sizeof(serviceStatusType));
   if (!*outStatuses) {
@@ -407,6 +419,11 @@ int clean_network_state(void) {
   vnetConfig *tmpvnetconfig;
 
   tmpvnetconfig = malloc(sizeof(vnetConfig));
+  if(!tmpvnetconfig) { 
+    logprintfl(EUCAERROR, "clean_network_state(): out of memory\n");
+    return -1;
+  }
+
   memcpy(tmpvnetconfig, vnetconfig, sizeof(vnetConfig));
   
   snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del 169.254.169.254/32 dev %s", config->eucahome, tmpvnetconfig->pubInterface);

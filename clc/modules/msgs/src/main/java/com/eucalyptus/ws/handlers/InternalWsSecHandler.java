@@ -77,14 +77,14 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.w3c.dom.Element;
 import com.eucalyptus.auth.login.SecurityContext;
-import com.eucalyptus.auth.principal.FakePrincipals;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.WSSecurity;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.util.Logs;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.util.CredentialProxy;
 import com.google.common.collect.Lists;
@@ -128,7 +128,7 @@ public class InternalWsSecHandler extends WsSecHandler {
         Logs.exhaust( ).error( ex , ex );
         throw new WebServicesException( "Authentication failed: " + ex.getMessage( ), ex );
       }
-      Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( FakePrincipals.SYSTEM_USER );
+      Contexts.lookup( ( ( MappingHttpMessage ) o ).getCorrelationId( ) ).setUser( Principals.systemUser() );
     }
   }
 }

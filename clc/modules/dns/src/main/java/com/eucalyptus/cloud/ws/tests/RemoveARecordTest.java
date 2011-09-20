@@ -73,7 +73,7 @@ public class RemoveARecordTest extends TestCase {
 
     private static com.eucalyptus.cloud.ws.DNSControl dnsControl;
 
-	public void testRemoveARecord() throws Throwable {
+	public void testRemoveARecord() throws Exception {
         String userId = "admin";
         RemoveARecordType request = new RemoveARecordType();
         request.setUserId(userId);

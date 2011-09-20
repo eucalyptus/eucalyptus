@@ -1,6 +1,7 @@
 package com.eucalyptus.upgrade;
 
 import java.io.File;
+import org.apache.log4j.Logger;
 
 /**
  * Any Class implementing this interface will be registered as a candidate for usage during the upgrade procedure.
@@ -27,4 +28,6 @@ public interface UpgradeScript {
   public void upgrade( File oldEucaHome, File newEucaHome );
   
   public int getPriority();
+
+  public void setLogger(Logger log);
 }

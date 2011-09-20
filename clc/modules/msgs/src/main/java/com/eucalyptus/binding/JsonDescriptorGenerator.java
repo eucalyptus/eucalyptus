@@ -177,7 +177,7 @@ public class JsonDescriptorGenerator extends BindingGenerator {
   
   public static class RequestInfo {
     private String                                name;
-    private Class                                 request;
+    private Class                                 requestType;
     private Class                                 response;
     private Class                                 parent;
     private static final Map<String, RequestInfo> requestMap = new HashMap<String, RequestInfo>( );
@@ -277,11 +277,11 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     }
     
     public Class getRequest( ) {
-      return this.request;
+      return this.requestType;
     }
     
     public void setRequest( Class request ) {
-      this.request = request;
+      this.requestType = request;
     }
     
     public Class getResponse( ) {
@@ -307,8 +307,8 @@ public class JsonDescriptorGenerator extends BindingGenerator {
     @Override
     public String toString( ) {
       if ( this.parent == null ) {
-        if ( this.request != null ) {
-          this.setParent( this.request );
+        if ( this.requestType != null ) {
+          this.setParent( this.requestType );
         } else if ( this.response != null ) {
           this.setParent( this.response );
         }

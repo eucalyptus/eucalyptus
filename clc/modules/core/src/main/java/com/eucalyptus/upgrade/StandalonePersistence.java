@@ -10,6 +10,9 @@ import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import org.apache.log4j.Level;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.FileAppender;
+import org.apache.log4j.SimpleLayout;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.jboss.netty.util.internal.ConcurrentHashMap;
 import com.eucalyptus.auth.Accounts;
@@ -38,7 +41,7 @@ public class StandalonePersistence {
   private static DatabaseSource             source;
   private static DatabaseDestination        dest;
   
-  public static void main( String[] args ) throws Throwable {
+  public static void main( String[] args ) throws Exception {
     if ( ( eucaHome = System.getProperty( "euca.upgrade.new.dir" ) ) == null ) {
       throw new RuntimeException( "Failed to find required 'euca.upgrade.new.dir' property: " + eucaHome );
     } else if ( ( eucaOld = System.getProperty( "euca.upgrade.old.dir" ) ) == null ) {
@@ -67,7 +70,7 @@ public class StandalonePersistence {
       StandalonePersistence.setupOldDatabase( );
       StandalonePersistence.runUpgrade( );
       System.exit(0);
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.error( e, e );
       e.printStackTrace( );
       System.exit( -1 );
@@ -78,6 +81,7 @@ public class StandalonePersistence {
     Collections.sort(upgradeScripts);
     LOG.info( upgradeScripts );
     for( UpgradeScript up : upgradeScripts ) {
+      up.setLogger(LOG);
       up.upgrade( oldLibDir, newLibDir );
     }
     LOG.info( "=============================" );
@@ -115,7 +119,7 @@ public class StandalonePersistence {
         for ( Sql s : StandalonePersistence.sqlConnections.values( ) ) {
           try {
             s.close( );
-          } catch ( Throwable e ) {
+          } catch ( Exception e ) {
             LOG.debug( e, e );
           }
         }
@@ -151,7 +155,7 @@ public class StandalonePersistence {
   static void setupSystemProperties( ) {
     /** Pre-flight configuration for system **/
     System.setProperty( "euca.home", eucaHome );
-    System.setProperty( "euca.log.appender", "console" );
+    System.setProperty( "euca.log.appender", "upgrade" );
     System.setProperty( "euca.log.exhaustive.cc", "FATAL" );
     System.setProperty( "euca.log.exhaustive.db", "FATAL" );
     System.setProperty( "euca.log.exhaustive.external", "FATAL" );
@@ -161,9 +165,10 @@ public class StandalonePersistence {
     System.setProperty( "euca.log.dir", eucaHome + "/var/log/eucalyptus/" );
     System.setProperty( "euca.lib.dir", eucaHome + "/usr/share/eucalyptus/" );
     String logLevel = System.getProperty( "euca.log.level", "INFO" ).toUpperCase();
-    LOG = Logger.getLogger( StandalonePersistence.class );
-    LOG.setLevel(Level.toLevel(logLevel, Level.toLevel("INFO")));
 
+    // Keep logs off the console
+    // Logger.getRootLogger().removeAllAppenders();
+    LOG = Logger.getLogger( StandalonePersistence.class );
     LOG.info( String.format( "%-20.20s %s", "New install directory:", eucaHome ) );
     LOG.info( String.format( "%-20.20s %s", "Old install directory:", eucaOld ) );
     LOG.info( String.format( "%-20.20s %s", "Upgrade data source:", eucaSource ) );
@@ -215,7 +220,7 @@ public class StandalonePersistence {
       for ( Class c : classList ) {
         try {
           d.processClass( c );
-        } catch ( Throwable t ) {
+        } catch ( Exception t ) {
           if( t instanceof ClassNotFoundException ) {
           } else {
             t.printStackTrace( );

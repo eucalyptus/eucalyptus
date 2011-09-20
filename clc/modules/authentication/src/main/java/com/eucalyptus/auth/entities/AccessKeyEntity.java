@@ -60,6 +60,7 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
   public AccessKeyEntity( UserEntity user ) {
     this.user = user;
     this.key = Hmacs.generateSecretKey( user.getName( ) );
+    this.createDate = new Date( );
   }
 
   @PrePersist

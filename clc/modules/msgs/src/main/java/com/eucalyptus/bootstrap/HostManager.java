@@ -86,13 +86,11 @@ import org.jgroups.PhysicalAddress;
 import org.jgroups.Receiver;
 import org.jgroups.View;
 import org.jgroups.stack.ProtocolStack;
-import com.eucalyptus.bootstrap.HostManager.HostStateListener;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Host;
 import com.eucalyptus.component.Hosts;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
@@ -100,12 +98,9 @@ import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.Logs;
-import com.google.common.base.Joiner;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class HostManager {
@@ -252,7 +247,7 @@ public class HostManager {
           break;
         case FINISHED:
           if ( msg.getObject( ) instanceof List ) {
-            LOG.debug( "Received updated host information: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+            Logs.exhaust( ).debug( "Received updated host information: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
             this.receive( ( List<Host> ) msg.getObject( ) );
           } else {
             LOG.debug( "Received unknown message type: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
@@ -293,7 +288,7 @@ public class HostManager {
         try {
           Bootstrap.initializeSystem( );
           System.exit( 123 );
-        } catch ( Throwable ex ) {
+        } catch ( Exception ex ) {
           LOG.error( ex, ex );
           System.exit( 123 );
         }

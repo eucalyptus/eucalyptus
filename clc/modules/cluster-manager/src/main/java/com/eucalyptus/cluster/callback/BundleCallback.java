@@ -27,13 +27,13 @@ public class BundleCallback extends MessageCallback<BundleInstanceType,BundleIns
     if ( !reply.get_return( ) ) {
       LOG.info( "Attempt to bundle instance " + this.getRequest( ).getInstanceId( ) + " has failed." );
       try {
-        VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest().getInstanceId( ) );
+        VmInstance vm = VmInstances.lookup( this.getRequest().getInstanceId( ) );
         vm.resetBundleTask( );
       } catch ( NoSuchElementException e1 ) {
       }
     } else {
       try {
-        VmInstance vm = VmInstances.getInstance( ).lookup( this.getRequest().getInstanceId( ) );
+        VmInstance vm = VmInstances.lookup( this.getRequest().getInstanceId( ) );
         vm.clearPendingBundleTask( );
         EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTED, this.getRequest( ).toSimpleString( ), vm.getBundleTask( ).getBundleId( ), vm.getInstanceId( ) ).info( );
       } catch ( NoSuchElementException e1 ) {

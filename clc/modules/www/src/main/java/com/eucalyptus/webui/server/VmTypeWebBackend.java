@@ -86,6 +86,9 @@ public class VmTypeWebBackend {
     Integer cpu = null;
     try {
       cpu = Integer.parseInt( row.getField( i++ ) );
+      if ( cpu <= 0 ) {
+        throw new IllegalArgumentException( "Can not have negative or zero value for CPU" );
+      }
     } catch ( Exception e ) {
       LOG.error( "Failed to parse cpu value from UI input for " + name, e );
       return null;
@@ -93,6 +96,9 @@ public class VmTypeWebBackend {
     Integer memory = null;
     try {
       memory = Integer.parseInt( row.getField( i++ ) );
+      if ( memory <= 0 ) {
+        throw new IllegalArgumentException( "Can not have negative or zero value for memory" );
+      }
     } catch ( Exception e ) {
       LOG.error( "Failed to parse memory value from UI input for " + name, e );
       return null;
@@ -100,6 +106,9 @@ public class VmTypeWebBackend {
     Integer disk = null;
     try {
       disk = Integer.parseInt( row.getField( i++ ) );
+      if ( disk <= 0 ) {
+        throw new IllegalArgumentException( "Can not have negative or zero value for disk" );
+      }
     } catch ( Exception e ) {
       LOG.error( "Failed to parse disk value from UI input for " + name, e );
       return null;

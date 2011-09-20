@@ -46,4 +46,42 @@ public class Units
 				sizeTimeSizeUnit);
 	}
 	
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime
+				* result
+				+ ((sizeTimeSizeUnit == null) ? 0 : sizeTimeSizeUnit.hashCode());
+		result = prime
+				* result
+				+ ((sizeTimeTimeUnit == null) ? 0 : sizeTimeTimeUnit.hashCode());
+		result = prime * result
+				+ ((sizeUnit == null) ? 0 : sizeUnit.hashCode());
+		result = prime * result
+				+ ((timeUnit == null) ? 0 : timeUnit.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Units other = (Units) obj;
+		if (sizeTimeSizeUnit != other.sizeTimeSizeUnit)
+			return false;
+		if (sizeTimeTimeUnit != other.sizeTimeTimeUnit)
+			return false;
+		if (sizeUnit != other.sizeUnit)
+			return false;
+		if (timeUnit != other.timeUnit)
+			return false;
+		return true;
+	}
+
+
 }

@@ -66,9 +66,15 @@
 package com.eucalyptus.cluster;
 
 import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.Adler32;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
+import org.hibernate.criterion.Example;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.Accounts;
@@ -76,247 +82,336 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.blockstorage.StorageUtil;
-import com.eucalyptus.cluster.callback.StopNetworkCallback;
+import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
+import com.eucalyptus.cluster.VmInstance.VmState;
+import com.eucalyptus.cluster.VmInstance.VmStateSet;
 import com.eucalyptus.cluster.callback.TerminateCallback;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.config.Configuration;
-import com.eucalyptus.config.StorageControllerConfiguration;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
+import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
-import com.eucalyptus.event.AbstractNamedRegistry;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.UnconditionalCallback;
-import com.eucalyptus.vm.SystemState;
-import com.eucalyptus.vm.SystemState.Reason;
-import com.eucalyptus.vm.VmState;
 import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
-import edu.ucsb.eucalyptus.cloud.Network;
-import edu.ucsb.eucalyptus.cloud.NetworkToken;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.MapMaker;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
-public class VmInstances extends AbstractNamedRegistry<VmInstance> {
-  private static Logger      LOG       = Logger.getLogger( VmInstances.class );
-  private static VmInstances singleton = getInstance( );
+@ConfigurableClass( root = "vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
+public class VmInstances {
+  @ConfigurableField( description = "Amount of time (in milliseconds) before a VM which is not reported by a cluster will be marked as terminated.", initial = "" + 10 * 60 * 1000 )
+  public static Long         SHUT_DOWN_TIME                = 10 * 60 * 1000l;
+  @ConfigurableField( description = "Amount of time (in milliseconds) that a terminated VM will continue to be reported.", initial = "" + 60 * 60 * 1000 )
+  public static Long         BURY_TIME                     = 60 * 60 * 1000l;
+  @ConfigurableField( description = "Maximum amount of time (in seconds) that the network topology service takes to propagate state changes.", initial = "" + 60 * 60 * 1000 )
+  public static Long         NETWORK_METADATA_REFRESH_TIME = 15l;
+  @ConfigurableField( description = "Prefix to use for instance MAC addresses.", initial = "d0:0d" )
+  public static String       MAC_PREFIX                    = "d0:0d";
+  @ConfigurableField( description = "Subdomain to use for instance DNS.", initial = ".eucalyptus", changeListener = SubdomainListener.class )
+  public static final String INSTANCE_SUBDOMAIN            = ".eucalyptus";
   
-  public static VmInstances getInstance( ) {
-    synchronized ( VmInstances.class ) {
-      if ( singleton == null ) singleton = new VmInstances( );
+  public static class SubdomainListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+      
+      if ( !newValue.toString( ).startsWith( "." ) || newValue.toString( ).endsWith( "." ) )
+        throw new ConfigurablePropertyException( "Subdomain must begin and cannot end with a '.' -- e.g., '." + newValue.toString( ).replaceAll( "\\.$", "" )
+                                                 + "' is correct." + t.getFieldName( ) );
+      
     }
-    return singleton;
   }
   
-  public static String getId( Long rsvId, int launchIndex ) {
+  private static ConcurrentMap<String, VmInstance>               terminateCache         = new MapMaker( ).softKeys( )
+                                                                                                         .softValues( )
+                                                                                                         .expireAfterWrite( BURY_TIME, TimeUnit.MILLISECONDS )
+                                                                                                         .makeMap( );
+  private static ConcurrentMap<String, RunningInstancesItemType> terminateDescribeCache = new MapMaker( ).softKeys( )
+                                                                                                         .softValues( )
+                                                                                                         .expireAfterWrite( BURY_TIME, TimeUnit.MILLISECONDS )
+                                                                                                         .makeMap( );
+  
+  private static Logger                                          LOG                    = Logger.getLogger( VmInstances.class );
+  
+  @QuantityMetricFunction( VmInstanceMetadata.class )
+  public enum CountVmInstances implements Function<OwnerFullName, Long> {
+    INSTANCE;
+    
+    @Override
+    public Long apply( final OwnerFullName input ) {
+      final EntityTransaction db = Entities.get( VmInstance.class );
+      final int i;
+      try {
+        i = Entities.createCriteria( VmInstance.class )
+                    .add( Example.create( VmInstance.named( input, null ) ) )
+                    .setReadOnly( true )
+                    .setCacheable( false )
+                    .list( )
+                    .size( );
+      } finally {
+        db.rollback( );
+      }
+      return ( long ) i;
+    }
+  }
+  
+  public static String getId( final Long rsvId, final int launchIndex ) {
     String vmId = null;
     do {
-      MessageDigest digest = Digest.MD5.get( );
+      final MessageDigest digest = Digest.MD5.get( );
       digest.reset( );
       digest.update( Long.toString( rsvId + launchIndex + System.currentTimeMillis( ) ).getBytes( ) );
       
-      Adler32 hash = new Adler32( );
+      final Adler32 hash = new Adler32( );
       hash.reset( );
       hash.update( digest.digest( ) );
       vmId = String.format( "i-%08X", hash.getValue( ) );
-    } while ( VmInstances.getInstance( ).contains( vmId ) );
+    } while ( VmInstances.contains( vmId ) );
     return vmId;
   }
   
-  public static String getAsMAC( String instanceId ) {
-    String mac = String.format( "d0:0d:%s:%s:%s:%s", instanceId.substring( 2, 4 ), instanceId.substring( 4, 6 ), instanceId.substring( 6, 8 ),
-                                instanceId.substring( 8, 10 ) );
-    return mac;
+  public static Predicate<VmInstance> withPrivateAddress( final String ip ) {
+    return new Predicate<VmInstance>( ) {
+      @Override
+      public boolean apply( VmInstance vm ) {
+        return ip.equals( vm.getPrivateAddress( ) ) && VmStateSet.RUN.apply( vm );
+      }
+    };
   }
   
-  public VmInstance lookupByInstanceIp( String ip ) throws NoSuchElementException {
-    for ( VmInstance vm : this.listValues( ) ) {
-      if ( ip.equals( vm.getPrivateAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
-        return vm;
-      }
-    }
-    throw new NoSuchElementException( "Can't find registered object with ip:" + ip + " in " + this.getClass( ).getSimpleName( ) );
+  public static VmInstance lookupByInstanceIp( final String ip ) throws NoSuchElementException {
+    return Iterables.find( listValues( ), vmWithPublicAddress( ip ) );
   }
   
-  public int countByPublicIp( String ip ) throws NoSuchElementException {
-    int count = 0;
-    for ( VmInstance vm : this.listValues( ) ) {
-      if ( ip.equals( vm.getPublicAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
-        count++;
+  public static Predicate<VmInstance> vmWithPublicAddress( final String ip ) {
+    return new Predicate<VmInstance>( ) {
+      @Override
+      public boolean apply( VmInstance vm ) {
+        return ip.equals( vm.getPublicAddress( ) ) && VmStateSet.RUN.apply( vm );
       }
-    }
-    return count;
+    };
   }
   
-  public VmInstance lookupByPublicIp( String ip ) throws NoSuchElementException {
-    for ( VmInstance vm : this.listValues( ) ) {
-      if ( ip.equals( vm.getPublicAddress( ) ) && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
-        return vm;
-      }
-    }
-    throw new NoSuchElementException( "Can't find registered object with public ip:" + ip + " in " + this.getClass( ).getSimpleName( ) );
+  public static VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
+    return Iterables.find( listValues( ), vmWithPublicAddress( ip ) );
   }
   
-  public VmInstance lookupByBundleId( String bundleId ) throws NoSuchElementException {
-    for ( VmInstance vm : this.listValues( ) ) {
-      if ( vm.getBundleTask( ) == null ) {
-        continue;
-      } else if ( bundleId.equals( vm.getBundleTask( ).getBundleId( ) ) ) {
-        return vm;
+  public static Predicate<VmInstance> withBundleId( final String bundleId ) {
+    return new Predicate<VmInstance>( ) {
+      @Override
+      public boolean apply( VmInstance vm ) {
+        return vm.getBundleTask( ) != null && bundleId.equals( vm.getBundleTask( ).getBundleId( ) );
       }
-    }
-    for ( VmInstance vm : this.listDisabledValues( ) ) {
-      if ( vm.getBundleTask( ) == null ) {
-        continue;
-      } else if ( bundleId.equals( vm.getBundleTask( ).getBundleId( ) ) ) {
-        return vm;
-      }
-    }
-    throw new NoSuchElementException( "Can't find vm with bundle task id:" + bundleId + " in " + this.getClass( ).getSimpleName( ) );
+    };
   }
   
-  public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final int networkIndex, final String networkFqName, final Cluster cluster ) {
-    UnconditionalCallback cleanup = new UnconditionalCallback( ) {
+  public static VmInstance lookupByBundleId( final String bundleId ) throws NoSuchElementException {
+    return Iterables.find( listValues( ), withBundleId( bundleId ) );
+  }
+  
+  public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final Cluster cluster ) {
+    final UnconditionalCallback cleanup = new UnconditionalCallback( ) {
+      @Override
       public void fire( ) {
         if ( address != null ) {
           try {
             if ( address.isSystemOwned( ) ) {
-              EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ).debug( );
+              EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ).debug( );
               Addresses.release( address );
             } else {
-              EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
+              EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
               AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( address.getPartition( ) );
             }
-          } catch ( IllegalStateException e ) {} catch ( Throwable e ) {
+          } catch ( final IllegalStateException e ) {} catch ( final Throwable e ) {
             LOG.debug( e, e );
           }
-        }
-        vm.updateNetworkIndex( -1 );
-        try {
-          if ( networkFqName != null ) {
-            Network net = Networks.getInstance( ).lookup( networkFqName );
-//            if ( networkIndex > 0 && vm.getNetworkNames( ).size( ) > 0 ) {
-//              net.returnNetworkIndex( networkIndex );
-//              EventRecord.caller( SystemState.class, EventType.VM_TERMINATING, "NETWORK_INDEX", networkFqName, Integer.toString( networkIndex ) ).debug( );
-//            }
-            if ( !Networks.getInstance( ).lookup( networkFqName ).hasTokens( ) ) {
-              StopNetworkCallback stopNet = new StopNetworkCallback( new NetworkToken( cluster.getName( ), net.getUserFullName( ), net.getNetworkName( ), net.getUuid( ),
-                                                                                       net.getVlan( ) ) );
-              for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-                AsyncRequests.newRequest( stopNet.newInstance( ) ).dispatch( c.getConfiguration( ) );
-              }
-            }
-          }
-        } catch ( NoSuchElementException e1 ) {} catch ( Throwable e1 ) {
-          LOG.debug( e1, e1 );
         }
       }
     };
     return cleanup;
   }
-
+  
   public static void cleanUp( final VmInstance vm ) {
+    LOG.trace( Logs.dump( vm ) );
+    LOG.trace( Threads.currentStackString( ) );
     try {
-      String networkFqName = !vm.getNetworks( ).isEmpty( ) ? vm.getOwner( ).getName( ) + "-" + vm.getNetworkNames( ).get( 0 ) : null;
-      Cluster cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
-      int networkIndex = vm.getNetworkIndex( );
+      final Cluster cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
       VmInstances.cleanUpAttachedVolumes( vm );
-
+      
       Address address = null;
-      Request<TerminateInstancesType, TerminateInstancesResponseType> req = AsyncRequests.newRequest( new TerminateCallback( vm.getInstanceId( ) ) );
-      if ( Clusters.getInstance( ).hasNetworking( ) ) {
+      final Request<TerminateInstancesType, TerminateInstancesResponseType> req = AsyncRequests.newRequest( new TerminateCallback( vm.getInstanceId( ) ) );
+      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
         try {
           address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
-        } catch ( NoSuchElementException e ) {} catch ( Throwable e1 ) {
+        } catch ( final NoSuchElementException e ) {} catch ( final Throwable e1 ) {
           LOG.debug( e1, e1 );
         }
       }
-      req.then( VmInstances.getCleanUpCallback( address, vm, networkIndex, networkFqName, cluster ) );
+      req.then( VmInstances.getCleanUpCallback( address, vm, cluster ) );
       req.dispatch( cluster.getConfiguration( ) );
-    } catch ( Throwable e ) {
+    } catch ( final Throwable e ) {
       LOG.error( e, e );
     }
   }
   
   private static final Predicate<AttachedVolume> anyVolumePred = new Predicate<AttachedVolume>( ) {
-    public boolean apply( AttachedVolume arg0 ) {
-      return true;
-    }
-  };
+                                                                 @Override
+                                                                 public boolean apply( final AttachedVolume arg0 ) {
+                                                                   return true;
+                                                                 }
+                                                               };
+  
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
     try {
-      final Cluster cluster = Clusters.getInstance( ).lookup( vm.getClusterName( ) );
+      final Cluster cluster = Clusters.getInstance( ).lookup( vm.lookupPartition( ) );
       vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
         @Override
-        public boolean apply( AttachedVolume arg0 ) {
+        public boolean apply( final AttachedVolume arg0 ) {
           try {
-            final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vm.getPartition( ) );
+            final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vm.lookupPartition( ) );
             vm.removeVolumeAttachment( arg0.getVolumeId( ) );
-            Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
+            final Dispatcher scDispatcher = ServiceDispatcher.lookup( sc );
             scDispatcher.send( new DetachStorageVolumeType( cluster.getNode( vm.getServiceTag( ) ).getIqn( ), arg0.getVolumeId( ) ) );
             return true;
-          } catch ( Throwable e ) {
+          } catch ( final Throwable e ) {
             LOG.error( "Failed sending Detach Storage Volume for: " + arg0.getVolumeId( )
                        + ".  Will keep trying as long as instance is reported.  The request failed because of: " + e.getMessage( ), e );
             return false;
           }
         }
       } );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       LOG.error( "Failed to lookup Storage Controller configuration for: " + vm.getInstanceId( ) + " (placement=" + vm.getPartition( ) + ").  " );
     }
   }
-
-  public static VmInstance restrictedLookup( BaseMessage request, String instanceId ) throws EucalyptusCloudException {
-    VmInstance vm = VmInstances.getInstance( ).lookup( instanceId ); //TODO: test should throw error.
-    Context ctx = Contexts.lookup( );
-    Account addrAccount = null;
-    try {
-      addrAccount = Accounts.lookupUserById( vm.getOwner( ).getUniqueId( ) ).getAccount( );
-    } catch ( AuthException e ) {
-      throw new EucalyptusCloudException( e );
-    }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, instanceId, addrAccount, PolicySpec.requestToAction( request ), ctx.getUser( ) ) ) {
-      throw new EucalyptusCloudException( "Permission denied while trying to access instance " + instanceId + " by " + ctx.getUser( ) );
+  
+  public static VmInstance restrictedLookup( final String instanceId ) throws EucalyptusCloudException {
+    final VmInstance vm = VmInstances.lookup( instanceId );
+    if ( ! RestrictedTypes.filterPrivileged( ).apply( vm ) ) {
+      throw new EucalyptusCloudException( "Permission denied while trying to access instance " + instanceId );
     }
     return vm;
   }
   
-  public static void flushBuried( ) {
-    for ( VmInstance vm : VmInstances.getInstance( ).getDisabledEntries( ) ) {
-      if ( vm.getSplitTime( ) > SystemState.SHUT_DOWN_TIME && !VmState.BURIED.equals( vm.getState( ) ) ) {
-        vm.setState( VmState.BURIED, Reason.BURIED );
-      } else if ( vm.getSplitTime( ) > SystemState.BURY_TIME && VmState.BURIED.equals( vm.getState( ) ) ) {
-        VmInstances.getInstance( ).deregister( vm.getName( ) );
-      }
-    }
-    if ( ( float ) Runtime.getRuntime( ).freeMemory( ) / ( float ) Runtime.getRuntime( ).maxMemory( ) < 0.10f ) {
-      for ( VmInstance vm : VmInstances.getInstance( ).listDisabledValues( ) ) {
-        if ( VmState.BURIED.equals( vm.getState( ) ) || vm.getSplitTime( ) > SystemState.BURY_TIME ) {
-          VmInstances.getInstance( ).deregister( vm.getInstanceId( ) );
-          LOG.info( EventRecord.here( VmInstances.class, EventType.FLUSH_CACHE, LogUtil.dumpObject( vm ) ) );
-        }
-      }
+  public static String asMacAddress( final String instanceId ) {
+    return String.format( "%s:%s:%s:%s:%s",
+                          VmInstances.MAC_PREFIX,
+                          instanceId.substring( 2, 4 ),
+                          instanceId.substring( 4, 6 ),
+                          instanceId.substring( 6, 8 ),
+                          instanceId.substring( 8, 10 ) );
+  }
+  
+  public static VmInstance lookup( final String name ) throws NoSuchElementException {
+    if ( name != null && terminateCache.containsKey( name ) ) {
+      return terminateCache.get( name );
+    } else {
+      return VmInstance.Lookup.INSTANCE.apply( name );
     }
   }
   
-  public static String asMacAddress( final String instanceId ) {
-    return String
-                 .format( "%s:%s:%s:%s", instanceId.substring( 2, 4 ), instanceId.substring( 4, 6 ), instanceId.substring( 6, 8 ), instanceId.substring( 8, 10 ) );
+  public static VmInstance register( final VmInstance vm ) {
+    if ( !terminateCache.containsKey( vm.getInstanceId( ) ) ) {
+      return VmInstance.Transitions.REGISTER.apply( vm );
+    } else {
+      throw new IllegalArgumentException( "Attempt to register instance which is already terminated." );
+    }
+  }
+  
+  public static VmInstance delete( final VmInstance vm ) throws TransactionException {
+    try {
+      if ( VmState.BURIED.apply( vm ) ) {
+        terminateCache.remove( vm.getDisplayName( ) );
+        terminateDescribeCache.remove( vm.getDisplayName( ) );
+      } else if ( VmStateSet.DONE.apply( vm ) ) {
+        RunningInstancesItemType ret = VmInstances.transform( vm );
+        terminateCache.put( vm.getDisplayName( ), vm );
+        terminateDescribeCache.put( vm.getDisplayName( ), ret );
+        return VmInstance.Transitions.DELETE.apply( vm );
+      }
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
+    }
+    return vm;
+  }
+  
+  public static VmInstance terminate( final VmInstance vm ) throws TransactionException {
+    return VmInstance.Transitions.TERMINATE.apply( vm );
+  }
+  
+  public static VmInstance terminate( final String key ) throws NoSuchElementException {
+    return Functions.compose( VmInstance.Transitions.TERMINATE, VmInstance.Lookup.INSTANCE ).apply( key );
+  }
+  
+  @Deprecated
+  public static List<VmInstance> listValues( ) {
+    final EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      final List<VmInstance> vms = Entities.query( VmInstance.named( null, null ) );
+      db.commit( );
+      List<VmInstance> ret = Lists.newArrayList( vms );
+      ret.addAll( terminateCache.values( ) );
+      return ret;
+    } catch ( final Exception ex ) {
+      Logs.extreme( ).error( ex, ex );
+      db.rollback( );
+      return Lists.newArrayList( );
+    }
+  }
+  
+  public static boolean contains( final String name ) {
+    final EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, name ) );
+      db.commit( );
+      return true;
+    } catch ( RuntimeException ex ) {
+      db.rollback( );
+      return false;
+    } catch ( TransactionException ex ) {
+      db.rollback( );
+      return false;
+    }
+  }
+  
+  /**
+   * @param vm
+   * @return
+   */
+  public static RunningInstancesItemType transform( VmInstance vm ) {
+    if ( terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
+      return terminateDescribeCache.get( vm.getDisplayName( ) );
+    } else {
+      return VmInstance.Transform.INSTANCE.apply( vm );
+    }
   }
   
 }

@@ -62,6 +62,26 @@ public class WebSessionManager {
   }
   
   /**
+   * Get a session by user name and account name. Remove the found session if expired.
+   * 
+   * @param userName
+   * @param accountName
+   * @return
+   */
+  public synchronized WebSession getSession( String userName, String accountName ) {
+	for ( WebSession session : sessions.values( ) ) {
+	  if ( session != null && session.getUserName( ).equals( userName ) && session.getAccountName( ).equals( accountName ) ) {
+	    if ( System.currentTimeMillis( ) - session.getCreationTime( ) > SESSION_LIFE_IN_MILLIS ) {
+	      sessions.remove( session.getId( ) );
+	      return null;
+	    }
+	    return session;
+	  }
+	}
+	return null;
+  }
+  
+  /**
    * Remove a session.
    * 
    * @param id

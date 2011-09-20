@@ -1,5 +1,6 @@
 package com.eucalyptus.auth;
 
+import java.util.HashMap;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.PolicyEngine;
@@ -26,14 +27,18 @@ public class Permissions {
     Context context = null;
     try {
       context = Contexts.lookup( );
-      Map<Contract.Type, Contract> contracts = context.getContracts( );
+    } catch ( IllegalContextAccessException e ) {
+      LOG.debug( "Not in a request context", e );      
+    }
+    try {
+      // If we are not in a request context, e.g. the UI, use a dummy contract map.
+      // TODO(wenye): we should consider how to handle this if we allow the EC2 operations in the UI.
+      Map<Contract.Type, Contract> contracts = context != null ? context.getContracts( ) : new HashMap<Contract.Type, Contract>( );
       policyEngine.evaluateAuthorization( vendor + ":" + resourceType, resourceName, resourceAccount, action, requestUser, contracts );
       return true;
-    } catch ( IllegalContextAccessException e ) {
-      LOG.debug( "Exception trying to identify the current request context requesting resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount.getName( ) + " for " + requestUser.getName( ), e );      
     } catch ( AuthException e ) {
       LOG.error( "Denied resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount.getName( ) + " for " + requestUser.getName( ), e );
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.debug( "Exception in resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount.getName( ) + " for " + requestUser.getName( ), e );      
     }
     return false;
@@ -52,7 +57,7 @@ public class Permissions {
   public static User getUserById( String userId ) throws EucalyptusCloudException {
     try {
       return Accounts.lookupUserById( userId );
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       throw new EucalyptusCloudException( t );
     }
   }
@@ -60,7 +65,7 @@ public class Permissions {
   public static Account getAccountByUserId( String userId ) throws EucalyptusCloudException {
     try {
       return Accounts.lookupUserById( userId ).getAccount( );
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       throw new EucalyptusCloudException( t );
     }
   }
@@ -68,7 +73,7 @@ public class Permissions {
   public static Account getUserAccount( User user ) throws EucalyptusCloudException {
     try {
       return user.getAccount( );
-    } catch ( Throwable t ) {
+    } catch ( Exception t ) {
       throw new EucalyptusCloudException( t );
     }
   }

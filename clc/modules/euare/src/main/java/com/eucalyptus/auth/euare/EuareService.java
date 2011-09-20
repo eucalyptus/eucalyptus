@@ -134,9 +134,9 @@ public class EuareService {
     try {
       Account newAccount = Accounts.addAccount( request.getAccountName( ) );
       User admin = newAccount.addUser( User.ACCOUNT_ADMIN, "/", true/*skipRegistration*/, true/*enabled*/, null/*info*/ );
-      admin.createToken( );
+      admin.resetToken( );
       admin.createConfirmationCode( );
-      admin.createPassword( );
+      //admin.createPassword( );
       AccountType account = reply.getCreateAccountResult( ).getAccount( );
       account.setAccountName( newAccount.getName( ) );
       account.setAccountId( newAccount.getAccountNumber( ) );
@@ -421,7 +421,7 @@ public class EuareService {
       }
     }
     // Policy attached to account admin is the account policy. Only system admin can put policy to an account.
-    if ( userFound.isAccountAdmin( ) ){
+    if ( userFound.isAccountAdmin( ) && !requestUser.isSystemAdmin( ) ){
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Only system admin can put policy on an account" );      
     }
     if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
@@ -464,9 +464,11 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                "Not authorized to get user policies for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                  "Not authorized to get user policies for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+      }
     }
     try {
       Policy policy = null;
@@ -546,6 +548,9 @@ public class EuareService {
     User userFound = null;
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
+      if ( userFound.isSystemAdmin( ) && userFound.isAccountAdmin( ) ) {
+        throw new AuthException( "admin@eucalyptus can not be updated" );
+      }
     } catch ( Exception e ) {
       LOG.debug( e, e );
       if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
@@ -870,9 +875,11 @@ public class EuareService {
         throw new EucalyptusCloudException( e );
       }
     }
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                "Not authorized to list user policies for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+    if ( !userFound.getName( ).equals( requestUser.getName( ) ) ) {
+      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( userFound ), account, action, requestUser ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
+                                  "Not authorized to list user policies for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+      }
     }
     // TODO(Ye Wen, 01/26/2011): support pagination
     ListUserPoliciesResultType result = reply.getListUserPoliciesResult( );
@@ -1100,6 +1107,9 @@ public class EuareService {
     User userToDelete = null;
     try {
       userToDelete = account.lookupUserByName( request.getUserName( ) );
+      if ( userToDelete.isSystemAdmin( ) && userToDelete.isAccountAdmin( ) ) {
+        throw new AuthException( "admin@eucalyptus can not be deleted" );
+      }
     } catch ( Exception e ) {
       LOG.debug( e, e );
       if ( e instanceof AuthException && AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {

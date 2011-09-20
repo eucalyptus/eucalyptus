@@ -64,19 +64,27 @@
 package com.eucalyptus.blockstorage;
 
 import java.lang.reflect.UndeclaredThrowableException;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
+import org.hibernate.criterion.Example;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.StorageEvent;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Transactions;
-import com.eucalyptus.util.async.Callback;
+import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
+import com.eucalyptus.util.RestrictedTypes.UsageMetricFunction;
 import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType;
@@ -87,6 +95,40 @@ public class Volumes {
   private static Logger LOG       = Logger.getLogger( Volumes.class );
   private static String ID_PREFIX = "vol";
   
+  @QuantityMetricFunction( VolumeMetadata.class )
+  public enum CountVolumes implements Function<OwnerFullName, Long> {
+    INSTANCE;
+    
+    @SuppressWarnings( "unchecked" )
+    @Override
+    public Long apply( final OwnerFullName input ) {
+      final EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
+      final int i = db.createCriteria( Volume.class ).add( Example.create( Volume.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( ).size( );
+      db.rollback( );
+      return ( long ) i;
+    }
+    
+  }
+  
+  @UsageMetricFunction( VolumeMetadata.class )
+  public enum MeasureVolumes implements Function<OwnerFullName, Long> {
+    INSTANCE;
+    
+    @SuppressWarnings( "unchecked" )
+    @Override
+    public Long apply( final OwnerFullName input ) {
+      final EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
+      final List<Volume> vols = db.createCriteria( Volume.class ).add( Example.create( Volume.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( );
+      Long size = 0l;
+      for ( final Volume v : vols ) {
+        size += v.getSize( );
+      }
+      db.rollback( );
+      return size;
+    }
+    
+  }
+  
   public static Volume checkVolumeReady( final Volume vol ) throws EucalyptusCloudException {
     if ( vol.isReady( ) ) {
       return vol;
@@ -95,22 +137,22 @@ public class Volumes {
       final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
       final DescribeStorageVolumesType descVols = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );
       try {
-        Transactions.one( Volume.named( vol.getDisplayName( ) ), new Callback<Volume>( ) {
+        Transactions.one( Volume.named( null, vol.getDisplayName( ) ), new Callback<Volume>( ) {
           
           @Override
-          public void fire( Volume t ) {
+          public void fire( final Volume t ) {
             try {
-              DescribeStorageVolumesResponseType volState = ServiceDispatcher.lookup( sc ).send( descVols );
+              final DescribeStorageVolumesResponseType volState = ServiceDispatcher.lookup( sc ).send( descVols );
               if ( !volState.getVolumeSet( ).isEmpty( ) ) {
                 vol.setMappedState( volState.getVolumeSet( ).get( 0 ).getStatus( ) );
               }
-            } catch ( EucalyptusCloudException ex ) {
+            } catch ( final EucalyptusCloudException ex ) {
               LOG.error( ex, ex );
               throw new UndeclaredThrowableException( ex, "Failed to update the volume state " + vol.getDisplayName( ) + " not yet ready" );
             }
           }
         } );
-      } catch ( ExecutionException ex ) {
+      } catch ( final ExecutionException ex ) {
         throw new EucalyptusCloudException( ex.getCause( ) );
       }
       if ( !vol.isReady( ) ) {
@@ -120,19 +162,21 @@ public class Volumes {
     }
   }
   
-  public static Volume createStorageVolume( final ServiceConfiguration sc, UserFullName owner, final String snapId, Integer newSize, final BaseMessage request ) throws ExecutionException {
-    String newId = Crypto.generateId( owner.getAccountNumber( ), ID_PREFIX );
-    Volume newVol = Transactions.save( new Volume( owner, newId, newSize, sc.getName( ), sc.getPartition( ), snapId ), new Callback<Volume>( ) {
+  public static Volume createStorageVolume( final ServiceConfiguration sc, final UserFullName owner, final String snapId, final Integer newSize, final BaseMessage request ) throws ExecutionException {
+    final String newId = Crypto.generateId( owner.getAccountNumber( ), ID_PREFIX );
+    final Volume newVol = Transactions.save( Volume.create( sc, owner, snapId, newSize, newId ), new Callback<Volume>( ) {
       
       @Override
-      public void fire( Volume t ) {
+      public void fire( final Volume t ) {
         t.setState( State.GENERATING );
         try {
-          ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, t.getSize( ), t.getOwnerUserId( ),
-                                                                       t.getOwnerAccountId( ), t.getScName( ), t.getPartition( ) ) );
-          CreateStorageVolumeType req = new CreateStorageVolumeType( t.getDisplayName( ), t.getSize( ), snapId, null ).regardingUserRequest( request );
+          ListenerRegistry.getInstance( ).fireEvent( new StorageEvent( StorageEvent.EventType.EbsVolume, true, t.getSize( ),
+                                                                       t.getOwnerUserId( ), t.getOwnerUserName( ),
+                                                                       t.getOwnerAccountNumber( ), t.getOwnerAccountName( ),
+                                                                       t.getScName( ), t.getPartition( ) ) );
+          final CreateStorageVolumeType req = new CreateStorageVolumeType( t.getDisplayName( ), t.getSize( ), snapId, null ).regardingUserRequest( request );
           ServiceDispatcher.lookup( sc ).send( req );
-        } catch ( Exception ex ) {
+        } catch ( final Exception ex ) {
           LOG.error( "Failed to create volume: " + t.toString( ), ex );
           throw new UndeclaredThrowableException( ex );
         }
@@ -140,4 +184,5 @@ public class Volumes {
     } );
     return newVol;
   }
+
 }

@@ -1,9 +1,10 @@
 package com.eucalyptus.reporting.storage;
 
+import com.eucalyptus.reporting.ReportLine;
 import com.eucalyptus.reporting.units.*;
 
 public class StorageReportLine
-	implements Comparable<StorageReportLine>
+	implements Comparable<StorageReportLine>, ReportLine
 {
 	private static final Units INTERNAL_UNITS =
 		new Units(TimeUnit.SECS, SizeUnit.MB, TimeUnit.SECS, SizeUnit.MB);

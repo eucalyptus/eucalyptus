@@ -8,7 +8,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.reporting.Period;
 
 /**
- * <p>S3UsageLog is the main API for accessing storage usage information.
+ * <p>S3UsageLog is the main API for accessing S3 usage information.
  * 
  * @author tom.werges
  */

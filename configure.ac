@@ -44,9 +44,9 @@ java_min_version="1.6.0"
 ant_min_version="1.6.5"
 
 # these are for large files (>2GB)
-LDFLAGS="`getconf LFS64_LDFLAGS` $LDFLAGS"
-LIBS="`getconf LFS64_LIBS` $LIBS"
-CFLAGS="`getconf LFS64_CFLAGS`"
+LDFLAGS="`getconf LFS64_LDFLAGS` `getconf LFS_LDFLAGS` $LDFLAGS"
+LIBS="`getconf LFS64_LIBS` `getconf LFS_LIBS` $LIBS"
+CFLAGS="`getconf LFS64_CFLAGS` `getconf LFS_CFLAGS`"
 
 # compile options
 CFLAGS="${CFLAGS} -Wall -Wno-unused-variable -fPIC -DHAVE_CONFIG_H -std=gnu99"
@@ -102,12 +102,11 @@ if test -z "$APACHE2_MODULE_DIR"; then
 fi
 
 AM_PATH_PYTHON([2.5])
-if ! echo "$PYTHON_VERSION" | grep -q '^2\.'; then
-        # We picked up python 3
-        echo "Found Python version $PYTHON_VERSION; expected version 2.x"
-        echo "Specify a path to Python 2 with the PYTHON environment variable."
-        exit 1
-fi
+AC_MSG_CHECKING([whether $PYTHON version is < 3.0])
+AM_PYTHON_CHECK_VERSION([$PYTHON], [3.0],
+                        [AC_MSG_RESULT([no])
+                         AC_MSG_ERROR([Python >= 3.0 is not supported])],
+                        [AC_MSG_RESULT([yes])])
 
 # Fix the paths for includes and libraries
 if test -n "${AXIS2C_HOME}" ; then

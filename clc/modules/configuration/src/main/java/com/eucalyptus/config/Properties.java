@@ -4,7 +4,6 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableProperty;
-import com.eucalyptus.configurable.ConfigurationProperties;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.scripting.Groovyness;
@@ -30,7 +29,6 @@ public class Properties {
         props.add( new Property( entry.getQualifiedName( ), value, entry.getDescription( ) ) );
       }
     } else {
-      deprecatedEucaOps( request, props );
       for ( ConfigurableProperty entry : PropertyDirectory.getPropertyEntrySet( ) ) {
         if ( request.getProperties( ).contains( entry.getQualifiedName( ) ) ) {
           String value = "********";
@@ -53,25 +51,6 @@ public class Properties {
     }
     return reply;
   }
-  /**
-   * DO NOT USE THIS ANYMORE.
-   */
-  @Deprecated
-  private void deprecatedEucaOps( DescribePropertiesType request, List<Property> props ) {
-    Iterable<String> eucas = Iterables.filter( request.getProperties( ), new Predicate<String>( ) {
-      @Override
-      public boolean apply( String arg0 ) {
-        return arg0.matches( "euca=.*" );
-      }
-    } );
-    for ( String altValue : eucas ) {
-      try {
-        props.add( new Property( ( altValue = altValue.replaceAll( "euca=", "" ) ), "" + Groovyness.eval( altValue ), altValue ) );
-      } catch ( Exception ex ) {
-        props.add( new Property( altValue, ex.getMessage( ), Exceptions.string( ex ) ) );
-      }
-    }
-  }
   private static final String INTERNAL_OP = "euca";
   public ModifyPropertyValueResponseType modifyProperty( ModifyPropertyValueType request ) throws EucalyptusCloudException {
     if ( !Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
@@ -84,7 +63,7 @@ public class Properties {
         reply.setName( INTERNAL_OP );
         reply.setValue( "" + Groovyness.eval( request.getValue( ) ) );
         reply.setOldValue( "executed successfully." );
-      } catch ( Throwable ex ) {
+      } catch ( Exception ex ) {
         LOG.error( ex , ex );
         reply.setName( INTERNAL_OP );
         reply.setOldValue( "euca operation failed because of: " + ex.getMessage( ) );
@@ -103,7 +82,6 @@ public class Properties {
         } catch ( Exception e ) {
           entry.setValue( oldValue );
         }
-        ConfigurationProperties.store( entry.getEntrySetName( ) );
         reply.setValue( entry.getValue( ) );
         reply.setName( request.getName( ) );
       } catch ( IllegalAccessException e ) {

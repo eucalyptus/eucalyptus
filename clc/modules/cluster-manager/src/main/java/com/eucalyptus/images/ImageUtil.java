@@ -82,9 +82,9 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.WalrusUtil;
-import com.eucalyptus.cloud.Image;
-import com.eucalyptus.cloud.Image.Architecture;
-import com.eucalyptus.cloud.Image.StaticDiskImage;
+import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.cloud.ImageMetadata.Architecture;
+import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
@@ -92,7 +92,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.Lookups;
+import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType;
@@ -185,7 +185,7 @@ public class ImageUtil {
     return size;
   }
   
-  public static void checkStoredImage( final Image.StaticDiskImage imgInfo ) throws EucalyptusCloudException {
+  public static void checkStoredImage( final ImageMetadata.StaticDiskImage imgInfo ) throws EucalyptusCloudException {
     if ( imgInfo != null ) try {
       Document inputSource = null;
       try {
@@ -203,7 +203,7 @@ public class ImageUtil {
       if ( imgInfo.getSignature( ) != null && !imgInfo.getSignature( ).equals( signature ) ) throw new EucalyptusCloudException( "Manifest signature has changed since registration." );
       LOG.info( "Triggering caching: " + imgInfo.getManifestLocation( ) );
       try {
-        if( imgInfo instanceof Image.StaticDiskImage ) {
+        if( imgInfo instanceof ImageMetadata.StaticDiskImage ) {
           WalrusUtil.triggerCaching( ( StaticDiskImage ) imgInfo );
         }
       } catch ( Exception e ) {}
@@ -253,7 +253,7 @@ public class ImageUtil {
       LOG.error( e, e );
       db.commit( );
       throw new EucalyptusCloudException( "Failed to find registered image with id " + searchId, e );
-      } catch ( Throwable t ) {
+      } catch ( Exception t ) {
       LOG.error( t, t );
       db.commit( );
       }
@@ -286,7 +286,7 @@ public class ImageUtil {
     String architecture = ( ( arch == null )
         ? "i386"
         : arch );
-    return Image.Architecture.valueOf( architecture );
+    return ImageMetadata.Architecture.valueOf( architecture );
   }
   
   public static String extractRamdiskId( Document inputSource, XPath xpath ) {
@@ -364,7 +364,7 @@ public class ImageUtil {
       db.rollback( );
       return false;
     }
-    if ( Lookups.checkPrivilege( request, PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, imageId, imgInfo.getOwner( ) ) ) {
+    if ( RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) {
       return false;
     }
     try {
@@ -392,14 +392,14 @@ public class ImageUtil {
   public static void cleanDeregistered( ) {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
-      List<ImageInfo> imgList = db.query( Images.exampleWithImageState( Image.State.deregistered ) );
+      List<ImageInfo> imgList = db.query( Images.exampleWithImageState( ImageMetadata.State.deregistered ) );
       for ( ImageInfo deregImg : imgList ) {
         try {
           db.delete( deregImg );
-        } catch ( Throwable e1 ) {}
+        } catch ( Exception e1 ) {}
       }
       db.commit( );
-    } catch ( Throwable e1 ) {
+    } catch ( Exception e1 ) {
       db.rollback( );
     }
   }
@@ -410,7 +410,7 @@ public class ImageUtil {
       List<ImageInfo> images = db.query( new ImageInfo( ) );
       int imageNum = 0;
       for ( ImageInfo img : images ) {
-        if ( img.getOwnerAccountId( ).equals( accountId ) ) {
+        if ( img.getOwnerAccountNumber( ).equals( accountId ) ) {
           imageNum ++;
         }
       }

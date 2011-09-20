@@ -302,13 +302,14 @@ int create_instance_backing (ncInstance * instance)
     set_path (instance->xmlFilePath,     sizeof (instance->xmlFilePath),     instance, "instance.xml");
     set_path (instance->libvirtFilePath, sizeof (instance->libvirtFilePath), instance, "libvirt.xml");
     set_path (instance->consoleFilePath, sizeof (instance->consoleFilePath), instance, "console.log");
+    logprintfl(EUCADEBUG, "NURMI: %s\n", instance->platform);
     if (strstr (instance->platform, "windows")) {
-        set_path (instance->floppyFilePath, sizeof (instance->floppyFilePath), instance, "floppy");
-
         // generate the floppy file for windows instances
         if (makeWindowsFloppy (nc_state.home, instance->instancePath, instance->keyName, instance->instanceId)) {
             logprintfl (EUCAERROR, "[%s] error: could not create windows bootup script floppy\n", instance->instanceId);
             goto out;
+        } else {
+            set_path (instance->floppyFilePath, sizeof (instance->floppyFilePath), instance, "floppy");
         }
     }
     

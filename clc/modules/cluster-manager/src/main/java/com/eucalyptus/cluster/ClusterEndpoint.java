@@ -76,15 +76,15 @@ import org.mule.api.lifecycle.Startable;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.cloud.run.ClusterAllocator;
+import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.cloud.run.ClusterAllocator;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.util.Internets;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
@@ -92,10 +92,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.cloud.Network;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
-import edu.ucsb.eucalyptus.cloud.ResourceToken;
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
@@ -138,9 +135,7 @@ public class ClusterEndpoint implements Startable {
   }
   
   public void enqueue( Allocation allocInfo ) {
-    for ( ResourceToken t : allocInfo.getAllocationTokens( ) ) {
-      ClusterAllocator.create( t, allocInfo );
-    }
+    ClusterAllocator.create( allocInfo );
     RequestContext.getEventContext( ).setStopFurtherProcessing( true );
   }
   
@@ -179,8 +174,7 @@ public class ClusterEndpoint implements Startable {
           try {
             Cluster c = Clusters.getInstance( ).lookup( partitionName );
             reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c, args ) );
-          } catch ( NoSuchElementException ex ) {
-          }
+          } catch ( NoSuchElementException ex ) {}
         }
       }
     }
@@ -229,13 +223,7 @@ public class ClusterEndpoint implements Startable {
                                                                                    LOG.info( val );
                                                                                  }
                                                                                  retList.add( new ClusterInfoType( "================== VMs", "" ) );
-                                                                                 for ( VmInstance vm : VmInstances.getInstance( ).listValues( ) ) {
-                                                                                   String val = vm.toString( );
-                                                                                   retList.add( new ClusterInfoType( val, "" ) );
-                                                                                   LOG.info( val );
-                                                                                 }
-                                                                                 retList.add( new ClusterInfoType( "================== Disabled VMs", "" ) );
-                                                                                 for ( VmInstance vm : VmInstances.getInstance( ).listDisabledValues( ) ) {
+                                                                                 for ( VmInstance vm : VmInstances.listValues( ) ) {
                                                                                    String val = vm.toString( );
                                                                                    retList.add( new ClusterInfoType( val, "" ) );
                                                                                    LOG.info( val );
@@ -246,12 +234,13 @@ public class ClusterEndpoint implements Startable {
                                                                                    retList.add( new ClusterInfoType( val, "" ) );
                                                                                    LOG.info( val );
                                                                                  }
-                                                                                 retList.add( new ClusterInfoType( "================== Networks", "" ) );
-                                                                                 for ( Network network : Networks.getInstance( ).listValues( ) ) {
-                                                                                   String val = network.toString( );
-                                                                                   retList.add( new ClusterInfoType( val, "" ) );
-                                                                                   LOG.info( val );
-                                                                                 }
+                                                                                 //GRZE:NET
+//                                                                                 retList.add( new ClusterInfoType( "================== Networks", "" ) );
+//                                                                                 for ( Network network : Networks.getInstance( ).listValues( ) ) {
+//                                                                                   String val = network.toString( );
+//                                                                                   retList.add( new ClusterInfoType( val, "" ) );
+//                                                                                   LOG.info( val );
+//                                                                                 }
                                                                                  retList.add( new ClusterInfoType( "================== Level-0 Bootstrappers",
                                                                                                                    "" ) );
                                                                                  for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
@@ -363,19 +352,19 @@ public class ClusterEndpoint implements Startable {
   
   public DescribeRegionsResponseType DescribeRegions( DescribeRegionsType request ) {//TODO:GRZE:URGENT fix the behaviour here.
     DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
-    try {
+    try {//TODO:GRZE:wtfugly
       Component euca = Components.lookup( Eucalyptus.class );
       NavigableSet<ServiceConfiguration> configs = euca.lookupServiceConfigurations( );
-      if( !configs.isEmpty( ) && Component.State.ENABLED.isIn( configs.first( ) ) ) {
+      if ( !configs.isEmpty( ) && Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
         reply.getRegionInfo( ).add( new RegionInfoType( euca.getComponentId( ).name( ), configs.first( ).getUri( ).toASCIIString( ) ) );
       }
     } catch ( NoSuchElementException ex ) {
       LOG.error( ex, ex );
     }
-    try {
+    try {//TODO:GRZE:wtfugly
       Component walrus = Components.lookup( Walrus.class );
       NavigableSet<ServiceConfiguration> configs = walrus.lookupServiceConfigurations( );
-      if( !configs.isEmpty( ) && Component.State.ENABLED.isIn( configs.first( ) ) ) {
+      if ( !configs.isEmpty( ) && Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
         reply.getRegionInfo( ).add( new RegionInfoType( walrus.getComponentId( ).name( ), configs.first( ).getUri( ).toASCIIString( ) ) );
       }
     } catch ( NoSuchElementException ex ) {

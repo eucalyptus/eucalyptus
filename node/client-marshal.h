@@ -76,7 +76,7 @@ typedef struct ncStub_t {
 ncStub * ncStubCreate  (char *endpoint, char *logfile, char *homedir);
 int      ncStubDestroy (ncStub * stub);
 
-int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInstPtr);
+int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInstPtr);
 int ncGetConsoleOutputStub (ncStub *stub, ncMetadata *meta, char *instanceId, char **consoleOutput);
 int ncRebootInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId);
 int ncTerminateInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId, int force, int *shutdownState, int *previousState);

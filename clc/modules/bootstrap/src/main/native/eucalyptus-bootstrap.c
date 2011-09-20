@@ -58,6 +58,9 @@
 #include <grp.h>
 #include <sys/prctl.h>
 #include <sys/syscall.h>
+#include <limits.h>
+#include <stdlib.h>
+
 #define _LINUX_FS_H 
 
 extern char **environ;
@@ -391,24 +394,41 @@ int main(int argc, char *argv[]) {
 	pid_t pid = 0;
 	uid_t uid = 0;
 	gid_t gid = 0;
+	int i;
 	if (arguments(argc, argv, args) != 0)
 		exit(1);
 	debug = args->debug_flag;
+	set_output(GETARG(args, out), GETARG(args, err));
 	if (args->kill_flag == 1)
 		return stop_child(args);
 	if (checkuser(GETARG(args, user), &uid, &gid) == 0)
 		return 1;
-	char* java_home_user = GETARG(args, java_home);
-	char* java_home_env = getenv("JAVA_HOME");
-	if (java_home_user != NULL) {
-		__debug("Trying user supplied java home: %s", java_home_user);
-		data = get_java_home(java_home_user);
+	for (i = 0; i < args->java_home_given; ++i) {
+		__debug("Trying user supplied java home: %s", args->java_home_arg[i]);
+		data = get_java_home(args->java_home_arg[i]);
+		if (data != NULL) {
+			break;
+		}
 	}
+	char* java_home_env = getenv("JAVA_HOME");
 	if (data == NULL && java_home_env != NULL) {
 		__debug("Trying environment JAVA_HOME: %s", java_home_env);
 		data = get_java_home(java_home_env);
 	}
-	__debug("TODO: loop through common locations for JVMs here.");
+	if (data == NULL && !args->java_home_given && 
+            args->java_home_arg[0] != NULL && CHECK_ISDIR(args->java_home_arg[0])) {
+		__debug("Trying built-in java home: %s", args->java_home_arg[0]);
+		data = get_java_home(args->java_home_arg[0]);
+	}
+	if (data == NULL && CHECK_ISREG("/usr/bin/java")) {
+		char * javapath = (char *) calloc(PATH_MAX, sizeof(char));
+		realpath("/usr/bin/java", javapath);
+		if (javapath != NULL) {
+			javapath[strlen(javapath)-strlen("jre/bin/java")] = '\0';
+			__debug("Trying system java home: %s", javapath);
+			data = get_java_home(javapath);
+		}
+	}
 	if (data == NULL) {
 		__error("Cannot locate Java Home");
 		return 1;
@@ -460,7 +480,6 @@ int main(int argc, char *argv[]) {
 			return wait_child(args, pid);
 		setsid();
 	}
-	set_output(GETARG(args, out), GETARG(args, err));
 	while ((pid = fork()) != -1) {
 		if (pid == 0)
 			exit(child(args, data, uid, gid));

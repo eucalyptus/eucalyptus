@@ -214,13 +214,16 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
     vnetconfig->max_vlan = NUMBER_OF_VLANS;
     if (numberofaddrs) {
       if (atoi(numberofaddrs) > NUMBER_OF_HOSTS_PER_VLAN) {
-	logprintfl(EUCAWARN, "vnetInit(): specified ADDRSPERNET exceeds maximum addresses per network (%d), setting to max\n", NUMBER_OF_HOSTS_PER_VLAN);
+	logprintfl(EUCAWARN, "vnetInit(): specified ADDRSPERNET exceeds maximum addresses per network (%d), setting to maximum.\n", NUMBER_OF_HOSTS_PER_VLAN);
 	vnetconfig->numaddrs = NUMBER_OF_HOSTS_PER_VLAN;
+      } else if (atoi(numberofaddrs) <= NUMBER_OF_CCS) {
+	logprintfl(EUCAWARN, "vnetInit(): specified ADDRSPERNET lower than absolute minimum (16) setting to minimum.\n");
+	vnetconfig->numaddrs = 16;
       } else {
 	vnetconfig->numaddrs = atoi(numberofaddrs);
       }
     }
-    vnetconfig->addrIndexMin = NUMBER_OF_CCS;
+    vnetconfig->addrIndexMin = NUMBER_OF_CCS+1;
     vnetconfig->addrIndexMax = vnetconfig->numaddrs-2;
     
     if (network) vnetconfig->nw = dot2hex(network);
@@ -229,7 +232,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
     // populate networks
     bzero(vnetconfig->users, sizeof(userEntry) * NUMBER_OF_VLANS);
     bzero(vnetconfig->networks, sizeof(networkEntry) * NUMBER_OF_VLANS);
-    bzero(vnetconfig->etherdevs, NUMBER_OF_VLANS * 16);
+    bzero(vnetconfig->etherdevs, NUMBER_OF_VLANS * MAX_ETH_DEV_PATH);
     bzero(vnetconfig->publicips, sizeof(publicip) * NUMBER_OF_PUBLIC_IPS);
   
     if (role != NC) {
@@ -308,7 +311,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	  if (vnetconfig->numaddrs > NUMBER_OF_PUBLIC_IPS) {
 	    vnetconfig->numaddrs = NUMBER_OF_PUBLIC_IPS;
 	  }
-	  vnetconfig->addrIndexMin = NUMBER_OF_CCS;
+	  vnetconfig->addrIndexMin = NUMBER_OF_CCS+1;
 	  vnetconfig->addrIndexMax = vnetconfig->numaddrs-2;
 	}
       }
@@ -1023,7 +1026,7 @@ int vnetSetVlan(vnetConfig *vnetconfig, int vlan, char *uuid, char *user, char *
   if (param_check("vnetSetVlan", vnetconfig, vlan, user, network)) return(1);
 
   safe_strncpy(vnetconfig->users[vlan].userName, user, 48);
-  safe_strncpy(vnetconfig->users[vlan].netName, network, 32);
+  safe_strncpy(vnetconfig->users[vlan].netName, network, 64);
   if (uuid) safe_strncpy(vnetconfig->users[vlan].uuid, uuid, 48);
   
   return(0);
@@ -1287,7 +1290,7 @@ int vnetAddDev(vnetConfig *vnetconfig, char *dev) {
     }
   }
   if (foundone >= 0) {
-    safe_strncpy(vnetconfig->etherdevs[foundone], dev, 16);
+    safe_strncpy(vnetconfig->etherdevs[foundone], dev, MAX_ETH_DEV_PATH);
   }
   return(0);
 }
@@ -1299,8 +1302,8 @@ int vnetDelDev(vnetConfig *vnetconfig, char *dev) {
 
   done=0;
   for (i=0; i<vnetconfig->max_vlan && !done; i++) {
-    if (!strncmp(vnetconfig->etherdevs[i], dev, 16)) {
-      bzero(vnetconfig->etherdevs[i], 16);
+    if (!strncmp(vnetconfig->etherdevs[i], dev, MAX_ETH_DEV_PATH)) {
+      bzero(vnetconfig->etherdevs[i], MAX_ETH_DEV_PATH);
       done++;
     }
   }
@@ -1341,7 +1344,11 @@ int vnetGenerateDHCP(vnetConfig *vnetconfig, int *numHosts) {
       netmask = hex2dot(vnetconfig->networks[i].nm);
       broadcast = hex2dot(vnetconfig->networks[i].bc);
       nameserver = hex2dot(vnetconfig->networks[i].dns);      
-      router = hex2dot(vnetconfig->networks[i].router + vnetconfig->tunnels.localIpId);
+      if (vnetconfig->tunnels.localIpId < 0) {
+	router = hex2dot(vnetconfig->networks[i].router);
+      } else {
+	router = hex2dot(vnetconfig->networks[i].router + vnetconfig->tunnels.localIpId);
+      }
       
       if (vnetconfig->euca_ns != 0) {
 	euca_nameserver = hex2dot(vnetconfig->euca_ns);
@@ -1404,8 +1411,13 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
 
   for (i=0; i<vnetconfig->max_vlan; i++) {
     if (vnetconfig->etherdevs[i][0] != '\0') {
-      strncat (dstring, " ", MAX_PATH);
-      strncat (dstring, vnetconfig->etherdevs[i], 16);
+      strncat (dstring, " ", MAX_PATH - 1);
+
+      if((MAX_PATH - strlen(dstring) - 1) < MAX_ETH_DEV_PATH) {
+	logprintfl(EUCAERROR, "vnetKickDHCP(): not enough buffer length left to copy ethernet dev name\n");
+	return(1);
+      }
+      strncat (dstring, vnetconfig->etherdevs[i], MAX_ETH_DEV_PATH);
     }
   }
 
@@ -1727,7 +1739,7 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *
   } else if (vlan > 0 && (vnetconfig->role == CC || vnetconfig->role == CLC)) {
 
     vnetconfig->networks[vlan].active = 1;
-    for (i=0; i<NUMBER_OF_CCS; i++) {
+    for (i=0; i<=NUMBER_OF_CCS; i++) {
       vnetconfig->networks[vlan].addrs[i].active = 1;
     }
     vnetconfig->networks[vlan].addrs[vnetconfig->numaddrs-1].active = 1;

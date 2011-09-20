@@ -43,6 +43,7 @@ deploy: build
 install: deploy
 	@$(INSTALL) -d $(DESTDIR)$(prefix)
 	@$(INSTALL) -d $(DESTDIR)$(etcdir)/eucalyptus/cloud.d
+	@$(INSTALL) -d $(DESTDIR)$(etcdir)/eucalyptus/nc-hooks
 	@$(INSTALL) -m 0644 VERSION $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus-version
 	@$(INSTALL) -d $(DESTDIR)$(etcdir)/init.d
 	@$(INSTALL) -d $(DESTDIR)$(vardir)/run/eucalyptus/net

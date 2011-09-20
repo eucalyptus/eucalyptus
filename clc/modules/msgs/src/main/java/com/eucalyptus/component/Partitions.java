@@ -107,7 +107,7 @@ public class Partitions {
     }
   }
 
-  private static Partition lookupByName( String partitionName ) throws NoSuchElementException {
+  public static Partition lookupByName( String partitionName ) throws NoSuchElementException {
     EntityWrapper<Partition> db = EntityWrapper.get( Partition.class );
     Partition p = null;
     try {
@@ -182,16 +182,17 @@ public class Partitions {
   }
   
   @Deprecated
-  public static ServiceConfiguration lookupService( Class<? extends ComponentId> compClass, String partition ) {
+  public static <T extends ServiceConfiguration> T lookupService( Class<? extends ComponentId> compClass, String partition ) {
     return lookupService( compClass, Partitions.lookupByName( partition ) );
   }
 
-  public static ServiceConfiguration lookupService( Class<? extends ComponentId> compClass, Partition partition ) {
+  @SuppressWarnings("unchecked")
+  public static  <T extends ServiceConfiguration> T lookupService( Class<? extends ComponentId> compClass, Partition partition ) {
     NavigableSet<ServiceConfiguration> services = Components.lookup( compClass ).enabledPartitionServices( partition );
     if ( services.isEmpty( ) ) {
       throw new NoSuchElementException( "Failed to find service of type: " + compClass.getSimpleName( ) + " in partition: " + partition );
     } else {
-      return services.first( );
+      return (T) services.first( );
     }
   }
 

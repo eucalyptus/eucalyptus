@@ -3584,9 +3584,9 @@ java_min_version="1.6.0"
 ant_min_version="1.6.5"
 
 # these are for large files (>2GB)
-LDFLAGS="`getconf LFS64_LDFLAGS` $LDFLAGS"
-LIBS="`getconf LFS64_LIBS` $LIBS"
-CFLAGS="`getconf LFS64_CFLAGS`"
+LDFLAGS="`getconf LFS64_LDFLAGS` `getconf LFS_LDFLAGS` $LDFLAGS"
+LIBS="`getconf LFS64_LIBS` `getconf LFS_LIBS` $LIBS"
+CFLAGS="`getconf LFS64_CFLAGS` `getconf LFS_CFLAGS`"
 
 # compile options
 CFLAGS="${CFLAGS} -Wall -Wno-unused-variable -fPIC -DHAVE_CONFIG_H -std=gnu99"
@@ -3710,7 +3710,7 @@ if test "${am_cv_pathless_PYTHON+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
 
-	for am_cv_pathless_PYTHON in python python2 python3 python3.2 python3.1 python3.0 python2.7  python2.6 python2.5 python2.4 python2.3 python2.2 python2.1 python2.0 none; do
+	for am_cv_pathless_PYTHON in python python2 python2.7  python2.6 python2.5 python2.4 python2.3 python2.2 python2.1 python2.0 none; do
 	  test "$am_cv_pathless_PYTHON" = none && break
 	  prog="import sys
 # split strings by '.' and convert to numeric.  Append some zeros
@@ -3899,11 +3899,28 @@ $as_echo "$am_cv_python_pyexecdir" >&6; }
   fi
 
 
-if ! echo "$PYTHON_VERSION" | grep -q '^2\.'; then
-        # We picked up python 3
-        echo "Found Python version $PYTHON_VERSION; expected version 2.x"
-        echo "Specify a path to Python 2 with the PYTHON environment variable."
-        exit 1
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $PYTHON version is < 3.0" >&5
+$as_echo_n "checking whether $PYTHON version is < 3.0... " >&6; }
+prog="import sys
+# split strings by '.' and convert to numeric.  Append some zeros
+# because we need at least 4 digits for the hex conversion.
+# map returns an iterator in Python 3.0 and a list in 2.x
+minver = list(map(int, '3.0'.split('.'))) + [0, 0, 0]
+minverhex = 0
+# xrange is not present in Python 3.0 and range returns an iterator
+for i in list(range(0, 4)): minverhex = (minverhex << 8) + minver[i]
+sys.exit(sys.hexversion < minverhex)"
+  if { echo "$as_me:$LINENO: $PYTHON -c "$prog"" >&5
+   ($PYTHON -c "$prog") >&5 2>&5
+   ac_status=$?
+   echo "$as_me:$LINENO: \$? = $ac_status" >&5
+   (exit $ac_status); }; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+                         as_fn_error $? "Python >= 3.0 is not supported" "$LINENO" 5
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 fi
 
 # Fix the paths for includes and libraries

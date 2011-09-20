@@ -66,7 +66,7 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       } catch ( ServiceDispatchException e1 ) {
         LOG.debug( e1, e1 );
         reply = e1.getMessage( ).getBytes( );
-      } catch ( Throwable e1 ) {
+      } catch ( Exception e1 ) {
         LOG.debug( e1, e1 );
         reply = e1.getMessage( ).getBytes( );
       } finally {
@@ -74,7 +74,7 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       }
       if ( reply != null && !( reply instanceof NullPayload ) ) {
         response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
-        response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/html" );
+        response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
         ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( ( byte[] ) reply );
         response.setContent( buffer );
         response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );

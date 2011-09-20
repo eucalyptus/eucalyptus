@@ -169,17 +169,14 @@ upgrade_db() {
   fi
   # Arbitrary string of properly formatted opts passed direct to jvm"
   UPGRADE_OPTS="-Deuca.log.level=INFO -Djava.security.egd=file:/dev/./urandom"
-  UPGRADE_OUTPUT="egrep -v 'java.lang.ClassNotFoundException|PERSISTENCE_ENTITY_REGISTERED|DISCOVERY_LOADED_ENTRY'" #egrep -v '(TRACE)|(Resource)|(Bootstrap)|(istenceContextDiscovery)|(ServiceJarDiscovery)'" 
   # Setup commands 
   UPGRADE_ARGS=$( for arg in ${UPGRADE_DEST_DIR} ${UPGRADE_SRC_DIR} ${UPGRADE_SRC_DB} ${UPGRADE_DEST_DB} ${UPGRADE_DEST_VERSION} ${UPGRADE_SRC_VERSION}; do echo -n " -D${arg}"; done; )
   UPGRADE_CMD="java -Xbootclasspath/p:${EUCALYPTUS}/usr/share/eucalyptus/openjdk-crypto.jar -classpath ${CLASSPATH} ${UPGRADE_OPTS} ${UPGRADE_ARGS} ${UPGRADE_CLASS}" 
   echo "${UPGRADE_CMD}" >> ${UP_LOG} 
   
   echo "Upgrading your database..." | tee -a ${UP_LOG} 2>&1
-  # pipefail will return nonzero from a pipeline if _anything_ in the pipeline failed. NB: This is a bash-ism, v3 and later.
-  # Also note that egrep returns non-zero if any lines match the filter expression, hence the "or true"
-  set -o pipefail
-  if ! ( su $EUCA_USER -c "${UPGRADE_CMD}" | tee -a ${UP_LOG} 2>/dev/null | ( egrep -v 'java.lang.ClassNotFoundException|PERSISTENCE_ENTITY_REGISTERED|DISCOVERY_LOADED_ENTRY|:BOOTSTRAP_|_REGISTERED|ServiceJarDiscovery' || true ) ); then
+  chown $EUCA_USER $UP_LOG
+  if ! ( su $EUCA_USER -c "${UPGRADE_CMD}" ); then
     echo "Database upgrade failed! Please check your database before using Eucalyptus."
     exit 1
   fi

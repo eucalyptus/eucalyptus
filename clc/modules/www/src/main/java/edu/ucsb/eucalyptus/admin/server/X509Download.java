@@ -115,7 +115,7 @@ public class X509Download extends HttpServlet {
       return;
     }
     if ( code == null || "".equals( code ) ) {
-      hasError( "Wrong confirmation code", response );
+      hasError( "Wrong user security code", response );
       return;
     }
     
@@ -130,8 +130,13 @@ public class X509Download extends HttpServlet {
       hasError( "User does not exist", response );
       return;
     }
-    if ( !code.equals( user.getToken( ) ) ) {
-      hasError( "Token is invalid", response );
+    try {
+      if ( !code.equals( user.resetToken( ) ) ) {
+        hasError( "Token is invalid", response );
+        return;
+      }
+    } catch ( Exception e ) {
+      hasError( "Can not reset user security code", response );
       return;
     }
     response.setContentType( mimetype );
@@ -147,7 +152,7 @@ public class X509Download extends HttpServlet {
       op.write( x509zip );
       op.flush( );
       
-    } catch ( Throwable e ) {
+    } catch ( Exception e ) {
       LOG.error( e, e );
     }
   }
@@ -208,7 +213,7 @@ public class X509Download extends HttpServlet {
         LOG.debug( "Found walrus uri/configuration: uri=" + uri + " config=" + walrusConfig );
         sb.append( "\nexport S3_URL=" + uri );
       } else {
-        sb.append( "\necho WARN:  Walrus URL is not configured." );
+        sb.append( "\necho WARN:  Walrus URL is not configured. >&2" );
       }
       sb.append( "\nexport AWS_SNS_URL=" + Notifications.INSTANCE.makeExternalRemoteUri( localHost, 8773 ) );
       sb.append( "\nexport EUARE_URL=" + Euare.INSTANCE.makeExternalRemoteUri( localHost, 8773 ) );

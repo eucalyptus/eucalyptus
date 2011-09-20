@@ -114,6 +114,7 @@ doRunInstance(	struct nc_state_t *nc,
                 char *imageId, char *imageURL,  // ignored
                 char *kernelId, char *kernelURL, // ignored
                 char *ramdiskId, char *ramdiskURL, // ignored
+                char *ownerId, char *accountId,
                 char *keyName, 
                 netConfig *netparams,
                 char *userData, char *launchIndex, char *platform, int expiryTime,
@@ -142,6 +143,7 @@ doRunInstance(	struct nc_state_t *nc,
                                         instance_state_names[PENDING], 
                                         PENDING, 
                                         meta->userId, 
+                                        ownerId, accountId,
                                         &ncnet, keyName,
                                         userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize))) {
         logprintfl (EUCAERROR, "[%s] error: could not allocate instance struct\n", instanceId);
@@ -231,19 +233,32 @@ find_and_terminate_instance (
 	* instance_p = instance;
     
     // detach all attached volumes
-    for (i=0 ; i < EUCA_MAX_VOLUMES; ++i) {
+    for (i=0; i < EUCA_MAX_VOLUMES; ++i) {
         ncVolume * volume = &instance->volumes[i];
         if (! is_volume_used (volume))
             continue;
 
         int ret;
         logprintfl (EUCAINFO, "[%s] detaching volume %s, force=%d on termination\n", instanceId, volume->volumeId, force);
-        if (nc_state->H->doDetachVolume) 
+        if (nc_state->H->doDetachVolume) {
             ret = nc_state->H->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
-        else
+        } else {
             ret = nc_state->D->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
-        if((ret != OK) && (force == 0))
-            return ret;
+        }
+
+        // do our best to detach, then proceed
+        if ((ret != OK)) {
+            if (nc_state->H->doDetachVolume) {
+                ret = nc_state->H->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 1, 0);
+            } else {
+                ret = nc_state->D->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 1, 0);
+            }
+        }
+        
+        if ((ret != OK) && (force == 0)) {
+            logprintfl(EUCAWARN, "[%s] detaching of volume on terminate failed\n", instanceId);
+            //            return ret;
+        }
 	}
 
 	// try stopping the domain
@@ -606,7 +621,7 @@ doAttachVolume (	struct nc_state_t *nc,
      // mark volume as 'attaching'
      ncVolume * volume;
      sem_p (inst_sem);
-     volume = save_volume (instance, volumeId, NULL, localDevName, localDevReal, VOL_STATE_ATTACHING); // we do not have RemoteDevReal yet
+     volume = save_volume (instance, volumeId, remoteDev, localDevName, localDevReal, VOL_STATE_ATTACHING);
      save_instance_struct (instance);
      sem_v (inst_sem);
      if (!volume) {
@@ -679,7 +694,7 @@ doAttachVolume (	struct nc_state_t *nc,
          next_vol_state = VOL_STATE_ATTACHING_FAILED;
      }
      sem_p (inst_sem);
-     volume = save_volume (instance, volumeId, remoteDevReal, NULL, NULL, next_vol_state); // now we can record remoteDevReal
+     volume = save_volume (instance, volumeId, NULL, NULL, NULL, next_vol_state); // now we can record remoteDevReal
      save_instance_struct (instance);
      sem_v (inst_sem);
      if (volume==NULL) {
@@ -766,7 +781,7 @@ doDetachVolume (	struct nc_state_t *nc,
     // mark volume as 'detaching'
     ncVolume * volume;
     if (grab_inst_sem) sem_p (inst_sem);
-    volume = save_volume (instance, volumeId, NULL, localDevName, localDevReal, VOL_STATE_DETACHING); // we do not have RemoteDevReal yet
+    volume = save_volume (instance, volumeId, remoteDev, localDevName, localDevReal, VOL_STATE_DETACHING);
     save_instance_struct (instance);
     if (grab_inst_sem) sem_v (inst_sem);
     if (!volume) {
@@ -803,7 +818,7 @@ doDetachVolume (	struct nc_state_t *nc,
     
     // make sure there is a block device
     if (check_block (remoteDevReal)) {
-        logprintfl(EUCAERROR, "DetachVolume(): cannot verify that host device '%s' is available for hypervisor attach\n", remoteDevReal);
+        logprintfl(EUCAERROR, "DetachVolume(): cannot verify that host device '%s' is available for hypervisor detach\n", remoteDevReal);
         if (!force) 
             ret = ERROR;
         goto release;
@@ -844,7 +859,7 @@ doDetachVolume (	struct nc_state_t *nc,
         next_vol_state = VOL_STATE_DETACHING_FAILED;
     }
     if (grab_inst_sem) sem_p (inst_sem);
-    volume = save_volume (instance, volumeId, remoteDevReal, NULL, NULL, next_vol_state);
+    volume = save_volume (instance, volumeId, NULL, NULL, NULL, next_vol_state);
     save_instance_struct (instance);
     if (grab_inst_sem) sem_v (inst_sem);
     if (volume==NULL) {
@@ -865,6 +880,9 @@ doDetachVolume (	struct nc_state_t *nc,
     if (ret==OK)
         logprintfl (EUCAINFO, "[%s] detached '%s' as host device '%s' and guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
     
+    if (force) {
+        return(OK);
+    }
     return ret;
 }
 

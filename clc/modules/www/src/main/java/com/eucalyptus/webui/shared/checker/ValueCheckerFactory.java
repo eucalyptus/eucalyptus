@@ -12,12 +12,14 @@ import com.google.common.base.Strings;
  */
 public class ValueCheckerFactory {
 
-  public static final HashSet<Character> USERGROUPNAME_EXTRA = new HashSet<Character>( Arrays.asList( '+', '=', ',', '.', '@', '-', '_' ) );
+  public static final HashSet<Character> USERGROUPNAME_EXTRA = new HashSet<Character>( Arrays.asList( '+', '=', ',', '.', '@', '-' ) );
   
   public static final HashSet<Character> POLICYNAME_EXCLUDE = new HashSet<Character>( Arrays.asList( '/', '\\', '*', '?', ' ' ) );
 
   public static final HashSet<Character> PASSWORD_SPECIAL = new HashSet<Character>( Arrays.asList( '`', '~', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '=', '+', '[', ']', '{', '}', '\\', '|', ';', ':', '\'', '"', ',', '.', '<', '>', '/', '?' ) );
 
+  public static final HashSet<Character> WHITESPACES = new HashSet<Character>( Arrays.asList( '\t', ' ' ) );
+  
   public static ValueChecker createNonEmptyValueChecker( ) {
     return new ValueChecker( ) {
 
@@ -68,8 +70,8 @@ public class ValueCheckerFactory {
         }
         for ( int i = 0; i < value.length( ); i++ ) {
           char c = value.charAt( i );
-          if ( !Character.isLetterOrDigit( c ) && !USERGROUPNAME_EXTRA.contains( c ) ) {
-            throw new InvalidValueException( "Containing invalid character for user or group name: " + c );
+          if ( !Character.isLetterOrDigit( c ) && !USERGROUPNAME_EXTRA.contains( c ) && !WHITESPACES.contains( c ) ) {
+            throw new InvalidValueException( "Containing invalid character for user or group names: " + c );
           }
         }
         return value;
@@ -84,12 +86,12 @@ public class ValueCheckerFactory {
       @Override
       public String check( String value ) throws InvalidValueException {
         if ( Strings.isNullOrEmpty( value ) ) {
-          throw new InvalidValueException( "User or group names can not be empty" );
+          throw new InvalidValueException( "User or group name can not be empty" );
         }
         for ( int i = 0; i < value.length( ); i++ ) {
           char c = value.charAt( i );
-          if ( !Character.isLetterOrDigit( c ) && !USERGROUPNAME_EXTRA.contains( c ) && !Character.isSpace( c ) ) {
-            throw new InvalidValueException( "Containing invalid character for user or group names: " + c );
+          if ( !Character.isLetterOrDigit( c ) && !USERGROUPNAME_EXTRA.contains( c ) ) {
+            throw new InvalidValueException( "Containing invalid character for user or group name: " + c );
           }
         }
         return value;

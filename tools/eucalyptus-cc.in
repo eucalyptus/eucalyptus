@@ -337,32 +337,25 @@ if [ -z  "$HTTPD" ]; then
 fi
 HTTPD_HOME="/"
 
-# let's find our dependencies
-for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do
+if [ -d "@AXIS2C_HOME@" -a -e @AXIS2C_HOME@/services/EucalyptusCC ]; then
+        export AXIS2C_HOME="@AXIS2C_HOME@"
+else
+    # let's find our dependencies
+    for y in $EUCALYPTUS/opt $EUCALYPTUS/packages $EUCALYPTUS /opt ; do
 	for x in `/bin/ls $y 2> /dev/null`; do
-		# this is for the RPM installed pacakges
-		if [ "$x" = "euca-axis2c" ]; then
-			if [ -e $y/$x/lib/libmod_axis2.so ]; then
-				export AXIS2C_HOME="$y/$x"
-			fi
-		fi
 		# this is for system or source installed
 		if [ "`echo $x | cut -f 1 -d -`" = "axis2c" ]; then
-			if [ -e $y/$x/lib/libmod_axis2.so ]; then
+			if [ -e $y/$x/lib/libmod_axis2.so -a  
+                             -e $y/$x/services/EucalyptusCC ]; then
 				export AXIS2C_HOME="$y/$x"
+                                break
 			fi
 		fi
 	done
-done
-
-# if we didn't find AXIS2C we'll pick the one we used at configuration
-# time
-if [ -z "$AXIS2C_HOME" ]; then
-        export AXIS2C_HOME="@AXIS2C_HOME@"
+   done
 fi
 
-# finally let's check the path
-if [ ! -d "$AXIS2C_HOME" ]; then
+if [ -z "$AXIS2C_HOME" ]; then
 	echo "Cannot find AXIS2C_HOME?"
 	exit 1
 fi

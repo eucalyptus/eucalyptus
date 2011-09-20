@@ -2,11 +2,6 @@ package com.eucalyptus.reporting.s3;
 
 import javax.persistence.*;
 
-/**
- * <p>S3SnapshotKey is a key for looking up snapshots.
- * 
- * @author tom.werges
- */
 @Embeddable
 public class S3SnapshotKey
 	implements java.io.Serializable

@@ -125,7 +125,7 @@ void free_metadata (ncMetadata ** metap)
 ncInstance * allocate_instance (char *uuid,
                                 char *instanceId, char *reservationId, 
                                 virtualMachine *params, 
-                                char *stateName, int stateCode, char *userId, 
+                                char *stateName, int stateCode, char *userId, char *ownerId, char *accountId,
                                 netConfig *ncnet, char *keyName,
                                 char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize)
 {
@@ -182,6 +182,13 @@ ncInstance * allocate_instance (char *uuid,
     if (userId) {
       safe_strncpy(inst->userId, userId, CHAR_BUFFER_SIZE);
     }
+    if (ownerId) {
+        safe_strncpy(inst->ownerId, ownerId, CHAR_BUFFER_SIZE);
+    }
+    if (accountId) {
+        safe_strncpy(inst->accountId, accountId, CHAR_BUFFER_SIZE);
+    }
+
     if (params) {
       memcpy(&(inst->params), params, sizeof(virtualMachine));
     }
@@ -345,7 +352,7 @@ int total_instances (bunchOfInstances **headp)
  * OR returns a pointer to the next empty/avail volume slot 
  * OR if full, returns NULL
  */
-static ncVolume * find_volume (const ncInstance * instance, const char *volumeId) 
+static ncVolume * find_volume (ncInstance * instance, const char *volumeId) 
 {
     ncVolume * v = instance->volumes;
     ncVolume * match = NULL;
@@ -375,7 +382,7 @@ static ncVolume * find_volume (const ncInstance * instance, const char *volumeId
 }
 
 // returns 0 if volume slot is not in use and non-zero if it is
-int is_volume_used (ncVolume * v)
+int is_volume_used (const ncVolume * v)
 {
     if (strlen (v->stateName) == 0) 
         return 0;

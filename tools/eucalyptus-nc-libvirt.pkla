@@ -1,0 +1,6 @@
+[Allow eucalyptus group libvirt management permissions]
+Identity=unix-group:eucalyptus
+Action=org.libvirt.unix.manage
+ResultAny=yes
+ResultInactive=yes
+ResultActive=yes

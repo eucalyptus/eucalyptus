@@ -105,7 +105,7 @@ public class HttpReader extends HttpTransfer {
 					output.start();
 					output.join();
 					error.join();
-				} catch (Throwable t) {
+				} catch (Exception t) {
 					LOG.error(t);
 				}
 				if(!outFile.delete()) {

@@ -25,8 +25,16 @@ public class EuarePermission {
              // allowed to list group
              Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, PolicySpec.IAM_LISTGROUPS, requestUser ) );
   }
-  
+
   public static boolean allowReadUser( User requestUser, Account account, User user ) throws AuthException {
+    return requestUser.isSystemAdmin( ) || // system admin or ...
+           requestUser.getUserId( ).equals( user.getUserId( ) ) || // user himself or ...
+           ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
+             ( requestUser.isAccountAdmin( ) || // account admin or ...
+               Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_GETUSER, requestUser ) ) );
+  }
+
+  public static boolean allowListAndReadUser( User requestUser, Account account, User user ) throws AuthException {
     return requestUser.isSystemAdmin( ) || // system admin or ...
            requestUser.getUserId( ).equals( user.getUserId( ) ) || // user himself or ...
            ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
@@ -146,12 +154,19 @@ public class EuarePermission {
       throw new EucalyptusServiceException( "Operation is not authorized" );
     }
   }
+
+  public static void authorizeDeleteAccountPolicy( User requestUser ) throws EucalyptusServiceException {
+    if ( !requestUser.isSystemAdmin( ) ) {
+      throw new EucalyptusServiceException( "Operation is not authorized" );
+    }
+  }
   
   public static void authorizeAddUserPolicy( User requestUser, Account account, User user ) throws EucalyptusServiceException {
     boolean allowed = false;
     try {
       allowed = requestUser.isSystemAdmin( ) ||
                 ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) &&
+                  !user.isAccountAdmin( ) &&
                   ( requestUser.isAccountAdmin( ) ||
                     Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_PUTUSERPOLICY, requestUser ) ) );
     } catch ( Exception e ) {

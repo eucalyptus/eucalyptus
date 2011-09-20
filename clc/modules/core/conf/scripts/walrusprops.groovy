@@ -8,7 +8,7 @@
 **/
 
 IO_CHUNK_SIZE = 102400;
-trackUsageStatistics = true;
+trackUsageStatistics = false;
 enableVirtualHosting = true;
 
 /**

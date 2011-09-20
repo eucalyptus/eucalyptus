@@ -3,6 +3,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.SQLException;
+import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -55,13 +56,11 @@ import edu.ucsb.eucalyptus.cloud.entities.ZoneInfo;
 
 // Images
 import com.eucalyptus.images.ImageInfo;
-import com.eucalyptus.images.LaunchPermission;
-import com.eucalyptus.images.ProductCode;
 import com.eucalyptus.images.ImageUtil;
 import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
-import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.ImageMetadata;
 
 // Storage
 import edu.ucsb.eucalyptus.cloud.entities.AOEMetaInfo;
@@ -97,8 +96,7 @@ import edu.ucsb.eucalyptus.cloud.entities.WalrusStatsInfo;
 import com.eucalyptus.network.IpRange;
 import com.eucalyptus.network.NetworkPeer;
 import com.eucalyptus.network.NetworkRule;
-import com.eucalyptus.network.NetworkRulesGroup;
-import com.eucalyptus.network.NetworkGroupUtil;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.vm.VmType;
 
@@ -136,6 +134,22 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     // Map account names to account ids
     private static Map<String, String> accountIdMap = new HashMap<String, String>();
     private static Map<String, Sql> connMap = new HashMap<String, Sql>();
+    private static List<String> unmappedColumns = [ "walrus_stats_info.walrus_stats_info_id",
+                                "ISCSIMetadata.id",
+                                "direct_storage_info.storage_direct_id",
+                                "vm_types.id",
+                                "storage_info.storage_id",
+                                "storage_stats_info.storage_stats_info_id",
+                                "ARecords.arecord_id",
+                                "SOARecords.soarecord_id",
+                                "Snapshots.snapshot_id",
+                                "walrus_info.walrus_info_id",
+                                "Zones.zones_id",
+                                "NSRecords.nsrecord_id",
+                                "WalrusSnapshots.walrus_snapshot_id",
+                                "ImageCache.image_cache_id",
+                                "Volumes.volume_id",
+                              ];
 
     public upgrade_20_30() {
         super(1);        
@@ -148,6 +162,11 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         if(TO_VERSION.equals(to) && FROM_VERSION.contains(from))
             return true;
         return false;
+    }
+
+    @Override
+    public void setLogger( Logger log ) {
+        LOG = log;
     }
 
     @Override
@@ -283,7 +302,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         try {
             Object firstRow = conn.firstRow("SELECT * FROM " + entityKey);
             if(firstRow == null) {
-                LOG.warn("Unable to find anything in table: " + entityKey);
+                LOG.info("Unable to find anything in table: " + entityKey);
                 return null;
             }
             if(firstRow instanceof Map) {
@@ -311,8 +330,9 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     superClass = superClass.getSuperclass();
                 }
                 for (String column : columnNames) {
-                    if(!setterMap.containsKey(column)) {
-                        LOG.warn("No corresponding field for column: " + column + " found");
+                    if(!setterMap.containsKey(column) && !unmappedColumns.contains("${entityKey}.${column}".toString()) ) {
+                        print unmappedColumns;
+                        LOG.warn("No corresponding field for column: ${entityKey}.${column} found");
                     }
                 }
                 if (entityKey.equals('vm_types')) {
@@ -462,58 +482,57 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 def bundleSize = null;
                 def ckSum = null;
                 def ckSumType = null;
-                def platform = Image.Platform.valueOf("linux");
+                def platform = ImageMetadata.Platform.valueOf("linux");
                 def cachedImg = connMap['eucalyptus_walrus'].firstRow("""SELECT manifest_name,size sz FROM ImageCache 
                                                       WHERE bucket_name=? AND manifest_name=?""", path);
                 if (cachedImg != null)
                     imgSize = cachedImg.sz.toInteger();
                 if (img.image_platform != null)
-                    platform = Image.Platform.valueOf(img.image_platform);
+                    platform = ImageMetadata.Platform.valueOf(img.image_platform);
                 def ii = null;
                 switch ( img.image_type ) {
                     case "kernel":
                         ii = new KernelImageInfo( ufn, img.image_name, img.image_name, 
                                                  "No Description", imgSize, 
-                                                 Image.Architecture.valueOf(img.image_arch), platform,
+                                                 ImageMetadata.Architecture.valueOf(img.image_arch), platform,
                                                  img.image_path, bundleSize, ckSum, ckSumType );
                         break;
                     case "ramdisk":
                         ii = new RamdiskImageInfo( ufn, img.image_name, img.image_name,
                                                   "No Description", imgSize, 
-                                                  Image.Architecture.valueOf(img.image_arch), platform,
+                                                  ImageMetadata.Architecture.valueOf(img.image_arch), platform,
                                                   img.image_path, bundleSize, ckSum, ckSumType );
                         break;
                     case "machine":
                         ii = new MachineImageInfo( ufn, img.image_name, img.image_name,
                                                   "No Description", imgSize, 
-                                                  Image.Architecture.valueOf(img.image_arch), platform,
+                                                  ImageMetadata.Architecture.valueOf(img.image_arch), platform,
                                                   img.image_path, bundleSize, ckSum, ckSumType,
                                                   img.image_kernel_id, img.image_ramdisk_id );
                         break;
                 }
                 initMetaClass(ii, ii.class);
                 ii.setImagePublic(img.image_is_public);
-                ii.setImageType(Image.Type.valueOf(img.image_type));
+                ii.setImageType(ImageMetadata.Type.valueOf(img.image_type));
                 ii.setSignature(img.image_signature);
-                ii.setState( Image.State.valueOf(img.image_availability));
+                ii.setState( ImageMetadata.State.valueOf(img.image_availability));
                 dbGen.add(ii);
                 dbGen.commit();
                 connMap['eucalyptus_general'].rows("""SELECT image_product_code_value FROM image_product_code
                                  JOIN image_has_product_codes 
                                  ON image_product_code.image_product_code_id=image_has_product_codes.image_product_code_id
                                  WHERE image_id=?""", [ img.image_id ]).each { prodCode ->
-                    EntityWrapper<ProductCode> dbPC = EntityWrapper.get(ProductCode.class);
-                    dbPC.add(new ProductCode(ii, prodCode.image_product_code_value));
-                    dbPC.commit();
+                    ii.addProductCode(prodCode.image_product_code_value);
                 }
+                
+                List<String> accountIds = new ArrayList<String>();
                 connMap['eucalyptus_general'].rows("""SELECT * FROM image_authorization
                                  JOIN image_has_user_auth
                                  ON image_authorization.image_auth_id=image_has_user_auth.image_auth_id
                                  WHERE image_id=?""", [ img.image_id ]).each { imgAuth ->
-                    EntityWrapper<LaunchPermission> dbLP = EntityWrapper.get(LaunchPermission.class);
-                    dbLP.add(new LaunchPermission(ii, imgAuth.image_auth_name));
-                    dbLP.commit();
+                    accountIds.add(accountIdMap.get(safeUserMap.get(imgAuth.image_auth_name)))
                 }
+                ii.addPermissions(accountIds);
             }
 
             connMap['eucalyptus_images'].rows("SELECT * FROM Volume WHERE username=?", [ it.auth_user_name ]).each { vol ->
@@ -627,7 +646,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 }
                 dbBucket.add(b);
                 dbBucket.commit();
-            } catch (Throwable t) {
+            } catch (Exception t) {
                 t.printStackTrace();
                 dbBucket.rollback();
                 throw t;
@@ -681,7 +700,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 }
                 dbObject.add(objectInfo);
                 dbObject.commit();
-            } catch (Throwable t) {
+            } catch (Exception t) {
                 t.printStackTrace();
                 dbObject.rollback();
                 throw t;
@@ -697,7 +716,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
          */ 
 
         connMap['eucalyptus_general'].rows('SELECT * FROM metadata_network_group').each {
-            EntityWrapper<NetworkRulesGroup> dbGen = EntityWrapper.get(NetworkRulesGroup.class);
+            EntityWrapper<NetworkGroup> dbGen = EntityWrapper.get(NetworkGroup.class);
             try {
                 if (!userIdMap.containsKey(it.metadata_user_name)) {
                     return;
@@ -707,7 +726,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 if ( it.metadata_user_name == 'admin' && it.metadata_display_name == 'default' ) {
                     uniqueName = it.metadata_display_name;
                 }
-                def rulesGroup = new NetworkRulesGroup(ufn, uniqueName, it.metadata_network_group_description);
+                def rulesGroup = new NetworkGroup(ufn, uniqueName, it.metadata_network_group_description);
                 initMetaClass(rulesGroup, rulesGroup.class);
                 rulesGroup.setDisplayName(uniqueName);
                 LOG.debug("Adding network rules for ${ it.metadata_user_name }/${it.metadata_display_name}");
@@ -747,7 +766,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 LOG.debug("adding rules group: " + rulesGroup);
                 dbGen.add(rulesGroup);
                 dbGen.commit();
-            } catch (Throwable t) {
+            } catch (Exception t) {
                 t.printStackTrace();
                 dbGen.rollback();
                 throw t;
@@ -791,14 +810,22 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     }
 
     def has_table(dbName, tableName) {
-        // NB: http://programmingitch.blogspot.com/2010/10/be-careful-using-gstrings-for-sql.html
         try {
-            def query = "SELECT * FROM ${tableName}".toString();
-            connMap[dbName].firstRow(query);
-            return true;
-        } catch (Throwable t) {
-            return false;
+            // Gets the database metadata
+            DatabaseMetaData dbmd = connMap[dbName].getConnection().getMetaData();
+
+            // Specify the type of object; in this case we want tables
+            String[] types = {"TABLE"};
+            def tables = dbmd.getTables(null, null, null, null);
+            while(tables.next()) {
+                if (tables.getString("TABLE_NAME") == tableName) {
+                    return true;
+                }
+            }
+        } catch (SQLException e) {
+            LOG.warn("During check for table ${tableName}: ${e}");
         }
+        return false;
     }
 
     public boolean upgradeSAN() {
@@ -864,7 +891,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                  dbPart.commit();
                  LOG.debug("Adding Cluster ${ it.config_component_name }");
                  // First argument is Partition name
-                 ClusterConfiguration clcfg = new ClusterConfiguration(it.config_component_name, it.config_component_name, it.config_component_hostname, it.config_component_port);
+                 ClusterConfiguration clcfg = new ClusterConfiguration(it.config_component_name, it.config_component_name + "_cc", it.config_component_hostname, it.config_component_port);
                  dbCluster.add(clcfg);
                  dbCluster.commit();
             } finally {
@@ -874,7 +901,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         connMap['eucalyptus_config'].rows('SELECT * FROM config_sc').each{
             EntityWrapper<StorageControllerConfiguration> dbSC = EntityWrapper.get(StorageControllerConfiguration.class);
             // First argument is partition name
-            StorageControllerConfiguration sc = new StorageControllerConfiguration(it.config_component_name, it.config_component_name, it.config_component_hostname, it.config_component_port);
+            StorageControllerConfiguration sc = new StorageControllerConfiguration(it.config_component_name, it.config_component_name + "_sc", it.config_component_hostname, it.config_component_port);
             if (it.config_component_port == -1 || Internets.testLocal(it.config_component_hostname)) {
                 System.setProperty('euca.storage.name', it.config_component_name);
             }

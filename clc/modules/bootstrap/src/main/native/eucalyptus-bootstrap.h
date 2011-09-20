@@ -77,9 +77,9 @@ static int debug = 0;
 	} while(0)
 #define __die(condition,format,...) do { if(condition) {fprintf(stderr,"[error:%04d] ", __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ ); exit(1);} } while(0)
 #define __fail(format,...) __die(1,format,##__VA_ARGS__)
-#define __abort(r,condition,format,...) do { if(condition) {fprintf(stderr,"[error:%04d] ", __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ ); return r;} } while(0)
-#define __debug(format,...) do { if(debug){fprintf(stdout,"[debug:%04d] ", __LINE__);fprintf(stdout, format "\n", ##__VA_ARGS__ ); } } while(0)
-#define __error(format,...) do { fprintf(stderr,"[error:%04d] ", __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ ); } while(0)
+#define __abort(r,condition,format,...) do { if(condition) {fprintf(stderr,"[error:%04d] ", __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ ); fflush(stderr); return r;} } while(0)
+#define __debug(format,...) do { if(debug){fprintf(stdout,"[debug:%04d] ", __LINE__);fprintf(stdout, format "\n", ##__VA_ARGS__ );fflush(stdout); } } while(0)
+#define __error(format,...) do { fprintf(stderr,"[error:%04d] ", __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ );fflush(stderr); } while(0)
 #define EUCA_LIB_DIR "/usr/share/eucalyptus"
 #define EUCA_ETC_DIR "/etc/eucalyptus/cloud.d"
 #define EUCA_CLASSCACHE_DIR "/var/run/eucalyptus/classcache"

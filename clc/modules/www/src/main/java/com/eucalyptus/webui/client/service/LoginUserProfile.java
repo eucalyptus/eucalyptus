@@ -14,7 +14,6 @@ public class LoginUserProfile implements Serializable {
   private String userId;
   private String userName;
   private String accountName;
-  private String userToken;
   private String userProfileSearch;
   private String userKeySearch;
   private LoginAction loginAction;
@@ -22,14 +21,17 @@ public class LoginUserProfile implements Serializable {
   public LoginUserProfile( ) {
   }
   
-  public LoginUserProfile( String userId, String userName, String accountName, String userToken, String userProfileSearch, String userKeySearch, LoginAction action ) {
+  public LoginUserProfile( String userId, String userName, String accountName, String userProfileSearch, String userKeySearch, LoginAction action ) {
     this.setUserId( userId );
     this.setUserName( userName );
     this.setAccountName( accountName );
-    this.setUserToken( userToken );
     this.setUserProfileSearch( userProfileSearch );
     this.setUserKeySearch( userKeySearch );
     this.setLoginAction( action );
+  }
+  
+  public boolean isSystemAdmin( ) {
+	return "admin".equals( userName ) && "eucalyptus".equals( accountName );
   }
 
   public void setUserName( String userName ) {
@@ -66,14 +68,6 @@ public class LoginUserProfile implements Serializable {
 
   public String getUserId( ) {
     return userId;
-  }
-
-  public void setUserToken( String userToken ) {
-    this.userToken = userToken;
-  }
-
-  public String getUserToken( ) {
-    return userToken;
   }
 
   public void setLoginAction( LoginAction loginAction ) {
