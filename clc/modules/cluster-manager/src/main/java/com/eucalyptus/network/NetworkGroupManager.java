@@ -1,6 +1,5 @@
 package com.eucalyptus.network;
 
-import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
@@ -9,7 +8,6 @@ import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.OwnerFullName;
@@ -171,7 +169,6 @@ public class NetworkGroupManager {
         return reply;
       } else {
         ruleGroup.getNetworkRules( ).addAll( ruleList );
-        EntityWrapper.get( ruleGroup ).mergeAndCommit( ruleGroup );
         reply.set_return( true );
       }
       db.commit( );
