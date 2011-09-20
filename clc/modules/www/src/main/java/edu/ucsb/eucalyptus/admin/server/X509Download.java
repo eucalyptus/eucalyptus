@@ -213,7 +213,7 @@ public class X509Download extends HttpServlet {
         LOG.debug( "Found walrus uri/configuration: uri=" + uri + " config=" + walrusConfig );
         sb.append( "\nexport S3_URL=" + uri );
       } else {
-        sb.append( "\necho WARN:  Walrus URL is not configured." );
+        sb.append( "\necho WARN:  Walrus URL is not configured. >&2" );
       }
       sb.append( "\nexport AWS_SNS_URL=" + Notifications.INSTANCE.makeExternalRemoteUri( localHost, 8773 ) );
       sb.append( "\nexport EUARE_URL=" + Euare.INSTANCE.makeExternalRemoteUri( localHost, 8773 ) );
