@@ -143,9 +143,6 @@ public class NetworkRule extends AbstractPersistent {
   public static NetworkRule create( final String protocol, final Integer lowPort, final Integer highPort,
                                     final Multimap<String, String> peers,
                                     final Collection<String> ipRanges ) {
-    assertThat( "Protocol must be one of: " + Protocol.values( ),
-                Lists.transform( Arrays.asList( Protocol.values( ) ), Functions.toStringFunction( ) ),
-                contains( protocol ) );
     return create( Protocol.valueOf( protocol ), lowPort, highPort, peers, ipRanges );
   }
   
