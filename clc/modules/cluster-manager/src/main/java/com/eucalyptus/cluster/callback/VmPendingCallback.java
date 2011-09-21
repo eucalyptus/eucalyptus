@@ -52,9 +52,7 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
       try {
         final VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
         vm.setServiceTag( runVm.getServiceTag( ) );
-        if ( VmStateSet.RUN.apply( vm ) || VmStateSet.CHANGING.apply( vm ) ) {
-          vm.doUpdate( ).apply( runVm );
-        } else if ( VmInstances.Timeout.SHUTTING_DOWN.apply( vm ) ) {
+        if ( VmInstances.Timeout.SHUTTING_DOWN.apply( vm ) ) {
           VmInstances.terminated( vm );
         } else if ( VmState.SHUTTING_DOWN.apply( vm ) && VmState.SHUTTING_DOWN.equals( state ) ) {
           VmInstances.terminated( vm );
@@ -64,6 +62,11 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
           }
           vm.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
           vm.updateVolumeAttachments( runVm.getVolumes( ) );
+        } else if ( VmStateSet.RUN.apply( vm ) || VmStateSet.CHANGING.apply( vm ) ) {
+          vm.doUpdate( ).apply( runVm );
+        } else {
+          LOG.warn( "Applying generic state change: " + vm.getState( ) + " -> " + state + " for " + vm.getInstanceId( ) );
+          vm.doUpdate( ).apply( runVm );
         }
         db.commit( );
       } catch ( Exception ex ) {
