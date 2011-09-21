@@ -136,7 +136,7 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
         this.fireChange( s );
         StaticDatabasePropertyEntry.update( this.getFieldCanonicalName( ), this.getQualifiedName( ), s );
         this.field.set( null, o );
-        LOG.info( "--> Set property value:  " + super.getQualifiedName( ) + " to " + s );
+        Logs.extreme( ).trace( "--> Set property value:  " + super.getQualifiedName( ) + " to " + s );
       } catch ( Exception e ) {
         LOG.warn( "Failed to set property: " + super.getQualifiedName( ) + " because of " + e.getMessage( ) );
         Logs.extreme( ).debug( e, e );

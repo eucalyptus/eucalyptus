@@ -8,10 +8,10 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstance.Reason;
 import com.eucalyptus.cluster.VmInstance.VmState;
 import com.eucalyptus.cluster.VmInstance.VmStateSet;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.async.FailedRequestException;
+import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
@@ -97,16 +97,13 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       EntityTransaction db1 = Entities.get( VmInstance.class );
       try {
         VmInstance vm = VmInstances.lookup( vmId );
-        if ( VmStateSet.RUN.apply( vm ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
-          VmInstances.terminate( vm );
-        } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
-          VmInstances.terminate( vm );
-        } else if ( VmState.TERMINATED.apply( vm ) && vm.getSplitTime( ) > VmInstances.BURY_TIME ) {
+        if ( VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
+          VmInstances.terminated( vm );
           VmInstances.delete( vm );
-        } else if ( VmState.BURIED.apply( vm ) ) {
+        } else if ( VmState.SHUTTING_DOWN.apply( vm ) || VmInstances.Timeout.SHUTTING_DOWN.apply( vm ) ) {
+          VmInstances.terminated( vm );
+        } else if ( VmInstances.Timeout.TERMINATED.apply( vm ) ) {
           VmInstances.delete( vm );
-        } else if ( VmStateSet.DONE.apply( vm ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
-          VmInstances.terminate( vm );
         }
         db1.commit( );
       } catch ( final Exception ex ) {

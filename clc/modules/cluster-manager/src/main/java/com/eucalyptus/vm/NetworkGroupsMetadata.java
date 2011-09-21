@@ -70,9 +70,7 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstance.VmState;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.network.IpRange;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkPeer;
 import com.eucalyptus.network.NetworkRule;
@@ -125,8 +123,8 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
                       rules.put( ruleGroup.getClusterNetworkName( ), ruleString );
                     }
                   }
-                  for ( IpRange cidr : netRule.getIpRanges( ) ) {
-                    String ruleString = String.format( "%s -s %s", rule, cidr.getValue( ) );
+                  for ( String cidr : netRule.getIpRanges( ) ) {
+                    String ruleString = String.format( "%s -s %s", rule, cidr );
                     if ( !rules.get( ruleGroup.getClusterNetworkName( ) ).contains( ruleString ) ) {
                       rules.put( ruleGroup.getClusterNetworkName( ), ruleString );
                     }
@@ -143,7 +141,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
       }
       buf.append( rulesToString( rules ) );
       buf.append( groupsToString( networks ) );
-      db.commit( );
+      db.rollback( );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
       db.rollback( );

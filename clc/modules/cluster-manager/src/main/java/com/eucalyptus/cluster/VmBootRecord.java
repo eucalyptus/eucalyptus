@@ -65,6 +65,7 @@ package com.eucalyptus.cluster;
 
 import java.util.Arrays;
 import java.util.Set;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
@@ -105,6 +106,8 @@ public class VmBootRecord {
   @Column( name = "metadata_vm_platform" )
   private String                  platform;
   @ElementCollection
+  @CollectionTable(name="metadata_instances_persistent_volumes")
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<VmVolumeAttachment> persistentVolumes = Sets.newHashSet( );
   @Lob
   @Column( name = "metadata_vm_user_data" )
