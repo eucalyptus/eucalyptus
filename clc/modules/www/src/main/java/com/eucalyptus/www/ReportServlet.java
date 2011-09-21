@@ -41,7 +41,7 @@ public class ReportServlet
 
 		/* Parse all params
 		 */
-		final ReportType reportType = ReportType.valueOf(Param.type.get(req));
+		final String reportType = Param.type.get(req);
 		final ReportFormat format = ReportFormat.valueOf(Param.format.get(req));
 		final long start = Long.parseLong(Param.start.get(req));
 		final long end = Long.parseLong(Param.end.get(req));
@@ -88,7 +88,7 @@ public class ReportServlet
 					period, criterion, groupByCriterion, displayUnits,
 					res.getOutputStream(), accountId);			
 		} else {
-			throw new RuntimeException("Only admins can generate reports");
+			throw new RuntimeException("Only admins and account owners can generate reports");
 		}
 	  
 	}
