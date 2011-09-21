@@ -458,9 +458,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           try {
             final VmInstance vm = Entities.merge( v );
             if ( VmStateSet.RUN.apply( vm ) ) {
-              vm.setState( VmState.SHUTTING_DOWN, ( Timeout.SHUTTING_DOWN.apply( vm ) ? Reason.EXPIRED : Reason.USER_TERMINATED ) );
+              vm.setState( VmState.SHUTTING_DOWN, ( Timeout.SHUTTING_DOWN.apply( vm )
+                ? Reason.EXPIRED
+                : Reason.USER_TERMINATED ) );
             } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
-              vm.setState( VmState.TERMINATED, Timeout.TERMINATED.apply( vm ) ? Reason.EXPIRED : Reason.USER_TERMINATED );
+              vm.setState( VmState.TERMINATED, Timeout.TERMINATED.apply( vm )
+                ? Reason.EXPIRED
+                : Reason.USER_TERMINATED );
             }
             db.commit( );
             return vm;
@@ -492,7 +496,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           }
         }
       }
-    }, SHUTDOWN {
+    },
+    SHUTDOWN {
       @Override
       public VmInstance apply( final VmInstance v ) {
         if ( !Entities.isPersistent( v ) ) {
@@ -502,7 +507,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           try {
             final VmInstance vm = Entities.merge( v );
             if ( VmStateSet.RUN.apply( vm ) ) {
-              vm.setState( VmState.SHUTTING_DOWN, ( Timeout.SHUTTING_DOWN.apply( vm ) ? Reason.EXPIRED : Reason.USER_TERMINATED ) );
+              vm.setState( VmState.SHUTTING_DOWN, ( Timeout.SHUTTING_DOWN.apply( vm )
+                ? Reason.EXPIRED
+                : Reason.USER_TERMINATED ) );
             }
             db.commit( );
             return vm;
@@ -514,6 +521,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         }
       }
     };
+    public abstract VmInstance apply( final VmInstance v );
   }
   
   public enum Lookup implements Function<String, VmInstance> {
@@ -557,8 +565,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           throw new NoSuchElementException( "Failed to lookup vm instance: " + arg0 );
         }
       }
-      
-    }
+    };
+    public abstract VmInstance apply( final String arg0 );
   }
   
   public enum FilterTerminated implements Predicate<VmInstance> {
@@ -682,7 +690,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.networkConfig = new VmNetworkConfig( this );
     final Function<NetworkGroup, NetworkGroup> func = Entities.merge( );
     this.networkGroups.addAll( Collections2.transform( networkRulesGroups, func ) );
-    this.networkIndex = networkIndex != PrivateNetworkIndex.bogus( ) ? Entities.merge( networkIndex.set( this ) ) : null;
+    this.networkIndex = networkIndex != PrivateNetworkIndex.bogus( )
+      ? Entities.merge( networkIndex.set( this ) )
+      : null;
     this.store( );
   }
   
@@ -800,12 +810,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private Map<String, String> getMetadataMap( ) {
     final boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     final Map<String, String> m = new HashMap<String, String>( );
-     m.put( "ami-id", this.getImageId( ) );
+    m.put( "ami-id", this.getImageId( ) );
     m.put( "product-codes", this.bootRecord.getMachine( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
     m.put( "ami-launch-index", "" + this.launchRecord.getLaunchIndex( ) );
 //ASAP: FIXME: GRZE:
 //    m.put( "ancestor-ami-ids", this.getImageInfo( ).getAncestorIds( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
-    if( this.bootRecord.getMachine( ) instanceof MachineImageInfo ) {
+    if ( this.bootRecord.getMachine( ) instanceof MachineImageInfo ) {
       m.put( "ami-manifest-path", ( ( MachineImageInfo ) this.bootRecord.getMachine( ) ).getManifestLocation( ) );
     }
     m.put( "hostname", this.getPublicAddress( ) );
@@ -1389,10 +1399,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         //ASAP:FIXME:GRZE: restore.
         runningInstance.setProductCodes( new ArrayList<String>( ) );
         runningInstance.setImageId( input.getBootRecord( ).getMachine( ).getDisplayName( ) );
-        if( input.getBootRecord( ).getKernel( ) != null ) {
+        if ( input.getBootRecord( ).getKernel( ) != null ) {
           runningInstance.setKernel( input.getBootRecord( ).getKernel( ).getDisplayName( ) );
         }
-        if( input.getBootRecord( ).getRamdisk( ) != null ) {
+        if ( input.getBootRecord( ).getRamdisk( ) != null ) {
           runningInstance.setRamdisk( input.getBootRecord( ).getRamdisk( ).getDisplayName( ) );
         }
         if ( dns ) {

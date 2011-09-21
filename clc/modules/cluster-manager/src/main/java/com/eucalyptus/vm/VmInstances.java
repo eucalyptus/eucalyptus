@@ -57,9 +57,7 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- *
+ *******************************************************************************
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
@@ -106,7 +104,6 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.VmInstance.Lookup;
-import com.eucalyptus.vm.VmInstance.Transform;
 import com.eucalyptus.vm.VmInstance.Transitions;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
@@ -379,13 +376,13 @@ public class VmInstances {
     if ( ( name != null ) && terminateCache.containsKey( name ) ) {
       return terminateCache.get( name );
     } else {
-      return VmInstance.Lookup.INSTANCE.apply( name );
+      return Lookup.INSTANCE.apply( name );
     }
   }
   
   public static VmInstance register( final VmInstance vm ) {
     if ( !terminateCache.containsKey( vm.getInstanceId( ) ) ) {
-      return VmInstance.Transitions.REGISTER.apply( vm );
+      return Transitions.REGISTER.apply( vm );
     } else {
       throw new IllegalArgumentException( "Attempt to register instance which is already terminated." );
     }
@@ -395,7 +392,7 @@ public class VmInstances {
     try {
       if ( VmStateSet.DONE.apply( vm ) ) {
         cache( vm );
-        return VmInstance.Transitions.DELETE.apply( vm );
+        return Transitions.DELETE.apply( vm );
       }
     } catch ( final Exception ex ) {
       LOG.error( ex, ex );
@@ -407,7 +404,7 @@ public class VmInstances {
       final RunningInstancesItemType ret = VmInstances.transform( vm );
       terminateCache.put( vm.getDisplayName( ), vm );
       terminateDescribeCache.put( vm.getDisplayName( ), ret );
-      return VmInstance.Transitions.DELETE.apply( vm );
+      return Transitions.DELETE.apply( vm );
     } else {
       return terminateCache.get( vm );
     }
@@ -426,18 +423,18 @@ public class VmInstances {
   }
   
   public static VmInstance terminated( final VmInstance vm ) throws TransactionException {
-    return VmInstances.cache( VmInstance.Transitions.TERMINATED.apply( vm ) );
+    return VmInstances.cache( Transitions.TERMINATED.apply( vm ) );
   }
   
   public static VmInstance terminated( final String key ) throws NoSuchElementException {
-    return Functions.compose( VmInstance.Transitions.TERMINATED, VmInstance.Lookup.INSTANCE ).apply( key );
+    return Functions.compose( Transitions.TERMINATED, VmInstance.Lookup.INSTANCE ).apply( key );
   }
   
   public static VmInstance shutDown( VmInstance vm ) throws TransactionException {
     if ( VmStateSet.DONE.apply( vm ) ) {
       return VmInstances.delete( vm );
     } else {
-      return VmInstance.Transitions.SHUTDOWN.apply( vm );
+      return Transitions.SHUTDOWN.apply( vm );
     }
   }
 
