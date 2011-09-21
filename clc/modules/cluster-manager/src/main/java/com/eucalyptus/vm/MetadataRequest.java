@@ -68,7 +68,6 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
-import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.entities.Entities;
 
 public class MetadataRequest {

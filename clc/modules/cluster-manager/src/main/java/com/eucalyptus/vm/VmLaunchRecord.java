@@ -61,122 +61,63 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
+import java.util.Date;
+import javax.persistence.Column;
 import javax.persistence.Embeddable;
-import javax.persistence.Transient;
 import org.hibernate.annotations.Parent;
-import com.eucalyptus.vm.VmInstances;
 
 @Embeddable
-public class VmNetworkConfig {
-  
+public class VmLaunchRecord {
   @Parent
-  private VmInstance   parent;
-  private String       macAddress;
-  private String       privateAddress;
-  private String       publicAddress;
-  private String       privateDnsName;
-  private String       publicDnsName;
-  @Transient
-  public static String DEFAULT_IP = "0.0.0.0";
+  private VmInstance vmInstance;
+  @Column( name = "metadata_vm_launch_index" )
+  private Integer    launchIndex;
+  @Column( name = "metadata_vm_launch_time" )
+  private Date       launchTime;
   
-  VmNetworkConfig( VmInstance parent, String ipAddress, String ignoredPublicIp ) {
+  VmLaunchRecord( Integer launchIndex, Date launchTime ) {
     super( );
-    this.parent = parent;
-    this.macAddress = VmInstances.asMacAddress( this.parent.getInstanceId( ) );
-    this.privateAddress = ipAddress;
-    this.publicAddress = ignoredPublicIp;
-    this.updateDns( );
+    this.launchIndex = launchIndex;
+    this.launchTime = launchTime;
   }
   
-  VmNetworkConfig( ) {
+  VmLaunchRecord( ) {
     super( );
   }
   
-  /**
-   * @param vmInstance
-   */
-  public VmNetworkConfig( VmInstance vmInstance ) {
-    this( vmInstance, DEFAULT_IP, DEFAULT_IP );
+  VmInstance getVmInstance( ) {
+    return this.vmInstance;
   }
   
-  void updateDns( ) {
-    String dnsDomain = null;
-    try {
-      dnsDomain = edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
-    } catch ( final Exception e ) {}
-    dnsDomain = dnsDomain == null
-      ? "dns-disabled"
-      : dnsDomain;
-    
-    this.privateAddress = ( this.privateAddress == null
-      ? "0.0.0.0"
-      : this.privateAddress );
-    this.publicAddress = ( this.publicAddress == null
-      ? "0.0.0.0"
-      : this.publicAddress );
-    this.publicDnsName = "euca-" + this.publicAddress.replaceAll( "\\.", "-" ) + VmInstances.INSTANCE_SUBDOMAIN + "." + dnsDomain;
-    this.privateDnsName = "euca-" + this.privateAddress.replaceAll( "\\.", "-" ) + VmInstances.INSTANCE_SUBDOMAIN + ".internal";
+  Integer getLaunchIndex( ) {
+    return this.launchIndex;
   }
   
-  private VmInstance getParent( ) {
-    return this.parent;
+  Date getLaunchTime( ) {
+    return this.launchTime;
   }
   
-  void setParent( VmInstance parent ) {
-    this.parent = parent;
+  private void setVmInstance( VmInstance vmInstance ) {
+    this.vmInstance = vmInstance;
   }
   
-  String getMacAddress( ) {
-    return this.macAddress;
+  private void setLaunchIndex( Integer launchIndex ) {
+    this.launchIndex = launchIndex;
   }
   
-  void setMacAddress( String macAddress ) {
-    this.macAddress = macAddress;
+  private void setLaunchTime( Date launchTime ) {
+    this.launchTime = launchTime;
   }
-  
-  String getPrivateAddress( ) {
-    return this.privateAddress;
-  }
-  
-  void setPrivateAddress( String privateAddress ) {
-    this.privateAddress = privateAddress;
-  }
-  
-  String getPublicAddress( ) {
-    return this.publicAddress;
-  }
-  
-  void setPublicAddress( String publicAddress ) {
-    this.publicAddress = publicAddress;
-  }
-  
-  String getPrivateDnsName( ) {
-    return this.privateDnsName;
-  }
-  
-  void setPrivateDnsName( String privateDnsName ) {
-    this.privateDnsName = privateDnsName;
-  }
-  
-  String getPublicDnsName( ) {
-    return this.publicDnsName;
-  }
-  
-  void setPublicDnsName( String publicDnsName ) {
-    this.publicDnsName = publicDnsName;
-  }
-  
+
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
-    builder.append( "VmNetworkConfig:" );
-    if ( this.macAddress != null ) builder.append( "macAddress=" ).append( this.macAddress ).append( ":" );
-    if ( this.privateAddress != null ) builder.append( "privateAddress=" ).append( this.privateAddress ).append( ":" );
-    if ( this.publicAddress != null ) builder.append( "publicAddress=" ).append( this.publicAddress ).append( ":" );
-    if ( this.privateDnsName != null ) builder.append( "privateDnsName=" ).append( this.privateDnsName ).append( ":" );
-    if ( this.publicDnsName != null ) builder.append( "publicDnsName=" ).append( this.publicDnsName );
+    builder.append( "VmLaunchRecord:" );
+    if ( this.launchIndex != null ) builder.append( "launchIndex=" ).append( this.launchIndex ).append( ":" );
+    if ( this.launchTime != null ) builder.append( "launchTime=" ).append( this.launchTime );
     return builder.toString( );
   }
+  
 }

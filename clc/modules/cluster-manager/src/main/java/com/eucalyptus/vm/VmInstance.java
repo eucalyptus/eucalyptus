@@ -62,7 +62,7 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -102,7 +102,7 @@ import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
-import com.eucalyptus.cluster.VmInstance.VmState;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
@@ -117,9 +117,8 @@ import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.Emis;
-import com.eucalyptus.images.MachineImageInfo;
-import com.eucalyptus.images.PutGetImageInfo;
 import com.eucalyptus.images.Emis.BootableSet;
+import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.ExtantNetwork;
@@ -131,10 +130,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
-import com.eucalyptus.vm.BundleTask;
-import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmType;
-import com.eucalyptus.vm.VmTypes;
+import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances.Timeout;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -436,7 +432,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     
   }
   
-  public enum Transitions implements Function<VmInstance, VmInstance> {
+  enum Transitions implements Function<VmInstance, VmInstance> {
     REGISTER {
       @Override
       public VmInstance apply( final VmInstance arg0 ) {

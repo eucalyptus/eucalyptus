@@ -64,11 +64,11 @@
 package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.ConnectionException;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.MessageCallback;
+import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;

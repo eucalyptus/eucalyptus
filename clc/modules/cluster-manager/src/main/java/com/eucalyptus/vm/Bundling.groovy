@@ -69,7 +69,6 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.Filter;
 import com.eucalyptus.binding.HttpParameterMapping;
-import com.eucalyptus.cluster.VmInstance;
 
 public class VmBundleMessage extends EucalyptusMessage {
   
