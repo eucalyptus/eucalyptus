@@ -192,7 +192,7 @@ public class VmControl {
           Logs.exhaust( ).error( ex, ex );
           db.rollback( );
           try {
-            if ( vm != null && !VmState.BURIED.apply( vm ) ) {
+            if ( vm != null ) {
               RunningInstancesItemType ret = VmInstances.transform( vm );
               if ( ret != null && vm.getReservationId( ) != null ) {
                 if ( !rsvMap.containsKey( vm.getReservationId( ) ) ) {
