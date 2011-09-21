@@ -172,14 +172,14 @@ public class VmControl {
     Predicate<VmInstance> privileged = RestrictedTypes.filterPrivileged( );
     try {
       for ( final VmInstance vm : Iterables.filter( VmInstances.listValues( ), privileged ) ) {
+        if ( !instancesSet.isEmpty( ) && !instancesSet.contains( vm.getInstanceId( ) ) ) {
+          continue;
+        }
         EntityTransaction db = Entities.get( VmInstance.class );
         try {
           VmInstance v = Entities.merge( vm );
           if ( VmInstances.Timeout.TERMINATED.apply( v ) ) {
             VmInstances.delete( v );
-          }
-          if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) {
-            continue;
           }
           if ( !rsvMap.containsKey( v.getReservationId( ) ) ) {
             final ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getNamespace( ), v.getNetworkNames( ) );
