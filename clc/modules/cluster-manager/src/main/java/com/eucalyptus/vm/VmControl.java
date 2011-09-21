@@ -228,13 +228,13 @@ public class VmControl {
           try {
             VmInstance vm = null;
             try {
-              try {
-                vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.Lookup.INSTANCE );
-              } catch ( NoSuchElementException ex ) {
-                vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.Lookup.TERMINATED );
-              }
-              final int oldCode = vm.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
-              final String oldState = vm.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
+              vm = RestrictedTypes.doPrivileged( instanceId, VmInstances.lookupFunction( ) );
+              final int oldCode = vm.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.apply( vm )
+                ? VmState.TERMINATED.getCode( )
+                : VmState.SHUTTING_DOWN.getCode( );
+              final String oldState = vm.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.apply( vm )
+                ? VmState.TERMINATED.getName( )
+                : VmState.SHUTTING_DOWN.getName( );
               VmInstances.shutDown( vm );
               results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
               db.commit( );
@@ -552,9 +552,9 @@ public class VmControl {
         } else {
           throw new EucalyptusCloudException( "Instance is already being bundled: " + v.getBundleTask( ).getBundleId( ) );
         }
-        EventRecord.here( BundleCallback.class, 
-                          EventType.BUNDLE_PENDING, 
-                          ctx.getUserFullName( ).toString( ), 
+        EventRecord.here( BundleCallback.class,
+                          EventType.BUNDLE_PENDING,
+                          ctx.getUserFullName( ).toString( ),
                           v.getBundleTask( ).getBundleId( ),
                           v.getInstanceId( ) ).debug( );
         final BundleCallback callback = new BundleCallback( request );

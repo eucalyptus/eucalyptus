@@ -373,11 +373,7 @@ public class VmInstances {
   }
   
   public static VmInstance lookup( final String name ) throws NoSuchElementException {
-    if ( ( name != null ) && terminateCache.containsKey( name ) ) {
-      return terminateCache.get( name );
-    } else {
-      return Lookup.INSTANCE.apply( name );
-    }
+    return CachedLookup.INSTANCE.apply( name );
   }
   
   public static VmInstance register( final VmInstance vm ) {
@@ -399,8 +395,9 @@ public class VmInstances {
     }
     return vm;
   }
+  
   static VmInstance cache( VmInstance vm ) {
-    if ( ! terminateCache.containsKey( vm.getDisplayName( ) ) ) {
+    if ( !terminateCache.containsKey( vm.getDisplayName( ) ) ) {
       final RunningInstancesItemType ret = VmInstances.transform( vm );
       terminateCache.put( vm.getDisplayName( ), vm );
       terminateDescribeCache.put( vm.getDisplayName( ), ret );
@@ -437,7 +434,7 @@ public class VmInstances {
       return Transitions.SHUTDOWN.apply( vm );
     }
   }
-
+  
   @Deprecated
   public static List<VmInstance> listValues( ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
@@ -480,5 +477,28 @@ public class VmInstances {
       return VmInstance.Transform.INSTANCE.apply( vm );
     }
   }
-
+  
+  /**
+   * @return
+   */
+  public static Function<String, VmInstance> lookupFunction( ) {
+    return VmInstance.Lookup.INSTANCE;
+  }
+  
+  private enum CachedLookup implements Function<String, VmInstance> {
+    INSTANCE;
+    
+    /**
+     * @see com.google.common.base.Function#apply(java.lang.Object)
+     */
+    @Override
+    public VmInstance apply( String name ) {
+      if ( ( name != null ) && terminateCache.containsKey( name ) ) {
+        return terminateCache.get( name );
+      } else {
+        return Lookup.INSTANCE.apply( name );
+      }
+    }
+    
+  }
 }

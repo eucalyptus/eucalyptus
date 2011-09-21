@@ -64,7 +64,6 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
             LOG.error( ex );
           }
         } catch ( Exception ex1 ) {
-          VmInstance vm = VmInstance.Lookup.INSTANCE.apply( runVm.getInstanceId( ) );
           if ( VmStateSet.RUN.contains( runVmState ) ) {
             VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
           }
