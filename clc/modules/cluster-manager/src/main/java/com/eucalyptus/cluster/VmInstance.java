@@ -1289,7 +1289,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             final VmState state = VmState.Mapper.get( runVm.getStateName( ) );
             final long splitTime = VmInstance.this.getSplitTime( );
             final VmState oldState = VmInstance.this.getState( );
-            if ( VmStateSet.RUN.apply( VmInstance.this ) && state.equals( VmInstance.this.getState( ) ) ) {
+            if ( VmStateSet.RUN.apply( VmInstance.this ) && VmStateSet.RUN.contains( state ) ) {
               VmInstance.this.setState( state, Reason.APPEND, "UPDATE" );
               this.updateState( runVm );
             } else if ( VmState.STOPPING.apply( VmInstance.this ) && VmState.SHUTTING_DOWN.equals( state ) ) {
