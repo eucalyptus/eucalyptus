@@ -8,10 +8,10 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstance.Reason;
 import com.eucalyptus.cluster.VmInstance.VmState;
 import com.eucalyptus.cluster.VmInstance.VmStateSet;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.VmNetworkConfig;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.async.FailedRequestException;
+import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
@@ -52,12 +52,13 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
       try {
         final VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
         vm.setServiceTag( runVm.getServiceTag( ) );
-        if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
-          vm.setState( VmState.TERMINATED, Reason.EXPIRED );
-        } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && VmState.SHUTTING_DOWN.equals( state ) ) {
-          vm.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
-        } else if ( ( VmState.PENDING.equals( state ) || VmState.RUNNING.equals( state ) )
-                    && ( VmState.PENDING.equals( vm.getState( ) ) || VmState.RUNNING.equals( vm.getState( ) ) ) ) {
+        if ( VmStateSet.RUN.apply( vm ) || VmStateSet.CHANGING.apply( vm ) ) {
+          vm.doUpdate( ).apply( runVm );
+        } else if ( VmInstances.Timeout.SHUTTING_DOWN.apply( vm ) ) {
+          VmInstances.terminated( vm );
+        } else if ( VmState.SHUTTING_DOWN.apply( vm ) && VmState.SHUTTING_DOWN.equals( state ) ) {
+          VmInstances.terminated( vm );
+        } else if ( VmStateSet.RUN.apply( vm ) &&  VmStateSet.RUN.contains( state ) ) { 
           if ( !VmNetworkConfig.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
             vm.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
           }

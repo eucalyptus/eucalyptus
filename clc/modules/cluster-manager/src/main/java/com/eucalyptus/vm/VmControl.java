@@ -89,7 +89,6 @@ import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.VmInstance.Reason;
 import com.eucalyptus.cluster.VmInstance.VmState;
 import com.eucalyptus.cluster.VmInstance.VmStateSet;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.cluster.callback.CancelBundleCallback;
 import com.eucalyptus.cluster.callback.ConsoleOutputCallback;
@@ -104,6 +103,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -176,13 +176,9 @@ public class VmControl {
         EntityTransaction db = Entities.get( VmInstance.class );
         try {
           VmInstance v = Entities.merge( vm );
-          if ( VmState.TERMINATED.apply( v ) && v.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
-            VmInstances.terminate( v );
-          } else if ( VmState.BURIED.apply( v ) && v.getSplitTime( ) > VmInstances.BURY_TIME ) {
+          RunningInstancesItemType runInstItem = null;
+          if ( VmInstances.Timeout.TERMINATED.apply( v ) ) {
             VmInstances.delete( v );
-          }
-          if ( VmState.BURIED.apply( v ) && !isVerbose ) {
-            continue;
           }
           if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) {
             continue;
@@ -191,7 +187,7 @@ public class VmControl {
             final ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getNamespace( ), v.getNetworkNames( ) );
             rsvMap.put( reservation.getReservationId( ), reservation );
           }
-          rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstances.transform( v ) );
+          rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( runInstItem );
           db.commit( );
         } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex, ex );
@@ -241,14 +237,13 @@ public class VmControl {
               }
               final int oldCode = vm.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
               final String oldState = vm.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
-              if ( VmStateSet.DONE.apply( vm ) ) {
-                VmInstances.delete( vm );
-              } else {
-                VmInstances.terminate( vm );
-              }
+              VmInstances.shutDown( vm );
               results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
               db.commit( );
               return true;
+            } catch ( final TransactionException e ) {
+              db.rollback( );
+              return false;
             } catch ( final NoSuchElementException e ) {
               db.rollback( );
               return false;
@@ -432,7 +427,7 @@ public class VmControl {
             return true;
           } catch ( final NoSuchElementException e ) {
             try {
-              VmInstances.terminate( instanceId );
+              VmInstances.terminated( instanceId );
               return true;
             } catch ( final NoSuchElementException e1 ) {
               return false;

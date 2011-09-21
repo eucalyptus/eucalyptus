@@ -84,6 +84,7 @@ import com.eucalyptus.cluster.VmInstance.VmState;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.vm.VmInstances;
 import com.google.common.collect.Sets;
 
 @Embeddable

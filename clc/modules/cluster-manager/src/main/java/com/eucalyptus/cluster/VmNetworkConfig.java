@@ -66,6 +66,7 @@ package com.eucalyptus.cluster;
 import javax.persistence.Embeddable;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Parent;
+import com.eucalyptus.vm.VmInstances;
 
 @Embeddable
 public class VmNetworkConfig {
