@@ -1,6 +1,7 @@
 package com.eucalyptus.reporting.user;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 
@@ -8,7 +9,7 @@ import com.eucalyptus.entities.EntityWrapper;
 
 public class ReportingAccountDao
 {
-	private static Logger log = Logger.getLogger( ReportingUserDao.class );
+	private static Logger LOG = Logger.getLogger( ReportingUserDao.class );
 
 	private static ReportingAccountDao instance = null;
 	
@@ -20,7 +21,7 @@ public class ReportingAccountDao
 		return instance;
 	}
 	
-	private final Map<String,String> accounts = new HashMap<String,String>();
+	private final Map<String,String> accounts = new ConcurrentHashMap<String,String>();
 	
 	private ReportingAccountDao()
 	{
@@ -37,8 +38,12 @@ public class ReportingAccountDao
 			updateInDb(id, name);
 			accounts.put(id, name);
 		} else {
-			addToDb(id, name);
-			accounts.put(id, name);
+			try {
+				addToDb(id, name);
+				accounts.put(id, name);
+			} catch (RuntimeException e) {
+				LOG.trace(e, e);
+			}
 		}
 		
 	}
@@ -71,7 +76,7 @@ public class ReportingAccountDao
 				
 				entityWrapper.commit();
 			} catch (Exception ex) {
-				log.error(ex);
+				LOG.error(ex);
 				entityWrapper.rollback();
 				throw new RuntimeException(ex);
 			}			
@@ -91,7 +96,7 @@ public class ReportingAccountDao
 			reportingAccount.setName(name);
 			entityWrapper.commit();
 		} catch (Exception ex) {
-			log.error(ex);
+			LOG.error(ex);
 			entityWrapper.rollback();
 			throw new RuntimeException(ex);
 		}			
@@ -106,7 +111,7 @@ public class ReportingAccountDao
 			entityWrapper.add(new ReportingAccount(id, name));
 			entityWrapper.commit();
 		} catch (Exception ex) {
-			log.error(ex);
+			LOG.error(ex);
 			entityWrapper.rollback();
 			throw new RuntimeException(ex);
 		}					
