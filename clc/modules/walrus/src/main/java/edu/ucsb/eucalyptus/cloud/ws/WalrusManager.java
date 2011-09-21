@@ -208,6 +208,8 @@ import edu.ucsb.eucalyptus.util.WalrusDataMessenger;
 import edu.ucsb.eucalyptus.util.WalrusDataQueue;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
 import edu.ucsb.eucalyptus.util.SystemUtil;
+import com.eucalyptus.system.Threads;
+import com.eucalyptus.component.id.Walrus;
 
 public class WalrusManager {
 	private static Logger LOG = Logger.getLogger(WalrusManager.class);
@@ -849,7 +851,7 @@ public class WalrusManager {
 										ctx.getUser().getUserId(),
 										ctx.getAccount().getName(),
 										ctx.getAccount().getAccountNumber());
-								objectDeleter.start();
+								Threads.lookup(Walrus.class, WalrusManager.ObjectDeleter.class).limitTo(10).submit(objectDeleter);
 								LOG.info("Transfer interrupted: "+ key);
 								messenger.removeQueue(key, randomKey);
 								break;  
@@ -1502,7 +1504,7 @@ public class WalrusManager {
 										ctx.getUser().getUserId(),
 										ctx.getAccount().getName(),
 										ctx.getAccount().getAccountNumber());
-								objectDeleter.start();
+								Threads.lookup(Walrus.class, WalrusManager.ObjectDeleter.class).limitTo(10).submit(objectDeleter);
 								reply.setCode("200");
 								reply.setDescription("OK");
 								if (logData != null) {
@@ -1561,7 +1563,7 @@ public class WalrusManager {
 	}
 
 
-	private class ObjectDeleter extends Thread {
+	private class ObjectDeleter implements Runnable {
 		String bucketName;
 		String objectName;
 		Long size;
@@ -3316,7 +3318,7 @@ public class WalrusManager {
 										ctx.getUser().getUserId(),
 										ctx.getAccount().getName(),
 										ctx.getAccount().getAccountNumber());
-								objectDeleter.start();
+								Threads.lookup(Walrus.class, WalrusManager.ObjectDeleter.class).limitTo(10).submit(objectDeleter);
 							}
 							reply.setCode("200");
 							reply.setDescription("OK");
