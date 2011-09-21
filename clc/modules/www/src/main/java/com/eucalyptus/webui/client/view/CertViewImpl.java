@@ -30,6 +30,8 @@ public class CertViewImpl extends Composite implements CertView {
   @UiField
   LayoutPanel tablePanel;
   
+  private MultiSelectionModel<SearchResultRow> selectionModel;
+  
   private SearchResultTable table;
   
   private Presenter presenter;
@@ -45,7 +47,7 @@ public class CertViewImpl extends Composite implements CertView {
   
   public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs ) {
     tablePanel.clear( );
-    final MultiSelectionModel<SearchResultRow> selectionModel = new MultiSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );
+    selectionModel = new MultiSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );
     selectionModel.addSelectionChangeHandler( new Handler( ) {
       @Override
       public void onSelectionChange( SelectionChangeEvent event ) {
@@ -76,6 +78,11 @@ public class CertViewImpl extends Composite implements CertView {
   @Override
   public void setPresenter( Presenter presenter ) {
     this.presenter = presenter;
+  }
+
+  @Override
+  public void clearSelection( ) {
+    this.selectionModel.clear( );
   }
   
 }

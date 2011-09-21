@@ -56,13 +56,11 @@ import edu.ucsb.eucalyptus.cloud.entities.ZoneInfo;
 
 // Images
 import com.eucalyptus.images.ImageInfo;
-import com.eucalyptus.images.LaunchPermission;
-import com.eucalyptus.images.ProductCode;
 import com.eucalyptus.images.ImageUtil;
 import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
-import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.ImageMetadata;
 
 // Storage
 import edu.ucsb.eucalyptus.cloud.entities.AOEMetaInfo;
@@ -99,7 +97,6 @@ import com.eucalyptus.network.IpRange;
 import com.eucalyptus.network.NetworkPeer;
 import com.eucalyptus.network.NetworkRule;
 import com.eucalyptus.network.NetworkGroup;
-import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.vm.VmType;
 
@@ -485,58 +482,57 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 def bundleSize = null;
                 def ckSum = null;
                 def ckSumType = null;
-                def platform = Image.Platform.valueOf("linux");
+                def platform = ImageMetadata.Platform.valueOf("linux");
                 def cachedImg = connMap['eucalyptus_walrus'].firstRow("""SELECT manifest_name,size sz FROM ImageCache 
                                                       WHERE bucket_name=? AND manifest_name=?""", path);
                 if (cachedImg != null)
                     imgSize = cachedImg.sz.toInteger();
                 if (img.image_platform != null)
-                    platform = Image.Platform.valueOf(img.image_platform);
+                    platform = ImageMetadata.Platform.valueOf(img.image_platform);
                 def ii = null;
                 switch ( img.image_type ) {
                     case "kernel":
                         ii = new KernelImageInfo( ufn, img.image_name, img.image_name, 
                                                  "No Description", imgSize, 
-                                                 Image.Architecture.valueOf(img.image_arch), platform,
+                                                 ImageMetadata.Architecture.valueOf(img.image_arch), platform,
                                                  img.image_path, bundleSize, ckSum, ckSumType );
                         break;
                     case "ramdisk":
                         ii = new RamdiskImageInfo( ufn, img.image_name, img.image_name,
                                                   "No Description", imgSize, 
-                                                  Image.Architecture.valueOf(img.image_arch), platform,
+                                                  ImageMetadata.Architecture.valueOf(img.image_arch), platform,
                                                   img.image_path, bundleSize, ckSum, ckSumType );
                         break;
                     case "machine":
                         ii = new MachineImageInfo( ufn, img.image_name, img.image_name,
                                                   "No Description", imgSize, 
-                                                  Image.Architecture.valueOf(img.image_arch), platform,
+                                                  ImageMetadata.Architecture.valueOf(img.image_arch), platform,
                                                   img.image_path, bundleSize, ckSum, ckSumType,
                                                   img.image_kernel_id, img.image_ramdisk_id );
                         break;
                 }
                 initMetaClass(ii, ii.class);
                 ii.setImagePublic(img.image_is_public);
-                ii.setImageType(Image.Type.valueOf(img.image_type));
+                ii.setImageType(ImageMetadata.Type.valueOf(img.image_type));
                 ii.setSignature(img.image_signature);
-                ii.setState( Image.State.valueOf(img.image_availability));
+                ii.setState( ImageMetadata.State.valueOf(img.image_availability));
                 dbGen.add(ii);
                 dbGen.commit();
                 connMap['eucalyptus_general'].rows("""SELECT image_product_code_value FROM image_product_code
                                  JOIN image_has_product_codes 
                                  ON image_product_code.image_product_code_id=image_has_product_codes.image_product_code_id
                                  WHERE image_id=?""", [ img.image_id ]).each { prodCode ->
-                    EntityWrapper<ProductCode> dbPC = EntityWrapper.get(ProductCode.class);
-                    dbPC.add(new ProductCode(ii, prodCode.image_product_code_value));
-                    dbPC.commit();
+                    ii.addProductCode(prodCode.image_product_code_value);
                 }
+                
+                List<String> accountIds = new ArrayList<String>();
                 connMap['eucalyptus_general'].rows("""SELECT * FROM image_authorization
                                  JOIN image_has_user_auth
                                  ON image_authorization.image_auth_id=image_has_user_auth.image_auth_id
                                  WHERE image_id=?""", [ img.image_id ]).each { imgAuth ->
-                    EntityWrapper<LaunchPermission> dbLP = EntityWrapper.get(LaunchPermission.class);
-                    dbLP.add(new LaunchPermission(ii, imgAuth.image_auth_name));
-                    dbLP.commit();
+                    accountIds.add(accountIdMap.get(safeUserMap.get(imgAuth.image_auth_name)))
                 }
+                ii.addPermissions(accountIds);
             }
 
             connMap['eucalyptus_images'].rows("SELECT * FROM Volume WHERE username=?", [ it.auth_user_name ]).each { vol ->
@@ -895,7 +891,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                  dbPart.commit();
                  LOG.debug("Adding Cluster ${ it.config_component_name }");
                  // First argument is Partition name
-                 ClusterConfiguration clcfg = new ClusterConfiguration(it.config_component_name, it.config_component_name, it.config_component_hostname, it.config_component_port);
+                 ClusterConfiguration clcfg = new ClusterConfiguration(it.config_component_name, it.config_component_name + "_cc", it.config_component_hostname, it.config_component_port);
                  dbCluster.add(clcfg);
                  dbCluster.commit();
             } finally {
@@ -905,7 +901,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         connMap['eucalyptus_config'].rows('SELECT * FROM config_sc').each{
             EntityWrapper<StorageControllerConfiguration> dbSC = EntityWrapper.get(StorageControllerConfiguration.class);
             // First argument is partition name
-            StorageControllerConfiguration sc = new StorageControllerConfiguration(it.config_component_name, it.config_component_name, it.config_component_hostname, it.config_component_port);
+            StorageControllerConfiguration sc = new StorageControllerConfiguration(it.config_component_name, it.config_component_name + "_sc", it.config_component_hostname, it.config_component_port);
             if (it.config_component_port == -1 || Internets.testLocal(it.config_component_hostname)) {
                 System.setProperty('euca.storage.name', it.config_component_name);
             }

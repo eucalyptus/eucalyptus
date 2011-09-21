@@ -20,6 +20,7 @@ import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.AddressingConfiguration;
 import com.eucalyptus.bootstrap.HttpServerBootstrapper;
+import com.eucalyptus.broker.vmware.VMwareBroker;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
@@ -84,6 +85,7 @@ public class ConfigurationWebBackend {
 	public static final String CLUSTER_TYPE = "cluster controller";
 	public static final String STORAGE_TYPE = "storage controller";
 	public static final String WALRUS_TYPE = "walrus";
+	public static final String VMWARE_BROKER_TYPE = "vmware broker";
 
 	public static final String DEFAULT_KERNEL = "Default kernel";
 	public static final String DEFAULT_RAMDISK = "Default ramdisk";
@@ -312,7 +314,7 @@ public class ConfigurationWebBackend {
 				serializeClusterConfiguration( c, props.get(0), props.get(1), row );
 				results.add( row );
 			} else {
-				LOG.debug( "Got an error while trying to retrieving storage controller configuration list");
+				LOG.debug( "Got an error while trying to retrieving cluster configuration list");
 			}	
 		}
 		return results;
@@ -329,6 +331,33 @@ public class ConfigurationWebBackend {
 			Integer val = Integer.parseInt( input.getField( i++ ) );
 			clusterConf.setMaxNetworkTag( val );
 		} catch ( Exception e ) { }
+	}
+
+	
+	private static void serializeVMwareBrokerConfiguration( ServiceConfiguration serviceConf, SearchResultRow result ) {
+		// Common
+		result.addField( makeConfigId( serviceConf.getName( ), VMWARE_BROKER_TYPE ) );
+		result.addField( serviceConf.getName( ) );
+		result.addField( serviceConf.getPartition( ) );
+		result.addField( VMWARE_BROKER_TYPE );
+		result.addField( serviceConf.getHostName( ) );
+		result.addField( serviceConf.getPort( ) == null ? null : serviceConf.getPort( ).toString( ) );
+		result.addField( serviceConf.lookupState().toString( ) );
+	}
+
+	/**
+	 * @return the list of VMware broker configurations for UI display.
+	 */
+	public static List<SearchResultRow> getVMwareBrokerConfigurations( ) {
+		List<SearchResultRow> results = Lists.newArrayList( );
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(VMwareBroker.class).lookupServiceConfigurations();
+		for (ServiceConfiguration c : configs ) {
+			SearchResultRow row = new SearchResultRow( );
+			serializeVMwareBrokerConfiguration( c, row );
+			results.add( row );
+
+		}
+		return results;
 	}
 
 	/**
@@ -351,6 +380,15 @@ public class ConfigurationWebBackend {
 			LOG.debug( e, e );
 			throw new EucalyptusServiceException( "Failed to set cluster configuration", e );
 		}
+	}
+
+	/**
+	 * Set the VMware broker configuration using the UI input.
+	 * 
+	 * @param input
+	 */
+	public static void setVMwareBrokerConfiguration( final SearchResultRow input ) throws EucalyptusServiceException {
+		//Do nothing for now. Revisit.
 	}
 
 	private static Type propertyTypeToFieldType( String propertyType ) {
