@@ -95,7 +95,6 @@ static configEntry configKeysRestart[] = {
   {"VNET_ADDRSPERNET", NULL},
   {"VNET_BRIDGE", NULL},
   {"VNET_BROADCAST", NULL},
-  {"VNET_CLOUDIP", "localhost"},
   {"VNET_DHCPDAEMON", "/usr/sbin/dhcpd3"},
   {"VNET_DHCPUSER", "dhcpd"},
   {"VNET_DNS", NULL},
