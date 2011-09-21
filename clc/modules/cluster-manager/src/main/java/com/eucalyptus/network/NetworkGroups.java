@@ -418,13 +418,13 @@ public class NetworkGroups {
         List<String> empty = Lists.newArrayList( );
         //:: fixes handling of under-specified named-network rules sent by some clients :://
         if ( ipPerm.getIpProtocol( ) == null ) {
-          NetworkRule rule = NetworkRule.create( "tcp", ipPerm.getFromPort( ), ipPerm.getToPort( ),
+          NetworkRule rule = NetworkRule.create( NetworkRule.Protocol.tcp, ipPerm.getFromPort( ), ipPerm.getToPort( ),
                                                  IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), empty );
           ruleList.add( rule );
-          NetworkRule rule1 = NetworkRule.create( "udp", ipPerm.getFromPort( ), ipPerm.getToPort( ),
+          NetworkRule rule1 = NetworkRule.create( NetworkRule.Protocol.udp, ipPerm.getFromPort( ), ipPerm.getToPort( ),
                                                   IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), empty );
           ruleList.add( rule1 );
-          NetworkRule rule2 = NetworkRule.create( "icmp", -1, -1, 
+          NetworkRule rule2 = NetworkRule.create( NetworkRule.Protocol.tcp, -1, -1, 
                                                   IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), empty );
           ruleList.add( rule2 );
         } else {

@@ -74,6 +74,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkPeer;
 import com.eucalyptus.network.NetworkRule;
+import com.eucalyptus.network.NetworkRule.Protocol;
 import com.eucalyptus.util.ByteArray;
 import com.google.common.base.Function;
 import com.google.common.collect.ArrayListMultimap;
@@ -112,9 +113,9 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
             if ( !rules.containsKey( ruleGroup.getNaturalId( ) ) ) {
               for ( NetworkRule netRule : ruleGroup.getNetworkRules( ) ) {
                 try {
-                  String rule = String.format( "-P %s -%s %d%s%d ", netRule.getProtocol( ), ( "icmp".equals( netRule.getProtocol( ) )
+                  String rule = String.format( "-P %s -%s %d%s%d ", netRule.getProtocol( ), ( NetworkRule.Protocol.icmp.equals( netRule.getProtocol( ) )
                     ? "t"
-                    : "p" ), netRule.getLowPort( ), ( "icmp".equals( netRule.getProtocol( ) )
+                    : "p" ), netRule.getLowPort( ), ( NetworkRule.Protocol.icmp.equals( netRule.getProtocol( ) )
                     ? ":"
                     : "-" ), netRule.getHighPort( ) );
                   for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {                    
