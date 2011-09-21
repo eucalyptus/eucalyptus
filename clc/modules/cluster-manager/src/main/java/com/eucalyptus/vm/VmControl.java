@@ -176,7 +176,6 @@ public class VmControl {
         EntityTransaction db = Entities.get( VmInstance.class );
         try {
           VmInstance v = Entities.merge( vm );
-          RunningInstancesItemType runInstItem = null;
           if ( VmInstances.Timeout.TERMINATED.apply( v ) ) {
             VmInstances.delete( v );
           }
@@ -187,7 +186,7 @@ public class VmControl {
             final ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getNamespace( ), v.getNetworkNames( ) );
             rsvMap.put( reservation.getReservationId( ), reservation );
           }
-          rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( runInstItem );
+          rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstances.transform( vm ) );
           db.commit( );
         } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex, ex );
