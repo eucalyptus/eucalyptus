@@ -311,13 +311,13 @@ public class VmRuntimeState {
   }
   
   public Boolean clearPendingBundleTask( ) {
-    if ( BundleState.pending.name( ).equals( this.getBundleTask( ).getState( ) ) ) {
+    if ( BundleState.pending.name( ).equals( this.getBundleTaskState( ) ) ) {
       this.getBundleTask( ).setState( BundleState.storing.name( ) );
       EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTING, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
                         this.getVmInstance( ).getInstanceId( ),
                         this.getBundleTask( ).getState( ) ).info( );
       return true;
-    } else if ( BundleState.canceling.name( ).equals( this.getBundleTask( ).getState( ) ) ) {
+    } else if ( BundleState.canceling.name( ).equals( this.getBundleTaskState( ) ) ) {
       EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELLED, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
                         this.getVmInstance( ).getInstanceId( ),
                         this.getBundleTask( ).getState( ) ).info( );
