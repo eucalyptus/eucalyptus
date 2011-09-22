@@ -1,13 +1,16 @@
 package com.eucalyptus.cluster.callback;
 
 import java.util.NoSuchElementException;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.vm.BundleInstanceResponseType;
 import com.eucalyptus.vm.BundleInstanceType;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
 
@@ -32,11 +35,15 @@ public class BundleCallback extends MessageCallback<BundleInstanceType,BundleIns
       } catch ( NoSuchElementException e1 ) {
       }
     } else {
+      EntityTransaction db = Entities.get( BundleCallback.class );
       try {
         VmInstance vm = VmInstances.lookup( this.getRequest().getInstanceId( ) );
         vm.clearPendingBundleTask( );
         EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTED, this.getRequest( ).toSimpleString( ), vm.getBundleTask( ).getBundleId( ), vm.getInstanceId( ) ).info( );
-      } catch ( NoSuchElementException e1 ) {
+        db.commit( );
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        db.rollback( );
       }
     }
 
