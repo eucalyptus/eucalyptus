@@ -67,6 +67,7 @@ import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Adler32;
@@ -200,12 +201,8 @@ public class VmInstances {
     }
   }
   
-  private static ConcurrentMap<String, VmInstance>               terminateCache         = new MapMaker( ).softKeys( )
-                                                                                                         .softValues( )
-                                                                                                         .makeMap( );
-  private static ConcurrentMap<String, RunningInstancesItemType> terminateDescribeCache = new MapMaker( ).softKeys( )
-                                                                                                         .softValues( )
-                                                                                                         .makeMap( );
+  private static ConcurrentMap<String, VmInstance>               terminateCache         = new ConcurrentHashMap<String, VmInstance>( );
+  private static ConcurrentMap<String, RunningInstancesItemType> terminateDescribeCache = new ConcurrentHashMap<String, RunningInstancesItemType>( );
   
   private static Logger                                          LOG                    = Logger.getLogger( VmInstances.class );
   
