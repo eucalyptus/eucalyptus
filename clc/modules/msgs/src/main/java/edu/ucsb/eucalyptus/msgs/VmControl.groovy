@@ -323,6 +323,7 @@ public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 200
   String deviceName;
   Integer size; // in megabytes //TODO:GRZE: maybe remove
   String format; // optional, defaults to none (none, ext3, ntfs, swap) //TODO:GRZE: maybe remove
+  @HttpEmbedded (multiple = true)
   EbsDeviceMapping ebs;
   def BlockDeviceMappingItemType(final virtualName, final deviceName) {
     this.virtualName = virtualName;
