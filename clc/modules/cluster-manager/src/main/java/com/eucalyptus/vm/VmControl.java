@@ -227,12 +227,12 @@ public class VmControl {
         public boolean apply( final String instanceId ) {
           EntityTransaction db = Entities.get( VmInstance.class );
           try {
-            VmInstance vm = null;
             RunningInstancesItemType runVm = null;
             try {
               String oldState = null, newState = null;
               int oldCode = 0, newCode = 0;
               try {
+                VmInstance vm = null;
                 vm = RestrictedTypes.doPrivileged( instanceId, VmInstances.lookupFunction( ) );
                 runVm = VmInstances.transform( vm );
                 oldCode = vm.getState( ).getCode( );
@@ -248,9 +248,9 @@ public class VmControl {
                 runVm = VmInstances.transform( instanceId );
                 oldCode = newCode = VmState.TERMINATED.getCode( );
                 oldState = newState = VmState.TERMINATED.getName( );
-                VmInstances.delete( vm );
+                VmInstances.delete( instanceId );
               }
-              results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
+              results.add( new TerminateInstancesItemType( instanceId, oldCode, oldState, newCode, newState ) );
               db.commit( );
               return true;
             } catch ( final TransactionException e ) {
