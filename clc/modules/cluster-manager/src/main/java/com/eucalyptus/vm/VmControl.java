@@ -351,24 +351,32 @@ public class VmControl {
   }
   
   public DescribeBundleTasksResponseType describeBundleTasks( final DescribeBundleTasksType request ) throws EucalyptusCloudException {
-    final Context ctx = Contexts.lookup( );
     final DescribeBundleTasksResponseType reply = request.getReply( );
-    if ( request.getBundleIds( ).isEmpty( ) ) {
-      for ( final VmInstance v : Iterables.filter( VmInstances.listValues( ), VmInstance.Filters.BUNDLING ) ) {
-        if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-          reply.getBundleTasks( ).add( v.getBundleTask( ) );
-        }
-      }
-    } else {
-      for ( final String bundleId : request.getBundleIds( ) ) {
-        try {
-          final VmInstance v = VmInstances.lookupByBundleId( bundleId );
-          if ( v.isBundling( )
-               && ( RestrictedTypes.filterPrivileged( ).apply( v ) ) ) {
+    
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      if ( request.getBundleIds( ).isEmpty( ) ) {
+        for ( final VmInstance v : Iterables.filter( VmInstances.listValues( ), VmInstance.Filters.BUNDLING ) ) {
+          if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
             reply.getBundleTasks( ).add( v.getBundleTask( ) );
           }
-        } catch ( final NoSuchElementException e ) {}
+        }
+      } else {
+        for ( final String bundleId : request.getBundleIds( ) ) {
+          try {
+            final VmInstance v = VmInstances.lookupByBundleId( bundleId );
+            if ( v.isBundling( )
+                 && ( RestrictedTypes.filterPrivileged( ).apply( v ) ) ) {
+              reply.getBundleTasks( ).add( v.getBundleTask( ) );
+            }
+          } catch ( final NoSuchElementException e ) {}
+        }
       }
+      db.rollback( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new EucalyptusCloudException( ex );
     }
     return reply;
   }

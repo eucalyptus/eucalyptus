@@ -63,17 +63,12 @@
 
 package com.eucalyptus.vm;
 
-import com.eucalyptus.auth.PolicyParseException;
-import com.eucalyptus.cluster.callback.StartServiceCallback;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.AsyncRequests;
 import edu.ucsb.eucalyptus.msgs.CreateBucketType;
 import edu.ucsb.eucalyptus.msgs.DeleteBucketType;
@@ -108,23 +103,29 @@ public class Bundles {
   
   private static void verifyPrefix( String prefix ) {
     // check if the prefix name starts with "windows"
-    if ( !prefix.startsWith( "windows" ) ) 
-    /**
-     * GRZE:NOTE: bundling is /not/ restricted to windows
-     * only in general.
-     * what is it doing here? should be set in the manifest by the NC.
-     **/
-    throw new RuntimeException( "Prefix name should start with 'windows'" );
+    if ( !prefix.startsWith( "windows" ) )
+      /**
+       * GRZE:NOTE: bundling is /not/ restricted to windows
+       * only in general.
+       * what is it doing here? should be set in the manifest by the NC.
+       **/
+      throw new RuntimeException( "Prefix name should start with 'windows'" );
   }
   
   /**
    * @param bucket
    */
   private static void verifyBucket( final String bucketName ) {
-    Context ctx = Contexts.lookup( );
-    CreateBucketType createBucket = new CreateBucketType( bucketName ).regardingUserRequest( ctx.getRequest( ) );
+    final Context ctx = Contexts.lookup( );
+    CreateBucketType createBucket = new CreateBucketType( ) {
+      {
+        setAccessKeyID( ctx.getUserFullName( ).getUserId( ) );
+        setBucket( bucketName );
+      }
+    }.regardingUserRequest( ctx.getRequest( ) );
     DeleteBucketType deleteBucket = new DeleteBucketType( ) {
       {
+        setAccessKeyID( ctx.getUserFullName( ).getUserId( ) );
         setBucket( bucketName );
       }
     }.regardingUserRequest( ctx.getRequest( ) );
