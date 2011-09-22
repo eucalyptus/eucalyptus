@@ -27,7 +27,7 @@ public class BundleCallback extends MessageCallback<BundleInstanceType, BundleIn
   
   @Override
   public void fire( BundleInstanceResponseType reply ) {
-    EntityTransaction db = Entities.get( BundleCallback.class );
+    EntityTransaction db = Entities.get( VmInstance.class );
     try {
       if ( !reply.get_return( ) ) {
         LOG.info( "Attempt to bundle instance " + this.getRequest( ).getInstanceId( ) + " has failed." );
