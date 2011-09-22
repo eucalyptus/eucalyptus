@@ -128,20 +128,6 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType, Atta
       VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
       Cluster cluster = Clusters.lookup( vm.lookupClusterConfiguration( ) );
       ServiceConfiguration sc = Partitions.lookupService( Storage.class, cluster.getConfiguration( ).getPartition( ) );
-      /** send a forcible detach to ensure any vol session state is cleaned up **/
-      try {
-        AsyncRequests.sendSync( cluster.getConfiguration( ), new DetachVolumeType( ) {
-          {
-            this.setVolumeId( VolumeAttachCallback.this.getRequest( ).getVolumeId( ) );
-            this.setInstanceId( VolumeAttachCallback.this.getRequest( ).getInstanceId( ) );
-            this.setRemoteDevice( VolumeAttachCallback.this.getRequest( ).getRemoteDevice( ) );
-            this.setDevice( VolumeAttachCallback.this.getRequest( ).getDevice( ) );
-            this.setForce( true );
-          }
-        } );
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
-      }
       /** clean up SC session state **/
       try {
         Dispatcher dispatcher = ServiceDispatcher.lookup( sc );
