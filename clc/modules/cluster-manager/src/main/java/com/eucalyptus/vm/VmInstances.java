@@ -57,9 +57,7 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- *
+ *******************************************************************************
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
@@ -69,6 +67,7 @@ import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Adler32;
@@ -80,12 +79,6 @@ import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstance.Lookup;
-import com.eucalyptus.cluster.VmInstance.Transform;
-import com.eucalyptus.cluster.VmInstance.Transitions;
-import com.eucalyptus.cluster.VmInstance.VmState;
-import com.eucalyptus.cluster.VmInstance.VmStateSet;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Partitions;
@@ -111,6 +104,10 @@ import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.UnconditionalCallback;
+import com.eucalyptus.vm.VmInstance.Lookup;
+import com.eucalyptus.vm.VmInstance.Transitions;
+import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -126,6 +123,19 @@ import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
 @ConfigurableClass( root = "vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
 public class VmInstances {
+  public static class TerminatedInstanceException extends NoSuchElementException {
+    
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 1L;
+
+    TerminatedInstanceException( final String s ) {
+      super( s );
+    }
+    
+  }
+  
   public enum Timeout implements Predicate<VmInstance> {
     UNREPORTED( VmState.PENDING, VmState.RUNNING ) {
       @Override
@@ -145,9 +155,9 @@ public class VmInstances {
         return TERMINATED_TIME;
       }
     };
-    private List<VmState> states;
+    private final List<VmState> states;
     
-    private Timeout( VmState... states ) {
+    private Timeout( final VmState... states ) {
       this.states = Arrays.asList( states );
     }
     
@@ -163,10 +173,10 @@ public class VmInstances {
     
     @Override
     public boolean apply( final VmInstance arg0 ) {
-      return this.inState( arg0.getState( ) ) && arg0.getSplitTime( ) > this.getMilliseconds( );
+      return this.inState( arg0.getState( ) ) && ( arg0.getSplitTime( ) > this.getMilliseconds( ) );
     }
     
-    protected boolean inState( VmState state ) {
+    protected boolean inState( final VmState state ) {
       return this.states.contains( state );
     }
     
@@ -196,14 +206,8 @@ public class VmInstances {
     }
   }
   
-  private static ConcurrentMap<String, VmInstance>               terminateCache         = new MapMaker( ).softKeys( )
-                                                                                                         .softValues( )
-                                                                                                         .expireAfterWrite( 60, TimeUnit.MINUTES )
-                                                                                                         .makeMap( );
-  private static ConcurrentMap<String, RunningInstancesItemType> terminateDescribeCache = new MapMaker( ).softKeys( )
-                                                                                                         .softValues( )
-                                                                                                         .expireAfterWrite( 60, TimeUnit.MINUTES )
-                                                                                                         .makeMap( );
+  private static ConcurrentMap<String, VmInstance>               terminateCache         = new ConcurrentHashMap<String, VmInstance>( );
+  private static ConcurrentMap<String, RunningInstancesItemType> terminateDescribeCache = new ConcurrentHashMap<String, RunningInstancesItemType>( );
   
   private static Logger                                          LOG                    = Logger.getLogger( VmInstances.class );
   
@@ -376,17 +380,13 @@ public class VmInstances {
                           instanceId.substring( 8, 10 ) );
   }
   
-  public static VmInstance lookup( final String name ) throws NoSuchElementException {
-    if ( ( name != null ) && terminateCache.containsKey( name ) ) {
-      return terminateCache.get( name );
-    } else {
-      return VmInstance.Lookup.INSTANCE.apply( name );
-    }
+  public static VmInstance lookup( final String name ) throws NoSuchElementException, TerminatedInstanceException {
+    return CachedLookup.INSTANCE.apply( name );
   }
   
   public static VmInstance register( final VmInstance vm ) {
-    if ( !terminateCache.containsKey( vm.getInstanceId( ) ) ) {
-      return VmInstance.Transitions.REGISTER.apply( vm );
+    if ( !terminateDescribeCache.containsKey( vm.getInstanceId( ) ) ) {
+      return Transitions.REGISTER.apply( vm );
     } else {
       throw new IllegalArgumentException( "Attempt to register instance which is already terminated." );
     }
@@ -395,53 +395,56 @@ public class VmInstances {
   public static VmInstance delete( final VmInstance vm ) throws TransactionException {
     try {
       if ( VmStateSet.DONE.apply( vm ) ) {
-        cache( vm );
-        return VmInstance.Transitions.DELETE.apply( vm );
+        delete( vm.getInstanceId( ) );
       }
     } catch ( final Exception ex ) {
       LOG.error( ex, ex );
     }
     return vm;
   }
-  static VmInstance cache( VmInstance vm ) {
-    if ( ! terminateCache.containsKey( vm.getDisplayName( ) ) ) {
+  
+  public static void delete( final String instanceId ) {
+    terminateDescribeCache.remove( instanceId );
+    terminateCache.remove( instanceId );
+  }
+  
+  static void cache( final VmInstance vm ) {
+    if ( !terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
       final RunningInstancesItemType ret = VmInstances.transform( vm );
-      terminateCache.put( vm.getDisplayName( ), vm );
       terminateDescribeCache.put( vm.getDisplayName( ), ret );
-      return VmInstance.Transitions.DELETE.apply( vm );
-    } else {
-      return terminateCache.get( vm );
+      terminateCache.put( vm.getDisplayName( ), vm );
+      Transitions.DELETE.apply( vm );
     }
   }
   
-  public static VmInstance expired( final VmInstance vm ) throws TransactionException {
-    try {
-      if ( VmState.BURIED.apply( vm ) ) {
-        terminateCache.remove( vm.getDisplayName( ) );
-        terminateDescribeCache.remove( vm.getDisplayName( ) );
-      }
-    } catch ( final Exception ex ) {
-      LOG.error( ex, ex );
-    }
-    return vm;
+  public static void terminated( final VmInstance vm ) throws TransactionException {
+    VmInstances.cache( Transitions.TERMINATED.apply( vm ) );
   }
   
-  public static VmInstance terminated( final VmInstance vm ) throws TransactionException {
-    return VmInstances.cache( VmInstance.Transitions.TERMINATED.apply( vm ) );
+  public static void terminated( final String key ) throws NoSuchElementException, TransactionException {
+    terminated( VmInstance.Lookup.INSTANCE.apply( key ) );
   }
   
-  public static VmInstance terminated( final String key ) throws NoSuchElementException {
-    return Functions.compose( VmInstance.Transitions.TERMINATED, VmInstance.Lookup.INSTANCE ).apply( key );
+  public static void stopped( final VmInstance vm ) throws TransactionException {
+    Transitions.STOPPED.apply( vm );
   }
   
-  public static VmInstance shutDown( VmInstance vm ) throws TransactionException {
+  public static void stopped( final String key ) throws NoSuchElementException, TransactionException {
+    VmInstances.stopped( VmInstance.Lookup.INSTANCE.apply( key ) );
+  }
+  
+  public static void shutDown( final VmInstance vm ) throws TransactionException {
     if ( VmStateSet.DONE.apply( vm ) ) {
-      return VmInstances.delete( vm );
+      if ( terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
+        VmInstances.delete( vm );
+      } else {
+        VmInstances.terminated( vm );
+      }
     } else {
-      return VmInstance.Transitions.SHUTDOWN.apply( vm );
+      Transitions.SHUTDOWN.apply( vm );
     }
   }
-
+  
   @Deprecated
   public static List<VmInstance> listValues( ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
@@ -484,5 +487,40 @@ public class VmInstances {
       return VmInstance.Transform.INSTANCE.apply( vm );
     }
   }
-
+  
+  /**
+   * @return
+   */
+  public static Function<String, VmInstance> lookupFunction( ) {
+    return CachedLookup.INSTANCE;
+  }
+  
+  private enum CachedLookup implements Function<String, VmInstance> {
+    INSTANCE;
+    
+    /**
+     * @see com.google.common.base.Function#apply(java.lang.Object)
+     */
+    @Override
+    public VmInstance apply( final String name ) {
+      if ( ( name != null ) && VmInstances.terminateDescribeCache.containsKey( name ) ) {
+        throw new TerminatedInstanceException( name );
+      } else {
+        return Lookup.INSTANCE.apply( name );
+      }
+    }
+    
+  }
+  
+  /**
+   * @param vm
+   * @return
+   */
+  public static RunningInstancesItemType transform( final String name ) {
+    if ( terminateDescribeCache.containsKey( name ) ) {
+      return terminateDescribeCache.get( name );
+    } else {
+      return VmInstance.Transform.INSTANCE.apply( lookup( name ) );
+    }
+  }
 }

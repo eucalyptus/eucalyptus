@@ -61,62 +61,77 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
-import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import org.hibernate.annotations.Parent;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
 
 @Embeddable
-public class VmLaunchRecord {
+public class VmPlacement {
   @Parent
   private VmInstance vmInstance;
-  @Column( name = "metadata_vm_launch_index" )
-  private Integer    launchIndex;
-  @Column( name = "metadata_vm_launch_time" )
-  private Date       launchTime;
+  @Column( name = "metadata_vm_placement" )
+  private String     placement;
+  @Column( name = "metadata_vm_cluster_name" )
+  private String     clusterName;
+  @Column( name = "metadata_vm_partition_name" )
+  private String     partitionName;
   
-  VmLaunchRecord( Integer launchIndex, Date launchTime ) {
+  VmPlacement( String clusterName, String partitionName ) {
     super( );
-    this.launchIndex = launchIndex;
-    this.launchTime = launchTime;
+    this.clusterName = clusterName;
+    this.partitionName = partitionName;
   }
   
-  VmLaunchRecord( ) {
+  VmPlacement( ) {
     super( );
   }
-  
+
   VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
   
-  Integer getLaunchIndex( ) {
-    return this.launchIndex;
+  String getClusterName( ) {
+    return this.clusterName;
   }
   
-  Date getLaunchTime( ) {
-    return this.launchTime;
+  String getPartitionName( ) {
+    return this.partitionName;
   }
   
+  public Partition lookupPartition( ) {
+    return Partitions.lookupByName( this.partitionName );
+  }
+
   private void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
-  
-  private void setLaunchIndex( Integer launchIndex ) {
-    this.launchIndex = launchIndex;
+
+  private void setClusterName( String clusterName ) {
+    this.clusterName = clusterName;
   }
-  
-  private void setLaunchTime( Date launchTime ) {
-    this.launchTime = launchTime;
+
+  private void setPartitionName( String partitionName ) {
+    this.partitionName = partitionName;
+  }
+
+  private String getPlacement( ) {
+    return this.placement;
+  }
+
+  private void setPlacement( String placement ) {
+    this.placement = placement;
   }
 
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
-    builder.append( "VmLaunchRecord:" );
-    if ( this.launchIndex != null ) builder.append( "launchIndex=" ).append( this.launchIndex ).append( ":" );
-    if ( this.launchTime != null ) builder.append( "launchTime=" ).append( this.launchTime );
+    builder.append( "VmPlacement:" );
+    if ( this.clusterName != null ) builder.append( "clusterName=" ).append( this.clusterName ).append( ":" );
+    if ( this.partitionName != null ) builder.append( "partitionName=" ).append( this.partitionName );
     return builder.toString( );
   }
   

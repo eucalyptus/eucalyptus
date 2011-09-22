@@ -61,142 +61,121 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
-import java.util.Date;
-import javax.persistence.Column;
+import javax.persistence.Embeddable;
+import javax.persistence.Transient;
 import org.hibernate.annotations.Parent;
 
-public class VmCreateImageTask {
+@Embeddable
+public class VmNetworkConfig {
+  
   @Parent
-  private VmInstance vmInstance;
-  @Column( name = "metadata_vm_createimage_id" )
-  private String     createImageId;
-  @Column( name = "metadata_vm_createimage_state" )
-  private String     state;
-  @Column( name = "metadata_vm_createimage_start_time" )
-  private Date       startTime;
-  @Column( name = "metadata_vm_createimage_update_time" )
-  private Date       updateTime;
-  @Column( name = "metadata_vm_createimage_progress" )
-  private String     progress;
-  @Column( name = "metadata_vm_createimage_error_msg" )
-  private String     errorMessage;
-  @Column( name = "metadata_vm_createimage_error_code" )
-  private String     errorCode;
+  private VmInstance   parent;
+  private String       macAddress;
+  private String       privateAddress;
+  private String       publicAddress;
+  private String       privateDnsName;
+  private String       publicDnsName;
+  @Transient
+  public static String DEFAULT_IP = "0.0.0.0";
   
-  VmCreateImageTask( ) {
+  VmNetworkConfig( VmInstance parent, String ipAddress, String ignoredPublicIp ) {
+    super( );
+    this.parent = parent;
+    this.macAddress = VmInstances.asMacAddress( this.parent.getInstanceId( ) );
+    this.privateAddress = ipAddress;
+    this.publicAddress = ignoredPublicIp;
+    this.updateDns( );
+  }
+  
+  VmNetworkConfig( ) {
     super( );
   }
   
-  VmCreateImageTask( final VmInstance vmInstance, final String createImageId, final String state, final Date startTime, final Date updateTime,
-                     final String progress, final String errorMessage,
-                     final String errorCode ) {
-    super( );
-    this.vmInstance = vmInstance;
-    this.createImageId = createImageId;
-    this.state = state;
-    this.startTime = startTime;
-    this.updateTime = updateTime;
-    this.progress = progress;
-    this.errorMessage = errorMessage;
-    this.errorCode = errorCode;
+  /**
+   * @param vmInstance
+   */
+  public VmNetworkConfig( VmInstance vmInstance ) {
+    this( vmInstance, DEFAULT_IP, DEFAULT_IP );
   }
   
-  private VmInstance getVmInstance( ) {
-    return this.vmInstance;
+  void updateDns( ) {
+    String dnsDomain = null;
+    try {
+      dnsDomain = edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
+    } catch ( final Exception e ) {}
+    dnsDomain = dnsDomain == null
+      ? "dns-disabled"
+      : dnsDomain;
+    
+    this.privateAddress = ( this.privateAddress == null
+      ? "0.0.0.0"
+      : this.privateAddress );
+    this.publicAddress = ( this.publicAddress == null
+      ? "0.0.0.0"
+      : this.publicAddress );
+    this.publicDnsName = "euca-" + this.publicAddress.replaceAll( "\\.", "-" ) + VmInstances.INSTANCE_SUBDOMAIN + "." + dnsDomain;
+    this.privateDnsName = "euca-" + this.privateAddress.replaceAll( "\\.", "-" ) + VmInstances.INSTANCE_SUBDOMAIN + ".internal";
   }
   
-  private void setVmInstance( final VmInstance vmInstance ) {
-    this.vmInstance = vmInstance;
+  private VmInstance getParent( ) {
+    return this.parent;
   }
   
-  String getCreateImageId( ) {
-    return this.createImageId;
+  void setParent( VmInstance parent ) {
+    this.parent = parent;
   }
   
-  private void setCreateImageId( final String bundleId ) {
-    this.createImageId = bundleId;
+  String getMacAddress( ) {
+    return this.macAddress;
   }
   
-  String getState( ) {
-    return this.state;
+  void setMacAddress( String macAddress ) {
+    this.macAddress = macAddress;
   }
   
-  void setState( final String state ) {
-    this.state = state;
+  String getPrivateAddress( ) {
+    return this.privateAddress;
   }
   
-  private Date getStartTime( ) {
-    return this.startTime;
+  void setPrivateAddress( String privateAddress ) {
+    this.privateAddress = privateAddress;
   }
   
-  private void setStartTime( final Date startTime ) {
-    this.startTime = startTime;
+  String getPublicAddress( ) {
+    return this.publicAddress;
   }
   
-  private Date getUpdateTime( ) {
-    return this.updateTime;
+  void setPublicAddress( String publicAddress ) {
+    this.publicAddress = publicAddress;
   }
   
-  void setUpdateTime( final Date updateTime ) {
-    this.updateTime = updateTime;
+  String getPrivateDnsName( ) {
+    return this.privateDnsName;
   }
   
-  private String getProgress( ) {
-    return this.progress;
+  void setPrivateDnsName( String privateDnsName ) {
+    this.privateDnsName = privateDnsName;
   }
   
-  private void setProgress( final String progress ) {
-    this.progress = progress;
+  String getPublicDnsName( ) {
+    return this.publicDnsName;
   }
   
-  private String getErrorMessage( ) {
-    return this.errorMessage;
-  }
-  
-  private void setErrorMessage( final String errorMessage ) {
-    this.errorMessage = errorMessage;
-  }
-  
-  private String getErrorCode( ) {
-    return this.errorCode;
-  }
-  
-  private void setErrorCode( final String errorCode ) {
-    this.errorCode = errorCode;
+  void setPublicDnsName( String publicDnsName ) {
+    this.publicDnsName = publicDnsName;
   }
   
   @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ( ( this.createImageId == null )
-      ? 0
-      : this.createImageId.hashCode( ) );
-    return result;
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "VmNetworkConfig:" );
+    if ( this.macAddress != null ) builder.append( "macAddress=" ).append( this.macAddress ).append( ":" );
+    if ( this.privateAddress != null ) builder.append( "privateAddress=" ).append( this.privateAddress ).append( ":" );
+    if ( this.publicAddress != null ) builder.append( "publicAddress=" ).append( this.publicAddress ).append( ":" );
+    if ( this.privateDnsName != null ) builder.append( "privateDnsName=" ).append( this.privateDnsName ).append( ":" );
+    if ( this.publicDnsName != null ) builder.append( "publicDnsName=" ).append( this.publicDnsName );
+    return builder.toString( );
   }
-  
-  @Override
-  public boolean equals( final Object obj ) {
-    if ( this == obj ) {
-      return true;
-    }
-    if ( obj == null ) {
-      return false;
-    }
-    if ( this.getClass( ) != obj.getClass( ) ) {
-      return false;
-    }
-    final VmCreateImageTask other = ( VmCreateImageTask ) obj;
-    if ( this.createImageId == null ) {
-      if ( other.createImageId != null ) {
-        return false;
-      }
-    } else if ( !this.createImageId.equals( other.createImageId ) ) {
-      return false;
-    }
-    return true;
-  }
-  
 }

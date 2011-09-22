@@ -67,7 +67,6 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -76,6 +75,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.MessageCallback;
+import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Functions;
@@ -128,20 +128,6 @@ public class VolumeAttachCallback extends MessageCallback<AttachVolumeType, Atta
       VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
       Cluster cluster = Clusters.lookup( vm.lookupClusterConfiguration( ) );
       ServiceConfiguration sc = Partitions.lookupService( Storage.class, cluster.getConfiguration( ).getPartition( ) );
-      /** send a forcible detach to ensure any vol session state is cleaned up **/
-      try {
-        AsyncRequests.sendSync( cluster.getConfiguration( ), new DetachVolumeType( ) {
-          {
-            this.setVolumeId( VolumeAttachCallback.this.getRequest( ).getVolumeId( ) );
-            this.setInstanceId( VolumeAttachCallback.this.getRequest( ).getInstanceId( ) );
-            this.setRemoteDevice( VolumeAttachCallback.this.getRequest( ).getRemoteDevice( ) );
-            this.setDevice( VolumeAttachCallback.this.getRequest( ).getDevice( ) );
-            this.setForce( true );
-          }
-        } );
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
-      }
       /** clean up SC session state **/
       try {
         Dispatcher dispatcher = ServiceDispatcher.lookup( sc );

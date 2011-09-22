@@ -85,6 +85,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;

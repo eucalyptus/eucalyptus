@@ -70,9 +70,9 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.vm.VmInstance;
 
 public class CreateVmInstances {
   private static Logger LOG = Logger.getLogger( CreateVmInstances.class );

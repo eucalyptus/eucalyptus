@@ -61,7 +61,7 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
 import java.util.Date;
 import java.util.Set;
@@ -78,13 +78,12 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
-import com.eucalyptus.cluster.VmInstance.BundleState;
-import com.eucalyptus.cluster.VmInstance.Reason;
-import com.eucalyptus.cluster.VmInstance.VmState;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmInstance.BundleState;
+import com.eucalyptus.vm.VmInstance.Reason;
+import com.eucalyptus.vm.VmInstance.VmState;
 import com.google.common.collect.Sets;
 
 @Embeddable
@@ -312,13 +311,13 @@ public class VmRuntimeState {
   }
   
   public Boolean clearPendingBundleTask( ) {
-    if ( BundleState.pending.name( ).equals( this.getBundleTask( ).getState( ) ) ) {
+    if ( BundleState.pending.name( ).equals( this.getBundleTaskState( ) ) ) {
       this.getBundleTask( ).setState( BundleState.storing.name( ) );
       EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTING, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
                         this.getVmInstance( ).getInstanceId( ),
                         this.getBundleTask( ).getState( ) ).info( );
       return true;
-    } else if ( BundleState.canceling.name( ).equals( this.getBundleTask( ).getState( ) ) ) {
+    } else if ( BundleState.canceling.name( ).equals( this.getBundleTaskState( ) ) ) {
       EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELLED, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
                         this.getVmInstance( ).getInstanceId( ),
                         this.getBundleTask( ).getState( ) ).info( );

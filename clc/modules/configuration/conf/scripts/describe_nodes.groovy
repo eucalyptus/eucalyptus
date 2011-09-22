@@ -4,9 +4,9 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.google.common.collect.Lists;
 
-import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.config.NodeComponentInfoType;
 import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 
 List<NodeComponentInfoType> nodeInfoList = Lists.newArrayList( );

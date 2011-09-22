@@ -61,7 +61,7 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
 import java.util.Arrays;
 import java.util.Set;
@@ -85,8 +85,6 @@ import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.vm.VmType;
-import com.eucalyptus.vm.VmTypes;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
