@@ -476,6 +476,30 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         }
       }
     },
+    STOPPED {
+      @Override
+      public VmInstance apply( final VmInstance v ) {
+        if ( !Entities.isPersistent( v ) ) {
+          throw new TransientEntityException( v.toString( ) );
+        } else {
+          final EntityTransaction db = Entities.get( VmInstance.class );
+          try {
+            final VmInstance vm = Entities.merge( v );
+            if ( VmStateSet.RUN.apply( vm ) ) {
+              vm.setState( VmState.STOPPING, Reason.USER_STOPPED );
+            } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
+              vm.setState( VmState.STOPPED, Reason.USER_STOPPED );
+            }
+            db.commit( );
+            return vm;
+          } catch ( final Exception ex ) {
+            Logs.exhaust( ).trace( ex, ex );
+            db.rollback( );
+            throw new NoSuchElementException( "Failed to lookup instance: " + v );
+          }
+        }
+      }
+    },
     DELETE {
       @Override
       public VmInstance apply( final VmInstance vm ) {

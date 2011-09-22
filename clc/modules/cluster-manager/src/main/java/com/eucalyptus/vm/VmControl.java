@@ -112,6 +112,7 @@ import com.eucalyptus.util.async.Request;
 import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
+import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
@@ -227,15 +228,28 @@ public class VmControl {
           EntityTransaction db = Entities.get( VmInstance.class );
           try {
             VmInstance vm = null;
+            RunningInstancesItemType runVm = null;
             try {
-              vm = RestrictedTypes.doPrivileged( instanceId, VmInstances.lookupFunction( ) );
-              final int oldCode = vm.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.apply( vm )
-                ? VmState.TERMINATED.getCode( )
-                : VmState.SHUTTING_DOWN.getCode( );
-              final String oldState = vm.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.apply( vm )
-                ? VmState.TERMINATED.getName( )
-                : VmState.SHUTTING_DOWN.getName( );
-              VmInstances.shutDown( vm );
+              String oldState = null, newState = null;
+              int oldCode = 0, newCode = 0;
+              try {
+                vm = RestrictedTypes.doPrivileged( instanceId, VmInstances.lookupFunction( ) );
+                runVm = VmInstances.transform( vm );
+                oldCode = vm.getState( ).getCode( );
+                newCode = VmState.SHUTTING_DOWN.apply( vm )
+                  ? VmState.TERMINATED.getCode( )
+                  : VmState.SHUTTING_DOWN.getCode( );
+                oldState = vm.getState( ).getName( );
+                newState = VmState.SHUTTING_DOWN.apply( vm )
+                  ? VmState.TERMINATED.getName( )
+                  : VmState.SHUTTING_DOWN.getName( );
+                VmInstances.shutDown( vm );
+              } catch ( TerminatedInstanceException ex ) {
+                runVm = VmInstances.transform( instanceId );
+                oldCode = newCode = VmState.TERMINATED.getCode( );
+                oldState = newState = VmState.TERMINATED.getName( );
+                VmInstances.delete( vm );
+              }
               results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
               db.commit( );
               return true;
@@ -425,9 +439,12 @@ public class VmControl {
             return true;
           } catch ( final NoSuchElementException e ) {
             try {
-              VmInstances.terminated( instanceId );
+              VmInstances.stopped( instanceId );
               return true;
             } catch ( final NoSuchElementException e1 ) {
+              return false;
+            } catch ( TransactionException ex ) {
+              Logs.extreme( ).error( ex, ex );
               return false;
             }
           }

@@ -98,11 +98,16 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         VmInstance vm = VmInstances.lookup( vmId );
         if ( VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
           VmInstances.terminated( vm );
-          VmInstances.delete( vm );
-        } else if ( VmState.SHUTTING_DOWN.apply( vm ) || VmInstances.Timeout.SHUTTING_DOWN.apply( vm ) ) {
+        } else if ( VmInstances.Timeout.SHUTTING_DOWN.apply( vm ) ) {
           VmInstances.terminated( vm );
         } else if ( VmInstances.Timeout.TERMINATED.apply( vm ) ) {
           VmInstances.delete( vm );
+        } else if ( VmInstances.Timeout.TERMINATED.apply( vm ) ) {
+          VmInstances.delete( vm );
+        } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
+          VmInstances.terminated( vm );
+        } else if ( VmState.STOPPED.apply( vm ) ) {
+          VmInstances.stopped( vm );
         }
         db1.commit( );
       } catch ( final Exception ex ) {

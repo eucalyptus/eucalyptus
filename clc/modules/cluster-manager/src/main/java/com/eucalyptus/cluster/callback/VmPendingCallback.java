@@ -54,22 +54,27 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
         vm.setServiceTag( runVm.getServiceTag( ) );
         if ( VmInstances.Timeout.SHUTTING_DOWN.apply( vm ) ) {
           VmInstances.terminated( vm );
+        } else if ( VmInstances.Timeout.TERMINATED.apply( vm ) ) {
+          VmInstances.delete( vm );
         } else if ( VmState.SHUTTING_DOWN.apply( vm ) && VmState.SHUTTING_DOWN.equals( state ) ) {
           VmInstances.terminated( vm );
-        } else if ( VmStateSet.RUN.apply( vm ) &&  VmStateSet.RUN.contains( state ) ) { 
+        } else if ( VmState.STOPPED.apply( vm ) && VmState.STOPPED.equals( state ) ) {
+          VmInstances.stopped( vm );
+        } else if ( VmStateSet.RUN.apply( vm ) || VmStateSet.CHANGING.apply( vm ) ) {
+          vm.doUpdate( ).apply( runVm );
+        } else if ( VmStateSet.RUN.apply( vm ) && VmStateSet.RUN.contains( state ) ) {
           if ( !VmNetworkConfig.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
             vm.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
           }
           vm.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
           vm.updateVolumeAttachments( runVm.getVolumes( ) );
-        } else if ( VmStateSet.RUN.apply( vm ) || VmStateSet.CHANGING.apply( vm ) ) {
-          vm.doUpdate( ).apply( runVm );
         } else {
           LOG.warn( "Applying generic state change: " + vm.getState( ) + " -> " + state + " for " + vm.getInstanceId( ) );
           vm.doUpdate( ).apply( runVm );
         }
         db.commit( );
       } catch ( Exception ex ) {
+        db.rollback( );
         LOG.debug( "Ignoring update for uncached vm: " + runVm.getInstanceId( ) );
       }
     }

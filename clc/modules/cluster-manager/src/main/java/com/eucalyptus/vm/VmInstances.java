@@ -122,6 +122,14 @@ import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
 @ConfigurableClass( root = "vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
 public class VmInstances {
+  public static class TerminatedInstanceException extends NoSuchElementException {
+    
+    TerminatedInstanceException( String s ) {
+      super( s );
+    }
+    
+  }
+  
   public enum Timeout implements Predicate<VmInstance> {
     UNREPORTED( VmState.PENDING, VmState.RUNNING ) {
       @Override
@@ -372,12 +380,12 @@ public class VmInstances {
                           instanceId.substring( 8, 10 ) );
   }
   
-  public static VmInstance lookup( final String name ) throws NoSuchElementException {
+  public static VmInstance lookup( final String name ) throws NoSuchElementException, TerminatedInstanceException {
     return CachedLookup.INSTANCE.apply( name );
   }
   
   public static VmInstance register( final VmInstance vm ) {
-    if ( !terminateCache.containsKey( vm.getInstanceId( ) ) ) {
+    if ( !terminateDescribeCache.containsKey( vm.getInstanceId( ) ) ) {
       return Transitions.REGISTER.apply( vm );
     } else {
       throw new IllegalArgumentException( "Attempt to register instance which is already terminated." );
@@ -387,7 +395,7 @@ public class VmInstances {
   public static VmInstance delete( final VmInstance vm ) throws TransactionException {
     try {
       if ( VmStateSet.DONE.apply( vm ) ) {
-        cache( vm );
+        terminateDescribeCache.remove( vm.getDisplayName( ) );
         return Transitions.DELETE.apply( vm );
       }
     } catch ( final Exception ex ) {
@@ -396,42 +404,39 @@ public class VmInstances {
     return vm;
   }
   
-  static VmInstance cache( VmInstance vm ) {
-    if ( !terminateCache.containsKey( vm.getDisplayName( ) ) ) {
+  static void cache( VmInstance vm ) {
+    if ( !terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
       final RunningInstancesItemType ret = VmInstances.transform( vm );
-      terminateCache.put( vm.getDisplayName( ), vm );
       terminateDescribeCache.put( vm.getDisplayName( ), ret );
-      return Transitions.DELETE.apply( vm );
-    } else {
-      return terminateCache.get( vm );
+      Transitions.DELETE.apply( vm );
     }
   }
   
-  public static VmInstance expired( final VmInstance vm ) throws TransactionException {
-    try {
-      if ( VmState.BURIED.apply( vm ) ) {
-        terminateCache.remove( vm.getDisplayName( ) );
-        terminateDescribeCache.remove( vm.getDisplayName( ) );
-      }
-    } catch ( final Exception ex ) {
-      LOG.error( ex, ex );
-    }
-    return vm;
+  public static void terminated( final VmInstance vm ) throws TransactionException {
+    VmInstances.cache( Transitions.TERMINATED.apply( vm ) );
   }
   
-  public static VmInstance terminated( final VmInstance vm ) throws TransactionException {
-    return VmInstances.cache( Transitions.TERMINATED.apply( vm ) );
+  public static void terminated( final String key ) throws NoSuchElementException, TransactionException {
+    terminated( VmInstance.Lookup.INSTANCE.apply( key ) );
   }
   
-  public static VmInstance terminated( final String key ) throws NoSuchElementException {
-    return Functions.compose( Transitions.TERMINATED, VmInstance.Lookup.INSTANCE ).apply( key );
+  public static void stopped( final VmInstance vm ) throws TransactionException {
+    Transitions.STOPPED.apply( vm );
   }
   
-  public static VmInstance shutDown( VmInstance vm ) throws TransactionException {
+  public static void stopped( final String key ) throws NoSuchElementException, TransactionException {
+    VmInstances.stopped( VmInstance.Lookup.INSTANCE.apply( key ) );
+  }
+  
+  public static void shutDown( VmInstance vm ) throws TransactionException {
     if ( VmStateSet.DONE.apply( vm ) ) {
-      return VmInstances.delete( vm );
+      if ( terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
+        VmInstances.delete( vm );
+      } else {     
+        VmInstances.terminated( vm );
+      }
     } else {
-      return Transitions.SHUTDOWN.apply( vm );
+      Transitions.SHUTDOWN.apply( vm );
     }
   }
   
@@ -493,12 +498,24 @@ public class VmInstances {
      */
     @Override
     public VmInstance apply( String name ) {
-      if ( ( name != null ) && terminateCache.containsKey( name ) ) {
-        return terminateCache.get( name );
+      if ( ( name != null ) && terminateDescribeCache.containsKey( name ) ) {
+        throw new TerminatedInstanceException( name );
       } else {
         return Lookup.INSTANCE.apply( name );
       }
     }
     
+  }
+  
+  /**
+   * @param vm
+   * @return
+   */
+  public static RunningInstancesItemType transform( String name ) {
+    if ( terminateDescribeCache.containsKey( name ) ) {
+      return terminateDescribeCache.get( name );
+    } else {
+      return VmInstance.Transform.INSTANCE.apply( lookup( name ) );
+    }
   }
 }
