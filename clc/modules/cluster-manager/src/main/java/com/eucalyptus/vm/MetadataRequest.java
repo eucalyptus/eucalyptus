@@ -100,13 +100,13 @@ public class MetadataRequest {
         try {
           findVm = VmInstances.lookup( addr.getInstanceId( ) );
         } catch ( Exception ex ) {
-          Logs.extreme( ).error( ex, ex );
+          Logs.exhaust( ).error( ex );
         }
       } catch ( NoSuchElementException ex2 ) {
         try {
           findVm = VmInstances.lookupByInstanceIp( requestIp );
         } catch ( NoSuchElementException ex ) {
-          Logs.extreme( ).error( ex, ex );
+          Logs.exhaust( ).error( ex );
         }
       }
       this.vm = findVm;
