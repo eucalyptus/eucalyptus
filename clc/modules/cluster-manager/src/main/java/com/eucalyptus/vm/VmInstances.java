@@ -125,7 +125,12 @@ import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 public class VmInstances {
   public static class TerminatedInstanceException extends NoSuchElementException {
     
-    TerminatedInstanceException( String s ) {
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 1L;
+
+    TerminatedInstanceException( final String s ) {
       super( s );
     }
     
@@ -150,9 +155,9 @@ public class VmInstances {
         return TERMINATED_TIME;
       }
     };
-    private List<VmState> states;
+    private final List<VmState> states;
     
-    private Timeout( VmState... states ) {
+    private Timeout( final VmState... states ) {
       this.states = Arrays.asList( states );
     }
     
@@ -168,10 +173,10 @@ public class VmInstances {
     
     @Override
     public boolean apply( final VmInstance arg0 ) {
-      return this.inState( arg0.getState( ) ) && arg0.getSplitTime( ) > this.getMilliseconds( );
+      return this.inState( arg0.getState( ) ) && ( arg0.getSplitTime( ) > this.getMilliseconds( ) );
     }
     
-    protected boolean inState( VmState state ) {
+    protected boolean inState( final VmState state ) {
       return this.states.contains( state );
     }
     
@@ -390,8 +395,7 @@ public class VmInstances {
   public static VmInstance delete( final VmInstance vm ) throws TransactionException {
     try {
       if ( VmStateSet.DONE.apply( vm ) ) {
-        terminateDescribeCache.remove( vm.getDisplayName( ) );
-        terminateCache.remove( vm.getDisplayName( ) );
+        delete( vm.getInstanceId( ) );
       }
     } catch ( final Exception ex ) {
       LOG.error( ex, ex );
@@ -399,7 +403,12 @@ public class VmInstances {
     return vm;
   }
   
-  static void cache( VmInstance vm ) {
+  public static void delete( final String instanceId ) {
+    terminateDescribeCache.remove( instanceId );
+    terminateCache.remove( instanceId );
+  }
+  
+  static void cache( final VmInstance vm ) {
     if ( !terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
       final RunningInstancesItemType ret = VmInstances.transform( vm );
       terminateDescribeCache.put( vm.getDisplayName( ), ret );
@@ -424,11 +433,11 @@ public class VmInstances {
     VmInstances.stopped( VmInstance.Lookup.INSTANCE.apply( key ) );
   }
   
-  public static void shutDown( VmInstance vm ) throws TransactionException {
+  public static void shutDown( final VmInstance vm ) throws TransactionException {
     if ( VmStateSet.DONE.apply( vm ) ) {
       if ( terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
         VmInstances.delete( vm );
-      } else {     
+      } else {
         VmInstances.terminated( vm );
       }
     } else {
@@ -493,7 +502,7 @@ public class VmInstances {
      * @see com.google.common.base.Function#apply(java.lang.Object)
      */
     @Override
-    public VmInstance apply( String name ) {
+    public VmInstance apply( final String name ) {
       if ( ( name != null ) && VmInstances.terminateDescribeCache.containsKey( name ) ) {
         throw new TerminatedInstanceException( name );
       } else {
@@ -507,7 +516,7 @@ public class VmInstances {
    * @param vm
    * @return
    */
-  public static RunningInstancesItemType transform( String name ) {
+  public static RunningInstancesItemType transform( final String name ) {
     if ( terminateDescribeCache.containsKey( name ) ) {
       return terminateDescribeCache.get( name );
     } else {
