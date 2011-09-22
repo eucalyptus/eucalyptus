@@ -372,7 +372,7 @@ public class VmControl {
           } catch ( final NoSuchElementException e ) {}
         }
       }
-      db.commit( );
+      db.rollback( );
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
