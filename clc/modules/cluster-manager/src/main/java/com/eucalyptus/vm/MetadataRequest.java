@@ -69,6 +69,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.records.Logs;
 
 public class MetadataRequest {
   private static Logger LOG = Logger.getLogger( MetadataRequest.class );
@@ -99,9 +100,14 @@ public class MetadataRequest {
         try {
           findVm = VmInstances.lookup( addr.getInstanceId( ) );
         } catch ( Exception ex ) {
-          LOG.error( ex );
+          Logs.extreme( ).error( ex, ex );
         }
       } catch ( NoSuchElementException ex2 ) {
+        try {
+          findVm = VmInstances.lookupByInstanceIp( requestIp );
+        } catch ( NoSuchElementException ex ) {
+          Logs.extreme( ).error( ex, ex );
+        }
       }
       this.vm = findVm;
     } finally {
