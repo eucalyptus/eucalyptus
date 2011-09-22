@@ -603,14 +603,18 @@ doAttachVolume (	struct nc_state_t *nc,
          return NOT_FOUND;
      
      // try attaching to hypervisor
+     sem_p (hyp_sem);
      virConnectPtr *conn = check_hypervisor_conn();
+     sem_v (hyp_sem);
      if (conn==NULL) {
          logprintfl(EUCAERROR, "AttachVolume(): cannot get connection to hypervisor\n");
          return ERROR;
      }
      
      // find domain on hypervisor
+     sem_p (hyp_sem);
      virDomainPtr dom = virDomainLookupByName (*conn, instanceId);
+     sem_v (hyp_sem);
      if (dom==NULL) {
          if (instance->state != BOOTING && instance->state != STAGING) {
              logprintfl (EUCAWARN, "AttachVolume(): domain %s not running on hypervisor, cannot attach device\n", instanceId);
@@ -770,7 +774,9 @@ doDetachVolume (	struct nc_state_t *nc,
     }
     
     // find domain on hypervisor
+    sem_p (hyp_sem);
     virDomainPtr dom = virDomainLookupByName (*conn, instanceId);
+    sem_v (hyp_sem);
     if (dom==NULL) {
         if (instance->state != BOOTING && instance->state != STAGING) {
             logprintfl (EUCAWARN, "DetachVolume(): domain %s not running on hypervisor, cannot attach device\n", instanceId);
