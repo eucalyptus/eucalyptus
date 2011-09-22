@@ -230,7 +230,7 @@ axis2_status_t __euca_authenticate(const axutil_env_t *env,axis2_msg_ctx_t *out_
       AXIS2_LOG_CRITICAL(env->log,AXIS2_LOG_SI," ---------------------------------------------------" );
       NO_U_FAIL("The certificate specified is invalid!");
     }
-    if(verify_references(sig_node, env, out_msg_ctx, soap_envelope) == AXIS2_FAILURE) {
+    if(verify_references(sig_node, env, out_msg_ctx, soap_envelope, rampart_context) == AXIS2_FAILURE) {
       return AXIS2_FAILURE;
   }
 
@@ -252,7 +252,8 @@ axis2_status_t __euca_authenticate(const axutil_env_t *env,axis2_msg_ctx_t *out_
  * where expected by the application logic. Timestamp is checked for expiration regardless
  * of its actual location.
  */
-axis2_status_t verify_references(axiom_node_t *sig_node, const axutil_env_t *env, axis2_msg_ctx_t *msg_ctx, axiom_soap_envelope_t *envelope) {
+axis2_status_t verify_references(axiom_node_t *sig_node, const axutil_env_t *env, axis2_msg_ctx_t *msg_ctx, 
+				 axiom_soap_envelope_t *envelope, rampart_context_t *rampart_context) {
   axiom_node_t *si_node = NULL;
   axiom_node_t *ref_node = NULL;
   axis2_status_t status = AXIS2_SUCCESS;
@@ -308,7 +309,7 @@ axis2_status_t verify_references(axiom_node_t *sig_node, const axutil_env_t *env
 	  status = AXIS2_FAILURE;
 	  break;
       }
-      if(verify_node(signed_node, env, msg_ctx, ref, signed_elems)) {
+      if(verify_node(signed_node, env, msg_ctx, ref, signed_elems, rampart_context)) {
 	status = AXIS2_FAILURE;
 	break;
       }
@@ -336,7 +337,8 @@ axis2_status_t verify_references(axiom_node_t *sig_node, const axutil_env_t *env
 /**
  * Verifies XPath location of signed elements.
  */ 
-int verify_node(axiom_node_t *signed_node, const axutil_env_t *env, axis2_msg_ctx_t *msg_ctx, axis2_char_t *ref, short *signed_elems) {
+int verify_node(axiom_node_t *signed_node, const axutil_env_t *env, axis2_msg_ctx_t *msg_ctx, axis2_char_t *ref, 
+		short *signed_elems, rampart_context_t *rampart_context) {
 
   if(!axutil_strcmp(OXS_NODE_BODY, axiom_util_get_localname(signed_node, env))) {
     AXIS2_LOG_DEBUG(env->log, AXIS2_LOG_SI, "[euca-rampart] node %s is Body", ref); 
@@ -360,7 +362,8 @@ int verify_node(axiom_node_t *signed_node, const axutil_env_t *env, axis2_msg_ct
     signed_elems[1] = 1;
 
     /* Regardless of the location of the Timestamp, verify the one that is signed */
-    if(AXIS2_FAILURE == rampart_timestamp_token_validate(env, msg_ctx, signed_node, 20)) {
+    if(AXIS2_FAILURE == rampart_timestamp_token_validate(env, msg_ctx, signed_node, 
+							 rampart_context_get_clock_skew_buffer(rampart_context, env))) {
        oxs_error(env, OXS_ERROR_LOCATION, OXS_ERROR_ELEMENT_FAILED, "Validation failed for Timestamp with ID = %s", ref);
       return 1;
     }
