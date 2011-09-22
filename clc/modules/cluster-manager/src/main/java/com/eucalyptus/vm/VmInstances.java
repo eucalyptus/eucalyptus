@@ -482,7 +482,7 @@ public class VmInstances {
    * @return
    */
   public static Function<String, VmInstance> lookupFunction( ) {
-    return VmInstance.Lookup.INSTANCE;
+    return CachedLookup.INSTANCE;
   }
   
   private enum CachedLookup implements Function<String, VmInstance> {
