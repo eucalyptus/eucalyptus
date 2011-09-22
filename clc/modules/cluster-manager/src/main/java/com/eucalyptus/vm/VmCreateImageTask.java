@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,58 +61,142 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.network;
+package com.eucalyptus.vm;
 
+import java.util.Date;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.entities.AbstractPersistent;
+import org.hibernate.annotations.Parent;
 
-@Entity @javax.persistence.Entity
-@PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_network_rule_ip_range" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class IpRange extends AbstractPersistent {
-  @Column( name = "metadata_network_rule_ip_range_value" )
-  String value;
-  public IpRange(){
+public class VmCreateImageTask {
+  @Parent
+  private VmInstance vmInstance;
+  @Column( name = "metadata_vm_createimage_id" )
+  private String     createImageId;
+  @Column( name = "metadata_vm_createimage_state" )
+  private String     state;
+  @Column( name = "metadata_vm_createimage_start_time" )
+  private Date       startTime;
+  @Column( name = "metadata_vm_createimage_update_time" )
+  private Date       updateTime;
+  @Column( name = "metadata_vm_createimage_progress" )
+  private String     progress;
+  @Column( name = "metadata_vm_createimage_error_msg" )
+  private String     errorMessage;
+  @Column( name = "metadata_vm_createimage_error_code" )
+  private String     errorCode;
+  
+  VmCreateImageTask( ) {
+    super( );
   }
-  public IpRange( final String value ) {
-    this.value = value;
+  
+  VmCreateImageTask( final VmInstance vmInstance, final String createImageId, final String state, final Date startTime, final Date updateTime,
+                     final String progress, final String errorMessage,
+                     final String errorCode ) {
+    super( );
+    this.vmInstance = vmInstance;
+    this.createImageId = createImageId;
+    this.state = state;
+    this.startTime = startTime;
+    this.updateTime = updateTime;
+    this.progress = progress;
+    this.errorMessage = errorMessage;
+    this.errorCode = errorCode;
   }
-
-  public String getValue( ) {
-    return this.value;
+  
+  private VmInstance getVmInstance( ) {
+    return this.vmInstance;
   }
-  public void setValue( String value ) {
-    this.value = value;
+  
+  private void setVmInstance( final VmInstance vmInstance ) {
+    this.vmInstance = vmInstance;
   }
-  @Override
-  public String toString( ) {
-    return String.format( "IpRange:%s", this.value );
+  
+  String getCreateImageId( ) {
+    return this.createImageId;
   }
-
+  
+  private void setCreateImageId( final String bundleId ) {
+    this.createImageId = bundleId;
+  }
+  
+  String getState( ) {
+    return this.state;
+  }
+  
+  void setState( final String state ) {
+    this.state = state;
+  }
+  
+  private Date getStartTime( ) {
+    return this.startTime;
+  }
+  
+  private void setStartTime( final Date startTime ) {
+    this.startTime = startTime;
+  }
+  
+  private Date getUpdateTime( ) {
+    return this.updateTime;
+  }
+  
+  void setUpdateTime( final Date updateTime ) {
+    this.updateTime = updateTime;
+  }
+  
+  private String getProgress( ) {
+    return this.progress;
+  }
+  
+  private void setProgress( final String progress ) {
+    this.progress = progress;
+  }
+  
+  private String getErrorMessage( ) {
+    return this.errorMessage;
+  }
+  
+  private void setErrorMessage( final String errorMessage ) {
+    this.errorMessage = errorMessage;
+  }
+  
+  private String getErrorCode( ) {
+    return this.errorCode;
+  }
+  
+  private void setErrorCode( final String errorCode ) {
+    this.errorCode = errorCode;
+  }
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.value == null ) ? 0 : this.value.hashCode( ) );
+    result = prime * result + ( ( this.createImageId == null )
+      ? 0
+      : this.createImageId.hashCode( ) );
     return result;
   }
+  
   @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) return true;
-    if ( obj == null ) return false;
-    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
-    IpRange other = ( IpRange ) obj;
-    if ( this.value == null ) {
-      if ( other.value != null ) return false;
-    } else if ( !this.value.equals( other.value ) ) return false;
+  public boolean equals( final Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( obj == null ) {
+      return false;
+    }
+    if ( this.getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    final VmCreateImageTask other = ( VmCreateImageTask ) obj;
+    if ( this.createImageId == null ) {
+      if ( other.createImageId != null ) {
+        return false;
+      }
+    } else if ( !this.createImageId.equals( other.createImageId ) ) {
+      return false;
+    }
     return true;
-  }  
+  }
+  
 }

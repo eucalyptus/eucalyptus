@@ -108,8 +108,8 @@ public class PersistenceContexts {
         System.exit( 1 );
       } else if ( !emf.containsKey( persistenceContext ) ) {
         illegalAccesses = null;
-        EntityManagerFactoryImpl entityManagerFactory = ( EntityManagerFactoryImpl ) config.buildEntityManagerFactory( );
         LOG.trace( "-> Setting up persistence context for : " + persistenceContext );
+        EntityManagerFactoryImpl entityManagerFactory = ( EntityManagerFactoryImpl ) config.buildEntityManagerFactory( );
         LOG.trace( LogUtil.subheader( LogUtil.dumpObject( config ) ) );
         emf.put( persistenceContext, entityManagerFactory );
       }

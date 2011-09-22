@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,80 +61,17 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.network;
+package com.eucalyptus.util;
 
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
-import javax.persistence.Transient;
-import org.hibernate.annotations.Parent;
+import java.lang.reflect.Field;
 
-@Embeddable
-public class NetworkPeer {
-  @Transient
-  private static final long serialVersionUID = 1L;
-  @Parent
-  private NetworkRule       networkRule;
-  @Column( name = "network_rule_peer_network_user_query_key" )
-  private String            otherAccountId;
-  @Column( name = "network_rule_peer_network_user_group" )
-  private String            groupName;
+public class Fields {
   
-  NetworkPeer( ) {}
-  
-  NetworkPeer( final NetworkRule networkRule, final String userQueryKey, final String groupName ) {
-    this.networkRule = networkRule;
-    this.otherAccountId = userQueryKey;
-    this.groupName = groupName;
+  public static String canonicalName( Field f ) {
+    return f.getDeclaringClass( ).getCanonicalName( ) + "." + f.getName( );
   }
   
-  public String getUserQueryKey( ) {
-    return this.otherAccountId;
+  public static Field get( Class<?> declaringClass, String name ) throws NoSuchFieldException {
+    return declaringClass.getDeclaredField( name );
   }
-  
-  public void setUserQueryKey( final String userQueryKey ) {
-    this.otherAccountId = userQueryKey;
-  }
-  
-  public String getGroupName( ) {
-    return this.groupName;
-  }
-  
-  public void setGroupName( final String groupName ) {
-    this.groupName = groupName;
-  }
-  
-  @Override
-  public boolean equals( final Object o ) {
-    if ( this == o ) return true;
-    if ( ( o == null ) || !this.getClass( ).equals( o.getClass( ) ) ) return false;
-    
-    final NetworkPeer that = ( NetworkPeer ) o;
-    
-    if ( !this.groupName.equals( that.groupName ) ) return false;
-    if ( !this.otherAccountId.equals( that.otherAccountId ) ) return false;
-    
-    return true;
-  }
-  
-  @Override
-  public int hashCode( ) {
-    int result;
-    result = this.otherAccountId.hashCode( );
-    result = 31 * result + this.groupName.hashCode( );
-    return result;
-  }
-  
-  @Override
-  public String toString( ) {
-    return String.format( "NetworkPeer:userQueryKey=%s:groupName=%s", this.otherAccountId, this.groupName );
-  }
-  
-  private NetworkRule getNetworkRule( ) {
-    return this.networkRule;
-  }
-  
-  private void setNetworkRule( final NetworkRule networkRule ) {
-    this.networkRule = networkRule;
-  }
-  
 }

@@ -123,9 +123,8 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @Column( name = "metadata_network_group_description" )
   private String           description;
   
-  @Fetch( FetchMode.JOIN )
-  @OneToMany( cascade = CascadeType.ALL )
-  @JoinTable( name = "metadata_network_group_has_rules", joinColumns = { @JoinColumn( name = "id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_rule_id" ) } )
+  @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true )
+  @JoinColumn( name = "metadata_network_group_rule_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkRule> networkRules = new HashSet<NetworkRule>( );
   
@@ -154,11 +153,11 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   public static NetworkGroup named( final OwnerFullName ownerFullName, final String groupName ) {
     return new NetworkGroup( ownerFullName, groupName );
   }
-
+  
   public static NetworkGroup withNaturalId( final String naturalId ) {
     return new NetworkGroup( naturalId );
   }
-
+  
   /**
    * @param naturalId
    */
@@ -259,8 +258,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
                                                                                                                                 from.getProtocol( ),
                                                                                                                                 from.getLowPort( ),
                                                                                                                                 from.getHighPort( ) );
-                                                                          for ( final IpRange cidr : from.getIpRanges( ) )
-                                                                            pfrule.getSourceCidrs( ).add( cidr.getValue( ) );
+                                                                          pfrule.getSourceCidrs( ).addAll( from.getIpRanges( ) );
                                                                           for ( final NetworkPeer peer : from.getNetworkPeers( ) )
                                                                             pfrule.addPeer( peer.getUserQueryKey( ), peer.getGroupName( ) );
                                                                           return pfrule;
@@ -278,9 +276,9 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
       throw new TransientEntityException( this.toString( ) );
     } else {
       return Entities.persist( ExtantNetwork.create( this, i ) );
-    }    
+    }
   }
-
+  
   public ExtantNetwork extantNetwork( ) throws NotEnoughResourcesException, TransientEntityException {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       return ExtantNetwork.bogus( this );
@@ -304,7 +302,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
       } else {
         return this.getExtantNetwork( );
       }
-    } 
+    }
   }
   
   ExtantNetwork getExtantNetwork( ) {
@@ -314,7 +312,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   private void setExtantNetwork( final ExtantNetwork extantNetwork ) {
     this.extantNetwork = extantNetwork;
   }
-
+  
   public boolean hasExtantNetwork( ) {
     return this.extantNetwork != null;
   }
