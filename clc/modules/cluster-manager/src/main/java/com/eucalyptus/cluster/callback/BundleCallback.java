@@ -34,15 +34,14 @@ public class BundleCallback extends MessageCallback<BundleInstanceType, BundleIn
         try {
           VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
           vm.resetBundleTask( );
-        } catch ( NoSuchElementException e1 ) {
-        }
+        } catch ( NoSuchElementException e1 ) {}
         db.commit( );
       } else {
         VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
         vm.clearPendingBundleTask( );
-        db.commit( );
-        EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTED, this.getRequest( ).toSimpleString( ), vm.getBundleTask( ).getBundleId( ),
+        EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTED, this.getRequest( ).toSimpleString( ), "" + vm.getBundleTask( ),
                           vm.getInstanceId( ) ).info( );
+        db.commit( );
       }
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
