@@ -101,7 +101,7 @@ public class PropertyDirectory {
     }
     return props;
   }
-  
+    
   public static ConfigurableProperty getPropertyEntry( String fq ) throws IllegalAccessException {
     if ( !fqMap.containsKey( fq ) ) {
       throw new IllegalAccessException( "No such property: " + fq );

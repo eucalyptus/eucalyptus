@@ -61,61 +61,63 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
+import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import org.hibernate.annotations.Parent;
 
 @Embeddable
-public class VmId {
+public class VmLaunchRecord {
   @Parent
   private VmInstance vmInstance;
-  @Column( name = "metadata_vm_reservation_id" )
-  private String     reservationId;
-  @Column( name = "metadata_vm_instance_id" )
-  private String     instanceId;
+  @Column( name = "metadata_vm_launch_index" )
+  private Integer    launchIndex;
+  @Column( name = "metadata_vm_launch_time" )
+  private Date       launchTime;
   
-  VmId( ) {
+  VmLaunchRecord( Integer launchIndex, Date launchTime ) {
+    super( );
+    this.launchIndex = launchIndex;
+    this.launchTime = launchTime;
+  }
+  
+  VmLaunchRecord( ) {
     super( );
   }
   
-  VmId( String reservationId, String instanceId ) {
-    super( );
-    this.reservationId = reservationId;
-    this.instanceId = instanceId;
-  }
-  
-  private VmInstance getVmInstance( ) {
+  VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
   
-  public String getReservationId( ) {
-    return this.reservationId;
+  Integer getLaunchIndex( ) {
+    return this.launchIndex;
   }
   
-  public String getInstanceId( ) {
-    return this.instanceId;
+  Date getLaunchTime( ) {
+    return this.launchTime;
   }
   
   private void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
   
-  private void setReservationId( String reservationId ) {
-    this.reservationId = reservationId;
+  private void setLaunchIndex( Integer launchIndex ) {
+    this.launchIndex = launchIndex;
   }
   
-  private void setInstanceId( String instanceId ) {
-    this.instanceId = instanceId;
+  private void setLaunchTime( Date launchTime ) {
+    this.launchTime = launchTime;
   }
 
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
-    builder.append( "VmId:" );
-    if ( this.reservationId != null ) builder.append( "reservationId=" ).append( this.reservationId ).append( ":" );
-    if ( this.instanceId != null ) builder.append( "instanceId=" ).append( this.instanceId );
+    builder.append( "VmLaunchRecord:" );
+    if ( this.launchIndex != null ) builder.append( "launchIndex=" ).append( this.launchIndex ).append( ":" );
+    if ( this.launchTime != null ) builder.append( "launchTime=" ).append( this.launchTime );
     return builder.toString( );
   }
+  
 }

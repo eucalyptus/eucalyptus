@@ -8,10 +8,10 @@ import com.eucalyptus.entities.EntityWrapper;
 
 public class ReportingUserDao
 {
-	private static Logger log = Logger.getLogger( ReportingUserDao.class );
+	private static Logger LOG = Logger.getLogger( ReportingUserDao.class );
 
 	private static ReportingUserDao instance = null;
-	
+
 	public static ReportingUserDao getInstance()
 	{
 		if (instance == null) {
@@ -19,12 +19,12 @@ public class ReportingUserDao
 		}
 		return instance;
 	}
-	
+
 	private final Map<String,String> users = new HashMap<String,String>();
-	
+
 	private ReportingUserDao()
 	{
-		
+
 	}
 
 	public void addUpdateUser(String id, String name)
@@ -37,10 +37,14 @@ public class ReportingUserDao
 			users.put(id, name);
 			updateInDb(id, name);
 		} else {
-			users.put(id, name);
-			addToDb(id, name);
+			try {			
+				addToDb(id, name);
+				users.put(id, name);
+			} catch (RuntimeException e) {
+				LOG.trace(e, e);
+			}
 		}
-		
+
 	}
 
 	public String getUserName(String id)
@@ -48,9 +52,9 @@ public class ReportingUserDao
 		loadIfNeededFromDb();
 		return users.get(id);
 	}
-	
 
-	
+
+
 	private void loadIfNeededFromDb()
 	{
 		if (users.keySet().size() == 0) {
@@ -61,23 +65,23 @@ public class ReportingUserDao
 			try {
 				@SuppressWarnings("rawtypes")
 				List reportingUsers = (List)
-					entityWrapper.createQuery("from ReportingUser")
-					.list();
+				entityWrapper.createQuery("from ReportingUser")
+				.list();
 
 				for (Object obj: reportingUsers) {
 					ReportingUser user = (ReportingUser) obj;
 					users.put(user.getId(), user.getName());
 				}
-				
+
 				entityWrapper.commit();
 			} catch (Exception ex) {
-				log.error(ex);
+				LOG.error(ex);
 				entityWrapper.rollback();
 				throw new RuntimeException(ex);
 			}			
 		}
 	}
-	
+
 	private void updateInDb(String id, String name)
 	{
 		EntityWrapper<ReportingUser> entityWrapper =
@@ -86,17 +90,17 @@ public class ReportingUserDao
 		try {
 			ReportingUser reportingUser = (ReportingUser)
 			entityWrapper.createQuery("from ReportingUser where id = ?")
-				.setString(0, id)
-				.uniqueResult();
+			.setString(0, id)
+			.uniqueResult();
 			reportingUser.setName(name);
 			entityWrapper.commit();
 		} catch (Exception ex) {
-			log.error(ex);
+			LOG.error(ex);
 			entityWrapper.rollback();
 			throw new RuntimeException(ex);
 		}			
 	}
-	
+
 	private void addToDb(String id, String name)
 	{
 		EntityWrapper<ReportingUser> entityWrapper =
@@ -106,7 +110,7 @@ public class ReportingUserDao
 			entityWrapper.add(new ReportingUser(id, name));
 			entityWrapper.commit();
 		} catch (Exception ex) {
-			log.error(ex);
+			LOG.error(ex);
 			entityWrapper.rollback();
 			throw new RuntimeException(ex);
 		}					

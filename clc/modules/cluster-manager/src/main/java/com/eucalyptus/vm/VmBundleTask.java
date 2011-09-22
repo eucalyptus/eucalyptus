@@ -61,13 +61,12 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
 import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import org.hibernate.annotations.Parent;
-import com.eucalyptus.vm.BundleTask;
 import com.google.common.base.Function;
 
 @Embeddable
@@ -136,7 +135,7 @@ public class VmBundleTask {
       
       @Override
       public BundleTask apply( VmBundleTask input ) {
-        return new BundleTask( vm.getInstanceId( ),
+        return new BundleTask( vm.getInstanceId( ),//GRZE: this constructor reference is crap.
                                input.getBundleId( ),
                                input.getState( ),
                                input.getStartTime( ),

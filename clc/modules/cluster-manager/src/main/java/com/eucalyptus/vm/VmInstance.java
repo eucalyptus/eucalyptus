@@ -62,7 +62,7 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -102,7 +102,7 @@ import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
-import com.eucalyptus.cluster.VmInstance.VmState;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
@@ -117,9 +117,8 @@ import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.Emis;
-import com.eucalyptus.images.MachineImageInfo;
-import com.eucalyptus.images.PutGetImageInfo;
 import com.eucalyptus.images.Emis.BootableSet;
+import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.ExtantNetwork;
@@ -131,9 +130,8 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
-import com.eucalyptus.vm.BundleTask;
-import com.eucalyptus.vm.VmType;
-import com.eucalyptus.vm.VmTypes;
+import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstances.Timeout;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
@@ -434,7 +432,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     
   }
   
-  public enum Transitions implements Function<VmInstance, VmInstance> {
+  enum Transitions implements Function<VmInstance, VmInstance> {
     REGISTER {
       @Override
       public VmInstance apply( final VmInstance arg0 ) {
@@ -450,7 +448,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         }
       }
     },
-    TERMINATE {
+    TERMINATED {
       @Override
       public VmInstance apply( final VmInstance v ) {
         if ( !Entities.isPersistent( v ) ) {
@@ -460,11 +458,37 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           try {
             final VmInstance vm = Entities.merge( v );
             if ( VmStateSet.RUN.apply( vm ) ) {
-              vm.setState( VmState.SHUTTING_DOWN, Reason.USER_TERMINATED );
+              vm.setState( VmState.SHUTTING_DOWN, ( Timeout.SHUTTING_DOWN.apply( vm )
+                ? Reason.EXPIRED
+                : Reason.USER_TERMINATED ) );
             } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
-              vm.setState( VmState.TERMINATED, Reason.USER_TERMINATED );
-            } else {
-              vm.setState( VmState.BURIED, Reason.BURIED );
+              vm.setState( VmState.TERMINATED, Timeout.TERMINATED.apply( vm )
+                ? Reason.EXPIRED
+                : Reason.USER_TERMINATED );
+            }
+            db.commit( );
+            return vm;
+          } catch ( final Exception ex ) {
+            Logs.exhaust( ).trace( ex, ex );
+            db.rollback( );
+            throw new NoSuchElementException( "Failed to lookup instance: " + v );
+          }
+        }
+      }
+    },
+    STOPPED {
+      @Override
+      public VmInstance apply( final VmInstance v ) {
+        if ( !Entities.isPersistent( v ) ) {
+          throw new TransientEntityException( v.toString( ) );
+        } else {
+          final EntityTransaction db = Entities.get( VmInstance.class );
+          try {
+            final VmInstance vm = Entities.merge( v );
+            if ( VmStateSet.RUN.apply( vm ) ) {
+              vm.setState( VmState.STOPPING, Reason.USER_STOPPED );
+            } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
+              vm.setState( VmState.STOPPED, Reason.USER_STOPPED );
             }
             db.commit( );
             return vm;
@@ -496,7 +520,32 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           }
         }
       }
+    },
+    SHUTDOWN {
+      @Override
+      public VmInstance apply( final VmInstance v ) {
+        if ( !Entities.isPersistent( v ) ) {
+          throw new TransientEntityException( v.toString( ) );
+        } else {
+          final EntityTransaction db = Entities.get( VmInstance.class );
+          try {
+            final VmInstance vm = Entities.merge( v );
+            if ( VmStateSet.RUN.apply( vm ) ) {
+              vm.setState( VmState.SHUTTING_DOWN, ( Timeout.SHUTTING_DOWN.apply( vm )
+                ? Reason.EXPIRED
+                : Reason.USER_TERMINATED ) );
+            }
+            db.commit( );
+            return vm;
+          } catch ( final Exception ex ) {
+            Logs.exhaust( ).trace( ex, ex );
+            db.rollback( );
+            throw new NoSuchElementException( "Failed to lookup instance: " + v );
+          }
+        }
+      }
     };
+    public abstract VmInstance apply( final VmInstance v );
   }
   
   public enum Lookup implements Function<String, VmInstance> {
@@ -540,8 +589,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           throw new NoSuchElementException( "Failed to lookup vm instance: " + arg0 );
         }
       }
-      
-    }
+    };
+    public abstract VmInstance apply( final String arg0 );
   }
   
   public enum FilterTerminated implements Predicate<VmInstance> {
@@ -665,7 +714,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.networkConfig = new VmNetworkConfig( this );
     final Function<NetworkGroup, NetworkGroup> func = Entities.merge( );
     this.networkGroups.addAll( Collections2.transform( networkRulesGroups, func ) );
-    this.networkIndex = Entities.merge( networkIndex.set( this ) );
+    this.networkIndex = networkIndex != PrivateNetworkIndex.bogus( )
+      ? Entities.merge( networkIndex.set( this ) )
+      : null;
     this.store( );
   }
   
@@ -783,12 +834,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private Map<String, String> getMetadataMap( ) {
     final boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     final Map<String, String> m = new HashMap<String, String>( );
-     m.put( "ami-id", this.getImageId( ) );
+    m.put( "ami-id", this.getImageId( ) );
     m.put( "product-codes", this.bootRecord.getMachine( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
     m.put( "ami-launch-index", "" + this.launchRecord.getLaunchIndex( ) );
 //ASAP: FIXME: GRZE:
 //    m.put( "ancestor-ami-ids", this.getImageInfo( ).getAncestorIds( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
-    if( this.bootRecord.getMachine( ) instanceof MachineImageInfo ) {
+    if ( this.bootRecord.getMachine( ) instanceof MachineImageInfo ) {
       m.put( "ami-manifest-path", ( ( MachineImageInfo ) this.bootRecord.getMachine( ) ).getManifestLocation( ) );
     }
     m.put( "hostname", this.getPublicAddress( ) );
@@ -1002,11 +1053,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   public enum Reason {
     NORMAL( "" ),
-    EXPIRED( "Instance expired after not being reported for %s ms.", VmInstances.SHUT_DOWN_TIME ),
+    EXPIRED( "Instance expired after not being reported for %s mins.", VmInstances.Timeout.UNREPORTED.getMinutes( ) ),
     FAILED( "The instance failed to start on the NC." ),
     USER_TERMINATED( "User initiated terminate." ),
     USER_STOPPED( "User initiated stop." ),
-    BURIED( "Instance buried after timeout of %s ms.", VmInstances.BURY_TIME ),
     APPEND( "" );
     private String   message;
     private Object[] args;
@@ -1269,14 +1319,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             final VmState state = VmState.Mapper.get( runVm.getStateName( ) );
             final long splitTime = VmInstance.this.getSplitTime( );
             final VmState oldState = VmInstance.this.getState( );
-            if ( VmStateSet.RUN.contains( state ) && VmStateSet.RUN.contains( VmInstance.this.getState( ) ) ) {
+            if ( VmStateSet.RUN.apply( VmInstance.this ) && VmStateSet.RUN.contains( state ) ) {
               VmInstance.this.setState( state, Reason.APPEND, "UPDATE" );
               this.updateState( runVm );
-            } else if ( VmState.STOPPING.equals( oldState ) && VmState.SHUTTING_DOWN.equals( state ) ) {
+            } else if ( VmState.STOPPING.apply( VmInstance.this ) && VmState.SHUTTING_DOWN.equals( state ) ) {
               VmInstance.this.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
-            } else if ( VmState.SHUTTING_DOWN.equals( oldState ) && VmState.SHUTTING_DOWN.equals( state ) ) {
+            } else if ( VmState.SHUTTING_DOWN.apply( VmInstance.this ) && state.equals( VmInstance.this.getState( ) ) ) {
               VmInstance.this.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
-            } else if ( VmStateSet.STOP.contains( oldState ) && ( splitTime > VmInstances.BURY_TIME ) ) {
+            } else if ( VmStateSet.STOP.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
               VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
             } else {
               this.updateState( runVm );
@@ -1373,10 +1423,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         //ASAP:FIXME:GRZE: restore.
         runningInstance.setProductCodes( new ArrayList<String>( ) );
         runningInstance.setImageId( input.getBootRecord( ).getMachine( ).getDisplayName( ) );
-        if( input.getBootRecord( ).getKernel( ) != null ) {
+        if ( input.getBootRecord( ).getKernel( ) != null ) {
           runningInstance.setKernel( input.getBootRecord( ).getKernel( ).getDisplayName( ) );
         }
-        if( input.getBootRecord( ).getRamdisk( ) != null ) {
+        if ( input.getBootRecord( ).getRamdisk( ) != null ) {
           runningInstance.setRamdisk( input.getBootRecord( ).getRamdisk( ).getDisplayName( ) );
         }
         if ( dns ) {

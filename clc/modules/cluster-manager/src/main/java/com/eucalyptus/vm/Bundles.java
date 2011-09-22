@@ -61,78 +61,85 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
-import org.hibernate.annotations.Parent;
-import com.eucalyptus.component.Partition;
-import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.id.Walrus;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.async.AsyncRequests;
+import edu.ucsb.eucalyptus.msgs.CreateBucketType;
+import edu.ucsb.eucalyptus.msgs.DeleteBucketType;
 
-@Embeddable
-public class VmPlacement {
-  @Parent
-  private VmInstance vmInstance;
-  @Column( name = "metadata_vm_placement" )
-  private String     placement;
-  @Column( name = "metadata_vm_cluster_name" )
-  private String     clusterName;
-  @Column( name = "metadata_vm_partition_name" )
-  private String     partitionName;
-  
-  VmPlacement( String clusterName, String partitionName ) {
-    super( );
-    this.clusterName = clusterName;
-    this.partitionName = partitionName;
+public class Bundles {
+  public static BundleTask create( VmInstance v, String bucket, String prefix, String policy ) {
+    verifyPolicy( policy, bucket );
+    verifyBucket( bucket );
+    verifyPrefix( prefix );
+    return new BundleTask( v.getInstanceId( ).replaceFirst( "i-", "bun-" ), v.getInstanceId( ), bucket, prefix );
   }
   
-  VmPlacement( ) {
-    super( );
-  }
-
-  VmInstance getVmInstance( ) {
-    return this.vmInstance;
-  }
-  
-  String getClusterName( ) {
-    return this.clusterName;
-  }
-  
-  String getPartitionName( ) {
-    return this.partitionName;
-  }
-  
-  public Partition lookupPartition( ) {
-    return Partitions.lookupByName( this.partitionName );
-  }
-
-  private void setVmInstance( VmInstance vmInstance ) {
-    this.vmInstance = vmInstance;
-  }
-
-  private void setClusterName( String clusterName ) {
-    this.clusterName = clusterName;
-  }
-
-  private void setPartitionName( String partitionName ) {
-    this.partitionName = partitionName;
-  }
-
-  private String getPlacement( ) {
-    return this.placement;
-  }
-
-  private void setPlacement( String placement ) {
-    this.placement = placement;
-  }
-
-  @Override
-  public String toString( ) {
-    StringBuilder builder = new StringBuilder( );
-    builder.append( "VmPlacement:" );
-    if ( this.clusterName != null ) builder.append( "clusterName=" ).append( this.clusterName ).append( ":" );
-    if ( this.partitionName != null ) builder.append( "partitionName=" ).append( this.partitionName );
-    return builder.toString( );
+  private static void verifyPolicy( String policy, String bucketName ) {
+    /**
+     * GRZE:NOTE: why is there S3 specific stuff here? this is the ec2 implementation. policy check
+     * must happen in walrus not here.
+     **/
+    // check if the policy is not user-generated one
+    // "expiration": "2011-07-01T16:52:13","conditions": [{"bucket": "windowsbundle" },{"acl": "ec2-bundle-read" },["starts-with", "$key", "prefix"
+    int idxOpenBracket = policy.indexOf( "{" );
+    int idxClosingBracket = policy.lastIndexOf( "}" );
+    if ( idxOpenBracket < 0 || idxClosingBracket < 0 || idxOpenBracket >= idxClosingBracket )
+      throw new RuntimeException( "Custom policy is not acceptable for bundle instance" );
+    
+    String bucketAndAcl = policy.substring( idxOpenBracket, idxClosingBracket - idxOpenBracket );
+    if ( !bucketAndAcl.contains( bucketName ) )
+      throw new RuntimeException( "Custom policy is not acceptable for bundle instance" );
+    if ( !bucketAndAcl.contains( "ec2-bundle-read" ) )
+      throw new RuntimeException( "Custom policy is not acceptable for bundle instance" );
+    
   }
   
+  private static void verifyPrefix( String prefix ) {
+    // check if the prefix name starts with "windows"
+    if ( !prefix.startsWith( "windows" ) )
+      /**
+       * GRZE:NOTE: bundling is /not/ restricted to windows
+       * only in general.
+       * what is it doing here? should be set in the manifest by the NC.
+       **/
+      throw new RuntimeException( "Prefix name should start with 'windows'" );
+  }
+  
+  /**
+   * @param bucket
+   */
+  private static void verifyBucket( final String bucketName ) {
+    final Context ctx = Contexts.lookup( );
+    CreateBucketType createBucket = new CreateBucketType( ) {
+      {
+        setAccessKeyID( ctx.getUserFullName( ).getUserId( ) );
+        setBucket( bucketName );
+      }
+    }.regardingUserRequest( ctx.getRequest( ) );
+    DeleteBucketType deleteBucket = new DeleteBucketType( ) {
+      {
+        setAccessKeyID( ctx.getUserFullName( ).getUserId( ) );
+        setBucket( bucketName );
+      }
+    }.regardingUserRequest( ctx.getRequest( ) );
+    ServiceConfiguration walrusConfig = ServiceConfigurations.enabledServices( Walrus.class ).iterator( ).next( );
+    if ( walrusConfig != null ) {
+      try {
+        AsyncRequests.sendSync( walrusConfig, createBucket );
+        AsyncRequests.sendSync( walrusConfig, deleteBucket );
+      } catch ( Exception ex ) {
+        Logs.extreme( ).error( ex );
+      }
+    } else {
+      throw new RuntimeException( "Failed to lookup active service configuration for walrus." );
+    }
+    
+  }
 }
