@@ -74,11 +74,12 @@ import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 import org.mule.RequestContext;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.run.AdmissionControl;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.run.VerifyMetadata;
@@ -104,15 +105,12 @@ import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.BundleInstanceChecker;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
-import com.eucalyptus.vm.VmInstance.VmStateSet;
-import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
@@ -552,14 +550,12 @@ public class VmControl {
       final VmInstance v = VmInstances.lookup( instanceId );
       if ( v.isBundling( ) ) {
         reply.setTask( v.getBundleTask( ) );
-      } else if ( !"windows".equals( v.getPlatform( ) ) ) {
+      } else if ( !ImageMetadata.Platform.windows.name( ).equals( v.getPlatform( ) ) ) {
         throw new EucalyptusCloudException( "Failed to bundle requested vm because the platform is not 'windows': " + request.getInstanceId( ) );
       } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
         throw new EucalyptusCloudException( "Failed to bundle requested vm because it is not currently 'running': " + request.getInstanceId( ) );
       } else if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-        BundleInstanceChecker.check( request );
-        final BundleTask bundleTask = new BundleTask( v.getInstanceId( ).replaceFirst( "i-", "bun-" ), v.getInstanceId( ), request.getBucket( ),
-                                                      request.getPrefix( ) );
+        final BundleTask bundleTask = Bundles.create( v, request.getBucket( ), request.getPrefix( ), new String( Base64.decode( request.getUploadPolicy( ) ) ) );
         if ( v.startBundleTask( bundleTask ) ) {
           reply.setTask( bundleTask );
         } else if ( v.getBundleTask( ) == null ) {

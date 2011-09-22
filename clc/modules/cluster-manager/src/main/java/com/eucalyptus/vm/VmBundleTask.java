@@ -135,7 +135,7 @@ public class VmBundleTask {
       
       @Override
       public BundleTask apply( VmBundleTask input ) {
-        return new BundleTask( vm.getInstanceId( ),
+        return new BundleTask( vm.getInstanceId( ),//GRZE: this constructor reference is crap.
                                input.getBundleId( ),
                                input.getState( ),
                                input.getStartTime( ),

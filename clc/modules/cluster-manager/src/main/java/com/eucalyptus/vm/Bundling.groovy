@@ -138,7 +138,7 @@ public class BundleTask extends EucalyptusData {
   String errorCode;
   public BundleTask() {
   }
-  public BundleTask( String bundleId, String instanceId, String bucket, String prefix ) {
+  BundleTask( String bundleId, String instanceId, String bucket, String prefix ) {
     this.bundleId = bundleId;
     this.instanceId = instanceId;
     this.bucket = bucket;
@@ -148,7 +148,7 @@ public class BundleTask extends EucalyptusData {
     this.updateTime = new Date();
     this.progress = "0%";
   }
-  public BundleTask( String instanceId, String bundleId, String state, Date startTime, Date updateTime, String progress, String bucket, String prefix,
+  BundleTask( String instanceId, String bundleId, String state, Date startTime, Date updateTime, String progress, String bucket, String prefix,
   String errorMessage, String errorCode ) {
     super( );
     this.instanceId = instanceId;
