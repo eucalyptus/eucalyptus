@@ -397,7 +397,6 @@ public class VmInstances {
       if ( VmStateSet.DONE.apply( vm ) ) {
         terminateDescribeCache.remove( vm.getDisplayName( ) );
         terminateCache.remove( vm.getDisplayName( ) );
-        return Transitions.DELETE.apply( vm );
       }
     } catch ( final Exception ex ) {
       LOG.error( ex, ex );
