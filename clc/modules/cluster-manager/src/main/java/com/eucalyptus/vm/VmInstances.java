@@ -200,11 +200,13 @@ public class VmInstances {
     }
   }
   
-  private static ConcurrentMap<String, VmInstance>               terminateCache         = new MapMaker( ).softValues( )
-                                                                                                         .expireAfterWrite( 60, TimeUnit.MINUTES )
+  private static ConcurrentMap<String, VmInstance>               terminateCache         = new MapMaker( ).softKeys( )
+                                                                                                         .softValues( )
+//                                                                                                         .expireAfterWrite( 60, TimeUnit.MINUTES )
                                                                                                          .makeMap( );
-  private static ConcurrentMap<String, RunningInstancesItemType> terminateDescribeCache = new MapMaker( ).softValues( )
-                                                                                                         .expireAfterWrite( 60, TimeUnit.MINUTES )
+  private static ConcurrentMap<String, RunningInstancesItemType> terminateDescribeCache = new MapMaker( ).softKeys( )
+                                                                                                         .softValues( )
+//                                                                                                         .expireAfterWrite( 60, TimeUnit.MINUTES )
                                                                                                          .makeMap( );
   
   private static Logger                                          LOG                    = Logger.getLogger( VmInstances.class );
