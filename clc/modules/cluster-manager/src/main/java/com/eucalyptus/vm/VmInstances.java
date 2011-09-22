@@ -396,6 +396,7 @@ public class VmInstances {
     try {
       if ( VmStateSet.DONE.apply( vm ) ) {
         terminateDescribeCache.remove( vm.getDisplayName( ) );
+        terminateCache.remove( vm.getDisplayName( ) );
         return Transitions.DELETE.apply( vm );
       }
     } catch ( final Exception ex ) {
@@ -408,6 +409,7 @@ public class VmInstances {
     if ( !terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
       final RunningInstancesItemType ret = VmInstances.transform( vm );
       terminateDescribeCache.put( vm.getDisplayName( ), ret );
+      terminateCache.put( vm.getDisplayName( ), vm );
       Transitions.DELETE.apply( vm );
     }
   }
