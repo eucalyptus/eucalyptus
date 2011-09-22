@@ -241,7 +241,7 @@ public class VolumeManager {
         } );
       }
       
-      List<Volume> volumes = db.query( Volume.named( AccountFullName.getInstance( ctx.getAccount( ) ), null ) );
+      List<Volume> volumes = db.query( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), null ) );
       List<Volume> describeVolumes = Lists.newArrayList( );
       for ( Volume v : Iterables.filter( volumes, RestrictedTypes.filterPrivileged( ) ) ) {
         if ( !State.ANNIHILATED.equals( v.getState( ) ) ) {

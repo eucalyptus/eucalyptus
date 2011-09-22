@@ -55,10 +55,18 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         try {
           VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
           try {
-            if ( VmState.SHUTTING_DOWN.apply( vm ) && VmState.SHUTTING_DOWN.equals( runVmState ) ) {
-              VmInstances.terminated( vm );
-            } else if ( VmState.STOPPED.apply( vm ) && VmState.STOPPED.equals( runVmState ) ) {
-              VmInstances.stopped( vm );
+            if ( VmState.SHUTTING_DOWN.equals( runVmState ) ) {
+              /**
+               * TODO:GRZE: based on current local instance state we need to handle reported
+               * SHUTTING_DOWN state differently
+               **/
+              if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
+                VmInstances.terminated( vm );
+              } else if ( VmState.STOPPED.apply( vm ) ) {
+                VmInstances.stopped( vm );
+              } else if ( VmStateSet.RUN.apply( vm ) ) {
+                VmInstances.shutDown( vm );
+              }
             } else if ( VmStateSet.RUN.apply( vm ) || VmStateSet.CHANGING.apply( vm ) ) {
               vm.doUpdate( ).apply( runVm );
             } else {

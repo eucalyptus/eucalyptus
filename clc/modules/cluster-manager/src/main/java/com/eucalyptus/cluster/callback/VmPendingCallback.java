@@ -5,13 +5,14 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmNetworkConfig;
 import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
+import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmNetworkConfig;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
@@ -56,10 +57,16 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
           VmInstances.terminated( vm );
         } else if ( VmInstances.Timeout.TERMINATED.apply( vm ) ) {
           VmInstances.delete( vm );
-        } else if ( VmState.SHUTTING_DOWN.apply( vm ) && VmState.SHUTTING_DOWN.equals( state ) ) {
-          VmInstances.terminated( vm );
-        } else if ( VmState.STOPPED.apply( vm ) && VmState.STOPPED.equals( state ) ) {
-          VmInstances.stopped( vm );
+        } else if ( VmState.SHUTTING_DOWN.equals( state ) ) {
+          if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
+            VmInstances.terminated( vm );
+          } else if ( VmState.STOPPED.apply( vm ) ) {
+            VmInstances.stopped( vm );
+          } else if ( VmStateSet.RUN.apply( vm ) ) {
+            VmInstances.shutDown( vm );
+          } else {
+            Logs.extreme( ).debug( "Ignoring transition from: " + vm.getState( ) + " -> " + state + " for " + vm );
+          }
         } else if ( VmStateSet.RUN.apply( vm ) || VmStateSet.CHANGING.apply( vm ) ) {
           vm.doUpdate( ).apply( runVm );
         } else if ( VmStateSet.RUN.apply( vm ) && VmStateSet.RUN.contains( state ) ) {
