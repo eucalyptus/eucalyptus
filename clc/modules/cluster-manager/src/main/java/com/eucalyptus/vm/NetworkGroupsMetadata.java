@@ -72,7 +72,6 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkPeer;
 import com.eucalyptus.network.NetworkRule;
-import com.eucalyptus.network.NetworkRule.Protocol;
 import com.eucalyptus.util.ByteArray;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.google.common.base.Function;
@@ -104,7 +103,11 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
       for ( VmInstance vm : VmInstances.listValues( ) ) {
-        if ( VmState.RUNNING.ordinal( ) > vm.getState( ).ordinal( ) ) continue;
+        try {
+          if ( VmState.RUNNING.ordinal( ) > vm.getState( ).ordinal( ) ) continue;
+        } catch ( Exception ex1 ) {
+          continue;
+        }
         for ( NetworkGroup ruleGroup : vm.getNetworkGroups( ) ) {
           try {
             ruleGroup = Entities.merge( ruleGroup );
