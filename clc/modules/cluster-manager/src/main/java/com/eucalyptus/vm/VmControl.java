@@ -244,7 +244,7 @@ public class VmControl {
                   ? VmState.TERMINATED.getName( )
                   : VmState.SHUTTING_DOWN.getName( );
                 VmInstances.shutDown( vm );
-              } catch ( TerminatedInstanceException ex ) {
+              } catch ( final NoSuchElementException e ) {
                 runVm = VmInstances.transform( instanceId );
                 oldCode = newCode = VmState.TERMINATED.getCode( );
                 oldState = newState = VmState.TERMINATED.getName( );

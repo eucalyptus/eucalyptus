@@ -499,7 +499,7 @@ public class VmInstances {
      */
     @Override
     public VmInstance apply( String name ) {
-      if ( ( name != null ) && terminateDescribeCache.containsKey( name ) ) {
+      if ( ( name != null ) && VmInstances.terminateDescribeCache.containsKey( name ) ) {
         throw new TerminatedInstanceException( name );
       } else {
         return Lookup.INSTANCE.apply( name );
