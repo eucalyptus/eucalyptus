@@ -79,7 +79,7 @@
       </structure>
     </collection>
   </mapping>
-  <mapping name="CreateTagsType" class="edu.ucsb.eucalyptus.msgs.CreateTagsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="CreateTags" class="edu.ucsb.eucalyptus.msgs.CreateTagsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <collection name="resourcesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="resourcesSet"
       item-type="java.lang.String">
@@ -93,7 +93,7 @@
       </collection>
     </structure>
   </mapping>
-  <mapping name="CreateTagsResponseType" class="edu.ucsb.eucalyptus.msgs.CreateTagsResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="CreateTagsResponse" class="edu.ucsb.eucalyptus.msgs.CreateTagsResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="return" get-method="get_return" set-method="set_return" usage="required" />
   </mapping>
