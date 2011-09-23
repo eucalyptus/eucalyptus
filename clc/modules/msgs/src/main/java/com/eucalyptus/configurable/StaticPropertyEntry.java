@@ -105,6 +105,9 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
           this.field.set( null, o );
         }
         return dbValue;
+      } catch ( IllegalAccessException e ) {
+        Logs.exhaust( ).trace( e, e );
+        return super.getDefaultValue( );
       } catch ( Exception e ) {
         LOG.warn( "Failed to get property: " + super.getQualifiedName( ) + " because of " + e.getMessage( ) );
         Logs.extreme( ).debug( e, e );
@@ -197,11 +200,6 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
         if ( Modifier.isPublic( modifiers ) && Modifier.isStatic( modifiers ) ) {
           entry = new StaticPropertyEntry( c, fqPrefix, field, description, defaultValue, p, annote.readonly( ), annote.displayName( ), annote.type( ), alias,
                                            changeListener );
-          try {
-            entry.getValue( );
-          } catch ( Exception ex ) {
-            LOG.error( ex , ex );
-          }
           return entry;
         }
       }
@@ -215,6 +213,11 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
   @Override
   protected Object getQueryObject( ) throws Exception {
     return null;
+  }
+
+  @Override
+  public boolean isDeferred( ) {
+    return true;
   }
   
 }
