@@ -487,7 +487,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             final VmInstance vm = Entities.merge( v );
             if ( VmStateSet.RUN.apply( vm ) ) {
               vm.setState( VmState.STOPPING, Reason.USER_STOPPED );
-            } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
+            } else if ( VmState.STOPPING.equals( vm.getState( ) ) ) {
               vm.setState( VmState.STOPPED, Reason.USER_STOPPED );
             }
             db.commit( );
