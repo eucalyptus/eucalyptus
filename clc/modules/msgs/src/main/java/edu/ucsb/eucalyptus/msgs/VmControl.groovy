@@ -63,8 +63,6 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
-import com.eucalyptus.auth.policy.PolicyAction
-import com.eucalyptus.auth.policy.PolicySpec
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
 
@@ -361,6 +359,7 @@ public class StopInstancesResponseType extends VmControlMessage{
 }
 
 public class StopInstancesType extends VmControlMessage{
+  @HttpParameterMapping( parameter = "InstanceId" )
   ArrayList<String> instancesSet = new ArrayList<String>();
   Boolean force;
   public StopInstancesType() {  }
