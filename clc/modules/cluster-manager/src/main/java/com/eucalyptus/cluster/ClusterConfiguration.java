@@ -156,7 +156,7 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   @PostLoad
   private void initOnLoad( ) {//GRZE:HACK:HACK: needed to mark field as @ConfigurableIdentifier
     if ( this.propertyPrefix == null ) {
-      this.propertyPrefix = this.getPartition( ) + "." + this.getName( );
+      this.propertyPrefix = this.getPartition( ).replace( ".", "" ) + "." + this.getName( );
     }
   }
   
@@ -282,6 +282,8 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   }
   
   public void setPropertyPrefix( String propertyPrefix ) {
+    this.setName( propertyPrefix.replaceAll( "\\s*\\.", "." ) );
+    this.setPartition( propertyPrefix.replace( "." + this.getName( ), "" ) );
     this.propertyPrefix = propertyPrefix;
   }
   
