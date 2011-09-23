@@ -136,7 +136,7 @@
     </collection>
   </mapping>
 
-  <mapping name="ModifySnapshotAttributeType" class="edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeType"
+  <mapping name="ModifySnapshotAttribute" class="edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional" />
     <value name="snapshotId" field="snapshotId" usage="required" />
@@ -154,27 +154,27 @@
     <value name="userId" field="userId" usage="optional" />
     <value name="group" field="group" usage="optional" />
   </mapping>
-  <mapping name="ModifySnapshotAttributeResponseType" class="edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeResponseType"
+  <mapping name="ModifySnapshotAttributeResponse" class="edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="return" get-method="get_return" set-method="set_return" usage="required" />
   </mapping>
-  <mapping name="ResetSnapshotAttributeType" class="edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeType"
+  <mapping name="ResetSnapshotAttribute" class="edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional" />
     <value name="snapshotId" field="snapshotId" usage="required" />
   </mapping>
-  <mapping name="ResetSnapshotAttributeResponseType" class="edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeResponseType"
+  <mapping name="ResetSnapshotAttributeResponse" class="edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="return" get-method="get_return" set-method="set_return" usage="required" />
   </mapping>
-  <mapping name="DescribeSnapshotAttributeType" class="edu.ucsb.eucalyptus.msgs.DescribeSnapshotAttributeType"
+  <mapping name="DescribeSnapshotAttribute" class="edu.ucsb.eucalyptus.msgs.DescribeSnapshotAttributeType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional" />
     <value name="snapshotId" field="snapshotId" usage="required" />
   </mapping>
-  <mapping name="DescribeSnapshotAttributeResponseType" class="edu.ucsb.eucalyptus.msgs.DescribeSnapshotAttributeResponseType"
+  <mapping name="DescribeSnapshotAttributeResponse" class="edu.ucsb.eucalyptus.msgs.DescribeSnapshotAttributeResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" usage="optional" />
     <value name="snapshotId" field="snapshotId" usage="required" />

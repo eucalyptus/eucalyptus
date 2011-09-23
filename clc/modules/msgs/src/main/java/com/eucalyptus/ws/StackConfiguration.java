@@ -85,7 +85,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 public class StackConfiguration extends AbstractPersistent {
   
   @ConfigurableField( initial = "500", description = "Channel connect timeout (ms)." )
-  public static final Integer CHANNEL_CONNECT_TIMEOUT           = 500;
+  public static Integer CHANNEL_CONNECT_TIMEOUT           = 500;
   @ConfigurableField( initial = "3", changeListener = TimeChangeListener.class,
       description = "Time interval duration (in seconds) during which duplicate signatures will be accepted to accomodate collisions for legitimate requests inherent in Query/REST signing protocol." )
   public static Integer       REPLAY_SKEW_WINDOW_SEC            = 3;
