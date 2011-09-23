@@ -136,6 +136,30 @@ export EUCALYPTUS
 pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cloud.pid
 initlog=$EUCALYPTUS/var/log/eucalyptus/startup.log
 
+check_java_version() {
+    # First check CLOUD_OPTS for --java-home
+    JH=$( echo $CLOUD_OPTS | \
+         sed -r -e '/--java-home/!d; s/^.*(--java-home(=|\s+)(\S+)).*$/\3/g' );
+    if [ -n "$JH" ]; then
+        JAVA=$JH/jre/bin/java
+    elif [ -n "$JAVA_HOME" ]; then
+        JAVA=$JAVA_HOME/jre/bin/java
+    else
+        JAVA=$( which java )
+    fi
+    JV=$( $JAVA -version 2>&1 | \
+          sed -r -e '/^java version/!d; s/^java version "(.*)"/\1/' )
+    VER=$( echo $JV | cut -d_ -f1 )
+    PATCH=$( echo $JV | cut -d_ -f2 )
+    if [ "$VER" != "1.6.0" ]; then
+        echo "ERROR: Only JVM 1.6.0 is supported" >&2
+        exit 1
+    elif [ -z "$PATCH" ] || [ $PATCH -lt 20 ]; then
+        echo "ERROR: JVM 1.6.0 patch 20 or newer is required" >&2
+        exit 1
+    fi  
+}
+
 do_upgrade() {
         while IFS=: read -r a b; do
                 OLD_EUCA_VERSION=$a
@@ -149,6 +173,9 @@ do_upgrade() {
 
         # Remove old unpacked webapp area
         rm -rf $EUCALYPTUS/var/run/eucalyptus/webapp
+
+        # Java version check: older than 1.6.0_22 is bad
+        check_java_version
 
         # Attempt db upgrade
         echo "Attempting database upgrade from $OLD_EUCA_VERSION at $OLD_EUCA_PATH..."

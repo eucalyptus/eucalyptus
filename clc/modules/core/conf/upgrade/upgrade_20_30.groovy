@@ -93,11 +93,9 @@ import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusStatsInfo;
 
 // General -> Cloud
-import com.eucalyptus.network.IpRange;
 import com.eucalyptus.network.NetworkPeer;
 import com.eucalyptus.network.NetworkRule;
 import com.eucalyptus.network.NetworkGroup;
-import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.vm.VmType;
 
@@ -745,9 +743,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                                      LEFT OUTER JOIN metadata_network_rule_ip_range ip
                                      ON ip.metadata_network_rule_ip_range_id=metadata_network_rule_has_ip_range.metadata_network_rule_ip_range_id 
                                      WHERE metadata_network_rule_has_ip_range.metadata_network_rule_id=?""", [ rule.metadata_network_rule_id ]).each { iprange ->
-                        IpRange ipRange = new IpRange(iprange.metadata_network_rule_ip_range_value);
-                        initMetaClass(ipRange, ipRange.class);
-                        networkRule.getIpRanges().add(ipRange);
+                        networkRule.getIpRanges().add(iprange.metadata_network_rule_ip_range_value);
                         LOG.debug("IP Range: ${iprange.metadata_network_rule_ip_range_value}");
                     }
                     connMap['eucalyptus_general'].rows("""SELECT peer.* 
@@ -755,7 +751,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                                      LEFT OUTER JOIN network_rule_peer_network peer
                                      ON peer.network_rule_peer_network_id=metadata_network_rule_has_peer_network.metadata_network_rule_peer_network_id 
                                      WHERE metadata_network_rule_has_peer_network.metadata_network_rule_id=?""", [ rule.metadata_network_rule_id ]).each { peer ->
-                        NetworkPeer networkPeer = new NetworkPeer(peer.network_rule_peer_network_user_query_key, peer.network_rule_peer_network_user_group);
+                        NetworkPeer networkPeer = new NetworkPeer(networkRule,peer.network_rule_peer_network_user_query_key, peer.network_rule_peer_network_user_group);
                         initMetaClass(networkPeer, networkPeer.class);
                         networkRule.getNetworkPeers().add(networkPeer);
 
