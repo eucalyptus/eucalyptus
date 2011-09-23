@@ -348,7 +348,7 @@ public class VmControl {
       if ( request.getBundleIds( ).isEmpty( ) ) {
         for ( final VmInstance v : Iterables.filter( VmInstances.listValues( ), VmInstance.Filters.BUNDLING ) ) {
           if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-            reply.getBundleTasks( ).add( v.getBundleTask( ) );
+            reply.getBundleTasks( ).add( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
           }
         }
       } else {
@@ -357,7 +357,7 @@ public class VmControl {
             final VmInstance v = VmInstances.lookupByBundleId( bundleId );
             if ( v.getRuntimeState( ).isBundling( )
                  && ( RestrictedTypes.filterPrivileged( ).apply( v ) ) ) {
-              reply.getBundleTasks( ).add( v.getBundleTask( ) );
+              reply.getBundleTasks( ).add( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
             }
           } catch ( final NoSuchElementException e ) {}
         }
@@ -506,7 +506,7 @@ public class VmControl {
         final Cluster cluster = Clusters.lookup( v.lookupPartition( ) );
         
         request.setInstanceId( v.getInstanceId( ) );
-        reply.setTask( v.getBundleTask( ) );
+        reply.setTask( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
         AsyncRequests.newRequest( Bundles.cancelCallback( request ) ).dispatch( cluster.getConfiguration( ) );
         return reply;
       } else {
@@ -538,19 +538,19 @@ public class VmControl {
         if ( v.getRuntimeState( ).startBundleTask( bundleTask ) ) {
           reply.setTask( Bundles.transform( bundleTask ) );
           reply.markWinning( );
-        } else if ( v.getBundleTask( ) == null ) {
+        } else if ( v.getRuntimeState( ).getBundleTask( ) == null ) {
           v.resetBundleTask( );
           if ( v.getRuntimeState( ).startBundleTask( bundleTask ) ) {
             reply.setTask( Bundles.transform( bundleTask ) );
             reply.markWinning( );
           }
         } else {
-          throw new EucalyptusCloudException( "Instance is already being bundled: " + v.getBundleTask( ).getBundleId( ) );
+          throw new EucalyptusCloudException( "Instance is already being bundled: " + v.getRuntimeState( ).getBundleTask( ).getBundleId( ) );
         }
         EventRecord.here( VmControl.class,
                           EventType.BUNDLE_PENDING,
                           ctx.getUserFullName( ).toString( ),
-                          v.getBundleTask( ).getBundleId( ),
+                          v.getRuntimeState( ).getBundleTask( ).getBundleId( ),
                           v.getInstanceId( ) ).debug( );
         AsyncRequests.newRequest( Bundles.createCallback( request ) ).dispatch( v.lookupClusterConfiguration( ) );
       } else {

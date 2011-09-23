@@ -922,10 +922,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.getRuntimeState( ).resetBundleTask( );
   }
   
-  BundleState getBundleTaskState( ) {
-    return this.getRuntimeState( ).getBundleTask( ).getState( );
-  }
-  
   public String getImageId( ) {
     return this.bootRecord.getMachine( ).getDisplayName( );
   }
@@ -1399,7 +1395,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         runningInstance = new RunningInstancesItemType( );
         
         runningInstance.setAmiLaunchIndex( Integer.toString( input.getLaunchRecord( ).getLaunchIndex( ) ) );
-        if ( ( input.getBundleTaskState( ) != null ) && !BundleState.none.equals( input.getBundleTaskState( ) ) ) {
+        if ( ( input.getRuntimeState( ).getBundleTask( ) != null ) && !BundleState.none.equals( input.getRuntimeState( ).getBundleTask( ).getState( ) ) ) {
           runningInstance.setStateCode( Integer.toString( VmState.TERMINATED.getCode( ) ) );
           runningInstance.setStateName( VmState.TERMINATED.getName( ) );
         } else {

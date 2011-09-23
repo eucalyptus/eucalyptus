@@ -122,7 +122,7 @@ public class Bundles {
         try {
           VmInstance vm = VmInstances.lookupByBundleId( this.getRequest( ).getBundleId( ) );
           vm.getRuntimeState( ).cancelBundleTask( );
-          EventRecord.here( CancelBundleCallback.class, EventType.BUNDLE_CANCELLED, this.getRequest( ).toSimpleString( ), vm.getBundleTask( ).getBundleId( ),
+          EventRecord.here( CancelBundleCallback.class, EventType.BUNDLE_CANCELLED, this.getRequest( ).toSimpleString( ), vm.getRuntimeState( ).getBundleTask( ).getBundleId( ),
                             vm.getInstanceId( ) ).info( );
           db.commit( );
         } catch ( Exception ex ) {

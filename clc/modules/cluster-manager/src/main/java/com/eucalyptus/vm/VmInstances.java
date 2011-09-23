@@ -285,7 +285,7 @@ public class VmInstances {
     return new Predicate<VmInstance>( ) {
       @Override
       public boolean apply( final VmInstance vm ) {
-        return ( vm.getBundleTask( ) != null ) && bundleId.equals( vm.getBundleTask( ).getBundleId( ) );
+        return ( vm.getRuntimeState( ).getBundleTask( ) != null ) && bundleId.equals( vm.getBundleTask( ).getBundleId( ) );
       }
     };
   }
