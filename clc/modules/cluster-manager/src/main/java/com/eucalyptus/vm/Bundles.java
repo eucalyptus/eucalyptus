@@ -162,12 +162,6 @@ public class Bundles {
       }
     }
     
-    @Override
-    public void fireException( Throwable e ) {
-      LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
-      LOG.debug( e, e );
-    }
-    
   }
   
   public static BundleTask transform( final VmBundleTask bundleTask ) {

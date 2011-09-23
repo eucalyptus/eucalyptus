@@ -1280,10 +1280,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.bootRecord.getUserData( );
   }
   
-  public void clearPendingBundleTask( ) {
-    this.getRuntimeState( ).clearPendingBundleTask( );
-  }
-  
   /**
    * @param volumeId
    * @param newState
