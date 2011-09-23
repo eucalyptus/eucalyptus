@@ -124,15 +124,14 @@ public class ImageManager {
     DescribeImagesResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
-    final List<String> imagesSet = request.getImagesSet( );
     final List<String> ownersSet = request.getOwnersSet( );
     if ( ownersSet.remove( Images.SELF ) ) {
       ownersSet.add( requestAccountId );
     }
-    final List<String> executableSet = request.getExecutableBySet( );
     Predicate<ImageInfo> privilegesFilter = Predicates.and( Images.FilterPermissions.INSTANCE, CloudMetadatas.filterPrivilegesById( request.getImagesSet( ) ) );
     Predicate<ImageInfo> requestFilter = Predicates.and( privilegesFilter, CloudMetadatas.filterPrivilegesByOwningAccount( ownersSet ) );
-    List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), requestFilter, Images.TO_IMAGE_DETAILS );
+    Predicate<ImageInfo> filter = Predicates.and( requestFilter, Images.filterExecutableBy( ownersSet ) );
+    List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), filter, Images.TO_IMAGE_DETAILS );
     reply.getImagesSet( ).addAll( imageDetailsList );
     ImageUtil.cleanDeregistered( );
     return reply;
@@ -140,8 +139,6 @@ public class ImageManager {
   
   public RegisterImageResponseType register( RegisterImageType request ) throws EucalyptusCloudException {
     final Context ctx = Contexts.lookup( );
-    final User requestUser = Contexts.lookup( ).getUser( );
-    final String action = PolicySpec.requestToAction( request );
 //    if ( !ctx.hasAdministrativePrivileges( ) ) {
 //      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, "", ctx.getAccount( ), action, requestUser ) ) {
 //        throw new EucalyptusCloudException( "Register image is not allowed for " + requestUser.getName( ) );
