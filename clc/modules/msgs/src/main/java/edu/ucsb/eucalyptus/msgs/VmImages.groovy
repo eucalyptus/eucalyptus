@@ -66,6 +66,7 @@ package edu.ucsb.eucalyptus.msgs;
 import com.eucalyptus.auth.policy.PolicyAction;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.binding.HttpEmbedded;
 
 public class VmImageMessage extends EucalyptusMessage {
   
@@ -201,6 +202,7 @@ public class RegisterImageType extends VmImageMessage {
   String ramdiskId;
   String rootDeviceName;
   @HttpParameterMapping (parameter = "BlockDeviceMapping")
+  @HttpEmbedded (multiple = true)
   ArrayList<BlockDeviceMappingItemType> blockDeviceMappings = new ArrayList<BlockDeviceMappingItemType>();
 }
 /** *******************************************************************************/
