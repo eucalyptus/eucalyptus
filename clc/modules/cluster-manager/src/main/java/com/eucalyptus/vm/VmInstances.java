@@ -497,7 +497,7 @@ public class VmInstances {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final Iterable<VmInstance> vms = Iterables.filter( Entities.query( VmInstance.named( ownerFullName, instanceId ) ), predicate );
-      db.commit( );
+      db.rollback( );
       return Lists.newArrayList( vms );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
