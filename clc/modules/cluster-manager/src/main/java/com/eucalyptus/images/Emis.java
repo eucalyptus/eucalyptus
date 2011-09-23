@@ -64,6 +64,7 @@
 package com.eucalyptus.images;
 
 import java.util.NoSuchElementException;
+import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
@@ -77,7 +78,9 @@ import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
@@ -108,20 +111,6 @@ public class Emis {
     
   }
   
-  public enum LookupBlockStorage implements Function<String, BlockStorageImageInfo> {
-    INSTANCE;
-    @Override
-    public BlockStorageImageInfo apply( String identifier ) {
-      //Added check to ensure image is available
-      BlockStorageImageInfo ret = EntityWrapper.get( BlockStorageImageInfo.class ).lookupAndClose( Images.exampleBlockStorageWithImageId( identifier ) );
-      if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
-        throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
-      } else {
-        return ret;
-      }
-    }
-  }
-  
   @Resolver( ImageMetadata.class )
   public enum LookupImage implements Function<String, ImageInfo> {
     INSTANCE;
@@ -144,16 +133,46 @@ public class Emis {
     }
   }
   
+  public enum LookupBlockStorage implements Function<String, BlockStorageImageInfo> {
+    INSTANCE;
+    @Override
+    public BlockStorageImageInfo apply( String identifier ) {
+      EntityTransaction db = Entities.get( BlockStorageImageInfo.class );
+      try {
+        BlockStorageImageInfo ret = Entities.uniqueResult( Images.exampleBlockStorageWithImageId( identifier ) );
+        if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
+          db.rollback( );
+          throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
+        } else {
+          db.rollback( );
+          return ret;
+        }
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        db.rollback( );
+        throw new NoSuchElementException( "Failed to lookup image: " + identifier + " because of " + ex.getMessage( ) );
+      }
+    }
+  }
+  
   public enum LookupMachine implements Function<String, MachineImageInfo> {
     INSTANCE;
     @Override
     public MachineImageInfo apply( String identifier ) {
-      //Added check to ensure image is availabe
-      MachineImageInfo ret = EntityWrapper.get( MachineImageInfo.class ).lookupAndClose( Images.exampleMachineWithImageId( identifier ) );
-      if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
-        throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
-      } else {
-        return ret;
+      EntityTransaction db = Entities.get( MachineImageInfo.class );
+      try {
+        MachineImageInfo ret = Entities.uniqueResult( Images.exampleMachineWithImageId( identifier ) );
+        if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
+          db.rollback( );
+          throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
+        } else {
+          db.rollback( );
+          return ret;
+        }
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        db.rollback( );
+        throw new NoSuchElementException( "Failed to lookup image: " + identifier + " because of " + ex.getMessage( ) );
       }
     }
   }
@@ -162,12 +181,20 @@ public class Emis {
     INSTANCE;
     @Override
     public KernelImageInfo apply( String identifier ) {
-      //Added check to ensure the image is available
-      KernelImageInfo ret = EntityWrapper.get( KernelImageInfo.class ).lookupAndClose( Images.exampleKernelWithImageId( identifier ) );
-      if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
-        throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
-      } else {
-        return ret;
+      EntityTransaction db = Entities.get( KernelImageInfo.class );
+      try {
+        KernelImageInfo ret = Entities.uniqueResult( Images.exampleKernelWithImageId( identifier ) );
+        if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
+          db.rollback( );
+          throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
+        } else {
+          db.rollback( );
+          return ret;
+        }
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        db.rollback( );
+        throw new NoSuchElementException( "Failed to lookup image: " + identifier + " because of " + ex.getMessage( ) );
       }
     }
   }
@@ -176,12 +203,20 @@ public class Emis {
     INSTANCE;
     @Override
     public RamdiskImageInfo apply( String identifier ) {
-      //Added check to ensure the image is available 
-      RamdiskImageInfo ret = EntityWrapper.get( RamdiskImageInfo.class ).lookupAndClose( Images.exampleRamdiskWithImageId( identifier ) );
-      if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
-        throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
-      } else {
-        return ret;
+      EntityTransaction db = Entities.get( RamdiskImageInfo.class );
+      try {
+        RamdiskImageInfo ret = Entities.uniqueResult( Images.exampleRamdiskWithImageId( identifier ) );
+        if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
+          db.rollback( );
+          throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
+        } else {
+          db.rollback( );
+          return ret;
+        }
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        db.rollback( );
+        throw new NoSuchElementException( "Failed to lookup image: " + identifier + " because of " + ex.getMessage( ) );
       }
     }
   }
