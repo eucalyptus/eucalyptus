@@ -555,7 +555,7 @@ public class VmControl {
     
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      final VmInstance v = VmInstances.lookup( instanceId );
+      final VmInstance v = RestrictedTypes.doPrivileged( instanceId, VmInstances.CachedLookup.INSTANCE );
       if ( v.isBundling( ) ) {
         reply.setTask( v.getBundleTask( ) );
       } else if ( !ImageMetadata.Platform.windows.name( ).equals( v.getPlatform( ) ) ) {

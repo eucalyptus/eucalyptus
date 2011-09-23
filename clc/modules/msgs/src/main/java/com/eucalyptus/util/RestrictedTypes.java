@@ -63,6 +63,8 @@
 
 package com.eucalyptus.util;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -163,13 +165,18 @@ public class RestrictedTypes {
     throw new NoSuchElementException( "Failed to lookup function (@" + Threads.currentStackFrame( 1 ).getMethodName( ) + ") for type: " + type );
   }
   
+  @SuppressWarnings( { "cast", "unchecked" } )
+  public static <T extends RestrictedType> T doPrivileged( String identifier, Class<T> type ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return ( T ) doPrivileged( identifier, ( Function<String, T> ) resourceResolvers.get( type ) );
+  }
+  
   /**
    * Uses the provided {@code lookupFunction} to resolve the {@code identifier} to the underlying
    * object {@code T} with privileges determined by the current messaging context.
    * 
    * @param <T> type of object which needs looking up
    * @param identifier identifier of the desired object
-   * @param lookupFunction class which resolves string identifiers to the underlying object
+   * @param resolverFunction class which resolves string identifiers to the underlying object
    * @return the object corresponding with the given {@code identifier}
    * @throws AuthException if the user is not authorized
    * @throws PersistenceException if an error occurred in the underlying retrieval mechanism
@@ -178,16 +185,18 @@ public class RestrictedTypes {
    * @throws IllegalContextAccessException if the current request context cannot be determined.
    */
   @SuppressWarnings( "rawtypes" )
-  public static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> lookupFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> resolverFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    assertThat( "Resolver function must be not null: " + identifier, resolverFunction, notNullValue( ) );
     Context ctx = Contexts.lookup( );
     if ( ctx.hasAdministrativePrivileges( ) ) {
-      return lookupFunction.apply( identifier );
+      return resolverFunction.apply( identifier );
     } else {
       Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
-      LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + lookupFunction.getClass() + " typed as " + Classes.genericsToClasses( lookupFunction ) );
-      List<Class<?>> lookupTypes = Classes.genericsToClasses( lookupFunction );
+      LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + resolverFunction.getClass( ) + " typed as "
+                 + Classes.genericsToClasses( resolverFunction ) );
+      List<Class<?>> lookupTypes = Classes.genericsToClasses( resolverFunction );
       if ( lookupTypes.isEmpty( ) ) {
-        throw new IllegalArgumentException( "Failed to find required generic type for lookup " + lookupFunction.getClass( )
+        throw new IllegalArgumentException( "Failed to find required generic type for lookup " + resolverFunction.getClass( )
                                             + " so the policy type for looking up " + identifier + " cannot be determined." );
       } else {
         Class<?> rscType;
@@ -200,7 +209,7 @@ public class RestrictedTypes {
             }
           } );
         } catch ( NoSuchElementException ex1 ) {
-          LOG.error( ex1 , ex1 );
+          LOG.error( ex1, ex1 );
           throw ex1;
         }
         Ats ats = Ats.inClassHierarchy( rscType );
@@ -224,10 +233,10 @@ public class RestrictedTypes {
           User requestUser = ctx.getUser( );
           T requestedObject;
           try {
-            requestedObject = lookupFunction.apply( identifier );
+            requestedObject = resolverFunction.apply( identifier );
             if ( requestedObject == null ) {
               throw new NoSuchElementException( "Failed to lookup requested " + rscType.getCanonicalName( ) + " with id " + identifier + " using "
-                                                + lookupFunction.getClass( ) );
+                                                + resolverFunction.getClass( ) );
             }
           } catch ( NoSuchElementException ex ) {
             throw ex;
@@ -238,7 +247,8 @@ public class RestrictedTypes {
           } catch ( Exception ex ) {
             Logs.extreme( ).error( ex, ex );
             LOG.error( ex );
-            throw new PersistenceException( "Error occurred while attempting to lookup " + identifier + " using lookup: " + lookupFunction.getClass( ) + " typed as "
+            throw new PersistenceException( "Error occurred while attempting to lookup " + identifier + " using lookup: " + resolverFunction.getClass( )
+                                            + " typed as "
                                             + rscType, ex );
           }
           
@@ -258,7 +268,7 @@ public class RestrictedTypes {
       @Override
       public boolean apply( T arg0 ) {
         Context ctx = Contexts.lookup( );
-        if ( ctx.hasAdministrativePrivileges( ) ) { 
+        if ( ctx.hasAdministrativePrivileges( ) ) {
           return true;
         } else {
           Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );

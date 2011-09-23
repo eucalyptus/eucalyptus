@@ -495,7 +495,7 @@ public class VmInstances {
     return CachedLookup.INSTANCE;
   }
   
-  private enum CachedLookup implements Function<String, VmInstance> {
+  enum CachedLookup implements Function<String, VmInstance> {
     INSTANCE;
     
     /**
