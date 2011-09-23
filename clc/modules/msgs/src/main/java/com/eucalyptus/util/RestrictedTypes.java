@@ -167,7 +167,7 @@ public class RestrictedTypes {
   
   @SuppressWarnings( { "cast", "unchecked" } )
   public static <T extends RestrictedType> T doPrivileged( String identifier, Class<T> type ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
-    return ( T ) doPrivileged( identifier, ( Function<String, T> ) resourceResolvers.get( type ) );
+    return ( T ) doPrivileged( identifier, ( Function<String, T> ) checkMapByType( type, resourceResolvers ) );
   }
   
   /**

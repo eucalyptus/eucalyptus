@@ -101,6 +101,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
+import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.UnconditionalCallback;
@@ -495,6 +496,7 @@ public class VmInstances {
     return CachedLookup.INSTANCE;
   }
   
+  @Resolver( VmInstanceMetadata.class )
   enum CachedLookup implements Function<String, VmInstance> {
     INSTANCE;
     
