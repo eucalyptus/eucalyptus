@@ -88,7 +88,7 @@ import com.eucalyptus.network.NetworkGroups;
 @Table( name = "config_clusters" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart( ClusterController.class )
-@ConfigurableClass( root = "cluster", alias = "cc", description = "Basic cluster controller configuration.", singleton = false, deferred = true )
+@ConfigurableClass( root = "cluster", alias = "basic", description = "Basic cluster controller configuration.", singleton = false, deferred = true )
 public class ClusterConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String         DEFAULT_SERVICE_PATH  = "/axis2/services/EucalyptusCC";
