@@ -998,13 +998,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @return the bundleTask
-   */
-  public BundleTask getBundleTask( ) {
-    return VmBundleTask.asBundleTask( ).apply( this.getRuntimeState( ).getBundleTask( ) );
-  }
-  
-  /**
    * @return the networkBytes
    */
   public Long getNetworkBytes( ) {
@@ -1325,6 +1318,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             } else if ( VmStateSet.STOP.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
               VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
             } else {
+              VmInstance.this.setState( state );
               this.updateState( runVm );
             }
             db.commit( );
@@ -1404,7 +1398,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         runningInstance = new RunningInstancesItemType( );
         
         runningInstance.setAmiLaunchIndex( Integer.toString( input.getLaunchRecord( ).getLaunchIndex( ) ) );
-        if ( ( input.getRuntimeState( ).getBundleTask( ) != null ) && !BundleState.none.equals( input.getRuntimeState( ).getBundleTask( ).getState( ) ) ) {
+        if ( ( input.getRuntimeState( ).isBundling( ) ) ) {
           runningInstance.setStateCode( Integer.toString( VmState.TERMINATED.getCode( ) ) );
           runningInstance.setStateName( VmState.TERMINATED.getName( ) );
         } else {
