@@ -84,4 +84,18 @@ public class CloudMetadatas {
     
   }
   
+  public static <T extends CloudMetadata> Predicate<T> filterByOwningAccount( final Collection<String> requestedIdentifiers ) {
+    return new Predicate<T>( ) {
+      
+      @Override
+      public boolean apply( T input ) {
+        return requestedIdentifiers == null || requestedIdentifiers.isEmpty( ) || requestedIdentifiers.contains( input.getOwner( ).getAccountNumber( ) );
+      }
+    };
+    
+  }
+  public static <T extends CloudMetadata> Predicate<T> filterPrivilegesByOwningAccount( final Collection<String> requestedIdentifiers ) {
+    return Predicates.and( filterByOwningAccount( requestedIdentifiers ), RestrictedTypes.filterPrivileged( ) );
+    
+  }
 }

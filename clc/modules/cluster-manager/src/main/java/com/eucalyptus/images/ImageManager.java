@@ -79,6 +79,9 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.CloudMetadata;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
@@ -120,62 +123,21 @@ public class ImageManager {
   
   public static Logger        LOG  = Logger.getLogger( ImageManager.class );
   
-  private static final String ALL  = "all";
-  private static final String SELF = "self";
-  
   private static final String ADD  = "add";
   
   public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException, TransactionException {
     DescribeImagesResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
-    final Set<String> imageSelectionSet = request.getImagesSet( ) != null
-      ? new HashSet<String>( request.getImagesSet( ) )
-      : new HashSet<String>( );
-    final Set<String> ownerSelectionSet = request.getOwnersSet( ) != null
-      ? new HashSet<String>( request.getOwnersSet( ) )
-      : new HashSet<String>( );
-    if ( ownerSelectionSet.remove( SELF ) ) {
-      ownerSelectionSet.add( requestAccountId );
+    final List<String> imagesSet = request.getImagesSet( );
+    final List<String> ownersSet = request.getOwnersSet( );
+    if ( ownersSet.remove( Images.SELF ) ) {
+      ownersSet.add( requestAccountId );
     }
-    final Set<String> exeBySelectionSet = request.getExecutableBySet( ) != null
-      ? new HashSet<String>( request.getExecutableBySet( ) )
-      : new HashSet<String>( );
-    final boolean exeByNonEmpty = exeBySelectionSet.size( ) > 0;
-    final boolean exeByHasSelf = exeBySelectionSet.remove( SELF );
-    final boolean exeByHasAll = exeBySelectionSet.remove( ALL );
-    
-    final Predicate<ImageInfo> imageFilter = new Predicate<ImageInfo>( ) {
-      
-      @Override
-      public boolean apply( ImageInfo image ) {
-        // Check if selected by specified images
-        if ( imageSelectionSet.size( ) > 0 && !imageSelectionSet.contains( image.getDisplayName( ) ) ) {
-          return false;
-        }
-        // Make sure the request account can access the image
-        if ( !ctx.hasAdministrativePrivileges( ) && !image.isAllowed( requestAccountId ) ) {
-          return false;
-        }
-        // Check if selected by specified owner account ID
-        if ( ownerSelectionSet.size( ) > 0 && !ownerSelectionSet.contains( image.getOwnerAccountNumber( ) ) ) {
-          return false;
-        }
-        // Check if selected by explicit account permissions
-        if ( exeByNonEmpty ) {
-          if ( !( ( exeByHasAll && image.getImagePublic( ) ) || // public
-                  ( exeByHasSelf && ( image.getOwner( ).isOwner( requestAccountId ) || image.hasPermission( requestAccountId ) ) ) || // implicit or explicit, but no public
-          ( !exeBySelectionSet.isEmpty( ) && ( image.getOwner( ).isOwner( requestAccountId ) && image.hasPermission( ( String[] ) exeBySelectionSet.toArray( ) ) ) )
-                                             ) ) {
-                                               return false;
-                                             }
-                                           }
-                                           return true;
-                                         }
-      
-    };
-    Predicate<ImageInfo> filter = Predicates.and( imageFilter, RestrictedTypes.filterPrivileged( ) );
-    List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), filter, Images.TO_IMAGE_DETAILS );
+    final List<String> executableSet = request.getExecutableBySet( );
+    Predicate<ImageInfo> privilegesFilter = Predicates.and( Images.FilterPermissions.INSTANCE, CloudMetadatas.filterPrivilegesById( request.getImagesSet( ) ) );
+    Predicate<ImageInfo> requestFilter = Predicates.and( privilegesFilter, CloudMetadatas.filterPrivilegesByOwningAccount( ownersSet ) );
+    List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), requestFilter, Images.TO_IMAGE_DETAILS );
     reply.getImagesSet( ).addAll( imageDetailsList );
     ImageUtil.cleanDeregistered( );
     return reply;

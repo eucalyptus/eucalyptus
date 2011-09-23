@@ -124,7 +124,7 @@ public class SnapshotManager {
     EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
     Volume vol;
     try {
-      vol = Transactions.find( Volume.named( ctx.getUserFullName( ), request.getVolumeId( ) ) );
+      vol = Transactions.find( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), request.getVolumeId( ) ) );
     } catch ( ExecutionException ex1 ) {
       throw new EucalyptusCloudException( ex1 );
     }

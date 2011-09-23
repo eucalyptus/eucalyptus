@@ -135,6 +135,7 @@ import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances.Timeout;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -251,6 +252,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return this.states.contains( o );
     }
     
+    public Predicate<VmInstance> not( ) {
+      return Predicates.not( this );
+    }
+
   }
   
   public enum VmState implements Predicate<VmInstance> {
@@ -299,12 +304,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     
     public Predicate<VmInstance> not( ) {
-      return new Predicate<VmInstance>( ) {
-
-        @Override
-        public boolean apply( VmInstance input ) {
-          return !this.apply( input );
-        }};
+      return Predicates.not( this );
     }
   }
   

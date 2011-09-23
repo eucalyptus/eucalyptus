@@ -164,10 +164,25 @@ public class RestrictedTypes {
     }
     throw new NoSuchElementException( "Failed to lookup function (@" + Threads.currentStackFrame( 1 ).getMethodName( ) + ") for type: " + type );
   }
+//if ( !ctx.hasAdministrativePrivileges( ) ) {
+//if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
+//  throw new EucalyptusCloudException( "Not authorized to create snapshot by " + ctx.getUser( ).getName( ) );
+//}
+//if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, "", action, ctx.getUser( ), 1L ) ) {
+//  throw new EucalyptusCloudException( "Quota exceeded in creating snapshot by " + ctx.getUser( ).getName( ) );
+//}
+//}
   
   @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType, S extends T> S doPrivileged( String identifier, Class<T> type ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
-    return ( S ) doPrivileged( identifier, ( Function<String, T> ) checkMapByType( type, resourceResolvers ) );
+  public static <T extends RestrictedType> T allocate( Class<T> type ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    Context ctx = Contexts.lookup( );
+    if ( ctx.hasAdministrativePrivileges( ) ) {
+    }
+    return null;
+  }
+  @SuppressWarnings( { "cast", "unchecked" } )
+  public static <T extends RestrictedType> T doPrivileged( String identifier, Class<T> type ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return doPrivileged( identifier, ( Function<String, T> ) checkMapByType( type, resourceResolvers ) );
   }
   
   /**
@@ -185,11 +200,11 @@ public class RestrictedTypes {
    * @throws IllegalContextAccessException if the current request context cannot be determined.
    */
   @SuppressWarnings( "rawtypes" )
-  public static <T extends RestrictedType, S extends T> S doPrivileged( String identifier, Function<String, T> resolverFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> resolverFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     assertThat( "Resolver function must be not null: " + identifier, resolverFunction, notNullValue( ) );
     Context ctx = Contexts.lookup( );
     if ( ctx.hasAdministrativePrivileges( ) ) {
-      return ( S ) resolverFunction.apply( identifier );
+      return resolverFunction.apply( identifier );
     } else {
       Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
       LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + resolverFunction.getClass( ) + " typed as "
@@ -256,7 +271,7 @@ public class RestrictedTypes {
           if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, owningAccount, action, requestUser ) ) {
             throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user " + requestUser.getName( ) );
           }
-          return ( S ) requestedObject;
+          return requestedObject;
         }
       }
     }
