@@ -63,52 +63,25 @@
 
 package com.eucalyptus.cloud;
 
-import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.auth.policy.PolicyVendor;
-import com.eucalyptus.util.RestrictedType;
+import java.util.Collection;
+import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 
-/**
- * GRZE:WARN: values are intentionally opaque strings and /not/ a symbolic reference. do not change
- * them.
- * NOTE: this class can be safely treated as a public type; as opposed to the implementation
- * specific types which should /not/ be references.
- * 
- * @see PolicyResourceType
- * @see PolicyResourceType#NO_VALUE_SPECIFED
- * @see PolicyVendor
- **/
-@PolicyVendor( "ec2" )
-public interface CloudMetadata extends RestrictedType {
-  
-  @PolicyResourceType( "availabilityzone" )
-  public interface AvailabilityZoneMetadata extends CloudMetadata {}
-
-  @PolicyResourceType( "keypair" )
-  public interface KeyPairMetadata extends CloudMetadata {}
-  
-  @PolicyResourceType( "securitygroup" )
-  public interface NetworkGroupMetadata extends CloudMetadata {}
-  
-  @PolicyResourceType( "address" )
-  public interface AddressMetadata extends CloudMetadata {}
-  
-  @PolicyResourceType( "volume" )
-  public interface VolumeMetadata extends CloudMetadata {}
-  
-  @PolicyResourceType( "snapshot" )
-  public interface SnapshotMetadata extends CloudMetadata {}
-  
-  @PolicyResourceType( "instance" )
-  public interface VmInstanceMetadata extends CloudMetadata {}
-  
-  @PolicyResourceType( "vmtype" )
-  public interface VmTypeMetadata extends CloudMetadata {
-    public abstract Integer getMemory( );
-    
-    public abstract Integer getCpu( );
-    
-    public abstract Integer getDisk( );
+public class CloudMetadatas {
+  public static <T extends CloudMetadata> Predicate<T> filterById( final Collection<String> requestedIdentifiers ) {
+    return new Predicate<T>( ) {
+      
+      @Override
+      public boolean apply( T input ) {
+        return requestedIdentifiers == null || requestedIdentifiers.isEmpty( ) || requestedIdentifiers.contains( input.getDisplayName( ) );
+      }
+    };
     
   }
+  public static <T extends CloudMetadata> Predicate<T> filterPrivilegesById( final Collection<String> requestedIdentifiers ) {
+    return Predicates.and( filterById( requestedIdentifiers ), RestrictedTypes.filterPrivileged( ) );
+    
+  }
+  
 }
