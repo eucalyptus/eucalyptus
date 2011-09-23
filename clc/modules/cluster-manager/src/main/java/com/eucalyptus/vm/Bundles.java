@@ -168,7 +168,7 @@ public class Bundles {
     return VmBundleTask.asBundleTask( ).apply( bundleTask );
   }
   
-  public static VmBundleTask create( VmInstance v, String bucket, String prefix, String policy ) {
+  public static VmBundleTask create( VmInstance v, String bucket, String prefix, String policy ) throws AuthException {
     verifyPolicy( policy, bucket );
     verifyBucket( bucket );
     verifyPrefix( prefix );
@@ -208,18 +208,20 @@ public class Bundles {
   
   /**
    * @param bucket
+   * @throws AuthException 
    */
-  private static void verifyBucket( final String bucketName ) {
+  private static void verifyBucket( final String bucketName ) throws AuthException {
     final Context ctx = Contexts.lookup( );
+    final String accessKey = Accounts.getFirstActiveAccessKeyId( ctx.getUser( ) );
     CreateBucketType createBucket = new CreateBucketType( ) {
       {
-        setAccessKeyID( ctx.getUserFullName( ).getUserId( ) );
+        setAccessKeyID( accessKey );
         setBucket( bucketName );
       }
     }.regardingUserRequest( ctx.getRequest( ) );
     DeleteBucketType deleteBucket = new DeleteBucketType( ) {
       {
-        setAccessKeyID( ctx.getUserFullName( ).getUserId( ) );
+        setAccessKeyID( accessKey );
         setBucket( bucketName );
       }
     }.regardingUserRequest( ctx.getRequest( ) );
