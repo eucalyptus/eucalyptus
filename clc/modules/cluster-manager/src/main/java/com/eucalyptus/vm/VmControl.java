@@ -94,15 +94,16 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.vm.Bundles.BundleCallback;
-import com.eucalyptus.vm.Bundles.CancelBundleCallback;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupType;
@@ -155,12 +156,15 @@ public class VmControl {
   
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
     final DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
-    final boolean isVerbose = msg.getInstancesSet( ).remove( "verbose" );
     final ArrayList<String> instancesSet = msg.getInstancesSet( );
     final Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
     Predicate<VmInstance> privileged = RestrictedTypes.filterPrivileged( );
+    Context ctx = Contexts.lookup( );
+    OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( )
+      ? null
+      : ctx.getUserFullName( ).asAccountFullName( );
     try {
-      for ( final VmInstance vm : Iterables.filter( VmInstances.listValues( ), privileged ) ) {
+      for ( final VmInstance vm : VmInstances.list( ownerFullName, privileged ) ) {
         if ( !instancesSet.isEmpty( ) && !instancesSet.contains( vm.getInstanceId( ) ) ) {
           continue;
         }
@@ -345,18 +349,16 @@ public class VmControl {
     
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
+      Predicate<VmInstance> filter = Predicates.and( VmInstance.Filters.BUNDLING, RestrictedTypes.filterPrivileged( ) );
       if ( request.getBundleIds( ).isEmpty( ) ) {
-        for ( final VmInstance v : Iterables.filter( VmInstances.listValues( ), VmInstance.Filters.BUNDLING ) ) {
-          if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-            reply.getBundleTasks( ).add( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
-          }
+        for ( final VmInstance v : VmInstances.list( filter ) ) {
+          reply.getBundleTasks( ).add( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
         }
       } else {
         for ( final String bundleId : request.getBundleIds( ) ) {
           try {
             final VmInstance v = VmInstances.lookupByBundleId( bundleId );
-            if ( v.getRuntimeState( ).isBundling( )
-                 && ( RestrictedTypes.filterPrivileged( ).apply( v ) ) ) {
+            if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
               reply.getBundleTasks( ).add( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
             }
           } catch ( final NoSuchElementException e ) {}
@@ -381,7 +383,6 @@ public class VmControl {
     for ( String instanceId : request.getInstancesSet( ) ) {
       EntityTransaction db = Entities.get( VmInstance.class );
       try {
-//        if ( !VmState.STOPPED.apply( vm ) ) continue;
         final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
         try {
           VmInstances.start( vm );

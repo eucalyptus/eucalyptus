@@ -87,7 +87,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       }
     }
     
-    final List<String> unreportedVms = Lists.transform( VmInstances.listValues( ), new Function<VmInstance, String>( ) {
+    final List<String> unreportedVms = Lists.transform( VmInstances.list( ), new Function<VmInstance, String>( ) {
       
       @Override
       public String apply( final VmInstance input ) {

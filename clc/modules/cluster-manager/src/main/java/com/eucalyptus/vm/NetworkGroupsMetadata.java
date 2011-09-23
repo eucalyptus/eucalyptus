@@ -74,7 +74,10 @@ import com.eucalyptus.network.NetworkPeer;
 import com.eucalyptus.network.NetworkRule;
 import com.eucalyptus.util.ByteArray;
 import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 
@@ -102,12 +105,8 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
     Multimap<String, String> rules = ArrayListMultimap.create( );
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      for ( VmInstance vm : VmInstances.listValues( ) ) {
-        try {
-          if ( VmState.RUNNING.ordinal( ) > vm.getState( ).ordinal( ) ) continue;
-        } catch ( Exception ex1 ) {
-          continue;
-        }
+      Predicate<VmInstance> filter = Predicates.not( Predicates.or( VmState.TERMINATED, VmState.STOPPED ) );
+      for ( VmInstance vm : VmInstances.list( filter ) ) {
         for ( NetworkGroup ruleGroup : vm.getNetworkGroups( ) ) {
           try {
             ruleGroup = Entities.merge( ruleGroup );
@@ -120,7 +119,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
                     : "p" ), netRule.getLowPort( ), ( NetworkRule.Protocol.icmp.equals( netRule.getProtocol( ) )
                     ? ":"
                     : "-" ), netRule.getHighPort( ) );
-                  for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {                    
+                  for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {
                     String ruleString = String.format( "%s -o %s -u %s", rule, peer.getGroupName( ), peer.getUserQueryKey( ) );
                     if ( !rules.get( ruleGroup.getClusterNetworkName( ) ).contains( ruleString ) ) {
                       rules.put( ruleGroup.getClusterNetworkName( ), ruleString );

@@ -95,8 +95,10 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
@@ -181,7 +183,7 @@ public class VolumeManager {
       if ( !RestrictedTypes.filterPrivileged( ).apply( vol ) ) {
         throw new EucalyptusCloudException( "Not authorized to delete volume by " + ctx.getUser( ).getName( ) );
       }
-      for ( VmInstance vm : VmInstances.listValues( ) ) {
+      for ( VmInstance vm : VmInstances.list( Predicates.not( VmState.TERMINATED ) ) ) {
         try {
           vm.lookupVolumeAttachment( request.getVolumeId( ) );
           db.rollback( );
@@ -232,7 +234,7 @@ public class VolumeManager {
     try {
       
       final Map<String, AttachedVolume> attachedVolumes = new HashMap<String, AttachedVolume>( );
-      for ( VmInstance vm : VmInstances.listValues( ) ) {
+      for ( VmInstance vm : VmInstances.list( Predicates.not( VmState.TERMINATED ) ) ) {
         vm.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
           @Override
           public boolean apply( AttachedVolume arg0 ) {
@@ -304,7 +306,7 @@ public class VolumeManager {
     } catch ( NoSuchElementException ex1 ) {
       /** no attachment **/
     }
-    for ( VmInstance iter : VmInstances.listValues( ) ) {
+    for ( VmInstance iter : VmInstances.list( Predicates.not( VmState.TERMINATED ) ) ) {
       try {
         iter.lookupVolumeAttachment( volumeId );
         throw new EucalyptusCloudException( "Volume already attached: " + request.getVolumeId( ) );
@@ -379,7 +381,7 @@ public class VolumeManager {
     
     VmInstance vm = null;
     AttachedVolume volume = null;
-    for ( VmInstance iter : VmInstances.listValues( ) ) {
+    for ( VmInstance iter : VmInstances.list( Predicates.not( VmState.TERMINATED ) ) ) {
       try {
         volume = iter.lookupVolumeAttachment( request.getVolumeId( ) );
         vm = iter;
