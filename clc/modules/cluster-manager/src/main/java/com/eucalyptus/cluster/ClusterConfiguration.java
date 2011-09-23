@@ -156,7 +156,7 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   @PostLoad
   private void initOnLoad( ) {//GRZE:HACK:HACK: needed to mark field as @ConfigurableIdentifier
     if ( this.propertyPrefix == null ) {
-      this.propertyPrefix = this.getPartition( );
+      this.propertyPrefix = this.getPartition( ) + "." + this.getName( );
     }
   }
   
