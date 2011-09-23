@@ -79,6 +79,9 @@ import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+
 import edu.emory.mathcs.backport.java.util.Arrays;
 import edu.ucsb.eucalyptus.msgs.BaseData;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -214,6 +217,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
         return ret;
       } catch ( Exception e1 ) {
         e = e1;
+        
       }
       clazz = clazz.getSuperclass( );
     }
@@ -232,39 +236,74 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
                                                                                                                                                    params,
                                                                                                                                                    params.size( ) ) );
       } catch ( Exception e1 ) {
+	LOG.debug("Failed mapping : ", e1);
         failedMappings.add( e.getKey( ) );
       }
     }
-    for ( Map.Entry<String, String> e : paramFieldMap.entrySet( ) ) {
-      if ( params.containsKey( e.getKey( ) ) && !populateObjectField( obj, e, params ) ) {
-        failedMappings.add( e.getKey( ) );
-      } else {
-        failedMappings.remove( e.getKey( ) );
-      }
-    }
+    
+        Class<?> declaredType = null;
+        
+	for (Map.Entry<String, String> e : paramFieldMap.entrySet()) {
+
+	    try {
+		declaredType = getRecursiveField(obj.getClass(),
+		    e.getValue()).getType();
+	    } catch (Exception e2) {
+		e2.printStackTrace();
+	    }
+
+	    if (params.containsKey(e.getKey())
+		    && !populateObjectField(obj, e, params)) {
+		failedMappings.add(e.getKey());
+	    } else if (declaredType != null
+		    && EucalyptusData.class.isAssignableFrom(declaredType)) {
+		try {
+		    Map<String, String> fieldMap = this
+			    .buildFieldMap(declaredType);
+		    Object newInstance = declaredType.newInstance();
+		    Map<String, String> subParams = Maps.newHashMap();
+		    
+		    for (String item : Sets.newHashSet(params.keySet())) {
+			if(item.startsWith(e.getKey())) {
+			    params.get(item);
+			   subParams.put(item.replace(e.getKey() + ".", ""), params.remove(item));
+			}
+		    }
+		    populateObject((GroovyObject) newInstance, fieldMap, subParams);
+		    obj.setProperty(e.getValue(), newInstance);
+		} catch (Exception e1) {
+		    // TODO Auto-generated catch block
+		    e1.printStackTrace();
+		}
+	    } else {
+		failedMappings.remove(e.getKey());
+	    }
+
+	}
     return failedMappings;
   }
   
   @SuppressWarnings( "unchecked" )
   private boolean populateObjectField( final GroovyObject obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params ) {
     try {
-      Class<?> declaredType = getRecursiveField( obj.getClass( ), paramFieldPair.getValue( ) ).getType( );
-      if ( declaredType.equals( String.class ) )
-        obj.setProperty( paramFieldPair.getValue( ), params.remove( paramFieldPair.getKey( ) ) );
-      else if ( declaredType.getName( ).equals( "int" ) )
-        obj.setProperty( paramFieldPair.getValue( ), Integer.parseInt( params.remove( paramFieldPair.getKey( ) ) ) );
-      else if ( declaredType.equals( Integer.class ) )
-        obj.setProperty( paramFieldPair.getValue( ), new Integer( params.remove( paramFieldPair.getKey( ) ) ) );
-      else if ( declaredType.getName( ).equals( "boolean" ) )
-        obj.setProperty( paramFieldPair.getValue( ), Boolean.parseBoolean( params.remove( paramFieldPair.getKey( ) ) ) );
-      else if ( declaredType.equals( Boolean.class ) )
-        obj.setProperty( paramFieldPair.getValue( ), new Boolean( params.remove( paramFieldPair.getKey( ) ) ) );
-      else if ( declaredType.getName( ).equals( "long" ) )
-        obj.setProperty( paramFieldPair.getValue( ), Long.parseLong( params.remove( paramFieldPair.getKey( ) ) ) );
-      else if ( declaredType.equals( Long.class ) )
-        obj.setProperty( paramFieldPair.getValue( ), new Long( params.remove( paramFieldPair.getKey( ) ) ) );
-      else return false;
-      return true;
+	Class<?> declaredType = getRecursiveField( obj.getClass( ), paramFieldPair.getValue( ) ).getType( );
+	      if ( declaredType.equals( String.class ) )
+	        obj.setProperty( paramFieldPair.getValue( ), params.remove( paramFieldPair.getKey( ) ) );
+	      else if ( declaredType.getName( ).equals( "int" ) )
+	        obj.setProperty( paramFieldPair.getValue( ), Integer.parseInt( params.remove( paramFieldPair.getKey( ) ) ) );
+	      else if ( declaredType.equals( Integer.class ) )
+	        obj.setProperty( paramFieldPair.getValue( ), new Integer( params.remove( paramFieldPair.getKey( ) ) ) );
+	      else if ( declaredType.getName( ).equals( "boolean" ) )
+	        obj.setProperty( paramFieldPair.getValue( ), Boolean.parseBoolean( params.remove( paramFieldPair.getKey( ) ) ) );
+	      else if ( declaredType.equals( Boolean.class ) )
+	        obj.setProperty( paramFieldPair.getValue( ), new Boolean( params.remove( paramFieldPair.getKey( ) ) ) );
+	      else if ( declaredType.getName( ).equals( "long" ) )
+	        obj.setProperty( paramFieldPair.getValue( ), Long.parseLong( params.remove( paramFieldPair.getKey( ) ) ) );
+	      else if ( declaredType.equals( Long.class ) )
+	        obj.setProperty( paramFieldPair.getValue( ), new Long( params.remove( paramFieldPair.getKey( ) ) ) );
+	      else return false;
+	      return true;
+
     } catch ( Exception e1 ) {
       return false;
     }
@@ -293,27 +332,30 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
         HttpEmbedded annoteEmbedded = ( HttpEmbedded ) declaredField.getAnnotation( HttpEmbedded.class );
         // :: build the parameter map and call populate object recursively :://
         if ( annoteEmbedded.multiple( ) ) {
-          String prefix = paramFieldPair.getKey( );
-          List<String> embeddedListFieldNames = new ArrayList<String>( );
-          for ( String actualParameterName : params.keySet( ) )
-            if ( actualParameterName.matches( prefix + ".1.*" ) ) embeddedListFieldNames.add( actualParameterName.replaceAll( prefix + ".1.", "" ) );
-          for ( int i = 0; i < paramSize + 1; i++ ) {
-            boolean foundAll = true;
-            Map<String, String> embeddedParams = new HashMap<String, String>( );
-            for ( String fieldName : embeddedListFieldNames ) {
-              String paramName = prefix + "." + i + "." + fieldName;
-              if ( !params.containsKey( paramName ) ) {
-                failedMappings.add( "Mismatched embedded field: " + paramName );
-                foundAll = false;
-              } else embeddedParams.put( fieldName, params.get( paramName ) );
+            List<String> keys = Lists.newArrayList( params.keySet( ) );
+            for ( String k : keys ) {
+              if ( !k.contains( paramFieldPair.getKey( ) + ".1." ) ) {  
+                //theList.add( params.remove(k) );
+        	params.remove(k);
+              } 
             }
-            if ( foundAll )
-              failedMappings.addAll( populateEmbedded( genericType, embeddedParams, theList ) );
-            else break;
-          }
+            
+            List<String> keys2 = Lists.newArrayList(params.keySet()) ;
+            
+            for (String k2 : keys2) {
+                String currentValue = params.get(k2);
+                String currentKey = k2;
+                String newKey = k2.replaceAll( paramFieldPair.getKey( ) + ".1.", "");
+                params.put(newKey, currentValue);
+                params.remove(k2);
+            }
+            
+            //theList.add(params);
+            failedMappings.addAll( populateEmbedded( genericType, params, theList ) );
         } else failedMappings.addAll( populateEmbedded( genericType, params, theList ) );
       }
     } catch ( Exception e1 ) {
+      LOG.debug("FAILED HERE : ", e1);
       failedMappings.add( paramFieldPair.getKey( ) );
     }
     return failedMappings;
@@ -324,7 +366,9 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     Map<String, String> embeddedFields = buildFieldMap( genericType );
     int startSize = params.size( );
     List<String> embeddedFailures = populateObject( embedded, embeddedFields, params );
-    if ( embeddedFailures.isEmpty( ) && !( params.size( ) - startSize == 0 ) ) theList.add( embedded );
+    if ( embeddedFailures.isEmpty( ) && !( params.size( ) - startSize == 0 ) ) 
+	theList.add( embedded );
+    
     return embeddedFailures;
   }
   
