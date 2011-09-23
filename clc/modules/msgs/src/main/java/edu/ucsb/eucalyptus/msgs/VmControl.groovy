@@ -370,6 +370,7 @@ public class StartInstancesResponseType extends VmControlMessage{
 }
 
 public class StartInstancesType extends VmControlMessage{
+  @HttpParameterMapping( parameter = "InstanceId" )
   ArrayList<String> instancesSet = new ArrayList<String>();
   public StartInstancesType() {  }
 }
