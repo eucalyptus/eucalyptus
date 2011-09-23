@@ -164,22 +164,67 @@ public class RestrictedTypes {
     }
     throw new NoSuchElementException( "Failed to lookup function (@" + Threads.currentStackFrame( 1 ).getMethodName( ) + ") for type: " + type );
   }
-//if ( !ctx.hasAdministrativePrivileges( ) ) {
-//if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
-//  throw new EucalyptusCloudException( "Not authorized to create snapshot by " + ctx.getUser( ).getName( ) );
-//}
-//if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_SNAPSHOT, "", action, ctx.getUser( ), 1L ) ) {
-//  throw new EucalyptusCloudException( "Quota exceeded in creating snapshot by " + ctx.getUser( ).getName( ) );
-//}
-//}
   
   @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> T allocate( Class<T> type ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends RestrictedType> List<T> allocate( Long quantity, Function<Long, List<T>> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     Context ctx = Contexts.lookup( );
     if ( ctx.hasAdministrativePrivileges( ) ) {
+      return allocator.apply( quantity );
+    } else {
+      Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
+      List<Class<?>> lookupTypes = Classes.genericsToClasses( allocator );
+      if ( lookupTypes.isEmpty( ) ) {
+        throw new IllegalArgumentException( "Failed to find required generic type for lookup " + allocator.getClass( )
+                                            + " so the policy type for looking up " + allocator + " cannot be determined." );
+      } else {
+        Class<?> rscType;
+        try {
+          rscType = Iterables.find( lookupTypes, new Predicate<Class<?>>( ) {
+            
+            @Override
+            public boolean apply( Class<?> arg0 ) {
+              return RestrictedType.class.isAssignableFrom( arg0 );
+            }
+          } );
+        } catch ( NoSuchElementException ex1 ) {
+          LOG.error( ex1, ex1 );
+          throw ex1;
+        }
+        Ats ats = Ats.inClassHierarchy( rscType );
+        Ats msgAts = Ats.inClassHierarchy( msgType );
+        if ( !ats.has( PolicyVendor.class ) && !msgAts.has( PolicyVendor.class ) ) {
+          throw new IllegalArgumentException( "Failed to determine policy for allocating type instance " + rscType.getCanonicalName( )
+                                              + ": required @PolicyVendor missing in resource type hierarchy " + rscType.getCanonicalName( )
+                                              + " and request type hierarchy " + msgType.getCanonicalName( ) );
+        } else if ( !ats.has( PolicyResourceType.class ) && !msgAts.has( PolicyResourceType.class ) ) {
+          throw new IllegalArgumentException( "Failed to determine policy for looking up type instance " + rscType.getCanonicalName( )
+                                              + ": required @PolicyResourceType missing in resource type hierarchy " + rscType.getCanonicalName( )
+                                              + " and request type hierarchy " + msgType.getCanonicalName( ) );
+        } else {
+          PolicyVendor vendor = ats.get( PolicyVendor.class );
+          PolicyResourceType type = ats.get( PolicyResourceType.class );
+          String action = PolicySpec.requestToAction( ctx.getRequest( ) );
+          if ( action == null ) {
+            action = vendor.value( ) + ":" + ctx.getRequest( ).getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
+          }
+          User requestUser = ctx.getUser( );
+          try {
+            if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), "", requestUser.getAccount( ), action, requestUser ) ) {
+              throw new AuthException( "Not authorized to create: " + type + " by user: " + ctx.getUserFullName( ) );
+            } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), "", action, ctx.getUser( ), quantity ) ) {
+              throw new AuthException( "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
+            } else {
+              return allocator.apply( quantity );
+            }
+          } catch ( AuthException ex ) {
+            throw ex;
+          }
+        }
+      }
+      
     }
-    return null;
   }
+  
   @SuppressWarnings( { "cast", "unchecked" } )
   public static <T extends RestrictedType> T doPrivileged( String identifier, Class<T> type ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     return doPrivileged( identifier, ( Function<String, T> ) checkMapByType( type, resourceResolvers ) );
@@ -324,7 +369,7 @@ public class RestrictedTypes {
     public ResourceMetricFunctionDiscovery( ) {
       super( );
     }
-
+    
     @SuppressWarnings( "synthetic-access" )
     @Override
     public boolean processClass( Class candidate ) throws Exception {

@@ -126,22 +126,13 @@ public class VolumeManager {
   
   public CreateVolumeResponseType CreateVolume( final CreateVolumeType request ) throws EucalyptusCloudException {
     Context ctx = Contexts.lookup( );
-//    if ( !ctx.hasAdministrativePrivileges( ) 
-//         && !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VOLUME, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
-//      throw new EucalyptusCloudException( "Not authorized to create volume by " + ctx.getUser( ).getName( ) );
-//    }
-    
     Long volSize = request.getSize( ) != null
       ? Long.parseLong( request.getSize( ) )
       : null;
     final String snapId = request.getSnapshotId( );
     String partition = request.getAvailabilityZone( );
     
-//    if ( !ctx.hasAdministrativePrivileges( )
-//         && !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VOLUME, "", action, ctx.getUser( ), volSize ) ) {
-//      throw new EucalyptusCloudException( "Exceeded quota of volume creation by " + ctx.getUser( ).getName( ) );
-//    }
-//    
+    //GRZE:WHINE: add resource allocator here:  RestrictedTypes.allocate( 1, Allocator.INSTANCE );
     if ( ( request.getSnapshotId( ) == null && request.getSize( ) == null ) ) {
       throw new EucalyptusCloudException( "One of size or snapshotId is required as a parameter." );
     }

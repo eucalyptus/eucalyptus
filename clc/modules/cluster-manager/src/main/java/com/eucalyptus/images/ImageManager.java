@@ -139,14 +139,7 @@ public class ImageManager {
   
   public RegisterImageResponseType register( RegisterImageType request ) throws EucalyptusCloudException {
     final Context ctx = Contexts.lookup( );
-//    if ( !ctx.hasAdministrativePrivileges( ) ) {
-//      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, "", ctx.getAccount( ), action, requestUser ) ) {
-//        throw new EucalyptusCloudException( "Register image is not allowed for " + requestUser.getName( ) );
-//      }
-//      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, "", action, requestUser, 1L ) ) {
-//        throw new EucalyptusCloudException( "Quota exceeded in registering image for " + requestUser.getName( ) );
-//      }
-//    }
+    //GRZE:WHINE: add resource allocator here:  RestrictedTypes.allocate( 1, Allocator.INSTANCE );
     ImageInfo imageInfo = null;
     final String rootDevName = ( request.getRootDeviceName( ) != null )
       ? request.getRootDeviceName( )
