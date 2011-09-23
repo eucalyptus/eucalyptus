@@ -306,6 +306,10 @@ public class RestrictedTypes {
   
   public static class ResourceMetricFunctionDiscovery extends ServiceJarDiscovery {
     
+    public ResourceMetricFunctionDiscovery( ) {
+      super( );
+    }
+
     @SuppressWarnings( "synthetic-access" )
     @Override
     public boolean processClass( Class candidate ) throws Exception {
