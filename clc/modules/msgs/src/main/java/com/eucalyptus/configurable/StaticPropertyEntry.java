@@ -68,13 +68,14 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Fields;
 
 public class StaticPropertyEntry extends AbstractConfigurableProperty {
   static Logger LOG = Logger.getLogger( StaticPropertyEntry.class );
   private Field field;
   
-  public StaticPropertyEntry( Class definingClass, String entrySetName, Field field, String description, String defaultValue, PropertyTypeParser typeParser,
+  private StaticPropertyEntry( Class definingClass, String entrySetName, Field field, String description, String defaultValue, PropertyTypeParser typeParser,
                               Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias, PropertyChangeListener changeListener ) {
     super( definingClass, entrySetName, field, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias, changeListener );
     this.field = field;
@@ -101,8 +102,13 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
                                                              this.safeGetFieldValue( )
                                                              ).getValue( );
         Object o = super.getTypeParser( ).apply( dbValue );
-        this.field.set( null, o );
+        if ( !Modifier.isFinal( this.field.getModifiers( ) ) ) {
+          this.field.set( null, o );
+        }
         return dbValue;
+      } catch ( IllegalAccessException e ) {
+        Logs.exhaust( ).trace( e, e );
+        return super.getDefaultValue( );
       } catch ( Exception e ) {
         LOG.warn( "Failed to get property: " + super.getQualifiedName( ) + " because of " + e.getMessage( ) );
         Logs.extreme( ).debug( e, e );
@@ -160,20 +166,18 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
   }
   
   public static class StaticPropertyBuilder implements ConfigurablePropertyBuilder {
-    private static String qualifiedName( Class c, Field f ) {
-      ConfigurableClass annote = ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class );
-      return annote.root( ) + "." + f.getName( ).toLowerCase( );
-    }
     
     @Override
     public ConfigurableProperty buildProperty( Class c, Field field ) throws ConfigurablePropertyException {
-      if ( c.isAnnotationPresent( ConfigurableClass.class ) && field.isAnnotationPresent( ConfigurableField.class ) ) {
-        ConfigurableClass classAnnote = ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class );
-        ConfigurableField annote = ( ConfigurableField ) field.getAnnotation( ConfigurableField.class );
+      Ats classAts = Ats.from( c );
+      Ats fieldAts = Ats.from( field );
+      if ( classAts.has( ConfigurableClass.class ) && fieldAts.has( ConfigurableField.class ) ) {
+        ConfigurableClass classAnnote = classAts.get( ConfigurableClass.class );
+        ConfigurableField annote = fieldAts.get( ConfigurableField.class );
         String description = annote.description( );
         String defaultValue = annote.initial( );
-        String fq = qualifiedName( c, field );
-        String fqPrefix = fq.replaceAll( "\\..*", "" );
+        String fqPrefix = classAnnote.root( );
+        String fq = fqPrefix + "." + field.getName( ).toLowerCase( );
         String alias = classAnnote.alias( );
         PropertyTypeParser p = PropertyTypeParser.get( field.getType( ) );
         ConfigurableProperty entry = null;
@@ -208,6 +212,11 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
   @Override
   protected Object getQueryObject( ) throws Exception {
     return null;
+  }
+
+  @Override
+  public boolean isDeferred( ) {
+    return true;
   }
   
 }

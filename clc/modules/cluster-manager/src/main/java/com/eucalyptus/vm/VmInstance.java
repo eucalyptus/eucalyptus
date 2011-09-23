@@ -130,10 +130,12 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances.Timeout;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -208,7 +210,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       
       @Override
       public boolean apply( final VmInstance arg0 ) {
-        return arg0.isBundling( );
+        return arg0.getRuntimeState( ).isBundling( );
       }
       
     };
@@ -250,6 +252,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return this.states.contains( o );
     }
     
+    public Predicate<VmInstance> not( ) {
+      return Predicates.not( this );
+    }
+
   }
   
   public enum VmState implements Predicate<VmInstance> {
@@ -295,6 +301,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     @Override
     public boolean apply( final VmInstance arg0 ) {
       return this.equals( arg0.getState( ) );
+    }
+    
+    public Predicate<VmInstance> not( ) {
+      return Predicates.not( this );
     }
   }
   
@@ -448,6 +458,26 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         }
       }
     },
+    START {
+      @Override
+      public VmInstance apply( final VmInstance v ) {
+        if ( !Entities.isPersistent( v ) ) {
+          throw new TransientEntityException( v.toString( ) );
+        } else {
+          final EntityTransaction db = Entities.get( VmInstance.class );
+          try {
+            final VmInstance vm = Entities.merge( v );
+            vm.setState( VmState.PENDING, Reason.USER_STARTED );
+            db.commit( );
+            return vm;
+          } catch ( final RuntimeException ex ) {
+            Logs.extreme( ).error( ex, ex );
+            db.rollback( );
+            throw ex;
+          }
+        }
+      }
+    },
     TERMINATED {
       @Override
       public VmInstance apply( final VmInstance v ) {
@@ -487,7 +517,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             final VmInstance vm = Entities.merge( v );
             if ( VmStateSet.RUN.apply( vm ) ) {
               vm.setState( VmState.STOPPING, Reason.USER_STOPPED );
-            } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
+            } else if ( VmState.STOPPING.equals( vm.getState( ) ) ) {
               vm.setState( VmState.STOPPED, Reason.USER_STOPPED );
             }
             db.commit( );
@@ -897,37 +927,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return split;
   }
   
-  public enum BundleState {
-    none( "none" ), pending( null ), storing( "bundling" ), canceling( null ), complete( "succeeded" ), failed( "failed" );
-    private String mappedState;
-    
-    BundleState( final String mappedState ) {
-      this.mappedState = mappedState;
-    }
-    
-    public String getMappedState( ) {
-      return this.mappedState;
-    }
-  }
-  
-  public Boolean isCreatingImage( ) {
-    return this.getRuntimeState( ).isCreatingImage( );
-  }
-  
-  public Boolean isBundling( ) {
-    return this.getRuntimeState( ).isBundling( );
-  }
-  
   public VmBundleTask resetBundleTask( ) {
     return this.getRuntimeState( ).resetBundleTask( );
-  }
-  
-  BundleState getBundleTaskState( ) {
-    return this.getRuntimeState( ).getBundleTaskState( );
-  }
-  
-  public void updateBundleTaskState( final String state ) {
-    this.getRuntimeState( ).setBundleTaskState( state );
   }
   
   public String getImageId( ) {
@@ -1000,7 +1001,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @return the bundleTask
    */
   public BundleTask getBundleTask( ) {
-    return VmBundleTask.asBundleTask( this ).apply( this.getRuntimeState( ).getBundleTask( ) );
+    return VmBundleTask.asBundleTask( ).apply( this.getRuntimeState( ).getBundleTask( ) );
   }
   
   /**
@@ -1055,8 +1056,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     NORMAL( "" ),
     EXPIRED( "Instance expired after not being reported for %s mins.", VmInstances.Timeout.UNREPORTED.getMinutes( ) ),
     FAILED( "The instance failed to start on the NC." ),
-    USER_TERMINATED( "User initiated terminate." ),
-    USER_STOPPED( "User initiated stop." ),
+    USER_TERMINATED( "User terminated." ),
+    USER_STOPPED( "User stopped." ),
+    USER_STARTED( "User started." ),
     APPEND( "" );
     private String   message;
     private Object[] args;
@@ -1283,10 +1285,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.bootRecord.getUserData( );
   }
   
-  public void clearPendingBundleTask( ) {
-    this.getRuntimeState( ).clearPendingBundleTask( );
-  }
-  
   /**
    * @param volumeId
    * @param newState
@@ -1317,8 +1315,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           final EntityTransaction db = Entities.get( VmInstance.class );
           try {
             final VmState state = VmState.Mapper.get( runVm.getStateName( ) );
-            final long splitTime = VmInstance.this.getSplitTime( );
-            final VmState oldState = VmInstance.this.getState( );
             if ( VmStateSet.RUN.apply( VmInstance.this ) && VmStateSet.RUN.contains( state ) ) {
               VmInstance.this.setState( state, Reason.APPEND, "UPDATE" );
               this.updateState( runVm );
@@ -1342,7 +1338,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       
       private void updateState( final VmInfo runVm ) {
         VmInstance.this.getRuntimeState( ).setServiceTag( runVm.getServiceTag( ) );
-        VmInstance.this.updateBundleTaskState( runVm.getBundleTaskStateName( ) );
+        VmInstance.this.getRuntimeState( ).updateBundleTaskState( runVm.getBundleTaskStateName( ) );
         VmInstance.this.updateCreateImageTaskState( runVm.getBundleTaskStateName( ) );
         VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
         VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
@@ -1408,7 +1404,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         runningInstance = new RunningInstancesItemType( );
         
         runningInstance.setAmiLaunchIndex( Integer.toString( input.getLaunchRecord( ).getLaunchIndex( ) ) );
-        if ( ( input.getBundleTaskState( ) != null ) && !BundleState.none.equals( input.getBundleTaskState( ) ) ) {
+        if ( ( input.getRuntimeState( ).getBundleTask( ) != null ) && !BundleState.none.equals( input.getRuntimeState( ).getBundleTask( ).getState( ) ) ) {
           runningInstance.setStateCode( Integer.toString( VmState.TERMINATED.getCode( ) ) );
           runningInstance.setStateName( VmState.TERMINATED.getName( ) );
         } else {
@@ -1544,5 +1540,37 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   private void setNetworkGroups( final Set<NetworkGroup> networkGroups ) {
     this.networkGroups = networkGroups;
+  }
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( this.vmId == null )
+      ? 0
+      : this.vmId.hashCode( ) );
+    return result;
+  }
+
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( !super.equals( obj ) ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    VmInstance other = ( VmInstance ) obj;
+    if ( this.vmId == null ) {
+      if ( other.vmId != null ) {
+        return false;
+      }
+    } else if ( !this.vmId.equals( other.vmId ) ) {
+      return false;
+    }
+    return true;
   }
 }

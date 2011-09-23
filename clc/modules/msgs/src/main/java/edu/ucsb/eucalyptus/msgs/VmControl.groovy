@@ -63,8 +63,6 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
-import com.eucalyptus.auth.policy.PolicyAction
-import com.eucalyptus.auth.policy.PolicySpec
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
 
@@ -186,7 +184,6 @@ public class RunInstancesType extends VmControlMessage {
   String availabilityZone = "default"; //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "Placement.GroupName")
   String placementGroup = "default"; //** added 2010-02-01  **/
-  @HttpEmbedded (multiple = true)
   ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>(); //** added 2008-02-01  **/
   Boolean monitoring = false;
   String subnetId;
@@ -362,6 +359,7 @@ public class StopInstancesResponseType extends VmControlMessage{
 }
 
 public class StopInstancesType extends VmControlMessage{
+  @HttpParameterMapping( parameter = "InstanceId" )
   ArrayList<String> instancesSet = new ArrayList<String>();
   Boolean force;
   public StopInstancesType() {  }
@@ -372,6 +370,7 @@ public class StartInstancesResponseType extends VmControlMessage{
 }
 
 public class StartInstancesType extends VmControlMessage{
+  @HttpParameterMapping( parameter = "InstanceId" )
   ArrayList<String> instancesSet = new ArrayList<String>();
   public StartInstancesType() {  }
 }

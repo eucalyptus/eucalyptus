@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,49 +53,49 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.cloud.run;
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.ResourceToken;
-import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.vm.VmInstance;
+package com.eucalyptus.cloud;
 
-public class CreateVmInstances {
-  private static Logger LOG = Logger.getLogger( CreateVmInstances.class );
-  
-  public Allocation allocate( final Allocation allocInfo ) throws Exception {
-    final long quantity = allocInfo.getAllocationTokens( ).size( );
-    final Context ctx = allocInfo.getContext( );
-    final User requestUser = ctx.getUser( );
-    final UserFullName userFullName = ctx.getUserFullName( );
-    final String action = PolicySpec.requestToAction( allocInfo.getRequest( ) );
-    final String vmType = allocInfo.getVmType( ).getName( );
-    //GRZE:WHINE: add resource allocator here:  RestrictedTypes.allocate( 1, Allocator.INSTANCE ); vmtype
-    //GRZE:WHINE: add resource allocator here:  RestrictedTypes.allocate( 1, Allocator.INSTANCE ); instance
-    for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-      try {
-        VmInstance vmInst = VmInstance.Create.INSTANCE.apply( token );
-        token.setVmInstance( vmInst );
-      } catch ( Exception ex ) {
-        LOG.error( ex , ex );
-        throw new RuntimeException( ex );
+import java.util.Collection;
+import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+
+public class CloudMetadatas {
+  public static <T extends CloudMetadata> Predicate<T> filterById( final Collection<String> requestedIdentifiers ) {
+    return new Predicate<T>( ) {
+      
+      @Override
+      public boolean apply( T input ) {
+        return requestedIdentifiers == null || requestedIdentifiers.isEmpty( ) || requestedIdentifiers.contains( input.getDisplayName( ) );
       }
-    }
-    return allocInfo;
+    };
+    
+  }
+  public static <T extends CloudMetadata> Predicate<T> filterPrivilegesById( final Collection<String> requestedIdentifiers ) {
+    return Predicates.and( filterById( requestedIdentifiers ), RestrictedTypes.filterPrivileged( ) );
+    
   }
   
+  public static <T extends CloudMetadata> Predicate<T> filterByOwningAccount( final Collection<String> requestedIdentifiers ) {
+    return new Predicate<T>( ) {
+      
+      @Override
+      public boolean apply( T input ) {
+        return requestedIdentifiers == null || requestedIdentifiers.isEmpty( ) || requestedIdentifiers.contains( input.getOwner( ).getAccountNumber( ) );
+      }
+    };
+    
+  }
+  public static <T extends CloudMetadata> Predicate<T> filterPrivilegesByOwningAccount( final Collection<String> requestedIdentifiers ) {
+    return Predicates.and( filterByOwningAccount( requestedIdentifiers ), RestrictedTypes.filterPrivileged( ) );
+    
+  }
 }

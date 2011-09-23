@@ -70,8 +70,6 @@ import org.hibernate.annotations.Parent;
 public class VmCreateImageTask {
   @Parent
   private VmInstance vmInstance;
-  @Column( name = "metadata_vm_createimage_id" )
-  private String     createImageId;
   @Column( name = "metadata_vm_createimage_state" )
   private String     state;
   @Column( name = "metadata_vm_createimage_start_time" )
@@ -89,12 +87,11 @@ public class VmCreateImageTask {
     super( );
   }
   
-  VmCreateImageTask( final VmInstance vmInstance, final String createImageId, final String state, final Date startTime, final Date updateTime,
+  VmCreateImageTask( final VmInstance vmInstance, final String state, final Date startTime, final Date updateTime,
                      final String progress, final String errorMessage,
                      final String errorCode ) {
     super( );
     this.vmInstance = vmInstance;
-    this.createImageId = createImageId;
     this.state = state;
     this.startTime = startTime;
     this.updateTime = updateTime;
@@ -109,14 +106,6 @@ public class VmCreateImageTask {
   
   private void setVmInstance( final VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
-  }
-  
-  String getCreateImageId( ) {
-    return this.createImageId;
-  }
-  
-  private void setCreateImageId( final String bundleId ) {
-    this.createImageId = bundleId;
   }
   
   String getState( ) {
@@ -166,34 +155,34 @@ public class VmCreateImageTask {
   private void setErrorCode( final String errorCode ) {
     this.errorCode = errorCode;
   }
-  
+
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.createImageId == null )
+    result = prime * result + ( ( this.vmInstance == null )
       ? 0
-      : this.createImageId.hashCode( ) );
+      : this.vmInstance.hashCode( ) );
     return result;
   }
-  
+
   @Override
-  public boolean equals( final Object obj ) {
+  public boolean equals( Object obj ) {
     if ( this == obj ) {
       return true;
     }
     if ( obj == null ) {
       return false;
     }
-    if ( this.getClass( ) != obj.getClass( ) ) {
+    if ( getClass( ) != obj.getClass( ) ) {
       return false;
     }
-    final VmCreateImageTask other = ( VmCreateImageTask ) obj;
-    if ( this.createImageId == null ) {
-      if ( other.createImageId != null ) {
+    VmCreateImageTask other = ( VmCreateImageTask ) obj;
+    if ( this.vmInstance == null ) {
+      if ( other.vmInstance != null ) {
         return false;
       }
-    } else if ( !this.createImageId.equals( other.createImageId ) ) {
+    } else if ( !this.vmInstance.equals( other.vmInstance ) ) {
       return false;
     }
     return true;

@@ -62,7 +62,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
                **/
               if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
                 VmInstances.terminated( vm );
-              } else if ( VmState.STOPPED.apply( vm ) ) {
+              } else if ( VmState.STOPPING.apply( vm ) ) {
                 VmInstances.stopped( vm );
               } else if ( VmStateSet.RUN.apply( vm ) ) {
                 VmInstances.shutDown( vm );
@@ -87,7 +87,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       }
     }
     
-    final List<String> unreportedVms = Lists.transform( VmInstances.listValues( ), new Function<VmInstance, String>( ) {
+    final List<String> unreportedVms = Lists.transform( VmInstances.list( ), new Function<VmInstance, String>( ) {
       
       @Override
       public String apply( final VmInstance input ) {

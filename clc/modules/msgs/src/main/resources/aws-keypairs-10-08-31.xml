@@ -82,13 +82,13 @@
     <value name="keyFingerprint" field="keyFingerprint" />
   </mapping>
 
-  <mapping name="ImportKeyPairType" class="edu.ucsb.eucalyptus.msgs.ImportKeyPairType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="ImportKeyPair" class="edu.ucsb.eucalyptus.msgs.ImportKeyPairType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="keyName" field="keyName" usage="required" />
     <value name="publicKeyMaterial" field="publicKeyMaterial" usage="required" />
   </mapping>
 
-  <mapping name="ImportKeyPairResponseType" class="edu.ucsb.eucalyptus.msgs.ImportKeyPairResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="ImportKeyPairResponse" class="edu.ucsb.eucalyptus.msgs.ImportKeyPairResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="keyName" field="keyName" usage="required" />
     <value name="keyFingerprint" field="keyFingerprint" usage="required" />
