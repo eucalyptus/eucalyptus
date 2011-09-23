@@ -238,11 +238,11 @@ public class SystemBootstrapper {
       }
     } );
     SystemBootstrapper.runComponentStages( Component.Transition.STARTING, Components.filterWhichCanLoad( ) );
-    SystemBootstrapper.runComponentStages( Component.Transition.READY_CHECK, Components.filterWhichCanLoad( ) );
     Threads.lookup( Empyrean.class ).submit( new Runnable( ) {
       @Override
       public void run( ) {
         try {
+          SystemBootstrapper.runComponentStages( Component.Transition.READY_CHECK, Components.filterWhichCanLoad( ) );
           SystemBootstrapper.runComponentStages( Component.Transition.ENABLING, Components.filterWhichCanLoad( ) );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );

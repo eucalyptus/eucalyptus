@@ -121,7 +121,7 @@ import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
-@ConfigurableClass( root = "vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
+@ConfigurableClass( root = "cloud.vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
 public class VmInstances {
   public static class TerminatedInstanceException extends NoSuchElementException {
     
