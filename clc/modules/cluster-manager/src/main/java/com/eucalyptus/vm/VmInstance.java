@@ -297,6 +297,15 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     public boolean apply( final VmInstance arg0 ) {
       return this.equals( arg0.getState( ) );
     }
+    
+    public Predicate<VmInstance> not( ) {
+      return new Predicate<VmInstance>( ) {
+
+        @Override
+        public boolean apply( VmInstance input ) {
+          return !this.apply( input );
+        }};
+    }
   }
   
   public enum RestoreAllocation implements Predicate<VmInfo> {

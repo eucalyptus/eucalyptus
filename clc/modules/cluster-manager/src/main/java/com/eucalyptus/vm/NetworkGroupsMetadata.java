@@ -105,40 +105,44 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
     Multimap<String, String> rules = ArrayListMultimap.create( );
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      Predicate<VmInstance> filter = Predicates.not( Predicates.or( VmState.TERMINATED, VmState.STOPPED ) );
+      Predicate<VmInstance> filter = Predicates.and( VmState.TERMINATED.not( ), VmState.STOPPED.not( ) );
       for ( VmInstance vm : VmInstances.list( filter ) ) {
-        for ( NetworkGroup ruleGroup : vm.getNetworkGroups( ) ) {
-          try {
-            ruleGroup = Entities.merge( ruleGroup );
-            networks.put( ruleGroup.getClusterNetworkName( ), vm.getPrivateAddress( ) );
-            if ( !rules.containsKey( ruleGroup.getNaturalId( ) ) ) {
-              for ( NetworkRule netRule : ruleGroup.getNetworkRules( ) ) {
-                try {
-                  String rule = String.format( "-P %s -%s %d%s%d ", netRule.getProtocol( ), ( NetworkRule.Protocol.icmp.equals( netRule.getProtocol( ) )
-                    ? "t"
-                    : "p" ), netRule.getLowPort( ), ( NetworkRule.Protocol.icmp.equals( netRule.getProtocol( ) )
-                    ? ":"
-                    : "-" ), netRule.getHighPort( ) );
-                  for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {
-                    String ruleString = String.format( "%s -o %s -u %s", rule, peer.getGroupName( ), peer.getUserQueryKey( ) );
-                    if ( !rules.get( ruleGroup.getClusterNetworkName( ) ).contains( ruleString ) ) {
-                      rules.put( ruleGroup.getClusterNetworkName( ), ruleString );
+        try {
+          for ( NetworkGroup ruleGroup : vm.getNetworkGroups( ) ) {
+            try {
+              ruleGroup = Entities.merge( ruleGroup );
+              networks.put( ruleGroup.getClusterNetworkName( ), vm.getPrivateAddress( ) );
+              if ( !rules.containsKey( ruleGroup.getNaturalId( ) ) ) {
+                for ( NetworkRule netRule : ruleGroup.getNetworkRules( ) ) {
+                  try {
+                    String rule = String.format( "-P %s -%s %d%s%d ", netRule.getProtocol( ), ( NetworkRule.Protocol.icmp.equals( netRule.getProtocol( ) )
+                      ? "t"
+                      : "p" ), netRule.getLowPort( ), ( NetworkRule.Protocol.icmp.equals( netRule.getProtocol( ) )
+                      ? ":"
+                      : "-" ), netRule.getHighPort( ) );
+                    for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {
+                      String ruleString = String.format( "%s -o %s -u %s", rule, peer.getGroupName( ), peer.getUserQueryKey( ) );
+                      if ( !rules.get( ruleGroup.getClusterNetworkName( ) ).contains( ruleString ) ) {
+                        rules.put( ruleGroup.getClusterNetworkName( ), ruleString );
+                      }
                     }
-                  }
-                  for ( String cidr : netRule.getIpRanges( ) ) {
-                    String ruleString = String.format( "%s -s %s", rule, cidr );
-                    if ( !rules.get( ruleGroup.getClusterNetworkName( ) ).contains( ruleString ) ) {
-                      rules.put( ruleGroup.getClusterNetworkName( ), ruleString );
+                    for ( String cidr : netRule.getIpRanges( ) ) {
+                      String ruleString = String.format( "%s -s %s", rule, cidr );
+                      if ( !rules.get( ruleGroup.getClusterNetworkName( ) ).contains( ruleString ) ) {
+                        rules.put( ruleGroup.getClusterNetworkName( ), ruleString );
+                      }
                     }
+                  } catch ( Exception ex ) {
+                    LOG.error( ex, ex );
                   }
-                } catch ( Exception ex ) {
-                  LOG.error( ex, ex );
                 }
               }
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
             }
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
           }
+        } catch ( Exception ex ) {
+          LOG.error( ex , ex );
         }
       }
       buf.append( rulesToString( rules ) );
