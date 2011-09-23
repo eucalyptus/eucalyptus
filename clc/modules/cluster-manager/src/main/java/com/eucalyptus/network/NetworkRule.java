@@ -63,23 +63,27 @@
 
 package com.eucalyptus.network;
 
-import java.util.HashSet;
-import java.util.List;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Map.Entry;
 import java.util.Set;
-import javax.persistence.CascadeType;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.OneToMany;
+import javax.persistence.ElementCollection;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.google.common.base.Functions;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
 @Entity
@@ -88,52 +92,65 @@ import com.google.common.collect.Sets;
 @Table( name = "metadata_network_rule" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class NetworkRule extends AbstractPersistent {
+  public enum Protocol {
+    icmp, tcp, udp;
+  }
+  
+  @Transient
+  private static final long serialVersionUID = 1L;
+  @Enumerated( EnumType.STRING )
   @Column( name = "metadata_network_rule_protocol" )
-  String           protocol;
+  private Protocol          protocol;
   @Column( name = "metadata_network_rule_low_port" )
-  Integer          lowPort;
+  private Integer           lowPort;
   @Column( name = "metadata_network_rule_high_port" )
-  Integer          highPort;
-  @OneToMany( cascade = { CascadeType.REMOVE, CascadeType.MERGE, CascadeType.PERSIST }, fetch = FetchType.EAGER )//GRZE:WTF: why not all?
-  @JoinTable( name = "metadata_network_rule_has_ip_range", joinColumns = { @JoinColumn( name = "metadata_network_rule_id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_rule_ip_range_id" ) } )
+  private Integer           highPort;
+  
+  @ElementCollection
+  @CollectionTable( name = "metadata_network_rule_ip_ranges" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  Set<IpRange>     ipRanges     = new HashSet<IpRange>( );
-  @OneToMany( cascade = { CascadeType.REMOVE, CascadeType.MERGE, CascadeType.PERSIST }, fetch = FetchType.EAGER )
-  @JoinTable( name = "metadata_network_rule_has_peer_network", joinColumns = { @JoinColumn( name = "metadata_network_rule_id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_network_rule_peer_network_id" ) } )
+  private Set<String>       ipRanges         = Sets.newHashSet( );
+  
+  @ElementCollection
+  @CollectionTable( name = "metadata_network_group_rule_peers" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  Set<NetworkPeer> networkPeers = new HashSet<NetworkPeer>( );
+  private Set<NetworkPeer>  networkPeers     = Sets.newHashSet( );
   
-  public NetworkRule( ) {}
+  private NetworkRule( ) {}
   
-  public NetworkRule( final String protocol, final Integer lowPort, final Integer highPort, final List<IpRange> ipRanges ) {
+  private NetworkRule( final Protocol protocol, final Integer lowPort, final Integer highPort,
+                       final Collection<String> ipRanges,
+                       final Multimap<String, String> peers ) {
     this.protocol = protocol;
     this.lowPort = lowPort;
     this.highPort = highPort;
-    this.ipRanges = Sets.newHashSet( ipRanges );
+    if ( ipRanges != null ) {
+      this.ipRanges.addAll( ipRanges );
+    }
+    if ( peers != null ) {
+      for ( final Entry<String, String> entry : peers.entries( ) ) {
+        this.networkPeers.add( new NetworkPeer( this, entry.getKey( ), entry.getValue( ) ) );
+      }
+    }
   }
   
-  public NetworkRule( final String protocol, final Integer lowPort, final Integer highPort, final NetworkPeer peer ) {
-    this.protocol = protocol;
-    this.lowPort = lowPort;
-    this.highPort = highPort;
-    this.networkPeers.add( peer );
+  public static NetworkRule create( Protocol protocol, final Integer lowPort, final Integer highPort,
+                                    final Multimap<String, String> peers,
+                                    final Collection<String> ipRanges ) {
+    return new NetworkRule( protocol, lowPort, highPort, ipRanges, peers );
   }
   
-  public NetworkRule( final String protocol, final Integer lowPort, final Integer highPort ) {
-    this.protocol = protocol;
-    this.lowPort = lowPort;
-    this.highPort = highPort;
+  public static NetworkRule create( final String protocol, final Integer lowPort, final Integer highPort,
+                                    final Multimap<String, String> peers,
+                                    final Collection<String> ipRanges ) {
+    return create( Protocol.valueOf( protocol ), lowPort, highPort, peers, ipRanges );
   }
   
-  public boolean isValid( ) {
-    return "tcp".equals( this.protocol ) || "udp".equals( this.protocol ) || "icmp".equals( this.protocol );
-  }
-  
-  public String getProtocol( ) {
+  public Protocol getProtocol( ) {
     return this.protocol;
   }
   
-  public void setProtocol( String protocol ) {
+  public void setProtocol( final Protocol protocol ) {
     this.protocol = protocol;
   }
   
@@ -141,7 +158,7 @@ public class NetworkRule extends AbstractPersistent {
     return this.lowPort;
   }
   
-  public void setLowPort( Integer lowPort ) {
+  public void setLowPort( final Integer lowPort ) {
     this.lowPort = lowPort;
   }
   
@@ -149,15 +166,15 @@ public class NetworkRule extends AbstractPersistent {
     return this.highPort;
   }
   
-  public void setHighPort( Integer highPort ) {
+  public void setHighPort( final Integer highPort ) {
     this.highPort = highPort;
   }
   
-  public Set<IpRange> getIpRanges( ) {
+  public Set<String> getIpRanges( ) {
     return this.ipRanges;
   }
   
-  public void setIpRanges( Set<IpRange> ipRanges ) {
+  public void setIpRanges( final Set<String> ipRanges ) {
     this.ipRanges = ipRanges;
   }
   
@@ -165,7 +182,7 @@ public class NetworkRule extends AbstractPersistent {
     return this.networkPeers;
   }
   
-  public void setNetworkPeers( Set<NetworkPeer> networkPeers ) {
+  public void setNetworkPeers( final Set<NetworkPeer> networkPeers ) {
     this.networkPeers = networkPeers;
   }
   
@@ -173,39 +190,65 @@ public class NetworkRule extends AbstractPersistent {
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( highPort == null )
+    result = prime * result + ( ( this.highPort == null )
       ? 0
-      : highPort.hashCode( ) );
-    result = prime * result + ( ( lowPort == null )
+      : this.highPort.hashCode( ) );
+    result = prime * result + ( ( this.lowPort == null )
       ? 0
-      : lowPort.hashCode( ) );
-    result = prime * result + ( ( protocol == null )
+      : this.lowPort.hashCode( ) );
+    result = prime * result + ( ( this.protocol == null )
       ? 0
-      : protocol.hashCode( ) );
+      : this.protocol.hashCode( ) );
     return result;
   }
   
   @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) return true;
-    if ( obj == null ) return false;
-    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
-    NetworkRule other = ( NetworkRule ) obj;
-    if ( highPort == null ) {
-      if ( other.highPort != null ) return false;
-    } else if ( !highPort.equals( other.highPort ) ) return false;
-    if ( lowPort == null ) {
-      if ( other.lowPort != null ) return false;
-    } else if ( !lowPort.equals( other.lowPort ) ) return false;
-    if ( protocol == null ) {
-      if ( other.protocol != null ) return false;
-    } else if ( !protocol.equals( other.protocol ) ) return false;
-    if ( ipRanges == null ) {
-      if ( other.ipRanges != null ) return false;
-    } else if ( !ipRanges.equals( other.ipRanges ) ) return false;
-    if ( networkPeers == null ) {
-      if ( other.networkPeers != null ) return false;
-    } else if ( !networkPeers.equals( other.networkPeers ) ) return false;
+  public boolean equals( final Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( obj == null ) {
+      return false;
+    }
+    if ( !this.getClass( ).equals( obj.getClass( ) ) ) {
+      return false;
+    }
+    final NetworkRule other = ( NetworkRule ) obj;
+    if ( this.highPort == null ) {
+      if ( other.highPort != null ) {
+        return false;
+      }
+    } else if ( !this.highPort.equals( other.highPort ) ) {
+      return false;
+    }
+    if ( this.lowPort == null ) {
+      if ( other.lowPort != null ) {
+        return false;
+      }
+    } else if ( !this.lowPort.equals( other.lowPort ) ) {
+      return false;
+    }
+    if ( this.protocol == null ) {
+      if ( other.protocol != null ) {
+        return false;
+      }
+    } else if ( !this.protocol.equals( other.protocol ) ) {
+      return false;
+    }
+    if ( this.ipRanges == null || this.ipRanges.isEmpty( ) ) {
+      if ( other.ipRanges != null && !other.ipRanges.isEmpty( ) ) {
+        return false;
+      }
+    } else if ( !this.ipRanges.equals( other.ipRanges ) ) {
+      return false;
+    }
+    if ( this.networkPeers == null || this.networkPeers.isEmpty( ) ) {
+      if ( other.networkPeers != null && !other.networkPeers.isEmpty( ) ) {
+        return false;
+      }
+    } else if ( !this.networkPeers.equals( other.networkPeers ) ) {
+      return false;
+    }
     return true;
   }
   

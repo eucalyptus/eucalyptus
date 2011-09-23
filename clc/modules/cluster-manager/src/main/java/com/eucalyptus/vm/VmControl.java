@@ -74,22 +74,18 @@ import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 import org.mule.RequestContext;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.run.AdmissionControl;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.run.VerifyMetadata;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstance.Reason;
-import com.eucalyptus.cluster.VmInstance.VmState;
-import com.eucalyptus.cluster.VmInstance.VmStateSet;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.cluster.callback.CancelBundleCallback;
 import com.eucalyptus.cluster.callback.ConsoleOutputCallback;
@@ -104,15 +100,17 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.BundleInstanceChecker;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
+import com.eucalyptus.vm.VmInstance.Reason;
+import com.eucalyptus.vm.VmInstance.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
@@ -173,31 +171,26 @@ public class VmControl {
     Predicate<VmInstance> privileged = RestrictedTypes.filterPrivileged( );
     try {
       for ( final VmInstance vm : Iterables.filter( VmInstances.listValues( ), privileged ) ) {
+        if ( !instancesSet.isEmpty( ) && !instancesSet.contains( vm.getInstanceId( ) ) ) {
+          continue;
+        }
         EntityTransaction db = Entities.get( VmInstance.class );
         try {
           VmInstance v = Entities.merge( vm );
-          if ( VmState.TERMINATED.apply( v ) && v.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
-            VmInstances.terminate( v );
-          } else if ( VmState.BURIED.apply( v ) && v.getSplitTime( ) > VmInstances.BURY_TIME ) {
+          if ( VmInstances.Timeout.TERMINATED.apply( v ) ) {
             VmInstances.delete( v );
-          }
-          if ( VmState.BURIED.apply( v ) && !isVerbose ) {
-            continue;
-          }
-          if ( !instancesSet.isEmpty( ) && !instancesSet.contains( v.getInstanceId( ) ) ) {
-            continue;
           }
           if ( !rsvMap.containsKey( v.getReservationId( ) ) ) {
             final ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getNamespace( ), v.getNetworkNames( ) );
             rsvMap.put( reservation.getReservationId( ), reservation );
           }
-          rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstances.transform( v ) );
+          rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstances.transform( vm ) );
           db.commit( );
         } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex, ex );
           db.rollback( );
           try {
-            if ( vm != null && !VmState.BURIED.apply( vm ) ) {
+            if ( vm != null ) {
               RunningInstancesItemType ret = VmInstances.transform( vm );
               if ( ret != null && vm.getReservationId( ) != null ) {
                 if ( !rsvMap.containsKey( vm.getReservationId( ) ) ) {
@@ -208,7 +201,7 @@ public class VmControl {
               }
             }
           } catch ( Exception ex1 ) {
-            LOG.error( ex1 , ex1 );
+            LOG.error( ex1, ex1 );
           }
         }
       }
@@ -232,23 +225,35 @@ public class VmControl {
         public boolean apply( final String instanceId ) {
           EntityTransaction db = Entities.get( VmInstance.class );
           try {
-            VmInstance vm = null;
+            RunningInstancesItemType runVm = null;
             try {
+              String oldState = null, newState = null;
+              int oldCode = 0, newCode = 0;
               try {
-                vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.Lookup.INSTANCE );
-              } catch ( NoSuchElementException ex ) {
-                vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.Lookup.TERMINATED );
+                VmInstance vm = null;
+                vm = RestrictedTypes.doPrivileged( instanceId, VmInstances.lookupFunction( ) );
+                runVm = VmInstances.transform( vm );
+                oldCode = vm.getState( ).getCode( );
+                newCode = VmState.SHUTTING_DOWN.apply( vm )
+                  ? VmState.TERMINATED.getCode( )
+                  : VmState.SHUTTING_DOWN.getCode( );
+                oldState = vm.getState( ).getName( );
+                newState = VmState.SHUTTING_DOWN.apply( vm )
+                  ? VmState.TERMINATED.getName( )
+                  : VmState.SHUTTING_DOWN.getName( );
+                VmInstances.shutDown( vm );
+              } catch ( final NoSuchElementException e ) {
+                runVm = VmInstances.transform( instanceId );
+                oldCode = newCode = VmState.TERMINATED.getCode( );
+                oldState = newState = VmState.TERMINATED.getName( );
+                VmInstances.delete( instanceId );
               }
-              final int oldCode = vm.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
-              final String oldState = vm.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
-              if ( VmStateSet.DONE.apply( vm ) ) {
-                VmInstances.delete( vm );
-              } else {
-                VmInstances.terminate( vm );
-              }
-              results.add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
+              results.add( new TerminateInstancesItemType( instanceId, oldCode, oldState, newCode, newState ) );
               db.commit( );
               return true;
+            } catch ( final TransactionException e ) {
+              db.rollback( );
+              return false;
             } catch ( final NoSuchElementException e ) {
               db.rollback( );
               return false;
@@ -346,24 +351,32 @@ public class VmControl {
   }
   
   public DescribeBundleTasksResponseType describeBundleTasks( final DescribeBundleTasksType request ) throws EucalyptusCloudException {
-    final Context ctx = Contexts.lookup( );
     final DescribeBundleTasksResponseType reply = request.getReply( );
-    if ( request.getBundleIds( ).isEmpty( ) ) {
-      for ( final VmInstance v : Iterables.filter( VmInstances.listValues( ), VmInstance.Filters.BUNDLING ) ) {
-        if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-          reply.getBundleTasks( ).add( v.getBundleTask( ) );
-        }
-      }
-    } else {
-      for ( final String bundleId : request.getBundleIds( ) ) {
-        try {
-          final VmInstance v = VmInstances.lookupByBundleId( bundleId );
-          if ( v.isBundling( )
-               && ( RestrictedTypes.filterPrivileged( ).apply( v ) ) ) {
+    
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      if ( request.getBundleIds( ).isEmpty( ) ) {
+        for ( final VmInstance v : Iterables.filter( VmInstances.listValues( ), VmInstance.Filters.BUNDLING ) ) {
+          if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
             reply.getBundleTasks( ).add( v.getBundleTask( ) );
           }
-        } catch ( final NoSuchElementException e ) {}
+        }
+      } else {
+        for ( final String bundleId : request.getBundleIds( ) ) {
+          try {
+            final VmInstance v = VmInstances.lookupByBundleId( bundleId );
+            if ( v.isBundling( )
+                 && ( RestrictedTypes.filterPrivileged( ).apply( v ) ) ) {
+              reply.getBundleTasks( ).add( v.getBundleTask( ) );
+            }
+          } catch ( final NoSuchElementException e ) {}
+        }
       }
+      db.rollback( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new EucalyptusCloudException( ex );
     }
     return reply;
   }
@@ -432,9 +445,12 @@ public class VmControl {
             return true;
           } catch ( final NoSuchElementException e ) {
             try {
-              VmInstances.terminate( instanceId );
+              VmInstances.stopped( instanceId );
               return true;
             } catch ( final NoSuchElementException e1 ) {
+              return false;
+            } catch ( TransactionException ex ) {
+              Logs.extreme( ).error( ex, ex );
               return false;
             }
           }
@@ -537,19 +553,17 @@ public class VmControl {
     final Context ctx = Contexts.lookup( );
     final User user = ctx.getUser( );
     
+    EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance v = VmInstances.lookup( instanceId );
       if ( v.isBundling( ) ) {
         reply.setTask( v.getBundleTask( ) );
-        return reply;
-      } else if ( !"windows".equals( v.getPlatform( ) ) ) {
+      } else if ( !ImageMetadata.Platform.windows.name( ).equals( v.getPlatform( ) ) ) {
         throw new EucalyptusCloudException( "Failed to bundle requested vm because the platform is not 'windows': " + request.getInstanceId( ) );
       } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
         throw new EucalyptusCloudException( "Failed to bundle requested vm because it is not currently 'running': " + request.getInstanceId( ) );
       } else if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-        BundleInstanceChecker.check( request );
-        final BundleTask bundleTask = new BundleTask( v.getInstanceId( ).replaceFirst( "i-", "bun-" ), v.getInstanceId( ), request.getBucket( ),
-                                                      request.getPrefix( ) );
+        final BundleTask bundleTask = Bundles.create( v, request.getBucket( ), request.getPrefix( ), new String( Base64.decode( request.getUploadPolicy( ) ) ) );
         if ( v.startBundleTask( bundleTask ) ) {
           reply.setTask( bundleTask );
         } else if ( v.getBundleTask( ) == null ) {
@@ -559,22 +573,29 @@ public class VmControl {
         } else {
           throw new EucalyptusCloudException( "Instance is already being bundled: " + v.getBundleTask( ).getBundleId( ) );
         }
-        LOG.info( EventRecord
-                             .here( BundleCallback.class, EventType.BUNDLE_PENDING, ctx.getUserFullName( ).toString( ), v.getBundleTask( ).getBundleId( ),
-                                    v.getInstanceId( ) ) );
+        EventRecord.here( BundleCallback.class,
+                          EventType.BUNDLE_PENDING,
+                          ctx.getUserFullName( ).toString( ),
+                          v.getBundleTask( ).getBundleId( ),
+                          v.getInstanceId( ) ).debug( );
         final BundleCallback callback = new BundleCallback( request );
         request.setUrl( walrusUrl );
         request.setAwsAccessKeyId( Accounts.getFirstActiveAccessKeyId( user ) );
         AsyncRequests.newRequest( callback ).dispatch( v.lookupClusterConfiguration( ) );
-        return reply;
       } else {
         throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
       }
-    } catch ( EucalyptusCloudException e ) {
-      throw e;
-    } catch ( final Exception e ) {
-      throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
+    } catch ( EucalyptusCloudException ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw ex;
+    } catch ( final Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ), ex );
     }
+    return reply;
+    
   }
   
   public void getPasswordData( final GetPasswordDataType request ) throws Exception {

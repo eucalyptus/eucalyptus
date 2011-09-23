@@ -61,63 +61,61 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import org.hibernate.annotations.Parent;
 
 @Embeddable
-public class VmUsageStats {
+public class VmId {
   @Parent
   private VmInstance vmInstance;
-  @Column( name = "metadata_vm_block_bytes" )
-  private Long       blockBytes;
-  @Column( name = "metadata_vm_network_bytes" )
-  private Long       networkBytes;
+  @Column( name = "metadata_vm_reservation_id" )
+  private String     reservationId;
+  @Column( name = "metadata_vm_instance_id" )
+  private String     instanceId;
   
-  VmUsageStats( VmInstance vmInstance ) {
-    super( );
-    this.vmInstance = vmInstance;
-    this.blockBytes = 0l;
-    this.networkBytes = 0l;
-  }
-  
-  VmUsageStats( ) {
+  VmId( ) {
     super( );
   }
   
-  Long getBlockBytes( ) {
-    return this.blockBytes;
+  VmId( String reservationId, String instanceId ) {
+    super( );
+    this.reservationId = reservationId;
+    this.instanceId = instanceId;
   }
   
-  void setBlockBytes( Long blockBytes ) {
-    this.blockBytes = blockBytes;
-  }
-  
-  Long getNetworkBytes( ) {
-    return this.networkBytes;
-  }
-  
-  void setNetworkBytes( Long networkBytes ) {
-    this.networkBytes = networkBytes;
-  }
-  
-  VmInstance getVmInstance( ) {
+  private VmInstance getVmInstance( ) {
     return this.vmInstance;
+  }
+  
+  public String getReservationId( ) {
+    return this.reservationId;
+  }
+  
+  public String getInstanceId( ) {
+    return this.instanceId;
   }
   
   private void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
+  
+  private void setReservationId( String reservationId ) {
+    this.reservationId = reservationId;
+  }
+  
+  private void setInstanceId( String instanceId ) {
+    this.instanceId = instanceId;
+  }
 
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
-    builder.append( "VmUsageStats:" );
-    if ( this.blockBytes != null ) builder.append( "blockBytes=" ).append( this.blockBytes ).append( ":" );
-    if ( this.networkBytes != null ) builder.append( "networkBytes=" ).append( this.networkBytes );
+    builder.append( "VmId:" );
+    if ( this.reservationId != null ) builder.append( "reservationId=" ).append( this.reservationId ).append( ":" );
+    if ( this.instanceId != null ) builder.append( "instanceId=" ).append( this.instanceId );
     return builder.toString( );
   }
-  
 }

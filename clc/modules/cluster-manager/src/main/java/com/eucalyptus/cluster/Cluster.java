@@ -70,7 +70,6 @@ import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
@@ -78,7 +77,6 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.policy.PolicyVendor;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cloud.CloudMetadata.AvailabilityZoneMetadata;
@@ -158,6 +156,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   private static final long                              STATE_INTERVAL_DISABLED      = 10l;
   private static final long                              STATE_INTERVAL_NOTREADY      = 3l;
   private static final long                              STATE_INTERVAL_PENDING       = 3l;
+  private static final long                              VOLATILE_STATE_INTERVAL      = 3l;//TODO:@Configurable
   private static Logger                                  LOG                          = Logger.getLogger( Cluster.class );
   private final StateMachine<Cluster, State, Transition> stateMachine;
   private final ClusterConfiguration                     configuration;
@@ -253,6 +252,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     RESOURCES( ResourceStateCallback.class ),
     NETWORKS( NetworkStateCallback.class ),
     INSTANCES( VmStateCallback.class ),
+    VOLATILE_INSTANCES( VmPendingCallback.class ),
     ADDRESSES( PublicAddressStateCallback.class ),
     SERVICEREADY( ServiceStateCallback.class );
     Class refresh;
@@ -270,7 +270,10 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
             AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
-          } catch ( final Throwable t ) {
+          } catch ( final InterruptedException ex ) {
+            Thread.currentThread( ).interrupt( );
+            Exceptions.trace( ex );
+          } catch ( final Exception t ) {
             parent.filterExceptions( t );
           }
         }
@@ -430,6 +433,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
             }
             break;
           case ENABLED:
+            if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_ENABLED ) && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
+              Refresh.VOLATILE_INSTANCES.apply( this );
+            }
             if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_ENABLED ) && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
               transition = Automata.sequenceTransitions( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
                                                          State.ENABLED_NET, State.ENABLED_VMS, State.ENABLED );
@@ -898,18 +904,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
 //            LOG.info( event );
 //            break;
 //        }
-    }
-  }
-  
-  private void updateVolatiles( ) {
-    try {
-      AsyncRequests.newRequest( new VmPendingCallback( this ) ).sendSync( this.getConfiguration( ) );
-    } catch ( final ExecutionException ex ) {
-      Exceptions.trace( ex );
-    } catch ( final InterruptedException ex ) {
-      Exceptions.trace( ex );
-    } catch ( final CancellationException ex ) {
-      /** operation self-cancelled **/
     }
   }
   

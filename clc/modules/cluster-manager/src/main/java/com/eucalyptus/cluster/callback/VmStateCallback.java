@@ -4,16 +4,16 @@ import java.util.List;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstance.Reason;
-import com.eucalyptus.cluster.VmInstance.VmState;
-import com.eucalyptus.cluster.VmInstance.VmStateSet;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.async.FailedRequestException;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
+import com.eucalyptus.vm.VmInstance.Reason;
+import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
@@ -55,7 +55,19 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         try {
           VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
           try {
-            if ( VmStateSet.RUN.apply( vm ) || VmStateSet.CHANGING.apply( vm ) ) {
+            if ( VmState.SHUTTING_DOWN.equals( runVmState ) ) {
+              /**
+               * TODO:GRZE: based on current local instance state we need to handle reported
+               * SHUTTING_DOWN state differently
+               **/
+              if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
+                VmInstances.terminated( vm );
+              } else if ( VmState.STOPPED.apply( vm ) ) {
+                VmInstances.stopped( vm );
+              } else if ( VmStateSet.RUN.apply( vm ) ) {
+                VmInstances.shutDown( vm );
+              }
+            } else if ( VmStateSet.RUN.apply( vm ) || VmStateSet.CHANGING.apply( vm ) ) {
               vm.doUpdate( ).apply( runVm );
             } else {
               continue;
@@ -64,7 +76,6 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
             LOG.error( ex );
           }
         } catch ( Exception ex1 ) {
-          VmInstance vm = VmInstance.Lookup.INSTANCE.apply( runVm.getInstanceId( ) );
           if ( VmStateSet.RUN.contains( runVmState ) ) {
             VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
           }
@@ -97,16 +108,16 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       EntityTransaction db1 = Entities.get( VmInstance.class );
       try {
         VmInstance vm = VmInstances.lookup( vmId );
-        if ( VmStateSet.RUN.apply( vm ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
-          VmInstances.terminate( vm );
+        if ( VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
+          VmInstances.terminated( vm );
+        } else if ( VmInstances.Timeout.SHUTTING_DOWN.apply( vm ) ) {
+          VmInstances.terminated( vm );
+        } else if ( VmInstances.Timeout.TERMINATED.apply( vm ) ) {
+          VmInstances.delete( vm );
         } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
-          VmInstances.terminate( vm );
-        } else if ( VmState.TERMINATED.apply( vm ) && vm.getSplitTime( ) > VmInstances.BURY_TIME ) {
-          VmInstances.delete( vm );
-        } else if ( VmState.BURIED.apply( vm ) ) {
-          VmInstances.delete( vm );
-        } else if ( VmStateSet.DONE.apply( vm ) && vm.getSplitTime( ) > VmInstances.SHUT_DOWN_TIME ) {
-          VmInstances.terminate( vm );
+          VmInstances.terminated( vm );
+        } else if ( VmState.STOPPED.apply( vm ) ) {
+          VmInstances.stopped( vm );
         }
         db1.commit( );
       } catch ( final Exception ex ) {

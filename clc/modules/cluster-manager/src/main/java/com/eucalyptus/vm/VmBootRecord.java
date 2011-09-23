@@ -61,10 +61,11 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
 import java.util.Arrays;
 import java.util.Set;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
@@ -84,8 +85,6 @@ import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.vm.VmType;
-import com.eucalyptus.vm.VmTypes;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
@@ -105,6 +104,8 @@ public class VmBootRecord {
   @Column( name = "metadata_vm_platform" )
   private String                  platform;
   @ElementCollection
+  @CollectionTable(name="metadata_instances_persistent_volumes")
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<VmVolumeAttachment> persistentVolumes = Sets.newHashSet( );
   @Lob
   @Column( name = "metadata_vm_user_data" )

@@ -61,63 +61,33 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.configurable;
 
-import java.util.Date;
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
-import org.hibernate.annotations.Parent;
+import java.lang.reflect.Field;
+import java.util.NoSuchElementException;
+import com.eucalyptus.system.Ats;
+import com.eucalyptus.util.Fields;
 
-@Embeddable
-public class VmLaunchRecord {
-  @Parent
-  private VmInstance vmInstance;
-  @Column( name = "metadata_vm_launch_index" )
-  private Integer    launchIndex;
-  @Column( name = "metadata_vm_launch_time" )
-  private Date       launchTime;
+public class Properties {
   
-  VmLaunchRecord( Integer launchIndex, Date launchTime ) {
-    super( );
-    this.launchIndex = launchIndex;
-    this.launchTime = launchTime;
+  public static ConfigurableProperty lookup( String fullyQualifiedName ) throws IllegalAccessException {
+    return PropertyDirectory.getPropertyEntry( fullyQualifiedName );
   }
   
-  VmLaunchRecord( ) {
-    super( );
+  public static ConfigurableProperty lookup( Class<?> declaringClass, String fieldName ) throws IllegalAccessException, NoSuchFieldException {
+    Field f = Fields.get( declaringClass, fieldName );
+    return lookup( propertyName( f ) );
+    
   }
   
-  VmInstance getVmInstance( ) {
-    return this.vmInstance;
-  }
-  
-  Integer getLaunchIndex( ) {
-    return this.launchIndex;
-  }
-  
-  Date getLaunchTime( ) {
-    return this.launchTime;
-  }
-  
-  private void setVmInstance( VmInstance vmInstance ) {
-    this.vmInstance = vmInstance;
-  }
-  
-  private void setLaunchIndex( Integer launchIndex ) {
-    this.launchIndex = launchIndex;
-  }
-  
-  private void setLaunchTime( Date launchTime ) {
-    this.launchTime = launchTime;
-  }
-
-  @Override
-  public String toString( ) {
-    StringBuilder builder = new StringBuilder( );
-    builder.append( "VmLaunchRecord:" );
-    if ( this.launchIndex != null ) builder.append( "launchIndex=" ).append( this.launchIndex ).append( ":" );
-    if ( this.launchTime != null ) builder.append( "launchTime=" ).append( this.launchTime );
-    return builder.toString( );
+  public static String propertyName( Field f ) {
+    Class c = f.getDeclaringClass( );
+    if ( c.isAnnotationPresent( ConfigurableClass.class ) && f.isAnnotationPresent( ConfigurableField.class ) ) {
+      ConfigurableClass classAnnote = ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class );
+      return classAnnote.root( ) + "." + f.getName( ).toLowerCase( );
+    } else {
+      throw new NoSuchElementException( Ats.from( f ).toString( ) );
+    }
   }
   
 }
