@@ -498,9 +498,7 @@ public class VmInstances {
     try {
       final Iterable<VmInstance> vms = Iterables.filter( Entities.query( VmInstance.named( ownerFullName, instanceId ) ), predicate );
       db.commit( );
-      final List<VmInstance> ret = Lists.newArrayList( vms );
-      ret.addAll( Collections2.filter( terminateCache.values( ), predicate ) );
-      return ret;
+      return Lists.newArrayList( vms );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       db.rollback( );
