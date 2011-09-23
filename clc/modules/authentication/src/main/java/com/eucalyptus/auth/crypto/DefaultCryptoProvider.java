@@ -26,6 +26,7 @@ import com.eucalyptus.crypto.HmacProvider;
 import com.eucalyptus.crypto.Signatures;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.Internets;
 
 public class DefaultCryptoProvider implements CryptoProvider, CertificateProvider, HmacProvider {
   public static String  KEY_ALGORITHM         = "RSA";
@@ -116,7 +117,10 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
   }
   
   public X509Certificate generateServiceCertificate( KeyPair keys, String serviceName ) {
-    X500Principal x500 = new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=Cloud, C=US", serviceName ) );
+      String serviceIp = Internets.localHostInetAddress( ).getCanonicalHostName( );
+      //      X500Principal x500 = new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=Cloud, C=US", serviceName ) );
+      X500Principal x500 = new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=Cloud, C=US", serviceIp ) );
+
 //    if( !"eucalyptus".equals( serviceName ) ) {
 //      SystemCredentials sys = SystemCredentials.getCredentialProvider( Eucalyptus.class );
 //      return generateCertificate( keys, x500, sys.getCertificate( ).getSubjectX500Principal( ), sys.getPrivateKey( ) );
