@@ -320,9 +320,9 @@ public class RestrictedTypes {
         RestrictedTypes.quantityMetricFunctions.put( measuredType, ( Function<OwnerFullName, Long> ) Classes.newInstance( candidate ) );
         return true;
       } else if ( Ats.from( candidate ).has( Resolver.class ) && Function.class.isAssignableFrom( candidate ) ) {
-        QuantityMetricFunction measures = Ats.from( candidate ).get( QuantityMetricFunction.class );
-        Class measuredType = measures.value( );
-        RestrictedTypes.resourceResolvers.put( measuredType, ( Function<String, RestrictedType<?>> ) Classes.newInstance( candidate ) );
+        Resolver resolver = Ats.from( candidate ).get( Resolver.class );
+        Class resolverFunction = resolver.value( );
+        RestrictedTypes.resourceResolvers.put( resolverFunction, ( Function<String, RestrictedType<?>> ) Classes.newInstance( candidate ) );
         return true;
       } else {
         return false;
