@@ -62,7 +62,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
                **/
               if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
                 VmInstances.terminated( vm );
-              } else if ( VmState.STOPPED.apply( vm ) ) {
+              } else if ( VmState.STOPPING.apply( vm ) ) {
                 VmInstances.stopped( vm );
               } else if ( VmStateSet.RUN.apply( vm ) ) {
                 VmInstances.shutDown( vm );

@@ -198,6 +198,12 @@ public class Topology implements EventListener<Event> {
         if ( Bootstrap.isShuttingDown( ) ) {
           return null;
         } else {
+          try {
+            while ( !Bootstrap.isFinished( ) ) { TimeUnit.MILLISECONDS.sleep( 50 ); }
+          } catch ( InterruptedException ex1 ) {
+            Thread.currentThread( ).interrupt( );
+            throw ex1;
+          }
           Long serviceStart = System.currentTimeMillis( );
           Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), callable.toString( ) )
                                             .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) ) );
@@ -228,6 +234,12 @@ public class Topology implements EventListener<Event> {
         if ( Bootstrap.isShuttingDown( ) ) {
           return null;
         } else {
+          try {
+            while ( !Bootstrap.isFinished( ) ) { TimeUnit.MILLISECONDS.sleep( 50 ); }
+          } catch ( InterruptedException ex1 ) {
+            Thread.currentThread( ).interrupt( );
+            throw ex1;
+          }
           Long serviceStart = System.currentTimeMillis( );
           Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
                                             .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) ) );
@@ -259,6 +271,12 @@ public class Topology implements EventListener<Event> {
         if ( Bootstrap.isShuttingDown( ) ) {
           return null;
         } else {
+          try {
+            while ( !Bootstrap.isFinished( ) ) { TimeUnit.MILLISECONDS.sleep( 50 ); }
+          } catch ( InterruptedException ex1 ) {
+            Thread.currentThread( ).interrupt( );
+            throw ex1;
+          }
           Long serviceStart = System.currentTimeMillis( );
           EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
                      .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) )

@@ -193,7 +193,7 @@ public class VmInstances {
   @ConfigurableField( description = "Prefix to use for instance MAC addresses.", initial = "d0:0d" )
   public static String       MAC_PREFIX                    = "d0:0d";
   @ConfigurableField( description = "Subdomain to use for instance DNS.", initial = ".eucalyptus", changeListener = SubdomainListener.class )
-  public static final String INSTANCE_SUBDOMAIN            = ".eucalyptus";
+  public static String INSTANCE_SUBDOMAIN            = ".eucalyptus";
   
   public static class SubdomainListener implements PropertyChangeListener {
     @Override
