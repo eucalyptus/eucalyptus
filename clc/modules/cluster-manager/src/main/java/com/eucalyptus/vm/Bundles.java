@@ -63,22 +63,122 @@
 
 package com.eucalyptus.vm;
 
+import java.util.NavigableSet;
+import java.util.NoSuchElementException;
+import javax.persistence.EntityTransaction;
+import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.IllegalContextAccessException;
+import com.eucalyptus.context.ServiceStateException;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.async.MessageCallback;
 import edu.ucsb.eucalyptus.msgs.CreateBucketType;
 import edu.ucsb.eucalyptus.msgs.DeleteBucketType;
 
 public class Bundles {
-  public static BundleTask create( VmInstance v, String bucket, String prefix, String policy ) {
+  private static Logger LOG = Logger.getLogger( Bundles.class );
+  
+  public static MessageCallback createCallback( BundleInstanceType request ) throws AuthException, IllegalContextAccessException, ServiceStateException {
+    Component walrus = Components.lookup( Walrus.class );
+    NavigableSet<ServiceConfiguration> configs = walrus.lookupServiceConfigurations( );
+    if ( configs.isEmpty( ) || !Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
+      throw new ServiceStateException( "Failed to bundle instance because there is no available walrus service at the moment." );
+    }
+    final String walrusUrl = configs.first( ).getUri( ).toASCIIString( );
+    request.setUrl( walrusUrl );
+    request.setAwsAccessKeyId( Accounts.getFirstActiveAccessKeyId( Contexts.lookup( ).getUser( ) ) );
+    return new BundleCallback( request );
+  }
+  
+  public static MessageCallback cancelCallback( CancelBundleTaskType request ) {
+    return new CancelBundleCallback( request );
+  }
+  
+  public static class CancelBundleCallback extends MessageCallback<CancelBundleTaskType, CancelBundleTaskResponseType> {
+    private CancelBundleCallback( CancelBundleTaskType request ) {
+      super( request );
+    }
+    
+    @Override
+    public void fire( CancelBundleTaskResponseType reply ) {
+      if ( !reply.get_return( ) ) {
+        LOG.info( "Attempt to CancelBundleTask for instance " + this.getRequest( ).getBundleId( ) + " has failed." );
+      } else {
+        EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          VmInstance vm = VmInstances.lookupByBundleId( this.getRequest( ).getBundleId( ) );
+          vm.getRuntimeState( ).cancelBundleTask( );
+          EventRecord.here( CancelBundleCallback.class, EventType.BUNDLE_CANCELLED, this.getRequest( ).toSimpleString( ), vm.getBundleTask( ).getBundleId( ),
+                            vm.getInstanceId( ) ).info( );
+          db.commit( );
+        } catch ( Exception ex ) {
+          Logs.exhaust( ).error( ex, ex );
+          db.rollback( );
+        }
+      }
+    }
+  }
+  
+  public static class BundleCallback extends MessageCallback<BundleInstanceType, BundleInstanceResponseType> {
+    private BundleCallback( BundleInstanceType request ) {
+      super( request );
+    }
+    
+    @Override
+    public void fire( BundleInstanceResponseType reply ) {
+      EntityTransaction db = Entities.get( VmInstance.class );
+      try {
+        if ( !reply.get_return( ) ) {
+          LOG.info( "Attempt to bundle instance " + this.getRequest( ).getInstanceId( ) + " has failed." );
+          try {
+            VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
+            vm.getRuntimeState( ).resetBundleTask( );
+          } catch ( NoSuchElementException e1 ) {}
+          db.commit( );
+        } else {
+          VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
+          vm.getRuntimeState( ).submittedBundleTask( );
+          EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTED, this.getRequest( ).toSimpleString( ), "" + vm.getRuntimeState( ),
+                            vm.getInstanceId( ) ).info( );
+          db.commit( );
+        }
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        db.rollback( );
+      }
+    }
+    
+    @Override
+    public void fireException( Throwable e ) {
+      LOG.debug( LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
+      LOG.debug( e, e );
+    }
+    
+  }
+  
+  public static BundleTask transform( final VmBundleTask bundleTask ) {
+    return VmBundleTask.asBundleTask( ).apply( bundleTask );
+  }
+  
+  public static VmBundleTask create( VmInstance v, String bucket, String prefix, String policy ) {
     verifyPolicy( policy, bucket );
     verifyBucket( bucket );
     verifyPrefix( prefix );
-    return new BundleTask( v.getInstanceId( ).replaceFirst( "i-", "bun-" ), v.getInstanceId( ), bucket, prefix );
+    return VmBundleTask.create( v, bucket, prefix, policy );
   }
   
   private static void verifyPolicy( String policy, String bucketName ) {

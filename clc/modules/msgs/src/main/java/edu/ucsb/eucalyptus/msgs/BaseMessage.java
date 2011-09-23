@@ -82,16 +82,25 @@ public class BaseMessage {
     return this._return;
   }
   
+  @SuppressWarnings( "unchecked" )
+  public <TYPE extends BaseMessage> TYPE markWinning( ) {
+    this._return = true;
+    return ( TYPE ) this;
+  }
+  
+  @SuppressWarnings( "unchecked" )
   public <TYPE extends BaseMessage> TYPE markFailed( ) {
     this._return = false;
     return ( TYPE ) this;
   }
   
+  @SuppressWarnings( "unchecked" )
   public <TYPE extends BaseMessage> TYPE markPrivileged( ) {
     this.effectiveUserId = Principals.systemUser( ).getName( );
     return ( TYPE ) this;
   }
   
+  @SuppressWarnings( "unchecked" )
   public <TYPE extends BaseMessage> TYPE markUnprivileged( ) {
     this.effectiveUserId = this.userId;
     return ( TYPE ) this;

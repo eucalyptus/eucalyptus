@@ -109,11 +109,13 @@ public class VmBundleTask {
   @Column( name = "metadata_vm_bundle_update_time" )
   private Date        updateTime;
   @Column( name = "metadata_vm_bundle_progress" )
-  private String      progress;
+  private Integer     progress;
   @Column( name = "metadata_vm_bundle_bucket" )
   private String      bucket;
   @Column( name = "metadata_vm_bundle_prefix" )
   private String      prefix;
+  @Column( name = "metadata_vm_bundle_policy" )
+  private String      policy;
   @Column( name = "metadata_vm_bundle_error_msg" )
   private String      errorMessage;
   @Column( name = "metadata_vm_bundle_error_code" )
@@ -123,7 +125,8 @@ public class VmBundleTask {
     super( );
   }
   
-  VmBundleTask( final VmInstance vmInstance, final String state, final Date startTime, final Date updateTime, final String progress, final String bucket, final String prefix,
+  VmBundleTask( final VmInstance vmInstance, final String state, final Date startTime, final Date updateTime, final Integer progress, final String bucket,
+                final String prefix,
                 final String errorMessage, final String errorCode ) {
     super( );
     this.vmInstance = vmInstance;
@@ -137,6 +140,24 @@ public class VmBundleTask {
     this.errorCode = errorCode;
   }
   
+  private VmBundleTask( VmInstance vm, String bucket, String prefix, String policy ) {
+    super( );
+    this.vmInstance = vm;
+    this.state = BundleState.pending;
+    this.startTime = new Date( );
+    this.updateTime = new Date( );
+    this.progress = 0;
+    this.bucket = bucket;
+    this.prefix = prefix;
+    this.policy = policy;
+    this.errorCode = null;
+    this.errorMessage = null;
+  }
+  
+  static VmBundleTask create( VmInstance vm, String bucket, String prefix, String policy ) {
+    return new VmBundleTask( vm, bucket, prefix, policy );
+  }
+  
   public static Function<BundleTask, VmBundleTask> fromBundleTask( final VmInstance vm ) {
     return new Function<BundleTask, VmBundleTask>( ) {
       
@@ -146,7 +167,9 @@ public class VmBundleTask {
                                  input.getState( ),
                                  input.getStartTime( ),
                                  input.getUpdateTime( ),
-                                 input.getProgress( ),
+                                 input.getProgress( ) != null
+                                   ? Integer.parseInt( input.getProgress( ).replace( "%", "" ) )
+                                   : 0,
                                  input.getBucket( ),
                                  input.getPrefix( ),
                                  input.getErrorMessage( ),
@@ -155,17 +178,17 @@ public class VmBundleTask {
     };
   }
   
-  public static Function<VmBundleTask, BundleTask> asBundleTask( final VmInstance vm ) {
+  public static Function<VmBundleTask, BundleTask> asBundleTask( ) {
     return new Function<VmBundleTask, BundleTask>( ) {
       
       @Override
       public BundleTask apply( final VmBundleTask input ) {
-        return new BundleTask( vm.getInstanceId( ),//GRZE: this constructor reference is crap.
+        return new BundleTask( input.getVmInstance( ).getInstanceId( ),//GRZE: this constructor reference is crap.
                                input.getBundleId( ),
                                input.getState( ).name( ),
                                input.getStartTime( ),
                                input.getUpdateTime( ),
-                               input.getProgress( ),
+                               "" + input.getProgress( ),
                                input.getBucket( ),
                                input.getPrefix( ),
                                input.getErrorMessage( ),
@@ -210,11 +233,11 @@ public class VmBundleTask {
     this.updateTime = updateTime;
   }
   
-  private String getProgress( ) {
+  private Integer getProgress( ) {
     return this.progress;
   }
   
-  private void setProgress( final String progress ) {
+  private void setProgress( final Integer progress ) {
     this.progress = progress;
   }
   

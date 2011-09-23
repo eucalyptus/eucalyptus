@@ -209,7 +209,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       
       @Override
       public boolean apply( final VmInstance arg0 ) {
-        return arg0.isBundling( );
+        return arg0.getRuntimeState( ).isBundling( );
       }
       
     };
@@ -918,14 +918,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return split;
   }
   
-  public Boolean isCreatingImage( ) {
-    return this.getRuntimeState( ).isCreatingImage( );
-  }
-  
-  public Boolean isBundling( ) {
-    return this.getRuntimeState( ).isBundling( );
-  }
-  
   public VmBundleTask resetBundleTask( ) {
     return this.getRuntimeState( ).resetBundleTask( );
   }
@@ -1004,7 +996,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
    * @return the bundleTask
    */
   public BundleTask getBundleTask( ) {
-    return VmBundleTask.asBundleTask( this ).apply( this.getRuntimeState( ).getBundleTask( ) );
+    return VmBundleTask.asBundleTask( ).apply( this.getRuntimeState( ).getBundleTask( ) );
   }
   
   /**

@@ -78,7 +78,6 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
-import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -264,7 +263,7 @@ public class VmRuntimeState {
    * @return
    */
   public Boolean isBundling( ) {
-    return this.bundleTask != null && !BundleState.none.equals( this.bundleTask.getState( ) );
+    return this.bundleTask != null && ( BundleState.pending.equals( this.bundleTask.getState( ) ) || BundleState.storing.equals( this.bundleTask.getState( ) ) );
   }
   
   BundleState getBundleTaskState( ) {
@@ -275,56 +274,31 @@ public class VmRuntimeState {
     }
   }
   
-  void setBundleTaskState( final String state ) {
-    BundleState next = null;
-    if ( BundleState.storing.getMappedState( ).equals( state ) ) {
-      next = BundleState.storing;
-    } else if ( BundleState.complete.getMappedState( ).equals( state ) ) {
-      next = BundleState.complete;
-    } else if ( BundleState.failed.getMappedState( ).equals( state ) ) {
-      next = BundleState.failed;
-    } else {
-      next = BundleState.none;
-    }
-    if ( this.bundleTask != null ) {
-      final BundleState current = BundleState.valueOf( this.getBundleTask( ).getState( ) );
-      if ( BundleState.complete.equals( current ) || BundleState.failed.equals( current ) ) {
-        return; //already finished, wait and timeout the state along with the instance.
-      } else if ( BundleState.storing.equals( next ) || BundleState.storing.equals( current ) ) {
-        this.getBundleTask( ).setState( next.name( ) );
-        EventRecord.here( BundleCallback.class, EventType.BUNDLE_TRANSITION, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
-                          this.getVmInstance( ).getInstanceId( ),
-                          this.getBundleTask( ).getState( ) ).info( );
-        this.getBundleTask( ).setUpdateTime( new Date( ) );
-      } else if ( BundleState.none.equals( next ) && BundleState.failed.equals( current ) ) {
-        this.resetBundleTask( );
-      }
-    }
-  }
-  
   public Boolean cancelBundleTask( ) {
     if ( this.getBundleTask( ) != null ) {
-      this.getBundleTask( ).setState( BundleState.canceling.name( ) );
-      EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
+      this.getBundleTask( ).setState( BundleState.canceling );
+      EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_CANCELING, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
                         this.getVmInstance( ).getInstanceId( ),
-                        this.getBundleTask( ).getState( ) ).info( );
+                        "" + this.getBundleTask( ).getState( ) ).info( );
       return true;
     } else {
       return false;
     }
   }
   
-  public Boolean clearPendingBundleTask( ) {
-    if ( BundleState.pending.name( ).equals( this.getBundleTaskState( ) ) ) {
-      this.getBundleTask( ).setState( BundleState.storing.name( ) );
-      EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTING, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
+  public Boolean submittedBundleTask( ) {
+    if ( this.getBundleTask( ) != null && this.getBundleTask( ).getState( ).ordinal( ) >= BundleState.storing.ordinal( ) ) {
+      this.getBundleTask( ).setState( BundleState.storing );
+      EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_STARTING,
+                        this.vmInstance.getOwner( ).toString( ),
+                        this.getBundleTask( ).getBundleId( ),
                         this.getVmInstance( ).getInstanceId( ),
-                        this.getBundleTask( ).getState( ) ).info( );
+                        "" + this.getBundleTask( ).getState( ) ).info( );
       return true;
     } else if ( BundleState.canceling.name( ).equals( this.getBundleTaskState( ) ) ) {
-      EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELLED, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
+      EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_CANCELLED, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
                         this.getVmInstance( ).getInstanceId( ),
-                        this.getBundleTask( ).getState( ) ).info( );
+                        "" + this.getBundleTask( ).getState( ) ).info( );
       this.resetBundleTask( );
       return true;
     } else {
@@ -337,7 +311,7 @@ public class VmRuntimeState {
       this.bundleTask = task;
       return true;
     } else {
-      if ( ( this.getBundleTask( ) != null ) && BundleState.failed.equals( BundleState.valueOf( this.getBundleTask( ).getState( ) ) ) ) {
+      if ( ( this.getBundleTask( ) != null ) && ( BundleState.failed.equals( task ) || BundleState.canceling.equals( task ) || BundleState.none.equals( task ) ) ) {
         this.resetBundleTask( );
         this.bundleTask = task;
         return true;
@@ -409,15 +383,19 @@ public class VmRuntimeState {
   
   public void updateBundleTaskState( String state ) {
     BundleState next = BundleState.mapper.apply( state );
+    updateBundleTaskState( next );
+  }
+  
+  public void updateBundleTaskState( BundleState state ) {
     if ( this.getBundleTask( ) != null ) {
       final BundleState current = this.getBundleTask( ).getState( );
       if ( BundleState.complete.equals( current ) || BundleState.failed.equals( current ) || BundleState.failed.equals( current ) ) {
         return; //already finished, wait and timeout the state along with the instance.
-      } else if ( BundleState.storing.equals( next ) || BundleState.storing.equals( current ) ) {
-        this.getBundleTask( ).setState( next );
+      } else if ( BundleState.storing.equals( state ) || BundleState.storing.equals( current ) ) {
+        this.getBundleTask( ).setState( state );
         this.getBundleTask( ).setUpdateTime( new Date( ) );
-        EventRecord.here( BundleCallback.class, EventType.BUNDLE_TRANSITION, this.vmInstance.getOwner( ).toString( ), "" + this.getBundleTask( ) ).info( );
-      } else if ( BundleState.none.equals( next ) && BundleState.canceling.equals( current ) ) {
+        EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_TRANSITION, this.vmInstance.getOwner( ).toString( ), "" + this.getBundleTask( ) ).info( );
+      } else if ( BundleState.none.equals( state ) && BundleState.canceling.equals( current ) ) {
         this.resetBundleTask( );
       }
     } else {
