@@ -66,42 +66,68 @@ package com.eucalyptus.vm;
 import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import org.hibernate.annotations.Parent;
 import com.google.common.base.Function;
 
 @Embeddable
 public class VmBundleTask {
+  public enum BundleState {
+    none( "none" ), pending( null ), storing( "bundling" ), canceling( null ), complete( "succeeded" ), failed( "failed" );
+    private String mappedState;
+    
+    BundleState( final String mappedState ) {
+      this.mappedState = mappedState;
+    }
+    
+    public String getMappedState( ) {
+      return this.mappedState;
+    }
+    
+    public static Function<String, BundleState> mapper = new Function<String, BundleState>( ) {
+                                                         
+                                                         @Override
+                                                         public BundleState apply( final String input ) {
+                                                           for ( final BundleState s : BundleState.values( ) ) {
+                                                             if ( ( s.getMappedState( ) != null ) && s.getMappedState( ).equals( input ) ) {
+                                                               return s;
+                                                             }
+                                                           }
+                                                           return none;
+                                                         }
+                                                       };
+  }
+  
   @Parent
-  private VmInstance vmInstance;
-  @Column( name = "metadata_vm_bundle_id" )
-  private String     bundleId;
+  private VmInstance  vmInstance;
+  @Enumerated( EnumType.STRING )
   @Column( name = "metadata_vm_bundle_state" )
-  private String     state;
+  private BundleState state;
   @Column( name = "metadata_vm_bundle_start_time" )
-  private Date       startTime;
+  private Date        startTime;
   @Column( name = "metadata_vm_bundle_update_time" )
-  private Date       updateTime;
+  private Date        updateTime;
   @Column( name = "metadata_vm_bundle_progress" )
-  private String     progress;
+  private String      progress;
   @Column( name = "metadata_vm_bundle_bucket" )
-  private String     bucket;
+  private String      bucket;
   @Column( name = "metadata_vm_bundle_prefix" )
-  private String     prefix;
+  private String      prefix;
   @Column( name = "metadata_vm_bundle_error_msg" )
-  private String     errorMessage;
+  private String      errorMessage;
   @Column( name = "metadata_vm_bundle_error_code" )
-  private String     errorCode;
+  private String      errorCode;
   
   VmBundleTask( ) {
     super( );
   }
   
-  VmBundleTask( VmInstance vmInstance, String bundleId, String state, Date startTime, Date updateTime, String progress, String bucket, String prefix,
-                String errorMessage, String errorCode ) {
+  VmBundleTask( final VmInstance vmInstance, final String state, final Date startTime, final Date updateTime, final String progress, final String bucket, final String prefix,
+                final String errorMessage, final String errorCode ) {
     super( );
     this.vmInstance = vmInstance;
-    this.bundleId = bundleId;
-    this.state = state;
+    this.state = BundleState.mapper.apply( state );
     this.startTime = startTime;
     this.updateTime = updateTime;
     this.progress = progress;
@@ -115,9 +141,8 @@ public class VmBundleTask {
     return new Function<BundleTask, VmBundleTask>( ) {
       
       @Override
-      public VmBundleTask apply( BundleTask input ) {
+      public VmBundleTask apply( final BundleTask input ) {
         return new VmBundleTask( vm,
-                                 input.getBundleId( ),
                                  input.getState( ),
                                  input.getStartTime( ),
                                  input.getUpdateTime( ),
@@ -134,10 +159,10 @@ public class VmBundleTask {
     return new Function<VmBundleTask, BundleTask>( ) {
       
       @Override
-      public BundleTask apply( VmBundleTask input ) {
+      public BundleTask apply( final VmBundleTask input ) {
         return new BundleTask( vm.getInstanceId( ),//GRZE: this constructor reference is crap.
                                input.getBundleId( ),
-                               input.getState( ),
+                               input.getState( ).name( ),
                                input.getStartTime( ),
                                input.getUpdateTime( ),
                                input.getProgress( ),
@@ -153,23 +178,19 @@ public class VmBundleTask {
     return this.vmInstance;
   }
   
-  private void setVmInstance( VmInstance vmInstance ) {
+  private void setVmInstance( final VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
   
   String getBundleId( ) {
-    return this.bundleId;
+    return this.vmInstance.getInstanceId( ).replaceFirst( "i-", "bun-" );
   }
   
-  private void setBundleId( String bundleId ) {
-    this.bundleId = bundleId;
-  }
-  
-  String getState( ) {
+  BundleState getState( ) {
     return this.state;
   }
   
-  void setState( String state ) {
+  void setState( final BundleState state ) {
     this.state = state;
   }
   
@@ -177,7 +198,7 @@ public class VmBundleTask {
     return this.startTime;
   }
   
-  private void setStartTime( Date startTime ) {
+  private void setStartTime( final Date startTime ) {
     this.startTime = startTime;
   }
   
@@ -185,7 +206,7 @@ public class VmBundleTask {
     return this.updateTime;
   }
   
-  void setUpdateTime( Date updateTime ) {
+  void setUpdateTime( final Date updateTime ) {
     this.updateTime = updateTime;
   }
   
@@ -193,7 +214,7 @@ public class VmBundleTask {
     return this.progress;
   }
   
-  private void setProgress( String progress ) {
+  private void setProgress( final String progress ) {
     this.progress = progress;
   }
   
@@ -201,7 +222,7 @@ public class VmBundleTask {
     return this.bucket;
   }
   
-  private void setBucket( String bucket ) {
+  private void setBucket( final String bucket ) {
     this.bucket = bucket;
   }
   
@@ -209,7 +230,7 @@ public class VmBundleTask {
     return this.prefix;
   }
   
-  private void setPrefix( String prefix ) {
+  private void setPrefix( final String prefix ) {
     this.prefix = prefix;
   }
   
@@ -217,7 +238,7 @@ public class VmBundleTask {
     return this.errorMessage;
   }
   
-  private void setErrorMessage( String errorMessage ) {
+  private void setErrorMessage( final String errorMessage ) {
     this.errorMessage = errorMessage;
   }
   
@@ -225,40 +246,42 @@ public class VmBundleTask {
     return this.errorCode;
   }
   
-  private void setErrorCode( String errorCode ) {
+  private void setErrorCode( final String errorCode ) {
     this.errorCode = errorCode;
   }
   
   @Override
   public int hashCode( ) {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ( ( this.bundleId == null )
-      ? 0
-      : this.bundleId.hashCode( ) );
-    return result;
+    return this.vmInstance.hashCode( );
   }
   
   @Override
-  public boolean equals( Object obj ) {
+  public boolean equals( final Object obj ) {
     if ( this == obj ) {
       return true;
     }
     if ( obj == null ) {
       return false;
     }
-    if ( getClass( ) != obj.getClass( ) ) {
+    if ( this.getClass( ) != obj.getClass( ) ) {
       return false;
     }
-    VmBundleTask other = ( VmBundleTask ) obj;
-    if ( this.bundleId == null ) {
-      if ( other.bundleId != null ) {
-        return false;
-      }
-    } else if ( !this.bundleId.equals( other.bundleId ) ) {
-      return false;
-    }
-    return true;
+    final VmBundleTask other = ( VmBundleTask ) obj;
+    return this.getVmInstance( ).equals( other.getVmInstance( ) );
+  }
+  
+  @Override
+  public String toString( ) {
+    final StringBuilder builder = new StringBuilder( );
+    builder.append( "VmBundleTask " );
+    if ( this.vmInstance != null ) builder.append( this.vmInstance.getInstanceId( ) )
+                                          .append( " " )
+                                          .append( "bundleId=" )
+                                          .append( this.getBundleId( ) )
+                                          .append( ":" );
+    if ( this.state != null ) builder.append( "state=" ).append( this.state ).append( ":" );
+    if ( this.progress != null ) builder.append( "progress=" ).append( this.progress );
+    return builder.toString( );
   }
   
 }

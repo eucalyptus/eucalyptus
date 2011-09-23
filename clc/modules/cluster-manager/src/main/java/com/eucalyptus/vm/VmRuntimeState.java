@@ -81,7 +81,8 @@ import org.hibernate.annotations.Parent;
 import com.eucalyptus.cluster.callback.BundleCallback;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.vm.VmInstance.BundleState;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
@@ -107,9 +108,9 @@ public class VmRuntimeState {
   @Column( name = "metadata_vm_reason" )
   private Reason            reason;
   @ElementCollection
-  @CollectionTable(name="metadata_instances_state_reasons")
+  @CollectionTable( name = "metadata_instances_state_reasons" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<String>       reasonDetails = Sets.newHashSet( );
+  private Set<String>       reasonDetails       = Sets.newHashSet( );
   @Transient
   private StringBuffer      consoleOutput       = new StringBuffer( );
   @Lob
@@ -263,14 +264,14 @@ public class VmRuntimeState {
    * @return
    */
   public Boolean isBundling( ) {
-    return this.bundleTask != null;
+    return this.bundleTask != null && !BundleState.none.equals( this.bundleTask.getState( ) );
   }
   
   BundleState getBundleTaskState( ) {
     if ( this.bundleTask != null ) {
-      return BundleState.valueOf( this.getBundleTask( ).getState( ) );
+      return this.getBundleTask( ).getState( );
     } else {
-      return null;
+      return BundleState.none;
     }
   }
   
@@ -404,6 +405,56 @@ public class VmRuntimeState {
   
   private void setReasonDetails( Set<String> reasonDetails ) {
     this.reasonDetails = reasonDetails;
+  }
+  
+  public void updateBundleTaskState( String state ) {
+    BundleState next = BundleState.mapper.apply( state );
+    if ( this.getBundleTask( ) != null ) {
+      final BundleState current = this.getBundleTask( ).getState( );
+      if ( BundleState.complete.equals( current ) || BundleState.failed.equals( current ) || BundleState.failed.equals( current ) ) {
+        return; //already finished, wait and timeout the state along with the instance.
+      } else if ( BundleState.storing.equals( next ) || BundleState.storing.equals( current ) ) {
+        this.getBundleTask( ).setState( next );
+        this.getBundleTask( ).setUpdateTime( new Date( ) );
+        EventRecord.here( BundleCallback.class, EventType.BUNDLE_TRANSITION, this.vmInstance.getOwner( ).toString( ), "" + this.getBundleTask( ) ).info( );
+      } else if ( BundleState.none.equals( next ) && BundleState.canceling.equals( current ) ) {
+        this.resetBundleTask( );
+      }
+    } else {
+      Logs.extreme( ).trace( "Unhandle bundle task state update: " + state );
+    }
+  }
+  
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.vmInstance == null )
+      ? 0
+      : this.vmInstance.hashCode( ) );
+    return result;
+  }
+  
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( obj == null ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    VmRuntimeState other = ( VmRuntimeState ) obj;
+    if ( this.vmInstance == null ) {
+      if ( other.vmInstance != null ) {
+        return false;
+      }
+    } else if ( !this.vmInstance.equals( other.vmInstance ) ) {
+      return false;
+    }
+    return true;
   }
   
 }
