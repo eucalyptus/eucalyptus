@@ -520,7 +520,7 @@ public class VmInstances {
   }
   
   @Resolver( VmInstanceMetadata.class )
-  enum CachedLookup implements Function<String, VmInstance> {
+  public enum CachedLookup implements Function<String, VmInstance> {
     INSTANCE;
     
     /**
