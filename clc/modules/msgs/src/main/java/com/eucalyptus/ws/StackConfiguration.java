@@ -81,7 +81,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "cloud_image_configuration" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass( root = "bootstrap.webservices", description = "Parameters controlling the web services endpoint." )
+@ConfigurableClass( root = "ws", description = "Parameters controlling the web services endpoint." )//TODO:GRZE: this /will/ be changed to "bootstrap.webservices"
 public class StackConfiguration extends AbstractPersistent {
   
   @ConfigurableField( initial = "500", description = "Channel connect timeout (ms)." )
