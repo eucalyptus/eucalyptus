@@ -61,17 +61,20 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import javax.persistence.CollectionTable;
 import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
@@ -86,6 +89,8 @@ public class VmVolumeState {
   @Parent
   private VmInstance vmInstance;
   @ElementCollection
+  @CollectionTable(name="metadata_instances_volume_attachments")
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final Set<VmVolumeAttachment> attachments = Sets.newHashSet( );
 
   VmVolumeState( ) {

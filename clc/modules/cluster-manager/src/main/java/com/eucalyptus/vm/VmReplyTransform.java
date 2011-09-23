@@ -66,7 +66,6 @@ package com.eucalyptus.vm;
 import java.util.List;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.network.NetworkGroup;
