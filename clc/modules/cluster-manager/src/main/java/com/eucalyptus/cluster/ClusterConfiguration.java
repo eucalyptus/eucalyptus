@@ -67,6 +67,7 @@ import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PostLoad;
 import javax.persistence.PostPersist;
 import javax.persistence.PostUpdate;
 import javax.persistence.PrePersist;
@@ -80,6 +81,7 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.network.NetworkGroups;
 
 @Entity
@@ -94,6 +96,10 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   private static String         DEFAULT_SERVICE_PATH  = "/axis2/services/EucalyptusCC";
   @Transient
   private static String         INSECURE_SERVICE_PATH = "/axis2/services/EucalyptusGL";
+  
+  @Transient
+  @ConfigurableIdentifier
+  private String                propertyPrefix;
   
   @Column( name = "cluster_network_mode" )
   @ConfigurableField( description = "Currently configured network mode", displayName = "Network mode", readonly = true )
@@ -145,6 +151,13 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
     super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
     this.minNetworkTag = minVlan;
     this.maxNetworkTag = maxVlan;
+  }
+  
+  @PostLoad
+  private void initOnLoad( ) {//GRZE:HACK:HACK: needed to mark field as @ConfigurableIdentifier
+    if ( this.propertyPrefix == null ) {
+      this.propertyPrefix = this.getPartition( );
+    }
   }
   
   @PrePersist
@@ -262,6 +275,14 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   
   public void setVnetType( String vnetType ) {
     this.vnetType = vnetType;
+  }
+  
+  private String getPropertyPrefix( ) {
+    return this.propertyPrefix;
+  }
+  
+  private void setPropertyPrefix( String propertyPrefix ) {
+    this.propertyPrefix = propertyPrefix;
   }
   
 }
