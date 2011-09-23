@@ -96,6 +96,7 @@ default_pool_props = [
       'proxool.house-keeping-sleep-time': '5000',
       'proxool.test-before-use': 'true',
       'proxool.test-after-use': 'false',
+      'proxool.trace': 'true',
       'user': 'eucalyptus',
       'password': db_pass,
     ]
