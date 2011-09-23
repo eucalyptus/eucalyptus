@@ -68,15 +68,15 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Address.Transition;
 import com.eucalyptus.address.Addresses;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstance.VmStateSet;
-import com.eucalyptus.cluster.VmNetworkConfig;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
+import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmNetworkConfig;
+import com.eucalyptus.vm.VmInstance.VmStateSet;
 import edu.ucsb.eucalyptus.msgs.AssignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AssignAddressType;
 

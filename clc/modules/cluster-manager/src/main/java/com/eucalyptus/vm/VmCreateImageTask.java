@@ -61,116 +61,69 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
 import java.util.Date;
 import javax.persistence.Column;
-import javax.persistence.Embeddable;
 import org.hibernate.annotations.Parent;
-import com.eucalyptus.vm.BundleTask;
-import com.google.common.base.Function;
 
-@Embeddable
-public class VmBundleTask {
+public class VmCreateImageTask {
   @Parent
   private VmInstance vmInstance;
-  @Column( name = "metadata_vm_bundle_id" )
-  private String     bundleId;
-  @Column( name = "metadata_vm_bundle_state" )
+  @Column( name = "metadata_vm_createimage_id" )
+  private String     createImageId;
+  @Column( name = "metadata_vm_createimage_state" )
   private String     state;
-  @Column( name = "metadata_vm_bundle_start_time" )
+  @Column( name = "metadata_vm_createimage_start_time" )
   private Date       startTime;
-  @Column( name = "metadata_vm_bundle_update_time" )
+  @Column( name = "metadata_vm_createimage_update_time" )
   private Date       updateTime;
-  @Column( name = "metadata_vm_bundle_progress" )
+  @Column( name = "metadata_vm_createimage_progress" )
   private String     progress;
-  @Column( name = "metadata_vm_bundle_bucket" )
-  private String     bucket;
-  @Column( name = "metadata_vm_bundle_prefix" )
-  private String     prefix;
-  @Column( name = "metadata_vm_bundle_error_msg" )
+  @Column( name = "metadata_vm_createimage_error_msg" )
   private String     errorMessage;
-  @Column( name = "metadata_vm_bundle_error_code" )
+  @Column( name = "metadata_vm_createimage_error_code" )
   private String     errorCode;
   
-  VmBundleTask( ) {
+  VmCreateImageTask( ) {
     super( );
   }
   
-  VmBundleTask( VmInstance vmInstance, String bundleId, String state, Date startTime, Date updateTime, String progress, String bucket, String prefix,
-                String errorMessage, String errorCode ) {
+  VmCreateImageTask( final VmInstance vmInstance, final String createImageId, final String state, final Date startTime, final Date updateTime,
+                     final String progress, final String errorMessage,
+                     final String errorCode ) {
     super( );
     this.vmInstance = vmInstance;
-    this.bundleId = bundleId;
+    this.createImageId = createImageId;
     this.state = state;
     this.startTime = startTime;
     this.updateTime = updateTime;
     this.progress = progress;
-    this.bucket = bucket;
-    this.prefix = prefix;
     this.errorMessage = errorMessage;
     this.errorCode = errorCode;
-  }
-  
-  public static Function<BundleTask, VmBundleTask> fromBundleTask( final VmInstance vm ) {
-    return new Function<BundleTask, VmBundleTask>( ) {
-      
-      @Override
-      public VmBundleTask apply( BundleTask input ) {
-        return new VmBundleTask( vm,
-                                 input.getBundleId( ),
-                                 input.getState( ),
-                                 input.getStartTime( ),
-                                 input.getUpdateTime( ),
-                                 input.getProgress( ),
-                                 input.getBucket( ),
-                                 input.getPrefix( ),
-                                 input.getErrorMessage( ),
-                                 input.getErrorCode( ) );
-      }
-    };
-  }
-  
-  public static Function<VmBundleTask, BundleTask> asBundleTask( final VmInstance vm ) {
-    return new Function<VmBundleTask, BundleTask>( ) {
-      
-      @Override
-      public BundleTask apply( VmBundleTask input ) {
-        return new BundleTask( vm.getInstanceId( ),
-                               input.getBundleId( ),
-                               input.getState( ),
-                               input.getStartTime( ),
-                               input.getUpdateTime( ),
-                               input.getProgress( ),
-                               input.getBucket( ),
-                               input.getPrefix( ),
-                               input.getErrorMessage( ),
-                               input.getErrorCode( ) );
-      }
-    };
   }
   
   private VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
   
-  private void setVmInstance( VmInstance vmInstance ) {
+  private void setVmInstance( final VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
   
-  String getBundleId( ) {
-    return this.bundleId;
+  String getCreateImageId( ) {
+    return this.createImageId;
   }
   
-  private void setBundleId( String bundleId ) {
-    this.bundleId = bundleId;
+  private void setCreateImageId( final String bundleId ) {
+    this.createImageId = bundleId;
   }
   
   String getState( ) {
     return this.state;
   }
   
-  void setState( String state ) {
+  void setState( final String state ) {
     this.state = state;
   }
   
@@ -178,7 +131,7 @@ public class VmBundleTask {
     return this.startTime;
   }
   
-  private void setStartTime( Date startTime ) {
+  private void setStartTime( final Date startTime ) {
     this.startTime = startTime;
   }
   
@@ -186,7 +139,7 @@ public class VmBundleTask {
     return this.updateTime;
   }
   
-  void setUpdateTime( Date updateTime ) {
+  void setUpdateTime( final Date updateTime ) {
     this.updateTime = updateTime;
   }
   
@@ -194,31 +147,15 @@ public class VmBundleTask {
     return this.progress;
   }
   
-  private void setProgress( String progress ) {
+  private void setProgress( final String progress ) {
     this.progress = progress;
-  }
-  
-  private String getBucket( ) {
-    return this.bucket;
-  }
-  
-  private void setBucket( String bucket ) {
-    this.bucket = bucket;
-  }
-  
-  private String getPrefix( ) {
-    return this.prefix;
-  }
-  
-  private void setPrefix( String prefix ) {
-    this.prefix = prefix;
   }
   
   private String getErrorMessage( ) {
     return this.errorMessage;
   }
   
-  private void setErrorMessage( String errorMessage ) {
+  private void setErrorMessage( final String errorMessage ) {
     this.errorMessage = errorMessage;
   }
   
@@ -226,7 +163,7 @@ public class VmBundleTask {
     return this.errorCode;
   }
   
-  private void setErrorCode( String errorCode ) {
+  private void setErrorCode( final String errorCode ) {
     this.errorCode = errorCode;
   }
   
@@ -234,29 +171,29 @@ public class VmBundleTask {
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.bundleId == null )
+    result = prime * result + ( ( this.createImageId == null )
       ? 0
-      : this.bundleId.hashCode( ) );
+      : this.createImageId.hashCode( ) );
     return result;
   }
   
   @Override
-  public boolean equals( Object obj ) {
+  public boolean equals( final Object obj ) {
     if ( this == obj ) {
       return true;
     }
     if ( obj == null ) {
       return false;
     }
-    if ( getClass( ) != obj.getClass( ) ) {
+    if ( this.getClass( ) != obj.getClass( ) ) {
       return false;
     }
-    VmBundleTask other = ( VmBundleTask ) obj;
-    if ( this.bundleId == null ) {
-      if ( other.bundleId != null ) {
+    final VmCreateImageTask other = ( VmCreateImageTask ) obj;
+    if ( this.createImageId == null ) {
+      if ( other.createImageId != null ) {
         return false;
       }
-    } else if ( !this.bundleId.equals( other.bundleId ) ) {
+    } else if ( !this.createImageId.equals( other.createImageId ) ) {
       return false;
     }
     return true;

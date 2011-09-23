@@ -91,6 +91,7 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
   private final Method                 getter;
   private final Method                 setter;
   private final Class[]                setArgs;
+  private final boolean deferred;
   
   public AbstractConfigurableProperty( Class definingClass, String entrySetName, Field field, String defaultValue, String description,
                                        PropertyTypeParser typeParser, Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias ) {
@@ -126,6 +127,8 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
     this.setArgs = new Class[] { this.field.getType( ) };
     this.getter = this.getReflectedMethod( "get", this.field );
     this.setter = this.getReflectedMethod( "set", this.field, this.setArgs );
+    ConfigurableClass configurableAnnot = ( ConfigurableClass ) definingClass.getAnnotation( ConfigurableClass.class );
+    this.deferred = configurableAnnot.deferred( );
   }
   
   private Method getReflectedMethod( String namePrefix, Field field, Class... setArgs2 ) {
@@ -243,5 +246,9 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
   
   public Field getField( ) {
     return this.field;
+  }
+
+  public boolean isDeferred( ) {
+    return this.deferred;
   }
 }

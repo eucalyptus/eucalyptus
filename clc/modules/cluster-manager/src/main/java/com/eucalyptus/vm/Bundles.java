@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,116 +53,93 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
- * @author: chris grzegorczyk <grze@eucalyptus.com>
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.ws;
 
-import java.util.List;
-import java.util.Map.Entry;
-import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
+package com.eucalyptus.vm;
+
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.configurable.ConfigurableProperty;
-import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
-import com.eucalyptus.configurable.PropertyDirectory;
-import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
-import com.eucalyptus.configurable.StaticPropertyEntry;
+import com.eucalyptus.component.id.Walrus;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.Logs;
-import com.google.common.collect.Lists;
+import com.eucalyptus.util.async.AsyncRequests;
+import edu.ucsb.eucalyptus.msgs.CreateBucketType;
+import edu.ucsb.eucalyptus.msgs.DeleteBucketType;
 
-@Provides( ComponentId.class )
-@RunDuring( Bootstrap.Stage.RemoteServicesInit )
-public class DeferredPropertiesBootstrapper extends Bootstrapper {
-  private static Logger LOG = Logger.getLogger( DeferredPropertiesBootstrapper.class );
+public class Bundles {
+  public static BundleTask create( VmInstance v, String bucket, String prefix, String policy ) {
+    verifyPolicy( policy, bucket );
+    verifyBucket( bucket );
+    verifyPrefix( prefix );
+    return new BundleTask( v.getInstanceId( ).replaceFirst( "i-", "bun-" ), v.getInstanceId( ), bucket, prefix );
+  }
   
-  @Override
-  public boolean start( ) throws Exception {
-    List<ConfigurableProperty> staticProps = Lists.newArrayList( );
-    for ( Entry<String, ConfigurableProperty> entry : PropertyDirectory.getPendingPropertyEntries( ) ) {
-      ConfigurableProperty prop = entry.getValue( );
-      if ( prop instanceof StaticPropertyEntry ) {
-        staticProps.add( prop );
-      } else {
-        try {
-          ComponentId compId = ComponentIds.lookup( prop.getEntrySetName( ) );
-          for ( ServiceConfiguration s : ServiceConfigurations.list( compId.getClass( ) ) ) {
-            if ( compId.name( ).equals( prop.getEntrySetName( ) ) ) {
-              if ( prop instanceof SingletonDatabasePropertyEntry ) {
-                PropertyDirectory.addProperty( prop );
-              } else if ( prop instanceof MultiDatabasePropertyEntry ) {
-                PropertyDirectory.addProperty( ( ( MultiDatabasePropertyEntry ) prop ).getClone( s.getPartition( ) ) );
-              }
-            }
-          }
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-        }
+  private static void verifyPolicy( String policy, String bucketName ) {
+    /**
+     * GRZE:NOTE: why is there S3 specific stuff here? this is the ec2 implementation. policy check
+     * must happen in walrus not here.
+     **/
+    // check if the policy is not user-generated one
+    // "expiration": "2011-07-01T16:52:13","conditions": [{"bucket": "windowsbundle" },{"acl": "ec2-bundle-read" },["starts-with", "$key", "prefix"
+    int idxOpenBracket = policy.indexOf( "{" );
+    int idxClosingBracket = policy.lastIndexOf( "}" );
+    if ( idxOpenBracket < 0 || idxClosingBracket < 0 || idxOpenBracket >= idxClosingBracket )
+      throw new RuntimeException( "Custom policy is not acceptable for bundle instance" );
+    
+    String bucketAndAcl = policy.substring( idxOpenBracket, idxClosingBracket - idxOpenBracket );
+    if ( !bucketAndAcl.contains( bucketName ) )
+      throw new RuntimeException( "Custom policy is not acceptable for bundle instance" );
+    if ( !bucketAndAcl.contains( "ec2-bundle-read" ) )
+      throw new RuntimeException( "Custom policy is not acceptable for bundle instance" );
+    
+  }
+  
+  private static void verifyPrefix( String prefix ) {
+    // check if the prefix name starts with "windows"
+    if ( !prefix.startsWith( "windows" ) )
+      /**
+       * GRZE:NOTE: bundling is /not/ restricted to windows
+       * only in general.
+       * what is it doing here? should be set in the manifest by the NC.
+       **/
+      throw new RuntimeException( "Prefix name should start with 'windows'" );
+  }
+  
+  /**
+   * @param bucket
+   */
+  private static void verifyBucket( final String bucketName ) {
+    final Context ctx = Contexts.lookup( );
+    CreateBucketType createBucket = new CreateBucketType( ) {
+      {
+        setAccessKeyID( ctx.getUserFullName( ).getUserId( ) );
+        setBucket( bucketName );
       }
-    }
-    for ( ConfigurableProperty prop : staticProps ) {
-      if ( PropertyDirectory.addProperty( prop ) ) {
-        try {
-          prop.getValue( );
-        } catch ( Exception ex ) {
-          Logs.extreme( ).error( ex, ex );
-        }
+    }.regardingUserRequest( ctx.getRequest( ) );
+    DeleteBucketType deleteBucket = new DeleteBucketType( ) {
+      {
+        setAccessKeyID( ctx.getUserFullName( ).getUserId( ) );
+        setBucket( bucketName );
       }
+    }.regardingUserRequest( ctx.getRequest( ) );
+    ServiceConfiguration walrusConfig = ServiceConfigurations.enabledServices( Walrus.class ).iterator( ).next( );
+    if ( walrusConfig != null ) {
+      try {
+        AsyncRequests.sendSync( walrusConfig, createBucket );
+        AsyncRequests.sendSync( walrusConfig, deleteBucket );
+      } catch ( Exception ex ) {
+        Logs.extreme( ).error( ex );
+      }
+    } else {
+      throw new RuntimeException( "Failed to lookup active service configuration for walrus." );
     }
-    return true;
-  }
-  
-  @Override
-  public boolean load( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    //unload properties
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    return true;
+    
   }
 }

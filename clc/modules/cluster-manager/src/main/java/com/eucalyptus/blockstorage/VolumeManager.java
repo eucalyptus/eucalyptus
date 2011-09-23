@@ -75,7 +75,6 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.callback.VolumeAttachCallback;
 import com.eucalyptus.cluster.callback.VolumeDetachCallback;
 import com.eucalyptus.component.Partitions;
@@ -94,6 +93,7 @@ import com.eucalyptus.reporting.event.StorageEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Predicate;
@@ -241,7 +241,7 @@ public class VolumeManager {
         } );
       }
       
-      List<Volume> volumes = db.query( Volume.named( AccountFullName.getInstance( ctx.getAccount( ) ), null ) );
+      List<Volume> volumes = db.query( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), null ) );
       List<Volume> describeVolumes = Lists.newArrayList( );
       for ( Volume v : Iterables.filter( volumes, RestrictedTypes.filterPrivileged( ) ) ) {
         if ( !State.ANNIHILATED.equals( v.getState( ) ) ) {

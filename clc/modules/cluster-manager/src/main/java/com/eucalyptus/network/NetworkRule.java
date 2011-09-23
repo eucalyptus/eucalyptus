@@ -64,7 +64,8 @@
 package com.eucalyptus.network;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.contains;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -80,6 +81,8 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.google.common.base.Functions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
@@ -115,11 +118,10 @@ public class NetworkRule extends AbstractPersistent {
   
   private NetworkRule( ) {}
   
-  private NetworkRule( final String protocol, final Integer lowPort, final Integer highPort,
+  private NetworkRule( final Protocol protocol, final Integer lowPort, final Integer highPort,
                        final Collection<String> ipRanges,
                        final Multimap<String, String> peers ) {
-    assertThat( "Protocol must be one of: tcp, udp, icmp", protocol, notNullValue( ) );
-    this.protocol = Protocol.valueOf( protocol );
+    this.protocol = protocol;
     this.lowPort = lowPort;
     this.highPort = highPort;
     if ( ipRanges != null ) {
@@ -132,14 +134,16 @@ public class NetworkRule extends AbstractPersistent {
     }
   }
   
-  public static NetworkRule create( final String protocol, final Integer lowPort, final Integer highPort,
+  public static NetworkRule create( Protocol protocol, final Integer lowPort, final Integer highPort,
                                     final Multimap<String, String> peers,
                                     final Collection<String> ipRanges ) {
     return new NetworkRule( protocol, lowPort, highPort, ipRanges, peers );
   }
   
-  public boolean isValid( ) {
-    return "tcp".equals( this.protocol ) || "udp".equals( this.protocol ) || "icmp".equals( this.protocol );
+  public static NetworkRule create( final String protocol, final Integer lowPort, final Integer highPort,
+                                    final Multimap<String, String> peers,
+                                    final Collection<String> ipRanges ) {
+    return create( Protocol.valueOf( protocol ), lowPort, highPort, peers, ipRanges );
   }
   
   public Protocol getProtocol( ) {

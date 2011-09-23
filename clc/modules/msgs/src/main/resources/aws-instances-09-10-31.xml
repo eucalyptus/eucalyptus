@@ -287,7 +287,7 @@
     <value name="instanceId" field="instanceId" />
   </mapping>
   <!--2009-04-04 -->
-  <mapping name="MonitorInstancesType" class="edu.ucsb.eucalyptus.msgs.MonitorInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="MonitorInstances" class="edu.ucsb.eucalyptus.msgs.MonitorInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
       item-type="java.lang.String">
@@ -296,7 +296,7 @@
       </structure>
     </collection>
   </mapping>
-  <mapping name="MonitorInstancesResponseType" class="edu.ucsb.eucalyptus.msgs.MonitorInstancesResponseType"
+  <mapping name="MonitorInstancesResponse" class="edu.ucsb.eucalyptus.msgs.MonitorInstancesResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <structure name="instancesSet" usage="optional">
@@ -305,7 +305,7 @@
       </collection>
     </structure>
   </mapping>
-  <mapping name="UnmonitorInstancesType" class="edu.ucsb.eucalyptus.msgs.UnmonitorInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="UnmonitorInstances" class="edu.ucsb.eucalyptus.msgs.UnmonitorInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
       item-type="java.lang.String">
@@ -314,7 +314,7 @@
       </structure>
     </collection>
   </mapping>
-  <mapping name="UnmonitorInstancesResponseType" class="edu.ucsb.eucalyptus.msgs.UnmonitorInstancesResponseType"
+  <mapping name="UnmonitorInstancesResponse" class="edu.ucsb.eucalyptus.msgs.UnmonitorInstancesResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <structure name="instancesSet" usage="optional">
@@ -330,7 +330,7 @@
     </structure>
   </mapping>
   <!-- TODO:ADDED -->
-  <mapping name="StopInstancesType" class="edu.ucsb.eucalyptus.msgs.StopInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="StopInstances" class="edu.ucsb.eucalyptus.msgs.StopInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
       item-type="java.lang.String">
@@ -340,13 +340,13 @@
     </collection>
     <value name="force" field="force" usage="optional" />
   </mapping>
-  <mapping name="StopInstancesResponseType" class="edu.ucsb.eucalyptus.msgs.StopInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="StopInstancesResponse" class="edu.ucsb.eucalyptus.msgs.StopInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet">
       <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType" />
     </collection>
   </mapping>
-  <mapping name="StartInstancesType" class="edu.ucsb.eucalyptus.msgs.StartInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="StartInstances" class="edu.ucsb.eucalyptus.msgs.StartInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
       item-type="java.lang.String">
@@ -355,14 +355,14 @@
       </structure>
     </collection>
   </mapping>
-  <mapping name="StartInstancesResponseType" class="edu.ucsb.eucalyptus.msgs.StartInstancesResponseType"
+  <mapping name="StartInstancesResponse" class="edu.ucsb.eucalyptus.msgs.StartInstancesResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet">
       <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.TerminateInstancesItemType" />
     </collection>
   </mapping>
-  <mapping name="ModifyInstanceAttributeType" class="edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeType"
+  <mapping name="ModifyInstanceAttribute" class="edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="instanceId" field="instanceId" usage="required" />
@@ -392,17 +392,17 @@
       </collection>
     </structure>
   </mapping>
-  <mapping name="ModifyInstanceAttributeResponseType" class="edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeResponseType"
+  <mapping name="ModifyInstanceAttributeResponse" class="edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="return" get-method="get_return" set-method="set_return" usage="required" />
   </mapping>
-  <mapping name="DescribeInstanceAttributeType" class="edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeType"
+  <mapping name="DescribeInstanceAttribute" class="edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="instanceId" field="instanceId" usage="required" />
   </mapping>
-  <mapping name="DescribeInstanceAttributeResponseType" class="edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeResponseType"
+  <mapping name="DescribeInstanceAttributeResponse" class="edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="instanceId" field="instanceId" usage="required" />
@@ -419,12 +419,12 @@
       </collection>
     </structure>
   </mapping>
-  <mapping name="ResetInstanceAttributeType" class="edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeType"
+  <mapping name="ResetInstanceAttribute" class="edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="instanceId" field="instanceId" usage="required" />
   </mapping>
-  <mapping name="ResetInstanceAttributeResponseType" class="edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeResponseType"
+  <mapping name="ResetInstanceAttributeResponse" class="edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="return" get-method="get_return" set-method="set_return" usage="required" />

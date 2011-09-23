@@ -80,7 +80,6 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.AccountMetadata;
 import com.eucalyptus.cloud.CloudMetadata.AddressMetadata;
 import com.eucalyptus.cloud.UserMetadata;
-import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.cluster.callback.AssignAddressCallback;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.component.ComponentIds;
@@ -94,6 +93,7 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.async.NOOP;
 import com.eucalyptus.util.async.RemoteCallback;
+import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 

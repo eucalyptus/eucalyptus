@@ -79,10 +79,10 @@ import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.cloud.AccountMetadata;
 import com.eucalyptus.cloud.util.PersistentReference;
 import com.eucalyptus.cloud.util.Reference;
-import com.eucalyptus.cluster.VmInstance;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.vm.VmInstance;
 
 @Entity
 @javax.persistence.Entity

@@ -63,8 +63,6 @@
  */
 package edu.ucsb.eucalyptus.msgs
 
-import com.eucalyptus.auth.policy.PolicyAction
-import com.eucalyptus.auth.policy.PolicySpec
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
 
@@ -323,6 +321,7 @@ public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 200
   String deviceName;
   Integer size; // in megabytes //TODO:GRZE: maybe remove
   String format; // optional, defaults to none (none, ext3, ntfs, swap) //TODO:GRZE: maybe remove
+  @HttpEmbedded (multiple = true)
   EbsDeviceMapping ebs;
   def BlockDeviceMappingItemType(final virtualName, final deviceName) {
     this.virtualName = virtualName;
@@ -361,6 +360,7 @@ public class StopInstancesResponseType extends VmControlMessage{
 }
 
 public class StopInstancesType extends VmControlMessage{
+  @HttpParameterMapping( parameter = "InstanceId" )
   ArrayList<String> instancesSet = new ArrayList<String>();
   Boolean force;
   public StopInstancesType() {  }
@@ -371,6 +371,7 @@ public class StartInstancesResponseType extends VmControlMessage{
 }
 
 public class StartInstancesType extends VmControlMessage{
+  @HttpParameterMapping( parameter = "InstanceId" )
   ArrayList<String> instancesSet = new ArrayList<String>();
   public StartInstancesType() {  }
 }

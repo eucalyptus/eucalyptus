@@ -101,8 +101,13 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
                                                              this.safeGetFieldValue( )
                                                              ).getValue( );
         Object o = super.getTypeParser( ).apply( dbValue );
-        this.field.set( null, o );
+        if ( !Modifier.isFinal( this.field.getModifiers( ) ) ) {
+          this.field.set( null, o );
+        }
         return dbValue;
+      } catch ( IllegalAccessException e ) {
+        Logs.exhaust( ).trace( e, e );
+        return super.getDefaultValue( );
       } catch ( Exception e ) {
         LOG.warn( "Failed to get property: " + super.getQualifiedName( ) + " because of " + e.getMessage( ) );
         Logs.extreme( ).debug( e, e );
@@ -208,6 +213,11 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
   @Override
   protected Object getQueryObject( ) throws Exception {
     return null;
+  }
+
+  @Override
+  public boolean isDeferred( ) {
+    return true;
   }
   
 }

@@ -66,15 +66,11 @@ package com.eucalyptus.bootstrap;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import org.apache.log4j.Logger;
-import com.eucalyptus.records.Logs;
 import com.google.common.collect.Maps;
-import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import edu.emory.mathcs.backport.java.util.Collections;
 

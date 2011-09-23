@@ -61,77 +61,62 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import org.hibernate.annotations.Parent;
-import com.eucalyptus.component.Partition;
-import com.eucalyptus.component.Partitions;
 
 @Embeddable
-public class VmPlacement {
+public class VmUsageStats {
   @Parent
   private VmInstance vmInstance;
-  @Column( name = "metadata_vm_placement" )
-  private String     placement;
-  @Column( name = "metadata_vm_cluster_name" )
-  private String     clusterName;
-  @Column( name = "metadata_vm_partition_name" )
-  private String     partitionName;
+  @Column( name = "metadata_vm_block_bytes" )
+  private Long       blockBytes;
+  @Column( name = "metadata_vm_network_bytes" )
+  private Long       networkBytes;
   
-  VmPlacement( String clusterName, String partitionName ) {
+  VmUsageStats( VmInstance vmInstance ) {
     super( );
-    this.clusterName = clusterName;
-    this.partitionName = partitionName;
+    this.vmInstance = vmInstance;
+    this.blockBytes = 0l;
+    this.networkBytes = 0l;
   }
   
-  VmPlacement( ) {
+  VmUsageStats( ) {
     super( );
   }
-
+  
+  Long getBlockBytes( ) {
+    return this.blockBytes;
+  }
+  
+  void setBlockBytes( Long blockBytes ) {
+    this.blockBytes = blockBytes;
+  }
+  
+  Long getNetworkBytes( ) {
+    return this.networkBytes;
+  }
+  
+  void setNetworkBytes( Long networkBytes ) {
+    this.networkBytes = networkBytes;
+  }
+  
   VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
   
-  String getClusterName( ) {
-    return this.clusterName;
-  }
-  
-  String getPartitionName( ) {
-    return this.partitionName;
-  }
-  
-  public Partition lookupPartition( ) {
-    return Partitions.lookupByName( this.partitionName );
-  }
-
   private void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
-  }
-
-  private void setClusterName( String clusterName ) {
-    this.clusterName = clusterName;
-  }
-
-  private void setPartitionName( String partitionName ) {
-    this.partitionName = partitionName;
-  }
-
-  private String getPlacement( ) {
-    return this.placement;
-  }
-
-  private void setPlacement( String placement ) {
-    this.placement = placement;
   }
 
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
-    builder.append( "VmPlacement:" );
-    if ( this.clusterName != null ) builder.append( "clusterName=" ).append( this.clusterName ).append( ":" );
-    if ( this.partitionName != null ) builder.append( "partitionName=" ).append( this.partitionName );
+    builder.append( "VmUsageStats:" );
+    if ( this.blockBytes != null ) builder.append( "blockBytes=" ).append( this.blockBytes ).append( ":" );
+    if ( this.networkBytes != null ) builder.append( "networkBytes=" ).append( this.networkBytes );
     return builder.toString( );
   }
   
