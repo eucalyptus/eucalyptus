@@ -84,6 +84,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.vm.VmInstance.BundleState;
 import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.google.common.collect.Sets;
 
 @Embeddable
@@ -157,7 +158,7 @@ public class VmRuntimeState {
       this.addReasonDetail( extra );
       LOG.info( String.format( "%s state change: %s -> %s", this.getVmInstance( ).getInstanceId( ), this.getVmInstance( ).getState( ), newState ) );
       this.reason = reason;
-      if ( ( oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) && ( newState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
+      if ( VmStateSet.RUN.contains( oldState ) && VmStateSet.NOT_RUNNING.contains( newState ) ) {
         this.getVmInstance( ).setState( newState );
         action = this.cleanUpRunnable( );
       } else if ( VmState.PENDING.equals( oldState ) && VmState.RUNNING.equals( newState ) ) {
@@ -171,6 +172,8 @@ public class VmRuntimeState {
 //        this.getVmInstance( ).setState( oldState );
 //        action = this.cleanUpRunnable( );
       } else if ( newState.ordinal( ) > oldState.ordinal( ) ) {
+        this.getVmInstance( ).setState( newState );
+      } else if ( VmState.STOPPED.equals( oldState ) && VmState.PENDING.equals( newState ) ) {
         this.getVmInstance( ).setState( newState );
       }
       try {

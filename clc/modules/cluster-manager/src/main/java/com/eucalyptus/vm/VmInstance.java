@@ -448,6 +448,26 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         }
       }
     },
+    START {
+      @Override
+      public VmInstance apply( final VmInstance v ) {
+        if ( !Entities.isPersistent( v ) ) {
+          throw new TransientEntityException( v.toString( ) );
+        } else {
+          final EntityTransaction db = Entities.get( VmInstance.class );
+          try {
+            final VmInstance vm = Entities.merge( v );
+            vm.setState( VmState.PENDING, Reason.USER_STARTED );
+            db.commit( );
+            return vm;
+          } catch ( final RuntimeException ex ) {
+            Logs.extreme( ).error( ex, ex );
+            db.rollback( );
+            throw ex;
+          }
+        }
+      }
+    },
     TERMINATED {
       @Override
       public VmInstance apply( final VmInstance v ) {
@@ -1055,8 +1075,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     NORMAL( "" ),
     EXPIRED( "Instance expired after not being reported for %s mins.", VmInstances.Timeout.UNREPORTED.getMinutes( ) ),
     FAILED( "The instance failed to start on the NC." ),
-    USER_TERMINATED( "User initiated terminate." ),
-    USER_STOPPED( "User initiated stop." ),
+    USER_TERMINATED( "User terminated." ),
+    USER_STOPPED( "User stopped." ),
+    USER_STARTED( "User started." ),
     APPEND( "" );
     private String   message;
     private Object[] args;

@@ -386,39 +386,37 @@ public class VmControl {
     return reply;
   }
   
-  public StartInstancesResponseType startInstances( final StartInstancesType request ) throws EucalyptusCloudException {
+  public StartInstancesResponseType startInstances( final StartInstancesType request ) throws Exception {
     Context ctx = Contexts.lookup( );
     final StartInstancesResponseType reply = request.getReply( );
     for ( String instanceId : request.getInstancesSet( ) ) {
-      VmInstance vm = null;
+      EntityTransaction db = Entities.get( VmInstance.class );
       try {
-        vm = VmInstances.lookup( instanceId );
-      } catch ( NoSuchElementException ex ) {
-        try {
-          vm = Transactions.find( VmInstance.named( ctx.getUserFullName( ), instanceId ) );
-        } catch ( Exception ex1 ) {
-          throw new EucalyptusCloudException( "Failed to locate instance information for instance id: " + instanceId );
-        }
-        final VmInstance v = vm;
+        final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
+        if ( !VmState.STOPPED.apply( vm ) ) continue;
         try {
           RunInstancesType runRequest = new RunInstancesType( ) {
             {
               this.setMinCount( 1 );
               this.setMaxCount( 1 );
-              this.setImageId( v.getImageId( ) );
-              this.setAvailabilityZone( v.getPartition( ) );
-              this.getGroupSet( ).addAll( v.getNetworkNames( ) );
-              this.setInstanceType( v.getVmType( ).getName( ) );
+              this.setImageId( vm.getImageId( ) );
+              this.setAvailabilityZone( vm.getPartition( ) );
+              this.getGroupSet( ).addAll( vm.getNetworkNames( ) );
+              this.setInstanceType( vm.getVmType( ).getName( ) );
             }
           };
           Allocation allocInfo = VerifyMetadata.handle( runRequest );
           allocInfo = AdmissionControl.handle( allocInfo );
-          final int oldCode = v.getState( ).getCode( ), newCode = VmState.SHUTTING_DOWN.getCode( );
-          final String oldState = v.getState( ).getName( ), newState = VmState.SHUTTING_DOWN.getName( );
-          reply.getInstancesSet( ).add( new TerminateInstancesItemType( v.getInstanceId( ), oldCode, oldState, newCode, newState ) );
+          final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
+          final String oldState = vm.getState( ).getName( ), newState = VmState.PENDING.getName( );
+          reply.getInstancesSet( ).add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
         } catch ( MetadataException ex1 ) {
           LOG.error( ex1, ex1 );
         }
+        db.commit( );
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        db.rollback( );
       }
     }
     return reply;
@@ -555,7 +553,7 @@ public class VmControl {
     
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      final VmInstance v = RestrictedTypes.doPrivileged( instanceId, VmInstances.CachedLookup.INSTANCE );
+      final VmInstance v = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
       if ( v.isBundling( ) ) {
         reply.setTask( v.getBundleTask( ) );
       } else if ( !ImageMetadata.Platform.windows.name( ).equals( v.getPlatform( ) ) ) {

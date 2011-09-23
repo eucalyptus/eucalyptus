@@ -77,6 +77,11 @@ import org.hibernate.criterion.Example;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
+import com.eucalyptus.cloud.run.AdmissionControl;
+import com.eucalyptus.cloud.run.ClusterAllocator;
+import com.eucalyptus.cloud.run.VerifyMetadata;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.TerminateCallback;
@@ -118,6 +123,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
@@ -434,6 +440,23 @@ public class VmInstances {
     VmInstances.stopped( VmInstance.Lookup.INSTANCE.apply( key ) );
   }
   
+
+  public static void start( final VmInstance vm ) throws Exception {
+    RunInstancesType runRequest = new RunInstancesType( ) {
+      {
+        this.setMinCount( 1 );
+        this.setMaxCount( 1 );
+        this.setImageId( vm.getImageId( ) );
+        this.setAvailabilityZone( vm.getPartition( ) );
+        this.getGroupSet( ).addAll( vm.getNetworkNames( ) );
+        this.setInstanceType( vm.getVmType( ).getName( ) );
+      }
+    };
+    Allocation allocInfo = VerifyMetadata.handle( runRequest );
+    allocInfo = AdmissionControl.handle( allocInfo );
+    ClusterAllocator.create( allocInfo );
+  }
+
   public static void shutDown( final VmInstance vm ) throws TransactionException {
     if ( VmStateSet.DONE.apply( vm ) ) {
       if ( terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
