@@ -62,14 +62,7 @@ public class KeyPairManager {
   public CreateKeyPairResponseType create( CreateKeyPairType request ) throws EucalyptusCloudException, TransactionException, MetadataException {
     CreateKeyPairResponseType reply = request.getReply( );
     Context ctx = Contexts.lookup( );
-//    if ( !ctx.hasAdministrativePrivileges( ) ) {
-//      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
-//        throw new EucalyptusCloudException( "Permission denied while trying to create keypair by " + ctx.getUser( ) );
-//      }
-//      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, "", action, ctx.getUser( ), 1L ) ) {
-//        throw new EucalyptusCloudException( "Quota exceeded while trying to create keypair by " + ctx.getUser( ) );
-//      }
-//    }
+    //GRZE:WHINE: add resource allocator here:  RestrictedTypes.allocate( 1, Allocator.INSTANCE );
     PrivateKey pk = KeyPairs.create( ctx.getUserFullName( ), request.getKeyName( ) );
     reply.setKeyFingerprint( Certs.getFingerPrint( pk ) );
     ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
@@ -90,14 +83,7 @@ public class KeyPairManager {
     ImportKeyPairResponseType reply = request.getReply( );
     Context ctx = Contexts.lookup( );
     String action = PolicySpec.requestToAction( request );
-//    if ( !ctx.hasAdministrativePrivileges( ) ) {
-//      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
-//        throw new AuthException( "Permission denied while trying to create keypair by " + ctx.getUser( ) );
-//      }
-//      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_KEYPAIR, "", action, ctx.getUser( ), 1L ) ) {
-//        throw new AuthException( "Quota exceeded while trying to create keypair by " + ctx.getUser( ) );
-//      }
-//    }
+    //GRZE:WHINE: add resource allocator here:  RestrictedTypes.allocate( 1, Allocator.INSTANCE );
     try {
       KeyPairs.lookup( ctx.getUserFullName( ), request.getKeyName( ) );
     } catch ( Exception e1 ) {

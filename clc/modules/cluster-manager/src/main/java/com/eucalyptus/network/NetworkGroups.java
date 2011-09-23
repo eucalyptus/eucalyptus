@@ -106,7 +106,7 @@ import edu.ucsb.eucalyptus.msgs.IpPermissionType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 
-@ConfigurableClass( root = "net", description = "Default values used to bootstrap networking state discovery." )
+@ConfigurableClass( root = "cloud.network", description = "Default values used to bootstrap networking state discovery." )
 public class NetworkGroups {
   private static final String DEFAULT_NETWORK_NAME     = "default";
   private static Logger       LOG                      = Logger.getLogger( NetworkGroups.class );

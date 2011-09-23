@@ -184,7 +184,6 @@ public class RunInstancesType extends VmControlMessage {
   String availabilityZone = "default"; //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "Placement.GroupName")
   String placementGroup = "default"; //** added 2010-02-01  **/
-  @HttpEmbedded (multiple = true)
   ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>(); //** added 2008-02-01  **/
   Boolean monitoring = false;
   String subnetId;

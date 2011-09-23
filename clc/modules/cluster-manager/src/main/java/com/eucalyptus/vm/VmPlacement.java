@@ -134,5 +134,37 @@ public class VmPlacement {
     if ( this.partitionName != null ) builder.append( "partitionName=" ).append( this.partitionName );
     return builder.toString( );
   }
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.vmInstance == null )
+      ? 0
+      : this.vmInstance.hashCode( ) );
+    return result;
+  }
+
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( obj == null ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    VmPlacement other = ( VmPlacement ) obj;
+    if ( this.vmInstance == null ) {
+      if ( other.vmInstance != null ) {
+        return false;
+      }
+    } else if ( !this.vmInstance.equals( other.vmInstance ) ) {
+      return false;
+    }
+    return true;
+  }
   
 }
