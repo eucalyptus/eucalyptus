@@ -277,11 +277,11 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
     this.vnetType = vnetType;
   }
   
-  private String getPropertyPrefix( ) {
+  public String getPropertyPrefix( ) {
     return this.propertyPrefix;
   }
   
-  private void setPropertyPrefix( String propertyPrefix ) {
+  public void setPropertyPrefix( String propertyPrefix ) {
     this.propertyPrefix = propertyPrefix;
   }
   
