@@ -1317,8 +1317,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               VmInstance.this.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
             } else if ( VmStateSet.STOP.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
               VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
+            } else if ( VmInstance.this.getRuntimeState( ).isBundling( ) ) {
+              BundleState bundleState = BundleState.mapper.apply( runVm.getBundleTaskStateName( ) );
+              VmInstance.this.getRuntimeState( ).updateBundleTaskState( bundleState );
             } else {
-              VmInstance.this.setState( state );
               this.updateState( runVm );
             }
             db.commit( );

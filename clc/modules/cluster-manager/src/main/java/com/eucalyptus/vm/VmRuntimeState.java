@@ -389,14 +389,20 @@ public class VmRuntimeState {
   public void updateBundleTaskState( BundleState state ) {
     if ( this.getBundleTask( ) != null ) {
       final BundleState current = this.getBundleTask( ).getState( );
-      if ( BundleState.complete.equals( current ) || BundleState.failed.equals( current ) || BundleState.failed.equals( current ) ) {
-        return; //already finished, wait and timeout the state along with the instance.
-      } else if ( BundleState.storing.equals( state ) || BundleState.storing.equals( current ) ) {
+      if ( BundleState.complete.equals( state ) && !BundleState.complete.equals( current ) ) {
+        this.getBundleTask( ).setState( state );
+      } else if ( BundleState.failed.equals( state ) && !BundleState.failed.equals( current ) ) {
+        this.getBundleTask( ).setState( state );
+      } else if ( BundleState.canceling.equals( current ) || BundleState.canceling.equals( state ) ) {
+        this.resetBundleTask( );
+      } else if ( BundleState.pending.equals( current ) && !BundleState.none.equals( state ) ) {
         this.getBundleTask( ).setState( state );
         this.getBundleTask( ).setUpdateTime( new Date( ) );
         EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_TRANSITION, this.vmInstance.getOwner( ).toString( ), "" + this.getBundleTask( ) ).info( );
-      } else if ( BundleState.none.equals( state ) && BundleState.canceling.equals( current ) ) {
-        this.resetBundleTask( );
+      } else if ( BundleState.storing.equals( state ) ) {
+        this.getBundleTask( ).setState( state );
+        this.getBundleTask( ).setUpdateTime( new Date( ) );
+        EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_TRANSITION, this.vmInstance.getOwner( ).toString( ), "" + this.getBundleTask( ) ).info( );
       }
     } else {
       Logs.extreme( ).trace( "Unhandle bundle task state update: " + state );
