@@ -314,7 +314,7 @@ public class RestrictedTypes {
           }
           
           Account owningAccount = Accounts.lookupUserById( requestedObject.getOwner( ).getUniqueId( ) ).getAccount( );
-          owningAccount = Principals.systemAccount( ).equals( owningAccount ) ? null : owningAccount;
+          owningAccount = Principals.nobodyFullName( ).equals( owningAccount ) ? null : owningAccount;
           if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, owningAccount, action, requestUser ) ) {
             throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user " + requestUser.getName( ) );
           }
@@ -355,7 +355,7 @@ public class RestrictedTypes {
             User requestUser = ctx.getUser( );
             try {
               Account owningAccount = Accounts.lookupAccountByName( arg0.getOwner( ).getAccountName( ) );
-              owningAccount = Principals.systemAccount( ).equals( owningAccount ) ? null : owningAccount;
+              owningAccount = Principals.nobodyFullName( ).equals( owningAccount ) ? null : owningAccount;
               return Permissions.isAuthorized( vendor.value( ), type.value( ), arg0.getDisplayName( ), owningAccount, action, requestUser );
             } catch ( AuthException ex ) {
               return false;
