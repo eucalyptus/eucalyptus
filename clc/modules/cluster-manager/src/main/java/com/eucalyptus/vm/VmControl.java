@@ -563,6 +563,7 @@ public class VmControl {
       } else {
         throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
       }
+      db.commit( );
     } catch ( EucalyptusCloudException ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );

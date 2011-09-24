@@ -394,7 +394,6 @@ public class VmRuntimeState {
       } else if ( BundleState.failed.equals( state ) && !BundleState.failed.equals( current ) ) {
         this.getBundleTask( ).setState( state );
       } else if ( BundleState.canceling.equals( current ) || BundleState.canceling.equals( state ) ) {
-        this.resetBundleTask( );
       } else if ( BundleState.pending.equals( current ) && !BundleState.none.equals( state ) ) {
         this.getBundleTask( ).setState( state );
         this.getBundleTask( ).setUpdateTime( new Date( ) );
@@ -405,6 +404,7 @@ public class VmRuntimeState {
         EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_TRANSITION, this.vmInstance.getOwner( ).toString( ), "" + this.getBundleTask( ) ).info( );
       }
     } else {
+      this.setBundleTask( new VmBundleTask( this.vmInstance, state.name( ), new Date( ), new Date( ), 0, "unknown", "unknown", "unknown", "unknown" ) );
       Logs.extreme( ).trace( "Unhandle bundle task state update: " + state );
     }
   }

@@ -266,7 +266,16 @@ public class VmInstances {
   }
   
   public static VmInstance lookupByInstanceIp( final String ip ) throws NoSuchElementException {
-    return Iterables.find( list( ), vmWithPublicAddress( ip ) );
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      VmInstance vm = Iterables.find( list( ), vmWithPublicAddress( ip ) );
+      db.commit( );
+      return vm;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new NoSuchElementException( ex.getMessage( ) );
+    }
   }
   
   public static Predicate<VmInstance> vmWithPublicAddress( final String ip ) {
@@ -286,7 +295,7 @@ public class VmInstances {
     return new Predicate<VmInstance>( ) {
       @Override
       public boolean apply( final VmInstance vm ) {
-        return ( vm.getRuntimeState( ).getBundleTask( ) != null ) && bundleId.equals( vm.getRuntimeState( ).getBundleTask( ).getBundleId( ) );
+        return ( vm.getRuntimeState( ).getBundleTask( ) != null ) && vm.getRuntimeState( ).getBundleTask( ).getBundleId( ).equals( bundleId );
       }
     };
   }

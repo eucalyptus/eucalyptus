@@ -339,26 +339,14 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
         final HttpEmbedded annoteEmbedded = ( HttpEmbedded ) declaredField.getAnnotation( HttpEmbedded.class );
         // :: build the parameter map and call populate object recursively :://
         if ( annoteEmbedded.multiple( ) ) {
-          final List<String> keys = Lists.newArrayList( params.keySet( ) );
-          for ( final String k : keys ) {
-            if ( !k.contains( paramFieldPair.getKey( ) + ".1." ) ) {
-              //theList.add( params.remove(k) );
-              params.remove( k );
+          final Map<String,String> subParams = Maps.newHashMap( );
+          for ( final String k : Lists.newArrayList( params.keySet( ) ) ) {
+            String keyPrefix = paramFieldPair.getKey( ) + ".1.";
+            if ( !k.startsWith( keyPrefix ) ) {
+              subParams.put( k.replace( keyPrefix, "" ), params.remove( k ) );
             }
           }
-          
-          final List<String> keys2 = Lists.newArrayList( params.keySet( ) );
-          
-          for ( final String k2 : keys2 ) {
-            final String currentValue = params.get( k2 );
-            final String currentKey = k2;
-            final String newKey = k2.replaceAll( paramFieldPair.getKey( ) + ".1.", "" );
-            params.put( newKey, currentValue );
-            params.remove( k2 );
-          }
-          
-          //theList.add(params);
-          failedMappings.addAll( this.populateEmbedded( genericType, params, theList ) );
+          failedMappings.addAll( this.populateEmbedded( genericType, subParams, theList ) );
         } else failedMappings.addAll( this.populateEmbedded( genericType, params, theList ) );
       }
     } catch ( final Exception e1 ) {

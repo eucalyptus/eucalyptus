@@ -1373,14 +1373,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.getRuntimeState( ).setServiceTag( serviceTag );
   }
   
-  /**
-   * @param bundleTask
-   * @return
-   */
-  public boolean startBundleTask( final BundleTask bundleTask ) {
-    return this.getRuntimeState( ).startBundleTask( VmBundleTask.fromBundleTask( this ).apply( bundleTask ) );
-  }
-  
   public void setNetworkIndex( final PrivateNetworkIndex networkIndex ) {
     this.networkIndex = networkIndex;
   }
