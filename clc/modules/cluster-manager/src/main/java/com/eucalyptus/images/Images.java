@@ -57,7 +57,7 @@ public class Images {
           UserFullName userFullName = Contexts.lookup( ).getUserFullName( );
           boolean filtered = ( executableAll && image.getImagePublic( ) );
           filtered |= ( executableSelf && ( image.getOwner( ).isOwner( userFullName ) || image.hasPermission( userFullName.getAccountNumber( ) ) ) );
-          filtered |= ( image.getOwner( ).isOwner( userFullName ) && image.hasPermission( ( String[] ) executableSet.toArray( ) ) );
+          filtered |= ( image.getOwner( ).isOwner( userFullName ) && image.hasPermission( executableSet.toArray( new String[] {} ) ) );
           return filtered;
         }
       }
