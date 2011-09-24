@@ -311,7 +311,7 @@ public class VmRuntimeState {
       this.bundleTask = task;
       return true;
     } else {
-      if ( ( this.getBundleTask( ) != null ) && ( BundleState.failed.equals( task ) || BundleState.canceling.equals( task ) || BundleState.none.equals( task ) ) ) {
+      if ( ( this.getBundleTask( ) != null ) && ( BundleState.failed.equals( task ) || BundleState.canceling.equals( task ) ) ) {
         this.resetBundleTask( );
         this.bundleTask = task;
         return true;
