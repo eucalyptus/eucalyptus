@@ -55,8 +55,8 @@ public class Images {
         boolean filtered = ( executableAll && image.getImagePublic( ) );
         filtered |= ( executableSelf && ( image.getOwner( ).isOwner( userFullName ) || image.hasPermission( userFullName.getAccountNumber( ) ) ) );
         if ( !executableSet.isEmpty( ) ) {
-          filtered |= ( image.getOwner( ).isOwner( userFullName ) || image.hasPermission( ( String[] ) executableSet.toArray( ) ) );
-        }
+          filtered |= ( image.getOwner( ).isOwner( userFullName ) && image.hasPermission( ( String[] ) executableSet.toArray( ) ) );
+        } 
         return filtered;
       }
       
