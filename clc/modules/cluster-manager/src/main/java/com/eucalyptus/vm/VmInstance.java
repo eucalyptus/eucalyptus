@@ -255,7 +255,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     public Predicate<VmInstance> not( ) {
       return Predicates.not( this );
     }
-
+    
   }
   
   public enum VmState implements Predicate<VmInstance> {
@@ -1308,7 +1308,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           final EntityTransaction db = Entities.get( VmInstance.class );
           try {
             final VmState state = VmState.Mapper.get( runVm.getStateName( ) );
-            if ( VmStateSet.RUN.apply( VmInstance.this ) && VmStateSet.RUN.contains( state ) ) {
+            if ( VmInstance.this.getRuntimeState( ).isBundling( ) ) {
+              BundleState bundleState = BundleState.mapper.apply( runVm.getBundleTaskStateName( ) );
+              VmInstance.this.getRuntimeState( ).updateBundleTaskState( bundleState );
+            } else if ( VmStateSet.RUN.apply( VmInstance.this ) && VmStateSet.RUN.contains( state ) ) {
               VmInstance.this.setState( state, Reason.APPEND, "UPDATE" );
               this.updateState( runVm );
             } else if ( VmState.STOPPING.apply( VmInstance.this ) && VmState.SHUTTING_DOWN.equals( state ) ) {
@@ -1317,9 +1320,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               VmInstance.this.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
             } else if ( VmStateSet.STOP.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
               VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
-            } else if ( VmInstance.this.getRuntimeState( ).isBundling( ) ) {
-              BundleState bundleState = BundleState.mapper.apply( runVm.getBundleTaskStateName( ) );
-              VmInstance.this.getRuntimeState( ).updateBundleTaskState( bundleState );
             } else {
               this.updateState( runVm );
             }
@@ -1537,7 +1537,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private void setNetworkGroups( final Set<NetworkGroup> networkGroups ) {
     this.networkGroups = networkGroups;
   }
-
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -1547,7 +1547,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       : this.vmId.hashCode( ) );
     return result;
   }
-
+  
   @Override
   public boolean equals( Object obj ) {
     if ( this == obj ) {
