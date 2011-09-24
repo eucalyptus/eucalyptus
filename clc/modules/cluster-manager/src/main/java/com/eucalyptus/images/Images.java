@@ -51,13 +51,15 @@ public class Images {
       
       @Override
       public boolean apply( ImageInfo image ) {
-        UserFullName userFullName = Contexts.lookup( ).getUserFullName( );
-        boolean filtered = ( executableAll && image.getImagePublic( ) );
-        filtered |= ( executableSelf && ( image.getOwner( ).isOwner( userFullName ) || image.hasPermission( userFullName.getAccountNumber( ) ) ) );
-        if ( !executableSet.isEmpty( ) ) {
+        if ( executableSet.isEmpty( ) ) {
+          return true;
+        } else {
+          UserFullName userFullName = Contexts.lookup( ).getUserFullName( );
+          boolean filtered = ( executableAll && image.getImagePublic( ) );
+          filtered |= ( executableSelf && ( image.getOwner( ).isOwner( userFullName ) || image.hasPermission( userFullName.getAccountNumber( ) ) ) );
           filtered |= ( image.getOwner( ).isOwner( userFullName ) && image.hasPermission( ( String[] ) executableSet.toArray( ) ) );
-        } 
-        return filtered;
+          return filtered;
+        }
       }
       
     };
