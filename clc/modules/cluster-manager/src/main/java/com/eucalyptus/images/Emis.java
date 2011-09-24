@@ -68,6 +68,7 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
@@ -191,6 +192,7 @@ public class Emis {
           throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
         } else {
           db.rollback( );
+          ret.setOwner( Principals.nobodyFullName( ) );
           return ret;
         }
       } catch ( Exception ex ) {
@@ -213,6 +215,7 @@ public class Emis {
           throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
         } else {
           db.rollback( );
+          ret.setOwner( Principals.nobodyFullName( ) );
           return ret;
         }
       } catch ( Exception ex ) {
