@@ -418,6 +418,7 @@ public class VmInstances {
   
   static void cache( final VmInstance vm ) {
     if ( !terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
+      vm.setState( VmState.TERMINATED );
       final RunningInstancesItemType ret = VmInstances.transform( vm );
       terminateDescribeCache.put( vm.getDisplayName( ), ret );
       terminateCache.put( vm.getDisplayName( ), vm );
