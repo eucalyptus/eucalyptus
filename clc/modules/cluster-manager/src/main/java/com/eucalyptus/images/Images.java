@@ -74,6 +74,7 @@ public class Images {
           return true;
         } else {
           UserFullName luser = ctx.getUserFullName( );
+          /** GRZE: record why this must be so **/
           if ( input.getImagePublic( ) ) {
             return true;
           } else if ( input.getOwnerAccountNumber( ).equals( luser.getAccountNumber( ) ) ) {

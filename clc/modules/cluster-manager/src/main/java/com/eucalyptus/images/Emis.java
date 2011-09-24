@@ -70,6 +70,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
+import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
@@ -79,7 +80,6 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
@@ -88,6 +88,8 @@ import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
@@ -356,10 +358,10 @@ public class Emis {
   public static BootableSet newBootableSet( VmType vmType, Partition partition, String imageId ) throws MetadataException, AuthException {
     BootableSet bootSet = null;
     try {
-      bootSet = new BootableSet( RestrictedTypes.doPrivileged( imageId, LookupMachine.INSTANCE ) );
+      bootSet = new BootableSet( resolveDiskImage( imageId, LookupMachine.INSTANCE ) );
     } catch ( Exception e ) {
       try {
-        bootSet = new BootableSet( RestrictedTypes.doPrivileged( imageId, LookupBlockStorage.INSTANCE ) );
+        bootSet = new BootableSet( resolveDiskImage( imageId, LookupBlockStorage.INSTANCE ) );
       } catch ( IllegalContextAccessException ex ) {
         throw new VerificationException( ex );
       } catch ( NoSuchElementException ex ) {
@@ -374,6 +376,16 @@ public class Emis {
     }
     Emis.checkStoredImage( bootSet );
     return bootSet;
+  }
+  
+  public static <T extends ImageInfo> T resolveDiskImage( String imageId, Function<String, T> resolver ) throws IllegalMetadataAccessException {
+    T img = resolver.apply( imageId );
+    Predicate<T> filter = Predicates.or( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivileged( ) );
+    if ( filter.apply( img ) ) {
+      return img;
+    } else {
+      throw new IllegalMetadataAccessException( imageId + ": permission denied." );
+    }
   }
   
   private static BootableSet bootsetWithKernel( BootableSet bootSet ) throws MetadataException {

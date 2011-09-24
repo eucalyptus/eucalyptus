@@ -128,10 +128,10 @@ public class ImageManager {
     if ( ownersSet.remove( Images.SELF ) ) {
       ownersSet.add( requestAccountId );
     }
-    Predicate<ImageInfo> privilegesFilter = Predicates.and( Images.FilterPermissions.INSTANCE, CloudMetadatas.filterPrivilegesById( request.getImagesSet( ) ) );
-    Predicate<ImageInfo> requestFilter = Predicates.and( privilegesFilter, CloudMetadatas.filterPrivilegesByOwningAccount( ownersSet ) );
+    Predicate<ImageInfo> privilegesFilter = Predicates.or( Images.FilterPermissions.INSTANCE, CloudMetadatas.filterPrivilegesById( request.getImagesSet( ) ) );
+    Predicate<ImageInfo> requestFilter = Predicates.or( privilegesFilter, CloudMetadatas.filterPrivilegesByOwningAccount( ownersSet ) );
     Predicate<ImageInfo> filter = Predicates.and( requestFilter, Images.filterExecutableBy( ownersSet ) );
-    List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), requestFilter, Images.TO_IMAGE_DETAILS );
+    List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), filter, Images.TO_IMAGE_DETAILS );
     reply.getImagesSet( ).addAll( imageDetailsList );
     ImageUtil.cleanDeregistered( );
     return reply;
