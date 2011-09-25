@@ -307,7 +307,7 @@ public class VmRuntimeState {
   }
   
   public Boolean startBundleTask( final VmBundleTask task ) {
-    if ( this.bundleTask == null ) {
+    if ( !this.isBundling( ) ) {
       this.bundleTask = task;
       return true;
     } else {
