@@ -185,13 +185,17 @@ public class VmControl {
           db.rollback( );
           try {
             if ( vm != null ) {
-              RunningInstancesItemType ret = VmInstances.transform( vm );
-              if ( ret != null && vm.getReservationId( ) != null ) {
-                if ( !rsvMap.containsKey( vm.getReservationId( ) ) ) {
-                  final ReservationInfoType reservation = new ReservationInfoType( vm.getReservationId( ), vm.getOwner( ).getNamespace( ), vm.getNetworkNames( ) );
-                  rsvMap.put( reservation.getReservationId( ), reservation );
+              try {
+                RunningInstancesItemType ret = VmInstances.transform( vm );
+                if ( ret != null && vm.getReservationId( ) != null ) {
+                  if ( !rsvMap.containsKey( vm.getReservationId( ) ) ) {
+                    final ReservationInfoType reservation = new ReservationInfoType( vm.getReservationId( ), vm.getOwner( ).getNamespace( ), vm.getNetworkNames( ) );
+                    rsvMap.put( reservation.getReservationId( ), reservation );
+                  }
+                  rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( ret );
                 }
-                rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( ret );
+              } catch ( Exception ex1 ) {
+                LOG.error( ex1 , ex1 );
               }
             }
           } catch ( Exception ex1 ) {
