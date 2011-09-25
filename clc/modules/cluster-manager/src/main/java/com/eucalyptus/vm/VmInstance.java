@@ -1385,92 +1385,99 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
      * @see com.google.common.base.Supplier#get()
      */
     @Override
-    public RunningInstancesItemType apply( final VmInstance input ) {
-      RunningInstancesItemType runningInstance;
-      try {
-        final boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
-        runningInstance = new RunningInstancesItemType( );
-        
-        runningInstance.setAmiLaunchIndex( Integer.toString( input.getLaunchRecord( ).getLaunchIndex( ) ) );
-        if ( ( input.getRuntimeState( ).isBundling( ) ) ) {
-          runningInstance.setStateCode( Integer.toString( VmState.TERMINATED.getCode( ) ) );
-          runningInstance.setStateName( VmState.TERMINATED.getName( ) );
-        } else {
+    public RunningInstancesItemType apply( final VmInstance v ) {
+      if ( !Entities.isPersistent( v ) ) {
+        throw new TransientEntityException( v.toString( ) );
+      } else {
+        final EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          final VmInstance input = Entities.merge( v );
+          RunningInstancesItemType runningInstance;
+          final boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
+          runningInstance = new RunningInstancesItemType( );
+          
+          runningInstance.setAmiLaunchIndex( Integer.toString( input.getLaunchRecord( ).getLaunchIndex( ) ) );
+          if ( ( input.getRuntimeState( ).isBundling( ) ) ) {
+            runningInstance.setStateCode( Integer.toString( VmState.TERMINATED.getCode( ) ) );
+            runningInstance.setStateName( VmState.TERMINATED.getName( ) );
+          } else {
+            runningInstance.setStateCode( Integer.toString( input.getState( ).getCode( ) ) );
+            runningInstance.setStateName( input.getState( ).getName( ) );
+          }
+          runningInstance.setPlatform( input.getPlatform( ) );
+          
           runningInstance.setStateCode( Integer.toString( input.getState( ).getCode( ) ) );
           runningInstance.setStateName( input.getState( ).getName( ) );
-        }
-        runningInstance.setPlatform( input.getPlatform( ) );
-        
-        runningInstance.setStateCode( Integer.toString( input.getState( ).getCode( ) ) );
-        runningInstance.setStateName( input.getState( ).getName( ) );
-        runningInstance.setInstanceId( input.getVmId( ).getInstanceId( ) );
-        //ASAP:FIXME:GRZE: restore.
-        runningInstance.setProductCodes( new ArrayList<String>( ) );
-        runningInstance.setImageId( input.getBootRecord( ).getMachine( ).getDisplayName( ) );
-        if ( input.getBootRecord( ).getKernel( ) != null ) {
-          runningInstance.setKernel( input.getBootRecord( ).getKernel( ).getDisplayName( ) );
-        }
-        if ( input.getBootRecord( ).getRamdisk( ) != null ) {
-          runningInstance.setRamdisk( input.getBootRecord( ).getRamdisk( ).getDisplayName( ) );
-        }
-        if ( dns ) {
-          String publicDnsName = input.getPublicDnsName( );
-          String privateDnsName = input.getPrivateDnsName( );
-          publicDnsName = ( publicDnsName == null
-            ? VmNetworkConfig.DEFAULT_IP
-            : publicDnsName );
-          privateDnsName = ( privateDnsName == null
-            ? VmNetworkConfig.DEFAULT_IP
-            : privateDnsName );
-          runningInstance.setDnsName( publicDnsName );
-          runningInstance.setIpAddress( publicDnsName );
-          runningInstance.setPrivateDnsName( privateDnsName );
-          runningInstance.setPrivateIpAddress( privateDnsName );
-        } else {
-          String publicDnsName = input.getPublicAddress( );
-          String privateDnsName = input.getPrivateAddress( );
-          publicDnsName = ( publicDnsName == null
-            ? VmNetworkConfig.DEFAULT_IP
-            : publicDnsName );
-          privateDnsName = ( privateDnsName == null
-            ? VmNetworkConfig.DEFAULT_IP
-            : privateDnsName );
-          runningInstance.setPrivateDnsName( privateDnsName );
-          runningInstance.setPrivateIpAddress( privateDnsName );
-          if ( !VmNetworkConfig.DEFAULT_IP.equals( publicDnsName ) ) {
+          runningInstance.setInstanceId( input.getVmId( ).getInstanceId( ) );
+          //ASAP:FIXME:GRZE: restore.
+          runningInstance.setProductCodes( new ArrayList<String>( ) );
+          runningInstance.setImageId( input.getBootRecord( ).getMachine( ).getDisplayName( ) );
+          if ( input.getBootRecord( ).getKernel( ) != null ) {
+            runningInstance.setKernel( input.getBootRecord( ).getKernel( ).getDisplayName( ) );
+          }
+          if ( input.getBootRecord( ).getRamdisk( ) != null ) {
+            runningInstance.setRamdisk( input.getBootRecord( ).getRamdisk( ).getDisplayName( ) );
+          }
+          if ( dns ) {
+            String publicDnsName = input.getPublicDnsName( );
+            String privateDnsName = input.getPrivateDnsName( );
+            publicDnsName = ( publicDnsName == null
+              ? VmNetworkConfig.DEFAULT_IP
+              : publicDnsName );
+            privateDnsName = ( privateDnsName == null
+              ? VmNetworkConfig.DEFAULT_IP
+              : privateDnsName );
             runningInstance.setDnsName( publicDnsName );
             runningInstance.setIpAddress( publicDnsName );
+            runningInstance.setPrivateDnsName( privateDnsName );
+            runningInstance.setPrivateIpAddress( privateDnsName );
           } else {
-            runningInstance.setDnsName( privateDnsName );
-            runningInstance.setIpAddress( privateDnsName );
+            String publicDnsName = input.getPublicAddress( );
+            String privateDnsName = input.getPrivateAddress( );
+            publicDnsName = ( publicDnsName == null
+              ? VmNetworkConfig.DEFAULT_IP
+              : publicDnsName );
+            privateDnsName = ( privateDnsName == null
+              ? VmNetworkConfig.DEFAULT_IP
+              : privateDnsName );
+            runningInstance.setPrivateDnsName( privateDnsName );
+            runningInstance.setPrivateIpAddress( privateDnsName );
+            if ( !VmNetworkConfig.DEFAULT_IP.equals( publicDnsName ) ) {
+              runningInstance.setDnsName( publicDnsName );
+              runningInstance.setIpAddress( publicDnsName );
+            } else {
+              runningInstance.setDnsName( privateDnsName );
+              runningInstance.setIpAddress( privateDnsName );
+            }
           }
+          
+          runningInstance.setReason( input.runtimeState.getReason( ) );
+          
+          if ( input.getBootRecord( ).getSshKeyPair( ) != null )
+            runningInstance.setKeyName( input.getBootRecord( ).getSshKeyPair( ).getName( ) );
+          else runningInstance.setKeyName( "" );
+          
+          runningInstance.setInstanceType( input.getVmType( ).getName( ) );
+          runningInstance.setPlacement( input.getPlacement( ).getPartitionName( ) );
+          
+          runningInstance.setLaunchTime( input.getLaunchRecord( ).getLaunchTime( ) );
+          
+          runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( "/dev/sda1" ) );
+          for ( final VmVolumeAttachment attachedVol : input.getTransientVolumeState( ).getAttachments( ) ) {
+            runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),
+                                                                                    attachedVol.getStatus( ),
+                                                                                    attachedVol.getAttachTime( ) ) );
+          }
+          return runningInstance;
+        } catch ( final NoSuchElementException ex ) {
+          db.rollback( );
+          throw ex;
+        } catch ( final Exception ex ) {
+          db.rollback( );
+          throw new NoSuchElementException( "Failed to lookup vm instance: " + v );
         }
-        
-        runningInstance.setReason( input.runtimeState.getReason( ) );
-        
-        if ( input.getBootRecord( ).getSshKeyPair( ) != null )
-          runningInstance.setKeyName( input.getBootRecord( ).getSshKeyPair( ).getName( ) );
-        else runningInstance.setKeyName( "" );
-        
-        runningInstance.setInstanceType( input.getVmType( ).getName( ) );
-        runningInstance.setPlacement( input.getPlacement( ).getPartitionName( ) );
-        
-        runningInstance.setLaunchTime( input.getLaunchRecord( ).getLaunchTime( ) );
-        
-        runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( "/dev/sda1" ) );
-        for ( final VmVolumeAttachment attachedVol : input.getTransientVolumeState( ).getAttachments( ) ) {
-          runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),
-                                                                                  attachedVol.getStatus( ),
-                                                                                  attachedVol.getAttachTime( ) ) );
-        }
-        return runningInstance;
-      } catch ( final Exception ex ) {
-        LOG.error( ex, ex );
-        throw Exceptions.toUndeclared( ex );
       }
-      
     }
-    
   }
   
   public boolean isLinux( ) {
