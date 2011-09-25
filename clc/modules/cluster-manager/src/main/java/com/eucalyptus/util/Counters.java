@@ -105,10 +105,12 @@ public class Counters extends AbstractPersistent implements Serializable {
               db.add( singleton );
               db.commit( );
             } catch ( Exception e1 ) {
+              db.rollback( );
               LOG.fatal( e1, e1 );
               LOG.fatal( "Failed to initialize system counters.  These are important." );
-              System.exit( -1 );
             }
+          } catch ( Exception ex ) {
+            db.rollback( );
           }
         }
       }

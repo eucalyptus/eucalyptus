@@ -255,7 +255,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     public Predicate<VmInstance> not( ) {
       return Predicates.not( this );
     }
-
+    
   }
   
   public enum VmState implements Predicate<VmInstance> {
@@ -539,7 +539,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           final EntityTransaction db = Entities.get( VmInstance.class );
           try {
             vm.cleanUp( );
-            vm.setState( VmState.BURIED );
+            vm.setState( VmState.TERMINATED );
             Entities.delete( vm );
             db.commit( );
             return vm;
@@ -998,13 +998,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @return the bundleTask
-   */
-  public BundleTask getBundleTask( ) {
-    return VmBundleTask.asBundleTask( ).apply( this.getRuntimeState( ).getBundleTask( ) );
-  }
-  
-  /**
    * @return the networkBytes
    */
   public Long getNetworkBytes( ) {
@@ -1315,7 +1308,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           final EntityTransaction db = Entities.get( VmInstance.class );
           try {
             final VmState state = VmState.Mapper.get( runVm.getStateName( ) );
-            if ( VmStateSet.RUN.apply( VmInstance.this ) && VmStateSet.RUN.contains( state ) ) {
+            if ( VmInstance.this.getRuntimeState( ).isBundling( ) ) {
+              BundleState bundleState = BundleState.mapper.apply( runVm.getBundleTaskStateName( ) );
+              VmInstance.this.getRuntimeState( ).updateBundleTaskState( bundleState );
+            } else if ( VmStateSet.RUN.apply( VmInstance.this ) && VmStateSet.RUN.contains( state ) ) {
               VmInstance.this.setState( state, Reason.APPEND, "UPDATE" );
               this.updateState( runVm );
             } else if ( VmState.STOPPING.apply( VmInstance.this ) && VmState.SHUTTING_DOWN.equals( state ) ) {
@@ -1377,14 +1373,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.getRuntimeState( ).setServiceTag( serviceTag );
   }
   
-  /**
-   * @param bundleTask
-   * @return
-   */
-  public boolean startBundleTask( final BundleTask bundleTask ) {
-    return this.getRuntimeState( ).startBundleTask( VmBundleTask.fromBundleTask( this ).apply( bundleTask ) );
-  }
-  
   public void setNetworkIndex( final PrivateNetworkIndex networkIndex ) {
     this.networkIndex = networkIndex;
   }
@@ -1404,7 +1392,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         runningInstance = new RunningInstancesItemType( );
         
         runningInstance.setAmiLaunchIndex( Integer.toString( input.getLaunchRecord( ).getLaunchIndex( ) ) );
-        if ( ( input.getRuntimeState( ).getBundleTask( ) != null ) && !BundleState.none.equals( input.getRuntimeState( ).getBundleTask( ).getState( ) ) ) {
+        if ( ( input.getRuntimeState( ).isBundling( ) ) ) {
           runningInstance.setStateCode( Integer.toString( VmState.TERMINATED.getCode( ) ) );
           runningInstance.setStateName( VmState.TERMINATED.getName( ) );
         } else {
@@ -1541,7 +1529,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private void setNetworkGroups( final Set<NetworkGroup> networkGroups ) {
     this.networkGroups = networkGroups;
   }
-
+  
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -1551,7 +1539,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       : this.vmId.hashCode( ) );
     return result;
   }
-
+  
   @Override
   public boolean equals( Object obj ) {
     if ( this == obj ) {

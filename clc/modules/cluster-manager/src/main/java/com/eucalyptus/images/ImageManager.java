@@ -76,6 +76,7 @@ import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cluster.Cluster;
@@ -116,9 +117,9 @@ import edu.ucsb.eucalyptus.msgs.ResetImageAttributeType;
 
 public class ImageManager {
   
-  public static Logger        LOG  = Logger.getLogger( ImageManager.class );
+  public static Logger        LOG = Logger.getLogger( ImageManager.class );
   
-  private static final String ADD  = "add";
+  private static final String ADD = "add";
   
   public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException, TransactionException {
     DescribeImagesResponseType reply = request.getReply( );
@@ -128,10 +129,12 @@ public class ImageManager {
     if ( ownersSet.remove( Images.SELF ) ) {
       ownersSet.add( requestAccountId );
     }
-    Predicate<ImageInfo> privilegesFilter = Predicates.and( Images.FilterPermissions.INSTANCE, CloudMetadatas.filterPrivilegesById( request.getImagesSet( ) ) );
-    Predicate<ImageInfo> requestFilter = Predicates.and( privilegesFilter, CloudMetadatas.filterPrivilegesByOwningAccount( ownersSet ) );
-    Predicate<ImageInfo> filter = Predicates.and( requestFilter, Images.filterExecutableBy( ownersSet ) );
-    List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), requestFilter, Images.TO_IMAGE_DETAILS );
+    Predicate<ImageInfo> rangeFilter = Predicates.and( CloudMetadatas.filterById( request.getImagesSet( ) ),
+                                                       CloudMetadatas.filterByOwningAccount( request.getOwnersSet( ) ),
+                                                       Images.filterExecutableBy( ownersSet ) );
+    Predicate<ImageInfo> privilegesFilter = Predicates.or( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivileged( ) );
+    Predicate<ImageInfo> filter = Predicates.and( privilegesFilter, rangeFilter );
+    List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), filter, Images.TO_IMAGE_DETAILS );
     reply.getImagesSet( ).addAll( imageDetailsList );
     ImageUtil.cleanDeregistered( );
     return reply;

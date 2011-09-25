@@ -51,13 +51,15 @@ public class Images {
       
       @Override
       public boolean apply( ImageInfo image ) {
-        UserFullName userFullName = Contexts.lookup( ).getUserFullName( );
-        boolean filtered = ( executableAll && image.getImagePublic( ) );
-        filtered |= ( executableSelf && ( image.getOwner( ).isOwner( userFullName ) || image.hasPermission( userFullName.getAccountNumber( ) ) ) );
-        if ( !executableSet.isEmpty( ) ) {
-          filtered |= ( image.getOwner( ).isOwner( userFullName ) || image.hasPermission( ( String[] ) executableSet.toArray( ) ) );
+        if ( executableSet.isEmpty( ) ) {
+          return true;
+        } else {
+          UserFullName userFullName = Contexts.lookup( ).getUserFullName( );
+          boolean filtered = ( executableAll && image.getImagePublic( ) );
+          filtered |= ( executableSelf && ( image.getOwner( ).isOwner( userFullName ) || image.hasPermission( userFullName.getAccountNumber( ) ) ) );
+          filtered |= ( image.getOwner( ).isOwner( userFullName ) && image.hasPermission( executableSet.toArray( new String[] {} ) ) );
+          return filtered;
         }
-        return filtered;
       }
       
     };
@@ -74,6 +76,7 @@ public class Images {
           return true;
         } else {
           UserFullName luser = ctx.getUserFullName( );
+          /** GRZE: record why this must be so **/
           if ( input.getImagePublic( ) ) {
             return true;
           } else if ( input.getOwnerAccountNumber( ).equals( luser.getAccountNumber( ) ) ) {

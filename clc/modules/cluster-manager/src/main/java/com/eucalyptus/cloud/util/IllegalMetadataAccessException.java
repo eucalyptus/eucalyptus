@@ -63,22 +63,32 @@
 
 package com.eucalyptus.cloud.util;
 
-public class IllegalMetadataAccessException extends MetadataException {
+import com.eucalyptus.cloud.CloudMetadata;
 
+public class IllegalMetadataAccessException extends MetadataException {
+  
   public IllegalMetadataAccessException( ) {
     super( );
   }
-
+  
+  public IllegalMetadataAccessException( CloudMetadata metadata, String message, Throwable cause ) {
+    super( metadata.getDisplayName( ) + ": " + message, cause );
+  }
+  
   public IllegalMetadataAccessException( String message, Throwable cause ) {
     super( message, cause );
   }
-
+  
+  public IllegalMetadataAccessException( CloudMetadata metadata, String message ) {
+    super( metadata.getDisplayName( ) + ": " + message );
+  }
+  
   public IllegalMetadataAccessException( String message ) {
     super( message );
   }
-
+  
   public IllegalMetadataAccessException( Throwable cause ) {
     super( cause );
   }
-
+  
 }

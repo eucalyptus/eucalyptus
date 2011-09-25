@@ -12,7 +12,6 @@ public abstract class BindingGenerator {
       MSG_TYPE = Class.forName( "edu.ucsb.eucalyptus.msgs.BaseMessage" );
     } catch ( ClassNotFoundException e ) {
       e.printStackTrace( );
-      System.exit( -1 );
     }
   }
 

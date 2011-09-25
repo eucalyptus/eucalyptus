@@ -228,14 +228,20 @@ public class VmControl {
                 vm = RestrictedTypes.doPrivileged( instanceId, VmInstances.lookupFunction( ) );
                 runVm = VmInstances.transform( vm );
                 oldCode = vm.getState( ).getCode( );
-                newCode = VmState.SHUTTING_DOWN.apply( vm )
-                  ? VmState.TERMINATED.getCode( )
-                  : VmState.SHUTTING_DOWN.getCode( );
                 oldState = vm.getState( ).getName( );
-                newState = VmState.SHUTTING_DOWN.apply( vm )
-                  ? VmState.TERMINATED.getName( )
-                  : VmState.SHUTTING_DOWN.getName( );
-                VmInstances.shutDown( vm );
+                if ( VmState.STOPPED.apply( vm ) ) {
+                  newCode = VmState.TERMINATED.getCode( );
+                  newState = VmState.TERMINATED.getName( );
+                  VmInstances.terminated( vm );
+                } else {
+                  newCode = VmState.SHUTTING_DOWN.apply( vm )
+                    ? VmState.TERMINATED.getCode( )
+                    : VmState.SHUTTING_DOWN.getCode( );
+                  newState = VmState.SHUTTING_DOWN.apply( vm )
+                    ? VmState.TERMINATED.getName( )
+                    : VmState.SHUTTING_DOWN.getName( );
+                  VmInstances.shutDown( vm );
+                }
               } catch ( final NoSuchElementException e ) {
                 runVm = VmInstances.transform( instanceId );
                 oldCode = newCode = VmState.TERMINATED.getCode( );
@@ -557,6 +563,7 @@ public class VmControl {
       } else {
         throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
       }
+      db.commit( );
     } catch ( EucalyptusCloudException ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );

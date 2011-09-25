@@ -144,18 +144,13 @@ public class Bundles {
       try {
         if ( !reply.get_return( ) ) {
           LOG.info( "Attempt to bundle instance " + this.getRequest( ).getInstanceId( ) + " has failed." );
-          try {
-            VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
-            vm.getRuntimeState( ).resetBundleTask( );
-          } catch ( NoSuchElementException e1 ) {}
-          db.commit( );
         } else {
           VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
           vm.getRuntimeState( ).submittedBundleTask( );
           EventRecord.here( BundleCallback.class, EventType.BUNDLE_STARTED, this.getRequest( ).toSimpleString( ), "" + vm.getRuntimeState( ),
                             vm.getInstanceId( ) ).info( );
-          db.commit( );
         }
+        db.commit( );
       } catch ( Exception ex ) {
         Logs.exhaust( ).error( ex, ex );
         db.rollback( );
