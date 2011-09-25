@@ -263,7 +263,7 @@ public class VmRuntimeState {
    * @return
    */
   public Boolean isBundling( ) {
-    return this.bundleTask != null && ( BundleState.pending.equals( this.bundleTask.getState( ) ) || BundleState.storing.equals( this.bundleTask.getState( ) ) );
+    return this.bundleTask != null && !BundleState.none.equals( this.bundleTask.getState( ) );
   }
   
   BundleState getBundleTaskState( ) {
