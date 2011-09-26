@@ -1677,6 +1677,8 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *
     }
   }
   
+  logprintfl(EUCADEBUG, "vnetStartNetworkManaged(): params: vlan=%d, uuid=%s, userName=%s, netName=%s\n", vlan, SP(uuid), SP(userName), SP(netName));
+
   *outbrname = NULL;
 
   if (vlan < 0 || vlan > vnetconfig->max_vlan) {
