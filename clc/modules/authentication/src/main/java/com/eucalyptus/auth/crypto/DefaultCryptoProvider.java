@@ -155,7 +155,6 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
       return cert;
     } catch ( Exception e ) {
       LOG.fatal( e, e );
-      System.exit( -3 );
       return null;
     }
   }
@@ -177,7 +176,6 @@ public class DefaultCryptoProvider implements CryptoProvider, CertificateProvide
       return keyPair;
     } catch ( Exception e ) {
       LOG.fatal( e, e );
-      System.exit( -3 );
       return null;
     }
   }

@@ -127,11 +127,7 @@ public class Allocations {
       this.request = request;
       this.minCount = request.getMinCount( );
       this.maxCount = request.getMaxCount( );
-      try {
-        this.ownerFullName = Contexts.lookup( request.getCorrelationId( ) ).getUserFullName( );
-      } catch ( NoSuchContextException ex ) {
-        throw new IllegalContextAccessException( ex );
-      }
+      this.ownerFullName = this.context.getUserFullName( );
       if ( this.request.getInstanceType( ) == null || "".equals( this.request.getInstanceType( ) ) ) {
         this.request.setInstanceType( VmTypes.defaultTypeName( ) );
       }
