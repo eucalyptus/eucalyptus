@@ -67,13 +67,17 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
@@ -91,19 +95,18 @@ import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.SetMultimap;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 
-@ConfigurableClass( root = "net", description = "Default values used to bootstrap networking state discovery." )
+@ConfigurableClass( root = "cloud.network", description = "Default values used to bootstrap networking state discovery." )
 public class NetworkGroups {
   private static final String DEFAULT_NETWORK_NAME     = "default";
   private static Logger       LOG                      = Logger.getLogger( NetworkGroups.class );
@@ -195,7 +198,7 @@ public class NetworkGroups {
     } catch ( final TransactionException ex ) {
       Logs.extreme( ).error( ex, ex );
     }
-    netConfig.setUseNetworkTags( netTagging.get( ) ); 
+    netConfig.setUseNetworkTags( netTagging.get( ) );
     try {
       Properties.lookup( NetworkGroups.class, "GLOBAL_MAX_NETWORK_INDEX" ).setValue( netConfig.getMaxNetworkIndex( ).toString( ) );
       Properties.lookup( NetworkGroups.class, "GLOBAL_MIN_NETWORK_INDEX" ).setValue( netConfig.getMinNetworkIndex( ).toString( ) );
@@ -315,29 +318,49 @@ public class NetworkGroups {
   }
   
   public static NetworkGroup create( final OwnerFullName ownerFullName, final String groupName, final String groupDescription ) throws MetadataException {
+    UserFullName userFullName = null;
+    if ( ownerFullName instanceof UserFullName ) {
+      userFullName = ( UserFullName ) ownerFullName;
+    } else {
+      try {
+        Account account = Accounts.lookupAccountById( ownerFullName.getAccountNumber( ) );
+        User admin = Iterables.find( account.getUsers( ), new Predicate<User>( ) {
+          
+          @Override
+          public boolean apply( User input ) {
+            return input.isAccountAdmin( );
+          }
+        } );
+        userFullName = UserFullName.getInstance( admin );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+        throw new NoSuchMetadataException( "Failed to create group because owning user could not be identified.", ex );
+      }
+    }
+    
     final EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
-      NetworkGroup net = Entities.uniqueResult( new NetworkGroup( AccountFullName.getInstance( ownerFullName.getAccountNumber( ) ), groupName ) );
+      NetworkGroup net = Entities.uniqueResult( new NetworkGroup( AccountFullName.getInstance( userFullName.getAccountNumber( ) ), groupName ) );
       if ( net == null ) {
-        final NetworkGroup entity = Entities.persist( new NetworkGroup( ownerFullName, groupName, groupDescription ) );
+        final NetworkGroup entity = Entities.persist( new NetworkGroup( userFullName, groupName, groupDescription ) );
         db.commit( );
         return entity;
       } else {
         db.rollback( );
-        throw new DuplicateMetadataException( "Failed to create group: " + groupName + " for " + ownerFullName.toString( ) );
+        throw new DuplicateMetadataException( "Failed to create group: " + groupName + " for " + userFullName.toString( ) );
       }
     } catch ( final NoSuchElementException ex ) {
-      final NetworkGroup entity = Entities.persist( new NetworkGroup( ownerFullName, groupName, groupDescription ) );
+      final NetworkGroup entity = Entities.persist( new NetworkGroup( userFullName, groupName, groupDescription ) );
       db.commit( );
       return entity;
     } catch ( final ConstraintViolationException ex ) {
       Logs.exhaust( ).error( ex );
       db.rollback( );
-      throw new DuplicateMetadataException( "Failed to create group: " + groupName + " for " + ownerFullName.toString( ), ex );
+      throw new DuplicateMetadataException( "Failed to create group: " + groupName + " for " + userFullName.toString( ), ex );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
-      throw new MetadataException( "Failed to create group: " + groupName + " for " + ownerFullName.toString( ), PersistenceExceptions.transform( ex ) );
+      throw new MetadataException( "Failed to create group: " + groupName + " for " + userFullName.toString( ), PersistenceExceptions.transform( ex ) );
     }
   }
   
@@ -388,12 +411,12 @@ public class NetworkGroups {
   }
   
   @TypeMapper
-  public enum IpPermissionTypeExtractNetworkPeers implements Function<IpPermissionType, Multimap<String,String>> {
+  public enum IpPermissionTypeExtractNetworkPeers implements Function<IpPermissionType, Multimap<String, String>> {
     INSTANCE;
     
     @Override
-    public Multimap<String,String> apply( IpPermissionType ipPerm ) {
-      Multimap<String,String> networkPeers = ArrayListMultimap.create( );
+    public Multimap<String, String> apply( IpPermissionType ipPerm ) {
+      Multimap<String, String> networkPeers = ArrayListMultimap.create( );
       for ( UserIdGroupPairType peerInfo : ipPerm.getGroups( ) ) {
         networkPeers.put( peerInfo.getSourceUserId( ), peerInfo.getSourceGroupName( ) );
       }
@@ -424,7 +447,7 @@ public class NetworkGroups {
           NetworkRule rule1 = NetworkRule.create( NetworkRule.Protocol.udp, ipPerm.getFromPort( ), ipPerm.getToPort( ),
                                                   IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), empty );
           ruleList.add( rule1 );
-          NetworkRule rule2 = NetworkRule.create( NetworkRule.Protocol.tcp, -1, -1, 
+          NetworkRule rule2 = NetworkRule.create( NetworkRule.Protocol.tcp, -1, -1,
                                                   IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), empty );
           ruleList.add( rule2 );
         } else {

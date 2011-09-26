@@ -54,7 +54,7 @@ public abstract class AbstractSystemAddressManager {
     orphans.put( address, orphanCount + 1 );
     EventRecord.caller( ClusterState.class, EventType.ADDRESS_STATE,
                         "Updated orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).debug( );
-    if ( orphanCount > AddressingConfiguration.ADDRESS_ORPHAN_TICKS ) {
+    if ( orphanCount > AddressingConfiguration.getInstance( ).getMaxKillOrphans( ) ) {
       EventRecord.caller( ClusterState.class, EventType.ADDRESS_STATE,
                           "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).warn( );
       try {
@@ -186,7 +186,7 @@ public abstract class AbstractSystemAddressManager {
     private static void markAsAllocated( final Cluster cluster, final ClusterAddressInfo addrInfo, final Address address ) {
       try {
         if ( !address.isPending( ) ) {
-          for ( final VmInstance vm : VmInstances.listValues( ) ) {
+          for ( final VmInstance vm : VmInstances.list( VmState.RUNNING ) ) {
             if ( addrInfo.getInstanceIp( ).equals( vm.getPrivateAddress( ) ) && VmState.RUNNING.equals( vm.getState( ) ) ) {
               LOG.warn( "Out of band address state change: " + LogUtil.dumpObject( addrInfo ) + " address=" + address + " vm=" + vm );
 //              if ( !address.isAllocated( ) ) {
@@ -267,7 +267,7 @@ public abstract class AbstractSystemAddressManager {
     }
     
     private static void checkUniqueness( final ClusterAddressInfo addrInfo ) {
-      final Collection<VmInstance> matches = Collections2.filter( VmInstances.listValues( ), VmInstances.withPrivateAddress( addrInfo.getAddress( ) ) );
+      final Collection<VmInstance> matches = VmInstances.list( VmInstances.withPrivateAddress( addrInfo.getAddress( ) ) );
       if ( matches.size( ) > 1 ) {
         LOG.error( "Found " + matches.size( ) + " vms with the same address: " + addrInfo + " -> " + matches );
       }

@@ -1,8 +1,10 @@
 package com.eucalyptus.configurable;
 
 import java.lang.reflect.Field;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import org.apache.log4j.Logger;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
@@ -43,8 +45,7 @@ public class PropertyDirectory {
           System.exit( 1 );
         }
         if ( prop != null ) {
-          ConfigurableClass configurableAnnot = ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class );
-          if ( configurableAnnot.deferred( ) ) {
+          if ( prop.isDeferred( ) ) {
             if ( !fqPendingMap.containsKey( prop.getQualifiedName( ) ) ) {
               fqPendingMap.put( prop.getQualifiedName( ), prop );
               fqPendingPrefixMap.put( prop.getEntrySetName( ), prop );
@@ -110,6 +111,9 @@ public class PropertyDirectory {
     }
   }
   
+  public static Collection<Entry<String,ConfigurableProperty>> getPendingPropertyEntries( ) {
+    return fqPendingPrefixMap.entries( );
+  }
   public static List<ConfigurableProperty> getPendingPropertyEntrySet( String prefix ) {
     List<ConfigurableProperty> props = Lists.newArrayList( );
     for ( ConfigurableProperty fq : fqPendingPrefixMap.get( prefix ) ) {
@@ -131,10 +135,13 @@ public class PropertyDirectory {
     return componentProps;
   }
   
-  public static void addProperty( ConfigurableProperty prop ) {
+  public static boolean addProperty( ConfigurableProperty prop ) {
     if ( !fqMap.containsKey( prop.getQualifiedName( ) ) ) {
       fqMap.put( prop.getQualifiedName( ), prop );
       fqPrefixMap.put( prop.getEntrySetName( ), prop );
+      return true;
+    } else {
+      return false;
     }
   }
   

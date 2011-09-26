@@ -1,7 +1,7 @@
 package com.eucalyptus.configurable;
 
-
 public interface ConfigurableProperty extends Comparable<ConfigurableProperty> {
+  public abstract boolean isDeferred( );
   
   public abstract String getFieldName( );
   
@@ -17,7 +17,7 @@ public interface ConfigurableProperty extends Comparable<ConfigurableProperty> {
   
   public abstract ConfigurableFieldType getWidgetType( );
   
-  public abstract String getAlias();
+  public abstract String getAlias( );
   
   public abstract PropertyTypeParser getTypeParser( );
   
