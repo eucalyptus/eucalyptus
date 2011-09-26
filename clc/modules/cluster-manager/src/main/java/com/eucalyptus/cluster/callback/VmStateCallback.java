@@ -65,6 +65,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
                **/
               if ( vm.getRuntimeState( ).isBundling( ) ) {
                 vm.getRuntimeState( ).updateBundleTaskState( runVm.getBundleTaskStateName( ) );
+                VmInstances.terminated( vm );
               } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
                 VmInstances.terminated( vm );
               } else if ( VmState.STOPPING.apply( vm ) ) {
