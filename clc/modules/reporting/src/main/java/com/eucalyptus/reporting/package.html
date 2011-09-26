@@ -1,63 +1,37 @@
 
 <p>The reporting package generates visual reports, based upon usage statistics
-which it tracks and records.
+which it tracks and records. For example, it could be used to track S3
+storage usage, then generate monthly reports, broken down by user and account.
 
-<p>The reporting mechanism gathers usage data by means of events. Events are
+<p>The reporting system has a single entry point: the <code>generateReport</code>
+method in the <code>ReportGenerator</code> class. All reports are generated
+by calling that single method.
+
+<p><i>Implementation</i>
+
+<p>The reporting system is broken down into several <i>Reporting Modules</i>.
+Each module tracks its own usage statistics, has its own event listener, and
+has its own database tables. All reporting modules implement the
+<code>ReportingModule</code> interface, and
+are organized as sub-packages under the "com.eucalyptus.reporting.modules"
+package. When a report is generated, the reporting system calls a specific
+module to gather aggregate historical statistics, then feeds this information
+to Jasper to generate a report.
+
+<p>At present, three reporting modules are implemented: Instance, EBS, and S3.
+Additional reporting modules could be added, by adding additional
+sub-packages and implementing the ReportingModule interface; this would
+allow the reporting system to track additional kinds of usage statistics.
+
+<p>All reporting modules gather usage data by means of events. Events are
 sent from various components of Eucalyptus (like the CLC and Walrus) to the
-reporting system, either periodically or whenever some usage occurs.
+reporting modules, either periodically or whenever some usage occurs.
 The events are aggregated into reporting statistics which are stored in the
-database.
+various module database tables.
 
 <p>Usage statistics are aggregated and stored in the database as a series of
 <i>snapshots</i>.  Each snapshot contains the total usage for a given
-(user,account,cluster,avail_zone) tuple at a given moment in time. A series of
-snapshots across some period (say 2010.01.01 to 2011.01.01) could be used to
-extrapolate statistics of usage, which could then be used to generate a visual
-report.
-
-<p>The reporting system contains several <i>Reporting Modules</i>. At present,
-three modules are implemented: Instance, Storage, and S3. Each module tracks
-its own usage statistics, has its own event listener, and has its own database
-tables. All reporting modules implement the "ReportingModule" interface, and
-are organized as sub-packages under the "com.eucalyptus.reporting.modules"
-package. Additional reporting modules could be added, by adding additional
-sub-packages and implementing the ReportingModule interface.
-
-<p>The reporting modules all have the following classes at present:
-<ul>
- <li><i>UsageSnapshot</i> - a snapshot of resource usage at a moment of time,
-     keyed by a (user,account,cluster,avail_zone,timestamp) tuple, and mapped
-     to the DB using hibernate. A UsageSnapshot consists of a <i>SnapshotKey</i>
-     object and a <i>UsageData</i> object.</li>
- <ul>
-  <li><i>SnapshotKey</i> - A key for usage snapshots. Consists of (user,account,
-     cluster,avail_zone,timestamp).</li>
-  <li><i>UsageData</i> - Statistics of usage (like disk bandwidth used or S3
-     objects used) at a single moment in time.</li>
- </ul>
- <li><i>UsageSummary</i> - Contains aggregated resource usage over an
-     extended period of time. Aggregates several UsageSnapshots.</li>
- <li><i>ReportingModule</i> - An object which allows retrieval of statistics
-     for some time period. This is the main class for accessing reporting
-     statistics for each module. Contains logic for database queries,
-     extrapolation, fractional periods, and so on. Contains a single primary
-     method called <i>scanLog</i> for gathering usage information.</li>
- <li><i>ReportLine</i> - A bean which represents a single line in a visual
-     report. It's like a UsageSummary, but with units adjusted for
-     human-readable units (hours instead of milliseconds) and human-readable
-     strings for criteria values</li>
-</ul>
-
-<p>Some of these classes in the various modules (UsageSnapshot, SnapshotKey,
-UsageData, UsageSummary) are similarly named across modules but do not
-implement common interfaces, because they are similar only in a very abstract
-sense. They do not store the same statistics, or have the same method
-signatures, or have the same object properties, or use the same keys, and so 
-on. They follow a common general design, and so use similarly-named classes
-(but with Instance-, Storage-, or S3- naming prefixes). In a future version,
-some of this functionality will be factored out into a common package
-which will use reflection to generate aggregate statistics for any kind of
-bean classes with any properties.
+(user,account,cluster,avail_zone) tuple at a given moment in time.
 
 <p>The current reporting modules all share a common structure and a similar way
 of storing statistics as snapshots. However, this is only a <i>convention</i>
@@ -77,9 +51,4 @@ on.
 <p>The super-structure has a <i>queue</i> package for transmitting
 events over the network if necessary, and a <i>units</i> package for unit
 conversions.
-
-<p>The entry point for the reporting system is the <i>ReportGenerator</i>
-class, which acts as a facade for all the underlying logic and is the only
-class accessed by outside facilities. It has a single method:
-<i>generateReport</i>.
 
