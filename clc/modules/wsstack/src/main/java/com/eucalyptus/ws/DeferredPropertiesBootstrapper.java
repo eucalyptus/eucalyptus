@@ -87,7 +87,7 @@ public class DeferredPropertiesBootstrapper extends Bootstrapper {
   private static Logger LOG = Logger.getLogger( DeferredPropertiesBootstrapper.class );
   
   @Override
-  public boolean start( ) throws Exception {
+  public boolean load( ) throws Exception {
     List<ConfigurableProperty> staticProps = Lists.newArrayList( );
     for ( Entry<String, ConfigurableProperty> entry : PropertyDirectory.getPendingPropertyEntries( ) ) {
       ConfigurableProperty prop = entry.getValue( );
@@ -123,7 +123,7 @@ public class DeferredPropertiesBootstrapper extends Bootstrapper {
   }
   
   @Override
-  public boolean load( ) throws Exception {
+  public boolean start( ) throws Exception {
     return true;
   }
   

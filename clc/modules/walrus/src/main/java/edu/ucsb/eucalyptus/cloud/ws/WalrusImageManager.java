@@ -93,6 +93,7 @@ import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Lookups;
 import com.eucalyptus.util.WalrusProperties;
 
@@ -148,6 +149,7 @@ import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
@@ -546,7 +548,7 @@ public class WalrusImageManager {
 			}
 			imageCacher = imageCachers.get(bucketName + manifestKey);
 			imageCacher.setDecryptedImageKey(decryptedImageKey);
-			imageCacher.start();
+			Threads.lookup(Walrus.class, WalrusImageManager.ImageCacher.class).limitTo(10).submit(imageCacher);
 		} 
 	}
 
@@ -692,10 +694,10 @@ public class WalrusImageManager {
 
 	public void startImageCacheFlusher(String bucketName, String manifestName) {
 		ImageCacheFlusher imageCacheFlusher = new ImageCacheFlusher(bucketName, manifestName);
-		imageCacheFlusher.start();
+		Threads.lookup(Walrus.class, WalrusImageManager.ImageCacheFlusher.class).limitTo(10).submit(imageCacheFlusher);
 	}
 
-	private class ImageCacheFlusher extends Thread {
+	private class ImageCacheFlusher implements Runnable {
 		private String bucketName;
 		private String objectKey;
 
@@ -714,7 +716,7 @@ public class WalrusImageManager {
 	}
 
 
-	private class ImageCacher extends Thread {
+	private class ImageCacher implements Runnable {
 
 		private String bucketName;
 		private String manifestKey;
@@ -1308,7 +1310,7 @@ public class WalrusImageManager {
 				//check that there are no operations in progress and then flush cache and delete image file
 				db.commit();
 				ImageCacheFlusher imageCacheFlusher = new ImageCacheFlusher(bucketName, manifestKey);
-				imageCacheFlusher.start();
+				Threads.lookup(Walrus.class, WalrusImageManager.ImageCacheFlusher.class).limitTo(10).submit(imageCacheFlusher);
 			} else {
 				db.rollback();
 				throw new WalrusException("not in cache");

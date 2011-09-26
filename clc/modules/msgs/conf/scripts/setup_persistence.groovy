@@ -146,7 +146,6 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
     PersistenceContexts.registerPersistenceContext("${ctx_simplename}", config)
   } catch( Exception t ) {
     t.printStackTrace();
-    System.exit(1)
   }
 }
 

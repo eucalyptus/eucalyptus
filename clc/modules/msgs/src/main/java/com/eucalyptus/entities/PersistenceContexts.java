@@ -13,6 +13,7 @@ import org.hibernate.ejb.EntityManagerFactoryImpl;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Ats;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.ArrayListMultimap;
@@ -104,7 +105,8 @@ public class PersistenceContexts {
         for ( Exception e : illegalAccesses ) {
           LOG.fatal( e, e );
         }
-        LogUtil.header( "Illegal Access to Persistence Context.  Database not yet configured. This is always a BUG: " + persistenceContext );
+        LOG.error( Threads.currentStackString( ) );
+        LOG.error( LogUtil.header( "Illegal Access to Persistence Context.  Database not yet configured. This is always a BUG: " + persistenceContext ) );
         System.exit( 1 );
       } else if ( !emf.containsKey( persistenceContext ) ) {
         illegalAccesses = null;

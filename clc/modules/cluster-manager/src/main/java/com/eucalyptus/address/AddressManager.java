@@ -103,6 +103,7 @@ public class AddressManager {
     AllocateAddressResponseType reply = ( AllocateAddressResponseType ) request.getReply( );
     Address address;
     try {
+      //GRZE:WHINE: add resource allocator here:  RestrictedTypes.allocate( 1, Allocator.INSTANCE );
       address = Addresses.allocate( request );
     } catch ( NotEnoughResourcesException e ) {
       LOG.debug( e, e );

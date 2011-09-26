@@ -186,7 +186,7 @@ public abstract class AbstractSystemAddressManager {
     private static void markAsAllocated( final Cluster cluster, final ClusterAddressInfo addrInfo, final Address address ) {
       try {
         if ( !address.isPending( ) ) {
-          for ( final VmInstance vm : VmInstances.listValues( ) ) {
+          for ( final VmInstance vm : VmInstances.list( VmState.RUNNING ) ) {
             if ( addrInfo.getInstanceIp( ).equals( vm.getPrivateAddress( ) ) && VmState.RUNNING.equals( vm.getState( ) ) ) {
               LOG.warn( "Out of band address state change: " + LogUtil.dumpObject( addrInfo ) + " address=" + address + " vm=" + vm );
 //              if ( !address.isAllocated( ) ) {
@@ -267,7 +267,7 @@ public abstract class AbstractSystemAddressManager {
     }
     
     private static void checkUniqueness( final ClusterAddressInfo addrInfo ) {
-      final Collection<VmInstance> matches = Collections2.filter( VmInstances.listValues( ), VmInstances.withPrivateAddress( addrInfo.getAddress( ) ) );
+      final Collection<VmInstance> matches = VmInstances.list( VmInstances.withPrivateAddress( addrInfo.getAddress( ) ) );
       if ( matches.size( ) > 1 ) {
         LOG.error( "Found " + matches.size( ) + " vms with the same address: " + addrInfo + " -> " + matches );
       }

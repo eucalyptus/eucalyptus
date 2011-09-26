@@ -118,4 +118,36 @@ public class VmId {
     if ( this.instanceId != null ) builder.append( "instanceId=" ).append( this.instanceId );
     return builder.toString( );
   }
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.instanceId == null )
+      ? 0
+      : this.instanceId.hashCode( ) );
+    return result;
+  }
+
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( obj == null ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    VmId other = ( VmId ) obj;
+    if ( this.instanceId == null ) {
+      if ( other.instanceId != null ) {
+        return false;
+      }
+    } else if ( !this.instanceId.equals( other.instanceId ) ) {
+      return false;
+    }
+    return true;
+  }
 }
