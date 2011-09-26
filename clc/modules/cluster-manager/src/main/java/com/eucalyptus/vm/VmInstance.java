@@ -1406,8 +1406,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           }
           runningInstance.setPlatform( input.getPlatform( ) );
           
-          runningInstance.setStateCode( Integer.toString( input.getState( ).getCode( ) ) );
-          runningInstance.setStateName( input.getState( ).getName( ) );
           runningInstance.setInstanceId( input.getVmId( ).getInstanceId( ) );
           //ASAP:FIXME:GRZE: restore.
           runningInstance.setProductCodes( new ArrayList<String>( ) );
