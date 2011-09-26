@@ -178,7 +178,7 @@ public class VmControl {
             final ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getNamespace( ), v.getNetworkNames( ) );
             rsvMap.put( reservation.getReservationId( ), reservation );
           }
-          rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstances.transform( vm ) );
+          rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstances.transform( v ) );
           db.commit( );
         } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex, ex );
