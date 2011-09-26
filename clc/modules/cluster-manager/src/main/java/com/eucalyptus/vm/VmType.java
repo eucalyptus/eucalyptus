@@ -208,7 +208,7 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
   
   @Override
   public OwnerFullName getOwner( ) {
-    return Principals.systemFullName( );
+    return Principals.nobodyFullName( );
   }
   
 }

@@ -61,34 +61,41 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cloud.util;
+package com.eucalyptus.cloud;
 
-import com.eucalyptus.cloud.CloudMetadata;
+import java.util.Collection;
+import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 
-public class IllegalMetadataAccessException extends MetadataException {
-  
-  public IllegalMetadataAccessException( ) {
-    super( );
+public class CloudMetadatas {
+  public static <T extends CloudMetadata> Predicate<T> filterById( final Collection<String> requestedIdentifiers ) {
+    return new Predicate<T>( ) {
+      
+      @Override
+      public boolean apply( T input ) {
+        return requestedIdentifiers == null || requestedIdentifiers.isEmpty( ) || requestedIdentifiers.contains( input.getDisplayName( ) );
+      }
+    };
+    
+  }
+  public static <T extends CloudMetadata> Predicate<T> filterPrivilegesById( final Collection<String> requestedIdentifiers ) {
+    return Predicates.and( filterById( requestedIdentifiers ), RestrictedTypes.filterPrivileged( ) );
+    
   }
   
-  public IllegalMetadataAccessException( CloudMetadata metadata, String message, Throwable cause ) {
-    super( metadata.getDisplayName( ) + ": " + message, cause );
+  public static <T extends CloudMetadata> Predicate<T> filterByOwningAccount( final Collection<String> requestedIdentifiers ) {
+    return new Predicate<T>( ) {
+      
+      @Override
+      public boolean apply( T input ) {
+        return requestedIdentifiers == null || requestedIdentifiers.isEmpty( ) || requestedIdentifiers.contains( input.getOwner( ).getAccountNumber( ) );
+      }
+    };
+    
   }
-  
-  public IllegalMetadataAccessException( String message, Throwable cause ) {
-    super( message, cause );
+  public static <T extends CloudMetadata> Predicate<T> filterPrivilegesByOwningAccount( final Collection<String> requestedIdentifiers ) {
+    return Predicates.and( filterByOwningAccount( requestedIdentifiers ), RestrictedTypes.filterPrivileged( ) );
+    
   }
-  
-  public IllegalMetadataAccessException( CloudMetadata metadata, String message ) {
-    super( metadata.getDisplayName( ) + ": " + message );
-  }
-  
-  public IllegalMetadataAccessException( String message ) {
-    super( message );
-  }
-  
-  public IllegalMetadataAccessException( Throwable cause ) {
-    super( cause );
-  }
-  
 }

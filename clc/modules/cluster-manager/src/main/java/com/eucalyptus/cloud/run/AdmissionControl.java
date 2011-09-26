@@ -72,6 +72,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterNodeState;
@@ -124,7 +125,7 @@ public class AdmissionControl {
                                                          }
                                                        };
   
-  public static Allocation handle( Allocation allocInfo ) throws EucalyptusCloudException {
+  public static Allocation handle( Allocation allocInfo ) throws Exception {
     EventRecord.here( AdmissionControl.class, EventType.VM_RESERVED, LogUtil.dumpObject( allocInfo ) ).trace( );
     List<ResourceAllocator> finished = Lists.newArrayList( );
     EntityTransaction db = Entities.get( NetworkGroup.class );
@@ -138,7 +139,7 @@ public class AdmissionControl {
       Logs.exhaust( ).error( ex, ex );
       rollbackAllocations( allocInfo, finished, ex );
       db.rollback( );
-      throw new EucalyptusCloudException( ex.getMessage( ), ex );
+      throw new NotEnoughResourcesException( ex.getMessage( ), ex );
     }
     return allocInfo;
   }

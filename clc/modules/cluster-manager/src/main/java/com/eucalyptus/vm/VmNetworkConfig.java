@@ -63,6 +63,7 @@
 
 package com.eucalyptus.vm;
 
+import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Parent;
@@ -72,16 +73,24 @@ public class VmNetworkConfig {
   
   @Parent
   private VmInstance   parent;
+  @Column( name = "metadata_vm_private_addressing" )
+  private Boolean      usePrivateAddressing;
+  @Column( name = "metadata_vm_mac_address" )
   private String       macAddress;
+  @Column( name = "metadata_vm_private_address" )
   private String       privateAddress;
+  @Column( name = "metadata_vm_public_address" )
   private String       publicAddress;
+  @Column( name = "metadata_vm_private_dns" )
   private String       privateDnsName;
+  @Column( name = "metadata_vm_public_dns" )
   private String       publicDnsName;
   @Transient
   public static String DEFAULT_IP = "0.0.0.0";
   
   VmNetworkConfig( VmInstance parent, String ipAddress, String ignoredPublicIp ) {
     super( );
+    this.usePrivateAddressing = false;
     this.parent = parent;
     this.macAddress = VmInstances.asMacAddress( this.parent.getInstanceId( ) );
     this.privateAddress = ipAddress;
@@ -177,5 +186,13 @@ public class VmNetworkConfig {
     if ( this.privateDnsName != null ) builder.append( "privateDnsName=" ).append( this.privateDnsName ).append( ":" );
     if ( this.publicDnsName != null ) builder.append( "publicDnsName=" ).append( this.publicDnsName );
     return builder.toString( );
+  }
+
+  private Boolean getUsePrivateAddressing( ) {
+    return this.usePrivateAddressing;
+  }
+
+  private void setUsePrivateAddressing( Boolean usePrivateAddressing ) {
+    this.usePrivateAddressing = usePrivateAddressing;
   }
 }
