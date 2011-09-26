@@ -26,22 +26,21 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
-import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
-import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
-@ConfigurableClass( root = "system", description = "Parameters having to do with the system's state.  Mostly read-only." )
+@ConfigurableClass( root = "bootstrap.servicebus", description = "Parameters having to do with the service bus." )
 public class ServiceContext {
   private static Logger                        LOG                      = Logger.getLogger( ServiceContext.class );
   private static SpringXmlConfigurationBuilder builder;
+  @ConfigurableField( initial = "256", description = "Max queue length allowed per service stage.", changeListener = HupListener.class )
+  public static Integer                        MAX_OUTSTANDING_MESSAGES = 256;
   @ConfigurableField( initial = "16", description = "Max queue length allowed per service stage.", changeListener = HupListener.class )
-  public static Integer                        MAX_OUTSTANDING_MESSAGES = 16;
+  public static Integer                        WORKERS_PER_STAGE        = 16;//TODO:GRZE: finish this thought later.
   @ConfigurableField( initial = "0", description = "Do a soft reset.", changeListener = HupListener.class )
   public static Integer                        HUP                      = 0;
   
@@ -116,7 +115,7 @@ public class ServiceContext {
           }
         }
       } );
-    }*/
+      }*/
   }
   
   public static <T> T send( String dest, Object msg ) throws ServiceDispatchException {

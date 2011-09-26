@@ -69,6 +69,7 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.Filter;
 import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.vm.VmBundleTask.BundleState;
 
 public class VmBundleMessage extends EucalyptusMessage {
   
@@ -143,7 +144,7 @@ public class BundleTask extends EucalyptusData {
     this.instanceId = instanceId;
     this.bucket = bucket;
     this.prefix = prefix;
-    this.state = "pending";
+    this.state = BundleState.pending.name( );
     this.startTime = new Date();
     this.updateTime = new Date();
     this.progress = "0%";

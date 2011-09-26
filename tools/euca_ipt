@@ -188,6 +188,7 @@ sub new_euca_ipt() {
     } else {
 	return(1);
     }
+    system("cp $chainmapfile /tmp/chains");
     
     
     if (!$table || !$rulefile || !$chainmapfile || !($table eq "filter" || $table eq "nat") || $rulefile eq "" || !-f $rulefile || $chainmapfile eq "" || !-f $chainmapfile) {dodie("cannot verify commandline options");}
@@ -224,6 +225,9 @@ sub new_euca_ipt() {
 		$newchains{$chain} .= ",,," . join(" ", @rule);
 		$allchains{$chain} = 1;
 	    }
+	} elsif ($line =~ /^\s*GROUP/) {
+	    my ($add, $chainuser, @ips) = split(/\s+/, $line);
+	    
 	}
     }
     close(FH);
@@ -253,29 +257,33 @@ sub new_euca_ipt() {
     $ocl = keys(%oldchains);
     $cml = keys(%chainmap);
     if ($ncl <= 0 || $ocl <= 0 || $cml <= 0) {
-	print STDERR "nothing to do\n";
-	return(0);
     }    
     
     foreach $chain (keys(%newchains)) {
-	print STDERR "INCHAIN($chain): $newchains{$chain}\n";
+#	print STDERR "INCHAIN($chain): $newchains{$chain}\n";
 	my @inrules = split(',,,', $newchains{$chain});
-	print STDERR "INRULES: @inrules\n";
+#	print STDERR "INRULES: @inrules\n";
 	my $newchain = "";
 	foreach $rule (@inrules) {
 	    my @rules = rule_convert($rule, $chainmap{$chain});
 	    if (@rules) {
-		print STDERR "RULECONVERT: @rules\n";
+#		print STDERR "RULECONVERT: @rules\n";
 		$newchain .= ",,,$rules[0]";
 	    }
 	}
-	print STDERR "NEWCHAIN($chain): $newchain\n";
-	print STDERR "OLDCHAIN($chain): $oldchains{$chain}\n";
+#	print STDERR "NEWCHAIN($chain): $newchain\n";
+#	print STDERR "OLDCHAIN($chain): $oldchains{$chain}\n";
 	$oldchains{$chain} = $newchain;
-	print STDERR "CHAINMAP($chain): $chainmap{$chain}\n\n\n";
+#	print STDERR "CHAINMAP($chain): $chainmap{$chain}\n\n\n";
     }
     
-    print STDERR "------------------\n";
+    foreach $chain (keys(%chainmap)) {
+	if (!$newchains{$chain}) {
+	    $oldchains{$chain} = "";
+	}
+    }
+
+#    print STDERR "------------------\n";
     open(OFH, ">$ofile") || dodie("cannot write to file $ofile");
 # write out the header
     print OFH "*filter\n:INPUT ACCEPT [0:0]\n:FORWARD DROP [0:0]\n:OUTPUT ACCEPT [0:0]\n";
@@ -303,13 +311,18 @@ sub new_euca_ipt() {
     foreach $chain (keys(%oldchains)) {
 	if ($chainmap{$chain}) {
 	    my @rules = split(',,,', $oldchains{$chain});
-	    foreach $rule (@rules) {
-		if ($chain && $rule && $rule ne "") {
-		    print OFH "-A $chain $rule\n";
+	    my $rulelen = @rules;
+	    if ($rulelen > 0) {
+		print STDERR "CHAIN: $chain RULES: @rules\n";
+		foreach $rule (@rules) {
+		    if ($chain && $rule && $rule ne "") {
+			print OFH "-A $chain $rule\n";
+		    }
 		}
 	    }
 	}
     }
+    
     print OFH "COMMIT\n";
     close(OFH);
     

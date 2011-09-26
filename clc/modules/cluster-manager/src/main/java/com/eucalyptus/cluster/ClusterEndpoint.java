@@ -225,7 +225,7 @@ public class ClusterEndpoint implements Startable {
                                                                                    LOG.info( val );
                                                                                  }
                                                                                  retList.add( new ClusterInfoType( "================== VMs", "" ) );
-                                                                                 for ( VmInstance vm : VmInstances.listValues( ) ) {
+                                                                                 for ( VmInstance vm : VmInstances.list( null ) ) {
                                                                                    String val = vm.toString( );
                                                                                    retList.add( new ClusterInfoType( val, "" ) );
                                                                                    LOG.info( val );

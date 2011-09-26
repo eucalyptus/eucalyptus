@@ -183,6 +183,7 @@ public class ServiceBootstrapper extends Bootstrapper {
         ServiceBootstrapWorker.submit( new Runnable( ) {
           @Override
           public void run( ) {
+            Bootstrap.awaitFinished( );
             try {
               ServiceTransitions.transitionChain( config, Component.State.NOTREADY ).get( );
               try {
