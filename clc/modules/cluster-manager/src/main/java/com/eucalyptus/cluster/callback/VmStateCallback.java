@@ -11,6 +11,7 @@ import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
+import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
@@ -50,17 +51,22 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     
     for ( final VmInfo runVm : reply.getVms( ) ) {
       final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
+      BundleState bundleState = BundleState.mapper.apply( runVm.getBundleTaskStateName( ) );
       EntityTransaction db = Entities.get( VmInstance.class );
       try {
         try {
           VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
           try {
+            
             if ( VmState.SHUTTING_DOWN.equals( runVmState ) ) {
               /**
                * TODO:GRZE: based on current local instance state we need to handle reported
                * SHUTTING_DOWN state differently
                **/
-              if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
+              if ( vm.getRuntimeState( ).isBundling( ) ) {
+                vm.getRuntimeState( ).updateBundleTaskState( runVm.getBundleTaskStateName( ) );
+                VmInstances.terminated( vm );
+              } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
                 VmInstances.terminated( vm );
               } else if ( VmState.STOPPING.apply( vm ) ) {
                 VmInstances.stopped( vm );

@@ -178,20 +178,24 @@ public class VmControl {
             final ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getNamespace( ), v.getNetworkNames( ) );
             rsvMap.put( reservation.getReservationId( ), reservation );
           }
-          rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstances.transform( vm ) );
+          rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstances.transform( v ) );
           db.commit( );
         } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex, ex );
           db.rollback( );
           try {
             if ( vm != null ) {
-              RunningInstancesItemType ret = VmInstances.transform( vm );
-              if ( ret != null && vm.getReservationId( ) != null ) {
-                if ( !rsvMap.containsKey( vm.getReservationId( ) ) ) {
-                  final ReservationInfoType reservation = new ReservationInfoType( vm.getReservationId( ), vm.getOwner( ).getNamespace( ), vm.getNetworkNames( ) );
-                  rsvMap.put( reservation.getReservationId( ), reservation );
+              try {
+                RunningInstancesItemType ret = VmInstances.transform( vm );
+                if ( ret != null && vm.getReservationId( ) != null ) {
+                  if ( !rsvMap.containsKey( vm.getReservationId( ) ) ) {
+                    final ReservationInfoType reservation = new ReservationInfoType( vm.getReservationId( ), vm.getOwner( ).getNamespace( ), vm.getNetworkNames( ) );
+                    rsvMap.put( reservation.getReservationId( ), reservation );
+                  }
+                  rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( ret );
                 }
-                rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( ret );
+              } catch ( Exception ex1 ) {
+                LOG.error( ex1 , ex1 );
               }
             }
           } catch ( Exception ex1 ) {
@@ -228,14 +232,20 @@ public class VmControl {
                 vm = RestrictedTypes.doPrivileged( instanceId, VmInstances.lookupFunction( ) );
                 runVm = VmInstances.transform( vm );
                 oldCode = vm.getState( ).getCode( );
-                newCode = VmState.SHUTTING_DOWN.apply( vm )
-                  ? VmState.TERMINATED.getCode( )
-                  : VmState.SHUTTING_DOWN.getCode( );
                 oldState = vm.getState( ).getName( );
-                newState = VmState.SHUTTING_DOWN.apply( vm )
-                  ? VmState.TERMINATED.getName( )
-                  : VmState.SHUTTING_DOWN.getName( );
-                VmInstances.shutDown( vm );
+                if ( VmState.STOPPED.apply( vm ) ) {
+                  newCode = VmState.TERMINATED.getCode( );
+                  newState = VmState.TERMINATED.getName( );
+                  VmInstances.terminated( vm );
+                } else {
+                  newCode = VmState.SHUTTING_DOWN.apply( vm )
+                    ? VmState.TERMINATED.getCode( )
+                    : VmState.SHUTTING_DOWN.getCode( );
+                  newState = VmState.SHUTTING_DOWN.apply( vm )
+                    ? VmState.TERMINATED.getName( )
+                    : VmState.SHUTTING_DOWN.getName( );
+                  VmInstances.shutDown( vm );
+                }
               } catch ( final NoSuchElementException e ) {
                 runVm = VmInstances.transform( instanceId );
                 oldCode = newCode = VmState.TERMINATED.getCode( );
@@ -557,6 +567,7 @@ public class VmControl {
       } else {
         throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
       }
+      db.commit( );
     } catch ( EucalyptusCloudException ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );

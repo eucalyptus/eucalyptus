@@ -64,7 +64,7 @@
 package com.eucalyptus.util;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.notNullValue;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -77,11 +77,11 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicyAction;
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.PolicyVendor;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.context.Context;
@@ -209,7 +209,7 @@ public class RestrictedTypes {
           }
           User requestUser = ctx.getUser( );
           try {
-            if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), "", requestUser.getAccount( ), action, requestUser ) ) {
+            if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), "", null, action, requestUser ) ) {
               throw new AuthException( "Not authorized to create: " + type + " by user: " + ctx.getUserFullName( ) );
             } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), "", action, ctx.getUser( ), quantity ) ) {
               throw new AuthException( "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
@@ -312,7 +312,9 @@ public class RestrictedTypes {
                                             + rscType, ex );
           }
           
-          Account owningAccount = Accounts.lookupUserById( requestedObject.getOwner( ).getUniqueId( ) ).getAccount( );
+          Account owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( requestedObject.getOwner( ).getAccountNumber( ) )
+          ? null
+          : Accounts.lookupAccountByName( requestedObject.getOwner( ).getAccountName( ) );
           if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, owningAccount, action, requestUser ) ) {
             throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user " + requestUser.getName( ) );
           }
@@ -352,7 +354,9 @@ public class RestrictedTypes {
             }
             User requestUser = ctx.getUser( );
             try {
-              Account owningAccount = Accounts.lookupAccountByName( arg0.getOwner( ).getAccountName( ) );
+              Account owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( arg0.getOwner( ).getAccountNumber( ) )
+                ? null
+                : Accounts.lookupAccountByName( arg0.getOwner( ).getAccountName( ) );
               return Permissions.isAuthorized( vendor.value( ), type.value( ), arg0.getDisplayName( ), owningAccount, action, requestUser );
             } catch ( AuthException ex ) {
               return false;
