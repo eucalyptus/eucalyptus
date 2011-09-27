@@ -1,6 +1,7 @@
 package com.eucalyptus.cluster.callback;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.CancellationException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
@@ -115,10 +116,12 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         } catch ( Exception ex ) {
           LOG.error( ex );
         }
-      } catch ( Exception ex1 ) {
+      } catch ( NoSuchElementException ex1 ) {
         if ( VmStateSet.RUN.contains( runVmState ) ) {
           VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
         }
+      } catch ( Exception ex1 ) {
+        LOG.error( ex1, ex1 );
       }
       db.commit( );
     } catch ( Exception ex ) {
