@@ -96,9 +96,8 @@ public class MetadataRequest {
       }
       VmInstance findVm = null;
       try {
-        Address addr = Addresses.getInstance( ).lookup( requestIp );
         try {
-          findVm = VmInstances.lookup( addr.getInstanceId( ) );
+          findVm = VmInstances.lookupByPublicIp( requestIp );
         } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex );
         }
