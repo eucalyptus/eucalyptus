@@ -84,7 +84,6 @@ public class NioMessageReceiver extends AbstractMessageReceiver {
     try {
       Pipelines.register( this.soapPipeline );
       Pipelines.register( this.queryPipeline );
-      this.setupPipelines( );
     } catch ( NoSuchElementException ex ) {
       this.setupPipelines( );
     }
@@ -99,8 +98,6 @@ public class NioMessageReceiver extends AbstractMessageReceiver {
   public void doDispose( ) {}
   
   public void doDisconnect( ) throws ConnectException {
-    Pipelines.deregister( this.soapPipeline );
-    Pipelines.deregister( this.queryPipeline );
   }
   
 }
