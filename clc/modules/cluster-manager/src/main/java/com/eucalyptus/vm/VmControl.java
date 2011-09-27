@@ -102,6 +102,7 @@ import com.eucalyptus.vm.Bundles.BundleCallback;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
@@ -223,31 +224,32 @@ public class VmControl {
         public boolean apply( final String instanceId ) {
           EntityTransaction db = Entities.get( VmInstance.class );
           try {
-            RunningInstancesItemType runVm = null;
             try {
               String oldState = null, newState = null;
               int oldCode = 0, newCode = 0;
               try {
                 VmInstance vm = null;
                 vm = RestrictedTypes.doPrivileged( instanceId, VmInstances.lookupFunction( ) );
-                runVm = VmInstances.transform( vm );
                 oldCode = vm.getState( ).getCode( );
                 oldState = vm.getState( ).getName( );
                 if ( VmState.STOPPED.apply( vm ) ) {
+                  newCode = VmState.STOPPED.getCode( );
+                  newState = VmState.STOPPED.getName( );
+                  VmInstances.stopped( vm );
+                } else if ( VmStateSet.RUN.apply( vm ) ) {
+                  newCode = VmState.SHUTTING_DOWN.getCode( );
+                  newState = VmState.SHUTTING_DOWN.getName( );
+                  VmInstances.shutDown( vm );
+                } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
                   newCode = VmState.TERMINATED.getCode( );
                   newState = VmState.TERMINATED.getName( );
                   VmInstances.terminated( vm );
-                } else {
-                  newCode = VmState.SHUTTING_DOWN.apply( vm )
-                    ? VmState.TERMINATED.getCode( )
-                    : VmState.SHUTTING_DOWN.getCode( );
-                  newState = VmState.SHUTTING_DOWN.apply( vm )
-                    ? VmState.TERMINATED.getName( )
-                    : VmState.SHUTTING_DOWN.getName( );
-                  VmInstances.shutDown( vm );
+                } else if ( VmState.TERMINATED.apply( vm ) ) {
+                  oldCode = newCode = VmState.TERMINATED.getCode( );
+                  oldState = newState = VmState.TERMINATED.getName( );
+                  VmInstances.delete( vm );
                 }
               } catch ( final NoSuchElementException e ) {
-                runVm = VmInstances.transform( instanceId );
                 oldCode = newCode = VmState.TERMINATED.getCode( );
                 oldState = newState = VmState.TERMINATED.getName( );
                 VmInstances.delete( instanceId );

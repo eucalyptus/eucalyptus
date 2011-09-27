@@ -48,7 +48,7 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
   public void fire( VmDescribeResponseType reply ) {
     for ( final VmInfo runVm : reply.getVms( ) ) {
       runVm.setPlacement( this.getSubject( ).getConfiguration( ).getName( ) );
-      VmState state = VmState.Mapper.get( runVm.getStateName( ) );
+      VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
       EntityTransaction db = Entities.get( VmInstance.class );
       try {
         final VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
@@ -57,7 +57,7 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
           VmInstances.terminated( vm );
         } else if ( VmInstances.Timeout.TERMINATED.apply( vm ) ) {
           VmInstances.delete( vm );
-        } else if ( VmState.SHUTTING_DOWN.equals( state ) ) {
+        } else if ( VmState.SHUTTING_DOWN.equals( runVmState ) ) {
           if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
             VmInstances.terminated( vm );
           } else if ( VmState.STOPPED.apply( vm ) ) {
@@ -65,18 +65,18 @@ public class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDes
           } else if ( VmStateSet.RUN.apply( vm ) ) {
             VmInstances.shutDown( vm );
           } else {
-            Logs.extreme( ).debug( "Ignoring transition from: " + vm.getState( ) + " -> " + state + " for " + vm );
+            Logs.extreme( ).debug( "Ignoring transition from: " + vm.getState( ) + " -> " + runVmState + " for " + vm );
           }
         } else if ( VmStateSet.RUN.apply( vm ) || VmStateSet.CHANGING.apply( vm ) ) {
           vm.doUpdate( ).apply( runVm );
-        } else if ( VmStateSet.RUN.apply( vm ) && VmStateSet.RUN.contains( state ) ) {
+        } else if ( VmStateSet.RUN.apply( vm ) && VmStateSet.RUN.contains( runVmState ) ) {
           if ( !VmNetworkConfig.DEFAULT_IP.equals( runVm.getNetParams( ).getIpAddress( ) ) ) {
             vm.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
           }
           vm.setState( VmState.Mapper.get( runVm.getStateName( ) ), Reason.APPEND, "UPDATE" );
           vm.updateVolumeAttachments( runVm.getVolumes( ) );
         } else {
-          LOG.warn( "Applying generic state change: " + vm.getState( ) + " -> " + state + " for " + vm.getInstanceId( ) );
+          LOG.warn( "Applying generic state change: " + vm.getState( ) + " -> " + runVmState + " for " + vm.getInstanceId( ) );
           vm.doUpdate( ).apply( runVm );
         }
         db.commit( );

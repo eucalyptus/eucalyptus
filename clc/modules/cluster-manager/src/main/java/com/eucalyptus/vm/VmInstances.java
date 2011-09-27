@@ -214,8 +214,8 @@ public class VmInstances {
     }
   }
   
-  private static ConcurrentMap<String, VmInstance>               terminateCache         = new ConcurrentHashMap<String, VmInstance>( );
-  private static ConcurrentMap<String, RunningInstancesItemType> terminateDescribeCache = new ConcurrentHashMap<String, RunningInstancesItemType>( );
+  static ConcurrentMap<String, VmInstance>               terminateCache         = new ConcurrentHashMap<String, VmInstance>( );
+  static ConcurrentMap<String, RunningInstancesItemType> terminateDescribeCache = new ConcurrentHashMap<String, RunningInstancesItemType>( );
   
   private static Logger                                          LOG                    = Logger.getLogger( VmInstances.class );
   
@@ -397,8 +397,12 @@ public class VmInstances {
                           instanceId.substring( 8, 10 ) );
   }
   
-  public static VmInstance lookup( final String name ) throws NoSuchElementException, TerminatedInstanceException {
+  public static VmInstance cachedLookup( final String name ) throws NoSuchElementException, TerminatedInstanceException {
     return CachedLookup.INSTANCE.apply( name );
+  }
+
+  public static VmInstance lookup( final String name ) throws NoSuchElementException, TerminatedInstanceException {
+    return Lookup.INSTANCE.apply( name );
   }
   
   public static VmInstance register( final VmInstance vm ) {
@@ -560,11 +564,11 @@ public class VmInstances {
    * @return
    */
   public static Function<String, VmInstance> lookupFunction( ) {
-    return CachedLookup.INSTANCE;
+    return Lookup.INSTANCE;
   }
   
   @Resolver( VmInstanceMetadata.class )
-  public enum CachedLookup implements Function<String, VmInstance> {
+  public enum Lookup implements Function<String, VmInstance> {
     INSTANCE;
     
     /**
@@ -577,6 +581,27 @@ public class VmInstances {
       } else {
         return Lookup.INSTANCE.apply( name );
       }
+    }
+    
+  }
+  
+  @Resolver( VmInstanceMetadata.class )
+  public enum CachedLookup implements Function<String, VmInstance> {
+    INSTANCE;
+    
+    /**
+     * @see com.google.common.base.Function#apply(java.lang.Object)
+     */
+    @Override
+    public VmInstance apply( final String name ) {
+      VmInstance vm = null;
+      if ( ( name != null ) ) {
+        vm = VmInstances.terminateCache.get( name );
+        if ( vm == null ) { 
+          vm = Lookup.INSTANCE.apply( name );
+        }
+      }
+      return vm;
     }
     
   }
