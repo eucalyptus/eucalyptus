@@ -63,37 +63,37 @@
  */
 package com.eucalyptus.cloud.run;
 
+import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmInstance;
+import com.google.common.base.Supplier;
+import com.google.common.collect.Lists;
 
 public class CreateVmInstances {
   private static Logger LOG = Logger.getLogger( CreateVmInstances.class );
   
   public Allocation allocate( final Allocation allocInfo ) throws Exception {
-    final long quantity = allocInfo.getAllocationTokens( ).size( );
-    final Context ctx = allocInfo.getContext( );
-    final User requestUser = ctx.getUser( );
-    final UserFullName userFullName = ctx.getUserFullName( );
-    final String action = PolicySpec.requestToAction( allocInfo.getRequest( ) );
     final String vmType = allocInfo.getVmType( ).getName( );
-    //GRZE:WHINE: add resource allocator here:  RestrictedTypes.allocate( 1, Allocator.INSTANCE ); vmtype
-    //GRZE:WHINE: add resource allocator here:  RestrictedTypes.allocate( 1, Allocator.INSTANCE ); instance
+    RestrictedTypes.allocate( vmType, Long.valueOf( allocInfo.getAllocationTokens( ).size( ) ), allocInfo.getVmType( ).allocator( ) );
+    List<VmInstance> vms = Lists.newArrayList( );
     for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-      try {
-        VmInstance vmInst = VmInstance.Create.INSTANCE.apply( token );
-        token.setVmInstance( vmInst );
-      } catch ( Exception ex ) {
-        LOG.error( ex , ex );
-        throw new RuntimeException( ex );
-      }
+      Supplier<VmInstance> allocator = new Supplier<VmInstance>( ) {
+        
+        @Override
+        public VmInstance get( ) {
+          try {
+            return VmInstance.Create.INSTANCE.apply( token );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+            throw new RuntimeException( ex );
+          }
+        }
+      };
+      VmInstance vmInst = RestrictedTypes.allocate( allocator );
+      token.setVmInstance( vmInst );
     }
     return allocInfo;
   }
