@@ -14,6 +14,7 @@ import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
+import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
@@ -116,6 +117,8 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         } catch ( Exception ex ) {
           LOG.error( ex );
         }
+      } catch ( TerminatedInstanceException ex1 ) {
+        LOG.trace( "Ignore state update to terminated instance: " + runVm.getInstanceId( ) );
       } catch ( NoSuchElementException ex1 ) {
         try {
           if ( VmStateSet.RUN.contains( runVmState ) ) {

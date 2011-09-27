@@ -461,13 +461,13 @@ public class VmInstances {
   }
   
   public static void shutDown( final VmInstance vm ) throws TransactionException {
-    if ( VmStateSet.DONE.apply( vm ) ) {
-      if ( terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
-        VmInstances.delete( vm );
-      } else {
-        VmInstances.terminated( vm );
-      }
-    } else {
+    if ( !VmStateSet.DONE.apply( vm ) ) {
+//      if ( terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
+//        VmInstances.delete( vm );
+//      } else {
+//        VmInstances.terminated( vm );
+//      }
+//    } else {
       Transitions.SHUTDOWN.apply( vm );
     }
   }
