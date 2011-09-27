@@ -72,8 +72,10 @@ public class FalseDataGenerator
 				new ArrayList<InstanceAttributes>();
 
 		for (int i=0; i<NUM_USAGE; i++) {
+			
 			listener.setCurrentTimeMillis(START_TIME + (i * TIME_USAGE_APART));
 			for (int j=0; j<NUM_INSTANCE; j++) {
+				
 				String uuid = new Long(j).toString();
 				String instanceId = String.format("instance-%d", (j % NUM_INSTANCE));
 				String userId = String.format("fakeUserId-%d", (j % NUM_USER));
@@ -88,14 +90,16 @@ public class FalseDataGenerator
 				long netIoMegs = (instanceNum + i) * 1024;
 				long diskIoMegs = (instanceNum + i*2) * 1024;
 
-				InstanceEvent event = new InstanceEvent(uuid,
-						instanceId, instanceType, userId, userName, accountId,
+				InstanceEvent event = new InstanceEvent(uuid, instanceId,
+						instanceType, userId, userName, accountId,
 						accountName, clusterName, availZone, new Long(netIoMegs),
 						new Long(diskIoMegs));
 
 				System.out.println("Generating:" + i);
 				queueSender.send(event);
+				
 			}
+			
 		}
 
 	}
@@ -107,8 +111,8 @@ public class FalseDataGenerator
 	{
 		return ((correctVal - error) < val) && (val < (correctVal + error));
 	}
-	
-	
+
+
 	@ExposedCommand
 	public static void generateTestReport()
 	{
@@ -132,7 +136,7 @@ public class FalseDataGenerator
 		InstanceUsageLog.getInstanceUsageLog().purgeLog(MAX_MS);
 	}
 
-	
+
 	@ExposedCommand
 	public static void removeAllData()
 	{
@@ -140,7 +144,7 @@ public class FalseDataGenerator
 
 		InstanceUsageLog.getInstanceUsageLog().purgeLog(Long.MAX_VALUE);		
 	}
-	
+
 	@ExposedCommand
 	public static void setWriteIntervalMs(String writeIntervalMs)
 	{
@@ -149,7 +153,7 @@ public class FalseDataGenerator
 		long writeIntervalMsl = Long.parseLong(writeIntervalMs);
 		ReportingBootstrapper.getInstanceListener().setWriteIntervalMs(writeIntervalMsl);
 	}
-	
+
 
 	/**
 	 * <p>containsRecentRows checks if there are recent rows in 
