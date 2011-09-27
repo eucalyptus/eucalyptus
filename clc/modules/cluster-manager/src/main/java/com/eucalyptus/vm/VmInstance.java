@@ -813,16 +813,20 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   private void firePersist( ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
-    if ( !Entities.isPersistent( this ) ) {
-      db.rollback( );
-    } else {
-      try {
-        Entities.merge( this );
-        db.commit( );
-      } catch ( final Exception ex ) {
+    try {
+      if ( !Entities.isPersistent( this ) ) {
         db.rollback( );
-        LOG.debug( ex );
+      } else {
+        try {
+          Entities.merge( this );
+          db.commit( );
+        } catch ( final Exception ex ) {
+          db.rollback( );
+          LOG.debug( ex );
+        }
       }
+    } catch ( Exception ex ) {
+      db.rollback( );
     }
   }
   

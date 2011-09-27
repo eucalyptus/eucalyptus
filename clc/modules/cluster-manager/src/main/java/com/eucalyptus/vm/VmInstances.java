@@ -504,7 +504,7 @@ public class VmInstances {
     return ret;
   }
   
-  public static List<VmInstance> listPersistent( OwnerFullName ownerFullName, String instanceId, Predicate<VmInstance> predicate ) {
+  private static List<VmInstance> listPersistent( OwnerFullName ownerFullName, String instanceId, Predicate<VmInstance> predicate ) {
     predicate = checkPredicate( predicate );
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
