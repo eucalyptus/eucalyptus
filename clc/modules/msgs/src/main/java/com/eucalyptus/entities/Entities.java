@@ -752,7 +752,7 @@ public class Entities {
         try {
           this.transaction.commit( );
         } catch ( final RuntimeException ex ) {
-          LOG.warn( ex );
+          LOG.trace( ex, ex );
           Logs.exhaust( ).warn( ex, ex );
           throw ex;
         }
