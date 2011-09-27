@@ -95,7 +95,6 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.ws.ServiceNotReadyException;
 import com.eucalyptus.ws.WebServicesException;
-import com.eucalyptus.ws.util.PipelineRegistry;
 
 @ChannelPipelineCoverage( "one" )
 public class NioServerHandler extends SimpleChannelUpstreamHandler {
@@ -135,7 +134,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
         ( ( MappingHttpMessage ) request ).logMessage( );
       }
       final ChannelPipeline pipeline = ctx.getPipeline( );
-      FilteredPipeline filteredPipeline = PipelineRegistry.getInstance( ).find( request );
+      FilteredPipeline filteredPipeline = Pipelines.find( request );
       filteredPipeline.unroll( pipeline );
       this.first = false;
     } catch ( DuplicatePipelineException e1 ) {

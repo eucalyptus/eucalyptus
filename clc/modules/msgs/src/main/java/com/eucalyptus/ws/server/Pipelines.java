@@ -60,11 +60,11 @@
  *******************************************************************************
  * @author: chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.ws.util;
+package com.eucalyptus.ws.server;
 
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
@@ -75,97 +75,86 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
-import com.eucalyptus.ws.server.DuplicatePipelineException;
-import com.eucalyptus.ws.server.FilteredPipeline;
-import com.eucalyptus.ws.server.NoAcceptingPipelineException;
-import com.google.common.collect.ArrayListMultimap;
+import com.eucalyptus.util.Classes;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.TreeMultimap;
 
-public class PipelineRegistry {
-  private static PipelineRegistry                        registry;
-  private static Logger                                  LOG                = Logger.getLogger( PipelineRegistry.class );
-  private static Multimap<ComponentId, FilteredPipeline> componentPipelines = ArrayListMultimap.create( );
+public class Pipelines {
+  private static final Logger                                  LOG                = Logger.getLogger( Pipelines.class );
+  private static final Multimap<ComponentId, FilteredPipeline> componentPipelines = TreeMultimap.create( );
+  private static final Set<FilteredPipeline>                   pipelines          = new ConcurrentSkipListSet<FilteredPipeline>( );
   
-  public static PipelineRegistry getInstance( ) {
-    synchronized ( PipelineRegistry.class ) {
-      if ( PipelineRegistry.registry == null ) {
-        PipelineRegistry.registry = new PipelineRegistry( );
-      }
-    }
-    return PipelineRegistry.registry;
-  }
-  
-  private final List<FilteredPipeline> pipelines = new ArrayList<FilteredPipeline>( );
-  
-  public void register( final FilteredPipeline pipeline ) {
+  static void register( final FilteredPipeline pipeline ) {
     LOG.info( "-> Registering pipeline: " + pipeline );
-    this.pipelines.add( pipeline );
+    pipelines.add( pipeline );
   }
   
-  public void deregister( final FilteredPipeline pipeline ) {
+  static void deregister( final FilteredPipeline pipeline ) {
     LOG.info( "-> Deregistering pipeline: " + pipeline );
-    this.pipelines.remove( pipeline );
+    pipelines.remove( pipeline );
   }
   
-  public FilteredPipeline find( final HttpRequest request ) throws DuplicatePipelineException, NoAcceptingPipelineException {
+  static FilteredPipeline find( final HttpRequest request ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     FilteredPipeline candidate = null;
-    for ( FilteredPipeline f : this.pipelines ) {
+    for ( FilteredPipeline f : pipelines ) {
       if ( f.checkAccepts( request ) ) {
         
         if ( candidate != null ) {
-          EventRecord.here( this.getClass( ), EventType.PIPELINE_DUPLICATE, f.toString( ) ).debug( );
+          EventRecord.here( Pipelines.class, EventType.PIPELINE_DUPLICATE, f.toString( ) ).debug( );
         } else {
           candidate = f;
         }
       }
     }
     if ( candidate == null ) {
-      for ( FilteredPipeline f : this.componentPipelines.values( ) ) {
+      for ( FilteredPipeline f : componentPipelines.values( ) ) {
         if ( f.checkAccepts( request ) ) {
           candidate = f;
         }
       }
     }
     if ( candidate == null ) {
-      if ( Logs.isExtrrreeeme() ) {
+      if ( Logs.isExtrrreeeme( ) ) {
         if ( request instanceof MappingHttpMessage ) {
           ( ( MappingHttpMessage ) request ).logMessage( );
-          for ( FilteredPipeline p : this.pipelines ) {
+          for ( FilteredPipeline p : pipelines ) {
             LOG.debug( "PIPELINE: " + p );
           }
         }
       }
       throw new NoAcceptingPipelineException( );
     }
-    if ( Logs.isExtrrreeeme() ) {
-      EventRecord.here( this.getClass( ), EventType.PIPELINE_UNROLL, candidate.toString( ) ).debug( );
+    if ( Logs.isExtrrreeeme( ) ) {
+      EventRecord.here( Pipelines.class, EventType.PIPELINE_UNROLL, candidate.toString( ) ).debug( );
     }
     return candidate;
   }
   
-  public boolean enable( ComponentId compId ) {
-    for ( FilteredPipeline pipeline : componentPipelines.get( compId ) ) {
-      LOG.info( "-> Registering component pipeline: " + compId.getName( ) + " " + pipeline );
-    }
-    return this.pipelines.addAll( componentPipelines.get( compId ) );
+  public static boolean enable( ComponentId compId ) {
+    LOG.info( "-> Registering component pipeline: " + compId.getName( ) + " " + componentPipelines.get( compId ) );
+    return true; //pipelines.addAll( componentPipelines.get( compId ) );
   }
   
-  public boolean disable( ComponentId compId ) {
+  public static boolean disable( ComponentId compId ) {
     for ( FilteredPipeline pipeline : componentPipelines.get( compId ) ) {
       LOG.info( "-> Deregistering pipeline: " + compId.getName( ) + " " + pipeline );
     }
-    return this.pipelines.removeAll( componentPipelines.get( compId ) );
+    return true; //pipelines.removeAll( componentPipelines.get( compId ) );
   }
   
   public static class PipelineDiscovery extends ServiceJarDiscovery {
     
+    @SuppressWarnings( { "rawtypes", "unchecked", "synthetic-access" } )
     @Override
     public boolean processClass( Class candidate ) throws Exception {
       if ( FilteredPipeline.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) )
            && !Modifier.isInterface( candidate.getModifiers( ) ) && Ats.from( candidate ).has( ComponentPart.class ) ) {
         try {
           ComponentId compId = ( ComponentId ) Ats.from( candidate ).get( ComponentPart.class ).value( ).newInstance( );
-          PipelineRegistry.componentPipelines.put( compId, ( FilteredPipeline ) candidate.newInstance( ) );
+          Class<? extends FilteredPipeline> pipelineClass = candidate;
+          FilteredPipeline pipeline = Classes.newInstance( pipelineClass );
+          Pipelines.componentPipelines.put( compId, pipeline );
+          Pipelines.pipelines.add( pipeline );
           return true;
         } catch ( Exception ex ) {
           LOG.trace( ex, ex );
