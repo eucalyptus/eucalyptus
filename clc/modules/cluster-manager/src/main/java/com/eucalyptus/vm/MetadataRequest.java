@@ -102,10 +102,10 @@ public class MetadataRequest {
         } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex );
         }
-      } catch ( NoSuchElementException ex2 ) {
+      } catch ( Exception ex2 ) {
         try {
           findVm = VmInstances.lookupByInstanceIp( requestIp );
-        } catch ( NoSuchElementException ex ) {
+        } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex );
         }
       }
