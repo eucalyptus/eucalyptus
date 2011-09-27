@@ -119,12 +119,8 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       } catch ( TerminatedInstanceException ex1 ) {
         LOG.trace( "Ignore state update to terminated instance: " + runVm.getInstanceId( ) );
       } catch ( NoSuchElementException ex1 ) {
-        try {
-          if ( VmStateSet.RUN.contains( runVmState ) ) {
-            VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
-          }
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+        if ( VmStateSet.RUN.contains( runVmState ) ) {
+          VmStateCallback.handleRestore( runVm );
         }
       } catch ( Exception ex1 ) {
         LOG.error( ex1, ex1 );
@@ -133,6 +129,20 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     } catch ( Exception ex ) {
       LOG.trace( ex, ex );
       db.rollback( );
+    }
+  }
+
+  public static void handleRestore( final VmInfo runVm ) {
+    try {
+      if ( VmInstances.cachedLookup( runVm.getInstanceId( ) ) == null ) {
+        try {
+          VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
+        } catch ( Exception ex ) {
+          LOG.error( ex , ex );
+        }
+      }
+    } catch ( Exception ex2 ) {
+      LOG.trace( ex2, ex2 );
     }
   }
   
