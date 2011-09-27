@@ -253,7 +253,7 @@
     <value name="instanceId" field="instanceId" />
   </mapping>
   <!--2009-04-04 -->
-  <mapping name="MonitorInstancesType" class="edu.ucsb.eucalyptus.msgs.MonitorInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="MonitorInstances" class="edu.ucsb.eucalyptus.msgs.MonitorInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
       item-type="java.lang.String">
@@ -262,7 +262,7 @@
       </structure>
     </collection>
   </mapping>
-  <mapping name="MonitorInstancesResponseType" class="edu.ucsb.eucalyptus.msgs.MonitorInstancesResponseType"
+  <mapping name="MonitorInstancesResponse" class="edu.ucsb.eucalyptus.msgs.MonitorInstancesResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <structure name="instancesSet" usage="optional">
@@ -271,7 +271,7 @@
       </collection>
     </structure>
   </mapping>
-  <mapping name="UnmonitorInstancesType" class="edu.ucsb.eucalyptus.msgs.UnmonitorInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="UnmonitorInstances" class="edu.ucsb.eucalyptus.msgs.UnmonitorInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
       item-type="java.lang.String">
@@ -280,7 +280,7 @@
       </structure>
     </collection>
   </mapping>
-  <mapping name="UnmonitorInstancesResponseType" class="edu.ucsb.eucalyptus.msgs.UnmonitorInstancesResponseType"
+  <mapping name="UnmonitorInstancesResponse" class="edu.ucsb.eucalyptus.msgs.UnmonitorInstancesResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <structure name="instancesSet" usage="optional">

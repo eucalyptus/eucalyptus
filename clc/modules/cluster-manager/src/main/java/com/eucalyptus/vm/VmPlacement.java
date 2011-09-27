@@ -61,61 +61,110 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import org.hibernate.annotations.Parent;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
 
 @Embeddable
-public class VmId {
+public class VmPlacement {
   @Parent
   private VmInstance vmInstance;
-  @Column( name = "metadata_vm_reservation_id" )
-  private String     reservationId;
-  @Column( name = "metadata_vm_instance_id" )
-  private String     instanceId;
+  @Column( name = "metadata_vm_placement" )
+  private String     placement;
+  @Column( name = "metadata_vm_cluster_name" )
+  private String     clusterName;
+  @Column( name = "metadata_vm_partition_name" )
+  private String     partitionName;
   
-  VmId( ) {
+  VmPlacement( String clusterName, String partitionName ) {
     super( );
+    this.clusterName = clusterName;
+    this.partitionName = partitionName;
   }
   
-  VmId( String reservationId, String instanceId ) {
+  VmPlacement( ) {
     super( );
-    this.reservationId = reservationId;
-    this.instanceId = instanceId;
   }
-  
-  private VmInstance getVmInstance( ) {
+
+  VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
   
-  public String getReservationId( ) {
-    return this.reservationId;
+  String getClusterName( ) {
+    return this.clusterName;
   }
   
-  public String getInstanceId( ) {
-    return this.instanceId;
+  String getPartitionName( ) {
+    return this.partitionName;
   }
   
+  public Partition lookupPartition( ) {
+    return Partitions.lookupByName( this.partitionName );
+  }
+
   private void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
-  
-  private void setReservationId( String reservationId ) {
-    this.reservationId = reservationId;
+
+  private void setClusterName( String clusterName ) {
+    this.clusterName = clusterName;
   }
-  
-  private void setInstanceId( String instanceId ) {
-    this.instanceId = instanceId;
+
+  private void setPartitionName( String partitionName ) {
+    this.partitionName = partitionName;
+  }
+
+  private String getPlacement( ) {
+    return this.placement;
+  }
+
+  private void setPlacement( String placement ) {
+    this.placement = placement;
   }
 
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
-    builder.append( "VmId:" );
-    if ( this.reservationId != null ) builder.append( "reservationId=" ).append( this.reservationId ).append( ":" );
-    if ( this.instanceId != null ) builder.append( "instanceId=" ).append( this.instanceId );
+    builder.append( "VmPlacement:" );
+    if ( this.clusterName != null ) builder.append( "clusterName=" ).append( this.clusterName ).append( ":" );
+    if ( this.partitionName != null ) builder.append( "partitionName=" ).append( this.partitionName );
     return builder.toString( );
   }
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.vmInstance == null )
+      ? 0
+      : this.vmInstance.hashCode( ) );
+    return result;
+  }
+
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( obj == null ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    VmPlacement other = ( VmPlacement ) obj;
+    if ( this.vmInstance == null ) {
+      if ( other.vmInstance != null ) {
+        return false;
+      }
+    } else if ( !this.vmInstance.equals( other.vmInstance ) ) {
+      return false;
+    }
+    return true;
+  }
+  
 }

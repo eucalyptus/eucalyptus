@@ -61,139 +61,92 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
-import java.util.Date;
 import javax.persistence.Column;
+import javax.persistence.Embeddable;
 import org.hibernate.annotations.Parent;
 
-public class VmCreateImageTask {
+@Embeddable
+public class VmUsageStats {
   @Parent
   private VmInstance vmInstance;
-  @Column( name = "metadata_vm_createimage_id" )
-  private String     createImageId;
-  @Column( name = "metadata_vm_createimage_state" )
-  private String     state;
-  @Column( name = "metadata_vm_createimage_start_time" )
-  private Date       startTime;
-  @Column( name = "metadata_vm_createimage_update_time" )
-  private Date       updateTime;
-  @Column( name = "metadata_vm_createimage_progress" )
-  private String     progress;
-  @Column( name = "metadata_vm_createimage_error_msg" )
-  private String     errorMessage;
-  @Column( name = "metadata_vm_createimage_error_code" )
-  private String     errorCode;
+  @Column( name = "metadata_vm_block_bytes" )
+  private Long       blockBytes;
+  @Column( name = "metadata_vm_network_bytes" )
+  private Long       networkBytes;
   
-  VmCreateImageTask( ) {
-    super( );
-  }
-  
-  VmCreateImageTask( final VmInstance vmInstance, final String createImageId, final String state, final Date startTime, final Date updateTime,
-                     final String progress, final String errorMessage,
-                     final String errorCode ) {
+  VmUsageStats( VmInstance vmInstance ) {
     super( );
     this.vmInstance = vmInstance;
-    this.createImageId = createImageId;
-    this.state = state;
-    this.startTime = startTime;
-    this.updateTime = updateTime;
-    this.progress = progress;
-    this.errorMessage = errorMessage;
-    this.errorCode = errorCode;
+    this.blockBytes = 0l;
+    this.networkBytes = 0l;
   }
   
-  private VmInstance getVmInstance( ) {
+  VmUsageStats( ) {
+    super( );
+  }
+  
+  Long getBlockBytes( ) {
+    return this.blockBytes;
+  }
+  
+  void setBlockBytes( Long blockBytes ) {
+    this.blockBytes = blockBytes;
+  }
+  
+  Long getNetworkBytes( ) {
+    return this.networkBytes;
+  }
+  
+  void setNetworkBytes( Long networkBytes ) {
+    this.networkBytes = networkBytes;
+  }
+  
+  VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
   
-  private void setVmInstance( final VmInstance vmInstance ) {
+  private void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
-  
-  String getCreateImageId( ) {
-    return this.createImageId;
+
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "VmUsageStats:" );
+    if ( this.blockBytes != null ) builder.append( "blockBytes=" ).append( this.blockBytes ).append( ":" );
+    if ( this.networkBytes != null ) builder.append( "networkBytes=" ).append( this.networkBytes );
+    return builder.toString( );
   }
-  
-  private void setCreateImageId( final String bundleId ) {
-    this.createImageId = bundleId;
-  }
-  
-  String getState( ) {
-    return this.state;
-  }
-  
-  void setState( final String state ) {
-    this.state = state;
-  }
-  
-  private Date getStartTime( ) {
-    return this.startTime;
-  }
-  
-  private void setStartTime( final Date startTime ) {
-    this.startTime = startTime;
-  }
-  
-  private Date getUpdateTime( ) {
-    return this.updateTime;
-  }
-  
-  void setUpdateTime( final Date updateTime ) {
-    this.updateTime = updateTime;
-  }
-  
-  private String getProgress( ) {
-    return this.progress;
-  }
-  
-  private void setProgress( final String progress ) {
-    this.progress = progress;
-  }
-  
-  private String getErrorMessage( ) {
-    return this.errorMessage;
-  }
-  
-  private void setErrorMessage( final String errorMessage ) {
-    this.errorMessage = errorMessage;
-  }
-  
-  private String getErrorCode( ) {
-    return this.errorCode;
-  }
-  
-  private void setErrorCode( final String errorCode ) {
-    this.errorCode = errorCode;
-  }
-  
+
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.createImageId == null )
+    result = prime * result + ( ( this.vmInstance == null )
       ? 0
-      : this.createImageId.hashCode( ) );
+      : this.vmInstance.hashCode( ) );
     return result;
   }
-  
+
   @Override
-  public boolean equals( final Object obj ) {
+  public boolean equals( Object obj ) {
     if ( this == obj ) {
       return true;
     }
     if ( obj == null ) {
       return false;
     }
-    if ( this.getClass( ) != obj.getClass( ) ) {
+    if ( getClass( ) != obj.getClass( ) ) {
       return false;
     }
-    final VmCreateImageTask other = ( VmCreateImageTask ) obj;
-    if ( this.createImageId == null ) {
-      if ( other.createImageId != null ) {
+    VmUsageStats other = ( VmUsageStats ) obj;
+    if ( this.vmInstance == null ) {
+      if ( other.vmInstance != null ) {
         return false;
       }
-    } else if ( !this.createImageId.equals( other.createImageId ) ) {
+    } else if ( !this.vmInstance.equals( other.vmInstance ) ) {
       return false;
     }
     return true;

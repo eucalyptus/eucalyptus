@@ -61,78 +61,33 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.configurable;
 
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
-import org.hibernate.annotations.Parent;
-import com.eucalyptus.component.Partition;
-import com.eucalyptus.component.Partitions;
+import java.lang.reflect.Field;
+import java.util.NoSuchElementException;
+import com.eucalyptus.system.Ats;
+import com.eucalyptus.util.Fields;
 
-@Embeddable
-public class VmPlacement {
-  @Parent
-  private VmInstance vmInstance;
-  @Column( name = "metadata_vm_placement" )
-  private String     placement;
-  @Column( name = "metadata_vm_cluster_name" )
-  private String     clusterName;
-  @Column( name = "metadata_vm_partition_name" )
-  private String     partitionName;
+public class Properties {
   
-  VmPlacement( String clusterName, String partitionName ) {
-    super( );
-    this.clusterName = clusterName;
-    this.partitionName = partitionName;
+  public static ConfigurableProperty lookup( String fullyQualifiedName ) throws IllegalAccessException {
+    return PropertyDirectory.getPropertyEntry( fullyQualifiedName );
   }
   
-  VmPlacement( ) {
-    super( );
-  }
-
-  VmInstance getVmInstance( ) {
-    return this.vmInstance;
+  public static ConfigurableProperty lookup( Class<?> declaringClass, String fieldName ) throws IllegalAccessException, NoSuchFieldException {
+    Field f = Fields.get( declaringClass, fieldName );
+    return lookup( propertyName( f ) );
+    
   }
   
-  String getClusterName( ) {
-    return this.clusterName;
-  }
-  
-  String getPartitionName( ) {
-    return this.partitionName;
-  }
-  
-  public Partition lookupPartition( ) {
-    return Partitions.lookupByName( this.partitionName );
-  }
-
-  private void setVmInstance( VmInstance vmInstance ) {
-    this.vmInstance = vmInstance;
-  }
-
-  private void setClusterName( String clusterName ) {
-    this.clusterName = clusterName;
-  }
-
-  private void setPartitionName( String partitionName ) {
-    this.partitionName = partitionName;
-  }
-
-  private String getPlacement( ) {
-    return this.placement;
-  }
-
-  private void setPlacement( String placement ) {
-    this.placement = placement;
-  }
-
-  @Override
-  public String toString( ) {
-    StringBuilder builder = new StringBuilder( );
-    builder.append( "VmPlacement:" );
-    if ( this.clusterName != null ) builder.append( "clusterName=" ).append( this.clusterName ).append( ":" );
-    if ( this.partitionName != null ) builder.append( "partitionName=" ).append( this.partitionName );
-    return builder.toString( );
+  public static String propertyName( Field f ) {
+    Class c = f.getDeclaringClass( );
+    if ( c.isAnnotationPresent( ConfigurableClass.class ) && f.isAnnotationPresent( ConfigurableField.class ) ) {
+      ConfigurableClass classAnnote = ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class );
+      return classAnnote.root( ) + "." + f.getName( ).toLowerCase( );
+    } else {
+      throw new NoSuchElementException( Ats.from( f ).toString( ) );
+    }
   }
   
 }

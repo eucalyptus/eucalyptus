@@ -74,7 +74,6 @@ import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -87,6 +86,7 @@ import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.util.Counters;
+import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.collect.Lists;
@@ -127,11 +127,7 @@ public class Allocations {
       this.request = request;
       this.minCount = request.getMinCount( );
       this.maxCount = request.getMaxCount( );
-      try {
-        this.ownerFullName = Contexts.lookup( request.getCorrelationId( ) ).getUserFullName( );
-      } catch ( NoSuchContextException ex ) {
-        throw new IllegalContextAccessException( ex );
-      }
+      this.ownerFullName = this.context.getUserFullName( );
       if ( this.request.getInstanceType( ) == null || "".equals( this.request.getInstanceType( ) ) ) {
         this.request.setInstanceType( VmTypes.defaultTypeName( ) );
       }

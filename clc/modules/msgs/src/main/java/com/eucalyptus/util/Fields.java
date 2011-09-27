@@ -61,63 +61,17 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.util;
 
-import java.util.Date;
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
-import org.hibernate.annotations.Parent;
+import java.lang.reflect.Field;
 
-@Embeddable
-public class VmLaunchRecord {
-  @Parent
-  private VmInstance vmInstance;
-  @Column( name = "metadata_vm_launch_index" )
-  private Integer    launchIndex;
-  @Column( name = "metadata_vm_launch_time" )
-  private Date       launchTime;
+public class Fields {
   
-  VmLaunchRecord( Integer launchIndex, Date launchTime ) {
-    super( );
-    this.launchIndex = launchIndex;
-    this.launchTime = launchTime;
+  public static String canonicalName( Field f ) {
+    return f.getDeclaringClass( ).getCanonicalName( ) + "." + f.getName( );
   }
   
-  VmLaunchRecord( ) {
-    super( );
+  public static Field get( Class<?> declaringClass, String name ) throws NoSuchFieldException {
+    return declaringClass.getDeclaredField( name );
   }
-  
-  VmInstance getVmInstance( ) {
-    return this.vmInstance;
-  }
-  
-  Integer getLaunchIndex( ) {
-    return this.launchIndex;
-  }
-  
-  Date getLaunchTime( ) {
-    return this.launchTime;
-  }
-  
-  private void setVmInstance( VmInstance vmInstance ) {
-    this.vmInstance = vmInstance;
-  }
-  
-  private void setLaunchIndex( Integer launchIndex ) {
-    this.launchIndex = launchIndex;
-  }
-  
-  private void setLaunchTime( Date launchTime ) {
-    this.launchTime = launchTime;
-  }
-
-  @Override
-  public String toString( ) {
-    StringBuilder builder = new StringBuilder( );
-    builder.append( "VmLaunchRecord:" );
-    if ( this.launchIndex != null ) builder.append( "launchIndex=" ).append( this.launchIndex ).append( ":" );
-    if ( this.launchTime != null ) builder.append( "launchTime=" ).append( this.launchTime );
-    return builder.toString( );
-  }
-  
 }

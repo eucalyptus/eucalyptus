@@ -72,13 +72,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.Properties;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.PersistenceExceptions;
 import com.eucalyptus.entities.TransactionException;
@@ -89,35 +95,38 @@ import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 
-@ConfigurableClass( root = "net", description = "Default values used to bootstrap networking state discovery." )
+@ConfigurableClass( root = "cloud.network", description = "Default values used to bootstrap networking state discovery." )
 public class NetworkGroups {
-  private static final String DEFAULT_NETWORK_NAME      = "default";
-  private static Logger       LOG                       = Logger.getLogger( NetworkGroups.class );
-  private static String       NETWORK_DEFAULT_NAME      = "default";
+  private static final String DEFAULT_NETWORK_NAME     = "default";
+  private static Logger       LOG                      = Logger.getLogger( NetworkGroups.class );
+  private static String       NETWORK_DEFAULT_NAME     = "default";
   
   @ConfigurableField( initial = "4096", description = "Default max network index." )
-  public static Long          DEFAULT_MAX_NETWORK_INDEX = 4096l;
+  public static Long          GLOBAL_MAX_NETWORK_INDEX = 4096l;
   @ConfigurableField( initial = "1", description = "Default min network index." )
-  public static Long          DEFAULT_MIN_NETWORK_INDEX = 2l;
+  public static Long          GLOBAL_MIN_NETWORK_INDEX = 2l;
   @ConfigurableField( initial = "" + 4096, description = "Default max vlan tag." )
-  public static Integer       GLOBAL_MAX_NETWORK_TAG    = 4096;
+  public static Integer       GLOBAL_MAX_NETWORK_TAG   = 4096;
   @ConfigurableField( initial = "1", description = "Default min vlan tag." )
-  public static Integer       GLOBAL_MIN_NETWORK_TAG    = 1;
+  public static Integer       GLOBAL_MIN_NETWORK_TAG   = 1;
   
   public static class NetworkRangeConfiguration {
     private Boolean useNetworkTags  = Boolean.TRUE;
     private Integer minNetworkTag   = GLOBAL_MIN_NETWORK_TAG;
     private Integer maxNetworkTag   = GLOBAL_MAX_NETWORK_TAG;
-    private Long    minNetworkIndex = DEFAULT_MIN_NETWORK_INDEX;
-    private Long    maxNetworkIndex = DEFAULT_MAX_NETWORK_INDEX;
+    private Long    minNetworkIndex = GLOBAL_MIN_NETWORK_INDEX;
+    private Long    maxNetworkIndex = GLOBAL_MAX_NETWORK_INDEX;
     
     public Boolean hasNetworking( ) {
       return this.useNetworkTags;
@@ -136,6 +145,7 @@ public class NetworkGroups {
     }
     
     public void setMinNetworkTag( final Integer minNetworkTag ) {
+      
       this.minNetworkTag = minNetworkTag;
     }
     
@@ -175,7 +185,7 @@ public class NetworkGroups {
         
         @Override
         public void fire( final ClusterConfiguration input ) {
-          netConfig.setUseNetworkTags( netTagging.compareAndSet( true, input.getUseNetworkTags( ) ) );
+          netTagging.compareAndSet( true, input.getUseNetworkTags( ) );
           
           netConfig.setMinNetworkTag( Ints.max( netConfig.getMinNetworkTag( ), input.getMinNetworkTag( ) ) );
           netConfig.setMaxNetworkTag( Ints.min( netConfig.getMaxNetworkTag( ), input.getMaxNetworkTag( ) ) );
@@ -187,6 +197,17 @@ public class NetworkGroups {
       } );
     } catch ( final TransactionException ex ) {
       Logs.extreme( ).error( ex, ex );
+    }
+    netConfig.setUseNetworkTags( netTagging.get( ) );
+    try {
+      Properties.lookup( NetworkGroups.class, "GLOBAL_MAX_NETWORK_INDEX" ).setValue( netConfig.getMaxNetworkIndex( ).toString( ) );
+      Properties.lookup( NetworkGroups.class, "GLOBAL_MIN_NETWORK_INDEX" ).setValue( netConfig.getMinNetworkIndex( ).toString( ) );
+      Properties.lookup( NetworkGroups.class, "GLOBAL_MAX_NETWORK_TAG" ).setValue( netConfig.getMaxNetworkTag( ).toString( ) );
+      Properties.lookup( NetworkGroups.class, "GLOBAL_MIN_NETWORK_TAG" ).setValue( netConfig.getMinNetworkTag( ).toString( ) );
+    } catch ( IllegalAccessException ex ) {
+      LOG.error( ex, ex );
+    } catch ( NoSuchFieldException ex ) {
+      LOG.error( ex, ex );
     }
   }
   
@@ -226,7 +247,7 @@ public class NetworkGroups {
       throw new NoSuchMetadataException( "Failed to find security group: " + groupName + " for " + ownerFullName, ex );
     }
   }
-
+  
   public static NetworkGroup lookup( final String groupId ) throws NoSuchMetadataException {
     EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
@@ -297,29 +318,49 @@ public class NetworkGroups {
   }
   
   public static NetworkGroup create( final OwnerFullName ownerFullName, final String groupName, final String groupDescription ) throws MetadataException {
+    UserFullName userFullName = null;
+    if ( ownerFullName instanceof UserFullName ) {
+      userFullName = ( UserFullName ) ownerFullName;
+    } else {
+      try {
+        Account account = Accounts.lookupAccountById( ownerFullName.getAccountNumber( ) );
+        User admin = Iterables.find( account.getUsers( ), new Predicate<User>( ) {
+          
+          @Override
+          public boolean apply( User input ) {
+            return input.isAccountAdmin( );
+          }
+        } );
+        userFullName = UserFullName.getInstance( admin );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+        throw new NoSuchMetadataException( "Failed to create group because owning user could not be identified.", ex );
+      }
+    }
+    
     final EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
-      NetworkGroup net = Entities.uniqueResult( new NetworkGroup( AccountFullName.getInstance( ownerFullName.getAccountNumber( ) ), groupName ) );
+      NetworkGroup net = Entities.uniqueResult( new NetworkGroup( AccountFullName.getInstance( userFullName.getAccountNumber( ) ), groupName ) );
       if ( net == null ) {
-        final NetworkGroup entity = Entities.persist( new NetworkGroup( ownerFullName, groupName, groupDescription ) );
+        final NetworkGroup entity = Entities.persist( new NetworkGroup( userFullName, groupName, groupDescription ) );
         db.commit( );
         return entity;
       } else {
         db.rollback( );
-        throw new DuplicateMetadataException( "Failed to create group: " + groupName + " for " + ownerFullName.toString( ) );
+        throw new DuplicateMetadataException( "Failed to create group: " + groupName + " for " + userFullName.toString( ) );
       }
     } catch ( final NoSuchElementException ex ) {
-      final NetworkGroup entity = Entities.persist( new NetworkGroup( ownerFullName, groupName, groupDescription ) );
+      final NetworkGroup entity = Entities.persist( new NetworkGroup( userFullName, groupName, groupDescription ) );
       db.commit( );
       return entity;
     } catch ( final ConstraintViolationException ex ) {
       Logs.exhaust( ).error( ex );
       db.rollback( );
-      throw new DuplicateMetadataException( "Failed to create group: " + groupName + " for " + ownerFullName.toString( ), ex );
+      throw new DuplicateMetadataException( "Failed to create group: " + groupName + " for " + userFullName.toString( ), ex );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
-      throw new MetadataException( "Failed to create group: " + groupName + " for " + ownerFullName.toString( ), PersistenceExceptions.transform( ex ) );
+      throw new MetadataException( "Failed to create group: " + groupName + " for " + userFullName.toString( ), PersistenceExceptions.transform( ex ) );
     }
   }
   
@@ -334,16 +375,6 @@ public class NetworkGroups {
   }
   
   @TypeMapper
-  public enum IpRangeAsString implements Function<IpRange, String> {
-    INSTANCE;
-    
-    @Override
-    public String apply( final IpRange range ) {
-      return range.getValue( );
-    }
-  }
-  
-  @TypeMapper
   public enum NetworkRuleAsIpPerm implements Function<NetworkRule, IpPermissionType> {
     INSTANCE;
     
@@ -353,8 +384,7 @@ public class NetworkGroups {
       final Iterable<UserIdGroupPairType> peers = Iterables.transform( rule.getNetworkPeers( ),
                                                                        TypeMappers.lookup( NetworkPeer.class, UserIdGroupPairType.class ) );
       Iterables.addAll( ipPerm.getGroups( ), peers );
-      final Iterable<String> ipRanges = Iterables.transform( rule.getIpRanges( ), TypeMappers.lookup( IpRange.class, String.class ) );
-      Iterables.addAll( ipPerm.getIpRanges( ), ipRanges );
+      ipPerm.getIpRanges( ).addAll( rule.getIpRanges( ) );
       return ipPerm;
     }
   }
@@ -381,14 +411,14 @@ public class NetworkGroups {
   }
   
   @TypeMapper
-  public enum IpPermissionTypeExtractNetworkPeers implements Function<IpPermissionType, List<NetworkPeer>> {
+  public enum IpPermissionTypeExtractNetworkPeers implements Function<IpPermissionType, Multimap<String, String>> {
     INSTANCE;
     
     @Override
-    public List<NetworkPeer> apply( IpPermissionType ipPerm ) {
-      List<NetworkPeer> networkPeers = new ArrayList<NetworkPeer>( );
+    public Multimap<String, String> apply( IpPermissionType ipPerm ) {
+      Multimap<String, String> networkPeers = ArrayListMultimap.create( );
       for ( UserIdGroupPairType peerInfo : ipPerm.getGroups( ) ) {
-        networkPeers.add( new NetworkPeer( peerInfo.getSourceUserId( ), peerInfo.getSourceGroupName( ) ) );
+        networkPeers.put( peerInfo.getSourceUserId( ), peerInfo.getSourceGroupName( ) );
       }
       return networkPeers;
     }
@@ -408,35 +438,37 @@ public class NetworkGroups {
         if ( ipPerm.getFromPort( ) == 0 && ipPerm.getToPort( ) == 0 ) {
           ipPerm.setToPort( 65535 );
         }
+        List<String> empty = Lists.newArrayList( );
         //:: fixes handling of under-specified named-network rules sent by some clients :://
         if ( ipPerm.getIpProtocol( ) == null ) {
-          NetworkRule rule = new NetworkRule( "tcp", ipPerm.getFromPort( ), ipPerm.getToPort( ) );
-          rule.getNetworkPeers( ).addAll( IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ) );
+          NetworkRule rule = NetworkRule.create( NetworkRule.Protocol.tcp, ipPerm.getFromPort( ), ipPerm.getToPort( ),
+                                                 IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), empty );
           ruleList.add( rule );
-          NetworkRule rule1 = new NetworkRule( "udp", ipPerm.getFromPort( ), ipPerm.getToPort( ) );
-          rule1.getNetworkPeers( ).addAll( IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ) );
+          NetworkRule rule1 = NetworkRule.create( NetworkRule.Protocol.udp, ipPerm.getFromPort( ), ipPerm.getToPort( ),
+                                                  IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), empty );
           ruleList.add( rule1 );
-          NetworkRule rule2 = new NetworkRule( "icmp", -1, -1 );
-          rule2.getNetworkPeers( ).addAll( IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ) );
+          NetworkRule rule2 = NetworkRule.create( NetworkRule.Protocol.tcp, -1, -1,
+                                                  IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), empty );
           ruleList.add( rule2 );
         } else {
-          NetworkRule rule = new NetworkRule( ipPerm.getIpProtocol( ), ipPerm.getFromPort( ), ipPerm.getToPort( ) );
-          rule.getNetworkPeers( ).addAll( IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ) );
+          NetworkRule rule = NetworkRule.create( ipPerm.getIpProtocol( ), ipPerm.getFromPort( ), ipPerm.getToPort( ),
+                                                 IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), empty );
           ruleList.add( rule );
         }
       } else if ( !ipPerm.getIpRanges( ).isEmpty( ) ) {
-        List<IpRange> ipRanges = new ArrayList<IpRange>( );
+        List<String> ipRanges = Lists.newArrayList( );
         for ( String range : ipPerm.getIpRanges( ) ) {
           String[] rangeParts = range.split( "/" );
           try {
             if ( Integer.parseInt( rangeParts[1] ) > 32 || Integer.parseInt( rangeParts[1] ) < 0 ) continue;
             if ( rangeParts.length != 2 ) continue;
             if ( InetAddress.getByName( rangeParts[0] ) != null ) {
-              ipRanges.add( new IpRange( range ) );
+              ipRanges.add( range );
             }
           } catch ( NumberFormatException e ) {} catch ( UnknownHostException e ) {}
         }
-        NetworkRule rule = new NetworkRule( ipPerm.getIpProtocol( ), ipPerm.getFromPort( ), ipPerm.getToPort( ), ipRanges );
+        NetworkRule rule = NetworkRule.create( ipPerm.getIpProtocol( ), ipPerm.getFromPort( ), ipPerm.getToPort( ),
+                                               IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), ipRanges );
         ruleList.add( rule );
       } else {
         throw new IllegalArgumentException( "Invalid Ip Permissions:  must specify either a source cidr or user" );
@@ -444,5 +476,13 @@ public class NetworkGroups {
       return ruleList;
     }
     
+  }
+  
+  static List<NetworkRule> ipPermissionsAsNetworkRules( final List<IpPermissionType> ipPermissions ) {
+    final List<NetworkRule> ruleList = Lists.newArrayList( );
+    for ( final IpPermissionType ipPerm : ipPermissions ) {
+      ruleList.addAll( IpPermissionTypeAsNetworkRule.INSTANCE.apply( ipPerm ) );
+    }
+    return ruleList;
   }
 }

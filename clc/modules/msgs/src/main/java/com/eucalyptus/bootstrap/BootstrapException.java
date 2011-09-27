@@ -52,7 +52,6 @@ public class BootstrapException extends RuntimeException {
       Logger.getLogger( ste.getClassName( ) ).fatal( "Fatal error occured during bootstrap: " + ste.getClassName( ) + "." + ste.getMethodName( ) + ":" + ste.getLineNumber( ), t );
     }
     Exceptions.fatal( message, t );
-    System.exit( -1 );
     return ex;
   }
 

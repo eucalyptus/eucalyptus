@@ -77,9 +77,6 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstance.VmState;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -94,6 +91,9 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmInstance.VmState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
@@ -208,14 +208,6 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   
   public static Address allocate( BaseMessage request ) throws EucalyptusCloudException, NotEnoughResourcesException {
     Context ctx = Contexts.lookup( );
-//    if ( !ctx.hasAdministrativePrivileges( ) ) {
-//      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
-//        throw new EucalyptusCloudException( "Not authorized to allocate address by " + ctx.getUser( ).getName( ) );
-//      }
-//      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, "", action, ctx.getUser( ), 1L ) ) {
-//        throw new EucalyptusCloudException( "Exceeded quota in allocating address by " + ctx.getUser( ).getName( ) );
-//      }
-//    }
     return Addresses.getAddressManager( ).allocateNext( ctx.getUserFullName( ) );
   }
   

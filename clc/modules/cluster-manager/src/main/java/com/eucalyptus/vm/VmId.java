@@ -61,121 +61,93 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
+import javax.persistence.Column;
 import javax.persistence.Embeddable;
-import javax.persistence.Transient;
 import org.hibernate.annotations.Parent;
 
 @Embeddable
-public class VmNetworkConfig {
-  
+public class VmId {
   @Parent
-  private VmInstance   parent;
-  private String       macAddress;
-  private String       privateAddress;
-  private String       publicAddress;
-  private String       privateDnsName;
-  private String       publicDnsName;
-  @Transient
-  public static String DEFAULT_IP = "0.0.0.0";
+  private VmInstance vmInstance;
+  @Column( name = "metadata_vm_reservation_id" )
+  private String     reservationId;
+  @Column( name = "metadata_vm_instance_id" )
+  private String     instanceId;
   
-  VmNetworkConfig( VmInstance parent, String ipAddress, String ignoredPublicIp ) {
-    super( );
-    this.parent = parent;
-    this.macAddress = VmInstances.asMacAddress( this.parent.getInstanceId( ) );
-    this.privateAddress = ipAddress;
-    this.publicAddress = ignoredPublicIp;
-    this.updateDns( );
-  }
-  
-  VmNetworkConfig( ) {
+  VmId( ) {
     super( );
   }
   
-  /**
-   * @param vmInstance
-   */
-  public VmNetworkConfig( VmInstance vmInstance ) {
-    this( vmInstance, DEFAULT_IP, DEFAULT_IP );
+  VmId( String reservationId, String instanceId ) {
+    super( );
+    this.reservationId = reservationId;
+    this.instanceId = instanceId;
   }
   
-  void updateDns( ) {
-    String dnsDomain = null;
-    try {
-      dnsDomain = edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
-    } catch ( final Exception e ) {}
-    dnsDomain = dnsDomain == null
-      ? "dns-disabled"
-      : dnsDomain;
-    
-    this.privateAddress = ( this.privateAddress == null
-      ? "0.0.0.0"
-      : this.privateAddress );
-    this.publicAddress = ( this.publicAddress == null
-      ? "0.0.0.0"
-      : this.publicAddress );
-    this.publicDnsName = "euca-" + this.publicAddress.replaceAll( "\\.", "-" ) + VmInstances.INSTANCE_SUBDOMAIN + "." + dnsDomain;
-    this.privateDnsName = "euca-" + this.privateAddress.replaceAll( "\\.", "-" ) + VmInstances.INSTANCE_SUBDOMAIN + ".internal";
+  private VmInstance getVmInstance( ) {
+    return this.vmInstance;
   }
   
-  private VmInstance getParent( ) {
-    return this.parent;
+  public String getReservationId( ) {
+    return this.reservationId;
   }
   
-  void setParent( VmInstance parent ) {
-    this.parent = parent;
+  public String getInstanceId( ) {
+    return this.instanceId;
   }
   
-  String getMacAddress( ) {
-    return this.macAddress;
+  private void setVmInstance( VmInstance vmInstance ) {
+    this.vmInstance = vmInstance;
   }
   
-  void setMacAddress( String macAddress ) {
-    this.macAddress = macAddress;
+  private void setReservationId( String reservationId ) {
+    this.reservationId = reservationId;
   }
   
-  String getPrivateAddress( ) {
-    return this.privateAddress;
+  private void setInstanceId( String instanceId ) {
+    this.instanceId = instanceId;
   }
-  
-  void setPrivateAddress( String privateAddress ) {
-    this.privateAddress = privateAddress;
-  }
-  
-  String getPublicAddress( ) {
-    return this.publicAddress;
-  }
-  
-  void setPublicAddress( String publicAddress ) {
-    this.publicAddress = publicAddress;
-  }
-  
-  String getPrivateDnsName( ) {
-    return this.privateDnsName;
-  }
-  
-  void setPrivateDnsName( String privateDnsName ) {
-    this.privateDnsName = privateDnsName;
-  }
-  
-  String getPublicDnsName( ) {
-    return this.publicDnsName;
-  }
-  
-  void setPublicDnsName( String publicDnsName ) {
-    this.publicDnsName = publicDnsName;
-  }
-  
+
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
-    builder.append( "VmNetworkConfig:" );
-    if ( this.macAddress != null ) builder.append( "macAddress=" ).append( this.macAddress ).append( ":" );
-    if ( this.privateAddress != null ) builder.append( "privateAddress=" ).append( this.privateAddress ).append( ":" );
-    if ( this.publicAddress != null ) builder.append( "publicAddress=" ).append( this.publicAddress ).append( ":" );
-    if ( this.privateDnsName != null ) builder.append( "privateDnsName=" ).append( this.privateDnsName ).append( ":" );
-    if ( this.publicDnsName != null ) builder.append( "publicDnsName=" ).append( this.publicDnsName );
+    builder.append( "VmId:" );
+    if ( this.reservationId != null ) builder.append( "reservationId=" ).append( this.reservationId ).append( ":" );
+    if ( this.instanceId != null ) builder.append( "instanceId=" ).append( this.instanceId );
     return builder.toString( );
+  }
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.instanceId == null )
+      ? 0
+      : this.instanceId.hashCode( ) );
+    return result;
+  }
+
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( obj == null ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    VmId other = ( VmId ) obj;
+    if ( this.instanceId == null ) {
+      if ( other.instanceId != null ) {
+        return false;
+      }
+    } else if ( !this.instanceId.equals( other.instanceId ) ) {
+      return false;
+    }
+    return true;
   }
 }

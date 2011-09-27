@@ -95,7 +95,6 @@ static configEntry configKeysRestart[] = {
   {"VNET_ADDRSPERNET", NULL},
   {"VNET_BRIDGE", NULL},
   {"VNET_BROADCAST", NULL},
-  {"VNET_CLOUDIP", "localhost"},
   {"VNET_DHCPDAEMON", "/usr/sbin/dhcpd3"},
   {"VNET_DHCPUSER", "dhcpd"},
   {"VNET_DNS", NULL},
@@ -163,7 +162,7 @@ typedef struct instance_t {
 
   int expiryTime;
 
-  char groupNames[64][32];
+  char groupNames[64][64];
 
   ncVolume volumes[EUCA_MAX_VOLUMES];
   int volumesSize;
@@ -171,7 +170,7 @@ typedef struct instance_t {
   long long blkbytes, netbytes;
 } ccInstance;
 
-int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *accountId, char *state, char *ccState, time_t ts, char *reservationId, netConfig *ccnet, netConfig *ncnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform, char *bundleTaskStateName, char groupNames[][32], ncVolume *volumes, int volumesSize);
+int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *accountId, char *state, char *ccState, time_t ts, char *reservationId, netConfig *ccnet, netConfig *ncnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform, char *bundleTaskStateName, char groupNames[][64], ncVolume *volumes, int volumesSize);
 void print_ccInstance(char *tag, ccInstance *in);
 
 enum {RESDOWN, RESUP, RESASLEEP, RESWAKING};

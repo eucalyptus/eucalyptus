@@ -61,63 +61,41 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.cloud;
 
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
-import org.hibernate.annotations.Parent;
+import java.util.Collection;
+import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 
-@Embeddable
-public class VmUsageStats {
-  @Parent
-  private VmInstance vmInstance;
-  @Column( name = "metadata_vm_block_bytes" )
-  private Long       blockBytes;
-  @Column( name = "metadata_vm_network_bytes" )
-  private Long       networkBytes;
-  
-  VmUsageStats( VmInstance vmInstance ) {
-    super( );
-    this.vmInstance = vmInstance;
-    this.blockBytes = 0l;
-    this.networkBytes = 0l;
+public class CloudMetadatas {
+  public static <T extends CloudMetadata> Predicate<T> filterById( final Collection<String> requestedIdentifiers ) {
+    return new Predicate<T>( ) {
+      
+      @Override
+      public boolean apply( T input ) {
+        return requestedIdentifiers == null || requestedIdentifiers.isEmpty( ) || requestedIdentifiers.contains( input.getDisplayName( ) );
+      }
+    };
+    
+  }
+  public static <T extends CloudMetadata> Predicate<T> filterPrivilegesById( final Collection<String> requestedIdentifiers ) {
+    return Predicates.and( filterById( requestedIdentifiers ), RestrictedTypes.filterPrivileged( ) );
+    
   }
   
-  VmUsageStats( ) {
-    super( );
+  public static <T extends CloudMetadata> Predicate<T> filterByOwningAccount( final Collection<String> requestedIdentifiers ) {
+    return new Predicate<T>( ) {
+      
+      @Override
+      public boolean apply( T input ) {
+        return requestedIdentifiers == null || requestedIdentifiers.isEmpty( ) || requestedIdentifiers.contains( input.getOwner( ).getAccountNumber( ) );
+      }
+    };
+    
   }
-  
-  Long getBlockBytes( ) {
-    return this.blockBytes;
+  public static <T extends CloudMetadata> Predicate<T> filterPrivilegesByOwningAccount( final Collection<String> requestedIdentifiers ) {
+    return Predicates.and( filterByOwningAccount( requestedIdentifiers ), RestrictedTypes.filterPrivileged( ) );
+    
   }
-  
-  void setBlockBytes( Long blockBytes ) {
-    this.blockBytes = blockBytes;
-  }
-  
-  Long getNetworkBytes( ) {
-    return this.networkBytes;
-  }
-  
-  void setNetworkBytes( Long networkBytes ) {
-    this.networkBytes = networkBytes;
-  }
-  
-  VmInstance getVmInstance( ) {
-    return this.vmInstance;
-  }
-  
-  private void setVmInstance( VmInstance vmInstance ) {
-    this.vmInstance = vmInstance;
-  }
-
-  @Override
-  public String toString( ) {
-    StringBuilder builder = new StringBuilder( );
-    builder.append( "VmUsageStats:" );
-    if ( this.blockBytes != null ) builder.append( "blockBytes=" ).append( this.blockBytes ).append( ":" );
-    if ( this.networkBytes != null ) builder.append( "networkBytes=" ).append( this.networkBytes );
-    return builder.toString( );
-  }
-  
 }

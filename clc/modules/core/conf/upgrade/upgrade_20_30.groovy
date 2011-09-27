@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
+import com.google.common.collect.Multimap;
 
 import javax.persistence.Column;
 import javax.persistence.Id;
@@ -93,7 +94,6 @@ import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusStatsInfo;
 
 // General -> Cloud
-import com.eucalyptus.network.IpRange;
 import com.eucalyptus.network.NetworkPeer;
 import com.eucalyptus.network.NetworkRule;
 import com.eucalyptus.network.NetworkGroup;
@@ -735,31 +735,30 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                                  LEFT OUTER JOIN metadata_network_rule r 
                                  ON r.metadata_network_rule_id=metadata_network_group_has_rules.metadata_network_rule_id 
                                  WHERE metadata_network_group_has_rules.id=?""", [ it.id ]).each { rule ->
-                    NetworkRule networkRule = new NetworkRule(rule.metadata_network_rule_protocol, 
-                                                              rule.metadata_network_rule_low_port, 
-                                                              rule.metadata_network_rule_high_port);
-                    initMetaClass(networkRule, networkRule.class);
+                    Multimap<String, String> peers = new Multimap<String, String>();
+                    initMetaClass(peers, peers.class);
+                    Collection<String> ipRanges = new Collection<String>();
+                    initMetaClass(ipRanges, ipRanges.class);
                     connMap['eucalyptus_general'].rows("""SELECT ip.* 
                                      FROM metadata_network_rule_has_ip_range 
                                      LEFT OUTER JOIN metadata_network_rule_ip_range ip
                                      ON ip.metadata_network_rule_ip_range_id=metadata_network_rule_has_ip_range.metadata_network_rule_ip_range_id 
                                      WHERE metadata_network_rule_has_ip_range.metadata_network_rule_id=?""", [ rule.metadata_network_rule_id ]).each { iprange ->
-                        IpRange ipRange = new IpRange(iprange.metadata_network_rule_ip_range_value);
-                        initMetaClass(ipRange, ipRange.class);
-                        networkRule.getIpRanges().add(ipRange);
-                        LOG.debug("IP Range: ${iprange.metadata_network_rule_ip_range_value}");
+                        ipRanges.add(iprange.metadata_network_rule_ip_range_value);
                     }
                     connMap['eucalyptus_general'].rows("""SELECT peer.* 
                                      FROM metadata_network_rule_has_peer_network 
                                      LEFT OUTER JOIN network_rule_peer_network peer
                                      ON peer.network_rule_peer_network_id=metadata_network_rule_has_peer_network.metadata_network_rule_peer_network_id 
                                      WHERE metadata_network_rule_has_peer_network.metadata_network_rule_id=?""", [ rule.metadata_network_rule_id ]).each { peer ->
-                        NetworkPeer networkPeer = new NetworkPeer(peer.network_rule_peer_network_user_query_key, peer.network_rule_peer_network_user_group);
-                        initMetaClass(networkPeer, networkPeer.class);
-                        networkRule.getNetworkPeers().add(networkPeer);
-
+                        peers.put(peer.network_rule_peer_network_user_query_key, peer.network_rule_peer_network_user_group);
                         LOG.debug("Peer: " + networkPeer);
                     }
+                    NetworkRule networkRule = new NetworkRule(rule.metadata_network_rule_protocol, 
+                                                              rule.metadata_network_rule_low_port, 
+                                                              rule.metadata_network_rule_high_port,
+                                                              ipRanges, peers);
+                    initMetaClass(networkRule, networkRule.class);
                     rulesGroup.getNetworkRules().add(networkRule);
                 } 
 

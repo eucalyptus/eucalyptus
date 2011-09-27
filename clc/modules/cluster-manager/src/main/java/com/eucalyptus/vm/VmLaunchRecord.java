@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,58 +61,95 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.network;
+package com.eucalyptus.vm;
 
+import java.util.Date;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.entities.AbstractPersistent;
+import javax.persistence.Embeddable;
+import org.hibernate.annotations.Parent;
 
-@Entity @javax.persistence.Entity
-@PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_network_rule_ip_range" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class IpRange extends AbstractPersistent {
-  @Column( name = "metadata_network_rule_ip_range_value" )
-  String value;
-  public IpRange(){
+@Embeddable
+public class VmLaunchRecord {
+  @Parent
+  private VmInstance vmInstance;
+  @Column( name = "metadata_vm_launch_index" )
+  private Integer    launchIndex;
+  @Column( name = "metadata_vm_launch_time" )
+  private Date       launchTime;
+  
+  VmLaunchRecord( Integer launchIndex, Date launchTime ) {
+    super( );
+    this.launchIndex = launchIndex;
+    this.launchTime = launchTime;
   }
-  public IpRange( final String value ) {
-    this.value = value;
+  
+  VmLaunchRecord( ) {
+    super( );
+  }
+  
+  VmInstance getVmInstance( ) {
+    return this.vmInstance;
+  }
+  
+  Integer getLaunchIndex( ) {
+    return this.launchIndex;
+  }
+  
+  Date getLaunchTime( ) {
+    return this.launchTime;
+  }
+  
+  private void setVmInstance( VmInstance vmInstance ) {
+    this.vmInstance = vmInstance;
+  }
+  
+  private void setLaunchIndex( Integer launchIndex ) {
+    this.launchIndex = launchIndex;
+  }
+  
+  private void setLaunchTime( Date launchTime ) {
+    this.launchTime = launchTime;
   }
 
-  public String getValue( ) {
-    return this.value;
-  }
-  public void setValue( String value ) {
-    this.value = value;
-  }
   @Override
   public String toString( ) {
-    return String.format( "IpRange:%s", this.value );
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "VmLaunchRecord:" );
+    if ( this.launchIndex != null ) builder.append( "launchIndex=" ).append( this.launchIndex ).append( ":" );
+    if ( this.launchTime != null ) builder.append( "launchTime=" ).append( this.launchTime );
+    return builder.toString( );
   }
 
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.value == null ) ? 0 : this.value.hashCode( ) );
+    result = prime * result + ( ( this.vmInstance == null )
+      ? 0
+      : this.vmInstance.hashCode( ) );
     return result;
   }
+
   @Override
   public boolean equals( Object obj ) {
-    if ( this == obj ) return true;
-    if ( obj == null ) return false;
-    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
-    IpRange other = ( IpRange ) obj;
-    if ( this.value == null ) {
-      if ( other.value != null ) return false;
-    } else if ( !this.value.equals( other.value ) ) return false;
+    if ( this == obj ) {
+      return true;
+    }
+    if ( obj == null ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    VmLaunchRecord other = ( VmLaunchRecord ) obj;
+    if ( this.vmInstance == null ) {
+      if ( other.vmInstance != null ) {
+        return false;
+      }
+    } else if ( !this.vmInstance.equals( other.vmInstance ) ) {
+      return false;
+    }
     return true;
-  }  
+  }
+  
 }
