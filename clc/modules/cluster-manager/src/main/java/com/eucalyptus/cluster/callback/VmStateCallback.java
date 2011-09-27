@@ -117,8 +117,12 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           LOG.error( ex );
         }
       } catch ( NoSuchElementException ex1 ) {
-        if ( VmStateSet.RUN.contains( runVmState ) ) {
-          VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
+        try {
+          if ( VmStateSet.RUN.contains( runVmState ) ) {
+            VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
+          }
+        } catch ( Exception ex ) {
+          LOG.error( ex , ex );
         }
       } catch ( Exception ex1 ) {
         LOG.error( ex1, ex1 );
