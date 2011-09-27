@@ -382,7 +382,7 @@ public class ImageManager {
     Context ctx = Contexts.lookup( );
     VmInstance vm;
     try {
-      vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstances.lookupFunction( ) );
+      vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.class );
       if ( !VmState.RUNNING.equals( vm.getState( ) ) && !VmState.STOPPED.equals( vm.getState( ) ) ) {
         throw new EucalyptusCloudException( "Cannot create an image from an instance which is not in either the 'running' or 'stopped' state: "
                                             + vm.getInstanceId( ) + " is in state " + vm.getState( ).getName( ) );

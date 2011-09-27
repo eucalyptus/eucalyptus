@@ -110,7 +110,6 @@ import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.UnconditionalCallback;
-import com.eucalyptus.vm.VmInstance.Lookup;
 import com.eucalyptus.vm.VmInstance.Transitions;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
@@ -380,14 +379,6 @@ public class VmInstances {
     }
   }
   
-  public static VmInstance restrictedLookup( final String instanceId ) throws EucalyptusCloudException {
-    final VmInstance vm = VmInstances.lookup( instanceId );
-    if ( !RestrictedTypes.filterPrivileged( ).apply( vm ) ) {
-      throw new EucalyptusCloudException( "Permission denied while trying to access instance " + instanceId );
-    }
-    return vm;
-  }
-  
   public static String asMacAddress( final String instanceId ) {
     return String.format( "%s:%s:%s:%s:%s",
                           VmInstances.MAC_PREFIX,
@@ -402,7 +393,7 @@ public class VmInstances {
   }
 
   public static VmInstance lookup( final String name ) throws NoSuchElementException, TerminatedInstanceException {
-    return Lookup.INSTANCE.apply( name );
+    return PersistentLookup.INSTANCE.apply( name );
   }
   
   public static VmInstance register( final VmInstance vm ) {
@@ -560,15 +551,7 @@ public class VmInstances {
     }
   }
   
-  /**
-   * @return
-   */
-  public static Function<String, VmInstance> lookupFunction( ) {
-    return Lookup.INSTANCE;
-  }
-  
-  @Resolver( VmInstanceMetadata.class )
-  public enum Lookup implements Function<String, VmInstance> {
+  enum PersistentLookup implements Function<String, VmInstance> {
     INSTANCE;
     
     /**
@@ -579,7 +562,7 @@ public class VmInstances {
       if ( ( name != null ) && VmInstances.terminateDescribeCache.containsKey( name ) ) {
         throw new TerminatedInstanceException( name );
       } else {
-        return Lookup.INSTANCE.apply( name );
+        return VmInstance.Lookup.INSTANCE.apply( name );
       }
     }
     
@@ -598,7 +581,7 @@ public class VmInstances {
       if ( ( name != null ) ) {
         vm = VmInstances.terminateCache.get( name );
         if ( vm == null ) { 
-          vm = Lookup.INSTANCE.apply( name );
+          vm = PersistentLookup.INSTANCE.apply( name );
         }
       }
       return vm;

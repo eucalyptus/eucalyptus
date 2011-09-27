@@ -69,7 +69,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
+import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
@@ -84,6 +86,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
@@ -275,13 +278,13 @@ public class VolumeManager {
     }
     VmInstance vm = null;
     try {
-      vm = VmInstances.restrictedLookup( request.getInstanceId( ) );
-    } catch ( NoSuchElementException e ) {
-      LOG.debug( e, e );
-      throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId( ) );
-    }
-    if ( !RestrictedTypes.filterPrivileged( ).apply( vm ) ) {
-      throw new EucalyptusCloudException( "Not authorized to attach volume to instance " + request.getInstanceId( ) + " by " + ctx.getUser( ).getName( ) );
+      vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.class );
+    } catch ( NoSuchElementException ex ) {
+      LOG.debug( ex, ex );
+      throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId( ), ex );
+    } catch ( Exception ex ) {
+      LOG.debug( ex, ex );
+      throw new EucalyptusCloudException( ex.getMessage( ), ex );
     }
     Cluster cluster = null;
     try {

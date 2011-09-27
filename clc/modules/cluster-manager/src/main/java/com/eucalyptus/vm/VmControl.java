@@ -229,7 +229,7 @@ public class VmControl {
               int oldCode = 0, newCode = 0;
               try {
                 VmInstance vm = null;
-                vm = RestrictedTypes.doPrivileged( instanceId, VmInstances.lookupFunction( ) );
+                vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
                 oldCode = vm.getState( ).getCode( );
                 oldState = vm.getState( ).getName( );
                 if ( VmState.STOPPED.apply( vm ) ) {

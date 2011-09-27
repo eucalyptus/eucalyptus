@@ -374,22 +374,22 @@ public class RestrictedTypes {
       super( );
     }
     
-    @SuppressWarnings( "synthetic-access" )
+    @SuppressWarnings( { "synthetic-access", "unchecked" } )
     @Override
     public boolean processClass( Class candidate ) throws Exception {
       if ( Ats.from( candidate ).has( UsageMetricFunction.class ) && Function.class.isAssignableFrom( candidate ) ) {
         UsageMetricFunction measures = Ats.from( candidate ).get( UsageMetricFunction.class );
-        Class measuredType = measures.value( );
+        Class<?> measuredType = measures.value( );
         RestrictedTypes.usageMetricFunctions.put( measuredType, ( Function<OwnerFullName, Long> ) Classes.newInstance( candidate ) );
         return true;
       } else if ( Ats.from( candidate ).has( QuantityMetricFunction.class ) && Function.class.isAssignableFrom( candidate ) ) {
         QuantityMetricFunction measures = Ats.from( candidate ).get( QuantityMetricFunction.class );
-        Class measuredType = measures.value( );
+        Class<?> measuredType = measures.value( );
         RestrictedTypes.quantityMetricFunctions.put( measuredType, ( Function<OwnerFullName, Long> ) Classes.newInstance( candidate ) );
         return true;
       } else if ( Ats.from( candidate ).has( Resolver.class ) && Function.class.isAssignableFrom( candidate ) ) {
         Resolver resolver = Ats.from( candidate ).get( Resolver.class );
-        Class resolverFunction = resolver.value( );
+        Class<?> resolverFunction = resolver.value( );
         RestrictedTypes.resourceResolvers.put( resolverFunction, ( Function<String, RestrictedType<?>> ) Classes.newInstance( candidate ) );
         return true;
       } else {
