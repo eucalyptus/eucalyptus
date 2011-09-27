@@ -98,6 +98,12 @@ public class VmNetworkConfig {
     this.updateDns( );
   }
   
+  VmNetworkConfig( String ipAddress, String ignoredPublicIp ) {
+    super( );
+    this.privateAddress = ipAddress;
+    this.publicAddress = ignoredPublicIp;
+  }
+
   VmNetworkConfig( ) {
     super( );
   }
@@ -200,13 +206,13 @@ public class VmNetworkConfig {
    * @param ip
    * @return
    */
-  public static VmNetworkConfig createWithPrivateIp( String ip ) {
-    return new VmNetworkConfig( null, ip, null );
+  public static VmNetworkConfig exampleWithPrivateIp( String ip ) {
+    return new VmNetworkConfig( ip, null );
   }
-  public static VmNetworkConfig createWithPublicIp( String ip ) {
-    return new VmNetworkConfig( null, null, ip );
+  public static VmNetworkConfig exampleWithPublicIp( String ip ) {
+    return new VmNetworkConfig( null, ip );
   }
-  public static VmNetworkConfig createWithIps( String privateIp, String publicIp ) {
-    return new VmNetworkConfig( null, privateIp, publicIp );
+  public static VmNetworkConfig exampleWithIps( String privateIp, String publicIp ) {
+    return new VmNetworkConfig( privateIp, publicIp );
   }
 }

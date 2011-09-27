@@ -260,7 +260,7 @@ public class VmInstances {
     try {
       VmInstance vm = ( VmInstance ) Entities.createCriteria( VmInstance.class )
                                              .add( Example.create( VmInstance.create( ) ).enableLike( MatchMode.EXACT ) )
-                                             .createCriteria( "networkConfig" ).add( Example.create( VmNetworkConfig.createWithPrivateIp( ip ) ).enableLike( MatchMode.EXACT ) )
+                                             .createCriteria( "networkConfig" ).add( Example.create( VmNetworkConfig.exampleWithPrivateIp( ip ) ).enableLike( MatchMode.EXACT ) )
                                              .setCacheable( true )
                                              .setMaxResults( 1 )
                                              .setFetchSize( 1 )
@@ -280,7 +280,7 @@ public class VmInstances {
     try {
       VmInstance vm = ( VmInstance ) Entities.createCriteria( VmInstance.class )
                                              .add( Example.create( VmInstance.create( ) ).enableLike( MatchMode.EXACT ) )
-                                             .createCriteria( "networkConfig" ).add( Example.create( VmNetworkConfig.createWithPublicIp( ip ) ).enableLike( MatchMode.EXACT ) )
+                                             .createCriteria( "networkConfig" ).add( Example.create( VmNetworkConfig.exampleWithPublicIp( ip ) ).enableLike( MatchMode.EXACT ) )
                                              .setCacheable( true )
                                              .setMaxResults( 1 )
                                              .setFetchSize( 1 )
