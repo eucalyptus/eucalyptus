@@ -197,6 +197,8 @@ public class VmInstances {
   public static String  INSTANCE_SUBDOMAIN            = ".eucalyptus";
   @ConfigurableField( description = "Seconds between state updates for actively changing state.", initial = "3" )
   public static Long    VOLATILE_STATE_INTERVAL_SEC   = 3l;
+  @ConfigurableField( description = "Maximum number of threads the system will use to service blocking state changes.", initial = "16" )
+  public static Integer MAX_STATE_THREADS             = 16;
   
   public static class SubdomainListener implements PropertyChangeListener {
     @Override

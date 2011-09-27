@@ -78,9 +78,11 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
@@ -183,7 +185,7 @@ public class VmRuntimeState {
       }
       if ( action != null ) {
         try {
-          action.run( );
+          Threads.lookup( Eucalyptus.class, VmInstance.class ).limitTo( VmInstances.MAX_STATE_THREADS ).execute( action );
         } catch ( final Exception ex ) {
           LOG.error( ex, ex );
         }
