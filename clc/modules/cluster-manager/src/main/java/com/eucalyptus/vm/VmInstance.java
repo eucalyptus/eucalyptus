@@ -1308,10 +1308,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               this.updateState( runVm );
             } else if ( VmState.STOPPING.apply( VmInstance.this ) && VmState.SHUTTING_DOWN.equals( runVmState ) ) {
               VmInstance.this.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
-            } else if ( VmState.SHUTTING_DOWN.apply( VmInstance.this ) && runVmState.equals( VmInstance.this.getState( ) ) ) {
+            } else if ( VmState.SHUTTING_DOWN.apply( VmInstance.this ) && VmState.SHUTTING_DOWN.equals( runVmState ) ) {
               VmInstance.this.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
-            } else if ( VmStateSet.STOP.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
+            } else if ( VmState.STOPPING.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
               VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
+            } else if ( VmState.SHUTTING_DOWN.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
+              VmInstance.this.setState( VmState.TERMINATED, Reason.EXPIRED );
             } else if ( VmState.SHUTTING_DOWN.apply( VmInstance.this ) && VmStateSet.RUN.contains( runVmState ) ) {
               VmInstance.this.setState( VmState.SHUTTING_DOWN, Reason.APPEND, "DONE" );
             } else {

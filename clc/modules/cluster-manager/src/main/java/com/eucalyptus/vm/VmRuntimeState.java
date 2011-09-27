@@ -155,6 +155,8 @@ public class VmRuntimeState {
       action = this.cleanUpRunnable( SEND_USER_STOP );
     } else if ( ( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) || VmState.BURIED.equals( newState ) ) {
       action = this.cleanUpRunnable( SEND_USER_TERMINATE );
+    } else if ( VmStateSet.RUN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) ) {
+      action = this.cleanUpRunnable( SEND_USER_TERMINATE );
     } else if ( !oldState.equals( newState ) ) {
       if ( Reason.APPEND.equals( reason ) ) {
         reason = this.reason;

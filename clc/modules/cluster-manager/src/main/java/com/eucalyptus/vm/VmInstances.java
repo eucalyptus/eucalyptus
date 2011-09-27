@@ -197,8 +197,10 @@ public class VmInstances {
   public static String  MAC_PREFIX                    = "d0:0d";
   @ConfigurableField( description = "Subdomain to use for instance DNS.", initial = ".eucalyptus", changeListener = SubdomainListener.class )
   public static String  INSTANCE_SUBDOMAIN            = ".eucalyptus";
-  @ConfigurableField( description = "Seconds between state updates for actively changing state.", initial = "3" )
+  @ConfigurableField( description = "Period (in seconds) between state updates for actively changing state.", initial = "3" )
   public static Long    VOLATILE_STATE_INTERVAL_SEC   = 3l;
+  @ConfigurableField( description = "Timeout (in seconds) before a requested instance terminate will be repeated.", initial = "60" )
+  public static Long    VOLATILE_STATE_TIMEOUT_SEC    = 60l;
   @ConfigurableField( description = "Maximum number of threads the system will use to service blocking state changes.", initial = "16" )
   public static Integer MAX_STATE_THREADS             = 16;
   
