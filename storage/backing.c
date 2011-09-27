@@ -302,7 +302,6 @@ int create_instance_backing (ncInstance * instance)
     set_path (instance->xmlFilePath,     sizeof (instance->xmlFilePath),     instance, "instance.xml");
     set_path (instance->libvirtFilePath, sizeof (instance->libvirtFilePath), instance, "libvirt.xml");
     set_path (instance->consoleFilePath, sizeof (instance->consoleFilePath), instance, "console.log");
-    logprintfl(EUCADEBUG, "NURMI: %s\n", instance->platform);
     if (strstr (instance->platform, "windows")) {
         // generate the floppy file for windows instances
         if (makeWindowsFloppy (nc_state.home, instance->instancePath, instance->keyName, instance->instanceId)) {
