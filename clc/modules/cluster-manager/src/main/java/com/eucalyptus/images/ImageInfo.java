@@ -92,7 +92,9 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
@@ -326,7 +328,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
     return this;
   }
   
-  Set<String> getProductCodes( ) {
+  public Set<String> getProductCodes( ) {
     return this.productCodes;
   }
   
@@ -456,7 +458,17 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
             final Account account = Accounts.lookupAccountById( input );
             ImageInfo.this.getPermissions( ).add( input );
           } catch ( final Exception e ) {
-            LOG.error( e, e );
+            try {
+              final User user = Accounts.lookupUserById( input );
+              ImageInfo.this.getPermissions( ).add( user.getAccount( ).getAccountNumber( ) );
+            } catch ( AuthException ex ) {
+              try {
+                final User user = Accounts.lookupUserByAccessKeyId( input );
+                ImageInfo.this.getPermissions( ).add( user.getAccount( ).getAccountNumber( ) );
+              } catch ( AuthException ex1 ) {
+                LOG.error( ex1, ex1 );
+              }
+            }
           }
           return true;
         }
@@ -501,10 +513,6 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   
   public static ImageInfo named( final OwnerFullName input, final String imageId ) {
     return new ImageInfo( input, imageId );
-  }
-  
-  public boolean isAllowed( String accountId ) {
-    return this.getImagePublic( ) || this.getOwnerAccountNumber( ).equals( accountId ) || this.getPermissions( ).contains( accountId );
   }
   
 }

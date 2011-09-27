@@ -9,8 +9,6 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 
 public class Properties {
   private static Logger LOG = Logger.getLogger( Properties.class );

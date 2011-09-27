@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,121 +61,95 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
+import javax.persistence.Column;
 import javax.persistence.Embeddable;
-import javax.persistence.Transient;
 import org.hibernate.annotations.Parent;
 
 @Embeddable
-public class VmNetworkConfig {
-  
+public class VmUsageStats {
   @Parent
-  private VmInstance   parent;
-  private String       macAddress;
-  private String       privateAddress;
-  private String       publicAddress;
-  private String       privateDnsName;
-  private String       publicDnsName;
-  @Transient
-  public static String DEFAULT_IP = "0.0.0.0";
+  private VmInstance vmInstance;
+  @Column( name = "metadata_vm_block_bytes" )
+  private Long       blockBytes;
+  @Column( name = "metadata_vm_network_bytes" )
+  private Long       networkBytes;
   
-  VmNetworkConfig( VmInstance parent, String ipAddress, String ignoredPublicIp ) {
+  VmUsageStats( VmInstance vmInstance ) {
     super( );
-    this.parent = parent;
-    this.macAddress = VmInstances.asMacAddress( this.parent.getInstanceId( ) );
-    this.privateAddress = ipAddress;
-    this.publicAddress = ignoredPublicIp;
-    this.updateDns( );
+    this.vmInstance = vmInstance;
+    this.blockBytes = 0l;
+    this.networkBytes = 0l;
   }
   
-  VmNetworkConfig( ) {
+  VmUsageStats( ) {
     super( );
   }
   
-  /**
-   * @param vmInstance
-   */
-  public VmNetworkConfig( VmInstance vmInstance ) {
-    this( vmInstance, DEFAULT_IP, DEFAULT_IP );
+  Long getBlockBytes( ) {
+    return this.blockBytes;
   }
   
-  void updateDns( ) {
-    String dnsDomain = null;
-    try {
-      dnsDomain = edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
-    } catch ( final Exception e ) {}
-    dnsDomain = dnsDomain == null
-      ? "dns-disabled"
-      : dnsDomain;
-    
-    this.privateAddress = ( this.privateAddress == null
-      ? "0.0.0.0"
-      : this.privateAddress );
-    this.publicAddress = ( this.publicAddress == null
-      ? "0.0.0.0"
-      : this.publicAddress );
-    this.publicDnsName = "euca-" + this.publicAddress.replaceAll( "\\.", "-" ) + VmInstances.INSTANCE_SUBDOMAIN + "." + dnsDomain;
-    this.privateDnsName = "euca-" + this.privateAddress.replaceAll( "\\.", "-" ) + VmInstances.INSTANCE_SUBDOMAIN + ".internal";
+  void setBlockBytes( Long blockBytes ) {
+    this.blockBytes = blockBytes;
   }
   
-  private VmInstance getParent( ) {
-    return this.parent;
+  Long getNetworkBytes( ) {
+    return this.networkBytes;
   }
   
-  void setParent( VmInstance parent ) {
-    this.parent = parent;
+  void setNetworkBytes( Long networkBytes ) {
+    this.networkBytes = networkBytes;
   }
   
-  String getMacAddress( ) {
-    return this.macAddress;
+  VmInstance getVmInstance( ) {
+    return this.vmInstance;
   }
   
-  void setMacAddress( String macAddress ) {
-    this.macAddress = macAddress;
+  private void setVmInstance( VmInstance vmInstance ) {
+    this.vmInstance = vmInstance;
   }
-  
-  String getPrivateAddress( ) {
-    return this.privateAddress;
-  }
-  
-  void setPrivateAddress( String privateAddress ) {
-    this.privateAddress = privateAddress;
-  }
-  
-  String getPublicAddress( ) {
-    return this.publicAddress;
-  }
-  
-  void setPublicAddress( String publicAddress ) {
-    this.publicAddress = publicAddress;
-  }
-  
-  String getPrivateDnsName( ) {
-    return this.privateDnsName;
-  }
-  
-  void setPrivateDnsName( String privateDnsName ) {
-    this.privateDnsName = privateDnsName;
-  }
-  
-  String getPublicDnsName( ) {
-    return this.publicDnsName;
-  }
-  
-  void setPublicDnsName( String publicDnsName ) {
-    this.publicDnsName = publicDnsName;
-  }
-  
+
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
-    builder.append( "VmNetworkConfig:" );
-    if ( this.macAddress != null ) builder.append( "macAddress=" ).append( this.macAddress ).append( ":" );
-    if ( this.privateAddress != null ) builder.append( "privateAddress=" ).append( this.privateAddress ).append( ":" );
-    if ( this.publicAddress != null ) builder.append( "publicAddress=" ).append( this.publicAddress ).append( ":" );
-    if ( this.privateDnsName != null ) builder.append( "privateDnsName=" ).append( this.privateDnsName ).append( ":" );
-    if ( this.publicDnsName != null ) builder.append( "publicDnsName=" ).append( this.publicDnsName );
+    builder.append( "VmUsageStats:" );
+    if ( this.blockBytes != null ) builder.append( "blockBytes=" ).append( this.blockBytes ).append( ":" );
+    if ( this.networkBytes != null ) builder.append( "networkBytes=" ).append( this.networkBytes );
     return builder.toString( );
   }
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.vmInstance == null )
+      ? 0
+      : this.vmInstance.hashCode( ) );
+    return result;
+  }
+
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( obj == null ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    VmUsageStats other = ( VmUsageStats ) obj;
+    if ( this.vmInstance == null ) {
+      if ( other.vmInstance != null ) {
+        return false;
+      }
+    } else if ( !this.vmInstance.equals( other.vmInstance ) ) {
+      return false;
+    }
+    return true;
+  }
+  
 }

@@ -61,58 +61,41 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.network;
+package com.eucalyptus.cloud;
 
-import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.entities.AbstractPersistent;
+import java.util.Collection;
+import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 
-@Entity @javax.persistence.Entity
-@PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_network_rule_ip_range" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class IpRange extends AbstractPersistent {
-  @Column( name = "metadata_network_rule_ip_range_value" )
-  String value;
-  public IpRange(){
+public class CloudMetadatas {
+  public static <T extends CloudMetadata> Predicate<T> filterById( final Collection<String> requestedIdentifiers ) {
+    return new Predicate<T>( ) {
+      
+      @Override
+      public boolean apply( T input ) {
+        return requestedIdentifiers == null || requestedIdentifiers.isEmpty( ) || requestedIdentifiers.contains( input.getDisplayName( ) );
+      }
+    };
+    
   }
-  public IpRange( final String value ) {
-    this.value = value;
+  public static <T extends CloudMetadata> Predicate<T> filterPrivilegesById( final Collection<String> requestedIdentifiers ) {
+    return Predicates.and( filterById( requestedIdentifiers ), RestrictedTypes.filterPrivileged( ) );
+    
   }
-
-  public String getValue( ) {
-    return this.value;
+  
+  public static <T extends CloudMetadata> Predicate<T> filterByOwningAccount( final Collection<String> requestedIdentifiers ) {
+    return new Predicate<T>( ) {
+      
+      @Override
+      public boolean apply( T input ) {
+        return requestedIdentifiers == null || requestedIdentifiers.isEmpty( ) || requestedIdentifiers.contains( input.getOwner( ).getAccountNumber( ) );
+      }
+    };
+    
   }
-  public void setValue( String value ) {
-    this.value = value;
+  public static <T extends CloudMetadata> Predicate<T> filterPrivilegesByOwningAccount( final Collection<String> requestedIdentifiers ) {
+    return Predicates.and( filterByOwningAccount( requestedIdentifiers ), RestrictedTypes.filterPrivileged( ) );
+    
   }
-  @Override
-  public String toString( ) {
-    return String.format( "IpRange:%s", this.value );
-  }
-
-  @Override
-  public int hashCode( ) {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ( ( this.value == null ) ? 0 : this.value.hashCode( ) );
-    return result;
-  }
-  @Override
-  public boolean equals( Object obj ) {
-    if ( this == obj ) return true;
-    if ( obj == null ) return false;
-    if ( !getClass( ).equals( obj.getClass( ) ) ) return false;
-    IpRange other = ( IpRange ) obj;
-    if ( this.value == null ) {
-      if ( other.value != null ) return false;
-    } else if ( !this.value.equals( other.value ) ) return false;
-    return true;
-  }  
 }

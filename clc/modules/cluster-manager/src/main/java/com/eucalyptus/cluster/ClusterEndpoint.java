@@ -85,6 +85,8 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
@@ -223,7 +225,7 @@ public class ClusterEndpoint implements Startable {
                                                                                    LOG.info( val );
                                                                                  }
                                                                                  retList.add( new ClusterInfoType( "================== VMs", "" ) );
-                                                                                 for ( VmInstance vm : VmInstances.listValues( ) ) {
+                                                                                 for ( VmInstance vm : VmInstances.list( null ) ) {
                                                                                    String val = vm.toString( );
                                                                                    retList.add( new ClusterInfoType( val, "" ) );
                                                                                    LOG.info( val );

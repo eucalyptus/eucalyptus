@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,139 +61,92 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
 import java.util.Date;
 import javax.persistence.Column;
+import javax.persistence.Embeddable;
 import org.hibernate.annotations.Parent;
 
-public class VmCreateImageTask {
+@Embeddable
+public class VmLaunchRecord {
   @Parent
   private VmInstance vmInstance;
-  @Column( name = "metadata_vm_createimage_id" )
-  private String     createImageId;
-  @Column( name = "metadata_vm_createimage_state" )
-  private String     state;
-  @Column( name = "metadata_vm_createimage_start_time" )
-  private Date       startTime;
-  @Column( name = "metadata_vm_createimage_update_time" )
-  private Date       updateTime;
-  @Column( name = "metadata_vm_createimage_progress" )
-  private String     progress;
-  @Column( name = "metadata_vm_createimage_error_msg" )
-  private String     errorMessage;
-  @Column( name = "metadata_vm_createimage_error_code" )
-  private String     errorCode;
+  @Column( name = "metadata_vm_launch_index" )
+  private Integer    launchIndex;
+  @Column( name = "metadata_vm_launch_time" )
+  private Date       launchTime;
   
-  VmCreateImageTask( ) {
+  VmLaunchRecord( Integer launchIndex, Date launchTime ) {
+    super( );
+    this.launchIndex = launchIndex;
+    this.launchTime = launchTime;
+  }
+  
+  VmLaunchRecord( ) {
     super( );
   }
   
-  VmCreateImageTask( final VmInstance vmInstance, final String createImageId, final String state, final Date startTime, final Date updateTime,
-                     final String progress, final String errorMessage,
-                     final String errorCode ) {
-    super( );
-    this.vmInstance = vmInstance;
-    this.createImageId = createImageId;
-    this.state = state;
-    this.startTime = startTime;
-    this.updateTime = updateTime;
-    this.progress = progress;
-    this.errorMessage = errorMessage;
-    this.errorCode = errorCode;
-  }
-  
-  private VmInstance getVmInstance( ) {
+  VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
   
-  private void setVmInstance( final VmInstance vmInstance ) {
+  Integer getLaunchIndex( ) {
+    return this.launchIndex;
+  }
+  
+  Date getLaunchTime( ) {
+    return this.launchTime;
+  }
+  
+  private void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
   
-  String getCreateImageId( ) {
-    return this.createImageId;
+  private void setLaunchIndex( Integer launchIndex ) {
+    this.launchIndex = launchIndex;
   }
   
-  private void setCreateImageId( final String bundleId ) {
-    this.createImageId = bundleId;
+  private void setLaunchTime( Date launchTime ) {
+    this.launchTime = launchTime;
   }
-  
-  String getState( ) {
-    return this.state;
+
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "VmLaunchRecord:" );
+    if ( this.launchIndex != null ) builder.append( "launchIndex=" ).append( this.launchIndex ).append( ":" );
+    if ( this.launchTime != null ) builder.append( "launchTime=" ).append( this.launchTime );
+    return builder.toString( );
   }
-  
-  void setState( final String state ) {
-    this.state = state;
-  }
-  
-  private Date getStartTime( ) {
-    return this.startTime;
-  }
-  
-  private void setStartTime( final Date startTime ) {
-    this.startTime = startTime;
-  }
-  
-  private Date getUpdateTime( ) {
-    return this.updateTime;
-  }
-  
-  void setUpdateTime( final Date updateTime ) {
-    this.updateTime = updateTime;
-  }
-  
-  private String getProgress( ) {
-    return this.progress;
-  }
-  
-  private void setProgress( final String progress ) {
-    this.progress = progress;
-  }
-  
-  private String getErrorMessage( ) {
-    return this.errorMessage;
-  }
-  
-  private void setErrorMessage( final String errorMessage ) {
-    this.errorMessage = errorMessage;
-  }
-  
-  private String getErrorCode( ) {
-    return this.errorCode;
-  }
-  
-  private void setErrorCode( final String errorCode ) {
-    this.errorCode = errorCode;
-  }
-  
+
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.createImageId == null )
+    result = prime * result + ( ( this.vmInstance == null )
       ? 0
-      : this.createImageId.hashCode( ) );
+      : this.vmInstance.hashCode( ) );
     return result;
   }
-  
+
   @Override
-  public boolean equals( final Object obj ) {
+  public boolean equals( Object obj ) {
     if ( this == obj ) {
       return true;
     }
     if ( obj == null ) {
       return false;
     }
-    if ( this.getClass( ) != obj.getClass( ) ) {
+    if ( getClass( ) != obj.getClass( ) ) {
       return false;
     }
-    final VmCreateImageTask other = ( VmCreateImageTask ) obj;
-    if ( this.createImageId == null ) {
-      if ( other.createImageId != null ) {
+    VmLaunchRecord other = ( VmLaunchRecord ) obj;
+    if ( this.vmInstance == null ) {
+      if ( other.vmInstance != null ) {
         return false;
       }
-    } else if ( !this.createImageId.equals( other.createImageId ) ) {
+    } else if ( !this.vmInstance.equals( other.vmInstance ) ) {
       return false;
     }
     return true;

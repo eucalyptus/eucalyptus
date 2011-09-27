@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,78 +61,131 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
+import java.util.Date;
 import javax.persistence.Column;
-import javax.persistence.Embeddable;
 import org.hibernate.annotations.Parent;
-import com.eucalyptus.component.Partition;
-import com.eucalyptus.component.Partitions;
 
-@Embeddable
-public class VmPlacement {
+public class VmCreateImageTask {
   @Parent
   private VmInstance vmInstance;
-  @Column( name = "metadata_vm_placement" )
-  private String     placement;
-  @Column( name = "metadata_vm_cluster_name" )
-  private String     clusterName;
-  @Column( name = "metadata_vm_partition_name" )
-  private String     partitionName;
+  @Column( name = "metadata_vm_createimage_state" )
+  private String     state;
+  @Column( name = "metadata_vm_createimage_start_time" )
+  private Date       startTime;
+  @Column( name = "metadata_vm_createimage_update_time" )
+  private Date       updateTime;
+  @Column( name = "metadata_vm_createimage_progress" )
+  private String     progress;
+  @Column( name = "metadata_vm_createimage_error_msg" )
+  private String     errorMessage;
+  @Column( name = "metadata_vm_createimage_error_code" )
+  private String     errorCode;
   
-  VmPlacement( String clusterName, String partitionName ) {
+  VmCreateImageTask( ) {
     super( );
-    this.clusterName = clusterName;
-    this.partitionName = partitionName;
   }
   
-  VmPlacement( ) {
+  VmCreateImageTask( final VmInstance vmInstance, final String state, final Date startTime, final Date updateTime,
+                     final String progress, final String errorMessage,
+                     final String errorCode ) {
     super( );
+    this.vmInstance = vmInstance;
+    this.state = state;
+    this.startTime = startTime;
+    this.updateTime = updateTime;
+    this.progress = progress;
+    this.errorMessage = errorMessage;
+    this.errorCode = errorCode;
   }
-
-  VmInstance getVmInstance( ) {
+  
+  private VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
   
-  String getClusterName( ) {
-    return this.clusterName;
-  }
-  
-  String getPartitionName( ) {
-    return this.partitionName;
-  }
-  
-  public Partition lookupPartition( ) {
-    return Partitions.lookupByName( this.partitionName );
-  }
-
-  private void setVmInstance( VmInstance vmInstance ) {
+  private void setVmInstance( final VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
-
-  private void setClusterName( String clusterName ) {
-    this.clusterName = clusterName;
+  
+  String getState( ) {
+    return this.state;
   }
-
-  private void setPartitionName( String partitionName ) {
-    this.partitionName = partitionName;
+  
+  void setState( final String state ) {
+    this.state = state;
   }
-
-  private String getPlacement( ) {
-    return this.placement;
+  
+  private Date getStartTime( ) {
+    return this.startTime;
   }
-
-  private void setPlacement( String placement ) {
-    this.placement = placement;
+  
+  private void setStartTime( final Date startTime ) {
+    this.startTime = startTime;
+  }
+  
+  private Date getUpdateTime( ) {
+    return this.updateTime;
+  }
+  
+  void setUpdateTime( final Date updateTime ) {
+    this.updateTime = updateTime;
+  }
+  
+  private String getProgress( ) {
+    return this.progress;
+  }
+  
+  private void setProgress( final String progress ) {
+    this.progress = progress;
+  }
+  
+  private String getErrorMessage( ) {
+    return this.errorMessage;
+  }
+  
+  private void setErrorMessage( final String errorMessage ) {
+    this.errorMessage = errorMessage;
+  }
+  
+  private String getErrorCode( ) {
+    return this.errorCode;
+  }
+  
+  private void setErrorCode( final String errorCode ) {
+    this.errorCode = errorCode;
   }
 
   @Override
-  public String toString( ) {
-    StringBuilder builder = new StringBuilder( );
-    builder.append( "VmPlacement:" );
-    if ( this.clusterName != null ) builder.append( "clusterName=" ).append( this.clusterName ).append( ":" );
-    if ( this.partitionName != null ) builder.append( "partitionName=" ).append( this.partitionName );
-    return builder.toString( );
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.vmInstance == null )
+      ? 0
+      : this.vmInstance.hashCode( ) );
+    return result;
+  }
+
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( obj == null ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    VmCreateImageTask other = ( VmCreateImageTask ) obj;
+    if ( this.vmInstance == null ) {
+      if ( other.vmInstance != null ) {
+        return false;
+      }
+    } else if ( !this.vmInstance.equals( other.vmInstance ) ) {
+      return false;
+    }
+    return true;
   }
   
 }

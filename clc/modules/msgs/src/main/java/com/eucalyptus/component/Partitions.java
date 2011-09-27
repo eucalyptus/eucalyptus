@@ -187,7 +187,7 @@ public class Partitions {
   }
 
   @SuppressWarnings("unchecked")
-public static  <T extends ServiceConfiguration> T lookupService( Class<? extends ComponentId> compClass, Partition partition ) {
+  public static  <T extends ServiceConfiguration> T lookupService( Class<? extends ComponentId> compClass, Partition partition ) {
     NavigableSet<ServiceConfiguration> services = Components.lookup( compClass ).enabledPartitionServices( partition );
     if ( services.isEmpty( ) ) {
       throw new NoSuchElementException( "Failed to find service of type: " + compClass.getSimpleName( ) + " in partition: " + partition );

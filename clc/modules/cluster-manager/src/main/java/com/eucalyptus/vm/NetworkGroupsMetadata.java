@@ -68,16 +68,16 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstance.VmState;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.network.IpRange;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkPeer;
 import com.eucalyptus.network.NetworkRule;
 import com.eucalyptus.util.ByteArray;
+import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 
@@ -105,45 +105,49 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
     Multimap<String, String> rules = ArrayListMultimap.create( );
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      for ( VmInstance vm : VmInstances.listValues( ) ) {
-        if ( VmState.RUNNING.ordinal( ) > vm.getState( ).ordinal( ) ) continue;
-        for ( NetworkGroup ruleGroup : vm.getNetworkGroups( ) ) {
-          try {
-            ruleGroup = Entities.merge( ruleGroup );
-            networks.put( ruleGroup.getClusterNetworkName( ), vm.getPrivateAddress( ) );
-            if ( !rules.containsKey( ruleGroup.getNaturalId( ) ) ) {
-              for ( NetworkRule netRule : ruleGroup.getNetworkRules( ) ) {
-                try {
-                  String rule = String.format( "-P %s -%s %d%s%d ", netRule.getProtocol( ), ( "icmp".equals( netRule.getProtocol( ) )
-                    ? "t"
-                    : "p" ), netRule.getLowPort( ), ( "icmp".equals( netRule.getProtocol( ) )
-                    ? ":"
-                    : "-" ), netRule.getHighPort( ) );
-                  for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {                    
-                    String ruleString = String.format( "%s -o %s -u %s", rule, peer.getGroupName( ), peer.getUserQueryKey( ) );
-                    if ( !rules.get( ruleGroup.getClusterNetworkName( ) ).contains( ruleString ) ) {
-                      rules.put( ruleGroup.getClusterNetworkName( ), ruleString );
+      Predicate<VmInstance> filter = Predicates.and( VmState.TERMINATED.not( ), VmState.STOPPED.not( ) );
+      for ( VmInstance vm : VmInstances.list( filter ) ) {
+        try {
+          for ( NetworkGroup ruleGroup : vm.getNetworkGroups( ) ) {
+            try {
+              ruleGroup = Entities.merge( ruleGroup );
+              networks.put( ruleGroup.getClusterNetworkName( ), vm.getPrivateAddress( ) );
+              if ( !rules.containsKey( ruleGroup.getNaturalId( ) ) ) {
+                for ( NetworkRule netRule : ruleGroup.getNetworkRules( ) ) {
+                  try {
+                    String rule = String.format( "-P %s -%s %d%s%d ", netRule.getProtocol( ), ( NetworkRule.Protocol.icmp.equals( netRule.getProtocol( ) )
+                      ? "t"
+                      : "p" ), netRule.getLowPort( ), ( NetworkRule.Protocol.icmp.equals( netRule.getProtocol( ) )
+                      ? ":"
+                      : "-" ), netRule.getHighPort( ) );
+                    for ( NetworkPeer peer : netRule.getNetworkPeers( ) ) {
+                      String ruleString = String.format( "%s -o %s -u %s", rule, peer.getGroupName( ), peer.getUserQueryKey( ) );
+                      if ( !rules.get( ruleGroup.getClusterNetworkName( ) ).contains( ruleString ) ) {
+                        rules.put( ruleGroup.getClusterNetworkName( ), ruleString );
+                      }
                     }
-                  }
-                  for ( IpRange cidr : netRule.getIpRanges( ) ) {
-                    String ruleString = String.format( "%s -s %s", rule, cidr.getValue( ) );
-                    if ( !rules.get( ruleGroup.getClusterNetworkName( ) ).contains( ruleString ) ) {
-                      rules.put( ruleGroup.getClusterNetworkName( ), ruleString );
+                    for ( String cidr : netRule.getIpRanges( ) ) {
+                      String ruleString = String.format( "%s -s %s", rule, cidr );
+                      if ( !rules.get( ruleGroup.getClusterNetworkName( ) ).contains( ruleString ) ) {
+                        rules.put( ruleGroup.getClusterNetworkName( ), ruleString );
+                      }
                     }
+                  } catch ( Exception ex ) {
+                    LOG.error( ex, ex );
                   }
-                } catch ( Exception ex ) {
-                  LOG.error( ex, ex );
                 }
               }
+            } catch ( Exception ex ) {
+              LOG.error( ex, ex );
             }
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
           }
+        } catch ( Exception ex ) {
+          LOG.error( ex , ex );
         }
       }
       buf.append( rulesToString( rules ) );
       buf.append( groupsToString( networks ) );
-      db.commit( );
+      db.rollback( );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
       db.rollback( );

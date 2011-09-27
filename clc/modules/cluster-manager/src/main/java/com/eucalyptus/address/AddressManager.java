@@ -73,8 +73,6 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.Callback;
@@ -82,6 +80,8 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressType;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressResponseType;
@@ -103,6 +103,7 @@ public class AddressManager {
     AllocateAddressResponseType reply = ( AllocateAddressResponseType ) request.getReply( );
     Address address;
     try {
+      //GRZE:WHINE: add resource allocator here:  RestrictedTypes.allocate( 1, Allocator.INSTANCE );
       address = Addresses.allocate( request );
     } catch ( NotEnoughResourcesException e ) {
       LOG.debug( e, e );

@@ -61,24 +61,33 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cloud.util;
+package com.eucalyptus.configurable;
 
-public class MetadataCreationException extends MetadataException {
+import java.lang.reflect.Field;
+import java.util.NoSuchElementException;
+import com.eucalyptus.system.Ats;
+import com.eucalyptus.util.Fields;
 
-  public MetadataCreationException( ) {
-    super( );
+public class Properties {
+  
+  public static ConfigurableProperty lookup( String fullyQualifiedName ) throws IllegalAccessException {
+    return PropertyDirectory.getPropertyEntry( fullyQualifiedName );
   }
-
-  public MetadataCreationException( String message, Throwable cause ) {
-    super( message, cause );
+  
+  public static ConfigurableProperty lookup( Class<?> declaringClass, String fieldName ) throws IllegalAccessException, NoSuchFieldException {
+    Field f = Fields.get( declaringClass, fieldName );
+    return lookup( propertyName( f ) );
+    
   }
-
-  public MetadataCreationException( String message ) {
-    super( message );
+  
+  public static String propertyName( Field f ) {
+    Class c = f.getDeclaringClass( );
+    if ( c.isAnnotationPresent( ConfigurableClass.class ) && f.isAnnotationPresent( ConfigurableField.class ) ) {
+      ConfigurableClass classAnnote = ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class );
+      return classAnnote.root( ) + "." + f.getName( ).toLowerCase( );
+    } else {
+      throw new NoSuchElementException( Ats.from( f ).toString( ) );
+    }
   }
-
-  public MetadataCreationException( Throwable cause ) {
-    super( cause );
-  }
-
+  
 }

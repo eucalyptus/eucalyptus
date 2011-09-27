@@ -57,18 +57,17 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- *
+ *******************************************************************************
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
 import java.security.MessageDigest;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Adler32;
@@ -77,14 +76,14 @@ import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
-import com.eucalyptus.cluster.VmInstance.VmState;
-import com.eucalyptus.cluster.VmInstance.VmStateSet;
+import com.eucalyptus.cloud.run.AdmissionControl;
+import com.eucalyptus.cloud.run.ClusterAllocator;
+import com.eucalyptus.cloud.run.VerifyMetadata;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Partitions;
@@ -95,8 +94,6 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -109,39 +106,106 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
+import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.UnconditionalCallback;
+import com.eucalyptus.vm.VmInstance.Lookup;
+import com.eucalyptus.vm.VmInstance.Transitions;
+import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
-@ConfigurableClass( root = "vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
+@ConfigurableClass( root = "cloud.vmstate", description = "Parameters controlling the lifecycle of virtual machines." )
 public class VmInstances {
-  @ConfigurableField( description = "Amount of time (in milliseconds) before a VM which is not reported by a cluster will be marked as terminated.", initial = "" + 10 * 60 * 1000 )
-  public static Long         SHUT_DOWN_TIME                = 10 * 60 * 1000l;
-  @ConfigurableField( description = "Amount of time (in milliseconds) that a terminated VM will continue to be reported.", initial = "" + 60 * 60 * 1000 )
-  public static Long         BURY_TIME                     = 60 * 60 * 1000l;
+  public static class TerminatedInstanceException extends NoSuchElementException {
+    
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 1L;
+    
+    TerminatedInstanceException( final String s ) {
+      super( s );
+    }
+    
+  }
+  
+  public enum Timeout implements Predicate<VmInstance> {
+    UNREPORTED( VmState.PENDING, VmState.RUNNING ) {
+      @Override
+      public Integer getMinutes( ) {
+        return INSTANCE_TIMEOUT;
+      }
+    },
+    SHUTTING_DOWN( VmState.SHUTTING_DOWN ) {
+      @Override
+      public Integer getMinutes( ) {
+        return SHUT_DOWN_TIME;
+      }
+    },
+    TERMINATED( VmState.TERMINATED ) {
+      @Override
+      public Integer getMinutes( ) {
+        return TERMINATED_TIME;
+      }
+    };
+    private final List<VmState> states;
+    
+    private Timeout( final VmState... states ) {
+      this.states = Arrays.asList( states );
+    }
+    
+    public abstract Integer getMinutes( );
+    
+    public Integer getSeconds( ) {
+      return this.getMinutes( ) * 60;
+    }
+    
+    public Long getMilliseconds( ) {
+      return this.getSeconds( ) * 1000l;
+    }
+    
+    @Override
+    public boolean apply( final VmInstance arg0 ) {
+      return this.inState( arg0.getState( ) ) && ( arg0.getSplitTime( ) > this.getMilliseconds( ) );
+    }
+    
+    protected boolean inState( final VmState state ) {
+      return this.states.contains( state );
+    }
+    
+  }
+  
+  @ConfigurableField( description = "Amount of time (in minutes) before a previously running instance which is not reported will be marked as terminated.", initial = "60" )
+  public static Integer INSTANCE_TIMEOUT              = 60;
+  @ConfigurableField( description = "Amount of time (in minutes) before a VM which is not reported by a cluster will be marked as terminated.", initial = "10" )
+  public static Integer SHUT_DOWN_TIME                = 10;
+  @ConfigurableField( description = "Amount of time (in minutes) that a terminated VM will continue to be reported.", initial = "60" )
+  public static Integer TERMINATED_TIME               = 60;
   @ConfigurableField( description = "Maximum amount of time (in seconds) that the network topology service takes to propagate state changes.", initial = "" + 60 * 60 * 1000 )
-  public static Long         NETWORK_METADATA_REFRESH_TIME = 15l;
+  public static Long    NETWORK_METADATA_REFRESH_TIME = 15l;
   @ConfigurableField( description = "Prefix to use for instance MAC addresses.", initial = "d0:0d" )
-  public static String       MAC_PREFIX                    = "d0:0d";
+  public static String  MAC_PREFIX                    = "d0:0d";
   @ConfigurableField( description = "Subdomain to use for instance DNS.", initial = ".eucalyptus", changeListener = SubdomainListener.class )
-  public static final String INSTANCE_SUBDOMAIN            = ".eucalyptus";
+  public static String  INSTANCE_SUBDOMAIN            = ".eucalyptus";
   
   public static class SubdomainListener implements PropertyChangeListener {
     @Override
-    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+    public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
       
       if ( !newValue.toString( ).startsWith( "." ) || newValue.toString( ).endsWith( "." ) )
         throw new ConfigurablePropertyException( "Subdomain must begin and cannot end with a '.' -- e.g., '." + newValue.toString( ).replaceAll( "\\.$", "" )
@@ -150,14 +214,8 @@ public class VmInstances {
     }
   }
   
-  private static ConcurrentMap<String, VmInstance>               terminateCache         = new MapMaker( ).softKeys( )
-                                                                                                         .softValues( )
-                                                                                                         .expireAfterWrite( BURY_TIME, TimeUnit.MILLISECONDS )
-                                                                                                         .makeMap( );
-  private static ConcurrentMap<String, RunningInstancesItemType> terminateDescribeCache = new MapMaker( ).softKeys( )
-                                                                                                         .softValues( )
-                                                                                                         .expireAfterWrite( BURY_TIME, TimeUnit.MILLISECONDS )
-                                                                                                         .makeMap( );
+  private static ConcurrentMap<String, VmInstance>               terminateCache         = new ConcurrentHashMap<String, VmInstance>( );
+  private static ConcurrentMap<String, RunningInstancesItemType> terminateDescribeCache = new ConcurrentHashMap<String, RunningInstancesItemType>( );
   
   private static Logger                                          LOG                    = Logger.getLogger( VmInstances.class );
   
@@ -201,40 +259,49 @@ public class VmInstances {
   public static Predicate<VmInstance> withPrivateAddress( final String ip ) {
     return new Predicate<VmInstance>( ) {
       @Override
-      public boolean apply( VmInstance vm ) {
+      public boolean apply( final VmInstance vm ) {
         return ip.equals( vm.getPrivateAddress( ) ) && VmStateSet.RUN.apply( vm );
       }
     };
   }
   
   public static VmInstance lookupByInstanceIp( final String ip ) throws NoSuchElementException {
-    return Iterables.find( listValues( ), vmWithPublicAddress( ip ) );
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      VmInstance vm = Iterables.find( list( ), vmWithPublicAddress( ip ) );
+      db.commit( );
+      return vm;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new NoSuchElementException( ex.getMessage( ) );
+    }
   }
   
   public static Predicate<VmInstance> vmWithPublicAddress( final String ip ) {
     return new Predicate<VmInstance>( ) {
       @Override
-      public boolean apply( VmInstance vm ) {
+      public boolean apply( final VmInstance vm ) {
         return ip.equals( vm.getPublicAddress( ) ) && VmStateSet.RUN.apply( vm );
       }
     };
   }
   
   public static VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
-    return Iterables.find( listValues( ), vmWithPublicAddress( ip ) );
+    return Iterables.find( list( ), vmWithPublicAddress( ip ) );
   }
   
   public static Predicate<VmInstance> withBundleId( final String bundleId ) {
     return new Predicate<VmInstance>( ) {
       @Override
-      public boolean apply( VmInstance vm ) {
-        return vm.getBundleTask( ) != null && bundleId.equals( vm.getBundleTask( ).getBundleId( ) );
+      public boolean apply( final VmInstance vm ) {
+        return ( vm.getRuntimeState( ).getBundleTask( ) != null ) && vm.getRuntimeState( ).getBundleTask( ).getBundleId( ).equals( bundleId );
       }
     };
   }
   
   public static VmInstance lookupByBundleId( final String bundleId ) throws NoSuchElementException {
-    return Iterables.find( listValues( ), withBundleId( bundleId ) );
+    return Iterables.find( list( ), withBundleId( bundleId ) );
   }
   
   public static UnconditionalCallback getCleanUpCallback( final Address address, final VmInstance vm, final Cluster cluster ) {
@@ -315,7 +382,7 @@ public class VmInstances {
   
   public static VmInstance restrictedLookup( final String instanceId ) throws EucalyptusCloudException {
     final VmInstance vm = VmInstances.lookup( instanceId );
-    if ( ! RestrictedTypes.filterPrivileged( ).apply( vm ) ) {
+    if ( !RestrictedTypes.filterPrivileged( ).apply( vm ) ) {
       throw new EucalyptusCloudException( "Permission denied while trying to access instance " + instanceId );
     }
     return vm;
@@ -330,17 +397,13 @@ public class VmInstances {
                           instanceId.substring( 8, 10 ) );
   }
   
-  public static VmInstance lookup( final String name ) throws NoSuchElementException {
-    if ( name != null && terminateCache.containsKey( name ) ) {
-      return terminateCache.get( name );
-    } else {
-      return VmInstance.Lookup.INSTANCE.apply( name );
-    }
+  public static VmInstance lookup( final String name ) throws NoSuchElementException, TerminatedInstanceException {
+    return CachedLookup.INSTANCE.apply( name );
   }
   
   public static VmInstance register( final VmInstance vm ) {
-    if ( !terminateCache.containsKey( vm.getInstanceId( ) ) ) {
-      return VmInstance.Transitions.REGISTER.apply( vm );
+    if ( !terminateDescribeCache.containsKey( vm.getInstanceId( ) ) ) {
+      return Transitions.REGISTER.apply( vm );
     } else {
       throw new IllegalArgumentException( "Attempt to register instance which is already terminated." );
     }
@@ -349,38 +412,121 @@ public class VmInstances {
   public static VmInstance delete( final VmInstance vm ) throws TransactionException {
     try {
       if ( VmStateSet.DONE.apply( vm ) ) {
-        RunningInstancesItemType ret = VmInstances.transform( vm );
-        terminateCache.put( vm.getDisplayName( ), vm );
-        terminateDescribeCache.put( vm.getDisplayName( ), ret );
+        delete( vm.getInstanceId( ) );
       }
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       LOG.error( ex, ex );
     }
-    return VmInstance.Transitions.DELETE.apply( vm );
+    return vm;
   }
   
-  public static VmInstance terminate( final VmInstance vm ) throws TransactionException {
-    return VmInstance.Transitions.TERMINATE.apply( vm );
+  public static void delete( final String instanceId ) {
+    terminateDescribeCache.remove( instanceId );
+    terminateCache.remove( instanceId );
   }
   
-  public static VmInstance terminate( final String key ) throws NoSuchElementException {
-    return Functions.compose( VmInstance.Transitions.TERMINATE, VmInstance.Lookup.INSTANCE ).apply( key );
+  static void cache( final VmInstance vm ) {
+    if ( !terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
+      vm.setState( VmState.TERMINATED );
+      final RunningInstancesItemType ret = VmInstances.transform( vm );
+      terminateDescribeCache.put( vm.getDisplayName( ), ret );
+      terminateCache.put( vm.getDisplayName( ), vm );
+      Transitions.DELETE.apply( vm );
+    }
   }
   
-  @Deprecated
-  public static List<VmInstance> listValues( ) {
+  public static void terminated( final VmInstance vm ) throws TransactionException {
+    VmInstances.cache( Transitions.TERMINATED.apply( vm ) );
+  }
+  
+  public static void terminated( final String key ) throws NoSuchElementException, TransactionException {
+    terminated( VmInstance.Lookup.INSTANCE.apply( key ) );
+  }
+  
+  public static void stopped( final VmInstance vm ) throws TransactionException {
+    Transitions.STOPPED.apply( vm );
+  }
+  
+  public static void stopped( final String key ) throws NoSuchElementException, TransactionException {
+    VmInstances.stopped( VmInstance.Lookup.INSTANCE.apply( key ) );
+  }
+  
+  public static void start( final VmInstance vm ) throws Exception {
+    RunInstancesType runRequest = new RunInstancesType( ) {
+      {
+        this.setMinCount( 1 );
+        this.setMaxCount( 1 );
+        this.setImageId( vm.getImageId( ) );
+        this.setAvailabilityZone( vm.getPartition( ) );
+        this.getGroupSet( ).addAll( vm.getNetworkNames( ) );
+        this.setInstanceType( vm.getVmType( ).getName( ) );
+      }
+    };
+    Allocation allocInfo = VerifyMetadata.handle( runRequest );
+    allocInfo = AdmissionControl.handle( allocInfo );
+    ClusterAllocator.create( allocInfo );
+  }
+  
+  public static void shutDown( final VmInstance vm ) throws TransactionException {
+    if ( VmStateSet.DONE.apply( vm ) ) {
+      if ( terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
+        VmInstances.delete( vm );
+      } else {
+        VmInstances.terminated( vm );
+      }
+    } else {
+      Transitions.SHUTDOWN.apply( vm );
+    }
+  }
+  
+  public static List<VmInstance> list( ) {
+    return list( null );
+  }
+  
+  public static List<VmInstance> list( Predicate<VmInstance> predicate ) {
+    return list( null, null, predicate );
+  }
+  
+  public static List<VmInstance> list( OwnerFullName ownerFullName, Predicate<VmInstance> predicate ) {
+    return list( ownerFullName, null, predicate );
+  }
+  
+  public static List<VmInstance> list( String instanceId, Predicate<VmInstance> predicate ) {
+    return list( null, instanceId, predicate );
+  }
+  
+  public static List<VmInstance> list( OwnerFullName ownerFullName, String instanceId, Predicate<VmInstance> predicate ) {
+    predicate = checkPredicate( predicate );
+    List<VmInstance> ret = listPersistent( ownerFullName, instanceId, predicate );
+    ret.addAll( Collections2.filter( terminateCache.values( ), predicate ) );
+    return ret;
+  }
+  
+  public static List<VmInstance> listPersistent( OwnerFullName ownerFullName, String instanceId, Predicate<VmInstance> predicate ) {
+    predicate = checkPredicate( predicate );
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      final List<VmInstance> vms = Entities.query( VmInstance.named( null, null ) );
+      final Iterable<VmInstance> vms = Iterables.filter( Entities.query( VmInstance.named( ownerFullName, instanceId ) ), predicate );
       db.commit( );
-      List<VmInstance> ret = Lists.newArrayList( vms );
-      ret.addAll( terminateCache.values( ) );
-      return ret;
+      return Lists.newArrayList( vms );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
       db.rollback( );
       return Lists.newArrayList( );
     }
+  }
+  
+  private static Predicate<VmInstance> checkPredicate( Predicate<VmInstance> predicate ) {
+    if ( predicate == null ) {
+      predicate = new Predicate<VmInstance>( ) {
+        
+        @Override
+        public boolean apply( VmInstance input ) {
+          return true;
+        }
+      };
+    }
+    return predicate;
   }
   
   public static boolean contains( final String name ) {
@@ -389,10 +535,10 @@ public class VmInstances {
       final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, name ) );
       db.commit( );
       return true;
-    } catch ( RuntimeException ex ) {
+    } catch ( final RuntimeException ex ) {
       db.rollback( );
       return false;
-    } catch ( TransactionException ex ) {
+    } catch ( final TransactionException ex ) {
       db.rollback( );
       return false;
     }
@@ -402,7 +548,7 @@ public class VmInstances {
    * @param vm
    * @return
    */
-  public static RunningInstancesItemType transform( VmInstance vm ) {
+  public static RunningInstancesItemType transform( final VmInstance vm ) {
     if ( terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
       return terminateDescribeCache.get( vm.getDisplayName( ) );
     } else {
@@ -410,4 +556,40 @@ public class VmInstances {
     }
   }
   
+  /**
+   * @return
+   */
+  public static Function<String, VmInstance> lookupFunction( ) {
+    return CachedLookup.INSTANCE;
+  }
+  
+  @Resolver( VmInstanceMetadata.class )
+  public enum CachedLookup implements Function<String, VmInstance> {
+    INSTANCE;
+    
+    /**
+     * @see com.google.common.base.Function#apply(java.lang.Object)
+     */
+    @Override
+    public VmInstance apply( final String name ) {
+      if ( ( name != null ) && VmInstances.terminateDescribeCache.containsKey( name ) ) {
+        throw new TerminatedInstanceException( name );
+      } else {
+        return Lookup.INSTANCE.apply( name );
+      }
+    }
+    
+  }
+  
+  /**
+   * @param vm
+   * @return
+   */
+  public static RunningInstancesItemType transform( final String name ) {
+    if ( terminateDescribeCache.containsKey( name ) ) {
+      return terminateDescribeCache.get( name );
+    } else {
+      return VmInstance.Transform.INSTANCE.apply( lookup( name ) );
+    }
+  }
 }

@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,63 +61,110 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.cluster;
+package com.eucalyptus.vm;
 
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import org.hibernate.annotations.Parent;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
 
 @Embeddable
-public class VmUsageStats {
+public class VmPlacement {
   @Parent
   private VmInstance vmInstance;
-  @Column( name = "metadata_vm_block_bytes" )
-  private Long       blockBytes;
-  @Column( name = "metadata_vm_network_bytes" )
-  private Long       networkBytes;
+  @Column( name = "metadata_vm_placement" )
+  private String     placement;
+  @Column( name = "metadata_vm_cluster_name" )
+  private String     clusterName;
+  @Column( name = "metadata_vm_partition_name" )
+  private String     partitionName;
   
-  VmUsageStats( VmInstance vmInstance ) {
+  VmPlacement( String clusterName, String partitionName ) {
     super( );
-    this.vmInstance = vmInstance;
-    this.blockBytes = 0l;
-    this.networkBytes = 0l;
+    this.clusterName = clusterName;
+    this.partitionName = partitionName;
   }
   
-  VmUsageStats( ) {
+  VmPlacement( ) {
     super( );
   }
-  
-  Long getBlockBytes( ) {
-    return this.blockBytes;
-  }
-  
-  void setBlockBytes( Long blockBytes ) {
-    this.blockBytes = blockBytes;
-  }
-  
-  Long getNetworkBytes( ) {
-    return this.networkBytes;
-  }
-  
-  void setNetworkBytes( Long networkBytes ) {
-    this.networkBytes = networkBytes;
-  }
-  
+
   VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
   
+  String getClusterName( ) {
+    return this.clusterName;
+  }
+  
+  String getPartitionName( ) {
+    return this.partitionName;
+  }
+  
+  public Partition lookupPartition( ) {
+    return Partitions.lookupByName( this.partitionName );
+  }
+
   private void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
+  }
+
+  private void setClusterName( String clusterName ) {
+    this.clusterName = clusterName;
+  }
+
+  private void setPartitionName( String partitionName ) {
+    this.partitionName = partitionName;
+  }
+
+  private String getPlacement( ) {
+    return this.placement;
+  }
+
+  private void setPlacement( String placement ) {
+    this.placement = placement;
   }
 
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
-    builder.append( "VmUsageStats:" );
-    if ( this.blockBytes != null ) builder.append( "blockBytes=" ).append( this.blockBytes ).append( ":" );
-    if ( this.networkBytes != null ) builder.append( "networkBytes=" ).append( this.networkBytes );
+    builder.append( "VmPlacement:" );
+    if ( this.clusterName != null ) builder.append( "clusterName=" ).append( this.clusterName ).append( ":" );
+    if ( this.partitionName != null ) builder.append( "partitionName=" ).append( this.partitionName );
     return builder.toString( );
+  }
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.vmInstance == null )
+      ? 0
+      : this.vmInstance.hashCode( ) );
+    return result;
+  }
+
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( obj == null ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    VmPlacement other = ( VmPlacement ) obj;
+    if ( this.vmInstance == null ) {
+      if ( other.vmInstance != null ) {
+        return false;
+      }
+    } else if ( !this.vmInstance.equals( other.vmInstance ) ) {
+      return false;
+    }
+    return true;
   }
   
 }

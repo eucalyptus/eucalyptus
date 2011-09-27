@@ -345,6 +345,7 @@ int instIpSync(ccInstance *inst, void *in) {
 
 int instNetParamsSet(ccInstance *inst, void *in) {
   int rc, ret=0, i;
+  char userToken[64], *cleanGroupName=NULL;
 
   if (!inst) {
     return(1);
@@ -360,12 +361,23 @@ int instNetParamsSet(ccInstance *inst, void *in) {
     
     // set up groupName and userName
     if (inst->groupNames[0][0] != '\0' && inst->accountId[0] != '\0') {
-      if ( (vnetconfig->users[inst->ccnet.vlan].netName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].netName, inst->groupNames[0])) || (vnetconfig->users[inst->ccnet.vlan].userName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].userName, inst->accountId)) ) {
+      // logic to strip the username from the supplied network name
+      snprintf(userToken, 63, "%s-", inst->accountId);
+      cleanGroupName = strstr(inst->groupNames[0], userToken);
+      if (cleanGroupName) {
+	cleanGroupName = cleanGroupName + strlen(userToken);
+      } else {
+	cleanGroupName = inst->groupNames[0];
+      }
+
+      //      if ( (vnetconfig->users[inst->ccnet.vlan].netName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].netName, inst->groupNames[0])) || (vnetconfig->users[inst->ccnet.vlan].userName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].userName, inst->accountId)) ) {
+      if ( (vnetconfig->users[inst->ccnet.vlan].netName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].netName, cleanGroupName)) || (vnetconfig->users[inst->ccnet.vlan].userName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].userName, inst->accountId)) ) {
 	// this means that there is a pre-existing network with the passed in vlan tag, but with a different netName or userName
-	logprintfl(EUCAERROR, "instNetParamsSet(): input instance vlan<->user<->netname mapping is incompatible with internal state. Internal - userName=%s netName=%s vlan=%d.  Instance - userName=%s netName=%s vlan=%d\n", vnetconfig->users[inst->ccnet.vlan].userName, vnetconfig->users[inst->ccnet.vlan].netName, inst->ccnet.vlan, inst->accountId, inst->groupNames[0], inst->ccnet.vlan);
+	logprintfl(EUCAERROR, "instNetParamsSet(): input instance vlan<->user<->netname mapping is incompatible with internal state. Internal - userName=%s netName=%s vlan=%d.  Instance - userName=%s netName=%s vlan=%d\n", vnetconfig->users[inst->ccnet.vlan].userName, vnetconfig->users[inst->ccnet.vlan].netName, inst->ccnet.vlan, inst->accountId, cleanGroupName, inst->ccnet.vlan);
 	ret = 1;
       } else {
-	snprintf(vnetconfig->users[inst->ccnet.vlan].netName, 32, "%s", inst->groupNames[0]);
+	//	snprintf(vnetconfig->users[inst->ccnet.vlan].netName, 32, "%s", inst->groupNames[0]);
+	snprintf(vnetconfig->users[inst->ccnet.vlan].netName, 64, "%s", cleanGroupName);
 	snprintf(vnetconfig->users[inst->ccnet.vlan].userName, 48, "%s", inst->accountId);
       }
     }
