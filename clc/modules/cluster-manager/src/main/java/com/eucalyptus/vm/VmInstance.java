@@ -1561,4 +1561,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public static VmInstance create( ) {
     return new VmInstance( );
   }
+
+  /**
+   * @param exampleWithPrivateIp
+   */
+  void setNetworkConfig( VmNetworkConfig networkConfig ) {
+    this.networkConfig = networkConfig;
+  }
 }

@@ -111,7 +111,7 @@ public class VmNetworkConfig {
   /**
    * @param vmInstance
    */
-  public VmNetworkConfig( VmInstance vmInstance ) {
+  VmNetworkConfig( VmInstance vmInstance ) {
     this( vmInstance, DEFAULT_IP, DEFAULT_IP );
   }
   

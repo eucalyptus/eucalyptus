@@ -258,9 +258,10 @@ public class VmInstances {
   public static VmInstance lookupByInstanceIp( final String ip ) throws NoSuchElementException {
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
+      VmInstance vmExample = VmInstance.create( );
+      vmExample.setNetworkConfig( VmNetworkConfig.exampleWithPrivateIp( ip ) );
       VmInstance vm = ( VmInstance ) Entities.createCriteria( VmInstance.class )
-                                             .add( Example.create( VmInstance.create( ) ).enableLike( MatchMode.EXACT ) )
-                                             .createCriteria( "networkConfig" ).add( Example.create( VmNetworkConfig.exampleWithPrivateIp( ip ) ).enableLike( MatchMode.EXACT ) )
+                                             .add( Example.create( vmExample ).enableLike( MatchMode.EXACT ) )
                                              .setCacheable( true )
                                              .setMaxResults( 1 )
                                              .setFetchSize( 1 )
@@ -278,9 +279,10 @@ public class VmInstances {
   public static VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
+      VmInstance vmExample = VmInstance.create( );
+      vmExample.setNetworkConfig( VmNetworkConfig.exampleWithPublicIp( ip ) );
       VmInstance vm = ( VmInstance ) Entities.createCriteria( VmInstance.class )
-                                             .add( Example.create( VmInstance.create( ) ).enableLike( MatchMode.EXACT ) )
-                                             .createCriteria( "networkConfig" ).add( Example.create( VmNetworkConfig.exampleWithPublicIp( ip ) ).enableLike( MatchMode.EXACT ) )
+                                             .add( Example.create( vmExample ).enableLike( MatchMode.EXACT ) )
                                              .setCacheable( true )
                                              .setMaxResults( 1 )
                                              .setFetchSize( 1 )
