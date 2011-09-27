@@ -63,8 +63,8 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
                * TODO:GRZE: based on current local instance state we need to handle reported
                * SHUTTING_DOWN state differently
                **/
-              if ( vm.getRuntimeState( ).isBundling( ) ) {
-                vm.getRuntimeState( ).updateBundleTaskState( runVm.getBundleTaskStateName( ) );
+              if ( !BundleState.none.equals( bundleState ) ) {
+                vm.getRuntimeState( ).updateBundleTaskState( bundleState );
                 VmInstances.terminated( vm );
               } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
                 VmInstances.terminated( vm );

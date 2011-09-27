@@ -268,7 +268,7 @@ public class VmInstances {
   public static VmInstance lookupByInstanceIp( final String ip ) throws NoSuchElementException {
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      VmInstance vm = Iterables.find( list( ), vmWithPublicAddress( ip ) );
+      VmInstance vm = Iterables.find( list( ), withPrivateAddress( ip ) );
       db.commit( );
       return vm;
     } catch ( Exception ex ) {
@@ -278,7 +278,7 @@ public class VmInstances {
     }
   }
   
-  public static Predicate<VmInstance> vmWithPublicAddress( final String ip ) {
+  public static Predicate<VmInstance> withPublicAddress( final String ip ) {
     return new Predicate<VmInstance>( ) {
       @Override
       public boolean apply( final VmInstance vm ) {
@@ -288,7 +288,7 @@ public class VmInstances {
   }
   
   public static VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
-    return Iterables.find( list( ), vmWithPublicAddress( ip ) );
+    return Iterables.find( list( ), withPublicAddress( ip ) );
   }
   
   public static Predicate<VmInstance> withBundleId( final String bundleId ) {
