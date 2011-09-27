@@ -64,6 +64,7 @@
 package com.eucalyptus.configurable;
 
 import javax.persistence.Column;
+import javax.persistence.EntityTransaction;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -71,6 +72,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.Logs;
 
@@ -122,22 +124,21 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
   }
   
   static StaticDatabasePropertyEntry lookup( String fieldName, String propName, String defaultFieldValue ) throws Exception {
-    EntityWrapper<StaticDatabasePropertyEntry> db = EntityWrapper.get( StaticDatabasePropertyEntry.class );
+    
+    EntityTransaction db = Entities.get( StaticDatabasePropertyEntry.class );
     try {
-      StaticDatabasePropertyEntry dbEntry = db.getUnique( new StaticDatabasePropertyEntry( fieldName, propName, null ) );
+      StaticDatabasePropertyEntry entity = Entities.uniqueResult( new StaticDatabasePropertyEntry( fieldName, propName, null ) );
       db.commit( );
-      return dbEntry;
+      return entity;
     } catch ( Exception ex ) {
-      StaticDatabasePropertyEntry dbEntry;
       try {
-        dbEntry = new StaticDatabasePropertyEntry( fieldName, propName, defaultFieldValue );
-        db.persist( dbEntry );
+        StaticDatabasePropertyEntry entity = Entities.persist( new StaticDatabasePropertyEntry( fieldName, propName, defaultFieldValue ) );
         db.commit( );
-        return dbEntry;
+        return entity;
       } catch ( Exception ex1 ) {
         Logs.extreme( ).error( "Failed to lookup static configuration property for: " + fieldName + " with property name: " + propName ); 
         db.rollback( );
-        throw ex1;
+        throw ex;
       }
     }
   }
