@@ -64,7 +64,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     
     VmStateCallback.handleUnreported( unreportedVms );
   }
-
+  
   public static List<String> findUnreported( VmDescribeResponseType reply ) {
     final List<String> unreportedVms = Lists.transform( VmInstances.list( ), new Function<VmInstance, String>( ) {
       
@@ -84,7 +84,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     } );
     return unreportedVms;
   }
-
+  
   public static void handleUnreported( final List<String> unreportedVms ) {
     for ( final String vmId : unreportedVms ) {
       EntityTransaction db1 = Entities.get( VmInstance.class );
@@ -96,10 +96,6 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           VmInstances.terminated( vm );
         } else if ( VmInstances.Timeout.TERMINATED.apply( vm ) ) {
           VmInstances.delete( vm );
-        } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
-          VmInstances.terminated( vm );
-        } else if ( VmState.STOPPED.apply( vm ) ) {
-          VmInstances.stopped( vm );
         }
         db1.commit( );
       } catch ( final Exception ex ) {
@@ -128,7 +124,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
             VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
           }
         } catch ( Exception ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         }
       } catch ( Exception ex1 ) {
         LOG.error( ex1, ex1 );
@@ -199,7 +195,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           try {
             for ( VmInstance vm : Iterables.filter( VmInstances.list( ), VmPendingCallback.this.filter ) ) {
               this.getInstancesSet( ).add( vm.getInstanceId( ) );
-            }          
+            }
             db.commit( );
           } catch ( Exception ex ) {
             Logs.exhaust( ).error( ex, ex );
