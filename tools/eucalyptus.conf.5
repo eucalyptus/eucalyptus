@@ -151,11 +151,6 @@ VNET_PUBLICIPS should be set to any public IPs, that are currently unused, that 
 If you are running in multi-cluster mode (more than one CC), you should uncomment VNET_LOCALIP and set it to the local IP of the CC that is accessible by all other CCs in the system.  If VNET_LOCALIP is unset, the CC will try to determine the list of all IPs currently assigned to the machine at CC run time.
 .RE
 
-.BI VNET_CLOUDIP="your-cloud-controller's-ip"
-.RS
-If your CC and CLC are on different machines, uncomment VNET_CLOUDIP and set it to your cloud-contoller's IP address (must be an address that can be reached by the CC).
-.RE
-
 Options affecting the NC only:
 
 .BI NC_PORT="8775"
