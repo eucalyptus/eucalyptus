@@ -17,9 +17,6 @@ import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.reporting.instance.InstanceReportLineGenerator;
-import com.eucalyptus.reporting.s3.S3ReportLineGenerator;
-import com.eucalyptus.reporting.storage.StorageReportLineGenerator;
 import com.eucalyptus.reporting.units.Units;
 import com.eucalyptus.system.SubDirectory;
 
@@ -38,12 +35,14 @@ public class ReportGenerator
 
 	private static final int DEFAULT_CACHE_SIZE = 5;
 	private final Map<ReportKey, List<ReportLine>> lineListMap;
+	private final Map<String, ReportingModule> modules;
 	
 	private static ReportGenerator instance;
 
 	private ReportGenerator()
 	{
 		this.lineListMap = new HashMap<ReportKey, List<ReportLine>>();
+		this.modules = new HashMap<String, ReportingModule>();
 	}
 	
 	public static ReportGenerator getInstance()
@@ -57,12 +56,18 @@ public class ReportGenerator
 	/**
 	 * <p>Generates a report and sends it to an OutputStream.
 	 * 
+	 * @param reportType The type of report. Can be "Instance" or "S3" or
+	 *    any other valid module in the modules sub-package.
+	 *    
 	 * @param groupByCriterion Can be null if none selected
+	 * 
+	 * @throws IllegalArgumentException If reportType does not refer to a
+	 *    valid reporting module.
 	 */
-	public void generateReport(ReportType reportType, ReportFormat format,
+	public void generateReport(String reportType, ReportFormat format,
 			Period period, ReportingCriterion criterion,
 			ReportingCriterion groupByCriterion, Units displayUnits,
-			OutputStream out)
+			OutputStream out, String accountId)
 	{
 		if (reportType == null)
 			throw new IllegalArgumentException("ReportType can't be null");
@@ -70,8 +75,36 @@ public class ReportGenerator
 			throw new IllegalArgumentException("Criterion can't be null");
 		if (displayUnits == null)
 			displayUnits = Units.DEFAULT_DISPLAY_UNITS;
+
+		if (! modules.containsKey(reportType)) {
+			try {
+				/* Dynamically load the ReportingModule class corresponding to
+				 * this reportType.
+				 */
+				final String moduleClassName = 
+					String.format("com.eucalyptus.reporting.modules.%s.%sReportingModule",
+							reportType.toLowerCase(),
+							reportType);
+				ReportingModule mod =
+					(ReportingModule) Class.forName(moduleClassName).getConstructors()[0].newInstance();
+				modules.put(reportType, mod);
+				log.info("Loaded reporting module:" + reportType);
+			} catch (Exception ex) {
+				throw new IllegalArgumentException("No such reporting module:" + reportType, ex);
+			}
+		}
 		
+
 		
+		final ReportingModule module = modules.get(reportType);
+
+		final String jrxmlFilename = (groupByCriterion==null)
+			? module.getJrxmlFilename()
+			: module.getNestedJrxmlFilename();
+		final File jrxmlFile = 	new File(SubDirectory.REPORTS.toString()
+					+ File.separator + jrxmlFilename);
+
+
 		final Map<String, String> params = new HashMap<String, String>();
 		params.put("criterion", criterion.toString());
 		params.put("timeUnit", displayUnits.getTimeUnit().toString());
@@ -85,28 +118,6 @@ public class ReportGenerator
 		}
 
 
-		final String jrxmlFilename = (groupByCriterion==null)
-								? reportType.getJrxmlFilename()
-								: reportType.getNestedJrxmlFilename();
-		final File jrxmlFile = 	new File(SubDirectory.REPORTS.toString()
-				+ File.separator + jrxmlFilename);
-
-			
-		@SuppressWarnings("rawtypes")
-		ReportLineGenerator generator = null;
-		switch (reportType) {
-			case INSTANCE:
-				generator =	InstanceReportLineGenerator.getInstance();
-				break;
-			case STORAGE:
-				generator =	StorageReportLineGenerator.getInstance();
-				break;
-			case S3:
-				generator =	S3ReportLineGenerator.getInstance();
-				break;
-		}
-
-		
 		/* We maintain a small cache here of very recently-viewed reports. If
 		 * not found in cache then get report lines from {s3,storage,instance}
 		 * API
@@ -130,8 +141,8 @@ public class ReportGenerator
 					log.info("Removed report data from cache:" + oldestKey);
 				}
 			}
-			reportLines = generator.getReportLines(period, groupByCriterion,
-					criterion, displayUnits);
+			reportLines = module.getReportLines(period, groupByCriterion,
+					criterion, displayUnits, accountId);
 			log.info("Generated report data from db:" + key);
 			lineListMap.put(key, reportLines);
 			
@@ -156,14 +167,14 @@ public class ReportGenerator
 	
 	private class ReportKey
 	{
-		private final ReportType type;
+		private final String type;
 		private final Period period;
 		private final ReportingCriterion groupByCriterion;
 		private final ReportingCriterion criterion;
 		private final Units units;
 		private final long timestampMs;
 
-		public ReportKey(ReportType type, Period period,
+		public ReportKey(String type, Period period,
 				ReportingCriterion criterion,
 				ReportingCriterion groupByCriterion, Units units,
 				long timestampMs)

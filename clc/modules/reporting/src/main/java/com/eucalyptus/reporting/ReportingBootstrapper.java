@@ -10,12 +10,12 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.*;
 import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.reporting.event.StorageEvent;
-import com.eucalyptus.reporting.instance.InstanceEventListener;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 import com.eucalyptus.reporting.queue.mq.QueueBroker;
-import com.eucalyptus.reporting.s3.S3EventListener;
-import com.eucalyptus.reporting.storage.StorageEventListener;
+import com.eucalyptus.reporting.modules.instance.InstanceEventListener;
+import com.eucalyptus.reporting.modules.s3.S3EventListener;
+import com.eucalyptus.reporting.modules.storage.StorageEventListener;
 
 @Provides(Empyrean.class)//NOTE:GRZE: have the bootstrapper run earlier in bootstrap
 @RunDuring(Bootstrap.Stage.RemoteServicesInit)

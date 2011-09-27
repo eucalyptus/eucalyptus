@@ -690,12 +690,12 @@ public class OverlayManager implements LogicalStorageManager {
 				}
 				volumeManager.remove(foundLVMVolumeInfo);
 				volumeManager.finish();
-	                        File volFile = new File (DirectStorageInfo.getStorageInfo().getVolumesDir() + File.separator + volumeId);
-         	                if (volFile.exists()) {
-                	                if(!volFile.delete()) {
-                                        	LOG.error("Unable to delete: " + volFile.getAbsolutePath());
-                                	}
-                        	}
+				File volFile = new File (DirectStorageInfo.getStorageInfo().getVolumesDir() + File.separator + volumeId);
+				if (volFile.exists()) {
+					if(!volFile.delete()) {
+						LOG.error("Unable to delete: " + volFile.getAbsolutePath());
+					}
+				}
 
 			} catch(EucalyptusCloudException ex) {
 				volumeManager.abort();
@@ -815,8 +815,9 @@ public class OverlayManager implements LogicalStorageManager {
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(snapshotId);
 
 		if(foundLVMVolumeInfo != null) {
-			volumeManager.remove(foundLVMVolumeInfo);			
+			volumeManager.remove(foundLVMVolumeInfo);
 			File snapFile = new File (DirectStorageInfo.getStorageInfo().getVolumesDir() + File.separator + foundLVMVolumeInfo.getVolumeId());
+			volumeManager.finish();
 			if (snapFile.exists()) {
 				if(!snapFile.delete()) {
 					throw new EucalyptusCloudException("Unable to delete: " + snapFile.getAbsolutePath());
@@ -826,7 +827,6 @@ public class OverlayManager implements LogicalStorageManager {
 			volumeManager.abort();
 			throw new EucalyptusCloudException("Unable to find snapshot: " + snapshotId);
 		}
-		volumeManager.finish();
 	}
 
 	public String getVolumeProperty(String volumeId) throws EucalyptusCloudException {
@@ -1109,7 +1109,11 @@ public class OverlayManager implements LogicalStorageManager {
 		}
 
 		private void finish() {
-			entityWrapper.commit();
+			try {
+				entityWrapper.commit();
+			} catch (Exception ex) {
+				LOG.error(ex, ex);
+			}
 		}
 
 		private void abort() {

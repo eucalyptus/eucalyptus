@@ -535,12 +535,12 @@ class EucaConf(object):
 
     def do_enable(self):
         if self.options.enable_whats:
-            # This is now a no-op.  Just return success.
+            print 'This command is deprecated and no longer has any effect.'
             sys.exit(0)
 
     def do_disable(self):
         if self.options.disable_whats:
-            # This is now a no-op.  Just return success.
+            print 'This command is deprecated and no longer has any effect.'
             sys.exit(0)
 
     def do_heartbeat(self):
