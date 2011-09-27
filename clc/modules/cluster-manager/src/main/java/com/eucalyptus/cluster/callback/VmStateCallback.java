@@ -195,9 +195,16 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       super.setRequest( new VmDescribeType( ) {
         {
           regarding( );
-          for ( VmInstance vm : Iterables.filter( VmInstances.list( ), VmPendingCallback.this.filter ) ) {
-            this.getInstancesSet( ).add( vm.getInstanceId( ) );
-          }          
+          EntityTransaction db = Entities.get( VmInstance.class );
+          try {
+            for ( VmInstance vm : Iterables.filter( VmInstances.list( ), VmPendingCallback.this.filter ) ) {
+              this.getInstancesSet( ).add( vm.getInstanceId( ) );
+            }          
+            db.commit( );
+          } catch ( Exception ex ) {
+            Logs.exhaust( ).error( ex, ex );
+            db.rollback( );
+          }
         }
       } );
       if ( this.getRequest( ).getInstancesSet( ).isEmpty( ) ) {

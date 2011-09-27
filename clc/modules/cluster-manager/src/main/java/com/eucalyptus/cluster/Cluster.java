@@ -431,12 +431,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
             }
             break;
           case ENABLED:
-            if ( initialized && tick.isAsserted( VmInstances.VOLATILE_STATE_INTERVAL_SEC ) && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
-              Refresh.VOLATILE_INSTANCES.apply( this );
-            }
             if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_ENABLED ) && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
               transition = Automata.sequenceTransitions( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
                                                          State.ENABLED_NET, State.ENABLED_VMS, State.ENABLED );
+            } else if ( initialized && tick.isAsserted( VmInstances.VOLATILE_STATE_INTERVAL_SEC ) && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
+                Refresh.VOLATILE_INSTANCES.apply( this );
             } else if ( initialized && Component.State.DISABLED.equals( this.configuration.lookupState( ) )
                         || Component.State.NOTREADY.equals( this.configuration.lookupState( ) ) ) {
               transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
