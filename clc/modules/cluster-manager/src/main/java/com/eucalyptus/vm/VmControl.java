@@ -104,6 +104,7 @@ import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
+import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
@@ -251,10 +252,11 @@ public class VmControl {
                   oldState = newState = VmState.TERMINATED.getName( );
                   VmInstances.delete( vm );
                 }
-              } catch ( final NoSuchElementException e ) {
+              } catch ( final TerminatedInstanceException e ) {
                 oldCode = newCode = VmState.TERMINATED.getCode( );
                 oldState = newState = VmState.TERMINATED.getName( );
                 VmInstances.delete( instanceId );
+              } catch ( final NoSuchElementException e ) {
               }
               results.add( new TerminateInstancesItemType( instanceId, oldCode, oldState, newCode, newState ) );
               db.commit( );
