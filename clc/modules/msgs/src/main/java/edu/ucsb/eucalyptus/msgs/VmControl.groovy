@@ -119,7 +119,6 @@ public class TerminateInstancesType extends VmControlMessage {
   ArrayList<String> instancesSet = new ArrayList<String>();
   
   def TerminateInstancesType() {
-    
   }
   
   def TerminateInstancesType(String instanceId) {
@@ -147,7 +146,6 @@ public class RebootInstancesType extends VmControlMessage {
   ArrayList<String> instancesSet = new ArrayList<String>();
   
   def RebootInstancesType() {
-    
   }
   def RebootInstancesType(String instanceId) {
     this.instancesSet.add(instanceId);
@@ -256,7 +254,7 @@ public class ReservationInfoType extends EucalyptusData {
   def ReservationInfoType() {
   }
 }
-public class RunningInstancesItemType extends EucalyptusData {
+public class RunningInstancesItemType extends EucalyptusData implements Comparable<RunningInstancesItemType> {
   String instanceId;
   String imageId;
   String stateCode;
@@ -281,6 +279,41 @@ public class RunningInstancesItemType extends EucalyptusData {
   String rootDeviceType = "instance-store";
   String rootDeviceName = "/dev/sda1";
   ArrayList<InstanceBlockDeviceMapping> blockDevices = new ArrayList<InstanceBlockDeviceMapping>();
+  @Override
+  public int compareTo( RunningInstancesItemType that ) {
+    return this.instanceId.compareTo( that.instanceId );
+  }
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ( ( this.instanceId == null )
+        ? 0
+        : this.instanceId.hashCode( ) );
+    return result;
+  }
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this.is( obj ) ) {
+      return true;
+    }
+    if ( obj == null ) {
+      return false;
+    }
+    if ( !getClass( ).equals( obj.getClass( ) ) ) {
+      return false;
+    }
+    RunningInstancesItemType other = ( RunningInstancesItemType ) obj;
+    if ( this.instanceId == null ) {
+      if ( other.instanceId != null ) {
+        return false;
+      }
+    } else if ( !this.instanceId.equals( other.instanceId ) ) {
+      return false;
+    }
+    return true;
+  }
+  
 }
 
 public class InstanceBlockDeviceMapping extends EucalyptusData {

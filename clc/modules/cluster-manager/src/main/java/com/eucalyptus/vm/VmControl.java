@@ -65,8 +65,8 @@ package com.eucalyptus.vm;
 
 import java.security.AccessControlException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -76,6 +76,7 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.mule.RequestContext;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.MetadataException;
@@ -106,6 +107,10 @@ import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.TreeMultimap;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
@@ -158,14 +163,16 @@ public class VmControl {
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
     final DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
     final ArrayList<String> instancesSet = msg.getInstancesSet( );
-    final Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
-    Predicate<VmInstance> privileged = RestrictedTypes.filterPrivileged( );
+    
+    final Multimap<String, RunningInstancesItemType> instanceMap = TreeMultimap.create( );
+    final Map<String,ReservationInfoType> reservations = Maps.newHashMap( );
+    Predicate<VmInstance> filter = CloudMetadatas.filterPrivilegesById( msg.getInstancesSet( ) );
     Context ctx = Contexts.lookup( );
     OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( )
       ? null
       : ctx.getUserFullName( ).asAccountFullName( );
     try {
-      for ( final VmInstance vm : VmInstances.list( ownerFullName, privileged ) ) {
+      for ( final VmInstance vm :  VmInstances.list( ownerFullName, filter ) ) {
         if ( !instancesSet.isEmpty( ) && !instancesSet.contains( vm.getInstanceId( ) ) ) {
           continue;
         }
@@ -175,11 +182,9 @@ public class VmControl {
           if ( VmInstances.Timeout.TERMINATED.apply( v ) ) {
             VmInstances.delete( v );
           }
-          if ( !rsvMap.containsKey( v.getReservationId( ) ) ) {
-            final ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getNamespace( ), v.getNetworkNames( ) );
-            rsvMap.put( reservation.getReservationId( ), reservation );
+          if ( instanceMap.put( v.getReservationId( ), VmInstances.transform( v ) ) && !reservations.containsKey( v.getReservationId( ) ) ) {
+            reservations.put( v.getReservationId( ), new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getAccountNumber( ), v.getNetworkNames( ) ) );
           }
-          rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstances.transform( v ) );
           db.commit( );
         } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex, ex );
@@ -189,14 +194,12 @@ public class VmControl {
               try {
                 RunningInstancesItemType ret = VmInstances.transform( vm );
                 if ( ret != null && vm.getReservationId( ) != null ) {
-                  if ( !rsvMap.containsKey( vm.getReservationId( ) ) ) {
-                    final ReservationInfoType reservation = new ReservationInfoType( vm.getReservationId( ), vm.getOwner( ).getNamespace( ), vm.getNetworkNames( ) );
-                    rsvMap.put( reservation.getReservationId( ), reservation );
+                  if ( instanceMap.put( vm.getReservationId( ), VmInstances.transform( vm ) ) && !reservations.containsKey( vm.getReservationId( ) ) ) {
+                    reservations.put( vm.getReservationId( ), new ReservationInfoType( vm.getReservationId( ), vm.getOwner( ).getAccountNumber( ), vm.getNetworkNames( ) ) );
                   }
-                  rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( ret );
                 }
               } catch ( Exception ex1 ) {
-                LOG.error( ex1 , ex1 );
+                LOG.error( ex1, ex1 );
               }
             }
           } catch ( Exception ex1 ) {
@@ -204,8 +207,14 @@ public class VmControl {
           }
         }
       }
-      ArrayList<ReservationInfoType> vms = new ArrayList<ReservationInfoType>( rsvMap.values( ) );
-      reply.setReservationSet( vms );
+      List<ReservationInfoType> replyReservations = reply.getReservationSet( );
+      for ( ReservationInfoType r : reservations.values( ) ) {
+        Collection<RunningInstancesItemType> instanceSet = instanceMap.get( r.getReservationId( ) );
+        if ( !instanceSet.isEmpty( ) ) {
+          r.getInstancesSet( ).addAll( instanceSet );
+          replyReservations.add( r );
+        }
+      }
     } catch ( final Exception e ) {
       LOG.error( e );
       LOG.debug( e, e );
