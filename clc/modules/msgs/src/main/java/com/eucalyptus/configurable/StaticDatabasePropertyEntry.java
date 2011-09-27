@@ -162,4 +162,36 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
   private void setPropName( String propName ) {
     this.propName = propName;
   }
+
+  @Override
+  public int hashCode( ) {
+    final int prime = 31;
+    int result = super.hashCode( );
+    result = prime * result + ( ( this.propName == null )
+      ? 0
+      : this.propName.hashCode( ) );
+    return result;
+  }
+
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj ) {
+      return true;
+    }
+    if ( !super.equals( obj ) ) {
+      return false;
+    }
+    if ( getClass( ) != obj.getClass( ) ) {
+      return false;
+    }
+    StaticDatabasePropertyEntry other = ( StaticDatabasePropertyEntry ) obj;
+    if ( this.propName == null ) {
+      if ( other.propName != null ) {
+        return false;
+      }
+    } else if ( !this.propName.equals( other.propName ) ) {
+      return false;
+    }
+    return true;
+  }
 }
