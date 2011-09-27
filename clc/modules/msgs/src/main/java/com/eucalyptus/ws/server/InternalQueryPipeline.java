@@ -134,7 +134,7 @@ public class InternalQueryPipeline extends FilteredPipeline {
   
   @Override
   public String getName( ) {
-    return "internal-query-pipeline-" + this.serviceName.toLowerCase( );
+    return "internal-query-pipeline-" + this.serviceName.toLowerCase( ) + "-" + this.servicePath;
   }
 
   @Override
