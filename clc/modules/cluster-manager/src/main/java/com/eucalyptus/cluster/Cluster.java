@@ -742,7 +742,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     this.logUpdate.set( false );
   }
   
-  public NodeLogInfo getNodeLog( final String nodeIp ) throws EucalyptusClusterException {
+  public NodeLogInfo getNodeLog( final String nodeIp ) {
     final NodeInfo nodeInfo = Iterables.find( this.nodeMap.values( ), new Predicate<NodeInfo>( ) {
       @Override
       public boolean apply( final NodeInfo arg0 ) {
@@ -750,7 +750,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       }
     } );
     if ( nodeInfo == null ) {
-      throw new EucalyptusClusterException( "Error obtaining node log files for: " + nodeIp );
+      throw new NoSuchElementException( "Error obtaining node log files for: " + nodeIp );
     }
     if ( this.logUpdate.compareAndSet( false, true ) ) {
       final Cluster self = this;

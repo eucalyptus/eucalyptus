@@ -75,8 +75,8 @@ import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstances;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 
@@ -92,7 +92,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
   }
   
   @Override
-  public void initialize( final VmRunType msg ) throws Exception {
+  public void initialize( final VmRunType msg ) {
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance vm = VmInstances.lookup( msg.getInstanceId( ) );
@@ -111,12 +111,15 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
     } catch ( final Exception e ) {
       db.rollback( );
       LOG.debug( e, e );
-      throw e;
+      throw new EucalyptusClusterException( "Error while initializing request state: " + this.getRequest( ), e );
     }
   }
   
   @Override
   public void fire( final VmRunResponseType reply ) {
+    if ( !reply.get_return( ) ) {
+      throw new EucalyptusClusterException( "Failed to run instance: " + this.getRequest( ).getInstanceId( ) );
+    }
     Logs.extreme( ).error( reply );
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
@@ -129,7 +132,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
-      this.fireException( ex );
+      throw new EucalyptusClusterException( "Failed to run instance: " + this.getRequest( ).getInstanceId( ) + " because of: " + ex.getMessage( ), ex );
     }
   }
   
