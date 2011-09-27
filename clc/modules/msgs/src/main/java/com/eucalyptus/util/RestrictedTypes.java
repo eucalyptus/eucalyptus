@@ -164,9 +164,19 @@ public class RestrictedTypes {
     }
     throw new NoSuchElementException( "Failed to lookup function (@" + Threads.currentStackFrame( 1 ).getMethodName( ) + ") for type: " + type );
   }
-  
+
+  @SuppressWarnings( { "cast", "unchecked" } )
+  public static <T extends RestrictedType> List<T> allocate( Function<Long, List<T>> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return allocate( "", 1L, allocator );
+  }
+
   @SuppressWarnings( { "cast", "unchecked" } )
   public static <T extends RestrictedType> List<T> allocate( Long quantity, Function<Long, List<T>> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return allocate( "", quantity, allocator );
+  }
+  
+  @SuppressWarnings( { "cast", "unchecked" } )
+  public static <T extends RestrictedType> List<T> allocate( String identifier, Long quantity, Function<Long, List<T>> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     Context ctx = Contexts.lookup( );
     if ( ctx.hasAdministrativePrivileges( ) ) {
       return allocator.apply( quantity );
@@ -209,9 +219,9 @@ public class RestrictedTypes {
           }
           User requestUser = ctx.getUser( );
           try {
-            if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), "", null, action, requestUser ) ) {
+            if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, requestUser ) ) {
               throw new AuthException( "Not authorized to create: " + type + " by user: " + ctx.getUserFullName( ) );
-            } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), "", action, ctx.getUser( ), quantity ) ) {
+            } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), quantity ) ) {
               throw new AuthException( "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
             } else {
               return allocator.apply( quantity );

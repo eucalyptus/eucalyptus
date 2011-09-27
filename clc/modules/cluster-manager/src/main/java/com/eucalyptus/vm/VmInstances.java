@@ -69,7 +69,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 import java.util.zip.Adler32;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
@@ -78,10 +77,9 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.run.AdmissionControl;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.run.ClusterAllocator;
 import com.eucalyptus.cloud.run.VerifyMetadata;
-import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.TerminateCallback;
@@ -102,9 +100,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -115,12 +111,10 @@ import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
-import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
@@ -201,6 +195,8 @@ public class VmInstances {
   public static String  MAC_PREFIX                    = "d0:0d";
   @ConfigurableField( description = "Subdomain to use for instance DNS.", initial = ".eucalyptus", changeListener = SubdomainListener.class )
   public static String  INSTANCE_SUBDOMAIN            = ".eucalyptus";
+  @ConfigurableField( description = "Seconds between state updates for actively changing state.", initial = "3" )
+  public static Long    VOLATILE_STATE_INTERVAL_SEC   = 3l;
   
   public static class SubdomainListener implements PropertyChangeListener {
     @Override
@@ -216,7 +212,7 @@ public class VmInstances {
   static ConcurrentMap<String, VmInstance>               terminateCache         = new ConcurrentHashMap<String, VmInstance>( );
   static ConcurrentMap<String, RunningInstancesItemType> terminateDescribeCache = new ConcurrentHashMap<String, RunningInstancesItemType>( );
   
-  private static Logger                                          LOG                    = Logger.getLogger( VmInstances.class );
+  private static Logger                                  LOG                    = Logger.getLogger( VmInstances.class );
   
   @QuantityMetricFunction( VmInstanceMetadata.class )
   public enum CountVmInstances implements Function<OwnerFullName, Long> {
@@ -391,7 +387,7 @@ public class VmInstances {
   public static VmInstance cachedLookup( final String name ) throws NoSuchElementException, TerminatedInstanceException {
     return CachedLookup.INSTANCE.apply( name );
   }
-
+  
   public static VmInstance lookup( final String name ) throws NoSuchElementException, TerminatedInstanceException {
     return PersistentLookup.INSTANCE.apply( name );
   }
@@ -580,7 +576,7 @@ public class VmInstances {
       VmInstance vm = null;
       if ( ( name != null ) ) {
         vm = VmInstances.terminateCache.get( name );
-        if ( vm == null ) { 
+        if ( vm == null ) {
           vm = PersistentLookup.INSTANCE.apply( name );
         }
       }
@@ -600,4 +596,5 @@ public class VmInstances {
       return VmInstance.Transform.INSTANCE.apply( lookup( name ) );
     }
   }
+  
 }

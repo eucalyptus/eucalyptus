@@ -63,38 +63,39 @@
  */
 package com.eucalyptus.cloud.run;
 
+import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmInstance;
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 
 public class CreateVmInstances {
   private static Logger LOG = Logger.getLogger( CreateVmInstances.class );
   
   public Allocation allocate( final Allocation allocInfo ) throws Exception {
-    final long quantity = allocInfo.getAllocationTokens( ).size( );
-    final Context ctx = allocInfo.getContext( );
-    final User requestUser = ctx.getUser( );
-    final UserFullName userFullName = ctx.getUserFullName( );
-    final String action = PolicySpec.requestToAction( allocInfo.getRequest( ) );
     final String vmType = allocInfo.getVmType( ).getName( );
-    //GRZE:WHINE: add resource allocator here:  RestrictedTypes.allocate( 1, Allocator.INSTANCE ); vmtype
-    //GRZE:WHINE: add resource allocator here:  RestrictedTypes.allocate( 1, Allocator.INSTANCE ); instance
-    for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-      try {
-        VmInstance vmInst = VmInstance.Create.INSTANCE.apply( token );
-        token.setVmInstance( vmInst );
-      } catch ( Exception ex ) {
-        LOG.error( ex , ex );
-        throw new RuntimeException( ex );
+    RestrictedTypes.allocate( vmType, Long.valueOf( allocInfo.getAllocationTokens( ).size( ) ), allocInfo.getVmType( ).allocator( ) );
+    Function<Long, List<VmInstance>> allocator = new Function<Long, List<VmInstance>>( ) {
+      
+      @Override
+      public List<VmInstance> apply( Long input ) {
+        List<VmInstance> vms = Lists.newArrayList( );
+        for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+          try {
+            VmInstance vmInst = VmInstance.Create.INSTANCE.apply( token );
+            token.setVmInstance( vmInst );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+            throw new RuntimeException( ex );
+          }
+        }
+        return vms;
       }
-    }
+    };
+    RestrictedTypes.allocate( Long.valueOf( allocInfo.getAllocationTokens( ).size( ) ), allocator );
     return allocInfo;
   }
   

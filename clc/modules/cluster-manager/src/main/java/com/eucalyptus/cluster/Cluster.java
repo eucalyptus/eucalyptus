@@ -116,7 +116,6 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
@@ -136,6 +135,7 @@ import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.util.fsm.Transitions;
+import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.eucalyptus.ws.WebServicesException;
@@ -155,7 +155,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   private static final long                              STATE_INTERVAL_DISABLED      = 10l;
   private static final long                              STATE_INTERVAL_NOTREADY      = 3l;
   private static final long                              STATE_INTERVAL_PENDING       = 3l;
-  private static final long                              VOLATILE_STATE_INTERVAL      = 3l;                                    //TODO:@Configurable
   private static Logger                                  LOG                          = Logger.getLogger( Cluster.class );
   private final StateMachine<Cluster, State, Transition> stateMachine;
   private final ClusterConfiguration                     configuration;
@@ -432,7 +431,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
             }
             break;
           case ENABLED:
-            if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_ENABLED ) && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
+            if ( initialized && tick.isAsserted( VmInstances.VOLATILE_STATE_INTERVAL_SEC ) && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
               Refresh.VOLATILE_INSTANCES.apply( this );
             }
             if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_ENABLED ) && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
