@@ -156,7 +156,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   private static final long                              STATE_INTERVAL_DISABLED      = 10l;
   private static final long                              STATE_INTERVAL_NOTREADY      = 3l;
   private static final long                              STATE_INTERVAL_PENDING       = 3l;
-  private static final long                              VOLATILE_STATE_INTERVAL      = 3l;//TODO:@Configurable
+  private static final long                              VOLATILE_STATE_INTERVAL      = 3l;                                    //TODO:@Configurable
   private static Logger                                  LOG                          = Logger.getLogger( Cluster.class );
   private final StateMachine<Cluster, State, Transition> stateMachine;
   private final ClusterConfiguration                     configuration;
@@ -252,7 +252,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     RESOURCES( ResourceStateCallback.class ),
     NETWORKS( NetworkStateCallback.class ),
     INSTANCES( VmStateCallback.class ),
-    VOLATILE_INSTANCES( VmPendingCallback.class ),
+    VOLATILE_INSTANCES( VmStateCallback.VmPendingCallback.class ),
     ADDRESSES( PublicAddressStateCallback.class ),
     SERVICEREADY( ServiceStateCallback.class );
     Class refresh;

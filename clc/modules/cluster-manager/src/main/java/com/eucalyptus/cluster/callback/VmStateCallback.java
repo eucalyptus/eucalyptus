@@ -1,25 +1,30 @@
 package com.eucalyptus.cluster.callback;
 
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.async.FailedRequestException;
+import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
-import com.eucalyptus.vm.VmBundleTask.BundleState;
-import com.eucalyptus.vm.VmInstance.Reason;
-import com.eucalyptus.vm.VmInstance.VmState;
-import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmDescribeType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
+import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
@@ -50,47 +55,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     }
     
     for ( final VmInfo runVm : reply.getVms( ) ) {
-      final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
-      BundleState bundleState = BundleState.mapper.apply( runVm.getBundleTaskStateName( ) );
-      EntityTransaction db = Entities.get( VmInstance.class );
-      try {
-        try {
-          VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
-          try {
-            
-            if ( VmState.SHUTTING_DOWN.equals( runVmState ) ) {
-              /**
-               * TODO:GRZE: based on current local instance state we need to handle reported
-               * SHUTTING_DOWN state differently
-               **/
-              if ( !BundleState.none.equals( bundleState ) ) {
-                vm.getRuntimeState( ).updateBundleTaskState( bundleState );
-                VmInstances.terminated( vm );
-              } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
-                VmInstances.terminated( vm );
-              } else if ( VmState.STOPPING.apply( vm ) ) {
-                VmInstances.stopped( vm );
-              } else if ( VmStateSet.RUN.apply( vm ) ) {
-                VmInstances.shutDown( vm );
-              }
-            } else if ( VmStateSet.RUN.apply( vm ) || VmStateSet.CHANGING.apply( vm ) ) {
-              vm.doUpdate( ).apply( runVm );
-            } else {
-              continue;
-            }
-          } catch ( Exception ex ) {
-            LOG.error( ex );
-          }
-        } catch ( Exception ex1 ) {
-          if ( VmStateSet.RUN.contains( runVmState ) ) {
-            VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
-          }
-        }
-        db.commit( );
-      } catch ( Exception ex ) {
-        Logs.exhaust( ).error( ex, ex );
-        db.rollback( );
-      }
+      VmStateCallback.handleReportedState( runVm );
     }
     
     final List<String> unreportedVms = Lists.transform( VmInstances.list( ), new Function<VmInstance, String>( ) {
@@ -133,6 +98,53 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     }
   }
   
+  public static void handleReportedState( final VmInfo runVm ) {
+    final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      try {
+        VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
+        try {
+          if ( VmState.SHUTTING_DOWN.equals( runVmState ) ) {
+            VmStateCallback.handleReportedTeardown( vm, runVm );
+          } else if ( VmStateSet.RUN.apply( vm ) ) {
+            vm.doUpdate( ).apply( runVm );
+          } else {
+            return;
+          }
+        } catch ( Exception ex ) {
+          LOG.error( ex );
+        }
+      } catch ( Exception ex1 ) {
+        if ( VmStateSet.RUN.contains( runVmState ) ) {
+          VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
+        }
+      }
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+    }
+  }
+  
+  public static void handleReportedTeardown( VmInstance vm, final VmInfo runVm ) throws TransactionException {
+    /**
+     * TODO:GRZE: based on current local instance state we need to handle reported
+     * SHUTTING_DOWN state differently
+     **/
+    BundleState bundleState = BundleState.mapper.apply( runVm.getBundleTaskStateName( ) );
+    if ( !BundleState.none.equals( bundleState ) ) {
+      vm.getRuntimeState( ).updateBundleTaskState( bundleState );
+      VmInstances.terminated( vm );
+    } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
+      VmInstances.terminated( vm );
+    } else if ( VmState.STOPPING.apply( vm ) ) {
+      VmInstances.stopped( vm );
+    } else if ( VmStateSet.RUN.apply( vm ) ) {
+      VmInstances.shutDown( vm );
+    }
+  }
+  
   /**
    * @see com.eucalyptus.cluster.callback.StateUpdateMessageCallback#fireException(com.eucalyptus.util.async.FailedRequestException)
    * @param t
@@ -142,4 +154,59 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     LOG.debug( "Request to " + this.getSubject( ).getName( ) + " failed: " + t.getMessage( ) );
   }
   
+  public static class VmPendingCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
+    private final Predicate<VmInstance> clusterMatch = new Predicate<VmInstance>( ) {
+                                                       
+                                                       @Override
+                                                       public boolean apply( VmInstance arg0 ) {
+                                                         return arg0.getPartition( ).equals( VmPendingCallback.this.getSubject( ).getConfiguration( ).getPartition( ) )
+                                                       ;
+                                                     }
+                                                     };
+    private final Predicate<VmInstance> volumeState  = new Predicate<VmInstance>( ) {
+                                                       
+                                                       @Override
+                                                       public boolean apply( VmInstance input ) {
+                                                         return input.eachVolumeAttachment( new Predicate<AttachedVolume>( ) {
+                                                           @Override
+                                                           public boolean apply( AttachedVolume arg0 ) {
+                                                             return !arg0.getStatus( ).endsWith( "ing" );
+                                                           }
+                                                         } );
+                                                       }
+                                                     };
+    private final Predicate<VmInstance> filter       = Predicates.and( Predicates.or( VmStateSet.CHANGING, this.volumeState ), this.clusterMatch );
+    
+    public VmPendingCallback( Cluster cluster ) {
+      super( cluster );
+      super.setRequest( new VmDescribeType( ) {
+        {
+          regarding( );
+          for ( VmInstance vm : Iterables.filter( VmInstances.list( ), VmPendingCallback.this.filter ) ) {
+            this.getInstancesSet( ).add( vm.getInstanceId( ) );
+          }          
+        }
+      } );
+      if ( this.getRequest( ).getInstancesSet( ).isEmpty( ) ) {
+        throw new CancellationException( );
+      }
+    }
+    
+    @Override
+    public void fire( VmDescribeResponseType reply ) {
+      for ( final VmInfo runVm : reply.getVms( ) ) {
+        VmStateCallback.handleReportedState( runVm );
+      }
+    }
+    
+    /**
+     * @see com.eucalyptus.cluster.callback.StateUpdateMessageCallback#fireException(com.eucalyptus.util.async.FailedRequestException)
+     * @param t
+     */
+    @Override
+    public void fireException( FailedRequestException t ) {
+      LOG.debug( "Request to " + this.getSubject( ).getName( ) + " failed: " + t.getMessage( ) );
+    }
+    
+  }
 }
