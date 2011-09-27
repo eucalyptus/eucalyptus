@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
@@ -15,7 +16,7 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterState;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.component.Partition;
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -23,10 +24,9 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
-import com.google.common.collect.Collections2;
+import com.eucalyptus.vm.VmInstances;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
 import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
@@ -274,28 +274,21 @@ public abstract class AbstractSystemAddressManager {
     }
     
     protected static void loadStoredAddresses( final Cluster cluster ) {
+      final Address clusterAddr = new Address( );
+      clusterAddr.setCluster( cluster.getPartition( ) );
+      final EntityTransaction db = Entities.get( Address.class );
       try {
-        final EntityWrapper<Address> db = EntityWrapper.get( Address.class );
-        final Address clusterAddr = new Address( );
-        clusterAddr.setCluster( cluster.getPartition( ) );
-        List<Address> addrList = Lists.newArrayList( );
-        try {
-          addrList = db.query( clusterAddr );
-          db.commit( );
-        } catch ( final Exception e1 ) {
-          db.rollback( );
-        }
-        for ( final Address addr : addrList ) {
+        for ( Address addr : Entities.query( clusterAddr ) ) {
           try {
-            LOG.info( "Restoring persistent address info for: " + addr );
-            Addresses.getInstance( ).lookup( addr.getName( ) );
             addr.init( );
-          } catch ( final Exception e ) {
-            addr.init( );
+          } catch ( Exception ex ) {
+            LOG.error( ex , ex );
           }
         }
+        db.commit( );
       } catch ( final Exception e ) {
         LOG.debug( e, e );
+        db.rollback( );
       }
     }
   }
