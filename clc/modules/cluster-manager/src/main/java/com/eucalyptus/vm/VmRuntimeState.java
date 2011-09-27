@@ -167,6 +167,8 @@ public class VmRuntimeState {
         action = this.cleanUpRunnable( );
       } else if ( VmState.PENDING.equals( oldState ) && VmState.RUNNING.equals( newState ) ) {
         this.getVmInstance( ).setState( newState );
+      } else if ( VmState.SHUTTING_DOWN.equals( oldState ) && VmStateSet.RUN.contains( newState ) ) {
+        this.getVmInstance( ).setState( oldState );
       } else if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) ) {
         this.getVmInstance( ).setState( newState );
         action = this.cleanUpRunnable( );

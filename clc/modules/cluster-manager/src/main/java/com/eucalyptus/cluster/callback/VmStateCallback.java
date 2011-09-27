@@ -113,7 +113,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
         if ( VmState.SHUTTING_DOWN.equals( runVmState ) ) {
           VmStateCallback.handleReportedTeardown( vm, runVm );
-        } else if ( VmStateSet.RUN.apply( vm ) ) {
+        } else if ( VmStateSet.RUN.apply( vm ) || VmStateSet.RUN.contains( runVmState ) ) {
           vm.doUpdate( ).apply( runVm );
         }
       } catch ( TerminatedInstanceException ex1 ) {
