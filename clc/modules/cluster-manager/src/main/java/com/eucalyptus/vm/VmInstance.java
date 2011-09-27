@@ -346,8 +346,16 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           String ramdiskId = null;
           try {
             imageId = input.getInstanceType( ).lookupRoot( ).getId( );
-            kernelId = input.getInstanceType( ).lookupKernel( ).getId( );
-            ramdiskId = input.getInstanceType( ).lookupRamdisk( ).getId( );
+            try {
+              kernelId = input.getInstanceType( ).lookupKernel( ).getId( );
+            } catch ( Exception ex ) {
+              LOG.error( ex , ex );
+            }
+            try {
+              ramdiskId = input.getInstanceType( ).lookupRamdisk( ).getId( );
+            } catch ( Exception ex ) {
+              LOG.error( ex , ex );
+            }
           } catch ( final Exception ex2 ) {
             LOG.error( ex2, ex2 );
           }
