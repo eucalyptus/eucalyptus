@@ -79,6 +79,7 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 
@@ -215,12 +216,12 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
     return Principals.nobodyFullName( );
   }
   
-  public Function<Long, List<VmType>> allocator( ) {
-    return new Function<Long, List<VmType>>() {
+  public Supplier<VmType> allocator( ) {
+    return new Supplier<VmType>() {
 
       @Override
-      public List<VmType> apply( Long input ) {
-        return Lists.newArrayList( VmType.this );
+      public VmType get( ) {
+        return VmType.this;
       }
     };
   }

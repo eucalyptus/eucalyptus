@@ -14,9 +14,9 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
@@ -40,18 +40,18 @@ public class NetworkGroupManager {
     
     final CreateSecurityGroupResponseType reply = ( CreateSecurityGroupResponseType ) request.getReply( );
     try {
-      Function<Long, List<NetworkGroup>> allocator = new Function<Long, List<NetworkGroup>>( ) {
+      Supplier<NetworkGroup> allocator = new Supplier<NetworkGroup>( ) {
         
         @Override
-        public List<NetworkGroup> apply( Long input ) {
+        public NetworkGroup get( ) {
           try {
-            return Lists.newArrayList( NetworkGroups.create( ctx.getUserFullName( ), request.getGroupName( ), request.getGroupDescription( ) ) );
+            return NetworkGroups.create( ctx.getUserFullName( ), request.getGroupName( ), request.getGroupDescription( ) );
           } catch ( MetadataException ex ) {
             throw new RuntimeException( ex );
           }
         }
       };
-      RestrictedTypes.allocate( 1L, allocator );
+      RestrictedTypes.allocate( allocator );
       return reply;
     } catch ( final Exception ex ) {
       throw new EucalyptusCloudException( "CreateSecurityGroup failed because: " + Exceptions.causeString( ex ), ex );

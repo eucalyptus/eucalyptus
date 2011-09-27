@@ -92,6 +92,7 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.Threads;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -166,20 +167,20 @@ public class RestrictedTypes {
   }
 
   @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> List<T> allocate( Function<Long, List<T>> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends RestrictedType> T allocate( Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     return allocate( "", 1L, allocator );
   }
 
   @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> List<T> allocate( Long quantity, Function<Long, List<T>> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends RestrictedType> T allocate( Long quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     return allocate( "", quantity, allocator );
   }
   
   @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> List<T> allocate( String identifier, Long quantity, Function<Long, List<T>> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends RestrictedType> T allocate( String identifier, Long quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     Context ctx = Contexts.lookup( );
     if ( ctx.hasAdministrativePrivileges( ) ) {
-      return allocator.apply( quantity );
+      return allocator.get( );
     } else {
       Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
       List<Class<?>> lookupTypes = Classes.genericsToClasses( allocator );
@@ -224,7 +225,7 @@ public class RestrictedTypes {
             } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), quantity ) ) {
               throw new AuthException( "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
             } else {
-              return allocator.apply( quantity );
+              return allocator.get( );
             }
           } catch ( AuthException ex ) {
             throw ex;

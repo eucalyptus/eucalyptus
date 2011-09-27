@@ -69,7 +69,7 @@ import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmInstance;
-import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 public class CreateVmInstances {
@@ -78,24 +78,23 @@ public class CreateVmInstances {
   public Allocation allocate( final Allocation allocInfo ) throws Exception {
     final String vmType = allocInfo.getVmType( ).getName( );
     RestrictedTypes.allocate( vmType, Long.valueOf( allocInfo.getAllocationTokens( ).size( ) ), allocInfo.getVmType( ).allocator( ) );
-    Function<Long, List<VmInstance>> allocator = new Function<Long, List<VmInstance>>( ) {
-      
-      @Override
-      public List<VmInstance> apply( Long input ) {
-        List<VmInstance> vms = Lists.newArrayList( );
-        for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+    List<VmInstance> vms = Lists.newArrayList( );
+    for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+      Supplier<VmInstance> allocator = new Supplier<VmInstance>( ) {
+        
+        @Override
+        public VmInstance get( ) {
           try {
-            VmInstance vmInst = VmInstance.Create.INSTANCE.apply( token );
-            token.setVmInstance( vmInst );
+            return VmInstance.Create.INSTANCE.apply( token );
           } catch ( Exception ex ) {
             LOG.error( ex, ex );
             throw new RuntimeException( ex );
           }
         }
-        return vms;
-      }
-    };
-    RestrictedTypes.allocate( Long.valueOf( allocInfo.getAllocationTokens( ).size( ) ), allocator );
+      };
+      VmInstance vmInst = RestrictedTypes.allocate( allocator );
+      token.setVmInstance( vmInst );
+    }
     return allocInfo;
   }
   
