@@ -22,12 +22,13 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.vm.VmInstances;
-import com.google.common.collect.Lists;
+import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
 import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 
@@ -70,7 +71,8 @@ public abstract class AbstractSystemAddressManager {
   }
   
   public Address allocateNext( final OwnerFullName userId ) throws NotEnoughResourcesException {
-    final Address addr = Addresses.getInstance( ).enableFirst( ).allocate( userId );
+    Predicate<Address> predicate = RestrictedTypes.filterPrivileged( );
+    final Address addr = Addresses.getInstance( ).enableFirst( predicate ).allocate( userId );
     LOG.debug( "Allocated address for public addressing: " + addr.toString( ) );
     if ( addr == null ) {
       LOG.debug( LogUtil.header( Addresses.getInstance( ).toString( ) ) );
@@ -282,7 +284,7 @@ public abstract class AbstractSystemAddressManager {
           try {
             addr.init( );
           } catch ( Exception ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
           }
         }
         db.commit( );
