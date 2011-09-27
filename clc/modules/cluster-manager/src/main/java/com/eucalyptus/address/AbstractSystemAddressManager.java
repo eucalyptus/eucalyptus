@@ -147,7 +147,6 @@ public abstract class AbstractSystemAddressManager {
           LOG.trace( "Found address in the active set cache: " + addr );
         } catch ( final NoSuchElementException e ) {}
       }
-      Helper.checkUniqueness( addrInfo );
       if ( addrInfo.hasMapping( ) ) {
         vm = Helper.maybeFindVm( addr != null
           ? addr.getInstanceId( )
@@ -265,13 +264,6 @@ public abstract class AbstractSystemAddressManager {
         }
       } else {
         LOG.debug( "Address usage checked: " + addr );
-      }
-    }
-    
-    private static void checkUniqueness( final ClusterAddressInfo addrInfo ) {
-      final Collection<VmInstance> matches = VmInstances.list( VmInstances.withPrivateAddress( addrInfo.getAddress( ) ) );
-      if ( matches.size( ) > 1 ) {
-        LOG.error( "Found " + matches.size( ) + " vms with the same address: " + addrInfo + " -> " + matches );
       }
     }
     

@@ -1554,4 +1554,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     return true;
   }
+
+  /**
+   * @return
+   */
+  public static VmInstance create( ) {
+    return new VmInstance( );
+  }
 }

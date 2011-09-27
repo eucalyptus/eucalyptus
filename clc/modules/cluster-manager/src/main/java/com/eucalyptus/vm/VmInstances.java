@@ -73,6 +73,7 @@ import java.util.zip.Adler32;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
+import org.hibernate.criterion.MatchMode;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
@@ -99,6 +100,7 @@ import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
@@ -253,19 +255,17 @@ public class VmInstances {
     return vmId;
   }
   
-  public static Predicate<VmInstance> withPrivateAddress( final String ip ) {
-    return new Predicate<VmInstance>( ) {
-      @Override
-      public boolean apply( final VmInstance vm ) {
-        return ip.equals( vm.getPrivateAddress( ) ) && VmStateSet.RUN.apply( vm );
-      }
-    };
-  }
-  
   public static VmInstance lookupByInstanceIp( final String ip ) throws NoSuchElementException {
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      VmInstance vm = Iterables.find( list( ), withPrivateAddress( ip ) );
+      VmInstance vm = ( VmInstance ) Entities.createCriteria( VmInstance.class )
+                                             .add( Example.create( VmInstance.create( ) ).enableLike( MatchMode.EXACT ) )
+                                             .createCriteria( "networkConfig" ).add( Example.create( VmNetworkConfig.createWithPrivateIp( ip ) ).enableLike( MatchMode.EXACT ) )
+                                             .setCacheable( true )
+                                             .setMaxResults( 1 )
+                                             .setFetchSize( 1 )
+                                             .setFirstResult( 0 )
+                                             .uniqueResult( );
       db.commit( );
       return vm;
     } catch ( Exception ex ) {
@@ -275,17 +275,24 @@ public class VmInstances {
     }
   }
   
-  public static Predicate<VmInstance> withPublicAddress( final String ip ) {
-    return new Predicate<VmInstance>( ) {
-      @Override
-      public boolean apply( final VmInstance vm ) {
-        return ip.equals( vm.getPublicAddress( ) ) && VmStateSet.RUN.apply( vm );
-      }
-    };
-  }
-  
   public static VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
-    return Iterables.find( list( ), withPublicAddress( ip ) );
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      VmInstance vm = ( VmInstance ) Entities.createCriteria( VmInstance.class )
+                                             .add( Example.create( VmInstance.create( ) ).enableLike( MatchMode.EXACT ) )
+                                             .createCriteria( "networkConfig" ).add( Example.create( VmNetworkConfig.createWithPublicIp( ip ) ).enableLike( MatchMode.EXACT ) )
+                                             .setCacheable( true )
+                                             .setMaxResults( 1 )
+                                             .setFetchSize( 1 )
+                                             .setFirstResult( 0 )
+                                             .uniqueResult( );
+      db.commit( );
+      return vm;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new NoSuchElementException( ex.getMessage( ) );
+    }
   }
   
   public static Predicate<VmInstance> withBundleId( final String bundleId ) {

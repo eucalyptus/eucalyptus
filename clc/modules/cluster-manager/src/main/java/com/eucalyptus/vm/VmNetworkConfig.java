@@ -195,4 +195,18 @@ public class VmNetworkConfig {
   private void setUsePrivateAddressing( Boolean usePrivateAddressing ) {
     this.usePrivateAddressing = usePrivateAddressing;
   }
+
+  /**
+   * @param ip
+   * @return
+   */
+  public static VmNetworkConfig createWithPrivateIp( String ip ) {
+    return new VmNetworkConfig( null, ip, null );
+  }
+  public static VmNetworkConfig createWithPublicIp( String ip ) {
+    return new VmNetworkConfig( null, null, ip );
+  }
+  public static VmNetworkConfig createWithIps( String privateIp, String publicIp ) {
+    return new VmNetworkConfig( null, privateIp, publicIp );
+  }
 }
