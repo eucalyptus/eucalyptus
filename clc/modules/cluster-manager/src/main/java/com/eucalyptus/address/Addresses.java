@@ -69,11 +69,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
@@ -89,11 +84,13 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstances;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
@@ -186,6 +183,20 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     }
     if ( addrCount >= Addresses.getUserMaxAddresses( ) && !isAdministrator ) {
       throw new EucalyptusCloudException( ExceptionList.ERR_SYS_INSUFFICIENT_ADDRESS_CAPACITY );
+    }
+    
+  }
+  @Resolver(Address.class)
+  public enum Lookup implements Function<String,Address> {
+    INSTANCE;
+
+    @Override
+    public Address apply( String input ) {
+      Address address = Addresses.getInstance( ).lookup( input );
+      if ( address.isSystemOwned( ) ) {
+        throw new NoSuchElementException( "Non admin user cannot manipulate system owned address " + input );
+      }
+      return address;
     }
     
   }
