@@ -365,8 +365,11 @@ class EucaConf(object):
         try:
             self.config = eucadmin.configfile.ConfigFile(filepath)
         except IOError:
-            print 'Unable to find config file: %s' % filepath
+            self.warn('Unable to find config file: %s' % filepath)
             sys.exit(1)
+
+    def warn(self, msg):
+        sys.stderr.write(msg + '\n')
 
     def get_sshkey(self):
         key = None
@@ -379,13 +382,13 @@ class EucaConf(object):
                 key = fp.read()
                 fp.close()
         except:
-            print 'problem finding sshkey for user eucalyptus'
+            self.warn('problem finding sshkey for user eucalyptus')
         return key
 
     def check_local_service(self, service_name):
         valid_services = ['CLC', 'CC']
         if service_name is None or service_name not in valid_services:
-            print 'ERROR: must pass in service name %s' % valid_services
+            self.warn('ERROR: must pass in service name %s' % valid_services)
             return False
         if service_name == 'CLC':
             resp = boto.utils.retry_url('https://127.0.0.1:8443/register')
@@ -535,12 +538,12 @@ class EucaConf(object):
 
     def do_enable(self):
         if self.options.enable_whats:
-            print 'This command is deprecated and no longer has any effect.'
+            self.warn('This command is deprecated and no longer has any effect.')
             sys.exit(0)
 
     def do_disable(self):
         if self.options.disable_whats:
-            print 'This command is deprecated and no longer has any effect.'
+            self.warn('This command is deprecated and no longer has any effect.')
             sys.exit(0)
 
     def do_heartbeat(self):
@@ -609,7 +612,7 @@ class EucaConf(object):
                       'DescribeServices')
 
     def _get_accesskey_secretkey(self, url):
-        print 'No credentials found, attempting local authentication'
+        self.warn('No credentials found, attempting local authentication')
         gc_cls = boto.utils.find_class('eucadmin.getcredentials',
                                        'GetCredentials')
         obj = gc_cls(euca_home=self.config['EUCALYPTUS'],
@@ -714,9 +717,10 @@ class EucaConf(object):
         host = self.options.host_name
         host = socket.gethostbyname(host)
         if host not in ip_addrs:
-            print 'Warning: VMwareBroker registration must be peformed on the'
-            print '         VMwareBroker host.  Make sure you are running this'
-            print '         command on the VMwareBroker host.'
+            s = 'Warning: VMwareBroker registration must be peformed on the'
+            s += '         VMwareBroker host.  Make sure you are running this'
+            s += '         command on the VMwareBroker host.'
+            self.warn(s)
                                 
     def do_register_vmwarebroker(self):
         if hasattr(self.options, 'register_vmwarebroker'):
@@ -791,11 +795,12 @@ class EucaConf(object):
         return req.sync()
 
     def _print_sync_error(self, node):
-        print 'ERROR: could not synchronize keys with %s' % node
-        print 'The configuration will not have this node.'
+        s = 'ERROR: could not synchronize keys with %s\n' % node
+        s += 'The configuration will not have this node.'
+        self.warn(s)
         ssh_key = self.get_sshkey()
         if not ssh_key:
-            print 'User $EUCA_USER may have to run ssh-keygen!'
+            self.warn('User $EUCA_USER may have to run ssh-keygen!')
         else:
             print "Hint: to setup passwordless login to the nodes as"
             print "user $EUCA_USER, you can"
@@ -810,7 +815,7 @@ class EucaConf(object):
     def do_register_nodes(self):
         if self.options.reg_nodes:
             if not self.check_local_service('CC'):
-                print 'CC must be local service to run this command'
+                self.warn('CC must be local service to run this command')
                 sys.exit(1)
             missing = self.check_local_credentials()
             if missing:
@@ -823,7 +828,7 @@ class EucaConf(object):
             print msg
             current_nodes = self.config['NODES'].split()
 
-            for node_string in self.options.reg_nodes:
+            for nodestring in self.options.reg_nodes:
                 nodes_to_add = node_string.split()
                 for node in nodes_to_add:
                     if node not in current_nodes:
@@ -840,7 +845,7 @@ class EucaConf(object):
                 if node in current_nodes:
                     current_nodes.remove(node)
                 else:
-                    print 'Node %s is not currently registered' % node
+                    self.warn('Node %s is not currently registered' % node)
             self.config['NODES'] = ' '.join(current_nodes)
 
     def do_help_register(self):
