@@ -60,6 +60,12 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       VmStateCallback.handleReportedState( runVm );
     }
     
+    final List<String> unreportedVms = VmStateCallback.findUnreported( reply );
+    
+    VmStateCallback.handleUnreported( unreportedVms );
+  }
+
+  public static List<String> findUnreported( VmDescribeResponseType reply ) {
     final List<String> unreportedVms = Lists.transform( VmInstances.list( ), new Function<VmInstance, String>( ) {
       
       @Override
@@ -76,7 +82,10 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         return vmId;
       }
     } );
-    
+    return unreportedVms;
+  }
+
+  public static void handleUnreported( final List<String> unreportedVms ) {
     for ( final String vmId : unreportedVms ) {
       EntityTransaction db1 = Entities.get( VmInstance.class );
       try {
@@ -106,16 +115,10 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     try {
       try {
         VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
-        try {
-          if ( VmState.SHUTTING_DOWN.equals( runVmState ) ) {
-            VmStateCallback.handleReportedTeardown( vm, runVm );
-          } else if ( VmStateSet.RUN.apply( vm ) ) {
-            vm.doUpdate( ).apply( runVm );
-          } else {
-            return;
-          }
-        } catch ( Exception ex ) {
-          LOG.error( ex );
+        if ( VmState.SHUTTING_DOWN.equals( runVmState ) ) {
+          VmStateCallback.handleReportedTeardown( vm, runVm );
+        } else if ( VmStateSet.RUN.apply( vm ) ) {
+          vm.doUpdate( ).apply( runVm );
         }
       } catch ( TerminatedInstanceException ex1 ) {
         LOG.trace( "Ignore state update to terminated instance: " + runVm.getInstanceId( ) );
@@ -132,12 +135,12 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       }
       db.commit( );
     } catch ( Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      LOG.trace( ex, ex );
       db.rollback( );
     }
   }
   
-  public static void handleReportedTeardown( VmInstance vm, final VmInfo runVm ) throws TransactionException {
+  private static void handleReportedTeardown( VmInstance vm, final VmInfo runVm ) throws TransactionException {
     /**
      * TODO:GRZE: based on current local instance state we need to handle reported
      * SHUTTING_DOWN state differently
