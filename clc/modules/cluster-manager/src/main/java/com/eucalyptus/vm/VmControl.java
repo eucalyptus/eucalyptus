@@ -237,8 +237,7 @@ public class VmControl {
               String oldState = null, newState = null;
               int oldCode = 0, newCode = 0;
               try {
-                VmInstance vm = null;
-                vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
+                VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
                 oldCode = vm.getState( ).getCode( );
                 oldState = vm.getState( ).getName( );
                 if ( VmState.STOPPED.apply( vm ) ) {
@@ -265,28 +264,16 @@ public class VmControl {
               }
               results.add( new TerminateInstancesItemType( instanceId, oldCode, oldState, newCode, newState ) );
               db.commit( );
-              return true;
             } catch ( final TransactionException e ) {
               db.rollback( );
-              return false;
             } catch ( final NoSuchElementException e ) {
               db.rollback( );
-              return false;
             }
-          } catch ( AuthException ex ) {
-            db.rollback( );
-            throw new AccessControlException( "Not authorized to terminate instance: " + instanceId + " because of: " + ex.getMessage( ) );
-          } catch ( IllegalContextAccessException ex ) {
-            db.rollback( );
-            throw new RuntimeException( "Failed to terminate instance: " + instanceId + " becuase of: " + ex.getMessage( ), ex );
-          } catch ( PersistenceException ex ) {
-            db.rollback( );
-            throw new RuntimeException( "Failed to terminate instance: " + instanceId + " becuase of: " + ex.getMessage( ), ex );
           } catch ( Exception ex ) {
             Logs.exhaust( ).error( ex, ex );
             db.rollback( );
-            throw new RuntimeException( "Failed to terminate instance: " + instanceId + " becuase of: " + ex.getMessage( ), ex );
           }
+          return true;
         }
       } );
       reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
