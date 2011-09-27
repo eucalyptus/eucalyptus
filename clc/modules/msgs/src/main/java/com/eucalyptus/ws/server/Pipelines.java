@@ -132,7 +132,7 @@ public class Pipelines {
   
   public static boolean enable( ComponentId compId ) {
     LOG.info( "-> Registering component pipeline: " + compId.getName( ) + " " + componentPipelines.get( compId ) );
-    return true; //pipelines.addAll( componentPipelines.get( compId ) );
+    return pipelines.addAll( componentPipelines.get( compId ) );
   }
   
   public static boolean disable( ComponentId compId ) {

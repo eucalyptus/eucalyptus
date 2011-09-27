@@ -103,7 +103,7 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
     try {
       this.addHandlers( pipeline );
       this.addSystemHandlers( pipeline );
-      if ( Logs.isExtrrreeeme() ) {
+      if ( Logs.isExtrrreeeme( ) ) {
         for ( final Map.Entry<String, ChannelHandler> e : pipeline.toMap( ).entrySet( ) ) {
           EventRecord.here( this.getClass( ), EventType.PIPELINE_HANDLER, e.getKey( ), e.getValue( ).getClass( ).getSimpleName( ) ).trace( );
         }
@@ -125,10 +125,10 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
   public final int compareTo( final FilteredPipeline o ) {
     if ( this.getClass( ).getSimpleName( ).startsWith( "Internal" ) && !o.getClass( ).getSimpleName( ).startsWith( "Internal" ) ) {
       return 1;
-    } else if ( o.getClass( ).getSimpleName( ).startsWith( "Internal" ) && !this.getClass( ).getSimpleName( ).startsWith( "Internal" ) ) {
+    } else if ( !this.getClass( ).getSimpleName( ).startsWith( "Internal" ) && o.getClass( ).getSimpleName( ).startsWith( "Internal" ) ) {
       return -1;
     } else {
-      return ( this.getName( ) + this.getClass( ).getCanonicalName( ) ).compareTo( ( this.getName( ) + o.getClass( ).getCanonicalName( ) ) );
+      return this.getName( ).compareTo( this.getName( ) );
     }
   }
   
@@ -148,10 +148,7 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
     if ( obj == null ) return false;
     if ( getClass( ) != obj.getClass( ) ) return false;
     FilteredPipeline other = ( FilteredPipeline ) obj;
-    if ( this.getName( ) == null ) {
-      if ( other.getName( ) != null ) return false;
-    } else if ( !this.getName( ).equals( other.getName( ) ) ) return false;
-    return true;
+    return this.compareTo( other ) == 0;
   }
   
   @Override
