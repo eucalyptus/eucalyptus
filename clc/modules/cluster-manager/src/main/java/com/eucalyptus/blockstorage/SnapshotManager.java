@@ -67,7 +67,9 @@ package com.eucalyptus.blockstorage;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
+import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.component.NoSuchComponentException;
@@ -76,7 +78,9 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
@@ -86,6 +90,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
@@ -111,26 +116,31 @@ public class SnapshotManager {
   static Logger LOG       = Logger.getLogger( SnapshotManager.class );
   static String ID_PREFIX = "snap";
   
-  public CreateSnapshotResponseType create( CreateSnapshotType request ) throws EucalyptusCloudException, NoSuchComponentException, DuplicateMetadataException {
-    Context ctx = Contexts.lookup( );
-    //GRZE:WHINE: add resource allocator here:  RestrictedTypes.allocate( 1, Allocator.INSTANCE );
+  public CreateSnapshotResponseType create( CreateSnapshotType request ) throws EucalyptusCloudException, NoSuchComponentException, DuplicateMetadataException, AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException, TransactionException {
+    final Context ctx = Contexts.lookup( );
     EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
-    Volume vol;
-    try {
-      vol = Transactions.find( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), request.getVolumeId( ) ) );
-    } catch ( ExecutionException ex1 ) {
-      throw new EucalyptusCloudException( ex1 );
-    }
-    ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
-    vol = Volumes.checkVolumeReady( vol );
-    Snapshot snap = Snapshots.initializeSnapshot( ctx.getUserFullName( ), vol, sc );
-    snap = Snapshots.startCreateSnapshot( vol, snap );
+    Volume vol = Transactions.find( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), request.getVolumeId( ) ) );
+    final ServiceConfiguration sc = Partitions.lookupService( Storage.class, vol.getPartition( ) );
+    final Volume volReady = Volumes.checkVolumeReady( vol );
+    Supplier<Snapshot> allocator = new Supplier<Snapshot>( ) {
+      
+      @Override
+      public Snapshot get( ) {
+        try {
+          return Snapshots.initializeSnapshot( ctx.getUserFullName( ), volReady, sc );
+        } catch ( EucalyptusCloudException ex ) {
+          throw new RuntimeException( ex );
+        }
+      }
+    };
+    Snapshot snap = RestrictedTypes.allocate( allocator );
+    snap = Snapshots.startCreateSnapshot( volReady, snap );
     
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
     edu.ucsb.eucalyptus.msgs.Snapshot snapMsg = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
     snapMsg.setProgress( "0%" );
     snapMsg.setOwnerId( snap.getOwnerAccountNumber( ) );
-    snapMsg.setVolumeSize( vol.getSize( ).toString( ) );
+    snapMsg.setVolumeSize( volReady.getSize( ).toString( ) );
     reply.setSnapshot( snapMsg );
     return reply;
   }

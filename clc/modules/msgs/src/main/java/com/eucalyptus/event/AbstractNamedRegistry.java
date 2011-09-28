@@ -76,7 +76,9 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 @SuppressWarnings( "rawtypes" )
 public abstract class AbstractNamedRegistry<TYPE extends HasFullName> {
@@ -218,14 +220,13 @@ public abstract class AbstractNamedRegistry<TYPE extends HasFullName> {
     }
   }
   
-  public TYPE enableFirst( ) throws NoSuchElementException {
+  public TYPE enableFirst( Predicate<TYPE> filter ) throws NoSuchElementException {
     this.canHas.writeLock( ).lock( );
     try {
-      Map.Entry<String, TYPE> entry = this.disabledMap.pollFirstEntry( );
-      if ( entry == null ) {
+      TYPE first = Maps.filterValues( this.disabledMap, filter ).values( ).iterator( ).next( );
+      if ( first == null ) {
         throw new NoSuchElementException( "Disabled map is empty." );
       }
-      TYPE first = entry.getValue( );
       this.activeMap.put( first.getName( ), first );
       return first;
     } finally {
@@ -233,6 +234,7 @@ public abstract class AbstractNamedRegistry<TYPE extends HasFullName> {
     }
   }
   
+
   @Override
   public String toString( ) {
     return String.format( "%s [activeMap=%s, disabledMap=%s]", this.getClass( ).getSimpleName( ), this.activeMap, this.disabledMap );

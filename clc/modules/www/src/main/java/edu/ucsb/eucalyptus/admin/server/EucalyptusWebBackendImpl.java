@@ -107,8 +107,6 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.www.Reports;
-import com.eucalyptus.www.Reports.ReportCache;
 import com.google.gwt.dev.util.collect.Lists;
 import com.google.gwt.user.client.rpc.SerializableException;
 import com.google.gwt.user.client.rpc.SerializationException;
@@ -1233,8 +1231,6 @@ public class EucalyptusWebBackendImpl extends RemoteServiceServlet implements Eu
     }
     for( String reportName : sortedReports ) {
       try {
-        ReportCache reportCache = Reports.getReportManager( reportName, false );
-        reports.add( new ReportInfo( reportCache.getReportGroup( ), reportCache.getReportName( ), reportName, 1 ) );
       }
       catch ( Exception e ) {
         LOG.error( e, e );

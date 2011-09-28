@@ -64,7 +64,6 @@
 package com.eucalyptus.util;
 
 import com.google.common.base.Predicate;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public interface Callback<R> {
   /**

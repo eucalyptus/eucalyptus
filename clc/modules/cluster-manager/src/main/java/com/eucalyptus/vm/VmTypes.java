@@ -77,15 +77,13 @@ import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
-import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmTypes {
   private static String DEFAULT_TYPE_NAME = "m1.small";//TODO:GRZE:@Configurable
-
+  
   public static VmTypeInfo asVmTypeInfo( VmType vmType, BootableImageInfo img ) throws MetadataException {
     Long imgSize = img.getImageSizeBytes( );
     if ( imgSize > 1024l * 1024l * 1024l * vmType.getDisk( ) ) {
