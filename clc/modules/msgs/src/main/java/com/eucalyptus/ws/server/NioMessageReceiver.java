@@ -62,7 +62,6 @@
  */
 package com.eucalyptus.ws.server;
 
-import java.util.NoSuchElementException;
 import org.mule.api.endpoint.InboundEndpoint;
 import org.mule.api.lifecycle.CreateException;
 import org.mule.api.service.Service;
@@ -71,23 +70,12 @@ import org.mule.transport.AbstractMessageReceiver;
 import org.mule.transport.ConnectException;
 
 public class NioMessageReceiver extends AbstractMessageReceiver {
-  private final FilteredPipeline soapPipeline;
-  private final FilteredPipeline queryPipeline;
   
   public NioMessageReceiver( Connector connector, Service service, InboundEndpoint endpoint ) throws CreateException {
     super( connector, service, endpoint );
-    this.soapPipeline = new InternalSoapPipeline( this, service.getName( ), endpoint.getEndpointURI( ).getPath( ) );
-    this.queryPipeline = new InternalQueryPipeline( this, service.getName( ), endpoint.getEndpointURI( ).getPath( ) );
   }
   
-  public void doConnect( ) throws ConnectException {
-    try {
-      Pipelines.register( this.soapPipeline );
-      Pipelines.register( this.queryPipeline );
-    } catch ( NoSuchElementException ex ) {
-      this.setupPipelines( );
-    }
-  }
+  public void doConnect( ) throws ConnectException {}
   
   private void setupPipelines( ) {}
   
@@ -97,7 +85,6 @@ public class NioMessageReceiver extends AbstractMessageReceiver {
   
   public void doDispose( ) {}
   
-  public void doDisconnect( ) throws ConnectException {
-  }
+  public void doDisconnect( ) throws ConnectException {}
   
 }
