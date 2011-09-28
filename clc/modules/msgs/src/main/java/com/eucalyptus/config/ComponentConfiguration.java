@@ -164,6 +164,12 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   public URI getUri( ) {
     return this.getComponentId( ).makeExternalRemoteUri( this.getHostName( ), this.getPort( ) );
   }
+
+
+  @Override
+  public URI getUri( String prefix ) {
+    return this.getComponentId( ).makeExternalRemoteUri( this.getHostName( ), this.getPort( ), prefix );
+  }
   
   public URI getInternalUri( ) {
     return this.getComponentId( ).makeInternalRemoteUri( this.getHostName( ), this.getPort( ) );

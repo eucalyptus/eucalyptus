@@ -152,6 +152,19 @@ public class StackConfiguration extends AbstractPersistent {
   
   @ConfigurableField( initial = "500", description = "Client socket select timeout (ms)." )
   public static Long          CLIENT_POOL_TIMEOUT_MILLIS        = 500l;
+
+  @ConfigurableField( initial = "https", description = "Default prefix for EC2_URL in eucarc.", changeListener = UrlChangeListener.class )
+  public static String        DEFAULT_EC2_URL_PREFIX        = "https";
+
+  @ConfigurableField( initial = "http", description = "Default prefix for S3_URL in eucarc.", changeListener = UrlChangeListener.class )
+  public static String        DEFAULT_S3_URL_PREFIX        = "http";
+
+  @ConfigurableField( initial = "https", description = "Default prefix for AWS_SNS_URL in eucarc.", changeListener = UrlChangeListener.class )
+  public static String        DEFAULT_AWS_SNS_URL_PREFIX        = "https";
+
+  @ConfigurableField( initial = "https", description = "Default prefix for EUARE_URL in eucarc.", changeListener = UrlChangeListener.class )
+  public static String        DEFAULT_EUARE_URL_PREFIX        = "https";
+
   
   private static Logger       LOG                               = Logger.getLogger( StackConfiguration.class );
   
@@ -178,4 +191,30 @@ public class StackConfiguration extends AbstractPersistent {
       
     }
   }
+
+    public static class UrlChangeListener implements PropertyChangeListener {
+    /**
+     * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
+     *      java.lang.Object)
+     * 
+     *      Validates that the new value is >= 0
+     */
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+      
+      String prefix = null;
+
+      if ( newValue instanceof String ) {
+          prefix = ( String ) newValue;
+	  if( "http".equals(prefix) || "https".equals(prefix) )
+	      return;
+      }
+      throw new ConfigurablePropertyException( "URL prefix for " + t.getFieldName( ) + " has to be 'http' or 'https'");
+      
+    }
+  }
+
 }
+
+
+  
