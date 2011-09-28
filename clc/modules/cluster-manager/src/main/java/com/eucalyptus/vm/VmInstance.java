@@ -411,7 +411,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               }
             }
           }
-          
+          Entities.flush( index );          
           final VmInstance vmInst = new VmInstance.Builder( ).owner( userFullName )
                                                              .withIds( input.getInstanceId( ), input.getReservationId( ) )
                                                              .bootRecord( bootSet,
