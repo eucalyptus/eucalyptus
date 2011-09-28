@@ -65,8 +65,8 @@ package com.eucalyptus.vm;
 
 import java.security.AccessControlException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -76,6 +76,7 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.mule.RequestContext;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.MetadataException;
@@ -102,9 +103,15 @@ import com.eucalyptus.vm.Bundles.BundleCallback;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstance.VmStateSet;
+import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.TreeMultimap;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
@@ -157,28 +164,25 @@ public class VmControl {
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
     final DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
     final ArrayList<String> instancesSet = msg.getInstancesSet( );
-    final Map<String, ReservationInfoType> rsvMap = new HashMap<String, ReservationInfoType>( );
-    Predicate<VmInstance> privileged = RestrictedTypes.filterPrivileged( );
+    
+    final Multimap<String, RunningInstancesItemType> instanceMap = TreeMultimap.create( );
+    final Map<String,ReservationInfoType> reservations = Maps.newHashMap( );
+    Predicate<VmInstance> filter = CloudMetadatas.filterPrivilegesById( msg.getInstancesSet( ) );
     Context ctx = Contexts.lookup( );
     OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( )
       ? null
       : ctx.getUserFullName( ).asAccountFullName( );
     try {
-      for ( final VmInstance vm : VmInstances.list( ownerFullName, privileged ) ) {
+      for ( final VmInstance vm :  VmInstances.list( ownerFullName, filter ) ) {
         if ( !instancesSet.isEmpty( ) && !instancesSet.contains( vm.getInstanceId( ) ) ) {
           continue;
         }
         EntityTransaction db = Entities.get( VmInstance.class );
         try {
           VmInstance v = Entities.merge( vm );
-          if ( VmInstances.Timeout.TERMINATED.apply( v ) ) {
-            VmInstances.delete( v );
+          if ( instanceMap.put( v.getReservationId( ), VmInstances.transform( v ) ) && !reservations.containsKey( v.getReservationId( ) ) ) {
+            reservations.put( v.getReservationId( ), new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getAccountNumber( ), v.getNetworkNames( ) ) );
           }
-          if ( !rsvMap.containsKey( v.getReservationId( ) ) ) {
-            final ReservationInfoType reservation = new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getNamespace( ), v.getNetworkNames( ) );
-            rsvMap.put( reservation.getReservationId( ), reservation );
-          }
-          rsvMap.get( v.getReservationId( ) ).getInstancesSet( ).add( VmInstances.transform( v ) );
           db.commit( );
         } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex, ex );
@@ -188,14 +192,12 @@ public class VmControl {
               try {
                 RunningInstancesItemType ret = VmInstances.transform( vm );
                 if ( ret != null && vm.getReservationId( ) != null ) {
-                  if ( !rsvMap.containsKey( vm.getReservationId( ) ) ) {
-                    final ReservationInfoType reservation = new ReservationInfoType( vm.getReservationId( ), vm.getOwner( ).getNamespace( ), vm.getNetworkNames( ) );
-                    rsvMap.put( reservation.getReservationId( ), reservation );
+                  if ( instanceMap.put( vm.getReservationId( ), VmInstances.transform( vm ) ) && !reservations.containsKey( vm.getReservationId( ) ) ) {
+                    reservations.put( vm.getReservationId( ), new ReservationInfoType( vm.getReservationId( ), vm.getOwner( ).getAccountNumber( ), vm.getNetworkNames( ) ) );
                   }
-                  rsvMap.get( vm.getReservationId( ) ).getInstancesSet( ).add( ret );
                 }
               } catch ( Exception ex1 ) {
-                LOG.error( ex1 , ex1 );
+                LOG.error( ex1, ex1 );
               }
             }
           } catch ( Exception ex1 ) {
@@ -203,8 +205,14 @@ public class VmControl {
           }
         }
       }
-      ArrayList<ReservationInfoType> vms = new ArrayList<ReservationInfoType>( rsvMap.values( ) );
-      reply.setReservationSet( vms );
+      List<ReservationInfoType> replyReservations = reply.getReservationSet( );
+      for ( ReservationInfoType r : reservations.values( ) ) {
+        Collection<RunningInstancesItemType> instanceSet = instanceMap.get( r.getReservationId( ) );
+        if ( !instanceSet.isEmpty( ) ) {
+          r.getInstancesSet( ).addAll( instanceSet );
+          replyReservations.add( r );
+        }
+      }
     } catch ( final Exception e ) {
       LOG.error( e );
       LOG.debug( e, e );
@@ -223,59 +231,45 @@ public class VmControl {
         public boolean apply( final String instanceId ) {
           EntityTransaction db = Entities.get( VmInstance.class );
           try {
-            RunningInstancesItemType runVm = null;
             try {
               String oldState = null, newState = null;
               int oldCode = 0, newCode = 0;
               try {
-                VmInstance vm = null;
-                vm = RestrictedTypes.doPrivileged( instanceId, VmInstances.lookupFunction( ) );
-                runVm = VmInstances.transform( vm );
+                VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
                 oldCode = vm.getState( ).getCode( );
                 oldState = vm.getState( ).getName( );
                 if ( VmState.STOPPED.apply( vm ) ) {
-                  newCode = VmState.TERMINATED.getCode( );
-                  newState = VmState.TERMINATED.getName( );
-                  VmInstances.terminated( vm );
-                } else {
-                  newCode = VmState.SHUTTING_DOWN.apply( vm )
-                    ? VmState.TERMINATED.getCode( )
-                    : VmState.SHUTTING_DOWN.getCode( );
-                  newState = VmState.SHUTTING_DOWN.apply( vm )
-                    ? VmState.TERMINATED.getName( )
-                    : VmState.SHUTTING_DOWN.getName( );
+                  newCode = VmState.STOPPED.getCode( );
+                  newState = VmState.STOPPED.getName( );
+                  VmInstances.stopped( vm );
+                } else if ( VmStateSet.RUN.apply( vm ) ) {
+                  newCode = VmState.SHUTTING_DOWN.getCode( );
+                  newState = VmState.SHUTTING_DOWN.getName( );
                   VmInstances.shutDown( vm );
+                } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
+                } else if ( VmState.TERMINATED.apply( vm ) ) {
+                  oldCode = newCode = VmState.TERMINATED.getCode( );
+                  oldState = newState = VmState.TERMINATED.getName( );
+                  VmInstances.delete( vm );
                 }
-              } catch ( final NoSuchElementException e ) {
-                runVm = VmInstances.transform( instanceId );
+              } catch ( final TerminatedInstanceException e ) {
                 oldCode = newCode = VmState.TERMINATED.getCode( );
                 oldState = newState = VmState.TERMINATED.getName( );
                 VmInstances.delete( instanceId );
+              } catch ( final NoSuchElementException e ) {
               }
               results.add( new TerminateInstancesItemType( instanceId, oldCode, oldState, newCode, newState ) );
               db.commit( );
-              return true;
             } catch ( final TransactionException e ) {
               db.rollback( );
-              return false;
             } catch ( final NoSuchElementException e ) {
               db.rollback( );
-              return false;
             }
-          } catch ( AuthException ex ) {
-            db.rollback( );
-            throw new AccessControlException( "Not authorized to terminate instance: " + instanceId + " because of: " + ex.getMessage( ) );
-          } catch ( IllegalContextAccessException ex ) {
-            db.rollback( );
-            throw new RuntimeException( "Failed to terminate instance: " + instanceId + " becuase of: " + ex.getMessage( ), ex );
-          } catch ( PersistenceException ex ) {
-            db.rollback( );
-            throw new RuntimeException( "Failed to terminate instance: " + instanceId + " becuase of: " + ex.getMessage( ), ex );
           } catch ( Exception ex ) {
             Logs.exhaust( ).error( ex, ex );
             db.rollback( );
-            throw new RuntimeException( "Failed to terminate instance: " + instanceId + " becuase of: " + ex.getMessage( ), ex );
           }
+          return true;
         }
       } );
       reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );

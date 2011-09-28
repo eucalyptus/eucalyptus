@@ -159,7 +159,9 @@ public class StorageUtil {
             aVolume.getAttachmentSet().add( attachedVolumes.get( aVolume.getVolumeId() ) );
             
             for ( AttachedVolume attachedVolume : aVolume.getAttachmentSet( ) ) {
-        	attachedVolume.setDevice("/dev/" + attachedVolume.getDevice( ) );
+        	if(!attachedVolume.getDevice( ).startsWith("/dev/") ) {
+        	  attachedVolume.setDevice("/dev/" + attachedVolume.getDevice( ) );
+        	}
             }	
             
           }
