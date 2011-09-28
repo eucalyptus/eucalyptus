@@ -67,7 +67,6 @@ import java.security.GeneralSecurityException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.log4j.Logger;
@@ -108,25 +107,24 @@ import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.BaseQueryBinding;
 import com.eucalyptus.ws.protocol.OperationParameter;
 import com.eucalyptus.ws.protocol.SoapHandler;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.TreeMultimap;
+import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Pipelines {
-  private static final Logger                                  LOG                = Logger.getLogger( Pipelines.class );
-  private static final Multimap<ComponentId, FilteredPipeline> componentPipelines = TreeMultimap.create( );
-  private static final Set<FilteredPipeline>                   pipelines          = new ConcurrentSkipListSet<FilteredPipeline>( );
+  private static final Logger                LOG               = Logger.getLogger( Pipelines.class );
+  private static final Set<FilteredPipeline> internalPipelines = Sets.newHashSet( );
+  private static final Set<FilteredPipeline> pipelines         = Sets.newHashSet( );
   
   static FilteredPipeline find( final HttpRequest request ) throws DuplicatePipelineException, NoAcceptingPipelineException {
-    FilteredPipeline candidate = findAccepting( request );
+    final FilteredPipeline candidate = findAccepting( request );
     if ( candidate == null ) {
       if ( Logs.isExtrrreeeme( ) ) {
         if ( request instanceof MappingHttpMessage ) {
           ( ( MappingHttpMessage ) request ).logMessage( );
-          for ( FilteredPipeline p : pipelines ) {
+          for ( final FilteredPipeline p : pipelines ) {
             LOG.debug( "PIPELINE: " + p );
           }
-          for ( FilteredPipeline p : componentPipelines.values( ) ) {
+          for ( final FilteredPipeline p : internalPipelines ) {
             LOG.debug( "PIPELINE: " + p );
           }
         }
@@ -140,26 +138,20 @@ public class Pipelines {
   }
   
   private static FilteredPipeline findAccepting( final HttpRequest request ) {
-    FilteredPipeline candidate = null;
-    for ( FilteredPipeline f : componentPipelines.values( ) ) {
+    final FilteredPipeline candidate = null;
+    for ( final FilteredPipeline f : pipelines ) {
       if ( f.checkAccepts( request ) ) {
         return f;
       }
     }
     if ( candidate == null ) {
-      for ( FilteredPipeline f : pipelines ) {
-        return f;
+      for ( final FilteredPipeline f : internalPipelines ) {
+        if ( f.checkAccepts( request ) ) {
+          return f;
+        }
       }
     }
     return candidate;
-  }
-  
-  public static void enable( ComponentId compId ) {
-    LOG.info( "-> Registering component pipeline: " + compId.getName( ) + " " + componentPipelines.get( compId ) );
-  }
-  
-  public static void disable( ComponentId compId ) {
-    LOG.info( "-> Deregistering component pipeline: " + compId.getName( ) + " " + componentPipelines.get( compId ) );
   }
   
   @Provides( Empyrean.class )
@@ -168,9 +160,9 @@ public class Pipelines {
     
     @Override
     public boolean load( ) throws Exception {
-      for ( ComponentId comp : ComponentIds.list( ) ) {
-        Pipelines.pipelines.add( new InternalQueryPipeline( comp ) );
-        Pipelines.pipelines.add( new InternalSoapPipeline( comp ) );
+      for ( final ComponentId comp : ComponentIds.list( ) ) {
+        Pipelines.internalPipelines.add( new InternalQueryPipeline( comp ) );
+        Pipelines.internalPipelines.add( new InternalSoapPipeline( comp ) );
       }
       return true;
     }
@@ -181,16 +173,16 @@ public class Pipelines {
     
     @SuppressWarnings( { "rawtypes", "unchecked", "synthetic-access" } )
     @Override
-    public boolean processClass( Class candidate ) throws Exception {
+    public boolean processClass( final Class candidate ) throws Exception {
       if ( FilteredPipeline.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) )
            && !Modifier.isInterface( candidate.getModifiers( ) ) && Ats.from( candidate ).has( ComponentPart.class ) ) {
         try {
-          ComponentId compId = ( ComponentId ) Ats.from( candidate ).get( ComponentPart.class ).value( ).newInstance( );
-          Class<? extends FilteredPipeline> pipelineClass = candidate;
-          FilteredPipeline pipeline = Classes.newInstance( pipelineClass );
-          Pipelines.componentPipelines.put( compId, pipeline );
+          final ComponentId compId = ( ComponentId ) Ats.from( candidate ).get( ComponentPart.class ).value( ).newInstance( );
+          final Class<? extends FilteredPipeline> pipelineClass = candidate;
+          final FilteredPipeline pipeline = Classes.newInstance( pipelineClass );
+          Pipelines.pipelines.add( pipeline );
           return true;
-        } catch ( Exception ex ) {
+        } catch ( final Exception ex ) {
           LOG.trace( ex, ex );
           return false;
         }
@@ -207,18 +199,20 @@ public class Pipelines {
   }
   
   private static class InternalSoapPipeline extends FilteredPipeline.InternalPipeline {
-    private String servicePath;
-    private String serviceName;
+    private final String servicePath;
+    private final String internalServicePath;
+    private final String serviceName;
     
-    public InternalSoapPipeline( ComponentId componentId ) {
+    public InternalSoapPipeline( final ComponentId componentId ) {
       super( componentId );
-      this.servicePath = componentId.getLocalEndpointUri( ).getPath( );
-      this.serviceName = componentId.getLocalEndpointName( );
+      this.servicePath = componentId.makeExternalRemoteUri( "127.0.0.1", 8773 ).getPath( );
+      this.internalServicePath = componentId.makeInternalRemoteUri( "127.0.0.1", 8773 ).getPath( );
+      this.serviceName = componentId.getFullName( ).toString( );
     }
     
     @Override
-    public boolean checkAccepts( HttpRequest message ) {
-      return message.getUri( ).endsWith( servicePath ) && message.getHeaderNames( ).contains( "SOAPAction" );
+    public boolean checkAccepts( final HttpRequest message ) {
+      return ( message.getUri( ).endsWith( this.servicePath ) || message.getUri( ).endsWith( this.internalServicePath ) ) && message.getHeaderNames( ).contains( "SOAPAction" );
     }
     
     @Override
@@ -227,11 +221,11 @@ public class Pipelines {
     }
     
     @Override
-    public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
+    public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
       pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
       try {
         pipeline.addLast( "ws-security", new InternalWsSecHandler( ) );
-      } catch ( GeneralSecurityException e ) {
+      } catch ( final GeneralSecurityException e ) {
         LOG.error( e, e );
       }
       pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
@@ -253,55 +247,57 @@ public class Pipelines {
       Version
     }
     
-    private String servicePath;
-    private String serviceName;
+    private final String servicePath;
+    private final String internalServicePath;
+    private final String serviceName;
     
-    public InternalQueryPipeline( ComponentId componentId ) {
+    public InternalQueryPipeline( final ComponentId componentId ) {
       super( componentId );
-      this.servicePath = componentId.getLocalEndpointUri( ).getPath( );
-      this.serviceName = componentId.getLocalEndpointName( );
+      this.servicePath = componentId.makeExternalRemoteUri( "127.0.0.1", 8773 ).getPath( );
+      this.internalServicePath = componentId.makeInternalRemoteUri( "127.0.0.1", 8773 ).getPath( );
+      this.serviceName = componentId.getFullName( ).toString( );
     }
     
     @Override
-    public boolean checkAccepts( HttpRequest message ) {
+    public boolean checkAccepts( final HttpRequest message ) {
       if ( message instanceof MappingHttpRequest ) {
-        MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
+        final MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
         if ( httpRequest.getMethod( ).equals( HttpMethod.POST ) ) {
-          Map<String, String> parameters = new HashMap<String, String>( httpRequest.getParameters( ) );
-          ChannelBuffer buffer = httpRequest.getContent( );
+          final Map<String, String> parameters = new HashMap<String, String>( httpRequest.getParameters( ) );
+          final ChannelBuffer buffer = httpRequest.getContent( );
           buffer.markReaderIndex( );
-          byte[] read = new byte[buffer.readableBytes( )];
+          final byte[] read = new byte[buffer.readableBytes( )];
           buffer.readBytes( read );
-          String query = new String( read );
+          final String query = new String( read );
           buffer.resetReaderIndex( );
-          for ( String p : query.split( "&" ) ) {
-            String[] splitParam = p.split( "=" );
+          for ( final String p : query.split( "&" ) ) {
+            final String[] splitParam = p.split( "=" );
             String lhs = splitParam[0];
             String rhs = splitParam.length == 2
               ? splitParam[1]
               : null;
             try {
               if ( lhs != null ) lhs = new URLCodec( ).decode( lhs );
-            } catch ( DecoderException e ) {}
+            } catch ( final DecoderException e ) {}
             try {
               if ( rhs != null ) rhs = new URLCodec( ).decode( rhs );
-            } catch ( DecoderException e ) {}
+            } catch ( final DecoderException e ) {}
             parameters.put( lhs, rhs );
           }
-          for ( RequiredQueryParams p : RequiredQueryParams.values( ) ) {
+          for ( final RequiredQueryParams p : RequiredQueryParams.values( ) ) {
             if ( !parameters.containsKey( p.toString( ) ) ) {
               return false;
             }
           }
           httpRequest.getParameters( ).putAll( parameters );
         } else {
-          for ( RequiredQueryParams p : RequiredQueryParams.values( ) ) {
+          for ( final RequiredQueryParams p : RequiredQueryParams.values( ) ) {
             if ( !httpRequest.getParameters( ).containsKey( p.toString( ) ) ) {
               return false;
             }
           }
         }
-        return true && message.getUri( ).startsWith( servicePath );
+        return ( message.getUri( ).startsWith( this.servicePath ) || message.getUri( ).startsWith( this.internalServicePath ) );
       }
       return false;
     }
@@ -312,7 +308,7 @@ public class Pipelines {
     }
     
     @Override
-    public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
+    public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
       pipeline.addLast( "hmac-v2-verify", new HmacHandler( true ) );
       pipeline.addLast( "timestamp-verify", new QueryTimestampHandler( ) );
       pipeline.addLast( "restful-binding", new InternalQueryBinding( ) );
@@ -337,10 +333,10 @@ public class Pipelines {
   enum InternalOnlyHandler implements ChannelUpstreamHandler {
     INSTANCE;
     @Override
-    public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+    public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
       final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
       final BaseMessage msg = BaseMessage.extractMessage( e );
-      if ( request != null && msg != null ) {
+      if ( ( request != null ) && ( msg != null ) ) {
         final User user = Contexts.lookup( request.getCorrelationId( ) ).getUser( );
         if ( user.isSystemInternal( ) || user.isSystemAdmin( ) ) {
           ctx.sendUpstream( e );

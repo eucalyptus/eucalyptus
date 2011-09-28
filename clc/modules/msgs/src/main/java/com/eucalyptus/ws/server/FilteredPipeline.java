@@ -65,27 +65,16 @@ package com.eucalyptus.ws.server;
 
 import java.util.Map;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.http.MappingHttpMessage;
-import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Filterable;
 import com.eucalyptus.util.HasName;
-import com.eucalyptus.ws.protocol.BaseQueryBinding;
-import com.eucalyptus.ws.protocol.OperationParameter;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Filterable<HttpRequest> {
   private static Logger LOG = Logger.getLogger( FilteredPipeline.class );
@@ -109,7 +98,7 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
     
   }
   
-  protected FilteredPipeline( ) {}
+  public FilteredPipeline( ) {}
   
   public abstract String getName( );
   

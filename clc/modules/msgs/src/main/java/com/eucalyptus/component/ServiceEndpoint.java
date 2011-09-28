@@ -160,6 +160,7 @@ public class ServiceEndpoint extends AtomicReference<URI> implements HasParent<M
   class ServiceEndpointWorker implements Runnable {
     @SuppressWarnings( "unchecked" )
     public void run( ) {
+      Thread.currentThread( ).setName( ServiceEndpoint.this.get( ) + Thread.currentThread( ).getName( ) );
       LOG.info( "Starting message queue: " + Thread.currentThread( ).getName( ) + " for endpoint: " + ServiceEndpoint.this.get( ) );
       while ( ServiceEndpoint.this.running.get( ) ) {
         try {
