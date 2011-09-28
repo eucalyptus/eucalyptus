@@ -67,7 +67,6 @@ import java.security.GeneralSecurityException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.log4j.Logger;
@@ -114,7 +113,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 public class Pipelines {
   private static final Logger                LOG               = Logger.getLogger( Pipelines.class );
   private static final Set<FilteredPipeline> internalPipelines = Sets.newHashSet( );
-  private static final Set<FilteredPipeline> pipelines         = new ConcurrentSkipListSet<FilteredPipeline>( );
+  private static final Set<FilteredPipeline> pipelines         = Sets.newHashSet( );
   
   static FilteredPipeline find( final HttpRequest request ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     FilteredPipeline candidate = findAccepting( request );
