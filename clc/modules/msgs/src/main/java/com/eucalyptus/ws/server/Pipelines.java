@@ -207,8 +207,8 @@ public class Pipelines {
     
     public InternalSoapPipeline( ComponentId componentId ) {
       super( componentId );
-      this.servicePath = componentId.getLocalEndpointUri( ).getPath( );
-      this.serviceName = componentId.getLocalEndpointName( );
+      this.servicePath = componentId.makeInternalRemoteUri( "127.0.0.1", 8773 ).getPath( );
+      this.serviceName = componentId.getFullName( ).toString( );
     }
     
     @Override
@@ -253,8 +253,8 @@ public class Pipelines {
     
     public InternalQueryPipeline( ComponentId componentId ) {
       super( componentId );
-      this.servicePath = componentId.getLocalEndpointUri( ).getPath( );
-      this.serviceName = componentId.getLocalEndpointName( );
+      this.servicePath = componentId.makeInternalRemoteUri( "127.0.0.1", 8773 ).getPath( );
+      this.serviceName = componentId.getFullName( ).toString( );
     }
     
     @Override
