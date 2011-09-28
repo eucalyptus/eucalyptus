@@ -407,7 +407,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               if ( !exNet.getTag( ).equals( input.getNetParams( ).getVlan( ) ) ) {
                 exNet = null;
               } else {
-                index = exNet.reclaimNetworkIndex( input.getNetParams( ).getNetworkIndex( ) );
+                index = Entities.merge( exNet.reclaimNetworkIndex( input.getNetParams( ).getNetworkIndex( ) ) );
               }
             }
           }
