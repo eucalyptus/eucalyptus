@@ -136,15 +136,16 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
 
   public static void handleRestore( final VmInfo runVm ) {
     try {
-      if ( VmInstances.cachedLookup( runVm.getInstanceId( ) ) == null ) {
-        try {
-          VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
-        } catch ( Exception ex ) {
-          LOG.error( ex , ex );
-        }
+      if ( VmInstances.cachedLookup( runVm.getInstanceId( ) ) != null ) {
+        return;
       }
     } catch ( Exception ex2 ) {
       LOG.trace( ex2, ex2 );
+    }
+    try {
+      VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
     }
   }
   
