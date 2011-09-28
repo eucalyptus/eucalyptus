@@ -110,14 +110,6 @@ public class ClusterEndpoint implements Startable {
   
   private Map<String, Supplier<List<ClusterInfoType>>> describeKeywords = new HashMap<String, Supplier<List<ClusterInfoType>>>( ) {
                                                                           {
-                                                                            put( "coredump", new Supplier<List<ClusterInfoType>>( ) {
-                                                                              
-                                                                              @Override
-                                                                              public List<ClusterInfoType> get( ) {
-                                                                                return dumpInfo.apply( "IGNORED" );
-                                                                              }
-                                                                              
-                                                                            } );
                                                                             put( "verbose", new Supplier<List<ClusterInfoType>>( ) {
                                                                               
                                                                               @Override

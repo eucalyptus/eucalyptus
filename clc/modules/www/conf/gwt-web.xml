@@ -88,14 +88,6 @@
   </servlet>
 
   <servlet>
-    <description></description>
-    <display-name>Report Generator</display-name>
-    <servlet-name>Reports</servlet-name>
-    <servlet-class>com.eucalyptus.www.Reports</servlet-class>
-    <load-on-startup>1</load-on-startup>
-  </servlet>
-
-  <servlet>
     <description>Executes a command within Eucalyptus</description>
     <display-name>Command Servlet</display-name>
     <servlet-name>CommandServlet</servlet-name>
@@ -144,11 +136,6 @@
   <servlet-mapping>
     <servlet-name>X509Download</servlet-name>
     <url-pattern>/getX509</url-pattern>
-  </servlet-mapping>
-
-  <servlet-mapping>
-    <servlet-name>Reports</servlet-name>
-    <url-pattern>/reports</url-pattern>
   </servlet-mapping>
 
   <servlet-mapping>
