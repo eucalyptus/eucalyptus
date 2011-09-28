@@ -671,22 +671,6 @@ public class ServiceTransitions {
         ServiceContextManager.restartSync( parent );
       }
     },
-    PIPELINES_ADD {
-      @Override
-      public void fire( final ServiceConfiguration parent ) {
-        if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
-          Pipelines.enable( parent.getComponentId( ) );
-        }
-      }
-    },
-    PIPELINES_REMOVE {
-      @Override
-      public void fire( final ServiceConfiguration parent ) {
-        if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
-          Pipelines.disable( parent.getComponentId( ) );
-        }
-      }
-    },
     PROPERTIES_ADD {
       @Override
       public void fire( final ServiceConfiguration config ) {

@@ -109,13 +109,14 @@ import com.eucalyptus.ws.protocol.BaseQueryBinding;
 import com.eucalyptus.ws.protocol.OperationParameter;
 import com.eucalyptus.ws.protocol.SoapHandler;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import com.google.common.collect.TreeMultimap;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Pipelines {
-  private static final Logger                                  LOG                = Logger.getLogger( Pipelines.class );
-  private static final Multimap<ComponentId, FilteredPipeline> componentPipelines = TreeMultimap.create( );
-  private static final Set<FilteredPipeline>                   pipelines          = new ConcurrentSkipListSet<FilteredPipeline>( );
+  private static final Logger                LOG               = Logger.getLogger( Pipelines.class );
+  private static final Set<FilteredPipeline> internalPipelines = Sets.newHashSet( );
+  private static final Set<FilteredPipeline> pipelines         = new ConcurrentSkipListSet<FilteredPipeline>( );
   
   static FilteredPipeline find( final HttpRequest request ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     FilteredPipeline candidate = findAccepting( request );
@@ -126,7 +127,7 @@ public class Pipelines {
           for ( FilteredPipeline p : pipelines ) {
             LOG.debug( "PIPELINE: " + p );
           }
-          for ( FilteredPipeline p : componentPipelines.values( ) ) {
+          for ( FilteredPipeline p : internalPipelines ) {
             LOG.debug( "PIPELINE: " + p );
           }
         }
@@ -141,25 +142,19 @@ public class Pipelines {
   
   private static FilteredPipeline findAccepting( final HttpRequest request ) {
     FilteredPipeline candidate = null;
-    for ( FilteredPipeline f : componentPipelines.values( ) ) {
+    for ( FilteredPipeline f : pipelines ) {
       if ( f.checkAccepts( request ) ) {
         return f;
       }
     }
     if ( candidate == null ) {
-      for ( FilteredPipeline f : pipelines ) {
-        return f;
+      for ( FilteredPipeline f : internalPipelines ) {
+        if ( f.checkAccepts( request ) ) {
+          return f;
+        }
       }
     }
     return candidate;
-  }
-  
-  public static void enable( ComponentId compId ) {
-    LOG.info( "-> Registering component pipeline: " + compId.getName( ) + " " + componentPipelines.get( compId ) );
-  }
-  
-  public static void disable( ComponentId compId ) {
-    LOG.info( "-> Deregistering component pipeline: " + compId.getName( ) + " " + componentPipelines.get( compId ) );
   }
   
   @Provides( Empyrean.class )
@@ -169,8 +164,8 @@ public class Pipelines {
     @Override
     public boolean load( ) throws Exception {
       for ( ComponentId comp : ComponentIds.list( ) ) {
-        Pipelines.pipelines.add( new InternalQueryPipeline( comp ) );
-        Pipelines.pipelines.add( new InternalSoapPipeline( comp ) );
+        Pipelines.internalPipelines.add( new InternalQueryPipeline( comp ) );
+        Pipelines.internalPipelines.add( new InternalSoapPipeline( comp ) );
       }
       return true;
     }
@@ -188,7 +183,7 @@ public class Pipelines {
           ComponentId compId = ( ComponentId ) Ats.from( candidate ).get( ComponentPart.class ).value( ).newInstance( );
           Class<? extends FilteredPipeline> pipelineClass = candidate;
           FilteredPipeline pipeline = Classes.newInstance( pipelineClass );
-          Pipelines.componentPipelines.put( compId, pipeline );
+          Pipelines.pipelines.add( pipeline );
           return true;
         } catch ( Exception ex ) {
           LOG.trace( ex, ex );
