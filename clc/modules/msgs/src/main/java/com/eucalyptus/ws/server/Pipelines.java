@@ -297,7 +297,7 @@ public class Pipelines {
             }
           }
         }
-        return ( message.getUri( ).endsWith( this.servicePath ) || message.getUri( ).endsWith( this.internalServicePath ) );
+        return ( message.getUri( ).startsWith( this.servicePath ) || message.getUri( ).startsWith( this.internalServicePath ) );
       }
       return false;
     }
