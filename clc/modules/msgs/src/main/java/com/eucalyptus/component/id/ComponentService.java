@@ -71,7 +71,7 @@ import com.eucalyptus.empyrean.Empyrean;
 public class ComponentService extends ComponentId.Unpartioned {
   
   public ComponentService( ) {
-    super( "Component" );
+      super( "Component", null );
   }
   
   @Override

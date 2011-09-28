@@ -72,7 +72,7 @@ import com.eucalyptus.util.Internets;
 public class Database extends ComponentId.Unpartioned {
   
   public Database( ) {
-    super( "Db" );
+      super( "Db", null );
   }
   
   @Override

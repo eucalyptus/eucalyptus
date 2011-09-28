@@ -66,9 +66,15 @@ package com.eucalyptus.component.id;
 import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.ws.StackConfiguration;
 
 public class Euare extends ComponentId.Unpartioned {
   public static Euare INSTANCE = new Euare( );
+
+  public Euare( ) {
+   super( StackConfiguration.DEFAULT_EUARE_URL_PREFIX );
+  }
+
   @Override
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
     return   new ArrayList( ) {

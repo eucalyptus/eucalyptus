@@ -102,7 +102,7 @@ public class Empyrean extends ComponentId.Unpartioned {
   }
   
   public Empyrean( ) {
-    super( "Bootstrap" );
+      super( "Bootstrap", null );
   }
   
   @Override

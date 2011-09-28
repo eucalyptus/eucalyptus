@@ -72,7 +72,7 @@ import com.eucalyptus.util.Internets;
 public class GatherLogService extends ComponentId {
   
   public GatherLogService( ) {
-    super( "gatherlog" );
+      super( "gatherlog", null );
   }
 
   @Override

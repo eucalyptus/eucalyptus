@@ -71,7 +71,7 @@ import com.eucalyptus.util.Internets;
 public class NodeController extends ComponentId {
   
   public NodeController( ) {
-    super( "node" );
+    super( "node", null );
   }
 
   @Override

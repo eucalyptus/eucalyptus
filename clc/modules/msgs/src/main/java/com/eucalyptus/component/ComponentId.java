@@ -60,26 +60,39 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   private String              externalUriPattern;
   private String              uriLocal;
   
-  protected ComponentId( String name ) {
+  protected ComponentId( String name, String extUrlPrefix ) {
     this.capitalizedName = name;
     this.name = this.capitalizedName.toLowerCase( );
     this.entryPoint = this.capitalizedName + "RequestQueueEndpoint";
     this.port = 8773;
     this.uriPattern = "http://%s:%d/internal/%s";
-    this.externalUriPattern = "%s://%s:%d/services/" + this.capitalizedName;
+    //    this.externalUriPattern = "http://%s:%d/services/" + this.capitalizedName;
+    // NOTE: these patterns are overwritten in getExternalUriPattern() of some subclasses
+    /*    if( extUrlPrefix != null )
+	this.externalUriPattern = extUrlPrefix + "://%s:%d/services/" + this.capitalizedName;
+	else*/
+	this.externalUriPattern = "http://%s:%d/services/" + this.capitalizedName;
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
     this.modelContent = loadModel( );
   }
   
-  protected ComponentId( ) {
+  protected ComponentId( String extUrlPrefix ) {
     this.capitalizedName = this.getClass( ).getSimpleName( );
     this.name = this.capitalizedName.toLowerCase( );
     this.entryPoint = this.capitalizedName + "RequestQueueEndpoint";
     this.port = 8773;
     this.uriPattern = "http://%s:%d/internal/%s";
-    this.externalUriPattern = "%s://%s:%d/services/" + this.capitalizedName;
+    // NOTE: these patterns are overwritten in getExternalUriPattern() of some subclasses
+    /*    if( extUrlPrefix != null )
+	this.externalUriPattern = extUrlPrefix + "://%s:%d/services/" + this.capitalizedName;
+	else*/
+	this.externalUriPattern = "http://%s:%d/services/" + this.capitalizedName;
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
     this.modelContent = loadModel( );
+  }
+
+  protected ComponentId( ) {
+    this(null);
   }
 
   public String getVendorName( ) {
@@ -270,10 +283,6 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   }
   
   public final URI makeExternalRemoteUri( String hostName, Integer port ) {
-      return makeExternalRemoteUri(hostName, port, null);
-  }
-
-  public final URI makeExternalRemoteUri( String hostName, Integer port, String prefix ) {
     String uri;
     URI u = null;
     port = ( port == -1 )
@@ -282,20 +291,13 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     hostName = ( port == -1 )
       ? Internets.localHostAddress( )
       : hostName;
-    LOG.info("prefix = " + prefix + ", pattern = " + getExternalUriPattern());
     try {
-      if(prefix != null)
-	    uri = String.format( this.getExternalUriPattern( ), prefix, hostName, port );
-      else
-	    uri = String.format( this.getExternalUriPattern( ), hostName, port );
+      uri = String.format( this.getExternalUriPattern( ), hostName, port );
       LOG.info("uri = " + uri);
       u = new URI( uri );
       u.parseServerAuthority( );
     } catch ( URISyntaxException e ) {
-	if( prefix != null ) 
-	    uri = String.format( this.getExternalUriPattern( ), prefix, Internets.localHostAddress( ), this.getPort( ) );
-	else
-	    uri = String.format( this.getExternalUriPattern( ), Internets.localHostAddress( ), this.getPort( ) );
+      uri = String.format( this.getExternalUriPattern( ), Internets.localHostAddress( ), this.getPort( ) );
       try {
         u = new URI( uri );
         u.parseServerAuthority( );
@@ -303,10 +305,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
         u = URI.create( uri );
       }
     } catch ( MissingFormatArgumentException e ) {
-	if( prefix != null )
-	    uri = String.format( this.getExternalUriPattern( ), prefix, hostName, port, this.getCapitalizedName( ) );
-	else 
-	    uri = String.format( this.getExternalUriPattern( ), hostName, port, this.getCapitalizedName( ) );
+      uri = String.format( this.getExternalUriPattern( ), hostName, port, this.getCapitalizedName( ) );
       try {
         u = new URI( uri );
         u.parseServerAuthority( );
@@ -359,11 +358,15 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public static abstract class Unpartioned extends ComponentId {
     
     public Unpartioned( ) {
-      super( );
+      super();
+    }
+
+    public Unpartioned( String extUrlPrefix ) {
+      super( extUrlPrefix );
     }
     
-    public Unpartioned( String name ) {
-      super( name );
+    public Unpartioned( String name, String extUrlPrefix ) {
+	super( name, extUrlPrefix );
     }
     
     @Override
