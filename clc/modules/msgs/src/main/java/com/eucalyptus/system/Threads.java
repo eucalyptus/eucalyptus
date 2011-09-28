@@ -99,8 +99,12 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
 import org.jgroups.util.ThreadFactory;
+
+import com.eucalyptus.bootstrap.OrderedShutdown;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.Empyrean;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
@@ -169,16 +173,15 @@ public class Threads {
       this.name = groupPrefix;
       this.group = new ThreadGroup( this.name );
       this.pool = Executors.newCachedThreadPool( this );
-      Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
-        @Override
-        public void run( ) {
-          LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " Stopping thread pool..." );
-          if ( ThreadPool.this.pool != null ) {
-            ThreadPool.this.free( );
-          }
-        }
-      } );
-      
+      OrderedShutdown.register(Eucalyptus.class, new Runnable () {
+    	  @Override
+          public void run( ) {
+            LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " Stopping thread pool..." );
+            if ( ThreadPool.this.pool != null ) {
+              ThreadPool.this.free( );
+            }
+          } 
+      });      
     }
     
     public ThreadPool limitTo( final Integer numThreads ) {

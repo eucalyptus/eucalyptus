@@ -10,11 +10,13 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
@@ -35,13 +37,24 @@ public class NetworkGroupManager {
   
   public CreateSecurityGroupResponseType create( final CreateSecurityGroupType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
-    //GRZE:WHINE: add resource allocator here:  RestrictedTypes.allocate( 1, Allocator.INSTANCE );
+    
     final CreateSecurityGroupResponseType reply = ( CreateSecurityGroupResponseType ) request.getReply( );
     try {
-      NetworkGroups.create( ctx.getUserFullName( ), request.getGroupName( ), request.getGroupDescription( ) );
+      Supplier<NetworkGroup> allocator = new Supplier<NetworkGroup>( ) {
+        
+        @Override
+        public NetworkGroup get( ) {
+          try {
+            return NetworkGroups.create( ctx.getUserFullName( ), request.getGroupName( ), request.getGroupDescription( ) );
+          } catch ( MetadataException ex ) {
+            throw new RuntimeException( ex );
+          }
+        }
+      };
+      RestrictedTypes.allocate( allocator );
       return reply;
     } catch ( final Exception ex ) {
-      throw new EucalyptusCloudException( "CreatSecurityGroup failed because: " + ex.getMessage( ), ex );
+      throw new EucalyptusCloudException( "CreateSecurityGroup failed because: " + Exceptions.causeString( ex ), ex );
     }
   }
   

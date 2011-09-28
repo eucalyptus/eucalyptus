@@ -75,6 +75,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.LockModeType;
+import javax.persistence.OptimisticLockException;
 import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
@@ -85,31 +86,37 @@ import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Classes;
-import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+@ConfigurableClass( root = "bootstrap.tx", description = "Parameters controlling transaction behaviour." )
 public class Entities {
-  private static ConcurrentMap<String, String>                   txLog              = new MapMaker( ).softKeys( ).softValues( ).makeMap( );
-  private static Logger                                          LOG                = Logger.getLogger( Entities.class );
-  private static ThreadLocal<String>                             txRootThreadLocal  = new ThreadLocal<String>( );
-  private static ThreadLocal<ConcurrentMap<String, CascadingTx>> txStateThreadLocal = new ThreadLocal<ConcurrentMap<String, CascadingTx>>( ) {
-                                                                                      
-                                                                                      @Override
-                                                                                      protected ConcurrentMap<String, CascadingTx> initialValue( ) {
-                                                                                        return Maps.newConcurrentMap( );
-                                                                                      }
-                                                                                      
-                                                                                    };
+  @ConfigurableField( description = "Maximum number of times a transaction may be retried before giving up.", initial = "5" )
+  public static Long                                             CONCURRENT_UPDATE_RETRIES = 5l;
+  private static ConcurrentMap<String, String>                   txLog                     = new MapMaker( ).softKeys( ).softValues( ).makeMap( );
+  private static Logger                                          LOG                       = Logger.getLogger( Entities.class );
+  private static ThreadLocal<String>                             txRootThreadLocal         = new ThreadLocal<String>( );
+  private static ThreadLocal<ConcurrentMap<String, CascadingTx>> txStateThreadLocal        = new ThreadLocal<ConcurrentMap<String, CascadingTx>>( ) {
+                                                                                             
+                                                                                             @Override
+                                                                                             protected ConcurrentMap<String, CascadingTx> initialValue( ) {
+                                                                                               return Maps.newConcurrentMap( );
+                                                                                             }
+                                                                                             
+                                                                                           };
   
   private static CascadingTx lookup( final Object obj ) {
     final String ctx = lookatPersistenceContext( obj );
@@ -206,7 +213,7 @@ public class Entities {
   public static <T> void flush( T object ) {
     getTransaction( object ).txState.getEntityManager( ).flush( );
   }
-
+  
   public static <T> List<T> query( final T example ) {
     return query( example, false );
   }
@@ -745,7 +752,7 @@ public class Entities {
         try {
           this.transaction.commit( );
         } catch ( final RuntimeException ex ) {
-          LOG.warn( ex );
+          LOG.trace( ex, ex );
           Logs.exhaust( ).warn( ex, ex );
           throw ex;
         }
@@ -835,4 +842,24 @@ public class Entities {
     
   }
   
+  public static <T> boolean retry( T arg, Predicate<T> predicate ) {
+    RuntimeException rootCause = null;
+    for ( int i = 0; i < CONCURRENT_UPDATE_RETRIES; i++ ) {
+      try {
+        return predicate.apply( arg );
+      } catch ( RuntimeException ex ) {
+        if ( Exceptions.isCausedBy( ex, OptimisticLockException.class ) ) {
+          rootCause = Exceptions.causedBy( ex, OptimisticLockException.class );
+          continue;
+        } else {
+          rootCause = ex;
+          Logs.extreme( ).error( ex, ex );
+          throw ex;
+        }
+      }
+    }
+    throw ( rootCause != null
+            ? rootCause
+            : new NullPointerException( "BUG: Transaction retry failed but root cause exception is unknown!" ) );
+  }
 }
