@@ -115,25 +115,27 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           VmStateCallback.handleReportedTeardown( vm, runVm );
         } else if ( VmStateSet.RUN.apply( vm ) ) {
           vm.doUpdate( ).apply( runVm );
-        } else if ( !VmStateSet.RUN.apply( vm ) && VmStateSet.RUN.contains( runVmState ) && vm.lastUpdateMillis( ) > ( VmInstances.VOLATILE_STATE_TIMEOUT_SEC * 1000l ) ) {
+        } else if ( !VmStateSet.RUN.apply( vm ) && VmStateSet.RUN.contains( runVmState )
+                    && vm.lastUpdateMillis( ) > ( VmInstances.VOLATILE_STATE_TIMEOUT_SEC * 1000l ) ) {
           vm.doUpdate( ).apply( runVm );
         }
-      } catch ( TerminatedInstanceException ex1 ) {
-        LOG.trace( "Ignore state update to terminated instance: " + runVm.getInstanceId( ) );
-      } catch ( NoSuchElementException ex1 ) {
-        if ( VmStateSet.RUN.contains( runVmState ) ) {
-          VmStateCallback.handleRestore( runVm );
-        }
-      } catch ( Exception ex1 ) {
-        LOG.error( ex1, ex1 );
+        db.commit( );
+      } catch ( Exception ex ) {
+        LOG.trace( ex, ex );
+        db.rollback( );
+        throw ex;
       }
-      db.commit( );
-    } catch ( Exception ex ) {
-      LOG.trace( ex, ex );
-      db.rollback( );
+    } catch ( TerminatedInstanceException ex1 ) {
+      LOG.trace( "Ignore state update to terminated instance: " + runVm.getInstanceId( ) );
+    } catch ( NoSuchElementException ex1 ) {
+      if ( VmStateSet.RUN.contains( runVmState ) ) {
+        VmStateCallback.handleRestore( runVm );
+      }
+    } catch ( Exception ex1 ) {
+      LOG.trace( ex1, ex1 );
     }
   }
-
+  
   public static void handleRestore( final VmInfo runVm ) {
     try {
       if ( VmInstances.cachedLookup( runVm.getInstanceId( ) ) != null ) {
@@ -145,7 +147,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     try {
       VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
     } catch ( Exception ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
     }
   }
   
