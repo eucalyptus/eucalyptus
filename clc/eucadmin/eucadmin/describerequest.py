@@ -31,6 +31,7 @@
 from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
 import eucadmin
+import math
 
 class DescribeRequest(AWSQueryRequest):
 
@@ -52,7 +53,20 @@ class DescribeRequest(AWSQueryRequest):
       
     def cli_formatter(self, data):
         services = getattr(data, 'euca:registered')
-        fmt = '%s\t%-15.15s\t%-15.15s\t%-25s\t%s\t%s'
+        fields = {'euca:partition' : 15,
+                  'euca:name' : 15,
+                  'euca:hostName' : 25}
+        for s in services:
+            if s.get('euca:hostName', None) != 'detail':
+                for field_name in fields:
+                    field_size = math.ceil(fields[field_name]/5.0)*5
+                    if len(s.get(field_name)) > field_size:
+                        fields[field_name] = field_size
+        fmt = '%%s\t%%-%s.%ss\t%%-%d.%ds\t%%-%ds\t%%s\t%%s' % (fields['euca:partition'],
+                                                               fields['euca:partition'],
+                                                               fields['euca:name'],
+                                                               fields['euca:name'],
+                                                               fields['euca:hostName'])
         for s in services:
             if s.get('euca:hostName', None) != 'detail':
                 print fmt % (
