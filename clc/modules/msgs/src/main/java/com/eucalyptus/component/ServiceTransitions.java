@@ -93,15 +93,15 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Callback.Completion;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMappers;
-import com.eucalyptus.util.Callback.Completion;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.Automata;
 import com.eucalyptus.util.fsm.TransitionAction;
-import com.eucalyptus.ws.util.PipelineRegistry;
+import com.eucalyptus.ws.server.Pipelines;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
@@ -675,7 +675,7 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) {
         if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
-          PipelineRegistry.getInstance( ).enable( parent.getComponentId( ) );
+          Pipelines.enable( parent.getComponentId( ) );
         }
       }
     },
@@ -683,7 +683,7 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) {
         if ( parent.isVmLocal( ) || parent.isHostLocal( ) ) {
-          PipelineRegistry.getInstance( ).disable( parent.getComponentId( ) );
+          Pipelines.disable( parent.getComponentId( ) );
         }
       }
     },

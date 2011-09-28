@@ -155,6 +155,8 @@ public class VmRuntimeState {
       action = this.cleanUpRunnable( SEND_USER_STOP );
     } else if ( ( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) || VmState.BURIED.equals( newState ) ) {
       action = this.cleanUpRunnable( SEND_USER_TERMINATE );
+    } else if ( VmStateSet.RUN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) ) {
+      action = this.cleanUpRunnable( SEND_USER_TERMINATE );
     } else if ( !oldState.equals( newState ) ) {
       if ( Reason.APPEND.equals( reason ) ) {
         reason = this.reason;
@@ -167,14 +169,13 @@ public class VmRuntimeState {
         action = this.cleanUpRunnable( );
       } else if ( VmState.PENDING.equals( oldState ) && VmState.RUNNING.equals( newState ) ) {
         this.getVmInstance( ).setState( newState );
+      } else if ( VmState.SHUTTING_DOWN.equals( oldState ) && VmStateSet.RUN.contains( newState ) ) {
+        this.getVmInstance( ).setState( oldState );
       } else if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) ) {
         this.getVmInstance( ).setState( newState );
         action = this.cleanUpRunnable( );
       } else if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
         this.getVmInstance( ).setState( newState );
-//      } else if ( ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) && ( newState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) ) {
-//        this.getVmInstance( ).setState( oldState );
-//        action = this.cleanUpRunnable( );
       } else if ( newState.ordinal( ) > oldState.ordinal( ) ) {
         this.getVmInstance( ).setState( newState );
       } else if ( VmState.STOPPED.equals( oldState ) && VmState.PENDING.equals( newState ) ) {

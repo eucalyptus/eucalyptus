@@ -113,7 +113,7 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   
   public void clearVmAddress( ) {
     try {
-      VmInstance vm = VmInstances.lookupByInstanceIp( super.getRequest( ).getDestination( ) );
+      VmInstance vm = VmInstances.lookupByPrivateIp( super.getRequest( ).getDestination( ) );
       if ( vm.getPublicAddress( ).equals( super.getRequest( ).getSource( ) ) ) {
         vm.updatePublicAddress( vm.getPrivateAddress( ) );
       }
@@ -154,7 +154,7 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   @Override
   public void fireException( Throwable e ) {
     try {
-      VmInstance vm = VmInstances.lookupByInstanceIp( super.getRequest( ).getDestination( ) );
+      VmInstance vm = VmInstances.lookupByPrivateIp( super.getRequest( ).getDestination( ) );
       vm.updatePublicAddress( VmNetworkConfig.DEFAULT_IP );
     } catch ( Exception t ) {
       LOG.debug( t, t );

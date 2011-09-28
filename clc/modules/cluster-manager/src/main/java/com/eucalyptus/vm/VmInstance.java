@@ -1299,19 +1299,23 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         } else {
           final EntityTransaction db = Entities.get( VmInstance.class );
           try {
-            final VmState state = VmState.Mapper.get( runVm.getStateName( ) );
+            final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
             if ( VmInstance.this.getRuntimeState( ).isBundling( ) ) {
               BundleState bundleState = BundleState.mapper.apply( runVm.getBundleTaskStateName( ) );
               VmInstance.this.getRuntimeState( ).updateBundleTaskState( bundleState );
-            } else if ( VmStateSet.RUN.apply( VmInstance.this ) && VmStateSet.RUN.contains( state ) ) {
-              VmInstance.this.setState( state, Reason.APPEND, "UPDATE" );
+            } else if ( VmStateSet.RUN.apply( VmInstance.this ) && VmStateSet.RUN.contains( runVmState ) ) {
+              VmInstance.this.setState( runVmState, Reason.APPEND, "UPDATE" );
               this.updateState( runVm );
-            } else if ( VmState.STOPPING.apply( VmInstance.this ) && VmState.SHUTTING_DOWN.equals( state ) ) {
+            } else if ( VmState.STOPPING.apply( VmInstance.this ) && VmState.SHUTTING_DOWN.equals( runVmState ) ) {
               VmInstance.this.setState( VmState.STOPPED, Reason.APPEND, "STOPPED" );
-            } else if ( VmState.SHUTTING_DOWN.apply( VmInstance.this ) && state.equals( VmInstance.this.getState( ) ) ) {
+            } else if ( VmState.SHUTTING_DOWN.apply( VmInstance.this ) && VmState.SHUTTING_DOWN.equals( runVmState ) ) {
               VmInstance.this.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
-            } else if ( VmStateSet.STOP.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
+            } else if ( VmState.STOPPING.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
               VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
+            } else if ( VmState.SHUTTING_DOWN.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
+              VmInstance.this.setState( VmState.TERMINATED, Reason.EXPIRED );
+            } else if ( VmState.SHUTTING_DOWN.apply( VmInstance.this ) && VmStateSet.RUN.contains( runVmState ) ) {
+              VmInstance.this.setState( VmState.SHUTTING_DOWN, Reason.APPEND, "DONE" );
             } else {
               this.updateState( runVm );
             }

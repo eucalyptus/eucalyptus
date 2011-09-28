@@ -65,35 +65,55 @@ package com.eucalyptus.ws.server;
 
 import java.util.Map;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Filterable;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.ws.protocol.BaseQueryBinding;
+import com.eucalyptus.ws.protocol.OperationParameter;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Filterable<HttpRequest> {
-  private static Logger            LOG = Logger.getLogger( FilteredPipeline.class );
-  private final NioMessageReceiver msgReceiver;
-  
-  public FilteredPipeline( ) {
-    this.msgReceiver = null;
+  private static Logger LOG = Logger.getLogger( FilteredPipeline.class );
+  protected abstract static class InternalPipeline extends FilteredPipeline {
+    private final ComponentId componentId;
+    
+    InternalPipeline( ComponentId componentId ) {
+      this.componentId = componentId;
+    }
+    
+    @Override
+    void addSystemHandlers( ChannelPipeline pipeline ) {
+      pipeline.addLast( "internal-only-restriction", InternalOnlyHandler.INSTANCE );
+      pipeline.addLast( "msg-epoch-check", SystemChecksHandler.MESSAGE_EPOCH );
+      super.addSystemHandlers( pipeline );
+    }
+    
+    private ComponentId getComponentId( ) {
+      return this.componentId;
+    }
+    
   }
   
-  public FilteredPipeline( final NioMessageReceiver msgReceiver ) {
-    this.msgReceiver = msgReceiver;
-  }
+  protected FilteredPipeline( ) {}
   
   public abstract String getName( );
   
-  private final void addSystemHandlers( final ChannelPipeline pipeline ) {
-    if ( this.msgReceiver != null ) {
-      pipeline.addLast( "internal-only-restriction", InternalOnlyHandler.INSTANCE );
-      pipeline.addLast( "msg-epoch-check", SystemChecksHandler.MESSAGE_EPOCH );
-    }
+  void addSystemHandlers( final ChannelPipeline pipeline ) {
     pipeline.addLast( "service-state-check", SystemChecksHandler.SERVICE_STATE );
     pipeline.addLast( "service-specific-mangling", ServiceHackeryHandler.INSTANCE );
     pipeline.addLast( "service-sink", new ServiceContextHandler( ) );
@@ -103,7 +123,7 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
     try {
       this.addHandlers( pipeline );
       this.addSystemHandlers( pipeline );
-      if ( Logs.isExtrrreeeme() ) {
+      if ( Logs.isExtrrreeeme( ) ) {
         for ( final Map.Entry<String, ChannelHandler> e : pipeline.toMap( ).entrySet( ) ) {
           EventRecord.here( this.getClass( ), EventType.PIPELINE_HANDLER, e.getKey( ), e.getValue( ).getClass( ).getSimpleName( ) ).trace( );
         }
@@ -123,13 +143,7 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
   
   @Override
   public final int compareTo( final FilteredPipeline o ) {
-    if ( this.getClass( ).getSimpleName( ).startsWith( "Internal" ) && !o.getClass( ).getSimpleName( ).startsWith( "Internal" ) ) {
-      return 1;
-    } else if ( o.getClass( ).getSimpleName( ).startsWith( "Internal" ) && !this.getClass( ).getSimpleName( ).startsWith( "Internal" ) ) {
-      return -1;
-    } else {
-      return ( this.getName( ) + this.getClass( ).getCanonicalName( ) ).compareTo( ( this.getName( ) + o.getClass( ).getCanonicalName( ) ) );
-    }
+    return this.getName( ).compareTo( this.getName( ) );
   }
   
   @Override
@@ -148,10 +162,7 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
     if ( obj == null ) return false;
     if ( getClass( ) != obj.getClass( ) ) return false;
     FilteredPipeline other = ( FilteredPipeline ) obj;
-    if ( this.getName( ) == null ) {
-      if ( other.getName( ) != null ) return false;
-    } else if ( !this.getName( ).equals( other.getName( ) ) ) return false;
-    return true;
+    return this.compareTo( other ) == 0;
   }
   
   @Override
