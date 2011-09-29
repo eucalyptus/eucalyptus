@@ -333,7 +333,8 @@ public class ImageManifests {
           String kId = this.xpathHelper.apply( ImageMetadata.Type.kernel.getManifestPath( ) );
           String rId = this.xpathHelper.apply( ImageMetadata.Type.ramdisk.getManifestPath( ) );
           this.imageType = ImageMetadata.Type.machine;
-          if ( !manifestName.startsWith( ImageMetadata.Platform.windows.toString( ) ) ) {
+          if ( !manifestName.startsWith( ImageMetadata.Platform.windows.toString( ) ) 
+              && ( kId != null && ImageMetadata.Platform.windows.name( ).equals( kId ) ) ) {
             this.platform = ImageMetadata.Platform.linux;
             if ( kId != null && kId.startsWith( ImageMetadata.Type.kernel.getTypePrefix( ) ) ) {
               ImageManifests.checkPrivileges( this.kernelId );
