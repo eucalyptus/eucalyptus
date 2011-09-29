@@ -311,7 +311,7 @@ public abstract class Bootstrapper implements Comparable<Bootstrapper> {
   @SuppressWarnings( "unchecked" )
   public <T extends ComponentId> Class<T> getProvides( ) {
     if ( !Ats.from( this.getClass( ) ).has( Provides.class ) ) {
-      Exceptions.eat( "Bootstrap class does not specify the component which it @Provides.  Fine.  For now we pretend you had put @Provides(ComponentId.class) or something similar instead of System.exit(-1): "
+      Exceptions.eat( "Bootstrap class does not specify the component which it @Provides.  Fine.  For now we pretend you had put @Provides(ComponentId.class): "
                       + this.getClass( ) );
       return ( Class<T> ) ComponentId.class;
     } else {

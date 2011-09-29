@@ -88,11 +88,13 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.jboss.netty.handler.timeout.WriteTimeoutException;
+import com.eucalyptus.binding.Binding;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.ServiceNotReadyException;
 import com.eucalyptus.ws.WebServicesException;
 
@@ -182,14 +184,12 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
     Logs.exhaust( ).error( t, t );
     final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, status );
     response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
-    if ( Logs.isExtrrreeeme() ) {
-      ByteArrayOutputStream os = new ByteArrayOutputStream( );
-      PrintWriter out = new PrintWriter( os );
-      t.printStackTrace( out );
-      response.setContent( ChannelBuffers.copiedBuffer( "Failure: " + status.toString( ) + "\r\n" + t.getMessage( ) + "\r\n" + os.toString( ) + "\r\n", "UTF-8" ) );
-    } else {
-      response.setContent( ChannelBuffers.copiedBuffer( "Failure: " + status.toString( ) + "\r\n" + t.getMessage( ), "UTF-8" ) );
-    }
+    response.setContent( ChannelBuffers.copiedBuffer( Binding.createRestFault( status.toString( ), t.getMessage( ), Exceptions.createFaultDetails( t ) ), "UTF-8" ) );
+//    if ( Logs.isExtrrreeeme() ) {
+//      response.setContent( ChannelBuffers.copiedBuffer( "Failure: " + status.toString( ) + "\r\n" + t.getMessage( ) + "\r\n" + os.toString( ) + "\r\n", "UTF-8" ) );
+//    } else {
+//      response.setContent( ChannelBuffers.copiedBuffer( "Failure: " + status.toString( ) + "\r\n" + t.getMessage( ), "UTF-8" ) );
+//    }
     ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
     writeFuture.addListener( ChannelFutureListener.CLOSE );
     if ( ctx.getChannel( ).isConnected( ) ) {
