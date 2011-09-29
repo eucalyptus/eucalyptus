@@ -89,7 +89,6 @@ import com.eucalyptus.cluster.callback.PublicAddressStateCallback;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
 import com.eucalyptus.cluster.callback.ServiceStateCallback;
 import com.eucalyptus.cluster.callback.StartServiceCallback;
-import com.eucalyptus.cluster.callback.VmPendingCallback;
 import com.eucalyptus.cluster.callback.VmStateCallback;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
@@ -117,7 +116,6 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
@@ -137,6 +135,7 @@ import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.util.fsm.Transitions;
+import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.eucalyptus.ws.WebServicesException;
@@ -156,7 +155,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   private static final long                              STATE_INTERVAL_DISABLED      = 10l;
   private static final long                              STATE_INTERVAL_NOTREADY      = 3l;
   private static final long                              STATE_INTERVAL_PENDING       = 3l;
-  private static final long                              VOLATILE_STATE_INTERVAL      = 3l;//TODO:@Configurable
   private static Logger                                  LOG                          = Logger.getLogger( Cluster.class );
   private final StateMachine<Cluster, State, Transition> stateMachine;
   private final ClusterConfiguration                     configuration;
@@ -252,7 +250,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     RESOURCES( ResourceStateCallback.class ),
     NETWORKS( NetworkStateCallback.class ),
     INSTANCES( VmStateCallback.class ),
-    VOLATILE_INSTANCES( VmPendingCallback.class ),
+    VOLATILE_INSTANCES( VmStateCallback.VmPendingCallback.class ),
     ADDRESSES( PublicAddressStateCallback.class ),
     SERVICEREADY( ServiceStateCallback.class );
     Class refresh;
@@ -434,11 +432,10 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
             break;
           case ENABLED:
             if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_ENABLED ) && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
-              Refresh.VOLATILE_INSTANCES.apply( this );
-            }
-            if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_ENABLED ) && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
               transition = Automata.sequenceTransitions( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
                                                          State.ENABLED_NET, State.ENABLED_VMS, State.ENABLED );
+            } else if ( initialized && tick.isAsserted( VmInstances.VOLATILE_STATE_INTERVAL_SEC ) && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
+                Refresh.VOLATILE_INSTANCES.apply( this );
             } else if ( initialized && Component.State.DISABLED.equals( this.configuration.lookupState( ) )
                         || Component.State.NOTREADY.equals( this.configuration.lookupState( ) ) ) {
               transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
@@ -743,7 +740,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     this.logUpdate.set( false );
   }
   
-  public NodeLogInfo getNodeLog( final String nodeIp ) throws EucalyptusClusterException {
+  public NodeLogInfo getNodeLog( final String nodeIp ) {
     final NodeInfo nodeInfo = Iterables.find( this.nodeMap.values( ), new Predicate<NodeInfo>( ) {
       @Override
       public boolean apply( final NodeInfo arg0 ) {
@@ -751,7 +748,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       }
     } );
     if ( nodeInfo == null ) {
-      throw new EucalyptusClusterException( "Error obtaining node log files for: " + nodeIp );
+      throw new NoSuchElementException( "Error obtaining node log files for: " + nodeIp );
     }
     if ( this.logUpdate.compareAndSet( false, true ) ) {
       final Cluster self = this;

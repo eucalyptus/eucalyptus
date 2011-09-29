@@ -57,61 +57,46 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author Neil Soman <neil@eucalyptus.com>
  */
-package com.eucalyptus.ws.server;
+package com.eucalyptus.bootstrap;
 
-import java.security.GeneralSecurityException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.PriorityBlockingQueue;
+
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.handlers.InternalWsSecHandler;
-import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
-import com.eucalyptus.ws.protocol.AddressingHandler;
-import com.eucalyptus.ws.protocol.SoapHandler;
 
-public class InternalSoapPipeline extends FilteredPipeline {
-  private static Logger LOG = Logger.getLogger( InternalSoapPipeline.class );
-  private String        servicePath;
-  private String        serviceName;
-  
-  public InternalSoapPipeline( NioMessageReceiver msgReceiver, String serviceName, String servicePath ) {
-    super( msgReceiver );
-    this.servicePath = servicePath;
-    this.serviceName = serviceName;
-  }
-  
-  @Override
-  public boolean checkAccepts( HttpRequest message ) {
-    return message.getUri( ).endsWith( servicePath ) && message.getHeaderNames( ).contains( "SOAPAction" );
-  }
-  
-  @Override
-  public String getName( ) {
-    return "internal-pipeline-" + this.serviceName.toLowerCase( );
-  }
-  
-  @Override
-  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-    pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
-    try {
-      pipeline.addLast( "ws-security", new InternalWsSecHandler( ) );
-    } catch ( GeneralSecurityException e ) {
-      LOG.error( e, e );
-    }
-    pipeline.addLast( "ws-addressing", new AddressingHandler( ) );
-    pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
-    pipeline.addLast( "binding", new BindingHandler( ) );
-    return pipeline;
-  }
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 
-  @Override
-  public String toString( ) {
-    return String.format( "InternalSoapPipeline:servicePath=%s:serviceName=%s:toString()=%s", this.servicePath, this.serviceName, super.toString( ) );
+
+/**
+ * Executes shutdown hooks in order
+ */
+public class OrderedShutdown {
+  
+  static Logger                     LOG = Logger.getLogger( OrderedShutdown.class );
+  static PriorityBlockingQueue<ShutdownHook> hooks = new PriorityBlockingQueue<ShutdownHook>();
+  static ExecutorService executor;
+
+  public static <T extends ComponentId> void register(Class<T> id, Runnable r) {
+	  ShutdownHook hook = new ShutdownHook(ComponentIds.lookup(id), r);
+	  hooks.offer(hook);
   }
   
-  
+  public static void initialize() {
+	  executor = Executors.newFixedThreadPool(1);
+	  Runtime.getRuntime().addShutdownHook(new Thread() {
+		@Override
+		public void run() {
+			LOG.warn("Executing Shutdown Hooks...");
+			ShutdownHook h;
+			while((h = hooks.poll()) != null) {
+				executor.execute(h.getRunnable());
+			}
+		}		 
+	  });
+  }
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009  Eucalyptus Systems, Inc.
+ *Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -58,19 +58,58 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
- * @author chris grzegorczyk <grze@eucalyptus.com>
+ * @author Neil Soman <neil@eucalyptus.com>
  */
+package com.eucalyptus.bootstrap;
 
-package com.eucalyptus.ws.server;
+import org.apache.log4j.Logger;
 
-import org.jboss.netty.channel.ChannelHandler;
-import com.eucalyptus.ws.protocol.BaseQueryBinding;
-import com.eucalyptus.ws.protocol.OperationParameter;
+import com.eucalyptus.component.ComponentId;
 
-public class InternalQueryBinding extends BaseQueryBinding<OperationParameter> implements ChannelHandler {
-  
-  public InternalQueryBinding( ) {
-    super( "http://ec2.amazonaws.com/doc/%s/", "2009-04-04", OperationParameter.Action, OperationParameter.Operation );
-  }
-  
+
+/**
+ * Executes shutdown hooks in order
+ */
+public class ShutdownHook implements Comparable<ShutdownHook>{
+
+	private Runnable runnable;
+	private ComponentId componentId;
+
+	public ShutdownHook(ComponentId id, Runnable r) {
+		componentId = id;
+		runnable = r;
+	}
+
+	@Override
+	public int compareTo(ShutdownHook o) {
+		ComponentId id = o.getComponentId();
+		if(!componentId.isAlwaysLocal() && !componentId.isCloudLocal())
+			return -1;
+		if(componentId.isCloudLocal()) {
+			if(!id.isCloudLocal() && !id.isAlwaysLocal()) {
+				return 1;
+			} else {
+				return -1;
+			}
+		}
+		if(componentId.isAlwaysLocal()) {
+			if(!id.isCloudLocal() && !id.isAlwaysLocal()) {
+				return 1;
+			} else if(id.isCloudLocal()) {
+				return 1;
+			} else {
+				return -1;
+			}
+		}		
+		return 0;
+	}
+
+	public Runnable getRunnable() {
+		return runnable;
+	}
+
+	public ComponentId getComponentId() {
+		return componentId;
+	}
+	
 }

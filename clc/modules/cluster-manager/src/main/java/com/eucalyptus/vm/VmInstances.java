@@ -69,19 +69,18 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 import java.util.zip.Adler32;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
+import org.hibernate.criterion.MatchMode;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.run.AdmissionControl;
+import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.run.ClusterAllocator;
 import com.eucalyptus.cloud.run.VerifyMetadata;
-import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.TerminateCallback;
@@ -101,27 +100,23 @@ import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.OwnerFullName;
-import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.UnconditionalCallback;
-import com.eucalyptus.vm.VmInstance.Lookup;
 import com.eucalyptus.vm.VmInstance.Transitions;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
-import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
@@ -202,6 +197,12 @@ public class VmInstances {
   public static String  MAC_PREFIX                    = "d0:0d";
   @ConfigurableField( description = "Subdomain to use for instance DNS.", initial = ".eucalyptus", changeListener = SubdomainListener.class )
   public static String  INSTANCE_SUBDOMAIN            = ".eucalyptus";
+  @ConfigurableField( description = "Period (in seconds) between state updates for actively changing state.", initial = "3" )
+  public static Long    VOLATILE_STATE_INTERVAL_SEC   = 3l;
+  @ConfigurableField( description = "Timeout (in seconds) before a requested instance terminate will be repeated.", initial = "60" )
+  public static Long    VOLATILE_STATE_TIMEOUT_SEC    = 60l;
+  @ConfigurableField( description = "Maximum number of threads the system will use to service blocking state changes.", initial = "16" )
+  public static Integer MAX_STATE_THREADS             = 16;
   
   public static class SubdomainListener implements PropertyChangeListener {
     @Override
@@ -214,10 +215,10 @@ public class VmInstances {
     }
   }
   
-  private static ConcurrentMap<String, VmInstance>               terminateCache         = new ConcurrentHashMap<String, VmInstance>( );
-  private static ConcurrentMap<String, RunningInstancesItemType> terminateDescribeCache = new ConcurrentHashMap<String, RunningInstancesItemType>( );
+  static ConcurrentMap<String, VmInstance>               terminateCache         = new ConcurrentHashMap<String, VmInstance>( );
+  static ConcurrentMap<String, RunningInstancesItemType> terminateDescribeCache = new ConcurrentHashMap<String, RunningInstancesItemType>( );
   
-  private static Logger                                          LOG                    = Logger.getLogger( VmInstances.class );
+  private static Logger                                  LOG                    = Logger.getLogger( VmInstances.class );
   
   @QuantityMetricFunction( VmInstanceMetadata.class )
   public enum CountVmInstances implements Function<OwnerFullName, Long> {
@@ -256,19 +257,21 @@ public class VmInstances {
     return vmId;
   }
   
-  public static Predicate<VmInstance> withPrivateAddress( final String ip ) {
-    return new Predicate<VmInstance>( ) {
-      @Override
-      public boolean apply( final VmInstance vm ) {
-        return ip.equals( vm.getPrivateAddress( ) ) && VmStateSet.RUN.apply( vm );
-      }
-    };
-  }
-  
-  public static VmInstance lookupByInstanceIp( final String ip ) throws NoSuchElementException {
+  public static VmInstance lookupByPrivateIp( final String ip ) throws NoSuchElementException {
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      VmInstance vm = Iterables.find( list( ), vmWithPublicAddress( ip ) );
+      VmInstance vmExample = VmInstance.create( );
+      vmExample.setNetworkConfig( VmNetworkConfig.exampleWithPrivateIp( ip ) );
+      VmInstance vm = ( VmInstance ) Entities.createCriteria( VmInstance.class )
+                                             .add( Example.create( vmExample ).enableLike( MatchMode.EXACT ) )
+                                             .setCacheable( true )
+                                             .setMaxResults( 1 )
+                                             .setFetchSize( 1 )
+                                             .setFirstResult( 0 )
+                                             .uniqueResult( );
+      if ( vm == null ) {
+        throw new NoSuchElementException( "VmInstance with private ip: " + ip );
+      }
       db.commit( );
       return vm;
     } catch ( Exception ex ) {
@@ -278,17 +281,28 @@ public class VmInstances {
     }
   }
   
-  public static Predicate<VmInstance> vmWithPublicAddress( final String ip ) {
-    return new Predicate<VmInstance>( ) {
-      @Override
-      public boolean apply( final VmInstance vm ) {
-        return ip.equals( vm.getPublicAddress( ) ) && VmStateSet.RUN.apply( vm );
-      }
-    };
-  }
-  
   public static VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
-    return Iterables.find( list( ), vmWithPublicAddress( ip ) );
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      VmInstance vmExample = VmInstance.create( );
+      vmExample.setNetworkConfig( VmNetworkConfig.exampleWithPublicIp( ip ) );
+      VmInstance vm = ( VmInstance ) Entities.createCriteria( VmInstance.class )
+                                             .add( Example.create( vmExample ).enableLike( MatchMode.EXACT ) )
+                                             .setCacheable( true )
+                                             .setMaxResults( 1 )
+                                             .setFetchSize( 1 )
+                                             .setFirstResult( 0 )
+                                             .uniqueResult( );
+      if ( vm == null ) {
+        throw new NoSuchElementException( "VmInstance with public ip: " + ip );
+      }
+      db.commit( );
+      return vm;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new NoSuchElementException( ex.getMessage( ) );
+    }
   }
   
   public static Predicate<VmInstance> withBundleId( final String bundleId ) {
@@ -380,14 +394,6 @@ public class VmInstances {
     }
   }
   
-  public static VmInstance restrictedLookup( final String instanceId ) throws EucalyptusCloudException {
-    final VmInstance vm = VmInstances.lookup( instanceId );
-    if ( !RestrictedTypes.filterPrivileged( ).apply( vm ) ) {
-      throw new EucalyptusCloudException( "Permission denied while trying to access instance " + instanceId );
-    }
-    return vm;
-  }
-  
   public static String asMacAddress( final String instanceId ) {
     return String.format( "%s:%s:%s:%s:%s",
                           VmInstances.MAC_PREFIX,
@@ -397,8 +403,12 @@ public class VmInstances {
                           instanceId.substring( 8, 10 ) );
   }
   
-  public static VmInstance lookup( final String name ) throws NoSuchElementException, TerminatedInstanceException {
+  public static VmInstance cachedLookup( final String name ) throws NoSuchElementException, TerminatedInstanceException {
     return CachedLookup.INSTANCE.apply( name );
+  }
+  
+  public static VmInstance lookup( final String name ) throws NoSuchElementException, TerminatedInstanceException {
+    return PersistentLookup.INSTANCE.apply( name );
   }
   
   public static VmInstance register( final VmInstance vm ) {
@@ -468,13 +478,13 @@ public class VmInstances {
   }
   
   public static void shutDown( final VmInstance vm ) throws TransactionException {
-    if ( VmStateSet.DONE.apply( vm ) ) {
-      if ( terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
-        VmInstances.delete( vm );
-      } else {
-        VmInstances.terminated( vm );
-      }
-    } else {
+    if ( !VmStateSet.DONE.apply( vm ) ) {
+//      if ( terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
+//        VmInstances.delete( vm );
+//      } else {
+//        VmInstances.terminated( vm );
+//      }
+//    } else {
       Transitions.SHUTDOWN.apply( vm );
     }
   }
@@ -502,7 +512,7 @@ public class VmInstances {
     return ret;
   }
   
-  public static List<VmInstance> listPersistent( OwnerFullName ownerFullName, String instanceId, Predicate<VmInstance> predicate ) {
+  private static List<VmInstance> listPersistent( OwnerFullName ownerFullName, String instanceId, Predicate<VmInstance> predicate ) {
     predicate = checkPredicate( predicate );
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
@@ -556,11 +566,21 @@ public class VmInstances {
     }
   }
   
-  /**
-   * @return
-   */
-  public static Function<String, VmInstance> lookupFunction( ) {
-    return CachedLookup.INSTANCE;
+  enum PersistentLookup implements Function<String, VmInstance> {
+    INSTANCE;
+    
+    /**
+     * @see com.google.common.base.Function#apply(java.lang.Object)
+     */
+    @Override
+    public VmInstance apply( final String name ) {
+      if ( ( name != null ) && VmInstances.terminateDescribeCache.containsKey( name ) ) {
+        throw new TerminatedInstanceException( name );
+      } else {
+        return VmInstance.Lookup.INSTANCE.apply( name );
+      }
+    }
+    
   }
   
   @Resolver( VmInstanceMetadata.class )
@@ -572,11 +592,14 @@ public class VmInstances {
      */
     @Override
     public VmInstance apply( final String name ) {
-      if ( ( name != null ) && VmInstances.terminateDescribeCache.containsKey( name ) ) {
-        throw new TerminatedInstanceException( name );
-      } else {
-        return Lookup.INSTANCE.apply( name );
+      VmInstance vm = null;
+      if ( ( name != null ) ) {
+        vm = VmInstances.terminateCache.get( name );
+        if ( vm == null ) {
+          vm = PersistentLookup.INSTANCE.apply( name );
+        }
       }
+      return vm;
     }
     
   }
@@ -592,4 +615,5 @@ public class VmInstances {
       return VmInstance.Transform.INSTANCE.apply( lookup( name ) );
     }
   }
+  
 }

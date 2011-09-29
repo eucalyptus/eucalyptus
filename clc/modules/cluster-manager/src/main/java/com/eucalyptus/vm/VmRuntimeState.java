@@ -65,6 +65,8 @@ package com.eucalyptus.vm;
 
 import java.util.Date;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
@@ -78,9 +80,11 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
@@ -145,54 +149,57 @@ public class VmRuntimeState {
   public void setState( final VmState newState, Reason reason, final String... extra ) {
     final VmState oldState = this.getVmInstance( ).getState( );
     Runnable action = null;
-    if ( VmState.SHUTTING_DOWN.equals( newState ) && VmState.SHUTTING_DOWN.equals( oldState ) && Reason.USER_TERMINATED.equals( reason ) ) {
-      action = this.cleanUpRunnable( SEND_USER_TERMINATE );
-    } else if ( VmState.STOPPING.equals( newState ) && VmState.STOPPING.equals( oldState ) && Reason.USER_STOPPED.equals( reason ) ) {
-      action = this.cleanUpRunnable( SEND_USER_STOP );
-    } else if ( ( VmState.TERMINATED.equals( newState ) && VmState.TERMINATED.equals( oldState ) ) || VmState.BURIED.equals( newState ) ) {
+    if ( VmStateSet.RUN.contains( newState ) && VmStateSet.NOT_RUNNING.contains( oldState ) ) {
       action = this.cleanUpRunnable( SEND_USER_TERMINATE );
     } else if ( !oldState.equals( newState ) ) {
+      action = handleStateTransition( newState, oldState );
+      EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.getVmInstance( ).getInstanceId( ), this.vmInstance.getOwner( ),
+                          this.getVmInstance( ).getState( ).name( ) );
+    }
+    this.getVmInstance( ).updateTimeStamps( );
+    if ( action != null ) {
+      EventRecord.caller( VmInstance.class, EventType.VM_TERMINATING, this.getVmInstance( ).getInstanceId( ), this.vmInstance.getOwner( ),
+                          this.getVmInstance( ).getState( ).name( ) );
       if ( Reason.APPEND.equals( reason ) ) {
         reason = this.reason;
       }
       this.addReasonDetail( extra );
-      LOG.info( String.format( "%s state change: %s -> %s", this.getVmInstance( ).getInstanceId( ), this.getVmInstance( ).getState( ), newState ) );
       this.reason = reason;
-      if ( VmStateSet.RUN.contains( oldState ) && VmStateSet.NOT_RUNNING.contains( newState ) ) {
-        this.getVmInstance( ).setState( newState );
-        action = this.cleanUpRunnable( );
-      } else if ( VmState.PENDING.equals( oldState ) && VmState.RUNNING.equals( newState ) ) {
-        this.getVmInstance( ).setState( newState );
-      } else if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) ) {
-        this.getVmInstance( ).setState( newState );
-        action = this.cleanUpRunnable( );
-      } else if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
-        this.getVmInstance( ).setState( newState );
-//      } else if ( ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) && ( newState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) ) {
-//        this.getVmInstance( ).setState( oldState );
-//        action = this.cleanUpRunnable( );
-      } else if ( newState.ordinal( ) > oldState.ordinal( ) ) {
-        this.getVmInstance( ).setState( newState );
-      } else if ( VmState.STOPPED.equals( oldState ) && VmState.PENDING.equals( newState ) ) {
-        this.getVmInstance( ).setState( newState );
-      }
       try {
-        this.getVmInstance( ).store( );
-      } catch ( final Exception ex1 ) {
-        LOG.error( ex1, ex1 );
-      }
-      if ( action != null ) {
-        try {
-          action.run( );
-        } catch ( final Exception ex ) {
-          LOG.error( ex, ex );
-        }
-      }
-      if ( !this.getVmInstance( ).getState( ).equals( oldState ) ) {
-        EventRecord.caller( VmInstance.class, EventType.VM_STATE, this.getVmInstance( ).getInstanceId( ), this.vmInstance.getOwner( ),
-                              this.getVmInstance( ).getState( ).name( ) );
+        Threads.lookup( Eucalyptus.class, VmInstance.class ).limitTo( VmInstances.MAX_STATE_THREADS ).submit( action ).get( 10, TimeUnit.MILLISECONDS );
+      } catch ( final TimeoutException ex ) {
+      } catch ( final Exception ex ) {
+        LOG.error( ex, ex );
       }
     }
+  }
+
+  private Runnable handleStateTransition( final VmState newState, final VmState oldState ) {
+    Runnable action = null;
+    LOG.info( String.format( "%s state change: %s -> %s", this.getVmInstance( ).getInstanceId( ), this.getVmInstance( ).getState( ), newState ) );
+    if ( VmStateSet.RUN.contains( oldState ) && VmStateSet.NOT_RUNNING.contains( newState ) ) {
+      this.getVmInstance( ).setState( newState );
+      action = this.cleanUpRunnable( );
+    } else if ( VmState.PENDING.equals( oldState ) && VmState.RUNNING.equals( newState ) ) {
+      this.getVmInstance( ).setState( newState );
+    } else if ( VmState.SHUTTING_DOWN.equals( oldState ) && VmStateSet.RUN.contains( newState ) ) {
+      this.getVmInstance( ).setState( oldState );
+    } else if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) <= VmState.RUNNING.ordinal( ) ) ) {
+      this.getVmInstance( ).setState( newState );
+      action = this.cleanUpRunnable( );
+    } else if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
+      this.getVmInstance( ).setState( newState );
+    } else if ( newState.ordinal( ) > oldState.ordinal( ) ) {
+      this.getVmInstance( ).setState( newState );
+    } else if ( VmState.STOPPED.equals( oldState ) && VmState.PENDING.equals( newState ) ) {
+      this.getVmInstance( ).setState( newState );
+    }
+    try {
+      this.getVmInstance( ).store( );
+    } catch ( final Exception ex1 ) {
+      LOG.error( ex1, ex1 );
+    }
+    return action;
   }
   
   private Runnable cleanUpRunnable( ) {

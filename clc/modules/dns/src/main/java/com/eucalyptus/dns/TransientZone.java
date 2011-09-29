@@ -168,7 +168,7 @@ public class TransientZone extends Zone {
           VmInstances.lookupByPublicIp( ipCandidate );
         } catch ( Exception e ) {
           try {
-            VmInstances.lookupByInstanceIp( ipCandidate );
+            VmInstances.lookupByPrivateIp( ipCandidate );
           } catch ( Exception e1 ) {
             return super.findRecords( name, type );
           }
@@ -201,7 +201,7 @@ public class TransientZone extends Zone {
 	      target = new Name(instance.getPublicDnsName() + ".");
 	    } catch ( Exception e ) {
 	      try {
-	        VmInstance instance = VmInstances.lookupByInstanceIp( ipCandidate );
+	        VmInstance instance = VmInstances.lookupByPrivateIp( ipCandidate );
 	        target = new Name(instance.getPrivateDnsName() + ".");
 	      } catch ( Exception e1 ) {
 	        return super.findRecords( name, type );

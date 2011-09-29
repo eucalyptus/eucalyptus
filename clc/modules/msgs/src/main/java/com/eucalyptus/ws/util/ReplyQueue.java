@@ -64,7 +64,6 @@
 package com.eucalyptus.ws.util;
 
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mule.RequestContext;
 import org.mule.api.MessagingException;
@@ -72,19 +71,15 @@ import org.mule.api.MuleException;
 import org.mule.api.MuleMessage;
 import org.mule.message.ExceptionMessage;
 import com.eucalyptus.binding.BindingManager;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceContext;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
 import com.eucalyptus.ws.WebServicesException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
 
 public class ReplyQueue {
-  public static Logger LOG = Logger.getLogger( ReplyQueue.class );
+  private static Logger LOG = Logger.getLogger( ReplyQueue.class );
   
   public void handle( BaseMessage responseMessage ) {
     ServiceContext.response( responseMessage );
@@ -92,7 +87,6 @@ public class ReplyQueue {
   
   public void handle( ExceptionMessage exMsg ) {
     Throwable cause = exMsg.getException( );
-    EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, cause.getClass( ).getCanonicalName( ), cause.getMessage( ) ).debug( );
 
     if ( cause instanceof MessagingException ) {
       MessagingException messagingEx = ( ( MessagingException ) cause );
@@ -101,40 +95,22 @@ public class ReplyQueue {
       Object payload = muleMsg.getPayload( );
       BaseMessage msg = convert( payload );
       if( msg != null ) {
-        this.handle( new ExceptionResponseType( msg, cause.getMessage( ), HttpResponseStatus.NOT_ACCEPTABLE, cause )  );
+        ServiceContext.response( new ExceptionResponseType( msg, cause.getMessage( ), HttpResponseStatus.NOT_ACCEPTABLE, cause )  );
         return;
       } else {
         LOG.error( "Failed to identify request context for recieved error: " + exMsg.toString( ) );
         cause = new WebServicesException( "Failed to identify request context for recieved error: " + exMsg.toString( ) + " while handling error: " + cause.getMessage( ), cause, HttpResponseStatus.NOT_ACCEPTABLE );
-        try {
-          Context ctx = Contexts.lookup( );
-          Channels.fireExceptionCaught( ctx.getChannel( ), cause );
-        } catch ( IllegalContextAccessException ex ) {
-          LOG.error( ex );
-          LOG.error( cause, cause );
-        }
+        ServiceContext.responseError( cause );
       }
     } else if ( cause instanceof MuleException ) {
       LOG.error( "Error service request: " + cause.getMessage( ), cause );
       cause = new WebServicesException( cause.getMessage( ), cause, HttpResponseStatus.NOT_FOUND );
-      try {
-        Context ctx = Contexts.lookup( );
-        Channels.fireExceptionCaught( ctx.getChannel( ), cause );
-      } catch ( IllegalContextAccessException ex ) {
-        LOG.error( ex );
-        LOG.error( cause, cause );
-      }
+      ServiceContext.responseError( cause );
     } else {
-      try {
-        Context ctx = Contexts.lookup( );
-        Channels.fireExceptionCaught( ctx.getChannel( ), cause );
-      } catch ( IllegalContextAccessException ex ) {
-        LOG.error( ex );
-        LOG.error( cause, cause );
-      }
+      ServiceContext.responseError( cause );
     }
   }
-  
+
   private BaseMessage convert( Object payload ) {
     BaseMessage ret = null;
     if ( payload instanceof BaseMessage ) {
