@@ -14,7 +14,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="reporting")
 @Table(name="s3_usage_snapshot")
-class S3UsageSnapshot
+public class S3UsageSnapshot
 	extends AbstractPersistent
 {
 	@Embedded

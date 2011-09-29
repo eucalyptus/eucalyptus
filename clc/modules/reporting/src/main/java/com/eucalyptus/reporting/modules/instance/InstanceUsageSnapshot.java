@@ -17,7 +17,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="reporting")
 @Table(name="instance_usage_snapshot")
-class InstanceUsageSnapshot
+public class InstanceUsageSnapshot
 	extends AbstractPersistent 
 {
 	@Column(name="uuid", nullable=false)
@@ -50,12 +50,12 @@ class InstanceUsageSnapshot
 		this.diskIoMegs = diskIoMegs;
 	}
 
-	String getUuid()
+	public String getUuid()
 	{
 		return uuid;
 	}
 	
-	Long getTimestampMs()
+	public Long getTimestampMs()
 	{
 		return timestampMs;
 	}
@@ -63,7 +63,7 @@ class InstanceUsageSnapshot
 	/**
 	 * @return Can return null, which indicates unknown usage and not zero usage.
 	 */
-	Long getCumulativeNetworkIoMegs()
+	public Long getCumulativeNetworkIoMegs()
 	{
 		return networkIoMegs;
 	}
@@ -71,7 +71,7 @@ class InstanceUsageSnapshot
 	/**
 	 * @return Can return null, which indicates unknown usage and not zero usage.
 	 */
-	Long getCumulativeDiskIoMegs()
+	public Long getCumulativeDiskIoMegs()
 	{
 		return diskIoMegs;
 	}
