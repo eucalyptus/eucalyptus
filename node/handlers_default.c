@@ -603,9 +603,7 @@ doAttachVolume (	struct nc_state_t *nc,
          return NOT_FOUND;
      
      // try attaching to hypervisor
-     sem_p (hyp_sem);
      virConnectPtr *conn = check_hypervisor_conn();
-     sem_v (hyp_sem);
      if (conn==NULL) {
          logprintfl(EUCAERROR, "AttachVolume(): cannot get connection to hypervisor\n");
          return ERROR;
@@ -688,8 +686,10 @@ doAttachVolume (	struct nc_state_t *nc,
      
  release:
      
+     sem_p(hyp_sem);
      virDomainFree (dom); // release libvirt resource
-     
+     sem_v(hyp_sem);
+
      // record volume state in memory and on disk
      char * next_vol_state;
      if (ret==OK) {
@@ -855,8 +855,9 @@ doDetachVolume (	struct nc_state_t *nc,
     
  release:
     
+    sem_p (hyp_sem);
     virDomainFree (dom); // release libvirt resource
-    
+    sem_v (hyp_sem);
     // record volume state in memory and on disk
     char * next_vol_state;
     if (ret==OK) {
