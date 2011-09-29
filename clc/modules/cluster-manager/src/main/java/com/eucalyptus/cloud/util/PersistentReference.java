@@ -132,6 +132,7 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
   @Override
   public final void teardown( ) throws ResourceAllocationException {
     Entities.delete( this );
+    Entities.flush( this );
   }
   
   /**
