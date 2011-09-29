@@ -70,7 +70,7 @@ import com.eucalyptus.component.ComponentId;
 public class HttpService extends ComponentId.Unpartioned {
   
   public HttpService( ) {
-      super( "Jetty", null );
+    super( "Jetty" );
   }
   
   @Override

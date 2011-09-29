@@ -71,7 +71,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 public class PropertiesService extends ComponentId.Unpartioned {
   
   public PropertiesService( ) {
-   super( "Properties", null );
+    super( "Properties" );
   }
   
   @Override

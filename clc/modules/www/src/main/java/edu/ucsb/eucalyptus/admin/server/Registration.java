@@ -82,6 +82,7 @@ import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.ws.StackConfiguration;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class Registration extends HttpServlet {
@@ -96,7 +97,7 @@ public class Registration extends HttpServlet {
   
   private static String getConfigurationString( String uuid ) {
     return "<CloudSchema>\n" + "  <Services type=\"array\">\n" + "    <Service>\n" + "      <Name>ec2</Name>\n" + "      <EndpointUrl>"
-           + Eucalyptus.INSTANCE.makeExternalRemoteUri( Internets.localHostInetAddress( ).getCanonicalHostName( ), 8773 ) + "</EndpointUrl>\n" + "      <Resources type=\"array\">\n" + "        <Resource>\n"
+   	   + Eucalyptus.INSTANCE.makeExternalRemoteUri( Internets.localHostInetAddress( ).getCanonicalHostName( ), 8773, StackConfiguration.EXTERNAL_URI_SCHEME ) + "</EndpointUrl>\n" + "      <Resources type=\"array\">\n" + "        <Resource>\n"
            + "          <Name>instances</Name>\n" + "        </Resource>\n" + "        <Resource>\n" + "          <Name>security_groups</Name>\n"
            + "        </Resource>\n" + "        <Resource>\n" + "          <Name>ssh_keys</Name>\n" + "        </Resource>\n" + "        <Resource>\n"
            + "          <Name>images</Name>\n" + "        </Resource>\n" + blockStorageConfiguration( ) + publicAddressConfiguration( )

@@ -32,6 +32,8 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
   
   public abstract URI getUri( );
 
+  public abstract URI getUri( String prefix );
+  
   public abstract Boolean isVmLocal( );
   
   public abstract Partition lookupPartition( );

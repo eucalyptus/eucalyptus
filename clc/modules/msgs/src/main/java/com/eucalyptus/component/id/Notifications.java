@@ -66,15 +66,10 @@ package com.eucalyptus.component.id;
 import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.ws.StackConfiguration;
 
 public class Notifications extends ComponentId.Unpartioned {
   public static Notifications INSTANCE = new Notifications( );
   
-  public Notifications( ) {
-    super( StackConfiguration.DEFAULT_AWS_SNS_URL_PREFIX );
-  }
-
   @Override
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
     return new ArrayList( ) {

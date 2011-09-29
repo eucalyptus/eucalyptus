@@ -207,17 +207,17 @@ public class X509Download extends HttpServlet {
       String userNumber = u.getAccount( ).getAccountNumber( );
       sb.append( "EUCA_KEY_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))" );
       String localHost = Internets.localHostInetAddress( ).getCanonicalHostName( );
-      sb.append( "\nexport EC2_URL=" + Eucalyptus.INSTANCE.makeExternalRemoteUri( localHost, 8773 ));
+      sb.append( "\nexport EC2_URL=" + Eucalyptus.INSTANCE.makeExternalRemoteUri( localHost, 8773, StackConfiguration.DEFAULT_EC2_URI_SCHEME ) );
       if( Components.lookup( Walrus.class ).hasEnabledService( ) ) {
         ServiceConfiguration walrusConfig = Components.lookup( Walrus.class ).enabledServices( ).first( );
-        String uri = walrusConfig.getUri( ).toASCIIString( );
+        String uri = walrusConfig.getUri( StackConfiguration.DEFAULT_S3_URI_SCHEME ).toASCIIString( );
         LOG.debug( "Found walrus uri/configuration: uri=" + uri + " config=" + walrusConfig );
         sb.append( "\nexport S3_URL=" + uri );
       } else {
         sb.append( "\necho WARN:  Walrus URL is not configured. >&2" );
       }
-      sb.append( "\nexport AWS_SNS_URL=" + Notifications.INSTANCE.makeExternalRemoteUri( localHost, 8773 ));
-      sb.append( "\nexport EUARE_URL=" + Euare.INSTANCE.makeExternalRemoteUri( localHost, 8773 ));
+      sb.append( "\nexport AWS_SNS_URL=" + Notifications.INSTANCE.makeExternalRemoteUri( localHost, 8773, StackConfiguration.DEFAULT_AWS_SNS_URI_SCHEME ) );
+      sb.append( "\nexport EUARE_URL=" + Euare.INSTANCE.makeExternalRemoteUri( localHost, 8773, StackConfiguration.DEFAULT_EUARE_URI_SCHEME ) );
       sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );
       sb.append( "\nexport EC2_CERT=${EUCA_KEY_DIR}/" + baseName + "-cert.pem" );
       sb.append( "\nexport EC2_JVM_ARGS=-Djavax.net.ssl.trustStore=${EUCA_KEY_DIR}/jssecacerts" );

@@ -71,15 +71,10 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.ws.StackConfiguration;
 
 public class Eucalyptus extends ComponentId.Unpartioned {
   public static final Eucalyptus INSTANCE = new Eucalyptus( );                   //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
   private static Logger          LOG      = Logger.getLogger( Eucalyptus.class );
-
-  public Eucalyptus( ) {
-    super( StackConfiguration.DEFAULT_EC2_URL_PREFIX );
-  }
   
   @Override
   public String getLocalEndpointName( ) {

@@ -105,6 +105,7 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.fsm.StateMachine;
+import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.collect.Lists;
 
 @Entity
@@ -162,7 +163,13 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   
   @Override
   public URI getUri( ) {
-    return this.getComponentId( ).makeExternalRemoteUri( this.getHostName( ), this.getPort( ) );
+    return this.getComponentId( ).makeExternalRemoteUri( this.getHostName( ), this.getPort( ),  StackConfiguration.EXTERNAL_URI_SCHEME );
+  }
+
+
+  @Override
+  public URI getUri( String prefix ) {
+    return this.getComponentId( ).makeExternalRemoteUri( this.getHostName( ), this.getPort( ), prefix );
   }
   
   public URI getInternalUri( ) {

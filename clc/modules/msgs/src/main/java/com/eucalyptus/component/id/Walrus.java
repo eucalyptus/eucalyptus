@@ -64,19 +64,9 @@
 package com.eucalyptus.component.id;
 
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.ws.StackConfiguration;
+
 
 public class Walrus extends ComponentId.Unpartioned {
-
-  @Override
-  public String getExternalUriPattern() {
-    String extUriPattern = super.getExternalUriPattern();
-    String prefix = StackConfiguration.DEFAULT_S3_URL_PREFIX + ":";
-    
-    if(extUriPattern.startsWith(prefix)) 
-	extUriPattern = extUriPattern.replaceFirst("[a-zA-Z]*:", prefix);
-    return extUriPattern;
-  }
 
   @Override
   public String getLocalEndpointName( ) {

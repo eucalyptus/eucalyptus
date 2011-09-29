@@ -71,7 +71,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 public class ConfigurationService extends ComponentId.Unpartioned {
   
   public ConfigurationService( ) {
-      super( "Configuration", null );
+    super( "Configuration" );
   }
   
   @Override

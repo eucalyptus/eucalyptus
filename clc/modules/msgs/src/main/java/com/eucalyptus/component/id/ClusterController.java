@@ -9,7 +9,7 @@ import com.eucalyptus.util.Internets;
 public class ClusterController extends ComponentId {
   
   public ClusterController( ) {
-    super( "cluster", null );
+    super( "cluster" );
   }
   
   @Override

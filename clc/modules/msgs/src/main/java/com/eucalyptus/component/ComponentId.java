@@ -60,39 +60,28 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   private String              externalUriPattern;
   private String              uriLocal;
   
-  protected ComponentId( String name, String extUrlPrefix ) {
+  protected ComponentId( String name ) {
     this.capitalizedName = name;
     this.name = this.capitalizedName.toLowerCase( );
     this.entryPoint = this.capitalizedName + "RequestQueueEndpoint";
     this.port = 8773;
     this.uriPattern = "http://%s:%d/internal/%s";
-    // NOTE: these patterns are overwritten in getExternalUriPattern() of some subclasses
-    if( extUrlPrefix != null )
-	this.externalUriPattern = extUrlPrefix + "://%s:%d/services/" + this.capitalizedName;
-    else
-	this.externalUriPattern = "http://%s:%d/services/" + this.capitalizedName;
+    // NOTE: this pattern is overwritten by some subclasses in getExternalUriPattern()
+    this.externalUriPattern = "%s://%s:%d/services/" + this.capitalizedName;
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
     this.modelContent = loadModel( );
   }
   
-  protected ComponentId( String extUrlPrefix ) {
-      this.capitalizedName = this.getClass( ).getSimpleName( );
-      this.name = this.capitalizedName.toLowerCase( );
-      this.entryPoint = this.capitalizedName + "RequestQueueEndpoint";
-      this.port = 8773;
-      this.uriPattern = "http://%s:%d/internal/%s";
-      // NOTE: these patterns are overwritten in getExternalUriPattern() of some subclasses
-      if( extUrlPrefix != null )
-	this.externalUriPattern = extUrlPrefix + "://%s:%d/services/" + this.capitalizedName;
-      else
-	this.externalUriPattern = "http://%s:%d/services/" + this.capitalizedName;
-      this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
-      this.modelContent = loadModel( );
-
-  }
-
   protected ComponentId( ) {
-    this(null);
+    this.capitalizedName = this.getClass( ).getSimpleName( );
+    this.name = this.capitalizedName.toLowerCase( );
+    this.entryPoint = this.capitalizedName + "RequestQueueEndpoint";
+    this.port = 8773;
+    this.uriPattern = "http://%s:%d/internal/%s";
+    // NOTE: this pattern is overwritten by some subclasses in getExternalUriPattern()
+    this.externalUriPattern = "%s://%s:%d/services/" + this.capitalizedName;
+    this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
+    this.modelContent = loadModel( );
   }
 
   public String getVendorName( ) {
@@ -268,7 +257,6 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
    */
   public final URI makeInternalRemoteUri( String hostName, Integer port ) {
     String uri;
-
     try {
       uri = String.format( this.getUriPattern( ), hostName, port );
     } catch ( MissingFormatArgumentException e ) {
@@ -283,22 +271,36 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     }
   }
   
-  public final URI makeExternalRemoteUri( String hostName, Integer port ) {
+  /*  public final URI makeExternalRemoteUri( String hostName, Integer port ) {
+      return makeExternalRemoteUri(hostName, port, null);
+      }*/
+
+  public final URI makeExternalRemoteUri( String hostName, Integer port, String prefix ) {
     String uri;
     URI u = null;
+    String pattern;
+
     port = ( port == -1 )
       ? this.getPort( )
       : port;
     hostName = ( port == -1 )
       ? Internets.localHostAddress( )
       : hostName;
+    pattern = this.getExternalUriPattern();
+    LOG.info("prefix = " + prefix + ", pattern = " + pattern);
     try {
-      uri = String.format( this.getExternalUriPattern( ), hostName, port );
+      if(pattern.startsWith("%s"))
+	    uri = String.format( this.getExternalUriPattern( ), prefix, hostName, port );
+      else
+	    uri = String.format( this.getExternalUriPattern( ), hostName, port );
       LOG.info("uri = " + uri);
       u = new URI( uri );
       u.parseServerAuthority( );
     } catch ( URISyntaxException e ) {
-      uri = String.format( this.getExternalUriPattern( ), Internets.localHostAddress( ), this.getPort( ) );
+        if(pattern.startsWith("%s"))
+	    uri = String.format( this.getExternalUriPattern( ), prefix, Internets.localHostAddress( ), this.getPort( ) );
+	else
+	    uri = String.format( this.getExternalUriPattern( ), Internets.localHostAddress( ), this.getPort( ) );
       try {
         u = new URI( uri );
         u.parseServerAuthority( );
@@ -306,7 +308,10 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
         u = URI.create( uri );
       }
     } catch ( MissingFormatArgumentException e ) {
-      uri = String.format( this.getExternalUriPattern( ), hostName, port, this.getCapitalizedName( ) );
+	if(pattern.startsWith("%s"))
+	    uri = String.format( this.getExternalUriPattern( ), prefix, hostName, port, this.getCapitalizedName( ) );
+	else 
+	    uri = String.format( this.getExternalUriPattern( ), hostName, port, this.getCapitalizedName( ) );
       try {
         u = new URI( uri );
         u.parseServerAuthority( );
@@ -359,15 +364,11 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public static abstract class Unpartioned extends ComponentId {
     
     public Unpartioned( ) {
-      super();
-    }
-
-    public Unpartioned( String extUrlPrefix ) {
-      super( extUrlPrefix );
+      super( );
     }
     
-    public Unpartioned( String name, String extUrlPrefix ) {
-	super( name, extUrlPrefix );
+    public Unpartioned( String name ) {
+      super( name );
     }
     
     @Override

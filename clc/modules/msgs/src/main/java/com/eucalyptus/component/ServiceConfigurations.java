@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
+import com.eucalyptus.ws.StackConfiguration;
 
 public class ServiceConfigurations {
   static Logger LOG = Logger.getLogger( ServiceConfigurations.class );
@@ -237,7 +238,7 @@ public class ServiceConfigurations {
           this.setType( arg0.getComponentId( ).name( ) );
           this.setFullName( arg0.getFullName( ).toString( ) );
           if ( arg0.isVmLocal( ) ) {
-            this.setUri( arg0.getComponentId( ).makeExternalRemoteUri( Internets.localHostAddress( ), arg0.getComponentId( ).getPort( ) ).toASCIIString( ) );
+            this.setUri( arg0.getComponentId( ).makeExternalRemoteUri( Internets.localHostAddress( ), arg0.getComponentId( ).getPort( ), StackConfiguration.EXTERNAL_URI_SCHEME ).toASCIIString( ) );
           } else {
             this.setUri( arg0.getUri( ).toASCIIString( ) );
           }

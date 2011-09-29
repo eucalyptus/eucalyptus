@@ -153,17 +153,20 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( initial = "500", description = "Client socket select timeout (ms)." )
   public static Long          CLIENT_POOL_TIMEOUT_MILLIS        = 500l;
 
-  @ConfigurableField( initial = "https", description = "Default prefix for EC2_URL in eucarc.", changeListener = UrlChangeListener.class )
-  public static String        DEFAULT_EC2_URL_PREFIX        = "https";
+  @ConfigurableField( initial = "https", description = "Default scheme for EC2_URL in eucarc.", changeListener = UriChangeListener.class )
+  public static String        DEFAULT_EC2_URI_SCHEME        = "https";
 
-  @ConfigurableField( initial = "http", description = "Default prefix for S3_URL in eucarc.", changeListener = UrlChangeListener.class )
-  public static String        DEFAULT_S3_URL_PREFIX        = "http";
+  @ConfigurableField( initial = "http", description = "Default scheme for S3_URL in eucarc.", changeListener = UriChangeListener.class )
+  public static String        DEFAULT_S3_URI_SCHEME        = "http";
 
-  @ConfigurableField( initial = "https", description = "Default prefix for AWS_SNS_URL in eucarc.", changeListener = UrlChangeListener.class )
-  public static String        DEFAULT_AWS_SNS_URL_PREFIX        = "https";
+  @ConfigurableField( initial = "https", description = "Default scheme for AWS_SNS_URL in eucarc.", changeListener = UriChangeListener.class )
+  public static String        DEFAULT_AWS_SNS_URI_SCHEME        = "https";
 
-  @ConfigurableField( initial = "https", description = "Default prefix for EUARE_URL in eucarc.", changeListener = UrlChangeListener.class )
-  public static String        DEFAULT_EUARE_URL_PREFIX        = "https";
+  @ConfigurableField( initial = "https", description = "Default scheme for EUARE_URL in eucarc.", changeListener = UriChangeListener.class )
+  public static String        DEFAULT_EUARE_URI_SCHEME        = "https";
+
+  @ConfigurableField( initial = "http", description = "external URI scheme for eucalyptus endpoints communication", changeListener = UriChangeListener.class )
+  public static String        EXTERNAL_URI_SCHEME        = "http";
 
   
   private static Logger       LOG                               = Logger.getLogger( StackConfiguration.class );
@@ -192,7 +195,7 @@ public class StackConfiguration extends AbstractPersistent {
     }
   }
 
-    public static class UrlChangeListener implements PropertyChangeListener {
+    public static class UriChangeListener implements PropertyChangeListener {
     /**
      * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
      *      java.lang.Object)
