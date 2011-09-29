@@ -804,6 +804,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   void store( ) {
+    this.updateTimeStamps( );
     this.fireUsageEvent( );
     this.firePersist( );
   }
