@@ -81,7 +81,7 @@ public class InternalSoapBindingGenerator extends BindingGenerator {
         this.out = new PrintWriter( this.outFile );
       } catch ( FileNotFoundException e ) {
         e.printStackTrace( System.err );
-        System.exit( -1 );
+        System.exit( -1 );//GRZE: special case to fail build
       }
       this.bindingName = this.ns.replaceAll( "(http://)|(/$)", "" ).replaceAll( "[./-]", "_" );
       this.out.write( "<binding xmlns:euca=\"" + this.ns + "\" name=\"" + this.bindingName + "\">\n" );

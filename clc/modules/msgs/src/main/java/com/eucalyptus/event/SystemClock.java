@@ -138,7 +138,6 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
   @Override
   public void uncaughtException( Thread t, Throwable e ) {
     LOG.fatal( e, e );
-//    System.exit( -2 );
   }
 
   @Provides( Empyrean.class )

@@ -42,7 +42,6 @@ public class PropertyDirectory {
           throw e;
         } catch ( Exception t ) {
           LOG.error( "Failed to prepare configurable field: " + c.getCanonicalName( ) + "." + field.getName( ) );
-          System.exit( 1 );
         }
         if ( prop != null ) {
           if ( prop.isDeferred( ) ) {
@@ -62,7 +61,6 @@ public class PropertyDirectory {
                                                          + field.getName( )
                                                          + "\n" + "-> " + c.getCanonicalName( ) + "." + field.getName( ) + "\n" );
               LOG.fatal( r, r );
-              System.exit( 1 );
               throw r;
             }
           }

@@ -122,8 +122,6 @@ public class SystemUtil {
 	public static void shutdownWithError(String errorMessage) {
 		LOG.fatal(errorMessage);
 		throw new IllegalStateException(errorMessage);
-		// Shutting the system down is never an option for a component anymore.		
-		//		System.exit(0xEC2);
 	}        
 
 	public static void setEucaReadWriteOnly(String filePath) throws EucalyptusCloudException {

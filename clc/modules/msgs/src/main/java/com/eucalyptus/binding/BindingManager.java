@@ -119,9 +119,13 @@ public class BindingManager {
     if ( BindingManager.bindingMap.containsKey( bindingName ) ) {
       return BindingManager.bindingMap.get( bindingName );
     } else {
-      final Binding newBinding = new Binding( bindingName );
-      BindingManager.bindingMap.put( bindingName, newBinding );
-      return newBinding;
+      if ( BindingManager.bindingMap.containsKey( BindingManager.sanitizeNamespace( bindingName ) ) ) {
+        return BindingManager.bindingMap.get( BindingManager.sanitizeNamespace( bindingName ) );
+      } else {
+        final Binding newBinding = new Binding( bindingName );
+        BindingManager.bindingMap.put( bindingName, newBinding );
+        return newBinding;
+      }
     }
   }
   

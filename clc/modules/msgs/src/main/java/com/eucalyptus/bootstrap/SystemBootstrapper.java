@@ -294,7 +294,6 @@ public class SystemBootstrapper {
         exec.apply( stage );
       } while ( ( stage = Bootstrap.transition( ) ) != null );
     } catch ( Throwable t ) {
-      SystemBootstrapper.handleException( t );
       throw t;
     }
   }

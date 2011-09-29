@@ -52,7 +52,6 @@ public enum Signatures {
       return Signature.getInstance( this.toString( ) );
     } catch ( NoSuchAlgorithmException e ) {
       LOG.fatal( e, e );
-      System.exit( 1 );
       throw new RuntimeException( e );
     }
   }
