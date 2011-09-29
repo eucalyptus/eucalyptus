@@ -271,11 +271,11 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     }
   }
   
-  /*  public final URI makeExternalRemoteUri( String hostName, Integer port ) {
-      return makeExternalRemoteUri(hostName, port, null);
-      }*/
-
-  public final URI makeExternalRemoteUri( String hostName, Integer port, String prefix ) {
+  /**
+   * Create URI for external endpoint
+   * @param scheme URI scheme to be used, see StackConfiguration fields for configurable properties
+   */
+  public final URI makeExternalRemoteUri( String hostName, Integer port, String scheme ) {
     String uri;
     URI u = null;
     String pattern;
@@ -287,10 +287,10 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       ? Internets.localHostAddress( )
       : hostName;
     pattern = this.getExternalUriPattern();
-    LOG.info("prefix = " + prefix + ", pattern = " + pattern);
+    LOG.debug("scheme = " + scheme + ", pattern = " + pattern);
     try {
       if(pattern.startsWith("%s"))
-	    uri = String.format( this.getExternalUriPattern( ), prefix, hostName, port );
+	    uri = String.format( this.getExternalUriPattern( ), scheme, hostName, port );
       else
 	    uri = String.format( this.getExternalUriPattern( ), hostName, port );
       LOG.info("uri = " + uri);
@@ -298,7 +298,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       u.parseServerAuthority( );
     } catch ( URISyntaxException e ) {
         if(pattern.startsWith("%s"))
-	    uri = String.format( this.getExternalUriPattern( ), prefix, Internets.localHostAddress( ), this.getPort( ) );
+	    uri = String.format( this.getExternalUriPattern( ), scheme, Internets.localHostAddress( ), this.getPort( ) );
 	else
 	    uri = String.format( this.getExternalUriPattern( ), Internets.localHostAddress( ), this.getPort( ) );
       try {
@@ -309,7 +309,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       }
     } catch ( MissingFormatArgumentException e ) {
 	if(pattern.startsWith("%s"))
-	    uri = String.format( this.getExternalUriPattern( ), prefix, hostName, port, this.getCapitalizedName( ) );
+	    uri = String.format( this.getExternalUriPattern( ), scheme, hostName, port, this.getCapitalizedName( ) );
 	else 
 	    uri = String.format( this.getExternalUriPattern( ), hostName, port, this.getCapitalizedName( ) );
       try {

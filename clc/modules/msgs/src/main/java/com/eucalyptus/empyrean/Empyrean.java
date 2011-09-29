@@ -232,4 +232,14 @@ public class Empyrean extends ComponentId.Unpartioned {
     }
     
   }
+
+  @Override
+  public String getUriPattern( ) {
+    return "http://%s:%d/internal/Empyrean";
+  }
+
+  @Override
+  public String getExternalUriPattern( ) {
+    return "http://%s:%d/services/Empyrean";
+  }
 }

@@ -105,7 +105,6 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
     final TransitionAction<ServiceConfiguration> noop = Transitions.noop( );
     return new StateMachineBuilder<ServiceConfiguration, State, Transition>( this.parent, State.PRIMORDIAL ) {
       {
-        in( State.ENABLED ).run( ServiceTransitions.StateCallbacks.PIPELINES_ADD );
         in( State.LOADED ).run( ServiceTransitions.StateCallbacks.ENDPOINT_START );
         in( State.STOPPED ).run( ServiceTransitions.StateCallbacks.ENDPOINT_STOP ).run( ServiceTransitions.StateCallbacks.PROPERTIES_REMOVE );
         in( State.NOTREADY ).run( ServiceTransitions.StateCallbacks.PROPERTIES_REMOVE );

@@ -103,7 +103,7 @@ public class MetadataRequest {
         }
       } catch ( Exception ex2 ) {
         try {
-          findVm = VmInstances.lookupByInstanceIp( requestIp );
+          findVm = VmInstances.lookupByPrivateIp( requestIp );
         } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex );
         }

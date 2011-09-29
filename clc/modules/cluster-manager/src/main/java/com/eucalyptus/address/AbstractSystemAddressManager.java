@@ -107,7 +107,7 @@ public abstract class AbstractSystemAddressManager {
             Helper.markAsAllocated( cluster, addrInfo, address );
           }
           try {
-            final VmInstance vm = VmInstances.lookupByInstanceIp( addrInfo.getInstanceIp( ) );
+            final VmInstance vm = VmInstances.lookupByPrivateIp( addrInfo.getInstanceIp( ) );
             clearOrphan( addrInfo );
           } catch ( final NoSuchElementException e ) {
             try {
@@ -228,7 +228,7 @@ public abstract class AbstractSystemAddressManager {
         vm = VmInstances.lookup( instanceId );
       } catch ( NoSuchElementException ex ) {
         try {
-          vm = VmInstances.lookupByInstanceIp( privateIp );
+          vm = VmInstances.lookupByPrivateIp( privateIp );
         } catch ( final NoSuchElementException e ) {
           Logs.exhaust( ).error( e );
         }
