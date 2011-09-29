@@ -155,16 +155,17 @@ public class SoapHandler extends MessageStackHandler {
     }
   }
   
-  @Override
-  public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent channelEvent ) throws Exception {
-    if ( channelEvent instanceof ExceptionEvent ) {
-      Throwable cause = ( ( ExceptionEvent ) channelEvent ).getCause( );
-      ExceptionResponseType errMsg = new ExceptionResponseType( null, cause.getMessage( ), HttpResponseStatus.INTERNAL_SERVER_ERROR, cause );
-      channelEvent.getFuture( ).cancel( );
-      ctx.getChannel( ).write( errMsg );
-    } else {
-      super.handleDownstream( ctx, channelEvent );
-    }
-  }
-  
+//TODO:GRZE: services specific error handling  
+//  @Override
+//  public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent channelEvent ) throws Exception {
+//    if ( channelEvent instanceof ExceptionEvent ) {
+//      Throwable cause = ( ( ExceptionEvent ) channelEvent ).getCause( );
+//      ExceptionResponseType errMsg = new ExceptionResponseType( null, cause.getMessage( ), HttpResponseStatus.INTERNAL_SERVER_ERROR, cause );
+//      channelEvent.getFuture( ).cancel( );
+//      ctx.getChannel( ).write( errMsg );
+//    } else {
+//      super.handleDownstream( ctx, channelEvent );
+//    }
+//  }
+//  
 }
