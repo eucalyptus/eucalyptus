@@ -100,6 +100,7 @@ import com.eucalyptus.component.ServiceCheckRecord;
 import com.eucalyptus.component.ServiceChecks;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.FullName;
@@ -123,8 +124,12 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   @NaturalId
   @Column( name = "config_component_name", updatable = false, unique = true, nullable = false )
   private String            name;
+  @ConfigurableField( description = "Address which the cloud controller should use to contact this service.", displayName = "Host name", readonly = true )
   @Column( name = "config_component_hostname" )
   private String            hostName;
+  @ConfigurableField( description = "Alternative address which is the source address for requests made by the component to the cloud controller.", displayName = "Source host name" )
+  @Column( name = "config_component_source_hostname" )
+  private String            sourceHostName;
   @Column( name = "config_component_port" )
   private Integer           port;
   @Column( name = "config_component_service_path" )
@@ -139,6 +144,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     this.partition = partition;
     this.name = name;
     this.hostName = hostName;
+    this.sourceHostName = hostName;
     this.servicePath = servicePath;
   }
   
@@ -146,6 +152,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     this.partition = partition;
     this.name = name;
     this.hostName = hostName;
+    this.sourceHostName = hostName;
     this.port = port;
     this.servicePath = servicePath;
   }
@@ -408,5 +415,13 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
         return Component.State.NONE;
       }
     }
+  }
+
+  private String getSourceHostName( ) {
+    return this.sourceHostName;
+  }
+
+  private void setSourceHostName( String aliasHostName ) {
+    this.sourceHostName = aliasHostName;
   }
 }
