@@ -420,7 +420,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                              .placement( partition, partition.getName( ) )
                                                              .networking( networks, index )
                                                              .build( launchIndex );
-          Entities.flush( vmInst );
           vmInst.setNaturalId( input.getUuid( ) );
           Address addr;
           try {
