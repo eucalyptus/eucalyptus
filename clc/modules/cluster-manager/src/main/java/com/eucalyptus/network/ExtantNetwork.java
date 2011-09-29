@@ -188,7 +188,7 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
             }
             netIdx.release( );
             final PrivateNetworkIndex ref = netIdx.allocate( );
-            Entities.persist( netIdx );
+            Entities.merge( netIdx );
             Entities.flush( netIdx );
             db.commit( );
             return ref;
