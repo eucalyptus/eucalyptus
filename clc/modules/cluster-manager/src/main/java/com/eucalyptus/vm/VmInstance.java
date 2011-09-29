@@ -610,7 +610,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           throw ex;
         } catch ( final Exception ex ) {
           db.rollback( );
-          throw new NoSuchElementException( "Failed to lookup vm instance: " + arg0 );
+          throw new NoSuchElementException( "An error occurred while trying to lookup vm instance " + arg0 + ": " + ex.getMessage( ) + "\n" + Exceptions.causeString( ex ) );
         }
       }
     };
