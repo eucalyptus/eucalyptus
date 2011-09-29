@@ -421,9 +421,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                              .networking( networks, index )
                                                              .build( launchIndex );
           vmInst.setNaturalId( input.getUuid( ) );
-          Address addr;
           try {
-            addr = Addresses.getInstance( ).lookup( input.getNetParams( ).getIgnoredPublicIp( ) );
+            Address addr = Addresses.getInstance( ).lookup( input.getNetParams( ).getIgnoredPublicIp( ) );
             if ( addr.isAssigned( ) &&
                  addr.getInstanceAddress( ).equals( input.getNetParams( ).getIpAddress( ) ) &&
                  addr.getInstanceId( ).equals( input.getInstanceId( ) ) ) {
