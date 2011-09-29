@@ -202,7 +202,7 @@
     <priority value="${euca.log.exhaustive.user}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
-  <category name="com.eucalyptus.ws.util.PipelineRegistry" additivity="false">
+  <category name="com.eucalyptus.ws.server.PipelineRegistry" additivity="false">
     <priority value="${euca.log.exhaustive.user}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
