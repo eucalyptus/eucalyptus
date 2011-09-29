@@ -417,11 +417,11 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
     }
   }
 
-  private String getSourceHostName( ) {
+  public String getSourceHostName( ) {
     return this.sourceHostName;
   }
 
-  private void setSourceHostName( String aliasHostName ) {
+  public void setSourceHostName( String aliasHostName ) {
     this.sourceHostName = aliasHostName;
   }
 }
