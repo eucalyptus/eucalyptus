@@ -92,6 +92,7 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.Threads;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -164,12 +165,22 @@ public class RestrictedTypes {
     }
     throw new NoSuchElementException( "Failed to lookup function (@" + Threads.currentStackFrame( 1 ).getMethodName( ) + ") for type: " + type );
   }
+
+  @SuppressWarnings( { "cast", "unchecked" } )
+  public static <T extends RestrictedType> T allocate( Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return allocate( "", 1L, allocator );
+  }
+
+  @SuppressWarnings( { "cast", "unchecked" } )
+  public static <T extends RestrictedType> T allocate( Long quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return allocate( "", quantity, allocator );
+  }
   
   @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> List<T> allocate( Long quantity, Function<Long, List<T>> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends RestrictedType> T allocate( String identifier, Long quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     Context ctx = Contexts.lookup( );
     if ( ctx.hasAdministrativePrivileges( ) ) {
-      return allocator.apply( quantity );
+      return allocator.get( );
     } else {
       Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
       List<Class<?>> lookupTypes = Classes.genericsToClasses( allocator );
@@ -209,12 +220,12 @@ public class RestrictedTypes {
           }
           User requestUser = ctx.getUser( );
           try {
-            if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), "", null, action, requestUser ) ) {
+            if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, requestUser ) ) {
               throw new AuthException( "Not authorized to create: " + type + " by user: " + ctx.getUserFullName( ) );
-            } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), "", action, ctx.getUser( ), quantity ) ) {
+            } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), quantity ) ) {
               throw new AuthException( "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
             } else {
-              return allocator.apply( quantity );
+              return allocator.get( );
             }
           } catch ( AuthException ex ) {
             throw ex;
@@ -374,22 +385,22 @@ public class RestrictedTypes {
       super( );
     }
     
-    @SuppressWarnings( "synthetic-access" )
+    @SuppressWarnings( { "synthetic-access", "unchecked" } )
     @Override
     public boolean processClass( Class candidate ) throws Exception {
       if ( Ats.from( candidate ).has( UsageMetricFunction.class ) && Function.class.isAssignableFrom( candidate ) ) {
         UsageMetricFunction measures = Ats.from( candidate ).get( UsageMetricFunction.class );
-        Class measuredType = measures.value( );
+        Class<?> measuredType = measures.value( );
         RestrictedTypes.usageMetricFunctions.put( measuredType, ( Function<OwnerFullName, Long> ) Classes.newInstance( candidate ) );
         return true;
       } else if ( Ats.from( candidate ).has( QuantityMetricFunction.class ) && Function.class.isAssignableFrom( candidate ) ) {
         QuantityMetricFunction measures = Ats.from( candidate ).get( QuantityMetricFunction.class );
-        Class measuredType = measures.value( );
+        Class<?> measuredType = measures.value( );
         RestrictedTypes.quantityMetricFunctions.put( measuredType, ( Function<OwnerFullName, Long> ) Classes.newInstance( candidate ) );
         return true;
       } else if ( Ats.from( candidate ).has( Resolver.class ) && Function.class.isAssignableFrom( candidate ) ) {
         Resolver resolver = Ats.from( candidate ).get( Resolver.class );
-        Class resolverFunction = resolver.value( );
+        Class<?> resolverFunction = resolver.value( );
         RestrictedTypes.resourceResolvers.put( resolverFunction, ( Function<String, RestrictedType<?>> ) Classes.newInstance( candidate ) );
         return true;
       } else {

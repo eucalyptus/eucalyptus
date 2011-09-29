@@ -165,8 +165,9 @@ static void * rebooting_thread (void *arg)
     sem_p (hyp_sem);
     // for KVM, must stop and restart the instance
     int error = virDomainDestroy (dom); // TODO: change to Shutdown?  TODO: is this synchronous?
-    sem_v (hyp_sem);
     virDomainFree(dom);
+    sem_v (hyp_sem);
+
     if (error) {
         free (xml);
         return NULL;
@@ -210,7 +211,9 @@ static void * rebooting_thread (void *arg)
         return NULL;
     }
     
+    sem_p (hyp_sem);
     virDomainFree(dom);
+    sem_v (hyp_sem);
     return NULL;
 }
 

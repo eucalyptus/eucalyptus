@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -98,6 +98,12 @@ public class VmNetworkConfig {
     this.updateDns( );
   }
   
+  VmNetworkConfig( String ipAddress, String ignoredPublicIp ) {
+    super( );
+    this.privateAddress = ipAddress;
+    this.publicAddress = ignoredPublicIp;
+  }
+
   VmNetworkConfig( ) {
     super( );
   }
@@ -105,7 +111,7 @@ public class VmNetworkConfig {
   /**
    * @param vmInstance
    */
-  public VmNetworkConfig( VmInstance vmInstance ) {
+  VmNetworkConfig( VmInstance vmInstance ) {
     this( vmInstance, DEFAULT_IP, DEFAULT_IP );
   }
   
@@ -194,5 +200,19 @@ public class VmNetworkConfig {
 
   private void setUsePrivateAddressing( Boolean usePrivateAddressing ) {
     this.usePrivateAddressing = usePrivateAddressing;
+  }
+
+  /**
+   * @param ip
+   * @return
+   */
+  public static VmNetworkConfig exampleWithPrivateIp( String ip ) {
+    return new VmNetworkConfig( ip, null );
+  }
+  public static VmNetworkConfig exampleWithPublicIp( String ip ) {
+    return new VmNetworkConfig( null, ip );
+  }
+  public static VmNetworkConfig exampleWithIps( String privateIp, String publicIp ) {
+    return new VmNetworkConfig( privateIp, publicIp );
   }
 }
