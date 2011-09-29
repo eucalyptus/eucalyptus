@@ -360,7 +360,7 @@ public class Logs {
       Logger.getRootLogger( ).info( LogUtil.subheader( "Starting system with debugging set as: " + Joiner.on( "\n" ).join( Logs.class.getDeclaredFields( ) ) ) );
     } catch ( final Exception t ) {
       t.printStackTrace( );
-      System.exit( 1 );
+      System.exit( 1 );//GRZE: special case, can't open log files, hosed
     }
   }
   
