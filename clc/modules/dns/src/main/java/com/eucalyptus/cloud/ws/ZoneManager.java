@@ -70,6 +70,7 @@ import com.eucalyptus.util.DNSProperties;
 import edu.ucsb.eucalyptus.cloud.entities.*;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.dns.TransientZone;
 import com.eucalyptus.dns.Zone;
 import com.eucalyptus.entities.EntityWrapper;
@@ -102,6 +103,8 @@ public class ZoneManager {
 	}
 
 	public static Zone getZone(Name name) {
+	    
+	    if ( Bootstrap.isFinished( ) ) {
 		if(name.toString().endsWith("in-addr.arpa.")) {
 			//create new transient zone to handle reverse lookups
 			return TransientZone.getPtrZone(name);
@@ -117,6 +120,9 @@ public class ZoneManager {
 			}
 		}
 		return zones.get(name);
+	    } else {
+		return null;
+	    }
 	}
 
 	public static void registerZone( Name name, Zone z ) {
