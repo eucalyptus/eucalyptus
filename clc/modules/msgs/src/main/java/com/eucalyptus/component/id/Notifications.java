@@ -71,7 +71,7 @@ import com.eucalyptus.ws.StackConfiguration;
 public class Notifications extends ComponentId.Unpartioned {
   public static Notifications INSTANCE = new Notifications( );
   
-  private Notifications( ) {
+  public Notifications( ) {
     super( StackConfiguration.DEFAULT_AWS_SNS_URL_PREFIX );
   }
 

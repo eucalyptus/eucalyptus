@@ -66,29 +66,29 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     this.entryPoint = this.capitalizedName + "RequestQueueEndpoint";
     this.port = 8773;
     this.uriPattern = "http://%s:%d/internal/%s";
-    //    this.externalUriPattern = "http://%s:%d/services/" + this.capitalizedName;
     // NOTE: these patterns are overwritten in getExternalUriPattern() of some subclasses
-    /*    if( extUrlPrefix != null )
+    if( extUrlPrefix != null )
 	this.externalUriPattern = extUrlPrefix + "://%s:%d/services/" + this.capitalizedName;
-	else*/
+    else
 	this.externalUriPattern = "http://%s:%d/services/" + this.capitalizedName;
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
     this.modelContent = loadModel( );
   }
   
   protected ComponentId( String extUrlPrefix ) {
-    this.capitalizedName = this.getClass( ).getSimpleName( );
-    this.name = this.capitalizedName.toLowerCase( );
-    this.entryPoint = this.capitalizedName + "RequestQueueEndpoint";
-    this.port = 8773;
-    this.uriPattern = "http://%s:%d/internal/%s";
-    // NOTE: these patterns are overwritten in getExternalUriPattern() of some subclasses
-    /*    if( extUrlPrefix != null )
+      this.capitalizedName = this.getClass( ).getSimpleName( );
+      this.name = this.capitalizedName.toLowerCase( );
+      this.entryPoint = this.capitalizedName + "RequestQueueEndpoint";
+      this.port = 8773;
+      this.uriPattern = "http://%s:%d/internal/%s";
+      // NOTE: these patterns are overwritten in getExternalUriPattern() of some subclasses
+      if( extUrlPrefix != null )
 	this.externalUriPattern = extUrlPrefix + "://%s:%d/services/" + this.capitalizedName;
-	else*/
+      else
 	this.externalUriPattern = "http://%s:%d/services/" + this.capitalizedName;
-    this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
-    this.modelContent = loadModel( );
+      this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
+      this.modelContent = loadModel( );
+
   }
 
   protected ComponentId( ) {
@@ -268,6 +268,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
    */
   public final URI makeInternalRemoteUri( String hostName, Integer port ) {
     String uri;
+
     try {
       uri = String.format( this.getUriPattern( ), hostName, port );
     } catch ( MissingFormatArgumentException e ) {

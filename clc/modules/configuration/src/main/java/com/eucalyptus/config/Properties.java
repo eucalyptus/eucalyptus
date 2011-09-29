@@ -19,6 +19,7 @@ public class Properties {
     }
     DescribePropertiesResponseType reply = request.getReply( );
     List<Property> props = reply.getProperties( );
+
     if ( request.getProperties( ).isEmpty( ) ) {
       for ( ConfigurableProperty entry : PropertyDirectory.getPropertyEntrySet( ) ) {
         String value = "********";
