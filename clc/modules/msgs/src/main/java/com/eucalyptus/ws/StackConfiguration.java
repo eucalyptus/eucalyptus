@@ -166,7 +166,7 @@ public class StackConfiguration extends AbstractPersistent {
   public static String        DEFAULT_EUARE_URI_SCHEME        = "https";
 
   @ConfigurableField( initial = "http", description = "external URI scheme for eucalyptus endpoints communication", changeListener = UriChangeListener.class )
-  public static String        EXTERNAL_URI_SCHEME        = "http";
+  public static String        EXTERNAL_URI_SCHEME        = "https";
 
   
   private static Logger       LOG                               = Logger.getLogger( StackConfiguration.class );

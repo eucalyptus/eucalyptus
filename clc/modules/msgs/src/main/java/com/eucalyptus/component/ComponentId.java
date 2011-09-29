@@ -287,7 +287,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       ? Internets.localHostAddress( )
       : hostName;
     pattern = this.getExternalUriPattern();
-    LOG.debug("scheme = " + scheme + ", pattern = " + pattern);
+
     try {
       if(pattern.startsWith("%s"))
 	    uri = String.format( this.getExternalUriPattern( ), scheme, hostName, port );
