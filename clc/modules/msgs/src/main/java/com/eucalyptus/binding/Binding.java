@@ -271,7 +271,21 @@ public class Binding {
       final UnmarshallingContext ctx = this.getNewUnmarshalContext( param );
       return ctx.unmarshalElement( type );
     } catch ( final Exception e ) {
-      LOG.fatal( e, e );
+      LOG.warn( e, e );
+      throw new WebServicesException( e.getMessage( ) );
+    }
+  }
+  
+  public Object fromOM( final OMElement param, final String namespace ) throws WebServicesException { 
+    StringWriter out = new StringWriter( );
+    try {
+      IBindingFactory bindingFactory = BindingDirectory.getFactory( BindingManager.defaultBindingName( ), param.getClass( ) );
+      IMarshallingContext mctx = bindingFactory.createMarshallingContext( );
+      mctx.setIndent( 2 );
+      mctx.marshalDocument( this, "UTF-8", null, out );
+      return this.fromOM( out.toString( ).replaceAll( param.getNamespace( ).getNamespaceURI( ), out.toString( ) ) );
+    } catch ( Exception e ) {
+      LOG.warn( e, e );
       throw new WebServicesException( e.getMessage( ) );
     }
   }
@@ -281,7 +295,7 @@ public class Binding {
       final UnmarshallingContext ctx = this.getNewUnmarshalContext( param );
       return ctx.unmarshalElement( );
     } catch ( final Exception e ) {
-      LOG.fatal( e, e );
+      LOG.warn( e, e );
       throw new WebServicesException( e.getMessage( ) );
     }
   }

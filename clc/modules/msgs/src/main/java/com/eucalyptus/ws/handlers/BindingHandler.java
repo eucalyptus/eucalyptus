@@ -144,8 +144,12 @@ public class BindingHandler extends MessageStackHandler {
           msg = ( BaseMessage ) this.binding.fromOM( httpMessage.getOmMessage( ) );
         }
       } catch ( Exception e1 ) {
-        LOG.fatal( "FAILED TO PARSE:\n" + httpMessage.getMessageString( ) );
-        throw new WebServicesException( e1 );
+        try {
+          msg = ( BaseMessage ) this.binding.fromOM( httpMessage.getOmMessage( ), this.namespace );
+        } catch ( Exception ex ) {
+          LOG.warn( "FAILED TO PARSE:\n" + httpMessage.getMessageString( ) );
+          throw new WebServicesException( e1 );
+        }
       }
       msg.setCorrelationId( httpMessage.getCorrelationId( ) );
       httpMessage.setMessage( msg );
