@@ -279,10 +279,7 @@ public class Binding {
   public Object fromOM( final OMElement param, final String namespace ) throws WebServicesException { 
     StringWriter out = new StringWriter( );
     try {
-      IBindingFactory bindingFactory = BindingDirectory.getFactory( BindingManager.defaultBindingName( ), param.getClass( ) );
-      IMarshallingContext mctx = bindingFactory.createMarshallingContext( );
-      mctx.setIndent( 2 );
-      mctx.marshalDocument( this, "UTF-8", null, out );
+      param.serialize( out );
       return this.fromOM( out.toString( ).replaceAll( param.getNamespace( ).getNamespaceURI( ), out.toString( ) ) );
     } catch ( Exception e ) {
       LOG.warn( e, e );
