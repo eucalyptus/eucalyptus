@@ -81,6 +81,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -89,6 +90,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.PersistenceExceptions;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
@@ -484,5 +486,23 @@ public class NetworkGroups {
       ruleList.addAll( IpPermissionTypeAsNetworkRule.INSTANCE.apply( ipPerm ) );
     }
     return ruleList;
+  }
+  
+  public static PrivateNetworkIndex reclaimIndex( NetworkGroup group, Integer tag, Long idx ) throws Exception {
+    PrivateNetworkIndex index = null;
+    if ( group != null ) {
+      ExtantNetwork exNet;
+      if ( !group.hasExtantNetwork( ) ) {
+        exNet = group.reclaim( tag );
+      } else {
+        exNet = group.extantNetwork( );
+        if ( !exNet.getTag( ).equals( tag ) ) {
+          exNet = null;
+        } else {
+          index = exNet.reclaimNetworkIndex( idx );
+        }
+      }
+    }
+    return index;
   }
 }
