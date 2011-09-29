@@ -156,4 +156,5 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
   // Register proxool
   LOG.trace( proxool_config )
   ProxoolFacade.registerConnectionPool(url, proxool_config);
+  ProxoolFacade.disableShutdownHook();
 }
