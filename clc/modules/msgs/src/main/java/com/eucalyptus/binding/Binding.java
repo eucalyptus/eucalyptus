@@ -271,7 +271,18 @@ public class Binding {
       final UnmarshallingContext ctx = this.getNewUnmarshalContext( param );
       return ctx.unmarshalElement( type );
     } catch ( final Exception e ) {
-      LOG.fatal( e, e );
+      LOG.warn( e, e );
+      throw new WebServicesException( e.getMessage( ) );
+    }
+  }
+  
+  public Object fromOM( final OMElement param, final String namespace ) throws WebServicesException { 
+    StringWriter out = new StringWriter( );
+    try {
+      param.serialize( out );
+      return this.fromOM( out.toString( ).replaceAll( param.getNamespace( ).getNamespaceURI( ), out.toString( ) ) );
+    } catch ( Exception e ) {
+      LOG.warn( e, e );
       throw new WebServicesException( e.getMessage( ) );
     }
   }
@@ -281,7 +292,7 @@ public class Binding {
       final UnmarshallingContext ctx = this.getNewUnmarshalContext( param );
       return ctx.unmarshalElement( );
     } catch ( final Exception e ) {
-      LOG.fatal( e, e );
+      LOG.warn( e, e );
       throw new WebServicesException( e.getMessage( ) );
     }
   }

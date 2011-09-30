@@ -79,7 +79,7 @@ try {
   } catch( Exception ex ) {
     Databases.getBootstrapper( ).destroy( );
     LOG.error( ex, ex );
-    System.exit( 1 );
+    System.exit( 123 );
   }
 } catch( Exception ex ) {
   Databases.getBootstrapper( ).destroy( );

@@ -203,7 +203,6 @@ public class Exceptions {
       : ex, t != null
       ? t
       : ex );
-    System.exit( -1 );
     return ex;
   }
   
