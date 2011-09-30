@@ -4,6 +4,7 @@ import java.util.Iterator;
 
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.reporting.event.StorageEvent;
+import com.eucalyptus.reporting.modules.storage.*;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 import com.eucalyptus.util.ExposedCommand;
