@@ -6,6 +6,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.NoSuchElementException;
+import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.empyrean.ServiceId;
@@ -63,11 +64,11 @@ public class ServiceConfigurations {
     
     @Override
     public <T extends ServiceConfiguration> T lookup( final T example ) {
-      final EntityWrapper<T> db = EntityWrapper.get( example );
+      final EntityTransaction db = Entities.get( example );
       T existingName = null;
       try {
-        existingName = db.getUnique( example );
-        db.rollback( );
+        existingName = Entities.uniqueResult( example );
+        db.commit( );
         return existingName;
       } catch ( final PersistenceException ex ) {
         LOG.trace( ex );
@@ -314,8 +315,6 @@ public class ServiceConfigurations {
     return lookup( example );
   }
   
-  @Deprecated
-  //GRZE:PLS not using.
   public static <T extends ServiceConfiguration, C extends ComponentId> T lookupByHost( final Class<C> type, final String host ) {
     if ( !ComponentId.class.isAssignableFrom( type ) ) {
       throw new PersistenceException( "Unknown configuration type passed: " + type.getCanonicalName( ) );
@@ -325,6 +324,15 @@ public class ServiceConfigurations {
     return lookup( example );
   }
   
+  public static <T extends ServiceConfiguration, C extends ComponentId> T lookupByAliasHost( final Class<C> type, final String host ) {
+    if ( !ComponentId.class.isAssignableFrom( type ) ) {
+      throw new PersistenceException( "Unknown configuration type passed: " + type.getCanonicalName( ) );
+    }
+    final T example = ( T ) ServiceBuilders.lookup( type ).newInstance( );
+    example.setSourceHostName( host );
+    return lookup( example );
+  }
+
   public static <T extends ServiceConfiguration> List<T> list( final T type ) {
     return getProvider( ).list( type );
   }

@@ -183,7 +183,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private Set<NetworkGroup>    networkGroups    = Sets.newHashSet( );
   
   @NotFound( action = NotFoundAction.IGNORE )
-  @OneToOne( fetch = FetchType.EAGER, cascade = { CascadeType.ALL }, orphanRemoval = true, optional = true )
+  @OneToOne( fetch = FetchType.LAZY, cascade = { CascadeType.ALL }, orphanRemoval = true, optional = true )
   @JoinColumn( name = "metadata_vm_network_index", nullable = true, insertable = true, updatable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex  networkIndex;
@@ -855,7 +855,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     final Map<String, String> m = new HashMap<String, String>( );
     m.put( "ami-id", this.getImageId( ) );
-    m.put( "product-codes", this.bootRecord.getMachine( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
+    if ( !this.bootRecord.getMachine( ).getProductCodes( ).isEmpty()) {
+      m.put( "product-codes", this.bootRecord.getMachine( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
+    }
     m.put( "ami-launch-index", "" + this.launchRecord.getLaunchIndex( ) );
 //ASAP: FIXME: GRZE:
 //    m.put( "ancestor-ami-ids", this.getImageInfo( ).getAncestorIds( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
@@ -878,7 +880,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     m.put( "public-ipv4", this.getPublicAddress( ) );
     m.put( "reservation-id", this.vmId.getReservationId( ) );
-    m.put( "kernel-id", this.bootRecord.getKernel( ).getDisplayName( ) );
+    if ( this.bootRecord.getKernel( ) != null ) {
+      m.put( "kernel-id", this.bootRecord.getKernel( ).getDisplayName( ) );
+    }
     if ( this.bootRecord.getRamdisk( ) != null ) {
       m.put( "ramdisk-id", this.bootRecord.getRamdisk( ).getDisplayName( ) );
     }
@@ -892,11 +896,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     m.put( "block-device-mapping/swap", "sda3" );
     m.put( "block-device-mapping/root", "/dev/sda1" );
     
-    m.put( "public-keys/", "0=" + this.bootRecord.getSshKeyPair( ).getName( ) );
-    m.put( "public-keys/0", "openssh-key" );
-    m.put( "public-keys/0/", "openssh-key" );
-    m.put( "public-keys/0/openssh-key", this.bootRecord.getSshKeyPair( ).getPublicKey( ) );
-    
+    if ( this.bootRecord.getSshKeyPair( ) != null ) {
+      m.put( "public-keys/", "0=" + this.bootRecord.getSshKeyPair( ).getName( ) );
+      m.put( "public-keys/0", "openssh-key" );
+      m.put( "public-keys/0/", "openssh-key" );
+      m.put( "public-keys/0/openssh-key", this.bootRecord.getSshKeyPair( ).getPublicKey( ) );
+    }
     m.put( "placement/", "availability-zone" );
     m.put( "placement/availability-zone", this.getPartition( ) );
     String dir = "";

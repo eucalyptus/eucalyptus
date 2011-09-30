@@ -65,6 +65,7 @@ package com.eucalyptus.ws.server;
 
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.ComponentPart;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.ws.handlers.BindingHandler;
@@ -73,6 +74,7 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 
 @ComponentPart( Eucalyptus.class )
 public class EucalyptusSoapPipeline extends FilteredPipeline {
+  private static final String DEFAULT_EC2_SOAP_NAMESPACE = "http://ec2.amazonaws.com/doc/2011-02-28/";//GRZE:TODO: @Configurable
   private final UnrollableStage auth = new SoapUserAuthenticationStage( );
 
   @Override
@@ -88,7 +90,7 @@ public class EucalyptusSoapPipeline extends FilteredPipeline {
   @Override
   public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
     auth.unrollStage( pipeline );
-    pipeline.addLast( "binding", new BindingHandler( ) );
+    pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( DEFAULT_EC2_SOAP_NAMESPACE ) ) );
     return pipeline;
   }
 }

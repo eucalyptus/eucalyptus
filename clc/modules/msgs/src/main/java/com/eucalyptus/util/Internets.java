@@ -157,7 +157,6 @@ public class Internets {
         } else {
           LOG.error( "Failed to find specified --bind-addr=" + addrStr + " as it is not bound to a local interface.\n  Known addresses are: "
                      + Joiner.on( ", " ).join( locallyBoundAddrs ) );
-          System.exit( 1 );
         }
       } catch ( UnknownHostException ex ) {
         LOG.fatal( "Invalid argument given for --bind-addr=" + addrStr + " " + ex.getMessage( ) );
@@ -169,7 +168,7 @@ public class Internets {
         err = true;
       }
       if ( err ) {
-        System.exit( 1 );
+        System.exit( 1 );//GRZE: special case, failed to determine bind address
       }
     }
     return laddr;

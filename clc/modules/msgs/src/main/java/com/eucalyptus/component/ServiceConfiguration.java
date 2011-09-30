@@ -19,8 +19,12 @@ public interface ServiceConfiguration extends Serializable, HasFullName<ServiceC
   public InetSocketAddress getSocketAddress( );
   
   public abstract String getHostName( );
+
+  public abstract String getSourceHostName( );
   
   public abstract void setHostName( String hostName );
+
+  public abstract void setSourceHostName( String aliasHostName );
   
   public abstract Integer getPort( );
   

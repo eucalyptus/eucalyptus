@@ -523,11 +523,16 @@ static void update_vbr_with_backing_info (artifact * a)
     vbr->size = a->bb->size_bytes;
 }
 
-// These *_creator funcitons produce an artifact in blobstore, either from
-// scratch (such as Walrus download or a new partition) or by converting,
-// combining, and augmenting existing artifacts.  When invoked, creators
-// can assume that any input blobs and the output blob are open (and 
-// thus locked for their exclusive use).
+// The following *_creator funcitons produce an artifact in blobstore, 
+// either from scratch (such as Walrus download or a new partition) or 
+// by converting, combining, and augmenting existing artifacts.  
+//
+// When invoked, creators can assume that any input blobs and the output 
+// blob are open (and thus locked for their exclusive use).
+//
+// Creators return OK or an error code: either generic one (ERROR) or
+// a code specific to a failed blobstore operation, which can be obtained
+// using blobstore_get_error().
 
 static int url_creator (artifact * a)
 {
@@ -699,7 +704,8 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
 
     // map the partitions to the disk
     if (blockblob_clone (a->bb, map, map_entries)==-1) {
-        logprintfl (EUCAERROR, "[%s] error: failed to clone partitions to created disk: %d %s\n", a->instanceId, blobstore_get_error(), blobstore_get_last_msg());
+        ret = blobstore_get_error();
+        logprintfl (EUCAERROR, "[%s] error: failed to clone partitions to created disk: %d %s\n", a->instanceId, ret, blobstore_get_last_msg());
         goto cleanup;
     }
 
@@ -843,7 +849,7 @@ static int copy_creator (artifact * a)
     if (a->must_be_file) {
         if (blockblob_copy (dep->bb, 0L, a->bb, 0L, 0L)==-1) {
             logprintfl (EUCAERROR, "[%s] error: failed to copy blob %s to blob %s\n", a->instanceId, dep->bb->id, a->bb->id);
-            return ERROR;
+            return blobstore_get_error();
         }
     } else {
         blockmap map [] = {
@@ -851,7 +857,7 @@ static int copy_creator (artifact * a)
         };
         if (blockblob_clone (a->bb, map, 1)==-1) {
             logprintfl (EUCAERROR, "[%s] error: failed to clone blob %s to blob %s\n", a->instanceId, dep->bb->id, a->bb->id);
-            return ERROR;
+            return blobstore_get_error();
         }
     }
 

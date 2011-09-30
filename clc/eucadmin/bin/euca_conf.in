@@ -388,11 +388,13 @@ class EucaConf(object):
             print 'ERROR: must pass in service name %s' % valid_services
             return False
         if service_name == 'CLC':
-            resp = boto.utils.retry_url('https://127.0.0.1:8443/register')
+            resp = boto.utils.retry_url('https://127.0.0.1:8443/register',
+                                        num_retries=2)
             if resp.find('CloudVersion') < 0:
                 return False
         elif service_name == 'CC':
-            resp = boto.utils.retry_url('http://127.0.0.1:8774/axis2/services')
+            resp = boto.utils.retry_url('http://127.0.0.1:8774/axis2/services',
+                                        num_retries=2)
             if resp.find('EucalyptusCC') < 0:
                 return False
         return True
