@@ -123,12 +123,12 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @Column( name = "metadata_network_group_description" )
   private String           description;
   
-  @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true )
+  @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY )
   @JoinColumn( name = "metadata_network_group_rule_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkRule> networkRules = new HashSet<NetworkRule>( );
   
-  @OneToOne( cascade = { CascadeType.ALL }, fetch = FetchType.EAGER, optional = true, orphanRemoval = true )
+  @OneToOne( cascade = { CascadeType.ALL }, fetch = FetchType.LAZY, optional = true, orphanRemoval = true )
   @NotFound( action = NotFoundAction.IGNORE )
   @JoinColumn( name = "vm_network_index", nullable = true, insertable = true, updatable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
