@@ -96,11 +96,7 @@ public class MetadataRequest {
       }
       VmInstance findVm = null;
       try {
-        try {
-          findVm = VmInstances.lookupByPublicIp( requestIp );
-        } catch ( Exception ex ) {
-          Logs.exhaust( ).error( ex );
-        }
+        findVm = VmInstances.lookupByPublicIp( requestIp );
       } catch ( Exception ex2 ) {
         try {
           findVm = VmInstances.lookupByPrivateIp( requestIp );

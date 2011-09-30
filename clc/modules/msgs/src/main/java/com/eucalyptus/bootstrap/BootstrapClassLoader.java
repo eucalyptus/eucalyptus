@@ -161,7 +161,6 @@ public class BootstrapClassLoader extends URLClassLoader {
       return singleton;
     } catch ( final MalformedURLException ex ) {
       LOG.error( ex, ex );
-      System.exit( 1 );
       return null;
     }
   }
