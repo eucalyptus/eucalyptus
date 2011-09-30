@@ -103,7 +103,6 @@ public class Classes {
     return Iterables.find( ancestors( o ), condition );
   }
   
-  @SuppressWarnings( "unchecked" )
   public static <T> T newInstance( final Class<T> type ) {
     if ( !Modifier.isPublic( type.getModifiers( ) ) ) {//TODO:GRZE: see if we can relax this restriction
       throw new InstantiationError( "Attempt to instantiate a class which is not public: " + type.getCanonicalName( ) );

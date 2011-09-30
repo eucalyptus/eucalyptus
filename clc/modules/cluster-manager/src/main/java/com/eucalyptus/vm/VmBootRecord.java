@@ -63,6 +63,8 @@
 
 package com.eucalyptus.vm;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 import java.util.Arrays;
 import java.util.Set;
 import javax.persistence.CollectionTable;
@@ -123,6 +125,7 @@ public class VmBootRecord {
   
   VmBootRecord( BootableSet bootSet, byte[] userData, SshKeyPair sshKeyPair, VmType vmType ) {
     super( );
+    assertThat("Bootset must not be null", bootSet, notNullValue());
     this.machineImage = ( ImageInfo ) bootSet.getMachine( );
     if(bootSet.hasKernel())
     	this.kernel = bootSet.getKernel( );
