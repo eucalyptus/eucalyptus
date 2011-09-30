@@ -151,7 +151,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
       for ( final String fileName : classList.get( c ) ) {
         LOG.fatal( "\n==> Defined in: " + fileName );
       }
-      System.exit( 1 );
+      System.exit( 1 );//GRZE: special case, broken installation
     }
   }
   

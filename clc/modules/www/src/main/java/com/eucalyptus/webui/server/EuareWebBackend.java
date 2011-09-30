@@ -65,7 +65,6 @@ public class EuareWebBackend {
   public static final String REGISTRATION = "registration";
   public static final String EXPIRATION = "expiration";
   public static final String ACTIVE = "active";
-  public static final String REVOKED = "revoked";
   public static final String CREATION = "creation";
   public static final String PEM = "pem";
   public static final String ACCOUNTID = "accountid";
@@ -145,9 +144,8 @@ public class EuareWebBackend {
   static {
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "25%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACTIVE, "Active", false, "10%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
-    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( REVOKED, "Revoked", false, "10%", TableDisplay.MANDATORY, Type.BOOLEAN, false, false ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACCOUNT, "Owner account", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
-    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( USER, "Owner user", false, "45%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
+    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( USER, "Owner user", false, "55%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( CREATION, "Creation date", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( OWNERID, "Owner", false, "0px", TableDisplay.NONE, Type.LINK, false, false ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( PEM, "PEM", false, "0px", TableDisplay.NONE, Type.ARTICLE, false, false ) );
@@ -715,12 +713,6 @@ public class EuareWebBackend {
       public boolean match( QueryValue value ) {
         return cert.getCertificateId( ) != null && cert.getCertificateId( ).equals( value.getValue( ) );
       }
-    } ) && query.match( REVOKED, new Matcher( ) {
-      @Override
-      public boolean match( QueryValue value ) {
-        boolean val = "true".equalsIgnoreCase( value.getValue( ) );
-        return cert.isRevoked( ) != null && ( cert.isRevoked( ).booleanValue( ) == val );
-      }
     } ) && query.match( ACTIVE, new Matcher( ) {
       @Override
       public boolean match( QueryValue value ) {
@@ -738,8 +730,10 @@ public class EuareWebBackend {
         User user = Accounts.lookupUserById( query.getSingle( USERID ).getValue( ) );
         Account account = user.getAccount( );
         for ( Certificate cert : user.getCertificates( ) ) {
-          if ( EuarePermission.allowReadUserCertificate( requestUser, account, user ) ) {
-            results.add( serializeCert( cert, account, user ) );
+          if ( !cert.isRevoked( ) ) {
+            if ( EuarePermission.allowReadUserCertificate( requestUser, account, user ) ) {
+              results.add( serializeCert( cert, account, user ) );
+            }
           }
         }        
       } else {
@@ -747,8 +741,10 @@ public class EuareWebBackend {
           for ( User user : getUsers( account, query ) ) {
             for ( Certificate cert : user.getCertificates( ) ) {
               if ( certMatchQuery( cert, query ) ) {
-                if ( EuarePermission.allowReadUserCertificate( requestUser, account, user ) ) {
-                  results.add( serializeCert( cert, account, user ) );
+                if ( !cert.isRevoked( ) ) {
+                  if ( EuarePermission.allowReadUserCertificate( requestUser, account, user ) ) {
+                    results.add( serializeCert( cert, account, user ) );
+                  }
                 }
               }
             }
@@ -767,7 +763,6 @@ public class EuareWebBackend {
     SearchResultRow result = new SearchResultRow( );
     result.addField( cert.getCertificateId( ) );
     result.addField( cert.isActive( ).toString( ) );
-    result.addField( cert.isRevoked( ).toString( ) );
     result.addField( account.getName( ) );
     result.addField( user.getName( ) );
     result.addField( cert.getCreateDate( ) == null ? "" : cert.getCreateDate( ).toString( ) );
@@ -1090,7 +1085,6 @@ public class EuareWebBackend {
       int i = 0;
       String certId = certSerialized.getField( i++ );
       i++;//Active
-      i++;//Revoked
       String accountName = certSerialized.getField( i++ );
       String userName = certSerialized.getField( i++ );
       Account account = Accounts.lookupAccountByName( accountName );
@@ -1209,7 +1203,6 @@ public class EuareWebBackend {
       int i = 0;
       String certId = values.get( i++ );
       String active = values.get( i++ );
-      i++;//Revoked
       String accountName = values.get( i++ );
       String userName = values.get( i++ );
       Account account = Accounts.lookupAccountByName( accountName );
