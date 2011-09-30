@@ -88,7 +88,7 @@ public class DeferredPropertiesBootstrapper extends Bootstrapper {
   
   @Override
   public boolean load( ) throws Exception {
-    if ( !Bootstrap.isFinished( ) && Bootstrap.getCurrentStage( ).ordinal( ) > Bootstrap.Stage.DatabaseInit.ordinal( ) ) {
+    if ( !Bootstrap.isFinished( ) && Bootstrap.getCurrentStage( ).ordinal( ) > Bootstrap.Stage.PersistenceInit.ordinal( ) ) {
       return true;
     } else {
       List<ConfigurableProperty> staticProps = Lists.newArrayList( );
