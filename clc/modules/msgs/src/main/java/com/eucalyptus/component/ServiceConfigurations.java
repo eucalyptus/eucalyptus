@@ -238,7 +238,7 @@ public class ServiceConfigurations {
           this.setType( arg0.getComponentId( ).name( ) );
           this.setFullName( arg0.getFullName( ).toString( ) );
           if ( arg0.isVmLocal( ) ) {
-            this.setUri( arg0.getComponentId( ).makeExternalRemoteUri( Internets.localHostAddress( ), arg0.getComponentId( ).getPort( ), StackConfiguration.EXTERNAL_URI_SCHEME ).toASCIIString( ) );
+            this.setUri( arg0.getComponentId( ).makeExternalRemoteUri( Internets.localHostAddress( ), arg0.getComponentId( ).getPort( ), "http" ).toASCIIString( ) );
           } else {
             this.setUri( arg0.getUri( ).toASCIIString( ) );
           }

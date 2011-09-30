@@ -133,7 +133,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
         ? ctx
         : "eucalyptus_" + ctx;
       
-      String dbUrl = "jdbc:" + ComponentIds.lookup( Database.class ).makeExternalRemoteUri( hostName, 8777, StackConfiguration.EXTERNAL_URI_SCHEME ).toASCIIString( ) + "_"
+      String dbUrl = "jdbc:" + ComponentIds.lookup( Database.class ).makeExternalRemoteUri( hostName, 8777, "http" ).toASCIIString( ) + "_"
                      + contextName.replace( "eucalyptus_", "" );
       
       try {
@@ -169,7 +169,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
         ? ctx
         : "eucalyptus_" + ctx;
       
-      String dbUrl = "jdbc:" + ComponentIds.lookup( Database.class ).makeExternalRemoteUri( hostName, 8777, StackConfiguration.EXTERNAL_URI_SCHEME ).toASCIIString( ) + "_"
+      String dbUrl = "jdbc:" + ComponentIds.lookup( Database.class ).makeExternalRemoteUri( hostName, 8777, "http" ).toASCIIString( ) + "_"
                      + contextName.replace( "eucalyptus_", "" );
       
       try {

@@ -196,7 +196,7 @@ public class SystemConfiguration extends AbstractPersistent {
       return walrusConfig.getUri( ).toASCIIString( );
     } else {
       LOG.error( "BUG BUG: Deprecated method called. No walrus service is registered.  Using local address for walrus URL." );
-      return walrus.getComponentId( ).makeExternalRemoteUri( Internets.localHostInetAddress( ).getCanonicalHostName( ), 8773, StackConfiguration.EXTERNAL_URI_SCHEME ).toASCIIString( );
+      return walrus.getComponentId( ).makeExternalRemoteUri( Internets.localHostInetAddress( ).getCanonicalHostName( ), 8773, "http" ).toASCIIString( );
     }
   }
 

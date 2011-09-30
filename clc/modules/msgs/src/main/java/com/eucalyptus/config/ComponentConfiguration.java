@@ -163,7 +163,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   
   @Override
   public URI getUri( ) {
-    return this.getComponentId( ).makeExternalRemoteUri( this.getHostName( ), this.getPort( ),  StackConfiguration.EXTERNAL_URI_SCHEME );
+    return this.getComponentId( ).makeExternalRemoteUri( this.getHostName( ), this.getPort( ),  "http" );
   }
 
 
