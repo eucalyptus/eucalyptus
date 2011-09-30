@@ -92,6 +92,7 @@
 
 typedef enum {
     BLOBSTORE_ERROR_OK = 0,
+    BLOBSTORE_ERROR_GENERAL, // here for compatibility with 'ERROR' elsewhere in Eucalyptus
 
     // system errno equivalents
     BLOBSTORE_ERROR_NOENT,

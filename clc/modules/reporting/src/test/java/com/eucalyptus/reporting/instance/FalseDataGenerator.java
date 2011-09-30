@@ -6,6 +6,7 @@ import java.util.*;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.reporting.*;
 import com.eucalyptus.reporting.event.InstanceEvent;
+import com.eucalyptus.reporting.modules.instance.*;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 import com.eucalyptus.util.ExposedCommand;
@@ -120,8 +121,8 @@ public class FalseDataGenerator
 
 		try {
 			OutputStream os = new FileOutputStream("/tmp/testReport.csv");
-			ReportGenerator.getInstance().generateReport(ReportType.INSTANCE, ReportFormat.CSV, new Period(1104566480000l, 1104571200000l),
-					ReportingCriterion.USER, null, null, os);
+			ReportGenerator.getInstance().generateReport("Instance", ReportFormat.CSV, new Period(1104566480000l, 1104571200000l),
+					ReportingCriterion.USER, null, null, os, "admin");
 			os.close();
 		} catch (Exception e) {
 			e.printStackTrace();

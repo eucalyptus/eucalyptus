@@ -3,7 +3,7 @@
 #
 # Script to generate fake reporting data for testing of reporting.
 #
-# Usage: generate_false_data adminPassword (create|delete) (instance|storage|s3)+
+# Usage: generate_reporting_data adminPassword (create|delete) (instance|storage|s3)+
 #
 # This calls the FalseDataGenerator classes in a running Eucalyptus instance,
 #  by using the CommandServlet. The FalseDataGenerator classes then generate
