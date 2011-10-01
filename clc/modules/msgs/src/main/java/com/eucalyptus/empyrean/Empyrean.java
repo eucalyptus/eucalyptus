@@ -140,7 +140,6 @@ public class Empyrean extends ComponentId.Unpartioned {
     
     @Override
     public boolean load( ) throws Exception {
-      System.setProperty( "jgroups.udp.bind_addr", Internets.localHostAddress( ) );
       Groovyness.run( "setup_persistence.groovy" );
       return true;
     }
@@ -152,7 +151,6 @@ public class Empyrean extends ComponentId.Unpartioned {
     
     @Override
     public boolean load( ) throws Exception {
-      System.setProperty( "jgroups.udp.jdbc.bind_addr", Internets.localHostAddress( ) );
       Groovyness.run( "setup_dbpool.groovy" );
       return true;
     }
@@ -171,6 +169,7 @@ public class Empyrean extends ComponentId.Unpartioned {
         while ( !HostManager.isReady( ) ) {
           TimeUnit.SECONDS.sleep( 5 );
           LOG.info( "Waiting for system view with database..." );
+          HostManager.broadcastHost( );
         }
         LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
         return true;

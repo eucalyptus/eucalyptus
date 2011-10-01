@@ -49,11 +49,11 @@ oobThreads = Threads.lookup( Empyrean.class, HostManager.class, "oob-pool" );
 
 
 UDP udp = new UDP( );
-udp.setValue( "singleton_name", SystemIds.membershipUdpMcastTransportName( ) );
 try {
+  LOG.info( "Setting membership addres: " + Internets.localHostAddress( ) );
   udp.setBindAddress( Internets.localHostAddress( ) );
   udp.setBindPort( 8773 );
-  udp.setBindToAllInterfaces( false );
+  udp.setBindToAllInterfaces( true );//this sets receive_on_all_interfaces
 } catch ( UnknownHostException ex ) {
   LOG.error( ex, ex );
 }
@@ -63,6 +63,7 @@ udp.setDiscardIncompatiblePackets( true );
 udp.setLogDiscardMessages( false );
 udp.setMaxBundleSize( 60000 );
 udp.setMaxBundleTimeout( 30 );
+udp.setValue( "singleton_name", SystemIds.membershipUdpMcastTransportName( ) );
 
 //udp.setDefaultThreadPool( defaultThreads );
 udp.setDefaultThreadPoolThreadFactory( defaultThreads );
@@ -89,6 +90,9 @@ MERGE2 mergeHandler = new MERGE2( );
 mergeHandler.setMaxInterval( 30000 );
 mergeHandler.setMinInterval( 10000 );
 
+FD_SOCK fdSocket = new FD_SOCK();
+fdSocket.setValue("bind_addr", Internets.localHostInetAddress( ) )
+
 NAKACK negackBroadcast = new NAKACK( );
 negackBroadcast.setUseMcastXmit( false );
 negackBroadcast.setDiscardDeliveredMsgs( true );
@@ -113,16 +117,15 @@ FC flowControl = new FC( );
 flowControl.setMaxCredits( 20000000 );
 flowControl.setMinThreshold( 0.1 );
 
-
-
 return [
   udp,
   pingDiscovery,
   mergeHandler,
-  new FD_SOCK(),
+  fdSocket,
   new FD(),
   new VERIFY_SUSPECT(),
-  negackBroadcast, new UNICAST(),
+  negackBroadcast, 
+  new UNICAST(),
   stableBroadcast,
   groupMembership,
   flowControl,

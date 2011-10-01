@@ -85,7 +85,9 @@ import org.jgroups.Message;
 import org.jgroups.PhysicalAddress;
 import org.jgroups.Receiver;
 import org.jgroups.View;
+import org.jgroups.stack.IpAddress;
 import org.jgroups.stack.ProtocolStack;
+import org.jgroups.util.Tuple;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Host;
@@ -128,10 +130,10 @@ public class HostManager {
       LOG.info( "Starting membership channel... " );
       this.membershipChannel.connect( this.membershipGroupName );
       this.setStateListener( listener );
-      Protocols.registerHeader( EpochHeader.class );
+      Protocols.registerHeader( EmpyreanHeader.class );
       this.physicalAddress = ( PhysicalAddress ) this.membershipChannel.downcall( new org.jgroups.Event( org.jgroups.Event.GET_PHYSICAL_ADDRESS,
                                                                                                          this.membershipChannel.getAddress( ) ) );
-      LOG.info( "Started membership channel: " + this.membershipGroupName );
+      LOG.info( "Started membership channel: " + this.physicalAddress + " called " + this.membershipGroupName );
     } catch ( ChannelException ex ) {
       LOG.fatal( ex, ex );
       throw BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
@@ -219,8 +221,9 @@ public class HostManager {
     }
     
     private void onMessage( Message msg ) {
-      EpochHeader epochHeader = ( EpochHeader ) msg.getHeader( Protocols.lookupRegisteredId( EpochHeader.class ) );
-      Integer senderEpoch = epochHeader.getValue( );
+      LOG.debug( "Received message: " + msg.getSrc( ) + " saying: " + msg.getObject( ) );
+      EmpyreanHeader epochHeader = ( EmpyreanHeader ) msg.getHeader( Protocols.lookupRegisteredId( EmpyreanHeader.class ) );
+      Integer senderEpoch = epochHeader.getEpoch( );
       int myEpoch = HostManager.epochSeen.get( );
       if ( myEpoch < senderEpoch ) {
         HostManager.epochSeen.compareAndSet( myEpoch, senderEpoch );
@@ -247,7 +250,7 @@ public class HostManager {
           break;
         case FINISHED:
           if ( msg.getObject( ) instanceof List ) {
-            Logs.exhaust( ).debug( "Received updated host information: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
+            LOG.debug( "Received updated host information: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
             this.receive( ( List<Host> ) msg.getObject( ) );
           } else {
             LOG.debug( "Received unknown message type: " + msg.getObject( ) + " [" + msg.getSrc( ) + "]" );
@@ -318,7 +321,7 @@ public class HostManager {
     public void fireEvent( Event event ) {
       if ( event instanceof Hertz && ( ( Hertz ) event ).isAsserted( HOST_ADVERTISE_REMOTE ) ) {
         try {
-          HostManager.send( null, Lists.newArrayList( Hosts.localHost( ) ) );
+          HostManager.broadcastHost( );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -335,6 +338,7 @@ public class HostManager {
     public void receive( List<Host> hosts ) {
       Component euca = Components.lookup( Eucalyptus.class );
       if ( !Bootstrap.isFinished( ) ) {
+        LOG.trace( "Waiting for bootstrap info: " + hosts );
         for ( final Host host : hosts ) {
           Hosts.update( host );
         }
@@ -345,6 +349,7 @@ public class HostManager {
         HostManager.this.view.markReady( );
         return;
       } else {
+        LOG.trace( "Received info: " + hosts );
         for ( final Host host : hosts ) {
           Hosts.update( host );
           if ( !host.hasBootstrapped( ) && !host.isLocalHost( ) ) {
@@ -389,7 +394,15 @@ public class HostManager {
     }
     
     private boolean setInitialView( View oldView, View newView ) {
-      return this.currentView.compareAndSet( oldView, newView, true, !( BootstrapArgs.isCloudController( ) && oldView == null && newView.size( ) == 1 ) );//handle the bootstrap case correctly
+      return this.currentView.compareAndSet( oldView, newView, true, shouldWaitStill( oldView, newView ) );//handle the bootstrap case correctly
+    }
+    
+    private boolean shouldWaitStill( View oldView, View newView ) {
+      if ( BootstrapArgs.isCloudController( ) && oldView == null && newView.size( ) == 1 ) {
+        return false;
+      } else {
+        return !BootstrapArgs.isCloudController( ) && Hosts.listDatabases( ).isEmpty( );
+      }
     }
     
     public void viewAccepted( View newView ) {
@@ -447,7 +460,7 @@ public class HostManager {
   
   public static Future<?> send( final Address dest, final Serializable msg ) {
     final Message outMsg = new Message( dest, null, msg );
-    outMsg.putHeader( Protocols.lookupRegisteredId( EpochHeader.class ), new EpochHeader( Topology.epoch( ) ) );
+    outMsg.putHeader( Protocols.lookupRegisteredId( EmpyreanHeader.class ), new EmpyreanHeader( Topology.epoch( ) ) );
     StackTraceElement caller = Thread.currentThread( ).getStackTrace( )[1];
     LOG.debug( caller.getClassName( ).replaceAll( "^.*\\.", "" ) + "." + caller.getMethodName( ) + ":" + caller.getLineNumber( ) + " sending message to: "
                + dest + " with payload " + msg.toString( ) + " " + outMsg.getHeaders( ) );
@@ -481,36 +494,48 @@ public class HostManager {
   
   static class NoInitialize implements InitRequest, Serializable {}
   
-  public static class EpochHeader extends Header {
-    private Integer value;
+  public static class EmpyreanHeader extends Header {
+    private Integer epoch;
+    private Boolean hasDatabase;
     
-    public EpochHeader( ) {
+    public EmpyreanHeader( ) {
       super( );
     }
     
-    public EpochHeader( Integer value ) {
+    public EmpyreanHeader( Integer value ) {
       super( );
-      this.value = value;
+      this.epoch = value;
     }
     
     @Override
     public void writeTo( DataOutputStream out ) throws IOException {
-      out.writeInt( this.value );
+      out.writeInt( this.epoch );
+      out.writeBoolean( this.hasDatabase );
     }
     
     @Override
     public void readFrom( DataInputStream in ) throws IOException, IllegalAccessException, InstantiationException {
-      this.value = in.readInt( );
+      this.epoch = in.readInt( );
+      this.hasDatabase = in.readBoolean( );
     }
     
     @Override
     public int size( ) {
-      return Global.INT_SIZE;
+      return Global.INT_SIZE + Global.BYTE_SIZE;
     }
     
-    public Integer getValue( ) {
-      return this.value;
+    public Integer getEpoch( ) {
+      return this.epoch;
     }
+    
+    public Boolean getHasDatabase( ) {
+      return this.hasDatabase;
+    }
+    
+  }
+  
+  public static void broadcastHost( ) {
+    HostManager.send( null, Lists.newArrayList( Hosts.localHost( ) ) );
   }
   
 }
