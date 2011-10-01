@@ -84,7 +84,8 @@ public enum SubDirectory {
   REPORTS( BaseDirectory.CONF, "reports" ),
   CONF( BaseDirectory.CONF, "conf" ),
   QUEUE( BaseDirectory.VAR, "queue" ),
-  LIB( BaseDirectory.HOME, "/usr/share/eucalyptus" );
+  LIB( BaseDirectory.HOME, "/usr/share/eucalyptus" ),
+  RUNDB( BaseDirectory.HOME, "/var/run/eucalyptus/db");
   private static Logger LOG = Logger.getLogger( SubDirectory.class );
   BaseDirectory parent;
   String        dir;
@@ -137,8 +138,12 @@ public enum SubDirectory {
     } catch ( ScriptExecutionFailedException ex ) {
       LOG.error( ex , ex );
     }
-    try {
-      Groovyness.exec( "chmod -R +rwX " + this.toString( ) );
+    try {	
+	if (this.toString( ).startsWith("RUN") ) {
+          Groovyness.exec( "chmod -R +rwX " + this.toString( ) );
+	} else {
+	  Groovyness.exec(" chmod -R 700 " + this.toString( ) );
+	}
     } catch ( ScriptExecutionFailedException ex ) {
       LOG.error( ex , ex );
     }
