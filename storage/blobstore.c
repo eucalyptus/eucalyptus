@@ -1944,30 +1944,32 @@ static int dm_create_devices (char * dev_names[], char * dm_tables[], int size)
                 rbytes = write(fd, dm_tables[i], strlen(dm_tables[i]));
                 if (rbytes != strlen(dm_tables[i])) {
                     // write error
-                    logprintfl(EUCAERROR, "dm_create_tables(): write returned number of bytes != write buffer: %d/%d\n", rbytes, strlen(dm_tables[i]));
+                    logprintfl(EUCAERROR, "dm_create_devices(): write returned number of bytes != write buffer: %d/%d\n", rbytes, strlen(dm_tables[i]));
                     unlink(tmpfile);
                     exit(1);
                 }
                 close(fd);
             } else {
                 // couldn't get fd
-                logprintfl(EUCAERROR, "dm_create_tables(): couldn't open tempfile %s\n", tmpfile);
+                logprintfl(EUCAERROR, "dm_create_devices(): couldn't open tempfile %s\n", tmpfile);
                 unlink(tmpfile);
                 exit(1);
             }
             snprintf(cmd, MAX_PATH-1, "%s %s create %s %s", helpers_path[ROOTWRAP], helpers_path[DMSETUP], dev_names[i], tmpfile);
-            logprintfl(EUCADEBUG, "dm_create_tables(): running cmd: %s\n", cmd);
+            logprintfl(EUCADEBUG, "dm_create_devices(): running cmd: %s\n", cmd);
             rc = system(cmd);
             rc = rc>>8;
             unlink(tmpfile);
             exit(rc);
         } else { // parent
-            int status;
+            int status, rc;
             //            close (pipefds [0]);
             //            write (pipefds [1], dm_tables [i], strlen (dm_tables [i]));
             //            close (pipefds [1]);
             //            if (waitpid (cpid, &status, 0) == -1) {
-            if (timewait(cpid, &status, 30) <= 0) {
+            rc = timewait(cpid, &status, 30);
+            if (rc <= 0) {
+                logprintfl(EUCAERROR, "dm_create_devices(): bad exit from dmsetup child: %d\n", rc);
                 PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
                 goto cleanup;
             }
