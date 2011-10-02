@@ -1911,13 +1911,13 @@ static int dm_create_devices (char * dev_names[], char * dm_tables[], int size)
     int i;
 
     for (i=0; i<size; i++) {    
-        int pipefds [2];
+        //        int pipefds [2];
         myprintf (EUCAINFO, "creating device %s\n", dev_names [i]);
 
-        if (pipe (pipefds) == -1) {
-            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-            goto cleanup;
-        }
+        //        if (pipe (pipefds) == -1) {
+        //            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        //            goto cleanup;
+        //        }
 
         pid_t cpid = fork();
 
