@@ -84,7 +84,7 @@ public class ReportGenerator
 				final String moduleClassName = 
 					String.format("com.eucalyptus.reporting.modules.%s.%sReportingModule",
 							reportType.toLowerCase(),
-							reportType);
+							capitalizeFirstChar(reportType));
 				ReportingModule mod =
 					(ReportingModule) Class.forName(moduleClassName).getConstructors()[0].newInstance();
 				modules.put(reportType, mod);
@@ -250,5 +250,10 @@ public class ReportGenerator
 					type, period, criterion, groupByCriterion, timestampMs);
 		}
 		
+	}
+	
+	private final String capitalizeFirstChar(String str)
+	{
+		return (str.length()==0) ? str : str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
 	}
 }

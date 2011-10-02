@@ -207,14 +207,17 @@ print_running_domains (void)
 virConnectPtr *
 check_hypervisor_conn()
 {
+
+    sem_p (hyp_sem);
 	if (nc_state.conn == NULL || virConnectGetURI(nc_state.conn) == NULL) {
 		nc_state.conn = virConnectOpen (nc_state.uri);
 		if (nc_state.conn == NULL) {
 			logprintfl (EUCAFATAL, "Failed to connect to %s\n", nc_state.uri);
+            sem_v (hyp_sem);
 			return NULL;
 		}
 	}
-
+    sem_v (hyp_sem);
 	return &(nc_state.conn);
 }
 

@@ -10,8 +10,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.HashSet;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.ArrayListMultimap;
 
 import javax.persistence.Column;
 import javax.persistence.Id;
@@ -710,11 +712,6 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     }
 
     public boolean upgradeNetwork() {
-        /* TODO: The system admin may not have a default network rules group.
-         * This means that no images can be launched from this account.
-         * Should a "default" one be created?
-         */ 
-
         connMap['eucalyptus_general'].rows('SELECT * FROM metadata_network_group').each {
             EntityWrapper<NetworkGroup> dbGen = EntityWrapper.get(NetworkGroup.class);
             try {
@@ -722,30 +719,21 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     return;
                 }
                 UserFullName ufn = UserFullName.getInstance(userIdMap.get(it.metadata_user_name));
-                def uniqueName = "${ it.metadata_user_name }_${it.metadata_display_name}";
-                if ( it.metadata_user_name == 'admin' && it.metadata_display_name == 'default' ) {
-                    uniqueName = it.metadata_display_name;
-                }
-                def rulesGroup = new NetworkGroup(ufn, uniqueName, it.metadata_network_group_description);
+                def rulesGroup = new NetworkGroup(ufn, it.metadata_display_name, it.metadata_network_group_description);
                 initMetaClass(rulesGroup, rulesGroup.class);
-                rulesGroup.setDisplayName(uniqueName);
+                rulesGroup.setDisplayName(it.metadata_display_name);
                 LOG.debug("Adding network rules for ${ it.metadata_user_name }/${it.metadata_display_name}");
                 connMap['eucalyptus_general'].rows("""SELECT r.* 
                                  FROM metadata_network_group_has_rules 
                                  LEFT OUTER JOIN metadata_network_rule r 
                                  ON r.metadata_network_rule_id=metadata_network_group_has_rules.metadata_network_rule_id 
                                  WHERE metadata_network_group_has_rules.id=?""", [ it.id ]).each { rule ->
-                    Multimap<String, String> peers = new Multimap<String, String>();
-                    initMetaClass(peers, peers.class);
-                    Collection<String> ipRanges = new Collection<String>();
-                    initMetaClass(ipRanges, ipRanges.class);
-                    connMap['eucalyptus_general'].rows("""SELECT ip.* 
+                    Collection<String> ipRanges = connMap['eucalyptus_general'].rows("""SELECT ip.* 
                                      FROM metadata_network_rule_has_ip_range 
                                      LEFT OUTER JOIN metadata_network_rule_ip_range ip
                                      ON ip.metadata_network_rule_ip_range_id=metadata_network_rule_has_ip_range.metadata_network_rule_ip_range_id 
-                                     WHERE metadata_network_rule_has_ip_range.metadata_network_rule_id=?""", [ rule.metadata_network_rule_id ]).each { iprange ->
-                        ipRanges.add(iprange.metadata_network_rule_ip_range_value);
-                    }
+                                     WHERE metadata_network_rule_has_ip_range.metadata_network_rule_id=?""", [ rule.metadata_network_rule_id ]).collect { iprange -> iprange.metadata_network_rule_ip_range_value; }
+                    def peers = ArrayListMultimap.create() as Multimap<String, String>;
                     connMap['eucalyptus_general'].rows("""SELECT peer.* 
                                      FROM metadata_network_rule_has_peer_network 
                                      LEFT OUTER JOIN network_rule_peer_network peer
@@ -754,10 +742,11 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                         peers.put(peer.network_rule_peer_network_user_query_key, peer.network_rule_peer_network_user_group);
                         LOG.debug("Peer: " + networkPeer);
                     }
-                    NetworkRule networkRule = new NetworkRule(rule.metadata_network_rule_protocol, 
+                    NetworkRule networkRule = NetworkRule.create(rule.metadata_network_rule_protocol, 
                                                               rule.metadata_network_rule_low_port, 
                                                               rule.metadata_network_rule_high_port,
-                                                              ipRanges, peers);
+                                                              peers as Multimap<String, String>,
+                                                              ipRanges as Collection<String>);
                     initMetaClass(networkRule, networkRule.class);
                     rulesGroup.getNetworkRules().add(networkRule);
                 } 

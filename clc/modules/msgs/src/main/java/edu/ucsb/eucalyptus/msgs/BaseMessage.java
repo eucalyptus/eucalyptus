@@ -50,8 +50,8 @@ public class BaseMessage {
   
   public BaseMessage( BaseMessage copy ) {
     this( );
-    this.effectiveUserId = copy.getEffectiveUserId( );
-    this.correlationId = copy.getCorrelationId( );
+    this.effectiveUserId = copy != null ? copy.getEffectiveUserId( ) : null;
+    this.correlationId = copy != null ? copy.getCorrelationId( ) : null;
   }
   
   public String getCorrelationId( ) {

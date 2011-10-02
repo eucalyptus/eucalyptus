@@ -183,7 +183,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private Set<NetworkGroup>    networkGroups    = Sets.newHashSet( );
   
   @NotFound( action = NotFoundAction.IGNORE )
-  @OneToOne( fetch = FetchType.EAGER, cascade = { CascadeType.ALL }, orphanRemoval = true, optional = true )
+  @OneToOne( fetch = FetchType.LAZY, cascade = { CascadeType.ALL }, orphanRemoval = true, optional = true )
   @JoinColumn( name = "metadata_vm_network_index", nullable = true, insertable = true, updatable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex  networkIndex;
@@ -411,7 +411,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               }
             }
           }
-          
           final VmInstance vmInst = new VmInstance.Builder( ).owner( userFullName )
                                                              .withIds( input.getInstanceId( ), input.getReservationId( ) )
                                                              .bootRecord( bootSet,
@@ -421,11 +420,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                              .placement( partition, partition.getName( ) )
                                                              .networking( networks, index )
                                                              .build( launchIndex );
-          
           vmInst.setNaturalId( input.getUuid( ) );
-          Address addr;
           try {
-            addr = Addresses.getInstance( ).lookup( input.getNetParams( ).getIgnoredPublicIp( ) );
+            Address addr = Addresses.getInstance( ).lookup( input.getNetParams( ).getIgnoredPublicIp( ) );
             if ( addr.isAssigned( ) &&
                  addr.getInstanceAddress( ).equals( input.getNetParams( ).getIpAddress( ) ) &&
                  addr.getInstanceId( ).equals( input.getInstanceId( ) ) ) {
@@ -447,7 +444,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           return false;
         }
       }
-      //TODO:GRZE: this is the case in restore where we either need to report the failed instance restore, terminate the instance, or handle partial reporting of the instance info.
+//TODO:GRZE: this is the case in restore where we either need to report the failed instance restore, terminate the instance, or handle partial reporting of the instance info.
 //      } catch ( NoSuchElementException e ) {
 //        ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
 //        AsyncRequests.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
@@ -613,7 +610,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           throw ex;
         } catch ( final Exception ex ) {
           db.rollback( );
-          throw new NoSuchElementException( "Failed to lookup vm instance: " + arg0 );
+          throw new NoSuchElementException( "An error occurred while trying to lookup vm instance " + arg0 + ": " + ex.getMessage( ) + "\n" + Exceptions.causeString( ex ) );
         }
       }
     };
@@ -807,6 +804,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   void store( ) {
+    this.updateTimeStamps( );
     this.fireUsageEvent( );
     this.firePersist( );
   }
@@ -857,7 +855,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final boolean dns = !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     final Map<String, String> m = new HashMap<String, String>( );
     m.put( "ami-id", this.getImageId( ) );
-    m.put( "product-codes", this.bootRecord.getMachine( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
+    if ( !this.bootRecord.getMachine( ).getProductCodes( ).isEmpty()) {
+      m.put( "product-codes", this.bootRecord.getMachine( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
+    }
     m.put( "ami-launch-index", "" + this.launchRecord.getLaunchIndex( ) );
 //ASAP: FIXME: GRZE:
 //    m.put( "ancestor-ami-ids", this.getImageInfo( ).getAncestorIds( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
@@ -880,7 +880,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     m.put( "public-ipv4", this.getPublicAddress( ) );
     m.put( "reservation-id", this.vmId.getReservationId( ) );
-    m.put( "kernel-id", this.bootRecord.getKernel( ).getDisplayName( ) );
+    if ( this.bootRecord.getKernel( ) != null ) {
+      m.put( "kernel-id", this.bootRecord.getKernel( ).getDisplayName( ) );
+    }
     if ( this.bootRecord.getRamdisk( ) != null ) {
       m.put( "ramdisk-id", this.bootRecord.getRamdisk( ).getDisplayName( ) );
     }
@@ -894,11 +896,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     m.put( "block-device-mapping/swap", "sda3" );
     m.put( "block-device-mapping/root", "/dev/sda1" );
     
-    m.put( "public-keys/", "0=" + this.bootRecord.getSshKeyPair( ).getName( ) );
-    m.put( "public-keys/0", "openssh-key" );
-    m.put( "public-keys/0/", "openssh-key" );
-    m.put( "public-keys/0/openssh-key", this.bootRecord.getSshKeyPair( ).getPublicKey( ) );
-    
+    if ( this.bootRecord.getSshKeyPair( ) != null ) {
+      m.put( "public-keys/", "0=" + this.bootRecord.getSshKeyPair( ).getName( ) );
+      m.put( "public-keys/0", "openssh-key" );
+      m.put( "public-keys/0/", "openssh-key" );
+      m.put( "public-keys/0/openssh-key", this.bootRecord.getSshKeyPair( ).getPublicKey( ) );
+    }
     m.put( "placement/", "availability-zone" );
     m.put( "placement/availability-zone", this.getPartition( ) );
     String dir = "";
@@ -1314,8 +1317,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
             } else if ( VmState.SHUTTING_DOWN.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
               VmInstance.this.setState( VmState.TERMINATED, Reason.EXPIRED );
-            } else if ( VmState.SHUTTING_DOWN.apply( VmInstance.this ) && VmStateSet.RUN.contains( runVmState ) ) {
-              VmInstance.this.setState( VmState.SHUTTING_DOWN, Reason.APPEND, "DONE" );
+            } else if ( VmStateSet.NOT_RUNNING.apply( VmInstance.this ) && VmStateSet.RUN.contains( runVmState ) ) {
+              VmInstance.this.setState( VmState.RUNNING, Reason.APPEND, "MISMATCHED" );
             } else {
               this.updateState( runVm );
             }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009  Eucalyptus Systems, Inc.
+ *Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -58,94 +58,58 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
- * @author chris grzegorczyk <grze@eucalyptus.com>
+ * @author Neil Soman <neil@eucalyptus.com>
  */
+package com.eucalyptus.bootstrap;
 
-package com.eucalyptus.vm;
-
-import java.util.NoSuchElementException;
-import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
-import com.eucalyptus.address.Address;
-import com.eucalyptus.address.Addresses;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.records.Logs;
 
-public class MetadataRequest {
-  private static Logger LOG = Logger.getLogger( MetadataRequest.class );
-  private final String     requestIp;
-  private final String     metadataName;
-  private final String     localPath;
-  private final VmInstance vm;
-  
-  public MetadataRequest( String requestIp, String requestUrl ) {
-    super( );
-    try {
-      this.requestIp = requestIp;
-      String[] path = requestUrl.replaceFirst( "/", "?" ).split( "\\?" );
-      if ( path.length > 0 ) {
-        this.metadataName = path[0];
-        if ( path.length > 1 ) {
-          this.localPath = path[1].replaceFirst( "^[/]*", "" ).replaceAll( "[/]+", "/" );
-        } else {
-          this.localPath = "";
-        }
-      } else {
-        this.metadataName = "";
-        this.localPath = "";
-      }
-      VmInstance findVm = null;
-      try {
-        findVm = VmInstances.lookupByPublicIp( requestIp );
-      } catch ( Exception ex2 ) {
-        try {
-          findVm = VmInstances.lookupByPrivateIp( requestIp );
-        } catch ( Exception ex ) {
-          Logs.exhaust( ).error( ex );
-        }
-      }
-      this.vm = findVm;
-    } finally {
-      LOG.debug( ( this.vm != null
-        ? "Instance"
-        : "External" )
-                 + " Metadata: requestIp=" + this.requestIp
-                 + " metadataName=" + this.metadataName
-                 + " metadataPath=" + this.localPath
-                 + " requestUrl=" + requestUrl );
-    }
-  }
-  
-  public boolean isInstance( ) {
-    return vm != null;
-  }
-  
-  /**
-   * @return the requestIp
-   */
-  public String getRequestIp( ) {
-    return this.requestIp;
-  }
-  
-  /**
-   * @return the metadataName
-   */
-  public String getMetadataName( ) {
-    return this.metadataName;
-  }
-  
-  /**
-   * @return the localPath
-   */
-  public String getLocalPath( ) {
-    return this.localPath;
-  }
-  
-  public VmInstance getVmInstance( ) {
-    return this.vm;
-  }
-  
-  public boolean isSystem( ) {
-    return true;
-  }
+import com.eucalyptus.component.ComponentId;
+
+
+/**
+ * Executes shutdown hooks in order
+ */
+public class ShutdownHook implements Comparable<ShutdownHook>{
+
+	private Runnable runnable;
+	private ComponentId componentId;
+
+	public ShutdownHook(ComponentId id, Runnable r) {
+		componentId = id;
+		runnable = r;
+	}
+
+	@Override
+	public int compareTo(ShutdownHook o) {
+		ComponentId id = o.getComponentId();
+		if(!componentId.isAlwaysLocal() && !componentId.isCloudLocal())
+			return -1;
+		if(componentId.isCloudLocal()) {
+			if(!id.isCloudLocal() && !id.isAlwaysLocal()) {
+				return 1;
+			} else {
+				return -1;
+			}
+		}
+		if(componentId.isAlwaysLocal()) {
+			if(!id.isCloudLocal() && !id.isAlwaysLocal()) {
+				return 1;
+			} else if(id.isCloudLocal()) {
+				return 1;
+			} else {
+				return -1;
+			}
+		}		
+		return 0;
+	}
+
+	public Runnable getRunnable() {
+		return runnable;
+	}
+
+	public ComponentId getComponentId() {
+		return componentId;
+	}
+	
 }

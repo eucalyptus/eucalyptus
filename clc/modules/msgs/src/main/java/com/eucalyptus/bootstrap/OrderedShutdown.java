@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009  Eucalyptus Systems, Inc.
+ *Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -58,94 +58,45 @@
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
  *******************************************************************************
- * @author chris grzegorczyk <grze@eucalyptus.com>
+ * @author Neil Soman <neil@eucalyptus.com>
  */
+package com.eucalyptus.bootstrap;
 
-package com.eucalyptus.vm;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.PriorityBlockingQueue;
 
-import java.util.NoSuchElementException;
-import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
-import com.eucalyptus.address.Address;
-import com.eucalyptus.address.Addresses;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.records.Logs;
 
-public class MetadataRequest {
-  private static Logger LOG = Logger.getLogger( MetadataRequest.class );
-  private final String     requestIp;
-  private final String     metadataName;
-  private final String     localPath;
-  private final VmInstance vm;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
+
+
+/**
+ * Executes shutdown hooks in order
+ */
+public class OrderedShutdown {
   
-  public MetadataRequest( String requestIp, String requestUrl ) {
-    super( );
-    try {
-      this.requestIp = requestIp;
-      String[] path = requestUrl.replaceFirst( "/", "?" ).split( "\\?" );
-      if ( path.length > 0 ) {
-        this.metadataName = path[0];
-        if ( path.length > 1 ) {
-          this.localPath = path[1].replaceFirst( "^[/]*", "" ).replaceAll( "[/]+", "/" );
-        } else {
-          this.localPath = "";
-        }
-      } else {
-        this.metadataName = "";
-        this.localPath = "";
-      }
-      VmInstance findVm = null;
-      try {
-        findVm = VmInstances.lookupByPublicIp( requestIp );
-      } catch ( Exception ex2 ) {
-        try {
-          findVm = VmInstances.lookupByPrivateIp( requestIp );
-        } catch ( Exception ex ) {
-          Logs.exhaust( ).error( ex );
-        }
-      }
-      this.vm = findVm;
-    } finally {
-      LOG.debug( ( this.vm != null
-        ? "Instance"
-        : "External" )
-                 + " Metadata: requestIp=" + this.requestIp
-                 + " metadataName=" + this.metadataName
-                 + " metadataPath=" + this.localPath
-                 + " requestUrl=" + requestUrl );
-    }
+  static Logger                     LOG = Logger.getLogger( OrderedShutdown.class );
+  static PriorityBlockingQueue<ShutdownHook> hooks = new PriorityBlockingQueue<ShutdownHook>();
+  static ExecutorService executor;
+
+  public static <T extends ComponentId> void register(Class<T> id, Runnable r) {
+	  ShutdownHook hook = new ShutdownHook(ComponentIds.lookup(id), r);
+	  hooks.offer(hook);
   }
   
-  public boolean isInstance( ) {
-    return vm != null;
-  }
-  
-  /**
-   * @return the requestIp
-   */
-  public String getRequestIp( ) {
-    return this.requestIp;
-  }
-  
-  /**
-   * @return the metadataName
-   */
-  public String getMetadataName( ) {
-    return this.metadataName;
-  }
-  
-  /**
-   * @return the localPath
-   */
-  public String getLocalPath( ) {
-    return this.localPath;
-  }
-  
-  public VmInstance getVmInstance( ) {
-    return this.vm;
-  }
-  
-  public boolean isSystem( ) {
-    return true;
+  public static void initialize() {
+	  executor = Executors.newFixedThreadPool(1);
+	  Runtime.getRuntime().addShutdownHook(new Thread() {
+		@Override
+		public void run() {
+			LOG.warn("Executing Shutdown Hooks...");
+			ShutdownHook h;
+			while((h = hooks.poll()) != null) {
+				executor.execute(h.getRunnable());
+			}
+		}		 
+	  });
   }
 }

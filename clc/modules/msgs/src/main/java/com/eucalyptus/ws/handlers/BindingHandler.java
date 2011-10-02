@@ -87,13 +87,19 @@ public class BindingHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( BindingHandler.class );
   
   private Binding       binding;
+  private String        namespace;
+  private final Binding defaultBinding;
   
   public BindingHandler( ) {
     super( );
+    this.defaultBinding = null;
+    this.namespace = null;
   }
   
   public BindingHandler( final Binding binding ) {
     this.binding = binding;
+    this.defaultBinding = binding;
+    this.namespace = null;
   }
   
   @Override
@@ -109,6 +115,16 @@ public class BindingHandler extends MessageStackHandler {
         namespace = omNs.getNamespaceURI( );
         this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
         msgType = this.binding.getElementClass( httpMessage.getOmMessage( ).getLocalName( ) );
+      } catch ( BindingException ex ) {
+        if ( this.defaultBinding != null ) {
+          this.namespace = namespace;
+          this.binding = this.defaultBinding;
+          try {
+            msgType = this.binding.getElementClass( httpMessage.getOmMessage( ).getLocalName( ) );
+          } catch ( Exception ex1 ) {
+            throw new WebServicesException( "Failed to find binding for namespace: " + namespace + " due to: " + ex.getMessage( ), ex );
+          }
+        }
       } catch ( Exception e1 ) {
         LOG.error( httpMessage.getSoapEnvelope( ).toString( ), e1 );
         if ( this.binding == null ) {
@@ -128,8 +144,12 @@ public class BindingHandler extends MessageStackHandler {
           msg = ( BaseMessage ) this.binding.fromOM( httpMessage.getOmMessage( ) );
         }
       } catch ( Exception e1 ) {
-        LOG.fatal( "FAILED TO PARSE:\n" + httpMessage.getMessageString( ) );
-        throw new WebServicesException( e1 );
+        try {
+          msg = ( BaseMessage ) this.binding.fromOM( httpMessage.getOmMessage( ), this.namespace );
+        } catch ( Exception ex ) {
+          LOG.warn( "FAILED TO PARSE:\n" + httpMessage.getMessageString( ) );
+          throw new WebServicesException( e1 );
+        }
       }
       msg.setCorrelationId( httpMessage.getCorrelationId( ) );
       httpMessage.setMessage( msg );
@@ -146,7 +166,7 @@ public class BindingHandler extends MessageStackHandler {
       } else if ( httpMessage.getMessage( ) instanceof ExceptionResponseType ) {
         ExceptionResponseType msg = ( ExceptionResponseType ) httpMessage.getMessage( );
         omElem = Binding.createFault( msg.getRequestType( ), msg.getMessage( ), Exceptions.createFaultDetails( msg.getException( ) ) );
-        if( httpMessage instanceof MappingHttpResponse ) {
+        if ( httpMessage instanceof MappingHttpResponse ) {
           ( ( MappingHttpResponse ) httpMessage ).setStatus( msg.getHttpStatus( ) );
         }
       } else {
@@ -156,7 +176,7 @@ public class BindingHandler extends MessageStackHandler {
         }
         Class responseClass = ClassLoader.getSystemClassLoader( ).loadClass( targetClass.getName( ) );
         try {
-          omElem = this.binding.toOM( httpMessage.getMessage( ) );
+          omElem = this.binding.toOM( httpMessage.getMessage( ), this.namespace );
         } catch ( BindingException ex ) {
           omElem = BindingManager.getDefaultBinding( ).toOM( httpMessage.getMessage( ) );
         } catch ( Exception ex ) {

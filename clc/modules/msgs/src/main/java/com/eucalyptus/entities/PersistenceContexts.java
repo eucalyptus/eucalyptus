@@ -107,7 +107,6 @@ public class PersistenceContexts {
         }
         LOG.error( Threads.currentStackString( ) );
         LOG.error( LogUtil.header( "Illegal Access to Persistence Context.  Database not yet configured. This is always a BUG: " + persistenceContext ) );
-        System.exit( 1 );
       } else if ( !emf.containsKey( persistenceContext ) ) {
         illegalAccesses = null;
         LOG.trace( "-> Setting up persistence context for : " + persistenceContext );
@@ -135,7 +134,6 @@ public class PersistenceContexts {
   private static void touchDatabase( ) {
     if ( MAX_FAIL > failCount.getAndIncrement( ) ) {
       LOG.fatal( LogUtil.header( "Database connection failure limit reached (" + MAX_FAIL + "):  HUPping the system." ) );
-      System.exit( 123 );
     } else {
       LOG.warn( LogUtil.subheader( "Error using or obtaining a database connection, fail count is " + failCount.intValue( ) + " (max=" + MAX_FAIL
                                    + ") more times before reloading." ) );
