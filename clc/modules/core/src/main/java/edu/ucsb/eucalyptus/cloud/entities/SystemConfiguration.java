@@ -90,7 +90,7 @@ import com.eucalyptus.util.Internets;
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "system_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass( root = "config", description = "Basic system configuration." )
+@ConfigurableClass( root = "system.dns", description = "Basic system configuration." )
 public class SystemConfiguration extends AbstractPersistent {
   private static Logger LOG = Logger.getLogger( SystemConfiguration.class );
   @ConfigurableField( description = "Unique ID of this cloud installation.", readonly = false )

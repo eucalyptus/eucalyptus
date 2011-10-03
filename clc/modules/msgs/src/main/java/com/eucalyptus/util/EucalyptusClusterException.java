@@ -1,6 +1,8 @@
 package com.eucalyptus.util;
 
-public class EucalyptusClusterException extends EucalyptusCloudException {
+public class EucalyptusClusterException extends RuntimeException {
+
+  private static final long serialVersionUID = 1L;
 
   public EucalyptusClusterException( ) {
     super( );

@@ -82,6 +82,7 @@ permission notice:
 #include "euca_auth.h"
 #include "backing.h"
 #include "xml.h"
+#include "diskutil.h"
 
 /* coming from handlers.c */
 extern sem * hyp_sem;
@@ -152,8 +153,10 @@ static void * rebooting_thread (void *arg)
         free (xml);
         return NULL;
     }
-    
+
+    sem_p (hyp_sem);
     virDomainPtr dom = virDomainLookupByName(*conn, instance->instanceId);
+    sem_v (hyp_sem);
     if (dom == NULL) {
         free (xml);
         return NULL;
@@ -162,8 +165,9 @@ static void * rebooting_thread (void *arg)
     sem_p (hyp_sem);
     // for KVM, must stop and restart the instance
     int error = virDomainDestroy (dom); // TODO: change to Shutdown?  TODO: is this synchronous?
-    sem_v (hyp_sem);
     virDomainFree(dom);
+    sem_v (hyp_sem);
+
     if (error) {
         free (xml);
         return NULL;
@@ -207,7 +211,9 @@ static void * rebooting_thread (void *arg)
         return NULL;
     }
     
+    sem_p (hyp_sem);
     virDomainFree(dom);
+    sem_v (hyp_sem);
     return NULL;
 }
 

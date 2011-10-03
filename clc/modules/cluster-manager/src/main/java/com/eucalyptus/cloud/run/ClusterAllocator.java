@@ -77,10 +77,6 @@ import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstance.Reason;
-import com.eucalyptus.cluster.VmInstance.VmState;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.cluster.callback.StartNetworkCallback;
 import com.eucalyptus.cluster.callback.VmRunCallback;
 import com.eucalyptus.component.Dispatcher;
@@ -103,6 +99,10 @@ import com.eucalyptus.util.Callback.Success;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.StatefulMessageSet;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmInstance.Reason;
+import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
@@ -186,8 +186,7 @@ public class ClusterAllocator implements Runnable {
   private void setupNetworkMessages( ) throws NotEnoughResourcesException {
     NetworkGroup net = this.allocInfo.getPrimaryNetwork( );
     if ( net != null ) {
-      final Request<StartNetworkType, StartNetworkResponseType> callback = AsyncRequests.newRequest( new StartNetworkCallback(
-                                                                                                                               this.allocInfo.getExtantNetwork( ) ) );
+      final Request callback = AsyncRequests.newRequest( new StartNetworkCallback( this.allocInfo.getExtantNetwork( ) ) );
       this.messages.addRequest( State.CREATE_NETWORK, callback );
       EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ), net.toString( ) ).debug( );
     }
@@ -292,7 +291,7 @@ public class ClusterAllocator implements Runnable {
                          .then( vmUpdateCallback )
                          .dispatch( addr.getPartition( ) );
           } catch ( Exception ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
           }
         }
       };

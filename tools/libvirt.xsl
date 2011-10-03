@@ -81,9 +81,16 @@ that describes a Eucalyptus instance to be launched.
             <memory>
                 <xsl:value-of select="/instance/memoryKB"/>
             </memory>
-            <devices>
+            <devices> 
                 <xsl:if test="/instance/hypervisor/@type = 'xen' and /instance/os/@platform = 'windows'">
-                    <emulator>/usr/lib64/xen/bin/qemu-dm</emulator>
+                    <xsl:choose>
+                        <xsl:when test="/instance/hypervisor/@bitness = '32'">
+                            <emulator>/usr/lib/xen/bin/qemu-dm</emulator>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <emulator>/usr/lib64/xen/bin/qemu-dm</emulator>
+                        </xsl:otherwise>
+                    </xsl:choose>
                 </xsl:if>
                 <!-- disks -->
                 <xsl:for-each select="/instance/disks/diskPath">
@@ -182,7 +189,7 @@ that describes a Eucalyptus instance to be launched.
                             <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@platform = 'windows'">
                                 <model type="virtio"/>
                             </xsl:when>
-                            <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@virtioRoot = 'true'">
+                            <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@virtioNet = 'true'">
                                 <model type="virtio"/>
                             </xsl:when>
                             <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@platform = 'linux'">

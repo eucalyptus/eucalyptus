@@ -44,6 +44,7 @@ generated/stubs: $(CCWSDL) $(NCWSDL)
 	../tools/add_marshalling.pl generated/axis2_skel_*.c 
 #	@echo Compiling the stubs
 #	cd generated; patch -p1 < ../axis2_svc_generated.patch; $(CC) -c $(CFLAGS) $(INCLUDES) *.c
+	cd generated; patch -p1 < ../axis2_svc_generated.patch; cd ../
 	@cp ../tools/Makefile.gen generated/Makefile
 #	cd generated; $(MAKE); cd ..
 	@echo "this is a cute little makefile marker" >generated/stubs

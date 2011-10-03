@@ -65,7 +65,6 @@ public class EuareWebBackend {
   public static final String REGISTRATION = "registration";
   public static final String EXPIRATION = "expiration";
   public static final String ACTIVE = "active";
-  public static final String REVOKED = "revoked";
   public static final String CREATION = "creation";
   public static final String PEM = "pem";
   public static final String ACCOUNTID = "accountid";
@@ -145,9 +144,8 @@ public class EuareWebBackend {
   static {
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "25%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACTIVE, "Active", false, "10%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
-    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( REVOKED, "Revoked", false, "10%", TableDisplay.MANDATORY, Type.BOOLEAN, false, false ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACCOUNT, "Owner account", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
-    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( USER, "Owner user", false, "45%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
+    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( USER, "Owner user", false, "55%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( CREATION, "Creation date", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( OWNERID, "Owner", false, "0px", TableDisplay.NONE, Type.LINK, false, false ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( PEM, "PEM", false, "0px", TableDisplay.NONE, Type.ARTICLE, false, false ) );
@@ -190,7 +188,7 @@ public class EuareWebBackend {
 	        action = LoginAction.EXPIRATION;
 	      }
       }
-      return new LoginUserProfile( user.getUserId( ), user.getName( ), user.getAccount( ).getName( ), user.getToken( ), userProfileSearch, userKeySearch, action );
+      return new LoginUserProfile( user.getUserId( ), user.getName( ), user.getAccount( ).getName( ), userProfileSearch, userKeySearch, action );
     } catch ( Exception e ) {
       LOG.error( "Exception in retrieving user profile", e );
       LOG.debug( e, e );
@@ -533,7 +531,7 @@ public class EuareWebBackend {
         // Optimization for a single user search
         User user = Accounts.lookupUserById( query.getSingle( ID ).getValue( ) );
         Account account = user.getAccount( );
-        if ( EuarePermission.allowReadUser( requestUser, account, user ) ) {
+        if ( EuarePermission.allowListAndReadUser( requestUser, account, user ) ) {
           results.add( serializeUser( account, user ) );
         }
       } else if ( query.hasOnlySingle( GROUPID ) ) {
@@ -541,7 +539,7 @@ public class EuareWebBackend {
         Group group = Accounts.lookupGroupById( query.getSingle( GROUPID ).getValue( ) );
         Account account = group.getAccount( );
         for ( User user : group.getUsers( ) ) {
-          if ( EuarePermission.allowReadUser( requestUser, account, user ) ) {
+          if ( EuarePermission.allowListAndReadUser( requestUser, account, user ) ) {
             results.add( serializeUser( account, user ) );
           }
         }
@@ -549,7 +547,7 @@ public class EuareWebBackend {
         // Optimization for users of a single account
         Account account = Accounts.lookupAccountById( query.getSingle( ACCOUNTID ).getValue( ) );
         for ( User user : account.getUsers( ) ) {
-          if ( EuarePermission.allowReadUser( requestUser, account, user ) ) {
+          if ( EuarePermission.allowListAndReadUser( requestUser, account, user ) ) {
             results.add( serializeUser( account, user ) );
           }
         }        
@@ -557,7 +555,7 @@ public class EuareWebBackend {
         for ( Account account : getAccounts( query ) ) {
           for ( User user : account.getUsers( ) ) {
             if ( userMatchQuery( user, query ) ) {
-              if ( EuarePermission.allowReadUser( requestUser, account, user ) ) {
+              if ( EuarePermission.allowListAndReadUser( requestUser, account, user ) ) {
                 results.add( serializeUser( account, user ) );
               }
             }
@@ -715,12 +713,6 @@ public class EuareWebBackend {
       public boolean match( QueryValue value ) {
         return cert.getCertificateId( ) != null && cert.getCertificateId( ).equals( value.getValue( ) );
       }
-    } ) && query.match( REVOKED, new Matcher( ) {
-      @Override
-      public boolean match( QueryValue value ) {
-        boolean val = "true".equalsIgnoreCase( value.getValue( ) );
-        return cert.isRevoked( ) != null && ( cert.isRevoked( ).booleanValue( ) == val );
-      }
     } ) && query.match( ACTIVE, new Matcher( ) {
       @Override
       public boolean match( QueryValue value ) {
@@ -738,8 +730,10 @@ public class EuareWebBackend {
         User user = Accounts.lookupUserById( query.getSingle( USERID ).getValue( ) );
         Account account = user.getAccount( );
         for ( Certificate cert : user.getCertificates( ) ) {
-          if ( EuarePermission.allowReadUserCertificate( requestUser, account, user ) ) {
-            results.add( serializeCert( cert, account, user ) );
+          if ( !cert.isRevoked( ) ) {
+            if ( EuarePermission.allowReadUserCertificate( requestUser, account, user ) ) {
+              results.add( serializeCert( cert, account, user ) );
+            }
           }
         }        
       } else {
@@ -747,8 +741,10 @@ public class EuareWebBackend {
           for ( User user : getUsers( account, query ) ) {
             for ( Certificate cert : user.getCertificates( ) ) {
               if ( certMatchQuery( cert, query ) ) {
-                if ( EuarePermission.allowReadUserCertificate( requestUser, account, user ) ) {
-                  results.add( serializeCert( cert, account, user ) );
+                if ( !cert.isRevoked( ) ) {
+                  if ( EuarePermission.allowReadUserCertificate( requestUser, account, user ) ) {
+                    results.add( serializeCert( cert, account, user ) );
+                  }
                 }
               }
             }
@@ -767,7 +763,6 @@ public class EuareWebBackend {
     SearchResultRow result = new SearchResultRow( );
     result.addField( cert.getCertificateId( ) );
     result.addField( cert.isActive( ).toString( ) );
-    result.addField( cert.isRevoked( ).toString( ) );
     result.addField( account.getName( ) );
     result.addField( user.getName( ) );
     result.addField( cert.getCreateDate( ) == null ? "" : cert.getCreateDate( ).toString( ) );
@@ -843,7 +838,7 @@ public class EuareWebBackend {
     try {
       Account account = Accounts.addAccount( accountName );
       User admin = account.addUser( User.ACCOUNT_ADMIN, "/", true/*skipRegistration*/, true/*enabled*/, null/*info*/ );
-      admin.createToken( );
+      admin.resetToken( );
       admin.createConfirmationCode( );
       admin.setPassword( Crypto.generateHashedPassword( password ) );
       admin.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
@@ -861,7 +856,7 @@ public class EuareWebBackend {
       Map<String, String> info = Maps.newHashMap( );
       info.put( User.EMAIL, email );
       User admin = account.addUser( User.ACCOUNT_ADMIN, "/", false/*skipRegistration*/, true/*enabled*/, info );
-      admin.createToken( );
+      admin.resetToken( );
       admin.createConfirmationCode( );
       admin.setPassword( Crypto.generateHashedPassword( password ) );
       admin.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
@@ -1090,7 +1085,6 @@ public class EuareWebBackend {
       int i = 0;
       String certId = certSerialized.getField( i++ );
       i++;//Active
-      i++;//Revoked
       String accountName = certSerialized.getField( i++ );
       String userName = certSerialized.getField( i++ );
       Account account = Accounts.lookupAccountByName( accountName );
@@ -1209,7 +1203,6 @@ public class EuareWebBackend {
       int i = 0;
       String certId = values.get( i++ );
       String active = values.get( i++ );
-      i++;//Revoked
       String accountName = values.get( i++ );
       String userName = values.get( i++ );
       Account account = Accounts.lookupAccountByName( accountName );
@@ -1493,7 +1486,7 @@ public class EuareWebBackend {
       Map<String, String> info = Maps.newHashMap( );
       info.put( User.EMAIL, email );
       User user = account.addUser( userName, "/", false/*skipRegistration*/, true/*enabled*/, info );
-      user.createToken( );
+      user.resetToken( );
       user.createConfirmationCode( );
       user.setPassword( Crypto.generateHashedPassword( password ) );
       user.setPasswordExpires( System.currentTimeMillis( ) + User.PASSWORD_LIFETIME );
@@ -1608,6 +1601,16 @@ public class EuareWebBackend {
       LOG.error( "Failed to reset password", e );
       LOG.debug( e , e );
       throw new EucalyptusServiceException( "Failed to reset password" );
+    }
+  }
+
+  public static String getUserToken( User requestUser ) throws EucalyptusServiceException {
+    try {
+      return requestUser.getToken( );
+    } catch ( Exception e ) {
+      LOG.error( "Failed to get user security code", e );
+      LOG.debug( e , e );
+      throw new EucalyptusServiceException( "Failed to get user security code" );
     }
   }
 

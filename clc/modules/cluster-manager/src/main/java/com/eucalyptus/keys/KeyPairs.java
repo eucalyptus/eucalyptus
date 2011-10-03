@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -67,17 +67,22 @@ import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.util.List;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.cloud.util.MetadataCreationException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.crypto.Certs;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.OwnerFullName;
 
 public class KeyPairs {
@@ -89,6 +94,14 @@ public class KeyPairs {
     return NO_KEY;
   }
   
+  public static List<SshKeyPair> list( OwnerFullName ownerFullName ) throws NoSuchMetadataException {
+    try {
+      return Transactions.findAll( SshKeyPair.named( ownerFullName, null ) );
+    } catch ( Exception e ) {
+      throw new NoSuchMetadataException( "Failed to find key pairs for " + ownerFullName, e );
+    }
+  }
+
   public static SshKeyPair lookup( OwnerFullName ownerFullName, String keyName ) throws NoSuchMetadataException {
     try {
       return Transactions.find( new SshKeyPair( ownerFullName, keyName ) );
@@ -96,10 +109,23 @@ public class KeyPairs {
       throw new NoSuchMetadataException( "Failed to find key pair: " + keyName + " for " + ownerFullName, e );
     }
   }
-  
+
+  public static void delete( OwnerFullName ownerFullName, String keyName ) throws NoSuchMetadataException {
+    EntityTransaction db = Entities.get( SshKeyPair.class );
+    try {
+      SshKeyPair entity = Entities.uniqueResult( SshKeyPair.named( ownerFullName, keyName ) );
+      Entities.delete( entity );
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new NoSuchMetadataException( "Failed to find key pair: " + keyName + " for " + ownerFullName, ex );
+    }
+  }
+
   public static SshKeyPair fromPublicKey( OwnerFullName ownerFullName, String keyValue ) throws NoSuchMetadataException {
     try {
-      return Transactions.find( new SshKeyPair( ownerFullName, keyValue ) );
+      return Transactions.find( SshKeyPair.withPublicKey( ownerFullName, keyValue ) );
     } catch ( Exception e ) {
       throw new NoSuchMetadataException( "Failed to find key pair with public key: " + keyValue + " for " + ownerFullName, e );
     }
@@ -107,7 +133,7 @@ public class KeyPairs {
   }
   
   public static PrivateKey create( UserFullName userName, String keyName ) throws MetadataException, TransactionException {
-    SshKeyPair newKey = new SshKeyPair( userName, keyName );
+    SshKeyPair newKey = SshKeyPair.create( userName, keyName );
     KeyPair newKeys = null;
     try {
       newKeys = Certs.generateKeyPair( );
@@ -148,4 +174,5 @@ public class KeyPairs {
     String authKeyString = String.format( "%s %s %s@eucalyptus", new String( keyType ), new String( Base64.encode( authKeyBlob ) ), userName.toString( ) );
     return authKeyString;
   }
+
 }

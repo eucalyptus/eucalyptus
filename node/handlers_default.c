@@ -240,12 +240,25 @@ find_and_terminate_instance (
 
         int ret;
         logprintfl (EUCAINFO, "[%s] detaching volume %s, force=%d on termination\n", instanceId, volume->volumeId, force);
-        if (nc_state->H->doDetachVolume) 
+        if (nc_state->H->doDetachVolume) {
             ret = nc_state->H->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
-        else
+        } else {
             ret = nc_state->D->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
-        if ((ret != OK) && (force == 0))
-            return ret;
+        }
+
+        // do our best to detach, then proceed
+        if ((ret != OK)) {
+            if (nc_state->H->doDetachVolume) {
+                ret = nc_state->H->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 1, 0);
+            } else {
+                ret = nc_state->D->doDetachVolume(nc_state, meta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 1, 0);
+            }
+        }
+        
+        if ((ret != OK) && (force == 0)) {
+            logprintfl(EUCAWARN, "[%s] detaching of volume on terminate failed\n", instanceId);
+            //            return ret;
+        }
 	}
 
 	// try stopping the domain
@@ -597,7 +610,9 @@ doAttachVolume (	struct nc_state_t *nc,
      }
      
      // find domain on hypervisor
+     sem_p (hyp_sem);
      virDomainPtr dom = virDomainLookupByName (*conn, instanceId);
+     sem_v (hyp_sem);
      if (dom==NULL) {
          if (instance->state != BOOTING && instance->state != STAGING) {
              logprintfl (EUCAWARN, "AttachVolume(): domain %s not running on hypervisor, cannot attach device\n", instanceId);
@@ -671,8 +686,10 @@ doAttachVolume (	struct nc_state_t *nc,
      
  release:
      
+     sem_p(hyp_sem);
      virDomainFree (dom); // release libvirt resource
-     
+     sem_v(hyp_sem);
+
      // record volume state in memory and on disk
      char * next_vol_state;
      if (ret==OK) {
@@ -757,7 +774,9 @@ doDetachVolume (	struct nc_state_t *nc,
     }
     
     // find domain on hypervisor
+    sem_p (hyp_sem);
     virDomainPtr dom = virDomainLookupByName (*conn, instanceId);
+    sem_v (hyp_sem);
     if (dom==NULL) {
         if (instance->state != BOOTING && instance->state != STAGING) {
             logprintfl (EUCAWARN, "DetachVolume(): domain %s not running on hypervisor, cannot attach device\n", instanceId);
@@ -836,8 +855,9 @@ doDetachVolume (	struct nc_state_t *nc,
     
  release:
     
+    sem_p (hyp_sem);
     virDomainFree (dom); // release libvirt resource
-    
+    sem_v (hyp_sem);
     // record volume state in memory and on disk
     char * next_vol_state;
     if (ret==OK) {
@@ -867,6 +887,9 @@ doDetachVolume (	struct nc_state_t *nc,
     if (ret==OK)
         logprintfl (EUCAINFO, "[%s] detached '%s' as host device '%s' and guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
     
+    if (force) {
+        return(OK);
+    }
     return ret;
 }
 

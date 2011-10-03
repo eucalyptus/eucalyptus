@@ -85,6 +85,8 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
@@ -108,14 +110,6 @@ public class ClusterEndpoint implements Startable {
   
   private Map<String, Supplier<List<ClusterInfoType>>> describeKeywords = new HashMap<String, Supplier<List<ClusterInfoType>>>( ) {
                                                                           {
-                                                                            put( "coredump", new Supplier<List<ClusterInfoType>>( ) {
-                                                                              
-                                                                              @Override
-                                                                              public List<ClusterInfoType> get( ) {
-                                                                                return dumpInfo.apply( "IGNORED" );
-                                                                              }
-                                                                              
-                                                                            } );
                                                                             put( "verbose", new Supplier<List<ClusterInfoType>>( ) {
                                                                               
                                                                               @Override
@@ -204,61 +198,6 @@ public class ClusterEndpoint implements Startable {
   private static ClusterInfoType s( String left, String right ) {
     return new ClusterInfoType( String.format( INFO_FSTRING, left ), right );
   }
-  
-  private static Function<String, List<ClusterInfoType>>  dumpInfo           = new Function<String, List<ClusterInfoType>>( ) {
-                                                                               
-                                                                               @Override
-                                                                               public List<ClusterInfoType> apply( String sdfsdf ) {
-                                                                                 List<ClusterInfoType> retList = Lists.newArrayList( );
-                                                                                 retList.add( new ClusterInfoType( "================== Addresses", "" ) );
-                                                                                 for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
-                                                                                   String val = addr.toString( );
-                                                                                   retList.add( new ClusterInfoType( val, "" ) );
-                                                                                   LOG.info( val );
-                                                                                 }
-                                                                                 retList.add( new ClusterInfoType( "================== Disabled Addresses", "" ) );
-                                                                                 for ( Address addr : Addresses.getInstance( ).listDisabledValues( ) ) {
-                                                                                   String val = addr.toString( );
-                                                                                   retList.add( new ClusterInfoType( val, "" ) );
-                                                                                   LOG.info( val );
-                                                                                 }
-                                                                                 retList.add( new ClusterInfoType( "================== VMs", "" ) );
-                                                                                 for ( VmInstance vm : VmInstances.listValues( ) ) {
-                                                                                   String val = vm.toString( );
-                                                                                   retList.add( new ClusterInfoType( val, "" ) );
-                                                                                   LOG.info( val );
-                                                                                 }
-                                                                                 retList.add( new ClusterInfoType( "================== Clusters", "" ) );
-                                                                                 for ( Cluster cluster : Clusters.getInstance( ).listValues( ) ) {
-                                                                                   String val = cluster.toString( );
-                                                                                   retList.add( new ClusterInfoType( val, "" ) );
-                                                                                   LOG.info( val );
-                                                                                 }
-                                                                                 //GRZE:NET
-//                                                                                 retList.add( new ClusterInfoType( "================== Networks", "" ) );
-//                                                                                 for ( Network network : Networks.getInstance( ).listValues( ) ) {
-//                                                                                   String val = network.toString( );
-//                                                                                   retList.add( new ClusterInfoType( val, "" ) );
-//                                                                                   LOG.info( val );
-//                                                                                 }
-                                                                                 retList.add( new ClusterInfoType( "================== Level-0 Bootstrappers",
-                                                                                                                   "" ) );
-                                                                                 for ( Bootstrap.Stage stage : Bootstrap.Stage.values( ) ) {
-                                                                                   retList.add( new ClusterInfoType(
-                                                                                                                     stage.name( ),
-                                                                                                                     stage.describe( ).replaceAll( "\n", "" ).replaceAll( "^\\w* ",
-                                                                                                                                                                          "" ) ) );
-                                                                                   LOG.info( stage.describe( ) );
-                                                                                 }
-                                                                                 retList.add( new ClusterInfoType( "================== Components", "" ) );
-                                                                                 for ( String val : Iterables.transform( Components.list( ),
-                                                                                                                         Components.Functions.componentToString( ) ) ) {
-                                                                                   retList.add( new ClusterInfoType( val, "" ) );
-                                                                                   LOG.trace( val );
-                                                                                 }
-                                                                                 return retList;
-                                                                               }
-                                                                             };
   
   private static Function<Cluster, List<ClusterInfoType>> describeSystemInfo = new Function<Cluster, List<ClusterInfoType>>( ) {
                                                                                @Override

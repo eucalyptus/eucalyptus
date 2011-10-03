@@ -99,7 +99,7 @@ public class Snapshots {
     @Override
     public Long apply( OwnerFullName input ) {
       EntityWrapper<Snapshot> db = EntityWrapper.get( Snapshot.class );
-      int ret = db.createCriteria( Snapshot.class ).add( Example.create( Snapshots.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( ).size( );
+      int ret = db.createCriteria( Snapshot.class ).add( Example.create( Snapshot.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( ).size( );
       db.rollback( );
       return new Long( ret );
     }
@@ -114,7 +114,7 @@ public class Snapshots {
       while ( true ) {
         newId = Crypto.generateId( userFullName.getUniqueId( ), SnapshotManager.ID_PREFIX );
         try {
-          db.getUnique( Snapshots.named( newId ) );
+          db.getUnique( Snapshot.named( null, newId ) );
         } catch ( EucalyptusCloudException e ) {
           snap = new Snapshot( userFullName, newId, vol.getDisplayName( ), sc.getName( ), sc.getPartition( ) );
           snap.setVolumeSize( vol.getSize( ) );
@@ -162,24 +162,11 @@ public class Snapshots {
     return snap;
   }
   
-  /**
-   * @param snapshotId
-   * @return
-   * @throws ExecutionException
-   */
-  public static Snapshot lookup( String snapshotId ) throws ExecutionException {
-    return Transactions.find( Snapshots.named( snapshotId ) );
-  }
-  
   public static Snapshot named( final String snapshotId ) {
     return new Snapshot( ( UserFullName ) null, snapshotId );
   }
   
   public static Snapshot lookup( OwnerFullName accountFullName, String snapshotId ) throws ExecutionException {
-    return Transactions.find( Snapshots.named( accountFullName, snapshotId ) );
-  }
-  
-  public static Snapshot named( final OwnerFullName ownerFullName, String snapshotId ) {
-    return new Snapshot( ownerFullName, snapshotId );
+    return Transactions.find( Snapshot.named( accountFullName, snapshotId ) );
   }
 }

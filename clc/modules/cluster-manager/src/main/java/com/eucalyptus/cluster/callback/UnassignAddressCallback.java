@@ -67,14 +67,14 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 import com.eucalyptus.address.Address.Transition;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstances;
-import com.eucalyptus.cluster.VmNetworkConfig;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmNetworkConfig;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressType;
 
@@ -113,7 +113,7 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   
   public void clearVmAddress( ) {
     try {
-      VmInstance vm = VmInstances.lookupByInstanceIp( super.getRequest( ).getDestination( ) );
+      VmInstance vm = VmInstances.lookupByPrivateIp( super.getRequest( ).getDestination( ) );
       if ( vm.getPublicAddress( ).equals( super.getRequest( ).getSource( ) ) ) {
         vm.updatePublicAddress( vm.getPrivateAddress( ) );
       }
@@ -154,7 +154,7 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   @Override
   public void fireException( Throwable e ) {
     try {
-      VmInstance vm = VmInstances.lookupByInstanceIp( super.getRequest( ).getDestination( ) );
+      VmInstance vm = VmInstances.lookupByPrivateIp( super.getRequest( ).getDestination( ) );
       vm.updatePublicAddress( VmNetworkConfig.DEFAULT_IP );
     } catch ( Exception t ) {
       LOG.debug( t, t );

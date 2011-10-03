@@ -70,7 +70,6 @@ import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
@@ -78,7 +77,6 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.policy.PolicyVendor;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cloud.CloudMetadata.AvailabilityZoneMetadata;
@@ -91,7 +89,6 @@ import com.eucalyptus.cluster.callback.PublicAddressStateCallback;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
 import com.eucalyptus.cluster.callback.ServiceStateCallback;
 import com.eucalyptus.cluster.callback.StartServiceCallback;
-import com.eucalyptus.cluster.callback.VmPendingCallback;
 import com.eucalyptus.cluster.callback.VmStateCallback;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
@@ -119,7 +116,6 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
@@ -139,6 +135,7 @@ import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.util.fsm.StateMachineBuilder;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.util.fsm.Transitions;
+import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.eucalyptus.ws.WebServicesException;
@@ -253,6 +250,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     RESOURCES( ResourceStateCallback.class ),
     NETWORKS( NetworkStateCallback.class ),
     INSTANCES( VmStateCallback.class ),
+    VOLATILE_INSTANCES( VmStateCallback.VmPendingCallback.class ),
     ADDRESSES( PublicAddressStateCallback.class ),
     SERVICEREADY( ServiceStateCallback.class );
     Class refresh;
@@ -270,7 +268,10 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         public final void leave( final Cluster parent, final Callback.Completion transitionCallback ) {
           try {
             AsyncRequests.newRequest( factory.newInstance( ) ).then( transitionCallback ).sendSync( parent.getConfiguration( ) );
-          } catch ( final Throwable t ) {
+          } catch ( final InterruptedException ex ) {
+            Thread.currentThread( ).interrupt( );
+            Exceptions.trace( ex );
+          } catch ( final Exception t ) {
             parent.filterExceptions( t );
           }
         }
@@ -433,6 +434,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
             if ( initialized && tick.isAsserted( Cluster.STATE_INTERVAL_ENABLED ) && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
               transition = Automata.sequenceTransitions( this, State.ENABLED, State.ENABLED_SERVICE_CHECK, State.ENABLED_ADDRS, State.ENABLED_RSC,
                                                          State.ENABLED_NET, State.ENABLED_VMS, State.ENABLED );
+            } else if ( initialized && tick.isAsserted( VmInstances.VOLATILE_STATE_INTERVAL_SEC ) && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
+                Refresh.VOLATILE_INSTANCES.apply( this );
             } else if ( initialized && Component.State.DISABLED.equals( this.configuration.lookupState( ) )
                         || Component.State.NOTREADY.equals( this.configuration.lookupState( ) ) ) {
               transition = Automata.sequenceTransitions( this, State.ENABLED, State.DISABLED );
@@ -737,7 +740,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     this.logUpdate.set( false );
   }
   
-  public NodeLogInfo getNodeLog( final String nodeIp ) throws EucalyptusClusterException {
+  public NodeLogInfo getNodeLog( final String nodeIp ) {
     final NodeInfo nodeInfo = Iterables.find( this.nodeMap.values( ), new Predicate<NodeInfo>( ) {
       @Override
       public boolean apply( final NodeInfo arg0 ) {
@@ -745,7 +748,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       }
     } );
     if ( nodeInfo == null ) {
-      throw new EucalyptusClusterException( "Error obtaining node log files for: " + nodeIp );
+      throw new NoSuchElementException( "Error obtaining node log files for: " + nodeIp );
     }
     if ( this.logUpdate.compareAndSet( false, true ) ) {
       final Cluster self = this;
@@ -898,18 +901,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
 //            LOG.info( event );
 //            break;
 //        }
-    }
-  }
-  
-  private void updateVolatiles( ) {
-    try {
-      AsyncRequests.newRequest( new VmPendingCallback( this ) ).sendSync( this.getConfiguration( ) );
-    } catch ( final ExecutionException ex ) {
-      Exceptions.trace( ex );
-    } catch ( final InterruptedException ex ) {
-      Exceptions.trace( ex );
-    } catch ( final CancellationException ex ) {
-      /** operation self-cancelled **/
     }
   }
   

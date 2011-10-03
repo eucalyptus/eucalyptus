@@ -207,14 +207,17 @@ print_running_domains (void)
 virConnectPtr *
 check_hypervisor_conn()
 {
+
+    sem_p (hyp_sem);
 	if (nc_state.conn == NULL || virConnectGetURI(nc_state.conn) == NULL) {
 		nc_state.conn = virConnectOpen (nc_state.uri);
 		if (nc_state.conn == NULL) {
 			logprintfl (EUCAFATAL, "Failed to connect to %s\n", nc_state.uri);
+            sem_v (hyp_sem);
 			return NULL;
 		}
 	}
-
+    sem_v (hyp_sem);
 	return &(nc_state.conn);
 }
 
@@ -583,6 +586,21 @@ void *startup_thread (void * arg)
     safe_strncpy (instance->hypervisorType, nc_state.H->name, sizeof (instance->hypervisorType)); // set the hypervisor type
 
     instance->hypervisorCapability = nc_state.capability; // set the cap (xen/hw/hw+xen)
+    char *s = system_output("getconf LONG_BIT");
+    if (s){
+         int bitness = atoi(s);
+         if(bitness == 32 || bitness == 64)
+            instance->hypervisorBitness = bitness;
+         else{
+            logprintfl(EUCAWARN, "[%s] can't determine the host's bitness (%s, assuming 64)\n", instance->instanceId, s);
+	    instance->hypervisorBitness = 64;
+         }
+         free(s);
+    }else{
+            logprintfl(EUCAWARN, "[%s] can't determine the host's bitness (assuming 64)\n", instance->instanceId);
+            instance->hypervisorBitness = 64;
+    }
+
     instance->combinePartitions = nc_state.convert_to_disk; 
     instance->do_inject_key = nc_state.do_inject_key;
 
@@ -876,8 +894,10 @@ static int init (void)
     GET_VAR_INT(cache_size_mb, CONFIG_NC_CACHE_SIZE);
     GET_VAR_INT(work_size_mb, CONFIG_NC_WORK_SIZE);
     char * instance_path = getConfString(configFiles, 2, INSTANCE_PATH);
-    if (init_backing_store (instance_path, work_size_mb, cache_size_mb)) {
+
+    if (instance_path == NULL || init_backing_store (instance_path, work_size_mb, cache_size_mb)) {
         logprintfl (EUCAFATAL, "error: failed to initialize backing store\n");
+        if(instance_path) free(instance_path);
         return ERROR_FATAL;
 	}
 	if (statfs (instance_path, &fs) == -1) { // TODO: get the values from instance backing code

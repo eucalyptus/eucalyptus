@@ -96,6 +96,7 @@ default_pool_props = [
       'proxool.house-keeping-sleep-time': '5000',
       'proxool.test-before-use': 'false',
       'proxool.test-after-use': 'true',
+      'proxool.trace': 'false',
       'user': 'eucalyptus',
       'password': db_pass,
     ]
@@ -155,4 +156,5 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
   // Register proxool
   LOG.trace( proxool_config )
   ProxoolFacade.registerConnectionPool(url, proxool_config);
+  ProxoolFacade.disableShutdownHook();
 }

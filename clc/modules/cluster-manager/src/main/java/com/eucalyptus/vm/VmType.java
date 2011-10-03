@@ -63,6 +63,7 @@
  */
 package com.eucalyptus.vm;
 
+import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -77,6 +78,10 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Function;
+import com.google.common.base.Supplier;
+import com.google.common.collect.Lists;
+
 
 @Entity
 @javax.persistence.Entity
@@ -208,7 +213,17 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
   
   @Override
   public OwnerFullName getOwner( ) {
-    return Principals.systemFullName( );
+    return Principals.nobodyFullName( );
+  }
+  
+  public Supplier<VmType> allocator( ) {
+    return new Supplier<VmType>() {
+
+      @Override
+      public VmType get( ) {
+        return VmType.this;
+      }
+    };
   }
   
 }

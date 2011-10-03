@@ -232,7 +232,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
     // populate networks
     bzero(vnetconfig->users, sizeof(userEntry) * NUMBER_OF_VLANS);
     bzero(vnetconfig->networks, sizeof(networkEntry) * NUMBER_OF_VLANS);
-    bzero(vnetconfig->etherdevs, NUMBER_OF_VLANS * 16);
+    bzero(vnetconfig->etherdevs, NUMBER_OF_VLANS * MAX_ETH_DEV_PATH);
     bzero(vnetconfig->publicips, sizeof(publicip) * NUMBER_OF_PUBLIC_IPS);
   
     if (role != NC) {
@@ -1290,7 +1290,7 @@ int vnetAddDev(vnetConfig *vnetconfig, char *dev) {
     }
   }
   if (foundone >= 0) {
-    safe_strncpy(vnetconfig->etherdevs[foundone], dev, 16);
+    safe_strncpy(vnetconfig->etherdevs[foundone], dev, MAX_ETH_DEV_PATH);
   }
   return(0);
 }
@@ -1302,8 +1302,8 @@ int vnetDelDev(vnetConfig *vnetconfig, char *dev) {
 
   done=0;
   for (i=0; i<vnetconfig->max_vlan && !done; i++) {
-    if (!strncmp(vnetconfig->etherdevs[i], dev, 16)) {
-      bzero(vnetconfig->etherdevs[i], 16);
+    if (!strncmp(vnetconfig->etherdevs[i], dev, MAX_ETH_DEV_PATH)) {
+      bzero(vnetconfig->etherdevs[i], MAX_ETH_DEV_PATH);
       done++;
     }
   }
@@ -1411,8 +1411,13 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
 
   for (i=0; i<vnetconfig->max_vlan; i++) {
     if (vnetconfig->etherdevs[i][0] != '\0') {
-      strncat (dstring, " ", MAX_PATH);
-      strncat (dstring, vnetconfig->etherdevs[i], 16);
+      strncat (dstring, " ", MAX_PATH - 1);
+
+      if((MAX_PATH - strlen(dstring) - 1) < MAX_ETH_DEV_PATH) {
+	logprintfl(EUCAERROR, "vnetKickDHCP(): not enough buffer length left to copy ethernet dev name\n");
+	return(1);
+      }
+      strncat (dstring, vnetconfig->etherdevs[i], MAX_ETH_DEV_PATH);
     }
   }
 
@@ -1672,6 +1677,8 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *
     }
   }
   
+  logprintfl(EUCADEBUG, "vnetStartNetworkManaged(): params: vlan=%d, uuid=%s, userName=%s, netName=%s\n", vlan, SP(uuid), SP(userName), SP(netName));
+
   *outbrname = NULL;
 
   if (vlan < 0 || vlan > vnetconfig->max_vlan) {
@@ -2449,7 +2456,11 @@ int vnetReassignAddress(vnetConfig *vnetconfig, char *uuid, char *src, char *dst
     logprintfl(EUCAERROR, "vnetReassignAddress(): bad input params uuid=%s, src=%s, dst=%s\n", SP(uuid), SP(src), SP(dst));
     return(1);
   }
-
+  
+  if (vnetCheckPublicIP(vnetconfig, src)) {
+    return(0);
+  }
+  
   // get the publicIP of interest
   isallocated = 0;
   pubidx = 0;

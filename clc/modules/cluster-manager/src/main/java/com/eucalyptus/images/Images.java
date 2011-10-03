@@ -2,15 +2,16 @@ package com.eucalyptus.images;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.zip.Adler32;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Snapshot;
-import com.eucalyptus.blockstorage.Snapshots;
 import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
@@ -18,6 +19,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionExecutionException;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -38,7 +40,63 @@ import edu.ucsb.eucalyptus.msgs.ImageDetails;
  * @author decker
  */
 public class Images {
-  private static Logger LOG = Logger.getLogger( Images.class );
+  private static Logger LOG  = Logger.getLogger( Images.class );
+  
+  static final String   SELF = "self";
+  
+  public static Predicate<ImageInfo> filterExecutableBy( final Collection<String> executableSet ) {
+    final boolean executableSelf = executableSet.remove( SELF );
+    final boolean executableAll = executableSet.remove( "all" );
+    return new Predicate<ImageInfo>( ) {
+      
+      @Override
+      public boolean apply( ImageInfo image ) {
+        if ( executableSet.isEmpty( ) ) {
+          return true;
+        } else {
+          UserFullName userFullName = Contexts.lookup( ).getUserFullName( );
+          boolean filtered = ( executableAll && image.getImagePublic( ) );
+          filtered |= ( executableSelf && ( image.getOwner( ).isOwner( userFullName ) || image.hasPermission( userFullName.getAccountNumber( ) ) ) );
+          filtered |= ( image.getOwner( ).isOwner( userFullName ) && image.hasPermission( executableSet.toArray( new String[] {} ) ) );
+          return filtered;
+        }
+      }
+      
+    };
+  }
+  
+  public enum FilterPermissions implements Predicate<ImageInfo> {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( ImageInfo input ) {
+      try {
+        Context ctx = Contexts.lookup( );
+        if ( ctx.hasAdministrativePrivileges( ) ) {
+          return true;
+        } else {
+          UserFullName luser = ctx.getUserFullName( );
+          /** GRZE: record why this must be so **/
+          if ( input.getImagePublic( ) ) {
+            return true;
+          } else if ( input.getOwnerAccountNumber( ).equals( luser.getAccountNumber( ) ) ) {
+            return true;
+          } else if ( input.hasPermission( luser.getAccountNumber( ), luser.getAccountName( ), luser.getUserId( ) ) ) {
+            return true;
+          } else {
+            for ( AccessKey key : ctx.getUser( ).getKeys( ) ) {
+              if ( input.hasPermission( key.getAccessKey( ) ) ) {
+                return true;
+              }
+            }
+            return false;
+          }
+        }
+      } catch ( Exception ex ) {
+        return false;
+      }
+    }
+  }
   
   @QuantityMetricFunction( ImageMetadata.class )
   public enum CountImages implements Function<OwnerFullName, Long> {
@@ -52,7 +110,7 @@ public class Images {
       return ( long ) i;
     }
   }
-
+  
   private static String generateImageId( final String imagePrefix, final String imageLocation ) {
     Adler32 hash = new Adler32( );
     String key = imageLocation + System.currentTimeMillis( );
@@ -226,7 +284,7 @@ public class Images {
           Snapshot snap;
           Integer size;
           try {
-            snap = Snapshots.lookup( ebsInfo.getSnapshotId( ) );
+            snap = Transactions.find( Snapshot.named( null, ebsInfo.getSnapshotId( ) ) );
             size = snap.getVolumeSize( );
             if ( ebsInfo.getVolumeSize( ) != null && ebsInfo.getVolumeSize( ) >= snap.getVolumeSize( ) ) {
               size = ebsInfo.getVolumeSize( );
@@ -293,7 +351,7 @@ public class Images {
       if ( img instanceof ImageMetadata.StaticDiskImage ) {
         WalrusUtil.invalidate( ( StaticDiskImage ) img );
       }
-    
+      
     } catch ( ConstraintViolationException cve ) {
       db.rollback( );
       // Need to add message that the image is associated with running instances.
@@ -376,7 +434,7 @@ public class Images {
     BlockDeviceMappingItemType rootBlockDevice = Iterables.find( blockDeviceMappings, findEbsRoot( rootDeviceName ) );
     String snapshotId = rootBlockDevice.getEbs( ).getSnapshotId( );
     try {
-      Snapshot snap = Snapshots.lookup( userFullName, snapshotId );
+      Snapshot snap = Transactions.find( Snapshot.named( userFullName, snapshotId ) );
       if ( !userFullName.getUserId( ).equals( snap.getOwnerUserId( ) ) ) {
         throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice
                                             + " because of: you must the owner of the source snapshot." );

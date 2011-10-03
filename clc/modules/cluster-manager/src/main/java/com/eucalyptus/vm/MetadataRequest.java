@@ -68,9 +68,8 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.records.Logs;
 
 public class MetadataRequest {
   private static Logger LOG = Logger.getLogger( MetadataRequest.class );
@@ -97,13 +96,13 @@ public class MetadataRequest {
       }
       VmInstance findVm = null;
       try {
-        Address addr = Addresses.getInstance( ).lookup( requestIp );
+        findVm = VmInstances.lookupByPublicIp( requestIp );
+      } catch ( Exception ex2 ) {
         try {
-          findVm = VmInstances.lookup( addr.getInstanceId( ) );
+          findVm = VmInstances.lookupByPrivateIp( requestIp );
         } catch ( Exception ex ) {
-          LOG.error( ex );
+          Logs.exhaust( ).error( ex );
         }
-      } catch ( NoSuchElementException ex2 ) {
       }
       this.vm = findVm;
     } finally {

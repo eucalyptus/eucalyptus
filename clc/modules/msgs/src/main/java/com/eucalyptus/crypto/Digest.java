@@ -24,7 +24,6 @@ public enum Digest {
       return MessageDigest.getInstance( this.name( ) );
     } catch ( Exception e ) {
       e.printStackTrace( );
-      System.exit( -4 );
       return null;
     }
   }

@@ -94,5 +94,9 @@ public class AbstractPersistent implements Serializable, HasNaturalId {
   protected final String getId( ) {
     return this.id;
   }
+  
+  public long lastUpdateMillis( ) {
+    return System.currentTimeMillis( ) - this.getLastUpdateTimestamp( ).getTime( );
+  }
 }
 

@@ -6,6 +6,7 @@ import java.util.Map;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.event.S3Event;
+import com.eucalyptus.reporting.modules.s3.*;
 import com.eucalyptus.reporting.queue.*;
 import com.eucalyptus.reporting.queue.QueueFactory.QueueIdentifier;
 import com.eucalyptus.util.ExposedCommand;
@@ -73,7 +74,7 @@ public class FalseDataGenerator
 		System.out.println(" ----> PRINT USAGE SUMMARY MAP:" + period);
 
 		Map<S3SummaryKey, S3UsageSummary> usageSummaryMap =
-			S3UsageLog.getS3UsageLog().getUsageSummaryMap(period);
+			S3UsageLog.getS3UsageLog().getUsageSummaryMap(period, "admin");
 		for (S3SummaryKey key: usageSummaryMap.keySet()) {
 			System.out.println("key:" + key + " summary:"
 					+ usageSummaryMap.get(key));

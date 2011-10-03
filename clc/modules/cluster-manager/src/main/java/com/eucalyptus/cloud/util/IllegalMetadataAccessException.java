@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -63,22 +63,32 @@
 
 package com.eucalyptus.cloud.util;
 
-public class IllegalMetadataAccessException extends MetadataException {
+import com.eucalyptus.cloud.CloudMetadata;
 
+public class IllegalMetadataAccessException extends MetadataException {
+  
   public IllegalMetadataAccessException( ) {
     super( );
   }
-
+  
+  public IllegalMetadataAccessException( CloudMetadata metadata, String message, Throwable cause ) {
+    super( metadata.getDisplayName( ) + ": " + message, cause );
+  }
+  
   public IllegalMetadataAccessException( String message, Throwable cause ) {
     super( message, cause );
   }
-
+  
+  public IllegalMetadataAccessException( CloudMetadata metadata, String message ) {
+    super( metadata.getDisplayName( ) + ": " + message );
+  }
+  
   public IllegalMetadataAccessException( String message ) {
     super( message );
   }
-
+  
   public IllegalMetadataAccessException( Throwable cause ) {
     super( cause );
   }
-
+  
 }

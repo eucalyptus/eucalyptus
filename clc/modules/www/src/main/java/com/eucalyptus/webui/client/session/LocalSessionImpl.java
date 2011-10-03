@@ -12,7 +12,7 @@ public class LocalSessionImpl implements LocalSession {
   
   private static final String SESSION_COOKIE_NAME = "EUCASID";
   private static final long COOKIE_LIFE_IN_MS = 7 * 24 * 60 * 60 * 1000;// a week
-  private static final boolean USE_SECURE_COOKIE = false;
+  private static final boolean USE_SECURE_COOKIE = true;
   
   private Session session;
   

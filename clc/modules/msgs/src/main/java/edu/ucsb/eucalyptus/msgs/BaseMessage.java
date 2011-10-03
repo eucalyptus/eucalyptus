@@ -50,8 +50,8 @@ public class BaseMessage {
   
   public BaseMessage( BaseMessage copy ) {
     this( );
-    this.effectiveUserId = copy.getEffectiveUserId( );
-    this.correlationId = copy.getCorrelationId( );
+    this.effectiveUserId = copy != null ? copy.getEffectiveUserId( ) : null;
+    this.correlationId = copy != null ? copy.getCorrelationId( ) : null;
   }
   
   public String getCorrelationId( ) {
@@ -82,16 +82,25 @@ public class BaseMessage {
     return this._return;
   }
   
+  @SuppressWarnings( "unchecked" )
+  public <TYPE extends BaseMessage> TYPE markWinning( ) {
+    this._return = true;
+    return ( TYPE ) this;
+  }
+  
+  @SuppressWarnings( "unchecked" )
   public <TYPE extends BaseMessage> TYPE markFailed( ) {
     this._return = false;
     return ( TYPE ) this;
   }
   
+  @SuppressWarnings( "unchecked" )
   public <TYPE extends BaseMessage> TYPE markPrivileged( ) {
     this.effectiveUserId = Principals.systemUser( ).getName( );
     return ( TYPE ) this;
   }
   
+  @SuppressWarnings( "unchecked" )
   public <TYPE extends BaseMessage> TYPE markUnprivileged( ) {
     this.effectiveUserId = this.userId;
     return ( TYPE ) this;

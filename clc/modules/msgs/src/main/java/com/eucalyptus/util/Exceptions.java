@@ -100,7 +100,7 @@ public class Exceptions {
   public static RuntimeException toUndeclared( Throwable cause ) {
     return toUndeclared( cause.getMessage( ), cause );
   }
-
+  
   /**
    * Convert the argument {@link Throwable} into a suitable {@link Exception} (possibly a checked
    * type) either by type casting or wrapping in an {@link UndeclaredThrowableException}.
@@ -203,7 +203,6 @@ public class Exceptions {
       : ex, t != null
       ? t
       : ex );
-    System.exit( -1 );
     return ex;
   }
   
@@ -287,6 +286,10 @@ public class Exceptions {
     filtered.setStackTrace( Exceptions.filterStackTraceElements( t ).toArray( steArrayType ) );
     LOG.error( message, filtered );
     return t;
+  }
+  
+  public static <T extends Throwable> boolean isCausedBy( Throwable ex, final Class<T> class1 ) {
+    return causedBy( ex, class1 ) != null;
   }
   
   @SuppressWarnings( "unchecked" )

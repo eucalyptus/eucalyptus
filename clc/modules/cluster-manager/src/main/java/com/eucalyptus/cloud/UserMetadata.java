@@ -110,7 +110,7 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
   public void setOwner( final OwnerFullName owner ) {
     super.ownerFullNameCached = null;
     this.setOwnerUserId( owner != null
-      ? owner.getUniqueId( )
+      ? owner.getUserId( )
       : null );
     this.setOwnerUserName( owner != null
       ? owner.getUserName( )

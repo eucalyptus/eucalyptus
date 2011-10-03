@@ -612,7 +612,7 @@ int diskutil_grub_files (const char * mnt_pt, const int part, const char * kerne
         if (ramdisk) {
             char buf2 [1024];
             snprintf (buf2, sizeof (buf2), "initrd /boot/%s\n", rfile);
-            strncat (buf, buf2, sizeof (buf));
+            strncat (buf, buf2, sizeof (buf) - 1);
         }    
         if (diskutil_write2file (menu_lst_path, buf)!=OK) {
             ret = ERROR;
@@ -832,7 +832,7 @@ static char * pruntf (boolean log_error, char *format, ...)
     va_start(ap, format);
     vsnprintf(cmd, 1024, format, ap);
 
-    strncat(cmd, " 2>&1", 1024);
+    strncat(cmd, " 2>&1", 1024 - 1);
     output = NULL;
 
     IF=popen(cmd, "r");
