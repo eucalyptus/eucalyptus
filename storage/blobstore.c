@@ -941,7 +941,7 @@ static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const b
     set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
 
     mode_t old_umask = umask (~BLOBSTORE_FILE_PERM);
-    FILE * fp = fopen (path, "w+");
+    FILE * fp = fopen (path, "w");
     umask (old_umask);
     if (fp == NULL) {
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
@@ -1442,7 +1442,7 @@ int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** res
     if (bbs==NULL) {
         if (_blobstore_errno != BLOBSTORE_ERROR_OK) {
             ret = -1;
-            goto unlock;
+            goto free;
         }
     }
     
@@ -1459,6 +1459,7 @@ int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** res
         blockblob_meta * bm = calloc (1, sizeof (blockblob_meta));
         if (bm==NULL) {
             ERR (BLOBSTORE_ERROR_NOMEM, NULL);
+            ret = -1;
             goto free;
         }
 
@@ -1478,12 +1479,16 @@ int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** res
 
     * results = head;
     ret = blobs_matched;
-    goto unlock;
 
  free:
-    regfree (&re);
+    regfree (&re); // free the regular expression
     if (bbs)
-        free_bbs (bbs);
+        free_bbs (bbs); // free the blockblobs LL returned by the search function
+
+    if (ret > 0) // all is well above and we have results
+        goto unlock;
+
+    // there were problems above, so free the results linked list, too
     for (blockblob_meta * bm = head; bm;) {
         blockblob_meta * next = bm->next;
         free (bm);
@@ -1701,7 +1706,7 @@ blockblob * blockblob_open ( blobstore * bs,
             }
         }
 
-        // create a loopback device, if there isn't one already
+        // create a loopback device, if there isn't one already (this may happen whether the blob is new or old)
         char lo_dev [PATH_MAX] = "";
         _err_off(); // do not care if loopback file does not exist
         read_blockblob_metadata_path (BLOCKBLOB_PATH_LOOPBACK, bs, bb->id, lo_dev, sizeof (lo_dev));
