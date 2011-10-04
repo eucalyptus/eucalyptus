@@ -1523,8 +1523,8 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
     return root;
 }
 
-#define FIND_BLOB_TIMEOUT_USEC 100
-#define DELETE_BLOB_TIMEOUT_USEC 100
+#define FIND_BLOB_TIMEOUT_USEC   50000LL // TODO: use 100 or less to induce rare timeouts
+#define DELETE_BLOB_TIMEOUT_USEC 50000LL
 
 static int // returns OK or BLOBSTORE_ERROR_ error codes
 find_or_create_blob ( // either opens a blockblob or creates it
