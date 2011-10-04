@@ -334,9 +334,11 @@ static int close_and_unlock (int fd)
         if (l) { // we found a match
             assert (* next_ptr == l);
             assert (index>=0 && index<BLOBSTORE_MAX_CONCURRENT);
-            if (l->fd_status [index] == 1) { // has not been closed yet
-                { // inner critical section to protect changes to 'l'
-                    pthread_mutex_lock (&(l->mutex)); // grab path-specific mutex
+            boolean did_close = 0;
+
+            { // inner critical section to protect changes to 'l', if any
+                pthread_mutex_lock (&(l->mutex)); // grab path-specific mutex
+                if (l->fd_status [index] == 1) { // has not been closed yet
                     l->fd_status [index] = 0; // set status to 'unused'
                     
                     int open_fds = 0;
@@ -350,9 +352,12 @@ static int close_and_unlock (int fd)
                         close_filelock (l);
                         logprintfl (EUCADEBUG2, "{%u} close_and_unlock: fd=%d closed along with all others\n", (unsigned int)pthread_self(), fd);
                     }
-                    pthread_mutex_unlock (&(l->mutex));
-                } // end of critical section
-
+                    did_close = 1;
+                }
+                pthread_mutex_unlock (&(l->mutex));
+            } // end of critical section
+            
+            if (did_close) {
                 if (--l->refs==0) { // no references to this struct (from waiting threads)
                     * next_ptr = l->next; // remove from LL
                     _locks_list_rem_ctr++;
@@ -367,7 +372,7 @@ static int close_and_unlock (int fd)
                 ERR (BLOBSTORE_ERROR_BADF, "file descriptor already closed");
                 ret = -1;
             }
-        } else {
+        } else { // no match
             ERR (BLOBSTORE_ERROR_BADF, "not an open file descriptor");
             ret = -1;
         }
