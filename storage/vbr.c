@@ -1748,7 +1748,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
         
     } while (ret==BLOBSTORE_ERROR_AGAIN // only timeout error causes us to keep trying
              && ( timeout_usec==0 // indefinitely if there is no timeout at all
-                  || (time_usec()-started)>timeout_usec )); // or until we exceed the timeout
+                  || (time_usec()-started)<timeout_usec )); // or until we exceed the timeout
     
     return ret;
 }
