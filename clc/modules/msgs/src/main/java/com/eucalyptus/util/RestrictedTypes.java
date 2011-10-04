@@ -336,6 +336,14 @@ public class RestrictedTypes {
   }
   
   public static <T extends RestrictedType> Predicate<T> filterPrivileged( ) {
+    return filterPrivileged( false );
+  }
+  
+  /*
+   * Please, ignoreOwningAccount here is necessary. Consult me first before making any changes.
+   *  -- Ye Wen (wenye@eucalyptus.com)
+   */
+  public static <T extends RestrictedType> Predicate<T> filterPrivileged( final boolean ignoreOwningAccount ) {
     return new Predicate<T>( ) {
       
       @Override
@@ -365,9 +373,12 @@ public class RestrictedTypes {
             }
             User requestUser = ctx.getUser( );
             try {
-              Account owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( arg0.getOwner( ).getAccountNumber( ) )
-                ? null
-                : Accounts.lookupAccountByName( arg0.getOwner( ).getAccountName( ) );
+              Account owningAccount = null;
+              if ( !ignoreOwningAccount ) {
+                owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( arg0.getOwner( ).getAccountNumber( ) )
+                  ? null
+                  : Accounts.lookupAccountByName( arg0.getOwner( ).getAccountName( ) );
+              }
               return Permissions.isAuthorized( vendor.value( ), type.value( ), arg0.getDisplayName( ), owningAccount, action, requestUser );
             } catch ( AuthException ex ) {
               return false;
