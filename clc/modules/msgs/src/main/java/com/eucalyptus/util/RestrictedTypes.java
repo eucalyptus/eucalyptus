@@ -240,7 +240,11 @@ public class RestrictedTypes {
   public static <T extends RestrictedType> T doPrivileged( String identifier, Class<T> type ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     return doPrivileged( identifier, ( Function<String, T> ) checkMapByType( type, resourceResolvers ) );
   }
-  
+
+  @SuppressWarnings( "rawtypes" )
+  public static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> resolverFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return doPrivileged( identifier, resolverFunction, false );
+  }
   /**
    * Uses the provided {@code lookupFunction} to resolve the {@code identifier} to the underlying
    * object {@code T} with privileges determined by the current messaging context.
@@ -256,7 +260,7 @@ public class RestrictedTypes {
    * @throws IllegalContextAccessException if the current request context cannot be determined.
    */
   @SuppressWarnings( "rawtypes" )
-  public static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> resolverFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> resolverFunction, boolean ignoreOwningAccount ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     assertThat( "Resolver function must be not null: " + identifier, resolverFunction, notNullValue( ) );
     Context ctx = Contexts.lookup( );
     if ( ctx.hasAdministrativePrivileges( ) ) {
@@ -323,9 +327,12 @@ public class RestrictedTypes {
                                             + rscType, ex );
           }
           
-          Account owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( requestedObject.getOwner( ).getAccountNumber( ) )
-          ? null
-          : Accounts.lookupAccountByName( requestedObject.getOwner( ).getAccountName( ) );
+          Account owningAccount = null;
+          if ( !ignoreOwningAccount ) {
+            owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( requestedObject.getOwner( ).getAccountNumber( ) )
+              ? null
+              : Accounts.lookupAccountByName( requestedObject.getOwner( ).getAccountName( ) );
+          }
           if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, owningAccount, action, requestUser ) ) {
             throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user " + requestUser.getName( ) );
           }
