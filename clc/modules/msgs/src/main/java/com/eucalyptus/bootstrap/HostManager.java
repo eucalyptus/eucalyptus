@@ -461,7 +461,7 @@ public class HostManager {
   public static Future<?> send( final Address dest, final Serializable msg ) {
     final Message outMsg = new Message( dest, null, msg );
     outMsg.putHeader( Protocols.lookupRegisteredId( EmpyreanHeader.class ), new EmpyreanHeader( Topology.epoch( ) ) );
-    StackTraceElement caller = Thread.currentThread( ).getStackTrace( )[1];
+    StackTraceElement caller = Thread.currentThread( ).getStackTrace( )[2];
     LOG.debug( caller.getClassName( ).replaceAll( "^.*\\.", "" ) + "." + caller.getMethodName( ) + ":" + caller.getLineNumber( ) + " sending message to: "
                + dest + " with payload " + msg.toString( ) + " " + outMsg.getHeaders( ) );
     return Threads.lookup( Empyrean.class, HostManager.class ).limitTo( 8 ).submit( new Runnable( ) {
@@ -469,7 +469,7 @@ public class HostManager {
       @Override
       public void run( ) {
         View v = HostManager.getInstance( ).view.getCurrentView( );
-        if ( dest == null && ( v == null || v.getMembers( ).size( ) <= 1 ) ) {
+        if ( v == null || v.getMembers( ).size( ) <= 1 ) {
           return;
         } else {
           try {
