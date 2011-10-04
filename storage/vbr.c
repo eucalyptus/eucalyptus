@@ -1656,10 +1656,9 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
         if (!root->creator) { // sentinel nodes do not have a creator
             do_create = FALSE;
             
-        } else {
-
+        } else { // not a sentinel
             if (root->vbr && root->vbr->type == NC_RESOURCE_EBS)
-                goto create; // EBS artifacts have no disk manifestation and no dependencies, so cut to the chase
+                goto create; // EBS artifacts have no disk manifestation and no dependencies, so skip to creation
 
             // try to open the artifact
             switch (ret = find_or_create_artifact (FIND, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
@@ -1669,14 +1668,14 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 do_deps = FALSE;
                 do_create = FALSE;
                 break;
-            case BLOBSTORE_ERROR_NOENT: // doesn't exist yet => create it
+            case BLOBSTORE_ERROR_NOENT: // doesn't exist yet => ok, create it
                 break; 
             case BLOBSTORE_ERROR_AGAIN: // timed out
-                goto retry;
+                goto retry_or_fail;
                 break;
             default: // all other errors
                 logprintfl (EUCAERROR, "[%s] error: failed to provision artifact %03d|%s (error=%d)\n", root->instanceId, root->seq, root->id, ret);
-                goto retry;
+                goto retry_or_fail;
             }
         }
         
@@ -1689,7 +1688,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                     new_timeout_usec -= time_usec()-started;
                     if (new_timeout_usec < 1) { // timeout exceeded, so bail out of this function
                         ret=BLOBSTORE_ERROR_AGAIN;
-                        goto retry;
+                        goto retry_or_fail;
                     }
                 }
                 switch (ret = art_implement_tree (root->deps[i], work_bs, cache_bs, work_prefix, new_timeout_usec)) {
@@ -1702,10 +1701,10 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                     }
                     break; // out of the switch statement
                 case BLOBSTORE_ERROR_AGAIN: // timed out
-                    goto retry;
+                    goto retry_or_fail;
                 default: // all other errors
                     logprintfl (EUCAERROR, "[%s] error: failed to provision dependency %s for artifact %s (error=%d)\n", root->instanceId, root->deps[i]->id, root->id, ret);
-                    goto retry;
+                    goto retry_or_fail;
                 }
             }
         }
@@ -1720,11 +1719,11 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 ret = BLOBSTORE_ERROR_AGAIN;
                 // fall through
             case BLOBSTORE_ERROR_AGAIN: // timed out (but probably exists)
-                goto retry;
+                goto retry_or_fail;
                 break;
             default: // all other errors
                 logprintfl (EUCAERROR, "[%s] error: failed to allocate artifact %s (error=%d)\n", root->instanceId, root->id, ret);
-                goto retry;
+                goto retry_or_fail;
             }
 
         create:
@@ -1732,15 +1731,18 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
             if (ret != OK) {
                 logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s (error=%d)\n", root->instanceId, root->id, ret);
                 // delete the partially created artifact
-                blockblob_delete (root->bb, DELETE_BLOB_TIMEOUT_USEC);
+                if (blockblob_delete (root->bb, DELETE_BLOB_TIMEOUT_USEC) == -1) {
+                    logprintfl (EUCAWARN, "[%s] warning: failed to remove partially created artifact %s: %d %s\n", 
+                                root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg());
+                }
             } else {
                 if (root->vbr && root->vbr->type != NC_RESOURCE_EBS)
                     update_vbr_with_backing_info (root);
             }
         }
 
-    retry:
-        // close all opened blobs, whether we're trying again or giving up
+    retry_or_fail:
+        // close all opened blobs, whether we're trying again or returning
         for (int i=0; i<num_opened_deps; i++) {
             blockblob_close (root->deps[i]->bb);
             root->deps[i]->bb = 0; // for debugging

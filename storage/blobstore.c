@@ -2066,7 +2066,7 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec )
     }
     blobstore * bs = bb->store;
     int ret = 0;
-    if (blobstore_lock(bs, timeout_usec)==-1) { // lock it so we can traverse it (TODO: move this into creation-only section?)
+    if (blobstore_lock (bs, timeout_usec)==-1) { // lock it so we can traverse it
         ret = -1;
         goto error; // failed to obtain a lock on the blobstore
     }
