@@ -1682,7 +1682,17 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
         
         if (do_deps) { // recursively go over dependencies, if any
             for (int i = 0; i < MAX_ARTIFACT_DEPS && root->deps[i]; i++) {
-                switch (ret = art_implement_tree (root->deps[i], work_bs, cache_bs, work_prefix, 0)) {
+
+                // recalculate the time that remains in the timeout period
+                long long new_timeout_usec = timeout_usec;
+                if (timeout_usec > 0) {
+                    new_timeout_usec -= time_usec()-started;
+                    if (new_timeout_usec < 1) { // timeout exceeded, so bail out of this function
+                        ret=BLOBSTORE_ERROR_AGAIN;
+                        goto retry;
+                    }
+                }
+                switch (ret = art_implement_tree (root->deps[i], work_bs, cache_bs, work_prefix, new_timeout_usec)) {
                 case OK:
                     if (do_create) { // we'll hold the dependency open for the creator
                         num_opened_deps++;
@@ -1736,7 +1746,9 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
             root->deps[i]->bb = 0; // for debugging
         }
         
-    } while (ret==BLOBSTORE_ERROR_AGAIN && (time_usec()-started)>timeout_usec);
+    } while (ret==BLOBSTORE_ERROR_AGAIN // only timeout error causes us to keep trying
+             && ( timeout_usec==0 // indefinitely if there is no timeout at all
+                  || (time_usec()-started)>timeout_usec )); // or until we exceed the timeout
     
     return ret;
 }
