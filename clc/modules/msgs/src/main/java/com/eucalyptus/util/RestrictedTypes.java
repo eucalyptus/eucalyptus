@@ -216,7 +216,7 @@ public class RestrictedTypes {
           PolicyResourceType type = ats.get( PolicyResourceType.class );
           String action = PolicySpec.requestToAction( ctx.getRequest( ) );
           if ( action == null ) {
-            action = vendor.value( ) + ":" + ctx.getRequest( ).getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
+            action = getIamActionByMessageType( ctx.getRequest( ) );
           }
           User requestUser = ctx.getUser( );
           try {
@@ -298,7 +298,7 @@ public class RestrictedTypes {
           PolicyResourceType type = ats.get( PolicyResourceType.class );
           String action = PolicySpec.requestToAction( ctx.getRequest( ) );
           if ( action == null ) {
-            action = vendor.value( ) + ":" + ctx.getRequest( ).getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
+            action = getIamActionByMessageType( ctx.getRequest( ) );
           }
           
           User requestUser = ctx.getUser( );
@@ -369,7 +369,7 @@ public class RestrictedTypes {
             PolicyResourceType type = ats.get( PolicyResourceType.class );
             String action = PolicySpec.requestToAction( ctx.getRequest( ) );
             if ( action == null ) {
-              action = ctx.getRequest( ).getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
+              action = getIamActionByMessageType( ctx.getRequest( ) );
             }
             User requestUser = ctx.getUser( );
             try {
@@ -428,6 +428,13 @@ public class RestrictedTypes {
   
   public static <T> Function<String, T> listAll( Class<T> type ) {
     //TODO:GRZE:WTF FINISH THIS SHIT.
+    return null;
+  }
+  
+  public static String getIamActionByMessageType( BaseMessage request ) {
+    if ( request != null ) {
+      return request.getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
+    }
     return null;
   }
 }
