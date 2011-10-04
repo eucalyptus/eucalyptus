@@ -209,6 +209,7 @@ public class HostManager {
     
     @Override
     public void receive( Message msg ) {
+      LOG.debug( "Received message: " + msg.getSrc( ) + " saying: " + msg.getObject( ) );
       if ( Hosts.localHost( ).getGroupsId( ).equals( msg.getSrc( ) ) ) {
         return;
       } else {
@@ -221,7 +222,6 @@ public class HostManager {
     }
     
     private void onMessage( Message msg ) {
-      LOG.debug( "Received message: " + msg.getSrc( ) + " saying: " + msg.getObject( ) );
       EmpyreanHeader epochHeader = ( EmpyreanHeader ) msg.getHeader( Protocols.lookupRegisteredId( EmpyreanHeader.class ) );
       Integer senderEpoch = epochHeader.getEpoch( );
       int myEpoch = HostManager.epochSeen.get( );
