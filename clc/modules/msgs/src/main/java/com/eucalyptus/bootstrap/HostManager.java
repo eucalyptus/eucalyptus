@@ -115,7 +115,7 @@ public class HostManager {
   private static HostManager         singleton;
   private static final AtomicInteger epochSeen             = new AtomicInteger( 0 );
   private static final long          HOST_ADVERTISE_REMOTE = 15;
-  private static final long          HOST_ADVERTISE_CLOUD  = 8;
+  private static final long          HOST_ADVERTISE_CLOUD  = 3;
   
   private HostManager( ) {
     this.view = new CurrentView( );
