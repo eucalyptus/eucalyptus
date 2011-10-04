@@ -62,51 +62,22 @@
  */
 package com.eucalyptus.ws.server;
 
-import java.util.NoSuchElementException;
-import org.apache.log4j.Logger;
-import org.mule.api.component.JavaComponent;
 import org.mule.api.endpoint.InboundEndpoint;
 import org.mule.api.lifecycle.CreateException;
 import org.mule.api.service.Service;
 import org.mule.api.transport.Connector;
 import org.mule.transport.AbstractMessageReceiver;
 import org.mule.transport.ConnectException;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.ws.util.PipelineRegistry;
 
 public class NioMessageReceiver extends AbstractMessageReceiver {
   
-  private static Logger    LOG = Logger.getLogger( NioMessageReceiver.class );
-  private FilteredPipeline soapPipeline;
-  private FilteredPipeline queryPipeline;
-  
-  @SuppressWarnings( "unchecked" )
   public NioMessageReceiver( Connector connector, Service service, InboundEndpoint endpoint ) throws CreateException {
     super( connector, service, endpoint );
-    Class serviceClass = ( ( JavaComponent ) this.getService( ).getComponent( ) ).getObjectType( );
   }
   
-  public void doConnect( ) throws ConnectException {
-    String path = this.getEndpointURI( ).getPath( );
-    String nameGuess = path.replaceAll( ".*/","" );
-    try {
-      ComponentId compId = ComponentIds.lookup( nameGuess );
-      soapPipeline = queryPipeline = null;
-      if( !PipelineRegistry.getInstance( ).enable( compId ) ) {
-        this.setupPipelines( );
-      }
-    } catch ( NoSuchElementException ex ) {
-      this.setupPipelines( );
-    }
-  }
-
-  private void setupPipelines( ) {
-    soapPipeline = new InternalSoapPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) );
-    queryPipeline = new InternalQueryPipeline( this, this.getService( ).getName( ), this.getEndpointURI( ).getPath( ) );
-    PipelineRegistry.getInstance( ).register( soapPipeline );
-    PipelineRegistry.getInstance( ).register( queryPipeline );
-  }
+  public void doConnect( ) throws ConnectException {}
+  
+  private void setupPipelines( ) {}
   
   public void doStart( ) {}
   
@@ -114,13 +85,6 @@ public class NioMessageReceiver extends AbstractMessageReceiver {
   
   public void doDispose( ) {}
   
-  public void doDisconnect( ) throws ConnectException {
-    if( soapPipeline != null ) {
-      PipelineRegistry.getInstance( ).deregister( soapPipeline );
-    }
-    if( queryPipeline != null ) {
-      PipelineRegistry.getInstance( ).deregister( queryPipeline );
-    }
-  }
+  public void doDisconnect( ) throws ConnectException {}
   
 }

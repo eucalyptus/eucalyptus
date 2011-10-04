@@ -63,6 +63,8 @@
 
 package com.eucalyptus.util;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -75,11 +77,11 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicyAction;
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.PolicyVendor;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.context.Context;
@@ -90,6 +92,7 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.Threads;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -162,108 +165,50 @@ public class RestrictedTypes {
     }
     throw new NoSuchElementException( "Failed to lookup function (@" + Threads.currentStackFrame( 1 ).getMethodName( ) + ") for type: " + type );
   }
-  
-  /**
-   * Uses the provided {@code lookupFunction} to resolve the {@code identifier} to the underlying
-   * object {@code T} with privileges determined by the current messaging context.
-   * 
-   * @param <T> type of object which needs looking up
-   * @param identifier identifier of the desired object
-   * @param lookupFunction class which resolves string identifiers to the underlying object
-   * @return the object corresponding with the given {@code identifier}
-   * @throws AuthException if the user is not authorized
-   * @throws PersistenceException if an error occurred in the underlying retrieval mechanism
-   * @throws NoSuchElementException if the requested {@code identifier} does not exist and the user
-   *           is authorized.
-   * @throws IllegalContextAccessException if the current request context cannot be determined.
-   */
-  @SuppressWarnings( "rawtypes" )
-  public static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> lookupFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
-    Context ctx = Contexts.lookup( );
-    Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
-    LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + lookupFunction.getClass() + " typed as " + Classes.genericsToClasses( lookupFunction ) );
-    List<Class<?>> lookupTypes = Classes.genericsToClasses( lookupFunction );
-    if ( lookupTypes.isEmpty( ) ) {
-      throw new IllegalArgumentException( "Failed to find required generic type for lookup " + lookupFunction.getClass( )
-                                          + " so the policy type for looking up " + identifier + " cannot be determined." );
-    } else {
-      Class<?> rscType;
-      try {
-        rscType = Iterables.find( lookupTypes, new Predicate<Class<?>>( ) {
-          
-          @Override
-          public boolean apply( Class<?> arg0 ) {
-            return RestrictedType.class.isAssignableFrom( arg0 );
-          }
-        } );
-      } catch ( NoSuchElementException ex1 ) {
-        LOG.error( ex1 , ex1 );
-        throw ex1;
-      }
-      Ats ats = Ats.inClassHierarchy( rscType );
-      Ats msgAts = Ats.inClassHierarchy( msgType );
-      if ( !ats.has( PolicyVendor.class ) && !msgAts.has( PolicyVendor.class ) ) {
-        throw new IllegalArgumentException( "Failed to determine policy for looking up identifier " + identifier
-                                            + ": required @PolicyVendor missing in resource type hierarchy " + rscType.getCanonicalName( )
-                                            + " and request type hierarchy " + msgType.getCanonicalName( ) );
-      } else if ( !ats.has( PolicyResourceType.class ) && !msgAts.has( PolicyResourceType.class ) ) {
-        throw new IllegalArgumentException( "Failed to determine policy for looking up identifier " + identifier
-                                            + ": required @PolicyResourceType missing in resource type hierarchy " + rscType.getCanonicalName( )
-                                            + " and request type hierarchy " + msgType.getCanonicalName( ) );
-      } else {
-        PolicyVendor vendor = ats.get( PolicyVendor.class );
-        PolicyResourceType type = ats.get( PolicyResourceType.class );
-        String action = PolicySpec.requestToAction( ctx.getRequest( ) );
-        if ( action == null ) {
-          action = vendor.value( ) + ":" + ctx.getRequest( ).getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
-        }
-        
-        User requestUser = ctx.getUser( );
-        T requestedObject;
-        try {
-          requestedObject = lookupFunction.apply( identifier );
-          if ( requestedObject == null ) {
-            throw new NoSuchElementException( "Failed to lookup requested " + rscType.getCanonicalName( ) + " with id " + identifier + " using "
-                                              + lookupFunction.getClass( ) );
-          }
-        } catch ( NoSuchElementException ex ) {
-          throw ex;
-        } catch ( PersistenceException ex ) {
-          Logs.extreme( ).error( ex, ex );
-          LOG.error( ex );
-          throw ex;
-        } catch ( Exception ex ) {
-          Logs.extreme( ).error( ex, ex );
-          LOG.error( ex );
-          throw new PersistenceException( "Error occurred while attempting to lookup " + identifier + " using lookup: " + lookupFunction.getClass( ) + " typed as "
-                                          + rscType, ex );
-        }
-        
-        Account owningAccount = Accounts.lookupUserById( requestedObject.getOwner( ).getUniqueId( ) ).getAccount( );
-        if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, owningAccount, action, requestUser ) ) {
-          throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user " + requestUser.getName( ) );
-        }
-        return requestedObject;
-      }
-    }
+
+  @SuppressWarnings( { "cast", "unchecked" } )
+  public static <T extends RestrictedType> T allocate( Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return allocate( "", 1L, allocator );
+  }
+
+  @SuppressWarnings( { "cast", "unchecked" } )
+  public static <T extends RestrictedType> T allocate( Long quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return allocate( "", quantity, allocator );
   }
   
-  public static <T extends RestrictedType> Predicate<T> filterPrivileged( ) {
-    return new Predicate<T>( ) {
-      
-      @Override
-      public boolean apply( T arg0 ) {
-        Context ctx = Contexts.lookup( );
-        Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
-        Class<?> rscType = arg0.getClass( );
+  @SuppressWarnings( { "cast", "unchecked" } )
+  public static <T extends RestrictedType> T allocate( String identifier, Long quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    Context ctx = Contexts.lookup( );
+    if ( ctx.hasAdministrativePrivileges( ) ) {
+      return allocator.get( );
+    } else {
+      Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
+      List<Class<?>> lookupTypes = Classes.genericsToClasses( allocator );
+      if ( lookupTypes.isEmpty( ) ) {
+        throw new IllegalArgumentException( "Failed to find required generic type for lookup " + allocator.getClass( )
+                                            + " so the policy type for looking up " + allocator + " cannot be determined." );
+      } else {
+        Class<?> rscType;
+        try {
+          rscType = Iterables.find( lookupTypes, new Predicate<Class<?>>( ) {
+            
+            @Override
+            public boolean apply( Class<?> arg0 ) {
+              return RestrictedType.class.isAssignableFrom( arg0 );
+            }
+          } );
+        } catch ( NoSuchElementException ex1 ) {
+          LOG.error( ex1, ex1 );
+          throw ex1;
+        }
         Ats ats = Ats.inClassHierarchy( rscType );
         Ats msgAts = Ats.inClassHierarchy( msgType );
         if ( !ats.has( PolicyVendor.class ) && !msgAts.has( PolicyVendor.class ) ) {
-          throw new IllegalArgumentException( "Failed to determine policy for looking up type instance " + arg0.toString( )
+          throw new IllegalArgumentException( "Failed to determine policy for allocating type instance " + rscType.getCanonicalName( )
                                               + ": required @PolicyVendor missing in resource type hierarchy " + rscType.getCanonicalName( )
                                               + " and request type hierarchy " + msgType.getCanonicalName( ) );
         } else if ( !ats.has( PolicyResourceType.class ) && !msgAts.has( PolicyResourceType.class ) ) {
-          throw new IllegalArgumentException( "Failed to determine policy for looking up type instance " + arg0.toString( )
+          throw new IllegalArgumentException( "Failed to determine policy for looking up type instance " + rscType.getCanonicalName( )
                                               + ": required @PolicyResourceType missing in resource type hierarchy " + rscType.getCanonicalName( )
                                               + " and request type hierarchy " + msgType.getCanonicalName( ) );
         } else {
@@ -275,10 +220,158 @@ public class RestrictedTypes {
           }
           User requestUser = ctx.getUser( );
           try {
-            Account owningAccount = Accounts.lookupAccountById( arg0.getOwner( ).getAccountNumber( ) );
-            return Permissions.isAuthorized( vendor.value( ), type.value( ), arg0.getDisplayName( ), owningAccount, action, requestUser );
+            if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, requestUser ) ) {
+              throw new AuthException( "Not authorized to create: " + type + " by user: " + ctx.getUserFullName( ) );
+            } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), quantity ) ) {
+              throw new AuthException( "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
+            } else {
+              return allocator.get( );
+            }
           } catch ( AuthException ex ) {
-            return false;
+            throw ex;
+          }
+        }
+      }
+      
+    }
+  }
+  
+  @SuppressWarnings( { "cast", "unchecked" } )
+  public static <T extends RestrictedType> T doPrivileged( String identifier, Class<T> type ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return doPrivileged( identifier, ( Function<String, T> ) checkMapByType( type, resourceResolvers ) );
+  }
+  
+  /**
+   * Uses the provided {@code lookupFunction} to resolve the {@code identifier} to the underlying
+   * object {@code T} with privileges determined by the current messaging context.
+   * 
+   * @param <T> type of object which needs looking up
+   * @param identifier identifier of the desired object
+   * @param resolverFunction class which resolves string identifiers to the underlying object
+   * @return the object corresponding with the given {@code identifier}
+   * @throws AuthException if the user is not authorized
+   * @throws PersistenceException if an error occurred in the underlying retrieval mechanism
+   * @throws NoSuchElementException if the requested {@code identifier} does not exist and the user
+   *           is authorized.
+   * @throws IllegalContextAccessException if the current request context cannot be determined.
+   */
+  @SuppressWarnings( "rawtypes" )
+  public static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> resolverFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    assertThat( "Resolver function must be not null: " + identifier, resolverFunction, notNullValue( ) );
+    Context ctx = Contexts.lookup( );
+    if ( ctx.hasAdministrativePrivileges( ) ) {
+      return resolverFunction.apply( identifier );
+    } else {
+      Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
+      LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + resolverFunction.getClass( ) + " typed as "
+                 + Classes.genericsToClasses( resolverFunction ) );
+      List<Class<?>> lookupTypes = Classes.genericsToClasses( resolverFunction );
+      if ( lookupTypes.isEmpty( ) ) {
+        throw new IllegalArgumentException( "Failed to find required generic type for lookup " + resolverFunction.getClass( )
+                                            + " so the policy type for looking up " + identifier + " cannot be determined." );
+      } else {
+        Class<?> rscType;
+        try {
+          rscType = Iterables.find( lookupTypes, new Predicate<Class<?>>( ) {
+            
+            @Override
+            public boolean apply( Class<?> arg0 ) {
+              return RestrictedType.class.isAssignableFrom( arg0 );
+            }
+          } );
+        } catch ( NoSuchElementException ex1 ) {
+          LOG.error( ex1, ex1 );
+          throw ex1;
+        }
+        Ats ats = Ats.inClassHierarchy( rscType );
+        Ats msgAts = Ats.inClassHierarchy( msgType );
+        if ( !ats.has( PolicyVendor.class ) && !msgAts.has( PolicyVendor.class ) ) {
+          throw new IllegalArgumentException( "Failed to determine policy for looking up identifier " + identifier
+                                              + ": required @PolicyVendor missing in resource type hierarchy " + rscType.getCanonicalName( )
+                                              + " and request type hierarchy " + msgType.getCanonicalName( ) );
+        } else if ( !ats.has( PolicyResourceType.class ) && !msgAts.has( PolicyResourceType.class ) ) {
+          throw new IllegalArgumentException( "Failed to determine policy for looking up identifier " + identifier
+                                              + ": required @PolicyResourceType missing in resource type hierarchy " + rscType.getCanonicalName( )
+                                              + " and request type hierarchy " + msgType.getCanonicalName( ) );
+        } else {
+          PolicyVendor vendor = ats.get( PolicyVendor.class );
+          PolicyResourceType type = ats.get( PolicyResourceType.class );
+          String action = PolicySpec.requestToAction( ctx.getRequest( ) );
+          if ( action == null ) {
+            action = vendor.value( ) + ":" + ctx.getRequest( ).getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
+          }
+          
+          User requestUser = ctx.getUser( );
+          T requestedObject;
+          try {
+            requestedObject = resolverFunction.apply( identifier );
+            if ( requestedObject == null ) {
+              throw new NoSuchElementException( "Failed to lookup requested " + rscType.getCanonicalName( ) + " with id " + identifier + " using "
+                                                + resolverFunction.getClass( ) );
+            }
+          } catch ( NoSuchElementException ex ) {
+            throw ex;
+          } catch ( PersistenceException ex ) {
+            Logs.extreme( ).error( ex, ex );
+            LOG.error( ex );
+            throw ex;
+          } catch ( Exception ex ) {
+            Logs.extreme( ).error( ex, ex );
+            LOG.error( ex );
+            throw new PersistenceException( "Error occurred while attempting to lookup " + identifier + " using lookup: " + resolverFunction.getClass( )
+                                            + " typed as "
+                                            + rscType, ex );
+          }
+          
+          Account owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( requestedObject.getOwner( ).getAccountNumber( ) )
+          ? null
+          : Accounts.lookupAccountByName( requestedObject.getOwner( ).getAccountName( ) );
+          if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, owningAccount, action, requestUser ) ) {
+            throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user " + requestUser.getName( ) );
+          }
+          return requestedObject;
+        }
+      }
+    }
+  }
+  
+  public static <T extends RestrictedType> Predicate<T> filterPrivileged( ) {
+    return new Predicate<T>( ) {
+      
+      @Override
+      public boolean apply( T arg0 ) {
+        Context ctx = Contexts.lookup( );
+        if ( ctx.hasAdministrativePrivileges( ) ) {
+          return true;
+        } else {
+          Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
+          Class<?> rscType = arg0.getClass( );
+          Ats ats = Ats.inClassHierarchy( rscType );
+          Ats msgAts = Ats.inClassHierarchy( msgType );
+          if ( !ats.has( PolicyVendor.class ) && !msgAts.has( PolicyVendor.class ) ) {
+            throw new IllegalArgumentException( "Failed to determine policy for looking up type instance " + arg0.toString( )
+                                                + ": required @PolicyVendor missing in resource type hierarchy " + rscType.getCanonicalName( )
+                                                + " and request type hierarchy " + msgType.getCanonicalName( ) );
+          } else if ( !ats.has( PolicyResourceType.class ) && !msgAts.has( PolicyResourceType.class ) ) {
+            throw new IllegalArgumentException( "Failed to determine policy for looking up type instance " + arg0.toString( )
+                                                + ": required @PolicyResourceType missing in resource type hierarchy " + rscType.getCanonicalName( )
+                                                + " and request type hierarchy " + msgType.getCanonicalName( ) );
+          } else {
+            PolicyVendor vendor = ats.get( PolicyVendor.class );
+            PolicyResourceType type = ats.get( PolicyResourceType.class );
+            String action = PolicySpec.requestToAction( ctx.getRequest( ) );
+            if ( action == null ) {
+              action = vendor.value( ) + ":" + ctx.getRequest( ).getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
+            }
+            User requestUser = ctx.getUser( );
+            try {
+              Account owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( arg0.getOwner( ).getAccountNumber( ) )
+                ? null
+                : Accounts.lookupAccountByName( arg0.getOwner( ).getAccountName( ) );
+              return Permissions.isAuthorized( vendor.value( ), type.value( ), arg0.getDisplayName( ), owningAccount, action, requestUser );
+            } catch ( AuthException ex ) {
+              return false;
+            }
           }
         }
       }
@@ -286,91 +379,29 @@ public class RestrictedTypes {
     };
   }
   
-  public static boolean checkPrivilege( BaseMessage request, String vendor, String resourceType, String resourceId, FullName resourceOwner ) {
-    Context ctx = Contexts.lookup( );
-    String action = PolicySpec.requestToAction( request );
-    User requestUser = ctx.getUser( );
-    Account account = null;
-    try {
-      account = Accounts.lookupUserById( resourceOwner.getUniqueId( ) ).getAccount( );
-    } catch ( AuthException e ) {
-      LOG.error( e, e );
-      return false;
-    }
-    return ( ctx.hasAdministrativePrivileges( ) || Permissions.isAuthorized( vendor, resourceType, resourceId, account, action, requestUser ) );
-  }
-  
-  private static boolean isContextAuthorized( String identifier ) {
-    String resourceName = ( identifier == null
-      ? ""
-      : identifier );
-    Context ctx = Contexts.lookup( );
-    if ( ctx.hasAdministrativePrivileges( ) ) {
-      return true;
-    } else {
-      BaseMessage msg = ctx.getRequest( );
-      Ats ats = Ats.inClassHierarchy( msg );
-      
-      if ( ats.has( PolicyVendor.class ) && ats.has( PolicyAction.class ) && ats.has( PolicyResourceType.class ) ) {
-        PolicyVendor vendor = ats.get( PolicyVendor.class );
-        PolicyResourceType resourceType = ats.get( PolicyResourceType.class );
-        PolicyAction action = ats.get( PolicyAction.class );
-        return Permissions.isAuthorized( vendor.value( ), resourceType.value( ), "", ctx.getAccount( ), action.action( ), ctx.getUser( ) );
-      } else if ( !ats.has( PolicyResourceType.class ) ) {
-        String err = "Malformed message definition:  missing @PolicyResourceType in request type hierarchy: " + msg.getClass( ).getCanonicalName( );
-        LOG.error( err );
-        throw new RuntimeException( err );
-      } else if ( !ats.has( PolicyVendor.class ) ) {
-        String err = "Malformed message definition:  missing @PolicyVendor in request type hierarchy: " + msg.getClass( ).getCanonicalName( );
-        LOG.error( err );
-        throw new RuntimeException( err );
-      } else if ( ats.has( PolicyVendor.class ) && ats.has( PolicyResourceType.class ) ) {
-        PolicyVendor vendor = ats.get( PolicyVendor.class );
-        PolicyResourceType resourceType = ats.get( PolicyResourceType.class );
-      } else if ( ats.has( PolicyVendor.class ) ) {
-        PolicyVendor vendor = ats.get( PolicyVendor.class );
-      } else if ( ats.has( PolicyAction.class ) ) {} else if ( ats.has( PolicyResourceType.class ) ) {} else {
-        return false;
-      }
-    }
-    return false;
-  }
-  
-  private static String findPolicyAction( Object rscType ) {
-    return findPolicyAction( Classes.typeOf( rscType ) );
-  }
-  
-  private static String findPolicyAction( Class<RestrictedType<?>> rscType ) {
-    Context ctx = Contexts.lookup( );
-    Ats ats = Ats.inClassHierarchy( rscType );
-    PolicyVendor vendor = ats.get( PolicyVendor.class );
-    PolicyResourceType type = ats.get( PolicyResourceType.class );
-    String action = PolicySpec.requestToAction( ctx.getRequest( ) );
-    if ( action == null ) {
-      action = vendor.value( ) + ":" + ctx.getRequest( ).getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
-    }
-    return action;
-  }
-  
   public static class ResourceMetricFunctionDiscovery extends ServiceJarDiscovery {
     
-    @SuppressWarnings( "synthetic-access" )
+    public ResourceMetricFunctionDiscovery( ) {
+      super( );
+    }
+    
+    @SuppressWarnings( { "synthetic-access", "unchecked" } )
     @Override
     public boolean processClass( Class candidate ) throws Exception {
       if ( Ats.from( candidate ).has( UsageMetricFunction.class ) && Function.class.isAssignableFrom( candidate ) ) {
         UsageMetricFunction measures = Ats.from( candidate ).get( UsageMetricFunction.class );
-        Class measuredType = measures.value( );
+        Class<?> measuredType = measures.value( );
         RestrictedTypes.usageMetricFunctions.put( measuredType, ( Function<OwnerFullName, Long> ) Classes.newInstance( candidate ) );
         return true;
       } else if ( Ats.from( candidate ).has( QuantityMetricFunction.class ) && Function.class.isAssignableFrom( candidate ) ) {
         QuantityMetricFunction measures = Ats.from( candidate ).get( QuantityMetricFunction.class );
-        Class measuredType = measures.value( );
+        Class<?> measuredType = measures.value( );
         RestrictedTypes.quantityMetricFunctions.put( measuredType, ( Function<OwnerFullName, Long> ) Classes.newInstance( candidate ) );
         return true;
       } else if ( Ats.from( candidate ).has( Resolver.class ) && Function.class.isAssignableFrom( candidate ) ) {
-        QuantityMetricFunction measures = Ats.from( candidate ).get( QuantityMetricFunction.class );
-        Class measuredType = measures.value( );
-        RestrictedTypes.resourceResolvers.put( measuredType, ( Function<String, RestrictedType<?>> ) Classes.newInstance( candidate ) );
+        Resolver resolver = Ats.from( candidate ).get( Resolver.class );
+        Class<?> resolverFunction = resolver.value( );
+        RestrictedTypes.resourceResolvers.put( resolverFunction, ( Function<String, RestrictedType<?>> ) Classes.newInstance( candidate ) );
         return true;
       } else {
         return false;

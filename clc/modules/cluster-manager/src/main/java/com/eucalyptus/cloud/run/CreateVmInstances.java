@@ -63,43 +63,37 @@
  */
 package com.eucalyptus.cloud.run;
 
+import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.vm.VmInstance;
+import com.google.common.base.Supplier;
+import com.google.common.collect.Lists;
 
 public class CreateVmInstances {
   private static Logger LOG = Logger.getLogger( CreateVmInstances.class );
   
   public Allocation allocate( final Allocation allocInfo ) throws Exception {
-    final long quantity = allocInfo.getAllocationTokens( ).size( );
-    final Context ctx = allocInfo.getContext( );
-    final User requestUser = ctx.getUser( );
-    final UserFullName userFullName = ctx.getUserFullName( );
-    final String action = PolicySpec.requestToAction( allocInfo.getRequest( ) );
     final String vmType = allocInfo.getVmType( ).getName( );
-    // Allocate VmType instances
-    if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_VMTYPE, vmType, action, requestUser, 1L ) ) {
-      throw new EucalyptusCloudException( "Quota exceeded in allocating vm type " + vmType + " for " + requestUser.getName( ) );
-    }
-    // Allocate vm instances
-    if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE, "", action, requestUser, quantity ) ) {
-      throw new EucalyptusCloudException( "Quota exceeded in allocating " + quantity + " vm instances for " + requestUser.getName( ) );
-    }
+    RestrictedTypes.allocate( vmType, Long.valueOf( allocInfo.getAllocationTokens( ).size( ) ), allocInfo.getVmType( ).allocator( ) );
+    List<VmInstance> vms = Lists.newArrayList( );
     for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-      try {
-        VmInstance vmInst = VmInstance.Create.INSTANCE.apply( token );
-        token.setVmInstance( vmInst );
-      } catch ( Exception ex ) {
-        LOG.error( ex , ex );
-        throw new RuntimeException( ex );
-      }
+      Supplier<VmInstance> allocator = new Supplier<VmInstance>( ) {
+        
+        @Override
+        public VmInstance get( ) {
+          try {
+            return VmInstance.Create.INSTANCE.apply( token );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+            throw new RuntimeException( ex );
+          }
+        }
+      };
+      VmInstance vmInst = RestrictedTypes.allocate( allocator );
+      token.setVmInstance( vmInst );
     }
     return allocInfo;
   }

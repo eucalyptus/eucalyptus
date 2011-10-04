@@ -10,7 +10,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.HashSet;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.ArrayListMultimap;
 
 import javax.persistence.Column;
 import javax.persistence.Id;
@@ -56,13 +59,11 @@ import edu.ucsb.eucalyptus.cloud.entities.ZoneInfo;
 
 // Images
 import com.eucalyptus.images.ImageInfo;
-import com.eucalyptus.images.LaunchPermission;
-import com.eucalyptus.images.ProductCode;
 import com.eucalyptus.images.ImageUtil;
 import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
-import com.eucalyptus.cloud.Image;
+import com.eucalyptus.cloud.ImageMetadata;
 
 // Storage
 import edu.ucsb.eucalyptus.cloud.entities.AOEMetaInfo;
@@ -95,11 +96,9 @@ import edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo;
 import edu.ucsb.eucalyptus.cloud.entities.WalrusStatsInfo;
 
 // General -> Cloud
-import com.eucalyptus.network.IpRange;
 import com.eucalyptus.network.NetworkPeer;
 import com.eucalyptus.network.NetworkRule;
 import com.eucalyptus.network.NetworkGroup;
-import com.eucalyptus.network.NetworkGroupUtil;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.vm.VmType;
 
@@ -485,58 +484,57 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                 def bundleSize = null;
                 def ckSum = null;
                 def ckSumType = null;
-                def platform = Image.Platform.valueOf("linux");
+                def platform = ImageMetadata.Platform.valueOf("linux");
                 def cachedImg = connMap['eucalyptus_walrus'].firstRow("""SELECT manifest_name,size sz FROM ImageCache 
                                                       WHERE bucket_name=? AND manifest_name=?""", path);
                 if (cachedImg != null)
                     imgSize = cachedImg.sz.toInteger();
                 if (img.image_platform != null)
-                    platform = Image.Platform.valueOf(img.image_platform);
+                    platform = ImageMetadata.Platform.valueOf(img.image_platform);
                 def ii = null;
                 switch ( img.image_type ) {
                     case "kernel":
                         ii = new KernelImageInfo( ufn, img.image_name, img.image_name, 
                                                  "No Description", imgSize, 
-                                                 Image.Architecture.valueOf(img.image_arch), platform,
+                                                 ImageMetadata.Architecture.valueOf(img.image_arch), platform,
                                                  img.image_path, bundleSize, ckSum, ckSumType );
                         break;
                     case "ramdisk":
                         ii = new RamdiskImageInfo( ufn, img.image_name, img.image_name,
                                                   "No Description", imgSize, 
-                                                  Image.Architecture.valueOf(img.image_arch), platform,
+                                                  ImageMetadata.Architecture.valueOf(img.image_arch), platform,
                                                   img.image_path, bundleSize, ckSum, ckSumType );
                         break;
                     case "machine":
                         ii = new MachineImageInfo( ufn, img.image_name, img.image_name,
                                                   "No Description", imgSize, 
-                                                  Image.Architecture.valueOf(img.image_arch), platform,
+                                                  ImageMetadata.Architecture.valueOf(img.image_arch), platform,
                                                   img.image_path, bundleSize, ckSum, ckSumType,
                                                   img.image_kernel_id, img.image_ramdisk_id );
                         break;
                 }
                 initMetaClass(ii, ii.class);
                 ii.setImagePublic(img.image_is_public);
-                ii.setImageType(Image.Type.valueOf(img.image_type));
+                ii.setImageType(ImageMetadata.Type.valueOf(img.image_type));
                 ii.setSignature(img.image_signature);
-                ii.setState( Image.State.valueOf(img.image_availability));
+                ii.setState( ImageMetadata.State.valueOf(img.image_availability));
                 dbGen.add(ii);
                 dbGen.commit();
                 connMap['eucalyptus_general'].rows("""SELECT image_product_code_value FROM image_product_code
                                  JOIN image_has_product_codes 
                                  ON image_product_code.image_product_code_id=image_has_product_codes.image_product_code_id
                                  WHERE image_id=?""", [ img.image_id ]).each { prodCode ->
-                    EntityWrapper<ProductCode> dbPC = EntityWrapper.get(ProductCode.class);
-                    dbPC.add(new ProductCode(ii, prodCode.image_product_code_value));
-                    dbPC.commit();
+                    ii.addProductCode(prodCode.image_product_code_value);
                 }
+                
+                List<String> accountIds = new ArrayList<String>();
                 connMap['eucalyptus_general'].rows("""SELECT * FROM image_authorization
                                  JOIN image_has_user_auth
                                  ON image_authorization.image_auth_id=image_has_user_auth.image_auth_id
                                  WHERE image_id=?""", [ img.image_id ]).each { imgAuth ->
-                    EntityWrapper<LaunchPermission> dbLP = EntityWrapper.get(LaunchPermission.class);
-                    dbLP.add(new LaunchPermission(ii, imgAuth.image_auth_name));
-                    dbLP.commit();
+                    accountIds.add(accountIdMap.get(safeUserMap.get(imgAuth.image_auth_name)))
                 }
+                ii.addPermissions(accountIds);
             }
 
             connMap['eucalyptus_images'].rows("SELECT * FROM Volume WHERE username=?", [ it.auth_user_name ]).each { vol ->
@@ -714,11 +712,6 @@ class upgrade_20_30 extends AbstractUpgradeScript {
     }
 
     public boolean upgradeNetwork() {
-        /* TODO: The system admin may not have a default network rules group.
-         * This means that no images can be launched from this account.
-         * Should a "default" one be created?
-         */ 
-
         connMap['eucalyptus_general'].rows('SELECT * FROM metadata_network_group').each {
             EntityWrapper<NetworkGroup> dbGen = EntityWrapper.get(NetworkGroup.class);
             try {
@@ -726,44 +719,35 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                     return;
                 }
                 UserFullName ufn = UserFullName.getInstance(userIdMap.get(it.metadata_user_name));
-                def uniqueName = "${ it.metadata_user_name }_${it.metadata_display_name}";
-                if ( it.metadata_user_name == 'admin' && it.metadata_display_name == 'default' ) {
-                    uniqueName = it.metadata_display_name;
-                }
-                def rulesGroup = new NetworkGroup(ufn, uniqueName, it.metadata_network_group_description);
+                def rulesGroup = new NetworkGroup(ufn, it.metadata_display_name, it.metadata_network_group_description);
                 initMetaClass(rulesGroup, rulesGroup.class);
-                rulesGroup.setDisplayName(uniqueName);
+                rulesGroup.setDisplayName(it.metadata_display_name);
                 LOG.debug("Adding network rules for ${ it.metadata_user_name }/${it.metadata_display_name}");
                 connMap['eucalyptus_general'].rows("""SELECT r.* 
                                  FROM metadata_network_group_has_rules 
                                  LEFT OUTER JOIN metadata_network_rule r 
                                  ON r.metadata_network_rule_id=metadata_network_group_has_rules.metadata_network_rule_id 
                                  WHERE metadata_network_group_has_rules.id=?""", [ it.id ]).each { rule ->
-                    NetworkRule networkRule = new NetworkRule(rule.metadata_network_rule_protocol, 
-                                                              rule.metadata_network_rule_low_port, 
-                                                              rule.metadata_network_rule_high_port);
-                    initMetaClass(networkRule, networkRule.class);
-                    connMap['eucalyptus_general'].rows("""SELECT ip.* 
+                    Collection<String> ipRanges = connMap['eucalyptus_general'].rows("""SELECT ip.* 
                                      FROM metadata_network_rule_has_ip_range 
                                      LEFT OUTER JOIN metadata_network_rule_ip_range ip
                                      ON ip.metadata_network_rule_ip_range_id=metadata_network_rule_has_ip_range.metadata_network_rule_ip_range_id 
-                                     WHERE metadata_network_rule_has_ip_range.metadata_network_rule_id=?""", [ rule.metadata_network_rule_id ]).each { iprange ->
-                        IpRange ipRange = new IpRange(iprange.metadata_network_rule_ip_range_value);
-                        initMetaClass(ipRange, ipRange.class);
-                        networkRule.getIpRanges().add(ipRange);
-                        LOG.debug("IP Range: ${iprange.metadata_network_rule_ip_range_value}");
-                    }
+                                     WHERE metadata_network_rule_has_ip_range.metadata_network_rule_id=?""", [ rule.metadata_network_rule_id ]).collect { iprange -> iprange.metadata_network_rule_ip_range_value; }
+                    def peers = ArrayListMultimap.create() as Multimap<String, String>;
                     connMap['eucalyptus_general'].rows("""SELECT peer.* 
                                      FROM metadata_network_rule_has_peer_network 
                                      LEFT OUTER JOIN network_rule_peer_network peer
                                      ON peer.network_rule_peer_network_id=metadata_network_rule_has_peer_network.metadata_network_rule_peer_network_id 
                                      WHERE metadata_network_rule_has_peer_network.metadata_network_rule_id=?""", [ rule.metadata_network_rule_id ]).each { peer ->
-                        NetworkPeer networkPeer = new NetworkPeer(peer.network_rule_peer_network_user_query_key, peer.network_rule_peer_network_user_group);
-                        initMetaClass(networkPeer, networkPeer.class);
-                        networkRule.getNetworkPeers().add(networkPeer);
-
+                        peers.put(peer.network_rule_peer_network_user_query_key, peer.network_rule_peer_network_user_group);
                         LOG.debug("Peer: " + networkPeer);
                     }
+                    NetworkRule networkRule = NetworkRule.create(rule.metadata_network_rule_protocol, 
+                                                              rule.metadata_network_rule_low_port, 
+                                                              rule.metadata_network_rule_high_port,
+                                                              peers as Multimap<String, String>,
+                                                              ipRanges as Collection<String>);
+                    initMetaClass(networkRule, networkRule.class);
                     rulesGroup.getNetworkRules().add(networkRule);
                 } 
 
@@ -895,7 +879,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
                  dbPart.commit();
                  LOG.debug("Adding Cluster ${ it.config_component_name }");
                  // First argument is Partition name
-                 ClusterConfiguration clcfg = new ClusterConfiguration(it.config_component_name, it.config_component_name, it.config_component_hostname, it.config_component_port);
+                 ClusterConfiguration clcfg = new ClusterConfiguration(it.config_component_name, it.config_component_name + "_cc", it.config_component_hostname, it.config_component_port);
                  dbCluster.add(clcfg);
                  dbCluster.commit();
             } finally {
@@ -905,7 +889,7 @@ class upgrade_20_30 extends AbstractUpgradeScript {
         connMap['eucalyptus_config'].rows('SELECT * FROM config_sc').each{
             EntityWrapper<StorageControllerConfiguration> dbSC = EntityWrapper.get(StorageControllerConfiguration.class);
             // First argument is partition name
-            StorageControllerConfiguration sc = new StorageControllerConfiguration(it.config_component_name, it.config_component_name, it.config_component_hostname, it.config_component_port);
+            StorageControllerConfiguration sc = new StorageControllerConfiguration(it.config_component_name, it.config_component_name + "_sc", it.config_component_hostname, it.config_component_port);
             if (it.config_component_port == -1 || Internets.testLocal(it.config_component_hostname)) {
                 System.setProperty('euca.storage.name', it.config_component_name);
             }

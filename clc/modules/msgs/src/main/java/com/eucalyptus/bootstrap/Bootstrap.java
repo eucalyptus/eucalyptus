@@ -442,6 +442,20 @@ public class Bootstrap {
     return isFinished( ) && !isShuttingDown( );
   }
   
+  public static void awaitFinished( ) {
+    awaitFinished( Long.MAX_VALUE );
+  }
+  
+  public static void awaitFinished( Long millis ) {
+    try {
+      while ( !finished && ( millis -= 50 ) > 0 ) {
+        TimeUnit.MILLISECONDS.sleep( 50 );
+      }
+    } catch ( InterruptedException ex1 ) {
+      Thread.currentThread( ).interrupt( );
+    }
+  }
+  
   public static Boolean isFinished( ) {
     return finished;
   }
@@ -552,12 +566,12 @@ public class Bootstrap {
         } catch ( Exception ex ) {
           Logs.extreme( ).error( ex );
         }
-        try {
-          TimeUnit.MILLISECONDS.sleep( 50 );
-        } catch ( InterruptedException ex ) {
-          Thread.currentThread( ).interrupt( );
-          throw new RuntimeException( ex );
-        }
+//        try {
+//          TimeUnit.MILLISECONDS.sleep( 50 );
+//        } catch ( InterruptedException ex ) {
+//          Thread.currentThread( ).interrupt( );
+//          throw new RuntimeException( ex );
+//        }
       }
     }
     

@@ -945,7 +945,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
       logprintfl(EUCAERROR, "doAssignAddress(): vnetReassignAddress() failed\n");
       ret = 1;
     }
-
+    
     sem_mypost(VNET);
   }
   
@@ -1793,7 +1793,7 @@ int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
   memcpy(&(dst->ncnet), &(src->ncnet), sizeof(netConfig));
 
   for (i=0; i < src->groupNamesSize && i < 64; i++) {
-    snprintf(dst->groupNames[i], 32, "%s", src->groupNames[i]);
+    snprintf(dst->groupNames[i], 64, "%s", src->groupNames[i]);
   }
 
   memcpy(dst->volumes, src->volumes, sizeof(ncVolume) * EUCA_MAX_VOLUMES);
@@ -3430,7 +3430,6 @@ int init_config(void) {
       if (!localIp) {
 	logprintfl(EUCAWARN, "init_config(): VNET_LOCALIP not defined, will attempt to auto-discover (consider setting this explicitly if tunnelling does not function properly.)\n");
       }
-      //      cloudIp = configFileValue("VNET_CLOUDIP");
 
       if (!pubSubnet || !pubSubnetMask || !pubDNS || !numaddrs) {
 	logprintfl(EUCAFATAL,"init_config(): in 'MANAGED' or 'MANAGED-NOVLAN' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_ADDRSPERNET, and VNET_DNS'\n");
@@ -4252,7 +4251,7 @@ int free_instanceNetwork(char *mac, int vlan, int force, int dolock) {
   return(0);
 }
 
-int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *accountId, char *state, char *ccState, time_t ts, char *reservationId, netConfig *ccnet, netConfig *ncnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform, char *bundleTaskStateName, char groupNames[][32], ncVolume *volumes, int volumesSize) {
+int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char *ownerId, char *accountId, char *state, char *ccState, time_t ts, char *reservationId, netConfig *ccnet, netConfig *ncnet, virtualMachine *ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform, char *bundleTaskStateName, char groupNames[][64], ncVolume *volumes, int volumesSize) {
   if (out != NULL) {
     bzero(out, sizeof(ccInstance));
     if (id) safe_strncpy(out->instanceId, id, 16);
@@ -4281,7 +4280,7 @@ int allocate_ccInstance(ccInstance *out, char *id, char *amiId, char *kernelId, 
       int i;
       for (i=0; i<64; i++) {
 	if (groupNames[i]) {
-	  safe_strncpy(out->groupNames[i], groupNames[i], 32);
+	  safe_strncpy(out->groupNames[i], groupNames[i], 64);
 	}
       }
     }
@@ -4400,7 +4399,7 @@ void print_ccInstance(char *tag, ccInstance *in) {
   
   for (i=0; i<64; i++) {
     if (in->groupNames[i][0] != '\0') {
-      strncat(groupbuf, in->groupNames[i], 32);
+      strncat(groupbuf, in->groupNames[i], 64);
       strncat(groupbuf, " ", 1);
     }
   }

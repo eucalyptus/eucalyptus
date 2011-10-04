@@ -28,6 +28,8 @@ public class VmTypeViewImpl extends Composite implements VmTypeView {
   @UiField
   LayoutPanel tablePanel;
   
+  private SingleSelectionModel<SearchResultRow> selectionModel;
+  
   private SearchResultTable table;
   
   private Presenter presenter;
@@ -38,7 +40,7 @@ public class VmTypeViewImpl extends Composite implements VmTypeView {
 
   public void initializeTable( int pageSize,  ArrayList<SearchResultFieldDesc> fieldDescs ) {
     tablePanel.clear( );
-    final SingleSelectionModel<SearchResultRow> selectionModel = new SingleSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );
+    selectionModel = new SingleSelectionModel<SearchResultRow>( SearchResultRow.KEY_PROVIDER );
     selectionModel.addSelectionChangeHandler( new Handler( ) {
       @Override
       public void onSelectionChange( SelectionChangeEvent event ) {
@@ -69,6 +71,11 @@ public class VmTypeViewImpl extends Composite implements VmTypeView {
   @Override
   public void setPresenter( Presenter presenter ) {
     this.presenter = presenter;    
+  }
+
+  @Override
+  public void clearSelection( ) {
+    this.selectionModel.setSelected( this.selectionModel.getSelectedObject( ), false );
   }
   
 }

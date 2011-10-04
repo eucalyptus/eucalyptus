@@ -64,14 +64,14 @@
 package com.eucalyptus.cloud.run;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
+import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
@@ -84,17 +84,20 @@ import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Context;
+import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.Emis.BootableSet;
+import com.eucalyptus.images.ImageInfo;
+import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Joiner;
-import com.google.common.collect.Iterables;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -104,14 +107,14 @@ public class VerifyMetadata {
   private static Logger LOG = Logger.getLogger( VerifyMetadata.class );
   
   interface MetadataVerifier {
-    public abstract boolean apply( Allocation allocInfo ) throws MetadataException;
+    public abstract boolean apply( Allocation allocInfo ) throws MetadataException, AuthException;
   }
   
   private static final ArrayList<? extends MetadataVerifier> verifiers = Lists.newArrayList( VmTypeVerifier.INSTANCE, PartitionVerifier.INSTANCE,
                                                                                                 ImageVerifier.INSTANCE, KeyPairVerifier.INSTANCE,
                                                                                                 NetworkGroupVerifier.INSTANCE );
   
-  public static Allocation handle( RunInstancesType request ) throws MetadataException {
+  public static Allocation handle( RunInstancesType request ) throws MetadataException, AuthException {
     Allocation alloc = Allocations.begin( request );
     for ( MetadataVerifier v : verifiers ) {
       v.apply( alloc );
@@ -165,7 +168,7 @@ public class VerifyMetadata {
     INSTANCE;
     
     @Override
-    public boolean apply( Allocation allocInfo ) throws MetadataException {
+    public boolean apply( Allocation allocInfo ) throws MetadataException, AuthException {
       RunInstancesType msg = allocInfo.getRequest( );
       String imageId = msg.getImageId( );
       VmType vmType = allocInfo.getVmType( );
@@ -173,6 +176,14 @@ public class VerifyMetadata {
       try {
         BootableSet bootSet = Emis.newBootableSet( vmType, partition, imageId );
         allocInfo.setBootableSet( bootSet );
+        
+        // Add (1024L * 1024L * 10) to handle NTFS min requirements.
+        if ( bootSet.getMachine( ).getImageSizeBytes( ) > ( (1024L * 1024L * 1024L * vmType.getDisk( ) ) + (1024L * 1024L * 10) )) {
+          throw new VerificationException( "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
+                                           " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
+                                           " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) + " size " + vmType.getDisk( )
+                                           + " GB." );
+        }
       } catch ( AuthException ex ) {
         LOG.error( ex );
         throw new VerificationException( ex );
@@ -200,7 +211,7 @@ public class VerifyMetadata {
       Context ctx = allocInfo.getContext( );
       RunInstancesType request = allocInfo.getRequest( );
       String keyName = request.getKeyName( );
-      SshKeyPair key = KeyPairs.lookup( ctx.getUserFullName( ), keyName );
+      SshKeyPair key = KeyPairs.lookup( ctx.getUserFullName( ).asAccountFullName( ), keyName );
       if ( !ctx.hasAdministrativePrivileges( ) && !RestrictedTypes.filterPrivileged( ).apply( key ) ) {
         throw new IllegalMetadataAccessException( "Not authorized to use keypair " + keyName + " by " + ctx.getUser( ).getName( ) );
       }
@@ -215,7 +226,7 @@ public class VerifyMetadata {
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
       Context ctx = allocInfo.getContext( );
-      NetworkGroups.lookup( ctx.getUserFullName( ), NetworkGroups.defaultNetworkName( ) );
+      NetworkGroups.lookup( ctx.getUserFullName( ).asAccountFullName( ), NetworkGroups.defaultNetworkName( ) );
       
       Set<String> networkNames = Sets.newHashSet( allocInfo.getRequest( ).getGroupSet( ) );
       if ( networkNames.isEmpty( ) ) {
@@ -224,7 +235,7 @@ public class VerifyMetadata {
       
       Map<String, NetworkGroup> networkRuleGroups = Maps.newHashMap( );
       for ( String groupName : networkNames ) {
-        NetworkGroup group = NetworkGroups.lookup( ctx.getUserFullName( ), groupName );
+        NetworkGroup group = NetworkGroups.lookup( ctx.getUserFullName( ).asAccountFullName( ), groupName );
         if ( !ctx.hasAdministrativePrivileges( ) && !RestrictedTypes.filterPrivileged( ).apply( group ) ) {
           throw new IllegalMetadataAccessException( "Not authorized to use network group " + groupName + " for " + ctx.getUser( ).getName( ) );
         }

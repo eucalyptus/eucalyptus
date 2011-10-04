@@ -75,9 +75,9 @@ import org.xbill.DNS.RRset;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.SOARecord;
 import org.xbill.DNS.TextParseException;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class TransientZone extends Zone {
@@ -168,7 +168,7 @@ public class TransientZone extends Zone {
           VmInstances.lookupByPublicIp( ipCandidate );
         } catch ( Exception e ) {
           try {
-            VmInstances.lookupByInstanceIp( ipCandidate );
+            VmInstances.lookupByPrivateIp( ipCandidate );
           } catch ( Exception e1 ) {
             return super.findRecords( name, type );
           }
@@ -201,7 +201,7 @@ public class TransientZone extends Zone {
 	      target = new Name(instance.getPublicDnsName() + ".");
 	    } catch ( Exception e ) {
 	      try {
-	        VmInstance instance = VmInstances.lookupByInstanceIp( ipCandidate );
+	        VmInstance instance = VmInstances.lookupByPrivateIp( ipCandidate );
 	        target = new Name(instance.getPrivateDnsName() + ".");
 	      } catch ( Exception e1 ) {
 	        return super.findRecords( name, type );

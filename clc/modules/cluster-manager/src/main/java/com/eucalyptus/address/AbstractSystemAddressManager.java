@@ -8,26 +8,27 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterState;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstance.VmState;
-import com.eucalyptus.cluster.VmInstance.VmStateSet;
 import com.eucalyptus.cluster.callback.UnassignAddressCallback;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.Partition;
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstance.VmStateSet;
+import com.eucalyptus.vm.VmInstances;
+import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
 import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 
@@ -54,7 +55,7 @@ public abstract class AbstractSystemAddressManager {
     orphans.put( address, orphanCount + 1 );
     EventRecord.caller( ClusterState.class, EventType.ADDRESS_STATE,
                         "Updated orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).debug( );
-    if ( orphanCount > AddressingConfiguration.ADDRESS_ORPHAN_TICKS ) {
+    if ( orphanCount > AddressingConfiguration.getInstance( ).getMaxKillOrphans( ) ) {
       EventRecord.caller( ClusterState.class, EventType.ADDRESS_STATE,
                           "Unassigning orphaned public ip address: " + LogUtil.dumpObject( address ) + " count=" + orphanCount ).warn( );
       try {
@@ -70,7 +71,8 @@ public abstract class AbstractSystemAddressManager {
   }
   
   public Address allocateNext( final OwnerFullName userId ) throws NotEnoughResourcesException {
-    final Address addr = Addresses.getInstance( ).enableFirst( ).allocate( userId );
+    Predicate<Address> predicate = RestrictedTypes.filterPrivileged( );
+    final Address addr = Addresses.getInstance( ).enableFirst( predicate ).allocate( userId );
     LOG.debug( "Allocated address for public addressing: " + addr.toString( ) );
     if ( addr == null ) {
       LOG.debug( LogUtil.header( Addresses.getInstance( ).toString( ) ) );
@@ -105,7 +107,7 @@ public abstract class AbstractSystemAddressManager {
             Helper.markAsAllocated( cluster, addrInfo, address );
           }
           try {
-            final VmInstance vm = VmInstances.lookupByInstanceIp( addrInfo.getInstanceIp( ) );
+            final VmInstance vm = VmInstances.lookupByPrivateIp( addrInfo.getInstanceIp( ) );
             clearOrphan( addrInfo );
           } catch ( final NoSuchElementException e ) {
             try {
@@ -145,7 +147,6 @@ public abstract class AbstractSystemAddressManager {
           LOG.trace( "Found address in the active set cache: " + addr );
         } catch ( final NoSuchElementException e ) {}
       }
-      Helper.checkUniqueness( addrInfo );
       if ( addrInfo.hasMapping( ) ) {
         vm = Helper.maybeFindVm( addr != null
           ? addr.getInstanceId( )
@@ -186,7 +187,7 @@ public abstract class AbstractSystemAddressManager {
     private static void markAsAllocated( final Cluster cluster, final ClusterAddressInfo addrInfo, final Address address ) {
       try {
         if ( !address.isPending( ) ) {
-          for ( final VmInstance vm : VmInstances.listValues( ) ) {
+          for ( final VmInstance vm : VmInstances.list( VmState.RUNNING ) ) {
             if ( addrInfo.getInstanceIp( ).equals( vm.getPrivateAddress( ) ) && VmState.RUNNING.equals( vm.getState( ) ) ) {
               LOG.warn( "Out of band address state change: " + LogUtil.dumpObject( addrInfo ) + " address=" + address + " vm=" + vm );
 //              if ( !address.isAllocated( ) ) {
@@ -227,7 +228,7 @@ public abstract class AbstractSystemAddressManager {
         vm = VmInstances.lookup( instanceId );
       } catch ( NoSuchElementException ex ) {
         try {
-          vm = VmInstances.lookupByInstanceIp( privateIp );
+          vm = VmInstances.lookupByPrivateIp( privateIp );
         } catch ( final NoSuchElementException e ) {
           Logs.exhaust( ).error( e );
         }
@@ -266,36 +267,22 @@ public abstract class AbstractSystemAddressManager {
       }
     }
     
-    private static void checkUniqueness( final ClusterAddressInfo addrInfo ) {
-      final Collection<VmInstance> matches = Collections2.filter( VmInstances.listValues( ), VmInstances.withPrivateAddress( addrInfo.getAddress( ) ) );
-      if ( matches.size( ) > 1 ) {
-        LOG.error( "Found " + matches.size( ) + " vms with the same address: " + addrInfo + " -> " + matches );
-      }
-    }
-    
     protected static void loadStoredAddresses( final Cluster cluster ) {
+      final Address clusterAddr = new Address( );
+      clusterAddr.setCluster( cluster.getPartition( ) );
+      final EntityTransaction db = Entities.get( Address.class );
       try {
-        final EntityWrapper<Address> db = EntityWrapper.get( Address.class );
-        final Address clusterAddr = new Address( );
-        clusterAddr.setCluster( cluster.getPartition( ) );
-        List<Address> addrList = Lists.newArrayList( );
-        try {
-          addrList = db.query( clusterAddr );
-          db.commit( );
-        } catch ( final Exception e1 ) {
-          db.rollback( );
-        }
-        for ( final Address addr : addrList ) {
+        for ( Address addr : Entities.query( clusterAddr ) ) {
           try {
-            LOG.info( "Restoring persistent address info for: " + addr );
-            Addresses.getInstance( ).lookup( addr.getName( ) );
             addr.init( );
-          } catch ( final Exception e ) {
-            addr.init( );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
           }
         }
+        db.commit( );
       } catch ( final Exception e ) {
         LOG.debug( e, e );
+        db.rollback( );
       }
     }
   }

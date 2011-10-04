@@ -64,10 +64,8 @@
 
 package com.eucalyptus.images;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import javax.persistence.PersistenceException;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
@@ -76,25 +74,28 @@ import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstance.VmState;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstances;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.ConfirmProductInstanceResponseType;
@@ -118,81 +119,31 @@ import edu.ucsb.eucalyptus.msgs.ResetImageAttributeType;
 
 public class ImageManager {
   
-  public static Logger        LOG  = Logger.getLogger( ImageManager.class );
+  public static Logger        LOG = Logger.getLogger( ImageManager.class );
   
-  private static final String ALL  = "all";
-  private static final String SELF = "self";
-  
-  private static final String ADD  = "add";
+  private static final String ADD = "add";
   
   public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException, TransactionException {
     DescribeImagesResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
-    final Set<String> imageSelectionSet = request.getImagesSet( ) != null
-      ? new HashSet<String>( request.getImagesSet( ) )
-      : new HashSet<String>( );
-    final Set<String> ownerSelectionSet = request.getOwnersSet( ) != null
-      ? new HashSet<String>( request.getOwnersSet( ) )
-      : new HashSet<String>( );
-    if ( ownerSelectionSet.remove( SELF ) ) {
-      ownerSelectionSet.add( requestAccountId );
+    final List<String> ownersSet = request.getOwnersSet( );
+    if ( ownersSet.remove( Images.SELF ) ) {
+      ownersSet.add( requestAccountId );
     }
-    final Set<String> exeBySelectionSet = request.getExecutableBySet( ) != null
-      ? new HashSet<String>( request.getExecutableBySet( ) )
-      : new HashSet<String>( );
-    final boolean exeByNonEmpty = exeBySelectionSet.size( ) > 0;
-    final boolean exeByHasSelf = exeBySelectionSet.remove( SELF );
-    final boolean exeByHasAll = exeBySelectionSet.remove( ALL );
-    
-    final Predicate<ImageInfo> imageFilter = new Predicate<ImageInfo>( ) {
-      
-      @Override
-      public boolean apply( ImageInfo image ) {
-        // Check if selected by specified images
-        if ( imageSelectionSet.size( ) > 0 && !imageSelectionSet.contains( image.getDisplayName( ) ) ) {
-          return false;
-        }
-        // Make sure the request account can access the image
-        if ( !ctx.hasAdministrativePrivileges( ) && !image.isAllowed( requestAccountId ) ) {
-          return false;
-        }
-        // Check if selected by specified owner account ID
-        if ( ownerSelectionSet.size( ) > 0 && !ownerSelectionSet.contains( image.getOwnerAccountNumber( ) ) ) {
-          return false;
-        }
-        // Check if selected by explicit account permissions
-        if ( exeByNonEmpty ) {
-          if ( !( ( exeByHasAll && image.getImagePublic( ) ) || // public
-                  ( exeByHasSelf && ( image.getOwner( ).isOwner( requestAccountId ) || image.hasPermission( requestAccountId ) ) ) || // implicit or explicit, but no public
-          ( !exeBySelectionSet.isEmpty( ) && ( image.getOwner( ).isOwner( requestAccountId ) && image.hasPermission( ( String[] ) exeBySelectionSet.toArray( ) ) ) )
-                                             ) ) {
-                                               return false;
-                                             }
-                                           }
-                                           return true;
-                                         }
-      
-    };
-    Predicate<ImageInfo> filter = Predicates.and( imageFilter, RestrictedTypes.filterPrivileged( ) );
+    Predicate<ImageInfo> rangeFilter = Predicates.and( CloudMetadatas.filterById( request.getImagesSet( ) ),
+                                                       CloudMetadatas.filterByOwningAccount( request.getOwnersSet( ) ),
+                                                       Images.filterExecutableBy( ownersSet ) );
+    Predicate<ImageInfo> privilegesFilter = Predicates.or( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivileged( ) );
+    Predicate<ImageInfo> filter = Predicates.and( privilegesFilter, rangeFilter );
     List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), filter, Images.TO_IMAGE_DETAILS );
     reply.getImagesSet( ).addAll( imageDetailsList );
     ImageUtil.cleanDeregistered( );
     return reply;
   }
   
-  public RegisterImageResponseType register( RegisterImageType request ) throws EucalyptusCloudException {
+  public RegisterImageResponseType register( final RegisterImageType request ) throws EucalyptusCloudException, AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     final Context ctx = Contexts.lookup( );
-    final User requestUser = Contexts.lookup( ).getUser( );
-    final String action = PolicySpec.requestToAction( request );
-//    if ( !ctx.hasAdministrativePrivileges( ) ) {
-//      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, "", ctx.getAccount( ), action, requestUser ) ) {
-//        throw new EucalyptusCloudException( "Register image is not allowed for " + requestUser.getName( ) );
-//      }
-//      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, "", action, requestUser, 1L ) ) {
-//        throw new EucalyptusCloudException( "Quota exceeded in registering image for " + requestUser.getName( ) );
-//      }
-//    }
     ImageInfo imageInfo = null;
     final String rootDevName = ( request.getRootDeviceName( ) != null )
       ? request.getRootDeviceName( )
@@ -210,8 +161,20 @@ public class ImageManager {
                                              manifest );
       imageInfo.getDeviceMappings( ).addAll( vbr );
     } else if ( rootDevName != null && Iterables.any( request.getBlockDeviceMappings( ), Images.findEbsRoot( rootDevName ) ) ) {
-      imageInfo = Images.createFromDeviceMapping( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), eki, eri, rootDevName,
-                                                  request.getBlockDeviceMappings( ) );
+      Supplier<ImageInfo> allocator = new Supplier<ImageInfo>( ) {
+        
+        @Override
+        public ImageInfo get( ) {
+          try {
+            return Images.createFromDeviceMapping( ctx.getUserFullName( ), request.getName( ),
+                                                   request.getDescription( ), eki, eri, rootDevName,
+                                                   request.getBlockDeviceMappings( ) );
+          } catch ( EucalyptusCloudException ex ) {
+            throw new RuntimeException( ex );
+          }
+        }
+      };
+      imageInfo = RestrictedTypes.allocate( allocator );
     } else {
       throw new EucalyptusCloudException( "Malformed registration. A request must specify either " +
                                           "a manifest path or a snapshot to use for BFE. Provided values are: imageLocation="
@@ -432,7 +395,7 @@ public class ImageManager {
     Context ctx = Contexts.lookup( );
     VmInstance vm;
     try {
-      vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.Lookup.INSTANCE );
+      vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.class );
       if ( !VmState.RUNNING.equals( vm.getState( ) ) && !VmState.STOPPED.equals( vm.getState( ) ) ) {
         throw new EucalyptusCloudException( "Cannot create an image from an instance which is not in either the 'running' or 'stopped' state: "
                                             + vm.getInstanceId( ) + " is in state " + vm.getState( ).getName( ) );

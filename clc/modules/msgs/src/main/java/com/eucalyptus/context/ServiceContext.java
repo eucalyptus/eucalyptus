@@ -19,6 +19,7 @@ import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.module.client.MuleClient;
 import org.mule.transport.AbstractConnector;
 import org.mule.transport.vm.VMMessageDispatcherFactory;
+import com.eucalyptus.BaseException;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -26,22 +27,22 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
-import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
-import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
+import com.eucalyptus.ws.util.ReplyQueue;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
-@ConfigurableClass( root = "system", description = "Parameters having to do with the system's state.  Mostly read-only." )
+@ConfigurableClass( root = "bootstrap.servicebus", description = "Parameters having to do with the service bus." )
 public class ServiceContext {
   private static Logger                        LOG                      = Logger.getLogger( ServiceContext.class );
   private static SpringXmlConfigurationBuilder builder;
+  @ConfigurableField( initial = "256", description = "Max queue length allowed per service stage.", changeListener = HupListener.class )
+  public static Integer                        MAX_OUTSTANDING_MESSAGES = 256;
   @ConfigurableField( initial = "16", description = "Max queue length allowed per service stage.", changeListener = HupListener.class )
-  public static Integer                        MAX_OUTSTANDING_MESSAGES = 16;
+  public static Integer                        WORKERS_PER_STAGE        = 16;                                      //TODO:GRZE: finish this thought later.
   @ConfigurableField( initial = "0", description = "Do a soft reset.", changeListener = HupListener.class )
   public static Integer                        HUP                      = 0;
   
@@ -103,7 +104,7 @@ public class ServiceContext {
       LOG.error( ex, ex );
       throw new ServiceDispatchException( "Failed to dispatch message to " + dest + " caused by failure to obtain service dispatcher reference: "
                                           + ex.getMessage( ), ex );
-    } finally {
+    } /*finally {
       Threads.lookup( Empyrean.class, ServiceContext.class ).submit( new Runnable( ) {
         @Override
         public void run( ) {
@@ -116,7 +117,7 @@ public class ServiceContext {
           }
         }
       } );
-    }
+      }*/
   }
   
   public static <T> T send( String dest, Object msg ) throws ServiceDispatchException {
@@ -147,19 +148,37 @@ public class ServiceContext {
   
   @SuppressWarnings( "unchecked" )
   public static void response( BaseMessage responseMessage ) {
-    EventRecord.here( ServiceContext.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ) ).debug( );
     if ( responseMessage instanceof ExceptionResponseType ) {
       Logs.exhaust( ).trace( responseMessage );
     }
     String corrId = responseMessage.getCorrelationId( );
     try {
-      Context context = Contexts.lookup( corrId );
-      Channel channel = context.getChannel( );
+      Context ctx = Contexts.lookup( corrId );
+      EventRecord.here( ServiceContext.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ),
+                        String.format( "%.3f ms", ( System.nanoTime( ) - ctx.getCreationTime( ) ) / 1000000.0 ) ).debug( );
+      Channel channel = ctx.getChannel( );
       Channels.write( channel, responseMessage );
-      Contexts.clear( context );
+      Contexts.clear( ctx );
     } catch ( NoSuchContextException e ) {
       LOG.warn( "Received a reply for absent client:  No channel to write response message.", e );
       LOG.debug( responseMessage );
+    } catch ( Exception e ) {
+      LOG.warn( "Error occurred while handling reply: " + responseMessage, e );
+    }
+  }
+  
+  public static void responseError( Throwable cause ) {
+    try {
+      Context ctx = Contexts.lookup( );
+      EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, cause.getClass( ).getCanonicalName( ), cause.getMessage( ),
+                        String.format( "%.3f ms", ( System.nanoTime( ) - ctx.getCreationTime( ) ) / 1000000.0 ) ).debug( );
+      Channels.fireExceptionCaught( ctx.getChannel( ), cause );
+      if ( !( cause instanceof BaseException ) ) {
+        Contexts.clear( ctx );
+      }
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      LOG.error( cause, cause );
     }
   }
   

@@ -71,8 +71,10 @@ import org.apache.axiom.soap.SOAPFault;
 import org.apache.axiom.soap.SOAPHeader;
 import org.apache.axiom.soap.SOAPHeaderBlock;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.binding.Binding;
@@ -141,10 +143,11 @@ public class SoapHandler extends MessageStackHandler {
         }
       } else if ( httpMessage.getMessage( ) instanceof ExceptionResponseType ) {
         ExceptionResponseType errMsg = ( ExceptionResponseType ) httpMessage.getMessage( );
-        httpMessage.setSoapEnvelope( Binding.createFault( errMsg.getRequestType( ), errMsg.getMessage( ), Exceptions.createFaultDetails( errMsg.getException( ) ) ) );
+        httpMessage.setSoapEnvelope( Binding.createFault( errMsg.getRequestType( ), errMsg.getMessage( ),
+                                                          Exceptions.createFaultDetails( errMsg.getException( ) ) ) );
         if ( httpMessage instanceof MappingHttpResponse ) {
           ( ( MappingHttpResponse ) httpMessage ).setStatus( errMsg.getHttpStatus( ) );
-        }        
+        }
       } else {
         httpMessage.setSoapEnvelope( HoldMe.getOMSOAP11Factory( ).getDefaultEnvelope( ) );
         httpMessage.getSoapEnvelope( ).getBody( ).addChild( httpMessage.getOmMessage( ) );
@@ -152,4 +155,17 @@ public class SoapHandler extends MessageStackHandler {
     }
   }
   
+//TODO:GRZE: services specific error handling  
+//  @Override
+//  public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent channelEvent ) throws Exception {
+//    if ( channelEvent instanceof ExceptionEvent ) {
+//      Throwable cause = ( ( ExceptionEvent ) channelEvent ).getCause( );
+//      ExceptionResponseType errMsg = new ExceptionResponseType( null, cause.getMessage( ), HttpResponseStatus.INTERNAL_SERVER_ERROR, cause );
+//      channelEvent.getFuture( ).cancel( );
+//      ctx.getChannel( ).write( errMsg );
+//    } else {
+//      super.handleDownstream( ctx, channelEvent );
+//    }
+//  }
+//  
 }

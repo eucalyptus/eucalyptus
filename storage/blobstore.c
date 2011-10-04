@@ -2036,7 +2036,8 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec )
     array_size = 0;
     array = NULL;
 
-    // update .refs on dependencies
+    // Read in .deps (blobs that this blob depends on),
+    // so as to update their .refs (blobs depending on them).
     if (read_array_blockblob_metadata_path (BLOCKBLOB_PATH_DEPS, bb->store, bb->id, &array, &array_size)==-1) {
         ret = -1;
         goto unlock;
@@ -2059,9 +2060,13 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec )
             dep_bs = blobstore_open (store_path, 0, BLOBSTORE_FORMAT_ANY, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
             if (dep_bs == NULL)
                 continue; // TODO: print a warning about store/blob corruption?
+            if (blobstore_lock (dep_bs, timeout_usec)==-1) { // lock this (different) blobstore, too, so .refs are updated atomically
+                blobstore_close (dep_bs); 
+                continue; // TODO: print a warning about store/blob corruption?
+            }
         }
 
-        // update .refs on deps (TODO: put other .refs updates under global lock?)
+        // update .refs file on each of the dependencies
         if (update_entry_blockblob_metadata_path (BLOCKBLOB_PATH_REFS, dep_bs, blob_id, my_ref, 1)==-1) {
             // TODO: print a warning about store/blob corruption?
         }
@@ -2070,6 +2075,7 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec )
             loop_remove (dep_bs, blob_id); // TODO: do we care about errors?
         }
         if (dep_bs != bs) {
+            blobstore_unlock (dep_bs);
             blobstore_close (dep_bs);
         }
     }
@@ -2168,10 +2174,13 @@ int blockblob_copy ( blockblob * src_bb, // source blob to copy data from
     // do the copy (with block devices dd will silently omit to copy bytes outside the block boundary, so we use paths for uncloned blobs)
     const char * src_path = (src_bb->snapshot_type == BLOBSTORE_SNAPSHOT_DM)?(blockblob_get_dev (src_bb)):(blockblob_get_file (src_bb));
     const char * dst_path = (dst_bb->snapshot_type == BLOBSTORE_SNAPSHOT_DM)?(blockblob_get_dev (dst_bb)):(blockblob_get_file (dst_bb));
-    if (diskutil_dd2 (src_path, dst_path, granularity, copy_len_bytes/granularity, dst_offset_bytes/granularity, src_offset_bytes/granularity)) {
+    mode_t old_umask = umask (~BLOBSTORE_FILE_PERM);
+    int error = diskutil_dd2 (src_path, dst_path, granularity, copy_len_bytes/granularity, dst_offset_bytes/granularity, src_offset_bytes/granularity);
+    umask (old_umask);
+    if (error) {
         ERR (BLOBSTORE_ERROR_INVAL, "failed to copy a section");
         return -1;
-    }    
+    }
 
     return ret;
 }
@@ -2395,19 +2404,29 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
         for (int i=0; i<map_size; i++) {
             const blockmap * m = map + i;
             const blockblob * sbb = m->source.blob;
-            
+
             if (m->source_type != BLOBSTORE_BLOCKBLOB) // only blobstores have references
                 continue;
 
             if (m->relation_type == BLOBSTORE_COPY) // copies do not create references
                 continue;
-            
+
+            if (blobstore_lock (sbb->store, BLOBSTORE_LOCK_TIMEOUT_USEC)==-1) { // lock the source blobstore so the .refs are updated atomically
+                ret = -1;
+                goto cleanup; // TODO: remove .refs entries from this batch that succeeded, if any?
+            }
+
             // update .refs
             if (update_entry_blockblob_metadata_path (BLOCKBLOB_PATH_REFS, sbb->store, sbb->id, my_ref, 0)==-1) {
                 ret = -1;
                 goto cleanup; // TODO: remove .refs entries from this batch that succeeded, if any?
             }
             
+            if (blobstore_unlock (sbb->store)==-1) {
+                ret = -1;
+                goto cleanup; // TODO: remove .refs entries from this batch that succeeded, if any?
+            }
+
             // record the dependency in .deps (redundant entries will be filtered out)
             char dep_ref [BLOBSTORE_MAX_PATH+MAX_DM_NAME+1];
             snprintf (dep_ref, sizeof (dep_ref), "%s %s", sbb->store->path, sbb->id);

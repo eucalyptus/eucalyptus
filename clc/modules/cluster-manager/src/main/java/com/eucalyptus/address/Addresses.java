@@ -69,17 +69,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstance.VmState;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -92,8 +84,13 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstances;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
@@ -189,6 +186,20 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     }
     
   }
+  @Resolver(Address.class)
+  public enum Lookup implements Function<String,Address> {
+    INSTANCE;
+
+    @Override
+    public Address apply( String input ) {
+      Address address = Addresses.getInstance( ).lookup( input );
+      if ( address.isSystemOwned( ) ) {
+        throw new NoSuchElementException( "Non admin user cannot manipulate system owned address " + input );
+      }
+      return address;
+    }
+    
+  }
   
   public static Address restrictedLookup( String addr ) throws EucalyptusCloudException {
     Address address = null;
@@ -208,14 +219,6 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   
   public static Address allocate( BaseMessage request ) throws EucalyptusCloudException, NotEnoughResourcesException {
     Context ctx = Contexts.lookup( );
-//    if ( !ctx.hasAdministrativePrivileges( ) ) {
-//      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, "", ctx.getAccount( ), action, ctx.getUser( ) ) ) {
-//        throw new EucalyptusCloudException( "Not authorized to allocate address by " + ctx.getUser( ).getName( ) );
-//      }
-//      if ( !Permissions.canAllocate( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS, "", action, ctx.getUser( ), 1L ) ) {
-//        throw new EucalyptusCloudException( "Exceeded quota in allocating address by " + ctx.getUser( ).getName( ) );
-//      }
-//    }
     return Addresses.getAddressManager( ).allocateNext( ctx.getUserFullName( ) );
   }
   

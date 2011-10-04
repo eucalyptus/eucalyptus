@@ -198,6 +198,7 @@ public class Topology implements EventListener<Event> {
         if ( Bootstrap.isShuttingDown( ) ) {
           return null;
         } else {
+          Bootstrap.awaitFinished( );
           Long serviceStart = System.currentTimeMillis( );
           Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), callable.toString( ) )
                                             .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) ) );
@@ -228,6 +229,7 @@ public class Topology implements EventListener<Event> {
         if ( Bootstrap.isShuttingDown( ) ) {
           return null;
         } else {
+          Bootstrap.awaitFinished( );
           Long serviceStart = System.currentTimeMillis( );
           Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
                                             .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) ) );
@@ -259,6 +261,7 @@ public class Topology implements EventListener<Event> {
         if ( Bootstrap.isShuttingDown( ) ) {
           return null;
         } else {
+          Bootstrap.awaitFinished( );
           Long serviceStart = System.currentTimeMillis( );
           EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
                      .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) )

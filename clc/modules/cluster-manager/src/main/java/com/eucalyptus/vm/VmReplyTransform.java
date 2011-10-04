@@ -64,12 +64,14 @@
 package com.eucalyptus.vm;
 
 import java.util.List;
+import javax.persistence.EntityTransaction;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -94,7 +96,15 @@ public class VmReplyTransform {
                                                                Lists.newArrayList( networkNames ) );
     
     for ( ResourceToken allocToken : allocInfo.getAllocationTokens( ) ) {
-      reservation.getInstancesSet( ).add( VmInstances.transform( allocToken.getVmInstance( ) ) );
+      EntityTransaction db = Entities.get( VmInstance.class );
+      try {
+        VmInstance entity = Entities.merge( allocToken.getVmInstance( ) );
+        reservation.getInstancesSet( ).add( VmInstances.transform( entity ) );
+        db.commit( );
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        db.rollback( );
+      }
     }
     reply.setRsvInfo( reservation );
     return reply;

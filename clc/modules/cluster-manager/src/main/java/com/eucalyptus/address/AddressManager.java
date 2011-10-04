@@ -64,30 +64,33 @@
  */
 package com.eucalyptus.address;
 
+import java.util.NoSuchElementException;
+import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
-import com.eucalyptus.cluster.VmInstance;
-import com.eucalyptus.cluster.VmInstances;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
+import com.google.common.base.Supplier;
+import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressType;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AssociateAddressType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAddressesType;
 import edu.ucsb.eucalyptus.msgs.DisassociateAddressResponseType;
@@ -99,12 +102,23 @@ public class AddressManager {
   
   public static Logger LOG = Logger.getLogger( AddressManager.class );
   
-  public AllocateAddressResponseType allocate( AllocateAddressType request ) throws EucalyptusCloudException {
+  public AllocateAddressResponseType allocate( final AllocateAddressType request ) throws EucalyptusCloudException {
     AllocateAddressResponseType reply = ( AllocateAddressResponseType ) request.getReply( );
     Address address;
     try {
-      address = Addresses.allocate( request );
-    } catch ( NotEnoughResourcesException e ) {
+      Supplier<Address> allocator = new Supplier<Address>( ) {
+        
+        @Override
+        public Address get( ) {
+          try {
+            return Addresses.allocate( request );
+          } catch ( Exception ex ) {
+            throw new RuntimeException( ex );
+          }
+        }
+      };
+      address = RestrictedTypes.allocate( allocator );
+    } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new EucalyptusCloudException( e );
     }
@@ -112,11 +126,11 @@ public class AddressManager {
     return reply;
   }
   
-  public ReleaseAddressResponseType release( ReleaseAddressType request ) throws EucalyptusCloudException {
+  public ReleaseAddressResponseType release( ReleaseAddressType request ) throws Exception {
     ReleaseAddressResponseType reply = ( ReleaseAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    Address address = Addresses.restrictedLookup( request.getPublicIp( ) );
+    Address address = RestrictedTypes.doPrivileged( request.getPublicIp( ), Address.class );
     Addresses.release( address );
     reply.set_return( true );
     return reply;
@@ -133,9 +147,10 @@ public class AddressManager {
       //TODO:GRZE:FIXME this is not going to last this way.
       Account addrAccount = null;
       String addrAccountNumber = address.getOwnerAccountNumber( );
-      if ( !Principals.nobodyAccount().getAccountNumber( ).equals( addrAccountNumber ) && !Principals.systemAccount().getAccountNumber( ).equals( addrAccountNumber )) {
+      if ( !Principals.nobodyAccount( ).getAccountNumber( ).equals( addrAccountNumber )
+           && !Principals.systemAccount( ).getAccountNumber( ).equals( addrAccountNumber ) ) {
         try {
-        addrAccount = Accounts.lookupAccountById( addrAccountNumber );
+          addrAccount = Accounts.lookupAccountById( addrAccountNumber );
         } catch ( AuthException e ) {}
       }
       if ( addrAccount != null && ( isAdmin || RestrictedTypes.filterPrivileged( ).apply( address ) ) ) {
@@ -150,7 +165,7 @@ public class AddressManager {
     }
     if ( isAdmin ) {
       for ( Address address : Addresses.getInstance( ).listDisabledValues( ) ) {
-        reply.getAddressesSet( ).add( new AddressInfoType( address.getName( ), Principals.nobodyFullName().getUserName( ) ) );
+        reply.getAddressesSet( ).add( new AddressInfoType( address.getName( ), Principals.nobodyFullName( ).getUserName( ) ) );
       }
     }
     return reply;
@@ -161,8 +176,8 @@ public class AddressManager {
     AssociateAddressResponseType reply = ( AssociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
-    final Address address = Addresses.restrictedLookup( request.getPublicIp( ) );
-    final VmInstance vm = VmInstances.restrictedLookup( request.getInstanceId( ) );
+    final Address address = RestrictedTypes.doPrivileged( request.getPublicIp( ), Address.class );
+    final VmInstance vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.class );
     final VmInstance oldVm = findCurrentAssignedVm( address );
     final Address oldAddr = findVmExistingAddress( vm );
     final boolean oldAddrSystem = oldAddr != null
@@ -224,12 +239,12 @@ public class AddressManager {
     return oldVm;
   }
   
-  public DisassociateAddressResponseType disassociate( DisassociateAddressType request ) throws EucalyptusCloudException {
+  public DisassociateAddressResponseType disassociate( DisassociateAddressType request ) throws Exception {
     DisassociateAddressResponseType reply = ( DisassociateAddressResponseType ) request.getReply( );
     reply.set_return( false );
     Addresses.updateAddressingMode( );
     Context ctx = Contexts.lookup( );
-    final Address address = Addresses.restrictedLookup( request.getPublicIp( ) );
+    final Address address = RestrictedTypes.doPrivileged( request.getPublicIp( ), Address.class );
     reply.set_return( true );
     final String vmId = address.getInstanceId( );
     if ( address.isSystemOwned( ) && !ctx.hasAdministrativePrivileges( ) ) {

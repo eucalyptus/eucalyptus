@@ -7,6 +7,7 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NaturalId;
+import com.eucalyptus.util.Classes;
 
 public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty implements ConfigurableProperty {
   private static Logger LOG = Logger.getLogger( MultiDatabasePropertyEntry.class );
@@ -40,7 +41,7 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
     try {
       setIdentifier = ( setIdentifier != null )
         ? setIdentifier
-        : this.lookupSetIdentifierMethod( );
+          : this.lookupSetIdentifierMethod( );
       setIdentifier.invoke( queryObject, identifierValue );
     } catch ( Exception e1 ) {
       try {
@@ -60,21 +61,7 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
       if ( c.isAnnotationPresent( Entity.class ) &&
            !( ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class ) ).singleton( ) ) {
         ConfigurableClass classAnnote = ( ConfigurableClass ) c.getAnnotation( ConfigurableClass.class );
-        Field identifierField = null;
-        for ( Field field : c.getDeclaredFields( ) ) {
-          if ( field.isAnnotationPresent( ConfigurableIdentifier.class ) ) {
-            identifierField = field;
-            break;
-          }
-        }
-        if ( identifierField == null ) {
-          for ( Field field : c.getFields( ) ) {
-            if ( field.isAnnotationPresent( NaturalId.class ) ) {
-              identifierField = field;
-              break;
-            }
-          }
-        }
+        Field identifierField = findIdentifierField( c );//GRZE:NOTE: had to refactor to also look in class hierarchy
         if ( identifierField == null ) {
           return null;
         }
@@ -99,6 +86,22 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
         }
       } else {
         return null;
+      }
+      return null;
+    }
+
+    private Field findIdentifierField( Class c ) throws SecurityException {
+      for ( Class ancestor : Classes.classAncestors( c ) ) {
+        for ( Field field : ancestor.getDeclaredFields( ) ) {
+          if ( field.isAnnotationPresent( ConfigurableIdentifier.class ) ) {
+            return field;
+          }
+        }
+        for ( Field field : c.getFields( ) ) {
+          if ( field.isAnnotationPresent( NaturalId.class ) ) {
+            return field;
+          }
+        }
       }
       return null;
     }
@@ -144,8 +147,26 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
   public int compareTo( ConfigurableProperty that ) {
     return this.getQualifiedName( ) != null
       ? this.getQualifiedName( ).compareTo( that.getQualifiedName( ) )
-      : ( that.getQualifiedName( ) == null
-        ? 0
-        : -1 );
+        : ( that.getQualifiedName( ) == null
+            ? 0
+                : -1 );
   }
+  
+  @Override
+  public int hashCode( ) {
+    return getQualifiedName( ).hashCode( );
+  }
+  
+  @Override
+  public boolean equals( Object obj ) {
+    if ( this == obj )
+      return true;
+    if ( obj == null )
+      return false;
+    if ( getClass( ) != obj.getClass( ) )
+      return false;
+    MultiDatabasePropertyEntry other = ( MultiDatabasePropertyEntry ) obj;
+    return this.compareTo( other ) == 0;
+  }
+  
 }

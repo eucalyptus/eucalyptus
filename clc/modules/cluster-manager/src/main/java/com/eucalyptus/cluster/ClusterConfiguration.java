@@ -65,10 +65,8 @@ package com.eucalyptus.cluster;
 
 import java.io.Serializable;
 import javax.persistence.Column;
-import javax.persistence.DiscriminatorValue;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PostPersist;
-import javax.persistence.PostUpdate;
+import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -80,6 +78,7 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.network.NetworkGroups;
 
 @Entity
@@ -88,12 +87,16 @@ import com.eucalyptus.network.NetworkGroups;
 @Table( name = "config_clusters" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart( ClusterController.class )
-@ConfigurableClass( root = "cluster", alias = "cc", description = "Basic cluster controller configuration.", singleton = false, deferred = true )
+@ConfigurableClass( root = "cluster", alias = "basic", description = "Basic cluster controller configuration.", singleton = false, deferred = true )
 public class ClusterConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
   private static String         DEFAULT_SERVICE_PATH  = "/axis2/services/EucalyptusCC";
   @Transient
   private static String         INSECURE_SERVICE_PATH = "/axis2/services/EucalyptusGL";
+  
+  @Transient
+  @ConfigurableIdentifier
+  private String                propertyPrefix;
   
   @Column( name = "cluster_network_mode" )
   @ConfigurableField( description = "Currently configured network mode", displayName = "Network mode", readonly = true )
@@ -145,6 +148,13 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
     super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
     this.minNetworkTag = minVlan;
     this.maxNetworkTag = maxVlan;
+  }
+  
+  @PostLoad
+  private void initOnLoad( ) {//GRZE:HACK:HACK: needed to mark field as @ConfigurableIdentifier
+    if ( this.propertyPrefix == null ) {
+      this.propertyPrefix = this.getPartition( ).replace( ".", "" ) + "." + this.getName( );
+    }
   }
   
   @PrePersist
@@ -262,6 +272,16 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   
   public void setVnetType( String vnetType ) {
     this.vnetType = vnetType;
+  }
+  
+  public String getPropertyPrefix( ) {
+    return this.propertyPrefix;
+  }
+  
+  public void setPropertyPrefix( String propertyPrefix ) {
+    this.setName( propertyPrefix.replaceAll( "\\s*\\.", "." ) );
+    this.setPartition( propertyPrefix.replace( "." + this.getName( ), "" ) );
+    this.propertyPrefix = propertyPrefix;
   }
   
 }

@@ -177,8 +177,10 @@ public class DatabaseUserProxy implements User {
   }
 
   @Override
-  public void createToken( ) throws AuthException {
+  public String resetToken( ) throws AuthException {
+    String original = this.delegate.getToken( );
     this.setToken( Crypto.generateSessionToken( this.delegate.getName( ) ) );
+    return original;
   }
 
   @Override
@@ -429,12 +431,10 @@ public class DatabaseUserProxy implements User {
   
   @Override
   public void removeCertificate( final String certficateId ) throws AuthException {
-    EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
+    EntityWrapper<CertificateEntity> db = EntityWrapper.get( CertificateEntity.class );
     try {
-      UserEntity user = db.getUnique( UserEntity.newInstanceWithUserId( this.delegate.getUserId( ) ) );
-      CertificateEntity certificateEntity = db.recast(CertificateEntity.class).getUnique( CertificateEntity.newInstanceWithId( certficateId ) );
-      user.getCertificates( ).remove( certificateEntity );
-      db.recast( CertificateEntity.class ).delete( certificateEntity );
+      CertificateEntity certificateEntity = db.getUnique( CertificateEntity.newInstanceWithId( certficateId ) );
+      certificateEntity.setRevoked( true );
       db.commit( );
     } catch ( Exception e ) {
       db.rollback( );

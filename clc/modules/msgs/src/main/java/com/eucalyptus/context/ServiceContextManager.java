@@ -143,7 +143,7 @@ public class ServiceContextManager {
         while ( ServiceContextManager.this.running.get( ) ) {
           ServiceConfiguration event;
           try {
-            if ( ( event = ServiceContextManager.this.queue.poll( 2000, TimeUnit.MILLISECONDS ) ) != null ) {
+            if ( ( event = ServiceContextManager.this.queue.poll( 500, TimeUnit.MILLISECONDS ) ) != null ) {
               if ( event.isVmLocal( ) ) {
                 if ( ServiceContextManager.this.canHasWrite.tryLock( ) ) {
                   try {
@@ -191,6 +191,7 @@ public class ServiceContextManager {
   
   private void update( ) throws ServiceInitializationException {
     this.canHasWrite.lock( );
+    Bootstrap.awaitFinished( );
     try {
       List<ComponentId> reloadComponentIds = this.shouldReload( );
       
