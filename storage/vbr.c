@@ -1630,6 +1630,20 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
 
 #define ARTIFACT_RETRY_SLEEP_USEC 100LL
 
+// Given a root node in a tree of blob artifacts, unless the root
+// blob already exists and has the right signature, this function:
+//
+// - ensures that any depenent blobs are present and open
+// - creates the root blob and invokes to creator function to fill it
+// - closes any dependent blobs
+// 
+// The function is recursive and the contract is that when it returns
+//
+// - with success, the root blob is open and ready
+// - with failure, the root blob is closed and possibly non-existant
+//
+// Either way, none of the child blobs are open.
+
 int // returns OK or BLOBSTORE_ERROR_ error codes
 art_implement_tree ( // traverse artifact tree and create/download/combine artifacts
                     artifact * root, // root of the tree
@@ -1696,7 +1710,10 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                     if (do_create) { // we'll hold the dependency open for the creator
                         num_opened_deps++;
                     } else { // this is a sentinel, we're not creating anything, so release the dep immediately
-                        blockblob_close (root->deps[i]->bb);
+                        if (blockblob_close (root->deps[i]->bb) == -1) {
+                            logprintfl (EUCAERROR, "[%s] error: failed to close dependency of %s: %d %s (potential resource leak!)\n",
+                                        root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg());                            
+                        }
                         root->deps[i]->bb = 0; // for debugging
                     }
                     break; // out of the switch statement
@@ -1732,7 +1749,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s (error=%d)\n", root->instanceId, root->id, ret);
                 // delete the partially created artifact
                 if (blockblob_delete (root->bb, DELETE_BLOB_TIMEOUT_USEC) == -1) {
-                    logprintfl (EUCAWARN, "[%s] warning: failed to remove partially created artifact %s: %d %s\n", 
+                    logprintfl (EUCAERROR, "[%s] error: failed to remove partially created artifact %s: %d %s (potential resource leak!)\n",
                                 root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg());
                 }
             } else {
@@ -1742,7 +1759,7 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
         }
 
     retry_or_fail:
-        // close all opened blobs, whether we're trying again or returning
+        // close all opened dependent blobs, whether we're trying again or returning
         for (int i=0; i<num_opened_deps; i++) {
             blockblob_close (root->deps[i]->bb);
             root->deps[i]->bb = 0; // for debugging
