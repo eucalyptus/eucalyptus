@@ -98,7 +98,7 @@ prep_location ( // picks a service URI and prepends it to resourceLocation in VB
         serviceInfoType * service = &(meta->services[i]);
         if (strncmp(service->type, typeName, strlen(typeName)-3)==0 && service->urisLen>0) {
             char * l = vbr->resourceLocation + (strlen (typeName) + 3); // +3 for "://", so 'l' points past, e.g., "walrus:"
-            snprintf (vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s%s", service->uris[0], l); // TODO: for now we just pick the first one
+            snprintf (vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s/%s", service->uris[0], l); // TODO: for now we just pick the first one
             return OK;
         }
     }
