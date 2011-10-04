@@ -361,7 +361,7 @@ public class RestrictedTypes {
             PolicyResourceType type = ats.get( PolicyResourceType.class );
             String action = PolicySpec.requestToAction( ctx.getRequest( ) );
             if ( action == null ) {
-              action = vendor.value( ) + ":" + ctx.getRequest( ).getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
+              action = ctx.getRequest( ).getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
             }
             User requestUser = ctx.getUser( );
             try {
