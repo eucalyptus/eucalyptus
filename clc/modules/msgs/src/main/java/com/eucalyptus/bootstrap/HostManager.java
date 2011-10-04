@@ -469,7 +469,7 @@ public class HostManager {
       @Override
       public void run( ) {
         View v = HostManager.getInstance( ).view.getCurrentView( );
-        if ( v == null || v.getMembers( ).size( ) <= 1 ) {
+        if ( v == null ) {
           return;
         } else {
           try {
