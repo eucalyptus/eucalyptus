@@ -945,7 +945,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
       logprintfl(EUCAERROR, "doAssignAddress(): vnetReassignAddress() failed\n");
       ret = 1;
     }
-
+    
     sem_mypost(VNET);
   }
   

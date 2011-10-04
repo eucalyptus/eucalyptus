@@ -90,9 +90,9 @@
 
 #define BLOBSTORE_METADATA_FILE ".blobstore"
 #define BLOBSTORE_METADATA_TIMEOUT_USEC 9999999LL
-#define BLOBSTORE_LOCK_TIMEOUT_USEC 1000LL
-#define BLOBSTORE_FIND_TIMEOUT_USEC 1000LL
-#define BLOBSTORE_DELETE_TIMEOUT_USEC 1000LL
+#define BLOBSTORE_LOCK_TIMEOUT_USEC 50000LL
+#define BLOBSTORE_FIND_TIMEOUT_USEC 50000LL
+#define BLOBSTORE_DELETE_TIMEOUT_USEC 50000LL
 #define BLOBSTORE_SLEEP_INTERVAL_USEC 99999LL
 #define BLOBSTORE_MAX_CONCURRENT 99
 #define BLOBSTORE_NO_TIMEOUT -1L
@@ -1949,13 +1949,13 @@ static int dm_create_devices (char * dev_names[], char * dm_tables[], int size)
     int i;
 
     for (i=0; i<size; i++) {    
-        int pipefds [2];
+        //        int pipefds [2];
         myprintf (EUCAINFO, "creating device %s\n", dev_names [i]);
 
-        if (pipe (pipefds) == -1) {
-            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-            goto cleanup;
-        }
+        //        if (pipe (pipefds) == -1) {
+        //            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+        //            goto cleanup;
+        //        }
 
         pid_t cpid = fork();
 
@@ -1964,20 +1964,50 @@ static int dm_create_devices (char * dev_names[], char * dm_tables[], int size)
             goto cleanup;
 
         } else if (cpid==0) { // child
-            close (pipefds [1]);
-            if (dup2 (pipefds [0], 0) == -1) {
-                PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-                _exit (1);
+            //            close (pipefds [1]);
+            //            if (dup2 (pipefds [0], 0) == -1) {
+            //                PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+            //                _exit (1);
+            //            }
+            //            _exit (execl (helpers_path [ROOTWRAP], helpers_path [ROOTWRAP], helpers_path [DMSETUP], "create", dev_names[i], NULL));
+            char tmpfile[MAX_PATH], cmd[MAX_PATH];
+            int fd, rbytes, tot, rc;
+
+            bzero(tmpfile, MAX_PATH);
+            bzero(cmd, MAX_PATH);
+            snprintf(tmpfile, MAX_PATH-1, "/tmp/dmsetup.XXXXXX");
+            fd = safe_mkstemp(tmpfile);
+            if (fd > 0) {
+                tot = 0;
+                rbytes = write(fd, dm_tables[i], strlen(dm_tables[i]));
+                if (rbytes != strlen(dm_tables[i])) {
+                    // write error
+                    logprintfl(EUCAERROR, "dm_create_devices(): write returned number of bytes != write buffer: %d/%d\n", rbytes, strlen(dm_tables[i]));
+                    unlink(tmpfile);
+                    exit(1);
+                }
+                close(fd);
+            } else {
+                // couldn't get fd
+                logprintfl(EUCAERROR, "dm_create_devices(): couldn't open tempfile %s\n", tmpfile);
+                unlink(tmpfile);
+                exit(1);
             }
-            _exit (execl (helpers_path [ROOTWRAP], helpers_path [ROOTWRAP], helpers_path [DMSETUP], "create", dev_names[i], NULL));
-
+            snprintf(cmd, MAX_PATH-1, "%s %s create %s %s", helpers_path[ROOTWRAP], helpers_path[DMSETUP], dev_names[i], tmpfile);
+            logprintfl(EUCADEBUG, "dm_create_devices(): running cmd: %s\n", cmd);
+            rc = system(cmd);
+            rc = rc>>8;
+            unlink(tmpfile);
+            exit(rc);
         } else { // parent
-            close (pipefds [0]);
-            write (pipefds [1], dm_tables [i], strlen (dm_tables [i]));
-            close (pipefds [1]);
-
-            int status;
-            if (waitpid (cpid, &status, 0) == -1) {
+            int status, rc;
+            //            close (pipefds [0]);
+            //            write (pipefds [1], dm_tables [i], strlen (dm_tables [i]));
+            //            close (pipefds [1]);
+            //            if (waitpid (cpid, &status, 0) == -1) {
+            rc = timewait(cpid, &status, 30);
+            if (rc <= 0) {
+                logprintfl(EUCAERROR, "dm_create_devices(): bad exit from dmsetup child: %d\n", rc);
                 PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
                 goto cleanup;
             }
