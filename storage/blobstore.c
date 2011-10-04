@@ -94,6 +94,7 @@
 #define BLOBSTORE_FIND_TIMEOUT_USEC 50000LL
 #define BLOBSTORE_DELETE_TIMEOUT_USEC 50000LL
 #define BLOBSTORE_SLEEP_INTERVAL_USEC 99999LL
+#define BLOBSTORE_DMSETUP_TIMEOUT_SEC 30
 #define BLOBSTORE_MAX_CONCURRENT 99
 #define BLOBSTORE_NO_TIMEOUT -1L
 #define BLOBSTORE_SIG_MAX 32768
@@ -1948,73 +1949,57 @@ static int dm_create_devices (char * dev_names[], char * dm_tables[], int size)
 {
     int i;
 
-    for (i=0; i<size; i++) {    
-        //        int pipefds [2];
+    for (i=0; i<size; i++) { // create devices one by one
         myprintf (EUCAINFO, "creating device %s\n", dev_names [i]);
-
-        //        if (pipe (pipefds) == -1) {
-        //            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-        //            goto cleanup;
-        //        }
-
+        
         pid_t cpid = fork();
-
-        if (cpid<0) {
+        if (cpid<0) { // fork error
             PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
             goto cleanup;
 
-        } else if (cpid==0) { // child
-            //            close (pipefds [1]);
-            //            if (dup2 (pipefds [0], 0) == -1) {
-            //                PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-            //                _exit (1);
-            //            }
-            //            _exit (execl (helpers_path [ROOTWRAP], helpers_path [ROOTWRAP], helpers_path [DMSETUP], "create", dev_names[i], NULL));
-            char tmpfile[MAX_PATH], cmd[MAX_PATH];
-            int fd, rbytes, tot, rc;
-
-            bzero(tmpfile, MAX_PATH);
-            bzero(cmd, MAX_PATH);
-            snprintf(tmpfile, MAX_PATH-1, "/tmp/dmsetup.XXXXXX");
-            fd = safe_mkstemp(tmpfile);
+        } else if (cpid==0) { // child process - runs `dmsetup` using system()
+            char tmpfile [MAX_PATH];
+            bzero (tmpfile, sizeof(tmpfile));
+            snprintf (tmpfile, sizeof(tmpfile)-1, "/tmp/dmsetup.XXXXXX");
+            int fd = safe_mkstemp (tmpfile);
             if (fd > 0) {
-                tot = 0;
-                rbytes = write(fd, dm_tables[i], strlen(dm_tables[i]));
-                if (rbytes != strlen(dm_tables[i])) {
-                    // write error
-                    logprintfl(EUCAERROR, "dm_create_devices(): write returned number of bytes != write buffer: %d/%d\n", rbytes, strlen(dm_tables[i]));
-                    unlink(tmpfile);
-                    exit(1);
+                int tot = 0;
+                int rbytes = write (fd, dm_tables[i], strlen(dm_tables[i]));
+                if (rbytes != strlen (dm_tables[i])) { // if write error
+                    logprintfl (EUCAERROR, "{%u} dm_create_devices: write returned number of bytes != write buffer: %d/%d\n", 
+                                (unsigned int)pthread_self(), rbytes, strlen(dm_tables[i]));
+                    unlink (tmpfile);
+                    exit (1);
                 }
-                close(fd);
-            } else {
-                // couldn't get fd
-                logprintfl(EUCAERROR, "dm_create_devices(): couldn't open tempfile %s\n", tmpfile);
-                unlink(tmpfile);
-                exit(1);
+                close (fd);
+
+            } else { // couldn't get fd
+                logprintfl (EUCAERROR, "{%u} dm_create_devices: couldn't open temporary file %s\n", (unsigned int)pthread_self(), tmpfile);
+                unlink (tmpfile);
+                exit (1);
             }
-            snprintf(cmd, MAX_PATH-1, "%s %s create %s %s", helpers_path[ROOTWRAP], helpers_path[DMSETUP], dev_names[i], tmpfile);
-            logprintfl(EUCADEBUG, "dm_create_devices(): running cmd: %s\n", cmd);
-            rc = system(cmd);
+
+            // invoke `dmsetup create ...`
+            char cmd [MAX_PATH];
+            snprintf (cmd, sizeof(cmd)-1, "%s %s create %s %s", helpers_path[ROOTWRAP], helpers_path[DMSETUP], dev_names[i], tmpfile);
+            logprintfl (EUCADEBUG, "{%u} dm_create_devices: running '%s'\n", (unsigned int)pthread_self(), cmd);
+            int rc = system (cmd);
             rc = rc>>8;
-            unlink(tmpfile);
-            exit(rc);
-        } else { // parent
-            int status, rc;
-            //            close (pipefds [0]);
-            //            write (pipefds [1], dm_tables [i], strlen (dm_tables [i]));
-            //            close (pipefds [1]);
-            //            if (waitpid (cpid, &status, 0) == -1) {
-            rc = timewait(cpid, &status, 30);
+            unlink (tmpfile);
+            exit (rc); // pass back dmsetup's return code
+
+        } else { // parent - waits for child, reacts to status
+            int status;
+            int rc = timewait (cpid, &status, BLOBSTORE_DMSETUP_TIMEOUT_SEC);
             if (rc <= 0) {
-                logprintfl(EUCAERROR, "dm_create_devices(): bad exit from dmsetup child: %d\n", rc);
+                logprintfl (EUCAERROR, "{%u} dm_create_devices: bad exit from dmsetup child: %d\n", (unsigned int)pthread_self(), rc);
                 PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
                 goto cleanup;
             }
             if (WEXITSTATUS(status) != 0) {
                 ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to set up device mapper table with 'dmsetup'");
-                myprintf (EUCAINFO, "command: %s %s create %s\n", helpers_path [ROOTWRAP], helpers_path [DMSETUP], dev_names[i]);
-                myprintf (EUCAINFO, "input: %s", dm_tables [i]);
+                myprintf (EUCAINFO, "{%u} command: %s %s create %s\n", (unsigned int)pthread_self(), helpers_path [ROOTWRAP], helpers_path [DMSETUP], dev_names[i]);
+                myprintf (EUCAINFO, "{%u} input: %s", (unsigned int)pthread_self(), dm_tables [i]);
                 goto cleanup;
             }
 
