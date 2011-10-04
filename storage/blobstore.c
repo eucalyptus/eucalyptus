@@ -602,7 +602,7 @@ static char * get_val (const char * buf, const char * key)
 }
 
 // helper for reading a file into a buffer
-// returns size read or -1 if error
+// returns number of bytes read or -1 if error
 static int fd_to_buf (int fd, char * buf, int size_buf)
 {
     if (lseek (fd, 0, SEEK_SET)==-1) 
@@ -612,8 +612,30 @@ static int fd_to_buf (int fd, char * buf, int size_buf)
     if (fstat (fd, &sb)==-1) 
         { ERR (BLOBSTORE_ERROR_ACCES, "failed to stat metadata file"); return -1; }
 
-    if (read (fd, buf, size_buf) != sb.st_size)
+    if (read (fd, buf, size_buf) != sb.st_size) // TODO: do this in a loop?
         { ERR (BLOBSTORE_ERROR_NOENT, "failed to read metadata file"); return -1; }
+
+    return sb.st_size;
+}
+
+// helper for write buffer into a file at descriptor
+// returns number of bytes written or -1 if error
+static int buf_to_fd (int fd, const char * buf, int size_buf)
+{
+    if (lseek (fd, 0, SEEK_SET)==-1) 
+        { ERR (BLOBSTORE_ERROR_ACCES, "failed to seek in metadata file"); return -1; }
+
+    ssize_t size_wrote = write (fd, buf, size_buf); // TODO: do this in a loop?
+    if (size_wrote < size_buf)
+        { ERR (BLOBSTORE_ERROR_NOENT, "failed to write metadata file"); return -1; }
+
+    // as a sanity check, stat the file and verify its size
+    struct stat sb;
+    if (fstat (fd, &sb)==-1) 
+        { ERR (BLOBSTORE_ERROR_ACCES, "failed to stat metadata file"); return -1; }
+
+    if (sb.st_size != size_buf)
+        { ERR (BLOBSTORE_ERROR_NOENT, "failed to read back metadata file"); return -1; }
 
     return sb.st_size;
 }
@@ -893,20 +915,27 @@ static int set_blockblob_metadata_path (blockblob_path_t path_t, const blobstore
 // returns 0 for success or -1 for error
 static int write_blockblob_metadata_path (blockblob_path_t path_t, const blobstore * bs, const char * bb_id, const char * str)
 {
+    int ret = 0;
     char path [PATH_MAX];
     set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
 
-    mode_t old_umask = umask (~BLOBSTORE_FILE_PERM);
-    FILE * FH = fopen (path, "w");
-    umask (old_umask);
-    if (FH) {
-        fprintf (FH, "%s", str);
-        fclose (FH);
-    } else {
-        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);        
+    int fd = open_and_lock (path, 
+                            BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_RDWR,
+                            BLOBSTORE_METADATA_TIMEOUT_USEC, 
+                            BLOBSTORE_FILE_PERM);
+    if (fd == -1)
         return -1;
+    int size = buf_to_fd (fd, str, strlen (str));
+    int ret_close = close_and_unlock (fd);
+    if (size != strlen (str)) {
+        // set the error code, possibly overriding one set by close_and_unlock
+        ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to write desired number of characters to metadata file");
+        ret = -1;
+    } else if (ret_close != 0) {
+        ret = -1; // close_and_unlock should have set the error code
     }
-    return 0;    
+    
+    return ret;
 }
 
 // reads contents of a specific metadata file (based on 'path_t') of blob 'bb_id' into string 'str' up to 'str_size'
@@ -916,17 +945,21 @@ static int read_blockblob_metadata_path (blockblob_path_t path_t, const blobstor
     char path [PATH_MAX];
     set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
 
-    int fd = open (path, O_RDONLY);
-    if (fd == -1) {
-        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+    int fd = open_and_lock (path, 
+                            BLOBSTORE_FLAG_RDONLY,
+                            BLOBSTORE_METADATA_TIMEOUT_USEC, 
+                            BLOBSTORE_FILE_PERM);
+    if (fd == -1)
         return -1;
-    }
-        
     int size = fd_to_buf (fd, str, str_size);
-    close (fd);
-
-    if (size < 1)
-        { ERR (BLOBSTORE_ERROR_NOENT, "blockblob metadata size is too small"); return -1; }
+    int ret_close = close_and_unlock (fd);
+    if (size < 1) { 
+        // set the error code, possibly overriding one set by close_and_unlock
+        ERR (BLOBSTORE_ERROR_NOENT, "blockblob metadata size is too small"); 
+        size = -1;
+    } else if (ret_close != 0) {
+        size = -1; // close_and_unlock should have set the error code
+    }
 
     return size;
 }
