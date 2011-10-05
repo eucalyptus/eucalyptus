@@ -1692,6 +1692,9 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 goto retry_or_fail;
             }
         }
+
+        // at this point the artifact we need does not seem to exist
+        // (though it could be created before we get around to that)
         
         if (do_deps) { // recursively go over dependencies, if any
             for (int i = 0; i < MAX_ARTIFACT_DEPS && root->deps[i]; i++) {
@@ -1725,7 +1728,11 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 }
             }
         }
-        
+ 
+        // at this point the dependencies, if any, needed to create
+        // the artifact, have been created and opened (i.e. locked
+        // for exclusive use by this process and thread)
+       
         if (do_create) {
             // try to create the artifact since last time we checked it did not exist
             switch (ret = find_or_create_artifact (CREATE, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
@@ -1744,13 +1751,20 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
             }
 
         create:
-            ret = root->creator (root);
+            ret = root->creator (root); // create and open this artifact for exclusive use
             if (ret != OK) {
                 logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s (error=%d)\n", root->instanceId, root->id, ret);
-                // delete the partially created artifact
+                // delete the partially created artifact so we can retry with a clean slate
                 if (blockblob_delete (root->bb, DELETE_BLOB_TIMEOUT_USEC) == -1) {
+                    // failure of 'delete' is bad, since we may have an open blob
+                    // that will prevent others from ever opening it again, so at
+                    // least try to close it
                     logprintfl (EUCAERROR, "[%s] error: failed to remove partially created artifact %s: %d %s (potential resource leak!)\n",
                                 root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg());
+                    if (blockblob_close (root->bb) == -1) {
+                        logprintfl (EUCAERROR, "[%s] error: failed to close partially created artifact %s: %d %s (potential deadlock!)\n",
+                                    root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg());
+                    }
                 }
             } else {
                 if (root->vbr && root->vbr->type != NC_RESOURCE_EBS)
