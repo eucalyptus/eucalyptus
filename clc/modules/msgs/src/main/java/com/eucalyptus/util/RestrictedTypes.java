@@ -216,7 +216,7 @@ public class RestrictedTypes {
           PolicyResourceType type = ats.get( PolicyResourceType.class );
           String action = PolicySpec.requestToAction( ctx.getRequest( ) );
           if ( action == null ) {
-            action = vendor.value( ) + ":" + ctx.getRequest( ).getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
+            action = getIamActionByMessageType( ctx.getRequest( ) );
           }
           User requestUser = ctx.getUser( );
           try {
@@ -240,7 +240,11 @@ public class RestrictedTypes {
   public static <T extends RestrictedType> T doPrivileged( String identifier, Class<T> type ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     return doPrivileged( identifier, ( Function<String, T> ) checkMapByType( type, resourceResolvers ) );
   }
-  
+
+  @SuppressWarnings( "rawtypes" )
+  public static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> resolverFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return doPrivileged( identifier, resolverFunction, false );
+  }
   /**
    * Uses the provided {@code lookupFunction} to resolve the {@code identifier} to the underlying
    * object {@code T} with privileges determined by the current messaging context.
@@ -256,7 +260,7 @@ public class RestrictedTypes {
    * @throws IllegalContextAccessException if the current request context cannot be determined.
    */
   @SuppressWarnings( "rawtypes" )
-  public static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> resolverFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> resolverFunction, boolean ignoreOwningAccount ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     assertThat( "Resolver function must be not null: " + identifier, resolverFunction, notNullValue( ) );
     Context ctx = Contexts.lookup( );
     if ( ctx.hasAdministrativePrivileges( ) ) {
@@ -298,7 +302,7 @@ public class RestrictedTypes {
           PolicyResourceType type = ats.get( PolicyResourceType.class );
           String action = PolicySpec.requestToAction( ctx.getRequest( ) );
           if ( action == null ) {
-            action = vendor.value( ) + ":" + ctx.getRequest( ).getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
+            action = getIamActionByMessageType( ctx.getRequest( ) );
           }
           
           User requestUser = ctx.getUser( );
@@ -323,9 +327,12 @@ public class RestrictedTypes {
                                             + rscType, ex );
           }
           
-          Account owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( requestedObject.getOwner( ).getAccountNumber( ) )
-          ? null
-          : Accounts.lookupAccountByName( requestedObject.getOwner( ).getAccountName( ) );
+          Account owningAccount = null;
+          if ( !ignoreOwningAccount ) {
+            owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( requestedObject.getOwner( ).getAccountNumber( ) )
+              ? null
+              : Accounts.lookupAccountByName( requestedObject.getOwner( ).getAccountName( ) );
+          }
           if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, owningAccount, action, requestUser ) ) {
             throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user " + requestUser.getName( ) );
           }
@@ -336,6 +343,14 @@ public class RestrictedTypes {
   }
   
   public static <T extends RestrictedType> Predicate<T> filterPrivileged( ) {
+    return filterPrivileged( false );
+  }
+  
+  /*
+   * Please, ignoreOwningAccount here is necessary. Consult me first before making any changes.
+   *  -- Ye Wen (wenye@eucalyptus.com)
+   */
+  public static <T extends RestrictedType> Predicate<T> filterPrivileged( final boolean ignoreOwningAccount ) {
     return new Predicate<T>( ) {
       
       @Override
@@ -361,13 +376,16 @@ public class RestrictedTypes {
             PolicyResourceType type = ats.get( PolicyResourceType.class );
             String action = PolicySpec.requestToAction( ctx.getRequest( ) );
             if ( action == null ) {
-              action = vendor.value( ) + ":" + ctx.getRequest( ).getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
+              action = getIamActionByMessageType( ctx.getRequest( ) );
             }
             User requestUser = ctx.getUser( );
             try {
-              Account owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( arg0.getOwner( ).getAccountNumber( ) )
-                ? null
-                : Accounts.lookupAccountByName( arg0.getOwner( ).getAccountName( ) );
+              Account owningAccount = null;
+              if ( !ignoreOwningAccount ) {
+                owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( arg0.getOwner( ).getAccountNumber( ) )
+                  ? null
+                  : Accounts.lookupAccountByName( arg0.getOwner( ).getAccountName( ) );
+              }
               return Permissions.isAuthorized( vendor.value( ), type.value( ), arg0.getDisplayName( ), owningAccount, action, requestUser );
             } catch ( AuthException ex ) {
               return false;
@@ -417,6 +435,13 @@ public class RestrictedTypes {
   
   public static <T> Function<String, T> listAll( Class<T> type ) {
     //TODO:GRZE:WTF FINISH THIS SHIT.
+    return null;
+  }
+  
+  public static String getIamActionByMessageType( BaseMessage request ) {
+    if ( request != null ) {
+      return request.getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
+    }
     return null;
   }
 }
