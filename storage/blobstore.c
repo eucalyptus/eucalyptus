@@ -90,10 +90,11 @@
 
 #define BLOBSTORE_METADATA_FILE ".blobstore"
 #define BLOBSTORE_METADATA_TIMEOUT_USEC 9999999LL
-#define BLOBSTORE_LOCK_TIMEOUT_USEC 1000LL
-#define BLOBSTORE_FIND_TIMEOUT_USEC 1000LL
-#define BLOBSTORE_DELETE_TIMEOUT_USEC 1000LL
+#define BLOBSTORE_LOCK_TIMEOUT_USEC 50000LL
+#define BLOBSTORE_FIND_TIMEOUT_USEC 50000LL
+#define BLOBSTORE_DELETE_TIMEOUT_USEC 50000LL
 #define BLOBSTORE_SLEEP_INTERVAL_USEC 99999LL
+#define BLOBSTORE_DMSETUP_TIMEOUT_SEC 30
 #define BLOBSTORE_MAX_CONCURRENT 99
 #define BLOBSTORE_NO_TIMEOUT -1L
 #define BLOBSTORE_SIG_MAX 32768
@@ -333,9 +334,11 @@ static int close_and_unlock (int fd)
         if (l) { // we found a match
             assert (* next_ptr == l);
             assert (index>=0 && index<BLOBSTORE_MAX_CONCURRENT);
-            if (l->fd_status [index] == 1) { // has not been closed yet
-                { // inner critical section to protect changes to 'l'
-                    pthread_mutex_lock (&(l->mutex)); // grab path-specific mutex
+            boolean did_close = 0;
+
+            { // inner critical section to protect changes to 'l', if any
+                pthread_mutex_lock (&(l->mutex)); // grab path-specific mutex
+                if (l->fd_status [index] == 1) { // has not been closed yet
                     l->fd_status [index] = 0; // set status to 'unused'
                     
                     int open_fds = 0;
@@ -349,9 +352,12 @@ static int close_and_unlock (int fd)
                         close_filelock (l);
                         logprintfl (EUCADEBUG2, "{%u} close_and_unlock: fd=%d closed along with all others\n", (unsigned int)pthread_self(), fd);
                     }
-                    pthread_mutex_unlock (&(l->mutex));
-                } // end of critical section
-
+                    did_close = 1;
+                }
+                pthread_mutex_unlock (&(l->mutex));
+            } // end of critical section
+            
+            if (did_close) {
                 if (--l->refs==0) { // no references to this struct (from waiting threads)
                     * next_ptr = l->next; // remove from LL
                     _locks_list_rem_ctr++;
@@ -366,7 +372,7 @@ static int close_and_unlock (int fd)
                 ERR (BLOBSTORE_ERROR_BADF, "file descriptor already closed");
                 ret = -1;
             }
-        } else {
+        } else { // no match
             ERR (BLOBSTORE_ERROR_BADF, "not an open file descriptor");
             ret = -1;
         }
@@ -602,7 +608,7 @@ static char * get_val (const char * buf, const char * key)
 }
 
 // helper for reading a file into a buffer
-// returns size read or -1 if error
+// returns number of bytes read or -1 if error
 static int fd_to_buf (int fd, char * buf, int size_buf)
 {
     if (lseek (fd, 0, SEEK_SET)==-1) 
@@ -612,8 +618,30 @@ static int fd_to_buf (int fd, char * buf, int size_buf)
     if (fstat (fd, &sb)==-1) 
         { ERR (BLOBSTORE_ERROR_ACCES, "failed to stat metadata file"); return -1; }
 
-    if (read (fd, buf, size_buf) != sb.st_size)
+    if (read (fd, buf, size_buf) != sb.st_size) // TODO: do this in a loop?
         { ERR (BLOBSTORE_ERROR_NOENT, "failed to read metadata file"); return -1; }
+
+    return sb.st_size;
+}
+
+// helper for write buffer into a file at descriptor
+// returns number of bytes written or -1 if error
+static int buf_to_fd (int fd, const char * buf, int size_buf)
+{
+    if (lseek (fd, 0, SEEK_SET)==-1) 
+        { ERR (BLOBSTORE_ERROR_ACCES, "failed to seek in metadata file"); return -1; }
+
+    ssize_t size_wrote = write (fd, buf, size_buf); // TODO: do this in a loop?
+    if (size_wrote < size_buf)
+        { ERR (BLOBSTORE_ERROR_NOENT, "failed to write metadata file"); return -1; }
+
+    // as a sanity check, stat the file and verify its size
+    struct stat sb;
+    if (fstat (fd, &sb)==-1) 
+        { ERR (BLOBSTORE_ERROR_ACCES, "failed to stat metadata file"); return -1; }
+
+    if (sb.st_size != size_buf)
+        { ERR (BLOBSTORE_ERROR_NOENT, "failed to read back metadata file"); return -1; }
 
     return sb.st_size;
 }
@@ -893,20 +921,27 @@ static int set_blockblob_metadata_path (blockblob_path_t path_t, const blobstore
 // returns 0 for success or -1 for error
 static int write_blockblob_metadata_path (blockblob_path_t path_t, const blobstore * bs, const char * bb_id, const char * str)
 {
+    int ret = 0;
     char path [PATH_MAX];
     set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
 
-    mode_t old_umask = umask (~BLOBSTORE_FILE_PERM);
-    FILE * FH = fopen (path, "w");
-    umask (old_umask);
-    if (FH) {
-        fprintf (FH, "%s", str);
-        fclose (FH);
-    } else {
-        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);        
+    int fd = open_and_lock (path, 
+                            BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_RDWR,
+                            BLOBSTORE_METADATA_TIMEOUT_USEC, 
+                            BLOBSTORE_FILE_PERM);
+    if (fd == -1)
         return -1;
+    int size = buf_to_fd (fd, str, strlen (str));
+    int ret_close = close_and_unlock (fd);
+    if (size != strlen (str)) {
+        // set the error code, possibly overriding one set by close_and_unlock
+        ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to write desired number of characters to metadata file");
+        ret = -1;
+    } else if (ret_close != 0) {
+        ret = -1; // close_and_unlock should have set the error code
     }
-    return 0;    
+    
+    return ret;
 }
 
 // reads contents of a specific metadata file (based on 'path_t') of blob 'bb_id' into string 'str' up to 'str_size'
@@ -916,17 +951,21 @@ static int read_blockblob_metadata_path (blockblob_path_t path_t, const blobstor
     char path [PATH_MAX];
     set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
 
-    int fd = open (path, O_RDONLY);
-    if (fd == -1) {
-        PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
+    int fd = open_and_lock (path, 
+                            BLOBSTORE_FLAG_RDONLY,
+                            BLOBSTORE_METADATA_TIMEOUT_USEC, 
+                            BLOBSTORE_FILE_PERM);
+    if (fd == -1)
         return -1;
-    }
-        
     int size = fd_to_buf (fd, str, str_size);
-    close (fd);
-
-    if (size < 1)
-        { ERR (BLOBSTORE_ERROR_NOENT, "blockblob metadata size is too small"); return -1; }
+    int ret_close = close_and_unlock (fd);
+    if (size < 1) { 
+        // set the error code, possibly overriding one set by close_and_unlock
+        ERR (BLOBSTORE_ERROR_NOENT, "blockblob metadata size is too small"); 
+        size = -1;
+    } else if (ret_close != 0) {
+        size = -1; // close_and_unlock should have set the error code
+    }
 
     return size;
 }
@@ -941,7 +980,7 @@ static int write_array_blockblob_metadata_path (blockblob_path_t path_t, const b
     set_blockblob_metadata_path (path_t, bs, bb_id, path, sizeof (path));
 
     mode_t old_umask = umask (~BLOBSTORE_FILE_PERM);
-    FILE * fp = fopen (path, "w+");
+    FILE * fp = fopen (path, "w");
     umask (old_umask);
     if (fp == NULL) {
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
@@ -1442,7 +1481,7 @@ int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** res
     if (bbs==NULL) {
         if (_blobstore_errno != BLOBSTORE_ERROR_OK) {
             ret = -1;
-            goto unlock;
+            goto free;
         }
     }
     
@@ -1459,6 +1498,7 @@ int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** res
         blockblob_meta * bm = calloc (1, sizeof (blockblob_meta));
         if (bm==NULL) {
             ERR (BLOBSTORE_ERROR_NOMEM, NULL);
+            ret = -1;
             goto free;
         }
 
@@ -1478,12 +1518,16 @@ int blobstore_search ( blobstore * bs, const char * regex, blockblob_meta ** res
 
     * results = head;
     ret = blobs_matched;
-    goto unlock;
 
  free:
-    regfree (&re);
+    regfree (&re); // free the regular expression
     if (bbs)
-        free_bbs (bbs);
+        free_bbs (bbs); // free the blockblobs LL returned by the search function
+
+    if (ret > 0) // all is well above and we have results
+        goto unlock;
+
+    // there were problems above, so free the results linked list, too
     for (blockblob_meta * bm = head; bm;) {
         blockblob_meta * next = bm->next;
         free (bm);
@@ -1701,7 +1745,7 @@ blockblob * blockblob_open ( blobstore * bs,
             }
         }
 
-        // create a loopback device, if there isn't one already
+        // create a loopback device, if there isn't one already (this may happen whether the blob is new or old)
         char lo_dev [PATH_MAX] = "";
         _err_off(); // do not care if loopback file does not exist
         read_blockblob_metadata_path (BLOCKBLOB_PATH_LOOPBACK, bs, bb->id, lo_dev, sizeof (lo_dev));
@@ -1910,43 +1954,57 @@ static int dm_create_devices (char * dev_names[], char * dm_tables[], int size)
 {
     int i;
 
-    for (i=0; i<size; i++) {    
-        int pipefds [2];
+    for (i=0; i<size; i++) { // create devices one by one
         myprintf (EUCAINFO, "creating device %s\n", dev_names [i]);
-
-        if (pipe (pipefds) == -1) {
-            PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-            goto cleanup;
-        }
-
+        
         pid_t cpid = fork();
-
-        if (cpid<0) {
+        if (cpid<0) { // fork error
             PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
             goto cleanup;
 
-        } else if (cpid==0) { // child
-            close (pipefds [1]);
-            if (dup2 (pipefds [0], 0) == -1) {
-                PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
-                _exit (1);
+        } else if (cpid==0) { // child process - runs `dmsetup` using system()
+            char tmpfile [MAX_PATH];
+            bzero (tmpfile, sizeof(tmpfile));
+            snprintf (tmpfile, sizeof(tmpfile)-1, "/tmp/dmsetup.XXXXXX");
+            int fd = safe_mkstemp (tmpfile);
+            if (fd > 0) {
+                int tot = 0;
+                int rbytes = write (fd, dm_tables[i], strlen(dm_tables[i]));
+                if (rbytes != strlen (dm_tables[i])) { // if write error
+                    logprintfl (EUCAERROR, "{%u} dm_create_devices: write returned number of bytes != write buffer: %d/%d\n", 
+                                (unsigned int)pthread_self(), rbytes, strlen(dm_tables[i]));
+                    unlink (tmpfile);
+                    exit (1);
+                }
+                close (fd);
+
+            } else { // couldn't get fd
+                logprintfl (EUCAERROR, "{%u} dm_create_devices: couldn't open temporary file %s\n", (unsigned int)pthread_self(), tmpfile);
+                unlink (tmpfile);
+                exit (1);
             }
-            _exit (execl (helpers_path [ROOTWRAP], helpers_path [ROOTWRAP], helpers_path [DMSETUP], "create", dev_names[i], NULL));
 
-        } else { // parent
-            close (pipefds [0]);
-            write (pipefds [1], dm_tables [i], strlen (dm_tables [i]));
-            close (pipefds [1]);
+            // invoke `dmsetup create ...`
+            char cmd [MAX_PATH];
+            snprintf (cmd, sizeof(cmd)-1, "%s %s create %s %s", helpers_path[ROOTWRAP], helpers_path[DMSETUP], dev_names[i], tmpfile);
+            logprintfl (EUCADEBUG, "{%u} dm_create_devices: running '%s'\n", (unsigned int)pthread_self(), cmd);
+            int rc = system (cmd);
+            rc = rc>>8;
+            unlink (tmpfile);
+            exit (rc); // pass back dmsetup's return code
 
+        } else { // parent - waits for child, reacts to status
             int status;
-            if (waitpid (cpid, &status, 0) == -1) {
+            int rc = timewait (cpid, &status, BLOBSTORE_DMSETUP_TIMEOUT_SEC);
+            if (rc <= 0) {
+                logprintfl (EUCAERROR, "{%u} dm_create_devices: bad exit from dmsetup child: %d\n", (unsigned int)pthread_self(), rc);
                 PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
                 goto cleanup;
             }
             if (WEXITSTATUS(status) != 0) {
                 ERR (BLOBSTORE_ERROR_UNKNOWN, "failed to set up device mapper table with 'dmsetup'");
-                myprintf (EUCAINFO, "command: %s %s create %s\n", helpers_path [ROOTWRAP], helpers_path [DMSETUP], dev_names[i]);
-                myprintf (EUCAINFO, "input: %s", dm_tables [i]);
+                myprintf (EUCAINFO, "{%u} command: %s %s create %s\n", (unsigned int)pthread_self(), helpers_path [ROOTWRAP], helpers_path [DMSETUP], dev_names[i]);
+                myprintf (EUCAINFO, "{%u} input: %s", (unsigned int)pthread_self(), dm_tables [i]);
                 goto cleanup;
             }
 
@@ -2008,7 +2066,7 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec )
     }
     blobstore * bs = bb->store;
     int ret = 0;
-    if (blobstore_lock(bs, timeout_usec)==-1) { // lock it so we can traverse it (TODO: move this into creation-only section?)
+    if (blobstore_lock (bs, timeout_usec)==-1) { // lock it so we can traverse it
         ret = -1;
         goto error; // failed to obtain a lock on the blobstore
     }
