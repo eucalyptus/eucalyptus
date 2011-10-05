@@ -90,8 +90,9 @@
 #define BLOCKBLOB_STATUS_MAPPED 00010 // loopback device dm-mapped by one or more other blobs
 #define BLOCKBLOB_STATUS_BACKED 00020 // loopback device used as a backing by device mapper
 
-typedef enum {
+typedef enum { // make sure these match up with _blobstore_error_strings[] entries below
     BLOBSTORE_ERROR_OK = 0,
+    BLOBSTORE_ERROR_GENERAL, // here for compatibility with 'ERROR' elsewhere in Eucalyptus
 
     // system errno equivalents
     BLOBSTORE_ERROR_NOENT,
@@ -109,9 +110,11 @@ typedef enum {
     BLOBSTORE_ERROR_UNKNOWN,
 } blobstore_error_t;
 
-static char * _blobstore_error_strings [] = {
+static char * _blobstore_error_strings [] = { // make sure these match up with blobstore_error_t enums above
     "success",
+    "general error",
 
+    // system errno equivalents
     "no such entity",
     "bad file descriptor",
     "out of memory",
@@ -122,6 +125,7 @@ static char * _blobstore_error_strings [] = {
     "timeout",
     "too many files open",
 
+    // blobstore-specific errors
     "wrong signature",
     "unknown error"
 };

@@ -98,7 +98,7 @@ prep_location ( // picks a service URI and prepends it to resourceLocation in VB
         serviceInfoType * service = &(meta->services[i]);
         if (strncmp(service->type, typeName, strlen(typeName)-3)==0 && service->urisLen>0) {
             char * l = vbr->resourceLocation + (strlen (typeName) + 3); // +3 for "://", so 'l' points past, e.g., "walrus:"
-            snprintf (vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s%s", service->uris[0], l); // TODO: for now we just pick the first one
+            snprintf (vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s/%s", service->uris[0], l); // TODO: for now we just pick the first one
             return OK;
         }
     }
@@ -523,11 +523,16 @@ static void update_vbr_with_backing_info (artifact * a)
     vbr->size = a->bb->size_bytes;
 }
 
-// These *_creator funcitons produce an artifact in blobstore, either from
-// scratch (such as Walrus download or a new partition) or by converting,
-// combining, and augmenting existing artifacts.  When invoked, creators
-// can assume that any input blobs and the output blob are open (and 
-// thus locked for their exclusive use).
+// The following *_creator funcitons produce an artifact in blobstore, 
+// either from scratch (such as Walrus download or a new partition) or 
+// by converting, combining, and augmenting existing artifacts.  
+//
+// When invoked, creators can assume that any input blobs and the output 
+// blob are open (and thus locked for their exclusive use).
+//
+// Creators return OK or an error code: either generic one (ERROR) or
+// a code specific to a failed blobstore operation, which can be obtained
+// using blobstore_get_error().
 
 static int url_creator (artifact * a)
 {
@@ -699,7 +704,8 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
 
     // map the partitions to the disk
     if (blockblob_clone (a->bb, map, map_entries)==-1) {
-        logprintfl (EUCAERROR, "[%s] error: failed to clone partitions to created disk: %d %s\n", a->instanceId, blobstore_get_error(), blobstore_get_last_msg());
+        ret = blobstore_get_error();
+        logprintfl (EUCAERROR, "[%s] error: failed to clone partitions to created disk: %d %s\n", a->instanceId, ret, blobstore_get_last_msg());
         goto cleanup;
     }
 
@@ -843,7 +849,7 @@ static int copy_creator (artifact * a)
     if (a->must_be_file) {
         if (blockblob_copy (dep->bb, 0L, a->bb, 0L, 0L)==-1) {
             logprintfl (EUCAERROR, "[%s] error: failed to copy blob %s to blob %s\n", a->instanceId, dep->bb->id, a->bb->id);
-            return ERROR;
+            return blobstore_get_error();
         }
     } else {
         blockmap map [] = {
@@ -851,7 +857,7 @@ static int copy_creator (artifact * a)
         };
         if (blockblob_clone (a->bb, map, 1)==-1) {
             logprintfl (EUCAERROR, "[%s] error: failed to clone blob %s to blob %s\n", a->instanceId, dep->bb->id, a->bb->id);
-            return ERROR;
+            return blobstore_get_error();
         }
     }
 
@@ -1517,8 +1523,8 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
     return root;
 }
 
-#define FIND_BLOB_TIMEOUT_USEC 100
-#define DELETE_BLOB_TIMEOUT_USEC 100
+#define FIND_BLOB_TIMEOUT_USEC   50000LL // TODO: use 100 or less to induce rare timeouts
+#define DELETE_BLOB_TIMEOUT_USEC 50000LL
 
 static int // returns OK or BLOBSTORE_ERROR_ error codes
 find_or_create_blob ( // either opens a blockblob or creates it
@@ -1624,6 +1630,20 @@ find_or_create_artifact ( // finds and opens or creates artifact's blob either i
 
 #define ARTIFACT_RETRY_SLEEP_USEC 100LL
 
+// Given a root node in a tree of blob artifacts, unless the root
+// blob already exists and has the right signature, this function:
+//
+// - ensures that any depenent blobs are present and open
+// - creates the root blob and invokes to creator function to fill it
+// - closes any dependent blobs
+// 
+// The function is recursive and the contract is that when it returns
+//
+// - with success, the root blob is open and ready
+// - with failure, the root blob is closed and possibly non-existant
+//
+// Either way, none of the child blobs are open.
+
 int // returns OK or BLOBSTORE_ERROR_ error codes
 art_implement_tree ( // traverse artifact tree and create/download/combine artifacts
                     artifact * root, // root of the tree
@@ -1650,10 +1670,9 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
         if (!root->creator) { // sentinel nodes do not have a creator
             do_create = FALSE;
             
-        } else {
-
+        } else { // not a sentinel
             if (root->vbr && root->vbr->type == NC_RESOURCE_EBS)
-                goto create; // EBS artifacts have no disk manifestation and no dependencies, so cut to the chase
+                goto create; // EBS artifacts have no disk manifestation and no dependencies, so skip to creation
 
             // try to open the artifact
             switch (ret = find_or_create_artifact (FIND, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
@@ -1663,37 +1682,57 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 do_deps = FALSE;
                 do_create = FALSE;
                 break;
-            case BLOBSTORE_ERROR_NOENT: // doesn't exist yet => create it
+            case BLOBSTORE_ERROR_NOENT: // doesn't exist yet => ok, create it
                 break; 
             case BLOBSTORE_ERROR_AGAIN: // timed out
-                goto retry;
+                goto retry_or_fail;
                 break;
             default: // all other errors
                 logprintfl (EUCAERROR, "[%s] error: failed to provision artifact %03d|%s (error=%d)\n", root->instanceId, root->seq, root->id, ret);
-                goto retry;
+                goto retry_or_fail;
             }
         }
+
+        // at this point the artifact we need does not seem to exist
+        // (though it could be created before we get around to that)
         
         if (do_deps) { // recursively go over dependencies, if any
             for (int i = 0; i < MAX_ARTIFACT_DEPS && root->deps[i]; i++) {
-                switch (ret = art_implement_tree (root->deps[i], work_bs, cache_bs, work_prefix, 0)) {
+
+                // recalculate the time that remains in the timeout period
+                long long new_timeout_usec = timeout_usec;
+                if (timeout_usec > 0) {
+                    new_timeout_usec -= time_usec()-started;
+                    if (new_timeout_usec < 1) { // timeout exceeded, so bail out of this function
+                        ret=BLOBSTORE_ERROR_AGAIN;
+                        goto retry_or_fail;
+                    }
+                }
+                switch (ret = art_implement_tree (root->deps[i], work_bs, cache_bs, work_prefix, new_timeout_usec)) {
                 case OK:
                     if (do_create) { // we'll hold the dependency open for the creator
                         num_opened_deps++;
                     } else { // this is a sentinel, we're not creating anything, so release the dep immediately
-                        blockblob_close (root->deps[i]->bb);
+                        if (blockblob_close (root->deps[i]->bb) == -1) {
+                            logprintfl (EUCAERROR, "[%s] error: failed to close dependency of %s: %d %s (potential resource leak!)\n",
+                                        root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg());                            
+                        }
                         root->deps[i]->bb = 0; // for debugging
                     }
                     break; // out of the switch statement
                 case BLOBSTORE_ERROR_AGAIN: // timed out
-                    goto retry;
+                    goto retry_or_fail;
                 default: // all other errors
                     logprintfl (EUCAERROR, "[%s] error: failed to provision dependency %s for artifact %s (error=%d)\n", root->instanceId, root->deps[i]->id, root->id, ret);
-                    goto retry;
+                    goto retry_or_fail;
                 }
             }
         }
-        
+ 
+        // at this point the dependencies, if any, needed to create
+        // the artifact, have been created and opened (i.e. locked
+        // for exclusive use by this process and thread)
+       
         if (do_create) {
             // try to create the artifact since last time we checked it did not exist
             switch (ret = find_or_create_artifact (CREATE, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
@@ -1704,33 +1743,45 @@ art_implement_tree ( // traverse artifact tree and create/download/combine artif
                 ret = BLOBSTORE_ERROR_AGAIN;
                 // fall through
             case BLOBSTORE_ERROR_AGAIN: // timed out (but probably exists)
-                goto retry;
+                goto retry_or_fail;
                 break;
             default: // all other errors
                 logprintfl (EUCAERROR, "[%s] error: failed to allocate artifact %s (error=%d)\n", root->instanceId, root->id, ret);
-                goto retry;
+                goto retry_or_fail;
             }
 
         create:
-            ret = root->creator (root);
+            ret = root->creator (root); // create and open this artifact for exclusive use
             if (ret != OK) {
                 logprintfl (EUCAERROR, "[%s] error: failed to create artifact %s (error=%d)\n", root->instanceId, root->id, ret);
-                // delete the partially created artifact
-                blockblob_delete (root->bb, DELETE_BLOB_TIMEOUT_USEC);
+                // delete the partially created artifact so we can retry with a clean slate
+                if (blockblob_delete (root->bb, DELETE_BLOB_TIMEOUT_USEC) == -1) {
+                    // failure of 'delete' is bad, since we may have an open blob
+                    // that will prevent others from ever opening it again, so at
+                    // least try to close it
+                    logprintfl (EUCAERROR, "[%s] error: failed to remove partially created artifact %s: %d %s (potential resource leak!)\n",
+                                root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg());
+                    if (blockblob_close (root->bb) == -1) {
+                        logprintfl (EUCAERROR, "[%s] error: failed to close partially created artifact %s: %d %s (potential deadlock!)\n",
+                                    root->instanceId, root->id, blobstore_get_error(), blobstore_get_last_msg());
+                    }
+                }
             } else {
                 if (root->vbr && root->vbr->type != NC_RESOURCE_EBS)
                     update_vbr_with_backing_info (root);
             }
         }
 
-    retry:
-        // close all opened blobs, whether we're trying again or giving up
+    retry_or_fail:
+        // close all opened dependent blobs, whether we're trying again or returning
         for (int i=0; i<num_opened_deps; i++) {
             blockblob_close (root->deps[i]->bb);
             root->deps[i]->bb = 0; // for debugging
         }
         
-    } while (ret==BLOBSTORE_ERROR_AGAIN && (time_usec()-started)>timeout_usec);
+    } while (ret==BLOBSTORE_ERROR_AGAIN // only timeout error causes us to keep trying
+             && ( timeout_usec==0 // indefinitely if there is no timeout at all
+                  || (time_usec()-started)<timeout_usec )); // or until we exceed the timeout
     
     return ret;
 }
