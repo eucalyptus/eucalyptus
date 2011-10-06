@@ -81,7 +81,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "cloud_image_configuration" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass( root = "ws", description = "Parameters controlling the web services endpoint." )//TODO:GRZE: this /will/ be changed to "bootstrap.webservices"
+@ConfigurableClass( root = "bootstrap.webservices", description = "Parameters controlling the web services endpoint." )
 public class StackConfiguration extends AbstractPersistent {
   
   @ConfigurableField( initial = "500", description = "Channel connect timeout (ms)." )
@@ -152,6 +152,19 @@ public class StackConfiguration extends AbstractPersistent {
   
   @ConfigurableField( initial = "500", description = "Client socket select timeout (ms)." )
   public static Long          CLIENT_POOL_TIMEOUT_MILLIS        = 500l;
+
+  @ConfigurableField( initial = "http", description = "Default scheme for EC2_URL in eucarc.", changeListener = UriChangeListener.class )
+  public static String        DEFAULT_EC2_URI_SCHEME        = "http";
+
+  @ConfigurableField( initial = "http", description = "Default scheme for S3_URL in eucarc.", changeListener = UriChangeListener.class )
+  public static String        DEFAULT_S3_URI_SCHEME        = "http";
+
+  @ConfigurableField( initial = "http", description = "Default scheme for AWS_SNS_URL in eucarc.", changeListener = UriChangeListener.class )
+  public static String        DEFAULT_AWS_SNS_URI_SCHEME        = "http";
+
+  @ConfigurableField( initial = "http", description = "Default scheme for EUARE_URL in eucarc.", changeListener = UriChangeListener.class )
+  public static String        DEFAULT_EUARE_URI_SCHEME        = "http";
+
   
   private static Logger       LOG                               = Logger.getLogger( StackConfiguration.class );
   
@@ -178,4 +191,30 @@ public class StackConfiguration extends AbstractPersistent {
       
     }
   }
+
+    public static class UriChangeListener implements PropertyChangeListener {
+    /**
+     * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
+     *      java.lang.Object)
+     * 
+     *      Validates that the new value is >= 0
+     */
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+      
+      String prefix = null;
+
+      if ( newValue instanceof String ) {
+          prefix = ( String ) newValue;
+	  if( "http".equals(prefix) || "https".equals(prefix) )
+	      return;
+      }
+      throw new ConfigurablePropertyException( "URL prefix for " + t.getFieldName( ) + " has to be 'http' or 'https'");
+      
+    }
+  }
+
 }
+
+
+  

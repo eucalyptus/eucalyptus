@@ -33,5 +33,6 @@ import eucadmin.describerequest
 class DescribeVMwareBrokers(eucadmin.describerequest.DescribeRequest):
 
     ServiceName = 'VMware'
+    Description = 'List VMwareBroker services.'
     
     

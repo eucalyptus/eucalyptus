@@ -33,5 +33,6 @@ import eucadmin.describerequest
 class DescribeWalruses(eucadmin.describerequest.DescribeRequest):
 
     ServiceName = 'Walrus'
+    Description = 'List Walrus services.'
     
     

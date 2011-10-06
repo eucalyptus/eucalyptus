@@ -95,26 +95,22 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
   
   @Override
   public String getValue( ) {
-    if ( Bootstrap.isFinished( ) ) {
-      try {
-        String dbValue = StaticDatabasePropertyEntry.lookup( Fields.canonicalName( this.getField( ) ),
-                                                             this.getQualifiedName( ),
-                                                             this.safeGetFieldValue( )
-                                                             ).getValue( );
-        Object o = super.getTypeParser( ).apply( dbValue );
-        if ( !Modifier.isFinal( this.field.getModifiers( ) ) ) {
-          this.field.set( null, o );
-        }
-        return dbValue;
-      } catch ( IllegalAccessException e ) {
-        Logs.exhaust( ).trace( e, e );
-        return super.getDefaultValue( );
-      } catch ( Exception e ) {
-        LOG.warn( "Failed to get property: " + super.getQualifiedName( ) + " because of " + e.getMessage( ) );
-        Logs.extreme( ).debug( e, e );
-        return super.getDefaultValue( );
+    try {
+      String dbValue = StaticDatabasePropertyEntry.lookup( Fields.canonicalName( this.getField( ) ),
+                                                           this.getQualifiedName( ),
+                                                           this.safeGetFieldValue( )
+                                                           ).getValue( );
+      Object o = super.getTypeParser( ).apply( dbValue );
+      if ( !Modifier.isFinal( this.field.getModifiers( ) ) ) {
+        this.field.set( null, o );
       }
-    } else {
+      return dbValue;
+    } catch ( IllegalAccessException e ) {
+      Logs.exhaust( ).trace( e, e );
+      return super.getDefaultValue( );
+    } catch ( Exception e ) {
+      LOG.warn( "Failed to get property: " + super.getQualifiedName( ) + " because of " + e.getMessage( ) );
+      Logs.extreme( ).debug( e, e );
       return super.getDefaultValue( );
     }
   }

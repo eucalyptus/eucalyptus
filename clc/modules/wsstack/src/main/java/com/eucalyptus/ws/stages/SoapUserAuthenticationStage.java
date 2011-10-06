@@ -64,16 +64,15 @@
 package com.eucalyptus.ws.stages;
 
 import org.jboss.netty.channel.ChannelPipeline;
-import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
+import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.handlers.UserWsSecHandler;
-import com.eucalyptus.ws.protocol.SoapHandler;
 
 public class SoapUserAuthenticationStage implements UnrollableStage {
 
   @Override
   public void unrollStage( final ChannelPipeline pipeline ) {
-    pipeline.addLast( "deserialize", new SoapMarshallingHandler( ) );
-    pipeline.addLast( "build-soap-envelope", new SoapHandler( ) );
+    pipeline.addLast( "deserialize", Handlers.soapMarshalling( ) );
+    pipeline.addLast( "build-soap-envelope", Handlers.soapHandler( ) );
     pipeline.addLast( "ws-security", new UserWsSecHandler( ) );
   }
 

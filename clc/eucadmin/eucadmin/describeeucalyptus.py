@@ -33,6 +33,7 @@ import eucadmin.describerequest
 class DescribeEucalyptus(eucadmin.describerequest.DescribeRequest):
 
     ServiceName = 'Cloud'
+    Description = 'List Cloud services.'
     
     def cli_formatter(self, data):
         clouds = getattr(data, 'euca:registered')

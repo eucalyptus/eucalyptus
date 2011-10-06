@@ -186,7 +186,7 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
             } catch ( final Exception ex ) {
               LOG.error( ex, ex );
             }
-            final PrivateNetworkIndex ref = netIdx.allocate( );
+            final PrivateNetworkIndex ref = Entities.persist( PrivateNetworkIndex.create( this, idx ) ).allocate( );
             db.commit( );
             return ref;
           }
