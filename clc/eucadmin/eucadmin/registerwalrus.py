@@ -33,4 +33,5 @@ import eucadmin.registerrequest
 class RegisterWalrus(eucadmin.registerrequest.RegisterRequest):
 
     ServiceName = 'Walrus'
+    Description = 'Register a Walrus service.'
     
