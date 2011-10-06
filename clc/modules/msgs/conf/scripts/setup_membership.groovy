@@ -53,7 +53,7 @@ try {
   LOG.info( "Setting membership addres: " + Internets.localHostAddress( ) );
   udp.setBindAddress( Internets.localHostAddress( ) );
   udp.setBindPort( 8773 );
-  udp.setBindToAllInterfaces( true );//this sets receive_on_all_interfaces
+  udp.setBindToAllInterfaces( false );//this sets receive_on_all_interfaces
 } catch ( UnknownHostException ex ) {
   LOG.error( ex, ex );
 }
