@@ -169,7 +169,7 @@ public class Empyrean extends ComponentId.Unpartioned {
         while ( !HostManager.isReady( ) ) {
           TimeUnit.SECONDS.sleep( 5 );
           LOG.info( "Waiting for system view with database..." );
-          HostManager.broadcastHost( );
+//          HostManager.broadcastHost( );
         }
         LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
         return true;
