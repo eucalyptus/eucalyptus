@@ -33,6 +33,7 @@ import eucadmin.describerequest
 class DescribeNodes(eucadmin.describerequest.DescribeRequest):
 
     ServiceName = 'Node'
+    Description = 'List Node controllers.'
     
     def cli_formatter(self, data):
         nodes = getattr(data, 'euca:registered')

@@ -26,6 +26,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Mbeans;
+import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.collect.ImmutableMap;
 
 @DiscoverableServiceBuilder( Eucalyptus.class )
@@ -132,7 +133,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
         ? ctx
         : "eucalyptus_" + ctx;
       
-      String dbUrl = "jdbc:" + ComponentIds.lookup( Database.class ).makeExternalRemoteUri( hostName, 8777 ).toASCIIString( ) + "_"
+      String dbUrl = "jdbc:" + ComponentIds.lookup( Database.class ).makeExternalRemoteUri( hostName, 8777, "http" ).toASCIIString( ) + "_"
                      + contextName.replace( "eucalyptus_", "" );
       
       try {
@@ -168,7 +169,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
         ? ctx
         : "eucalyptus_" + ctx;
       
-      String dbUrl = "jdbc:" + ComponentIds.lookup( Database.class ).makeExternalRemoteUri( hostName, 8777 ).toASCIIString( ) + "_"
+      String dbUrl = "jdbc:" + ComponentIds.lookup( Database.class ).makeExternalRemoteUri( hostName, 8777, "http" ).toASCIIString( ) + "_"
                      + contextName.replace( "eucalyptus_", "" );
       
       try {

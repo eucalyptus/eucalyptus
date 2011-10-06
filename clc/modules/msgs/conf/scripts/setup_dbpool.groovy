@@ -135,7 +135,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
             Hosts.listDatabases( ).each{ Host host ->
               database(id:host.getBindAddress().getHostAddress( ),local:host.isLocalHost( )) {
                 driver(real_jdbc_driver)
-                url("jdbc:${ComponentIds.lookup(Database.class).makeExternalRemoteUri( host.getBindAddress( ).getHostAddress( ), 8777 ).toASCIIString( )}_${context_name}")
+                url("jdbc:${ComponentIds.lookup(Database.class).makeExternalRemoteUri( host.getBindAddress( ).getHostAddress( ), 8777, "http" ).toASCIIString( )}_${context_name}")
                 user('eucalyptus')
                 password(db_pass)
               }
