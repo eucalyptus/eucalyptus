@@ -143,8 +143,7 @@ class EucaConf(object):
                                help="Don't use rsync when registering."),
         self.parser.add_option('--no-scp', action='store_true',
                                dest='no_scp', default=False,
-                               help="Don't use scp when registering.",
-                               default=False)
+                               help="Don't use scp when registering.")
         self.parser.add_option('--skip-scp-hostcheck', action='store_true',
                                dest='skip_scp_hostcheck',
                                help='Skip scp interactive host keycheck.',
