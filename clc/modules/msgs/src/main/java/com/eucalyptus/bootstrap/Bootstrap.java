@@ -223,7 +223,7 @@ public class Bootstrap {
     
     private void printAgenda( ) {
       if ( !this.bootstrappers.isEmpty( ) ) {
-        LOG.info( LogUtil.header( "Bootstrap stage: " + this.name( ) + "." + ( !Bootstrap.starting
+        LOG.info( LogUtil.header( "Bootstrap stage: " + this.name( ) + "." + ( Bootstrap.loading
           ? "load()"
           : "start()" ) ) );
         LOG.debug( Joiner.on( " " ).join( this.name( ) + " bootstrappers:  ", this.bootstrappers ) );

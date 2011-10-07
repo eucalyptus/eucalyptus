@@ -60,6 +60,7 @@
  *******************************************************************************/
 package com.eucalyptus.bootstrap;
 
+import java.io.File;
 import java.net.URL;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -75,6 +76,7 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.Threads;
 import java.util.concurrent.TimeUnit;
 
@@ -115,6 +117,17 @@ public class HttpServerBootstrapper extends Bootstrapper {
       @Override
       public void run( ) {
         try {
+          
+          String path = "/var/run/eucalyptus/webapp";
+          File dir = new File(BaseDirectory.HOME + path);
+          if(dir.exists() && dir.listFiles().length == 0) {
+              boolean status = dir.delete();
+              if (status != true) {
+        	  LOG.error("Unable to delete the webapp directory");
+        	  throw new Exception("Unable to delete the webapp directory");
+              }
+          }
+        
           jettyServer.start( );
         } catch ( Exception e ) {
           LOG.debug( e, e );

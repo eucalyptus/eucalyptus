@@ -33,6 +33,7 @@ import eucadmin.describerequest
 class DescribeComponents(eucadmin.describerequest.DescribeRequest):
 
     ServiceName = 'Component'
+    Description = 'List Components.'
     
     def cli_formatter(self, data):
         components = getattr(data, 'euca:registered')

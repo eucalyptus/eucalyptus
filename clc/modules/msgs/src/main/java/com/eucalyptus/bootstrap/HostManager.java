@@ -287,10 +287,10 @@ public class HostManager {
         LOG.info( "Performing first-time system init." );
         try {
           Bootstrap.initializeSystem( );
-          System.exit( 123 );//GRZE: special case, need to restart stack
+          System.exit( 123 );
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
-          System.exit( 123 );//GRZE: special case, need to restart stack
+          System.exit( 123 );
         }
       } else {}
     }

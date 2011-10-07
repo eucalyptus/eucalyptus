@@ -528,6 +528,7 @@ int diskutil_write2file (const char * file, const char * str)
     int fd = safe_mkstemp (tmpfile);
     if (fd<0) {
         logprintfl (EUCAERROR, "{%u} error: failed to create temporary directory\n", (unsigned int)pthread_self());
+        unlink(tmpfile);
         return ERROR;
     }
     int size = strlen (str);
@@ -542,6 +543,7 @@ int diskutil_write2file (const char * file, const char * str)
     }
     close (fd);
 
+    unlink(tmpfile);
     return ret;
 }
 
