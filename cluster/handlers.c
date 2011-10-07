@@ -1128,6 +1128,12 @@ int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccs
   logprintfl(EUCAINFO, "DescribeNetworks(): called \n");
   logprintfl(EUCADEBUG, "DescribeNetworks(): params: userId=%s, nameserver=%s, ccsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(nameserver), ccsLen);
   
+  // ensure that we have the latest network state from the CC (based on instance cache) before responding to CLC
+  rc = checkActiveNetworks();
+  if (rc) {
+    logprintfl(EUCAWARN, "DescribeNetowrks(): checkActiveNetworks() failed, will attempt to re-sync\n");
+  }
+  
   sem_mywait(VNET);
   if (nameserver) {
     vnetconfig->euca_ns = dot2hex(nameserver);
@@ -1137,7 +1143,7 @@ int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccs
     rc = vnetSetupTunnels(vnetconfig);
   }
   memcpy(outvnetConfig, vnetconfig, sizeof(vnetConfig));
-
+  
   sem_mypost(VNET);
   logprintfl(EUCADEBUG, "DescribeNetworks(): done. \n");
   
@@ -3769,59 +3775,74 @@ int syncNetworkState() {
   return(ret);
 }
 
+int checkActiveNetworks() {
+  int i, rc;
+  if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    int activeNetworks[NUMBER_OF_VLANS];
+    bzero(activeNetworks, sizeof(int) * NUMBER_OF_VLANS);
+    
+    logprintfl(EUCADEBUG, "checkActiveNetworks(): maintaining active networks\n");
+    for (i=0; i<MAXINSTANCES; i++) {
+      if ( instanceCache->cacheState[i] != INSTINVALID ) {
+	if ( strcmp(instanceCache->instances[i].state, "Teardown") ) {
+	  int vlan = instanceCache->instances[i].ccnet.vlan;
+	  activeNetworks[vlan] = 1;
+	  if ( ! vnetconfig->networks[vlan].active ) {
+	    logprintfl(EUCAWARN, "checkActiveNetworks(): instance running in network that is currently inactive (%s, %s, %d)\n", vnetconfig->users[vlan].userName, vnetconfig->users[vlan].netName, vlan);
+	  }
+	}
+      }
+    }
+    
+    for (i=0; i<NUMBER_OF_VLANS; i++) {
+      sem_mywait(VNET);
+      if ( !activeNetworks[i] && vnetconfig->networks[i].active ) {
+	logprintfl(EUCAWARN, "checkActiveNetworks(): network active but no running instances (%s, %s, %d)\n", vnetconfig->users[i].userName, vnetconfig->users[i].netName, i);
+	rc = vnetStopNetwork(vnetconfig, i, vnetconfig->users[i].userName, vnetconfig->users[i].netName);
+	if (rc) {
+	  logprintfl(EUCAERROR, "checkActiveNetworks(): failed to stop network (%s, %s, %d), will re-try\n", vnetconfig->users[i].userName, vnetconfig->users[i].netName, i);
+	}
+      }
+      sem_mypost(VNET);
+
+      /*
+      if ( activeNetworks[i] ) {
+	// make sure all active network indexes are used by an instance
+	for (j=0; j<NUMBER_OF_HOSTS_PER_VLAN; j++) {
+	  if (vnetconfig->networks[i].addrs[j].active && (vnetconfig->networks[i].addrs[j].ip != 0) ) {
+	    // dan
+	    char *ip=NULL;
+	    ccInstance *myInstance=NULL;
+	    
+	    ip = hex2dot(vnetconfig->networks[i].addrs[j].ip);
+	    rc = find_instanceCacheIP(ip, &myInstance);
+	    if (rc) {
+	      // network index marked as used, but no instance in cache with that index/ip
+	      logprintfl(EUCAWARN, "checkActiveNetworks(): address active but no instances using addr (%s, %d, %d\n", ip, i, j);
+	    } else {
+	      logprintfl(EUCADEBUG, "checkActiveNetworks(): address active and found for instance (%s, %s, %d, %d\n", myInstance->instanceId, ip, i, j);
+	    }
+	    if (myInstance) free(myInstance);
+	    if (ip) free(ip);
+	  }
+	}
+      }
+      */
+    }
+  }
+  return(0);
+}
+
 int maintainNetworkState() {
   int rc, i, j, ret=0, done=0;
   char pidfile[MAX_PATH], *pidstr=NULL;
   
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
-    {
-      int activeNetworks[NUMBER_OF_VLANS];
-      bzero(activeNetworks, sizeof(int) * NUMBER_OF_VLANS);
-
-      logprintfl(EUCADEBUG, "maintainNetworkState(): maintaining active networks\n");
-      for (i=0; i<MAXINSTANCES; i++) {
-	if ( instanceCache->cacheState[i] != INSTINVALID ) {
-	  if ( strcmp(instanceCache->instances[i].state, "Teardown") ) {
-	    int vlan = instanceCache->instances[i].ccnet.vlan;
-	    activeNetworks[vlan] = 1;
-	    if ( ! vnetconfig->networks[vlan].active ) {
-	      logprintfl(EUCAWARN, "maintainNetworkState(): instance running in network that is currently inactive (%s, %s, %d)\n", vnetconfig->users[vlan].userName, vnetconfig->users[vlan].netName, vlan);
-	    }
-	  }
-	}
-      }
-
-      for (i=0; i<NUMBER_OF_VLANS; i++) {
-	if ( !activeNetworks[i] && vnetconfig->networks[i].active ) {
-	  logprintfl(EUCAWARN, "maintainNetworkState(): network active but no running instances (%s, %s, %d)\n", vnetconfig->users[i].userName, vnetconfig->users[i].netName, i);
-	  sem_mywait(VNET);
-	  rc = vnetStopNetwork(vnetconfig, i, vnetconfig->users[i].userName, vnetconfig->users[i].netName);
-	  sem_mypost(VNET);
-	}
-	if ( activeNetworks[i] ) {
-	  // make sure all active network indexes are used by an instance
-	  for (j=0; j<NUMBER_OF_HOSTS_PER_VLAN; j++) {
-	    if (vnetconfig->networks[i].addrs[j].active && (vnetconfig->networks[i].addrs[j].ip != 0) ) {
-	      // dan
-	      char *ip=NULL;
-	      ccInstance *myInstance=NULL;
-
-	      ip = hex2dot(vnetconfig->networks[i].addrs[j].ip);
-	      rc = find_instanceCacheIP(ip, &myInstance);
-	      if (rc) {
-		// network index marked as used, but no instance in cache with that index/ip
-		logprintfl(EUCAWARN, "maintainNetworkState(): address active but no instances using addr (%s, %d, %d\n", ip, i, j);
-	      } else {
-		logprintfl(EUCAWARN, "maintainNetworkState(): address active and found for instance (%s, %s, %d, %d\n", myInstance->instanceId, ip, i, j);
-	      }
-	      if (myInstance) free(myInstance);
-	      if (ip) free(ip);
-	    }
-	  }
-	}
-      }
-    }
-      
+    //    rc = checkActiveNetworks();
+    //    if (rc) {
+    //      logprintfl(EUCAWARN, "maintainNetworkState(): checkActiveNetworks() failed, attempting to re-sync\n");
+    //    }
+    
     logprintfl(EUCADEBUG, "maintainNetworkState(): maintaining metadata redirect and tunnel health\n");
     sem_mywait(VNET);
     
@@ -3831,7 +3852,7 @@ int maintainNetworkState() {
     logprintfl(EUCADEBUG, "maintainNetworkState(): CCcloudIp=%s VNETcloudIp=%s\n", cloudIp1, cloudIp2);
     free(cloudIp1);
     free(cloudIp2);
-
+    
     if (config->cloudIp && (config->cloudIp != vnetconfig->cloudIp)) {
       vnetconfig->cloudIp = config->cloudIp;
       rc = vnetSetMetadataRedirect(vnetconfig);
@@ -3916,8 +3937,6 @@ int maintainNetworkState() {
 
   if(pidstr) 
      free(pidstr);
-
-
 
   return(ret);
 }

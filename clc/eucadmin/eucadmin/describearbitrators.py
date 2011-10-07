@@ -33,6 +33,7 @@ import eucadmin.describerequest
 class DescribeArbitrators(eucadmin.describerequest.DescribeRequest):
 
     ServiceName = 'Arbitrator'
+    Description = 'List Arbitrator services.'
     
     def cli_formatter(self, data):
         services = getattr(data, 'euca:registered')
