@@ -19,16 +19,14 @@
 # start three instances as three users: image_filea as usera, 
 # image_fileb as userb, and image_filec as userc, all using the kernel and
 # ramdisk files specified, and run them for DURATION. It will do all these
-# things simultaneously. It thereby simulates different users running
-# instances and performing various storage operations for a protracted period.
+# things simultaneously.
 #
 # NOTE!! This script has many external dependencies which must be satisfied
 #   for it to run. As follows: 1) A CLC must be running locally; 2) A
 #   Walrus must be running locally; 3) You must have created all the users
-#   which you pass in, and they all must have password "foobar";
-#   4) All credentials must be present; 5) You must have created all the
-#   image files, ramdisk files, and kernel files which you pass in;
-#   6) The s3curl.pl script must be present in this directory.
+#   which you pass in; 4) All credentials must be present; 5) You must have
+#   created all the image files, ramdisk files, and kernel files which you
+#   pass in; 6) The s3curl.pl script must be present in this directory.
 #
 # (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
 # author: tom.werges
