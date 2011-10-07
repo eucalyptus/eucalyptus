@@ -495,6 +495,13 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   
   public void updateNodeInfo( final ArrayList<String> serviceTags ) {
     NodeInfo ret = null;
+    
+    for ( String serviceTag : this.nodeMap.keySet( ) ) {
+      if( !serviceTags.contains( serviceTag ) ) {
+        this.nodeMap.remove( serviceTag );
+      }
+    }
+    
     for ( final String serviceTag : serviceTags ) {
       if ( ( ret = this.nodeMap.putIfAbsent( serviceTag, new NodeInfo( serviceTag ) ) ) != null ) {
         ret.touch( );
@@ -506,6 +513,15 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   
   public void updateNodeInfo( final List<NodeType> nodeTags ) {
     NodeInfo ret = null;
+    
+    for ( String serviceTag : this.nodeMap.keySet( ) ) {
+      for( NodeType node : nodeTags ) {
+        if( !node.getServiceTag( ).equals( serviceTag ) ) {
+          this.nodeMap.remove( serviceTag );
+        }
+      }
+    }
+    
     for ( final NodeType node : nodeTags ) {
       if ( ( ret = this.nodeMap.putIfAbsent( node.getServiceTag( ), new NodeInfo( node ) ) ) != null ) {
         ret.touch( );
