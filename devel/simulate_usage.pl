@@ -1,10 +1,11 @@
 #!/usr/bin/perl
 
 #
-# This script starts instances, allocates storage, and allocates s3 objects,
-# as different users. It continues running instances, and it allocates
-# additional s3 objects and storage every INTERVAL, until DURATION is reached,
-# at which point it terminates every instance it started and stops running.
+# This script simulates usage of instances, storage, and s3. It starts
+# instances, allocates storage, and allocates s3 objects, as different
+# users. It then continues running instances, and it allocates additional s3
+# objects and storage every INTERVAL, until DURATION is reached, at which
+# point it terminates every instance it started and stops running.
 #
 # The purpose of this is to verify that reporting events are sent to the
 # reporting system properly when usage occurs, as part of a test.
