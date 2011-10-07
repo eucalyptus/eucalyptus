@@ -72,19 +72,57 @@ import com.eucalyptus.scripting.ScriptExecutionFailedException;
 
 
 public enum SubDirectory {
-  DB( BaseDirectory.VAR, "db" ),
+  DB( BaseDirectory.VAR, "db" ){
+      @Override
+      protected void assertPermissions() {
+  	
+  	super.assertPermissions();
+  	try { 
+  	Groovyness.exec( "chmod -R 700 " + this.toString( ) );
+  	 } catch ( ScriptExecutionFailedException ex ) {
+  	      LOG.error( ex , ex );
+  	 }
+      }
+  },
   TX( BaseDirectory.HOME, "/var/run/eucalyptus/tx" ),
   CLASSCACHE( BaseDirectory.HOME, "/var/run/eucalyptus/classcache" ),
   WWW( BaseDirectory.CONF, "www" ),
   WEBAPPS( BaseDirectory.VAR, "webapps" ),
-  KEYS( BaseDirectory.VAR, "keys" ),
+  KEYS( BaseDirectory.VAR, "keys" ){ 
+      @Override
+      protected void assertPermissions() {
+  	
+  	super.assertPermissions();
+  	try { 
+  	Groovyness.exec( "chmod -R 700 " + this.toString( ) );
+  	 } catch ( ScriptExecutionFailedException ex ) {
+  	      LOG.error( ex , ex );
+  	 }
+      }
+  },
   SCRIPTS( BaseDirectory.CONF, "scripts" ),
   MANAGEMENT( BaseDirectory.CONF, "jmx" ),
   UPGRADE( BaseDirectory.CONF, "upgrade" ),
   REPORTS( BaseDirectory.CONF, "reports" ),
   CONF( BaseDirectory.CONF, "conf" ),
   QUEUE( BaseDirectory.VAR, "queue" ),
-  LIB( BaseDirectory.HOME, "/usr/share/eucalyptus" );
+  LIB( BaseDirectory.HOME, "/usr/share/eucalyptus" ),
+  RUNDB( BaseDirectory.HOME, "/var/run/eucalyptus/db") {
+
+    @Override
+    protected void assertPermissions() {
+	
+	super.assertPermissions();
+	try {   
+	  Groovyness.exec( "chmod -R +rwX " + this.toString( ) );
+	  Groovyness.exec( "chgrp eucalyptus" + this.toString( ));
+	} catch ( ScriptExecutionFailedException ex ) {
+	      LOG.error( ex , ex );
+	 }
+    }
+     
+  };
+
   private static Logger LOG = Logger.getLogger( SubDirectory.class );
   BaseDirectory parent;
   String        dir;
@@ -131,14 +169,14 @@ public enum SubDirectory {
     return ret;
   }
   
-  private void assertPermissions( ) {
+  protected void assertPermissions( ) {
     try {
       Groovyness.exec( "chown -R " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOG.error( ex , ex );
     }
-    try {
-      Groovyness.exec( "chmod -R +rwX " + this.toString( ) );
+    try {	
+        Groovyness.exec( "chmod -R +rwX " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOG.error( ex , ex );
     }
