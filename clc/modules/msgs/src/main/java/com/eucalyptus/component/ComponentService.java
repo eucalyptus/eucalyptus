@@ -53,7 +53,7 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
@@ -61,46 +61,15 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.bootstrap;
+package com.eucalyptus.component;
 
-import java.util.List;
-import org.apache.log4j.Logger;
-import org.jgroups.Header;
-import org.jgroups.conf.ClassConfigurator;
-import org.jgroups.stack.Protocol;
-import com.eucalyptus.scripting.Groovyness;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public class Protocols {
-  
-  private static Logger LOG         = Logger.getLogger( Protocols.class );
-  public static short   PROTOCOL_ID = 513;
-  public static short   HEADER_ID   = 1025;
-  
-  public static short lookupRegisteredId( Class c ) {
-    return ClassConfigurator.getMagicNumber( c );
-  }
-  
-  public static synchronized <T extends Header> String registerHeader( Class<T> h ) {
-    if ( ClassConfigurator.getMagicNumber( h ) == -1 ) {
-      ClassConfigurator.add( ++HEADER_ID, h );
-    }
-    return "euca-" + ( h.isAnonymousClass( )
-      ? h.getSuperclass( ).getSimpleName( ).toLowerCase( )
-      : h.getSimpleName( ).toLowerCase( ) ) + "-header";
-  }
-  
-  public static synchronized String registerProtocol( Protocol p ) {
-    if ( ClassConfigurator.getProtocolId( p.getClass( ) ) == 0 ) {
-      ClassConfigurator.addProtocol( ++PROTOCOL_ID, p.getClass( ) );
-    }
-    return "euca-" + ( p.getClass( ).isAnonymousClass( )
-      ? p.getClass( ).getSuperclass( ).getSimpleName( ).toLowerCase( )
-      : p.getClass( ).getSimpleName( ).toLowerCase( ) ) + "-protocol";
-  }
-  
-  static List<Protocol> getMembershipProtocolStack( ) {
-    return Groovyness.run( "setup_membership.groovy" );
-  }
-  
-  
+@Target( { ElementType.TYPE } )
+@Retention( RetentionPolicy.RUNTIME )
+public @interface ComponentService {
+  Class<? extends ComponentId> value( );
 }
