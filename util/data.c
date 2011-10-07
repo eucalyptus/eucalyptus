@@ -151,7 +151,7 @@ ncInstance * allocate_instance (char *uuid,
     inst->groupNamesSize = groupNamesSize;
     if (groupNames && groupNamesSize) {
         int i;
-        for (i=0; groupNames[i] && i<groupNamesSize; i++) {
+        for (i=0; i<groupNamesSize && groupNames[i]; i++) {
             safe_strncpy(inst->groupNames[i], groupNames[i], CHAR_BUFFER_SIZE);
         }
     }

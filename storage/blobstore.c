@@ -1855,7 +1855,7 @@ int blockblob_close ( blockblob * bb )
         ret = loop_remove (bb->store, bb->id);
     }
     ret |= close_and_unlock (bb->fd);
-    free (bb);
+    free (bb); // we free the blob regardless of whether closing succeeds or not
     return ret;
 }
 
@@ -1881,15 +1881,21 @@ static int dm_suspend_resume (const char * dev_name)
 static int dm_delete_device (const char * dev_name)
 {
     int retries = 1;
-    char cmd [1024];
     int ret = 0;
-    int status;
 
-    myprintf (EUCAINFO, "removing device %s\n", dev_name);
+    // see if the device to delete exists
+    char dm_path [MAX_DM_PATH];
+    snprintf (dm_path, sizeof (dm_path), DM_PATH "%s", dev_name);
+    errno = 0;
+    if (check_path (dm_path) && errno==ENOENT) // we do not use check_block() because /dev/mapper/... entries can be sym links
+        return 0;
+
+    char cmd [1024];
     snprintf (cmd, sizeof (cmd), "%s %s remove %s", helpers_path [ROOTWRAP], helpers_path [DMSETUP], dev_name);
 
  try_again:
-    status = system (cmd);
+    myprintf (EUCAINFO, "removing device %s (retries=%d)\n", dev_name, retries);
+    int status = system (cmd);
     if (status == -1 || WEXITSTATUS(status) != 0) {
         if (retries--) {
             usleep (100);
@@ -1971,7 +1977,7 @@ static int dm_create_devices (char * dev_names[], char * dm_tables[], int size)
                 int tot = 0;
                 int rbytes = write (fd, dm_tables[i], strlen(dm_tables[i]));
                 if (rbytes != strlen (dm_tables[i])) { // if write error
-                    logprintfl (EUCAERROR, "{%u} dm_create_devices: write returned number of bytes != write buffer: %d/%d\n", 
+                    logprintfl (EUCAERROR, "{%u} error: dm_create_devices: write returned number of bytes != write buffer: %d/%d\n", 
                                 (unsigned int)pthread_self(), rbytes, strlen(dm_tables[i]));
                     unlink (tmpfile);
                     exit (1);
@@ -1979,7 +1985,7 @@ static int dm_create_devices (char * dev_names[], char * dm_tables[], int size)
                 close (fd);
 
             } else { // couldn't get fd
-                logprintfl (EUCAERROR, "{%u} dm_create_devices: couldn't open temporary file %s\n", (unsigned int)pthread_self(), tmpfile);
+                logprintfl (EUCAERROR, "{%u} error: dm_create_devices: couldn't open temporary file %s\n", (unsigned int)pthread_self(), tmpfile);
                 unlink (tmpfile);
                 exit (1);
             }
@@ -1987,7 +1993,6 @@ static int dm_create_devices (char * dev_names[], char * dm_tables[], int size)
             // invoke `dmsetup create ...`
             char cmd [MAX_PATH];
             snprintf (cmd, sizeof(cmd)-1, "%s %s create %s %s", helpers_path[ROOTWRAP], helpers_path[DMSETUP], dev_names[i], tmpfile);
-            logprintfl (EUCADEBUG, "{%u} dm_create_devices: running '%s'\n", (unsigned int)pthread_self(), cmd);
             int rc = system (cmd);
             rc = rc>>8;
             unlink (tmpfile);
@@ -1997,7 +2002,7 @@ static int dm_create_devices (char * dev_names[], char * dm_tables[], int size)
             int status;
             int rc = timewait (cpid, &status, BLOBSTORE_DMSETUP_TIMEOUT_SEC);
             if (rc <= 0) {
-                logprintfl (EUCAERROR, "{%u} dm_create_devices: bad exit from dmsetup child: %d\n", (unsigned int)pthread_self(), rc);
+                logprintfl (EUCAERROR, "{%u} error: dm_create_devices: bad exit from dmsetup child: %d\n", (unsigned int)pthread_self(), rc);
                 PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
                 goto cleanup;
             }
@@ -2054,7 +2059,11 @@ static char * dm_get_zero (void)
 }
 
 // if no outside references to the blob exist, and blob is not protected, 
-// deletes the blob, its metadata, and frees the blockblob handle
+// deletes the blob and its metadata
+// 
+// returns 0 if cleanup was successful and frees the blockblob handle
+// returns -1 otherwise, and DOES NOT free the blockblob handle
+// (so that it can be closed and freed with blockblob_close) 
 int blockblob_delete ( blockblob * bb, long long timeout_usec )
 {
     char ** array = NULL;
@@ -2141,9 +2150,16 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec )
     if (loop_remove (bs, bb->id) == -1) {
         ret = -1;
     }
-    ret |= close_and_unlock (bb->fd);
-    ret |= (delete_blockblob_files (bs, bb->id)<1)?(-1):(0);
-    free (bb);
+    if (close_and_unlock (bb->fd) == -1) {
+        ret = -1;
+    } else {
+        bb->fd = 0;
+    }
+    if (delete_blockblob_files (bs, bb->id) < 1) {
+        ret = -1;
+    }
+    if (ret==0) // do not free the blob if there were any errors
+        free (bb);
     
     int saved_errno = 0;
  unlock:
@@ -2470,6 +2486,7 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
                 continue;
 
             if (blobstore_lock (sbb->store, BLOBSTORE_LOCK_TIMEOUT_USEC)==-1) { // lock the source blobstore so the .refs are updated atomically
+                logprintfl (EUCAERROR, "{%u} error: timed out on a blobstore lock while attempting to update .refs\n", (unsigned int)pthread_self());
                 ret = -1;
                 goto cleanup; // TODO: remove .refs entries from this batch that succeeded, if any?
             }
@@ -2500,9 +2517,16 @@ int blockblob_clone ( blockblob * bb, // destination blob, which blocks may be u
     goto free;
 
  cleanup:
-    // TODO: delete .dm file?
-    dm_delete_devices (dev_names, devices);
-
+    // remove dm devices that may have been created
+    if (dm_delete_devices (dev_names, devices)==0) {
+        
+        // remove the .dm file so that others do not 
+        // needlessly attempt to remove dm devices later
+        char path [PATH_MAX];
+        set_blockblob_metadata_path (BLOCKBLOB_PATH_DM, bb->store, bb->id, path, sizeof (path));
+        unlink (path);
+    }
+    
  free:
     for (int i=0; i<devices; i++) {
         free (dev_names[i]);
