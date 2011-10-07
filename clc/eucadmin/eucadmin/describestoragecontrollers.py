@@ -33,5 +33,6 @@ import eucadmin.describerequest
 class DescribeStorageControllers(eucadmin.describerequest.DescribeRequest):
 
     ServiceName = 'StorageController'
+    Description = 'List StorageController services.'
     
     

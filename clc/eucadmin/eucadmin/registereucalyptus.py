@@ -33,5 +33,6 @@ import eucadmin.registerrequest
 class RegisterEucalyptus(eucadmin.registerrequest.RegisterRequest):
 
     ServiceName = 'Cloud'
+    Description = 'Register a Cloud service.'
 
     

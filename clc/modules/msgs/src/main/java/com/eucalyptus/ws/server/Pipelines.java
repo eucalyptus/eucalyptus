@@ -108,6 +108,7 @@ import com.eucalyptus.ws.protocol.BaseQueryBinding;
 import com.eucalyptus.ws.protocol.OperationParameter;
 import com.eucalyptus.ws.protocol.SoapHandler;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Table;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Pipelines {
@@ -205,7 +206,7 @@ public class Pipelines {
     
     public InternalSoapPipeline( final ComponentId componentId ) {
       super( componentId );
-      this.servicePath = componentId.makeExternalRemoteUri( "127.0.0.1", 8773 ).getPath( );
+      this.servicePath = componentId.makeExternalRemoteUri( "127.0.0.1", 8773, "http" ).getPath( );
       this.internalServicePath = componentId.makeInternalRemoteUri( "127.0.0.1", 8773 ).getPath( );
       this.serviceName = componentId.getFullName( ).toString( );
     }
@@ -253,7 +254,7 @@ public class Pipelines {
     
     public InternalQueryPipeline( final ComponentId componentId ) {
       super( componentId );
-      this.servicePath = componentId.makeExternalRemoteUri( "127.0.0.1", 8773 ).getPath( );
+      this.servicePath = componentId.makeExternalRemoteUri( "127.0.0.1", 8773, "http" ).getPath( );
       this.internalServicePath = componentId.makeInternalRemoteUri( "127.0.0.1", 8773 ).getPath( );
       this.serviceName = componentId.getFullName( ).toString( );
     }

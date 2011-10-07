@@ -24,6 +24,7 @@ public class ImageWebBackend {
   
   public static final String ID = "id";
   public static final String NAME = "Name";
+  public static final String MANIFEST = "Manifest";
   public static final String DESC = "Description";
   public static final String OWNER = "owner";
   public static final String ARCH = "architecture";
@@ -38,7 +39,7 @@ public class ImageWebBackend {
   static {
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, "Name", false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( DESC, "Description", false, "30%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( MANIFEST, "Manifest Location", false, "30%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( KERNEL, "Kernel", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( RAMDISK, "Ramdisk", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( STATE, "State", false, "20%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
@@ -47,6 +48,7 @@ public class ImageWebBackend {
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ARCH, "Architecture", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( PUBLIC, "Public", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( PLATFORM, "Platform", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
+    COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( DESC, "Description", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
   }
   
   public static List<SearchResultRow> searchImages( User requestUser, String query ) throws EucalyptusServiceException {
@@ -72,15 +74,13 @@ public class ImageWebBackend {
     SearchResultRow result = new SearchResultRow( );
     result.addField( image.getDisplayName( ) );
     result.addField( image.getImageName( ) );
-    result.addField( image.getDescription( ) );
     if ( image instanceof MachineImageInfo ) {
-      result.addField( ( ( MachineImageInfo ) image ).getKernelId( ) ); 
+      result.addField( ( ( MachineImageInfo ) image ).getManifestLocation( ) );
+      result.addField( ( ( MachineImageInfo ) image ).getKernelId( ) );
+      result.addField( ( ( MachineImageInfo ) image ).getRamdiskId( ) );
     } else {
       result.addField( "" );
-    }
-    if ( image instanceof MachineImageInfo ) {
-      result.addField( ( ( MachineImageInfo ) image ).getRamdiskId( ) ); 
-    } else {
+      result.addField( "" );
       result.addField( "" );
     }
     result.addField( image.getState( ).toString( ) );
@@ -89,6 +89,7 @@ public class ImageWebBackend {
     result.addField( image.getArchitecture( ).toString( ) );
     result.addField( image.getImagePublic( ).toString( ) );
     result.addField( image.getPlatform( ).toString( ) );
+    result.addField( image.getDescription( ) );
     return result;
   }
   
