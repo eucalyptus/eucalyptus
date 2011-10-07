@@ -66,7 +66,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     this.entryPoint = this.capitalizedName + "RequestQueueEndpoint";
     this.port = 8773;
     this.uriPattern = "http://%s:%d/internal/%s";
-    this.externalUriPattern = "http://%s:%d/services/" + this.capitalizedName;
+    // NOTE: this pattern is overwritten by some subclasses in getExternalUriPattern()
+    this.externalUriPattern = "%s://%s:%d/services/" + this.capitalizedName;
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
     this.modelContent = loadModel( );
   }
@@ -77,7 +78,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     this.entryPoint = this.capitalizedName + "RequestQueueEndpoint";
     this.port = 8773;
     this.uriPattern = "http://%s:%d/internal/%s";
-    this.externalUriPattern = "http://%s:%d/services/" + this.capitalizedName;
+    // NOTE: this pattern is overwritten by some subclasses in getExternalUriPattern()
+    this.externalUriPattern = "%s://%s:%d/services/" + this.capitalizedName;
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
     this.modelContent = loadModel( );
   }
@@ -269,21 +271,35 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     }
   }
   
-  public final URI makeExternalRemoteUri( String hostName, Integer port ) {
+  /**
+   * Create URI for external endpoint
+   * @param scheme URI scheme to be used, see StackConfiguration fields for configurable properties
+   */
+  public final URI makeExternalRemoteUri( String hostName, Integer port, String scheme ) {
     String uri;
     URI u = null;
+    String pattern;
+
     port = ( port == -1 )
       ? this.getPort( )
       : port;
     hostName = ( port == -1 )
       ? Internets.localHostAddress( )
       : hostName;
+    pattern = this.getExternalUriPattern();
+
     try {
-      uri = String.format( this.getExternalUriPattern( ), hostName, port );
+      if(pattern.startsWith("%s"))
+	    uri = String.format( this.getExternalUriPattern( ), scheme, hostName, port );
+      else
+	    uri = String.format( this.getExternalUriPattern( ), hostName, port );
       u = new URI( uri );
       u.parseServerAuthority( );
     } catch ( URISyntaxException e ) {
-      uri = String.format( this.getExternalUriPattern( ), Internets.localHostAddress( ), this.getPort( ) );
+        if(pattern.startsWith("%s"))
+	    uri = String.format( this.getExternalUriPattern( ), scheme, Internets.localHostAddress( ), this.getPort( ) );
+	else
+	    uri = String.format( this.getExternalUriPattern( ), Internets.localHostAddress( ), this.getPort( ) );
       try {
         u = new URI( uri );
         u.parseServerAuthority( );
@@ -291,7 +307,10 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
         u = URI.create( uri );
       }
     } catch ( MissingFormatArgumentException e ) {
-      uri = String.format( this.getExternalUriPattern( ), hostName, port, this.getCapitalizedName( ) );
+	if(pattern.startsWith("%s"))
+	    uri = String.format( this.getExternalUriPattern( ), scheme, hostName, port, this.getCapitalizedName( ) );
+	else 
+	    uri = String.format( this.getExternalUriPattern( ), hostName, port, this.getCapitalizedName( ) );
       try {
         u = new URI( uri );
         u.parseServerAuthority( );

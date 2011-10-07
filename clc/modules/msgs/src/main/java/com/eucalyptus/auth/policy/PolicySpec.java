@@ -396,7 +396,7 @@ public class PolicySpec {
     if ( request != null ) {
       PolicyAction action = Ats.from( request ).get( PolicyAction.class );
       if ( action != null ) {
-        return action.vendor( ) + ":" + action.action( );
+        return action.action( );
       }
     }
     return null;

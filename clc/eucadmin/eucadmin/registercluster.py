@@ -33,4 +33,5 @@ import eucadmin.registerrequest
 class RegisterCluster(eucadmin.registerrequest.RegisterRequest):
 
     ServiceName = 'Cluster'
+    Description = 'Register a Cluster service.'
     

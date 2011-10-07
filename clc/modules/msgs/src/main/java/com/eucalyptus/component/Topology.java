@@ -91,6 +91,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
+import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -176,7 +177,7 @@ public class Topology implements EventListener<Event> {
             setName( input.getName( ) );
             setType( input.getComponentId( ).name( ) );
             if ( input.isVmLocal( ) ) {
-              getUris( ).add( input.getComponentId( ).makeExternalRemoteUri( localhostAddr, input.getComponentId( ).getPort( ) ).toASCIIString( ) );
+	      getUris( ).add( input.getComponentId( ).makeExternalRemoteUri( localhostAddr, input.getComponentId( ).getPort( ), "http" ).toASCIIString( ) );
             } else {
               getUris( ).add( input.getUri( ).toASCIIString( ) );
             }
