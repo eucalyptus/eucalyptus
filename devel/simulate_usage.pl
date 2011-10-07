@@ -25,7 +25,8 @@
 #   which you pass in; 4) All credentials must be present; 5) You must have
 #   created and uploaded all the images, ramdisk images, and kernel images
 #   which you pass in; 6) The s3curl.pl script must be present in this
-#   directory.
+#   directory; 7) we must have write access to /tmp in order to generate dummy
+#   files for upload to s3.
 #
 # (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
 # author: tom.werges
@@ -59,7 +60,7 @@ sub terminate_instance($) {
 }
 
 
-# SUB: allocate_storage
+# SUB: allocate_storage -- creates an EBS volume
 # 
 sub allocate_storage() {
 	print "  allocate_storage:$_[0]\n";
@@ -67,14 +68,33 @@ sub allocate_storage() {
 }
 
 
-# SUB: allocate_s3 -- allocates and S3 object as a user
-# Takes a username, EC2_ACCESS_KEY, EC2_SECRET_KEY, S3_URL
-sub allocate_s3($$$$) {
-	my $time = time();
-	my ($user,$access_key,$secret_key,$url) = ($_[0],$_[1],$_[2],$_[3]);
+# SUB: generate_dummy_file -- Returns a path to a dummy-data file of n kilobytes; creates if necessary
+# Takes a size (in KB) of dummy data, and returns a path to the resultant file
+sub generate_dummy_file($) {
+	my $size=$_[0];
+	my $path = "/tmp/dummy-$size-kilobyte.txt";
+	my $dummy_data = "foo";
+	unless (-e $path) {
+		open FILE, ">$path" or die ("couldn't open dummy file for writing");
+		for (my $i=0; $i<1024*$size; $i+=length($dummy_data)) {
+			print FILE $dummy_data;
+		}
+		close FILE or die ("couldn't close dummy file");
+	}
+	return $path;
+}
+
+
+# SUB: allocate_s3 -- allocates and S3 object 
+# Takes a username, EC2_ACCESS_KEY, EC2_SECRET_KEY, S3_URL, sizeKb
+#    sizeKb is the size of the data to upload to the s3 object
+sub allocate_s3($$$$$) {
 	print "  allocate_s3:$_[0]\n";
-	#system("./s3curl.pl --id $access_key --key $secret_key --put /dev/null -- -s -v $url/mybucket") or die("creating bucket failed");
-	#system("./s3curl.pl --id $access_key --key $secret_key --put data.txt -- -s -v $url/mybucket/obj-$user-$time") or die("creating s3 obj failed");
+	my $time = time();
+	my ($user,$access_key,$secret_key,$url,$sizeKb) = ($_[0],$_[1],$_[2],$_[3],$_[4]);
+	my $dummy_data_path = generate_dummy_file($sizeKb);
+	#system("./s3curl.pl --id $access_key --key $secret_key --put /dev/null -- -s -v $url/mybucket-$user") or die("creating bucket failed");
+	#system("./s3curl.pl --id $access_key --key $secret_key --put $dummy_data_path -- -s -v $url/mybucket/obj-$user-$time") or die("creating s3 obj failed");
 }
 
 # SUB: switch_to_user  -- switches to a user
@@ -122,10 +142,12 @@ foreach my $item (@ARGV) {
 # Allocate storage and s3 for each user, every INTERVAL, sleeping between
 for (my $i=0; $i < $duration; $i++) {
 	print "iter:$i\n";
+	my $usernum = 0;
 	foreach my $user (@users) {
 		my ($ec2_access_key, $ec2_secret_key) = switch_to_user($user);
 		allocate_storage();
-		allocate_s3($user,$ec2_access_key,$ec2_secret_key,$s3_url);
+		allocate_s3($user,$ec2_access_key,$ec2_secret_key,$s3_url,$usernum); # allocate usernum kilobytes; different sizes for each user
+		$usernum++;
 	}
 	sleep $interval;
 }
