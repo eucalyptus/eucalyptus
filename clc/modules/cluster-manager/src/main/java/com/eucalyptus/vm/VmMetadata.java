@@ -152,7 +152,7 @@ public class VmMetadata {
       } else if ( publicMetadataEndpoints.containsKey( request.getMetadataName( ) ) ) {
         return publicMetadataEndpoints.get( request.getMetadataName( ) ).apply( request ).getBytes( );
       } else {
-        return null;
+        return "".getBytes( );
       }
     } catch ( Exception ex ) {
       String errorMsg = "Metadata request failed: " + path + ( Logs.isExtrrreeeme( )
