@@ -110,12 +110,18 @@ struct request {
 #endif
 };
 
+/* walrus_request internal lock to prevent apparent race in curl ssl dependency */
+static pthread_mutex_t wreq_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 /* downloads a decrypted image from Walrus based on the manifest URL,
  * saves it to outfile */
 static int walrus_request (const char * walrus_op, const char * verb, const char * requested_url, const char * outfile, const int do_compress)
 {
     int code = ERROR;
     char url [BUFSIZE];
+
+    
+    pthread_mutex_lock(&wreq_mutex); /* lock for curl construction */
 
     safe_strncpy (url, requested_url, BUFSIZE);
 #if defined(CAN_GZIP)
@@ -127,21 +133,25 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     char * url_path;
     if (strncasecmp (url, "http://", 7)!=0) {
         logprintfl (EUCAERROR, "{%u} walrus_request: URL must start with http://...\n");
+        pthread_mutex_unlock(&wreq_mutex);
         return code;
     }
     if ((url_path=strchr(url+7, '/'))==NULL) { /* find first '/' after hostname */
         logprintfl (EUCAERROR, "{%u} walrus_request: URL has no path\n");
+        pthread_mutex_unlock(&wreq_mutex);
         return code;
     }
 
     if (euca_init_cert()) {
         logprintfl (EUCAERROR, "{%u} walrus_request: failed to initialize certificate\n");
+        pthread_mutex_unlock(&wreq_mutex);
         return code;
     }
 
     int fd = open (outfile, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR); // we do not truncate the file
     if (fd==-1 || lseek (fd, 0, SEEK_SET)==-1) {
         logprintfl (EUCAERROR, "{%u} walrus_request: failed to open %s for writing\n", (unsigned int)pthread_self(), outfile);
+        pthread_mutex_unlock(&wreq_mutex);
         return code;
     }
 
@@ -151,6 +161,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     if (curl==NULL) {
         logprintfl (EUCAERROR, "{%u} walrus_request: could not initialize libcurl\n");
         close(fd);
+        pthread_mutex_unlock(&wreq_mutex);
         return code;
     }
 
@@ -167,6 +178,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     } else {
         close(fd);
         logprintfl (EUCAERROR, "{%u} walrus_request: invalid HTTP verb %s\n", (unsigned int)pthread_self(), verb);
+        pthread_mutex_unlock(&wreq_mutex);
         return ERROR; /* TODO: dealloc structs before returning! */
     }
 
@@ -195,6 +207,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     char date_str [26];
     if (ctime_r(&t, date_str)==NULL) {
         close(fd);
+        pthread_mutex_unlock(&wreq_mutex);
         return ERROR;
     }
     assert (strlen(date_str)+7<=STRSIZE);
@@ -207,6 +220,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     char * cert_str = euca_get_cert (0); /* read the cloud-wide cert */
     if (cert_str==NULL) {
         close(fd);
+        pthread_mutex_unlock(&wreq_mutex);
         return ERROR;
     }
     char * cert64_str = base64_enc ((unsigned char *)cert_str, strlen(cert_str));
@@ -221,6 +235,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     char * sig_str = euca_sign_url (verb, date_str, url_path); /* create Walrus-compliant sig */
     if (sig_str==NULL) {
         close(fd);
+        pthread_mutex_unlock(&wreq_mutex);
         return ERROR;
     }
     assert (strlen(sig_str)+16<=BUFSIZE);
@@ -257,7 +272,9 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
         }
 #endif
 
+        pthread_mutex_unlock(&wreq_mutex); /* unlock for message exchange */
         result = curl_easy_perform (curl); /* do it */
+        pthread_mutex_lock(&wreq_mutex); /* relock for curl teardown */
         logprintfl (EUCADEBUG, "{%u} walrus_request: wrote %lld bytes in %ld writes\n", (unsigned int)pthread_self(), params.total_wrote, params.total_calls);
 
 #if defined(CAN_GZIP)
@@ -312,6 +329,7 @@ static int walrus_request (const char * walrus_op, const char * verb, const char
     free (sig_str);
     curl_slist_free_all (headers);
     curl_easy_cleanup (curl);
+    pthread_mutex_unlock(&wreq_mutex);
     return code;
 }
 

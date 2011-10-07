@@ -98,6 +98,10 @@ permission notice:
 int verify_helpers (char **helpers, char **helpers_path, int num_helpers) 
 {
     int missing_helpers = 0;
+    char **tmp_helpers_path = helpers_path;
+
+    if(helpers_path==NULL)
+        tmp_helpers_path = (char**) calloc (num_helpers, sizeof(char*));
     
     for (int i=0; i<num_helpers; i++) {
         struct stat statbuf;
@@ -112,8 +116,6 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
 
         } else { // no full path was given, so search $PATH
             char *tok, *toka, *path, *helper, *save, *savea;
-            if(helpers_path==NULL)
-		 helpers_path = (char**) calloc (num_helpers, sizeof(char*));
 
             tok = getenv("PATH");
             if (!tok) return -1;
@@ -134,7 +136,7 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
                     int rc = stat(file, &statbuf);
                     if (!rc) {
                         if (S_ISREG(statbuf.st_mode)) {
-                            helpers_path[i] = strdup(file);
+                            tmp_helpers_path[i] = strdup(file);
                             done++;
                         }
                     }
@@ -150,10 +152,17 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
             missing_helpers++;
             logprintfl (EUCAINFO, "did not find '%s' in path\n", helpers[i]);
         } else {
-            logprintfl (EUCAINFO, "found '%s' at '%s'\n", helpers[i], helpers_path[i]);
+            logprintfl (EUCAINFO, "found '%s' at '%s'\n", helpers[i], tmp_helpers_path[i]);
         }
     }
     
+    if(helpers_path == NULL) { 
+        for(int i = 0; i < num_helpers; i++) 
+            if(tmp_helpers_path[i])
+                free(tmp_helpers_path[i]);
+        free(tmp_helpers_path);
+    }
+
     return missing_helpers;
 }
 

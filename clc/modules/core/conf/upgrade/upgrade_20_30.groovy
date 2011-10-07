@@ -124,7 +124,7 @@ import com.eucalyptus.util.Counters;
 
 class upgrade_20_30 extends AbstractUpgradeScript {
     static final List<String> FROM_VERSION = ["eee-2.0.2", "eee-2.0.1", "2.0.2", "2.0.3"];
-    static final String TO_VERSION = "eee-3.0.0";
+    static final String TO_VERSION = "3.0.0";
     private static Logger LOG = Logger.getLogger( upgrade_20_30.class );
     private static List<Class> entities = new ArrayList<Class>();
     private static Map<String, Class> entityMap = new HashMap<String, Class>();

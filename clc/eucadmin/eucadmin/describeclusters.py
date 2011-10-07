@@ -33,6 +33,7 @@ import eucadmin.describerequest
 class DescribeClusters(eucadmin.describerequest.DescribeRequest):
 
     ServiceName = 'Cluster'
+    Description = 'List Cluster services.'
     
 
     

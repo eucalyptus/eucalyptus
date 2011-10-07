@@ -33,4 +33,5 @@ import eucadmin.registerrequest
 class RegisterArbitrator(eucadmin.registerrequest.RegisterRequest):
 
     ServiceName = 'Arbitrator'
+    Description = 'Register an Arbitrator service.'
     
