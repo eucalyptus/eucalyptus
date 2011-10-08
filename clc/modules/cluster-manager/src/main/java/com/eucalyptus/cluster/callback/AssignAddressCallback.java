@@ -68,15 +68,20 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Address.Transition;
 import com.eucalyptus.address.Addresses;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmNetworkConfig;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
+import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
+import com.eucalyptus.vm.VmNetworkConfig;
 import edu.ucsb.eucalyptus.msgs.AssignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AssignAddressType;
 
@@ -133,6 +138,24 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
   private void updateState( ) {
     if ( !this.checkVmState( ) ) {
       this.address.clearPending( );
+      try {
+        VmInstance vm = VmInstances.lookup( super.getRequest( ).getInstanceId( ) );
+        if ( !vm.getPartition( ).equals( address.getPartition( ) ) ) {
+          Partition partition = Partitions.lookupByName( vm.getPartition( ) );
+          ServiceConfiguration config = Partitions.lookupService( ClusterController.class, partition );
+          AssignAddressType request = new AssignAddressType( address.getNaturalId( ), address.getDisplayName( ), vm.getPrivateAddress( ), vm.getDisplayName( ) );
+          try {
+            AsyncRequests.sendSync( config, request );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+        }
+      } catch ( TerminatedInstanceException ex ) {
+        LOG.error( ex, ex );
+      } catch ( NoSuchElementException ex ) {
+        LOG.error( ex, ex );
+      }
+      
       throw new IllegalStateException( "Failed to find the vm for this assignment: " + this.getRequest( ) );
     } else {
       EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNED, Address.State.assigned.toString( ), LogUtil.dumpObject( address ) ).info( );
