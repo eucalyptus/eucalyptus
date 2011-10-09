@@ -1,6 +1,9 @@
 package com.eucalyptus.context;
 
 import java.lang.ref.WeakReference;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Map;
 import java.util.UUID;
 import javax.security.auth.Subject;
@@ -60,6 +63,15 @@ public class Context {
   
   public Channel getChannel( ) {
     return check( this.channel );
+  }
+  
+  public InetAddress getRemoteAddress( ) {
+    if ( this.getChannel( ) != null ) {
+      if( this.getChannel( ).getRemoteAddress( ) instanceof InetSocketAddress ) {
+        return ((InetSocketAddress) this.getChannel( ).getRemoteAddress( )).getAddress( );
+      }
+    }
+    throw new IllegalContextAccessException( "Attempt to access socket address information when no associated socket exists." );
   }
   
   public MappingHttpRequest getHttpRequest( ) {
