@@ -965,7 +965,10 @@ static int art_add_dep (artifact * a, artifact * dep)
 
 void art_free (artifact * a) // frees the artifact and all its dependencies
 {
-    if ((--a->refs)==0) { // if this is the last reference
+    if (a->refs > 0)
+        a->refs--; // this free reduces reference count, if positive, by 1
+
+    if (a->refs == 0) { // if this is the last reference
 
         // try freeing dependents recursively
         for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
