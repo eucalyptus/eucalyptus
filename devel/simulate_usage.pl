@@ -21,12 +21,20 @@
 #
 # NOTE!! This script has many external dependencies which must be satisfied
 #   for it to run. As follows: 1) A CLC must be running locally; 2) A
-#   Walrus must be running; 3) You must have created all the users
-#   which you pass in; 4) All credentials must be present; 5) You must have
-#   created and uploaded all the images, ramdisk images, and kernel images
-#   which you pass in; 6) The s3curl.pl script must be present in this
-#   directory; 7) we must have write access to /tmp in order to generate dummy
-#   files for upload to s3.
+#   Walrus must be running; 3) You must have created and uploaded all the
+#   images, ramdisk images, and kernel images which you pass in; 4) The
+#   s3curl.pl script must be present in this directory; 5) we must have write
+#   access to /tmp in order to generate dummy files for upload to s3.
+#
+# NOTE!! You must already have set up all the users which you pass in, by
+#   performing the following steps: 1) create the users using /usr/sbin/useradd;
+#   2) create corresponding users in Eucalyptus; 3) accept and confirm those
+#   Eucalyptus users using the web ui; 4) download credentials of the users;
+#   5) change their bashrc files to source eucarc's automatically. In other
+#   words, all users must already have been set up so you can log in to a
+#   shell as those users, and can perform eucalyptus operations using the
+#   command line as those users.
+#
 #
 # (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
 # author: tom.werges
@@ -42,7 +50,7 @@ use warnings;
 
 
 # SUB: run_instance
-# Takes a an image, a kernel image, and a ramdisk image; returns an instance id
+# Takes an image, a kernel image, and a ramdisk image; returns an instance id
 sub run_instance($$$) {
 	my ($image,$kernel,$ramdisk) = ($_[0],$_[1],$_[2]);
 	print "run_instance image:$image kernel:$kernel ramdisk:$ramdisk\n";
@@ -73,7 +81,7 @@ sub allocate_storage() {
 sub generate_dummy_file($) {
 	my $size=$_[0];
 	my $path = "/tmp/dummy-$size-kilobyte.txt";
-	my $dummy_data = "foo";
+	my $dummy_data = "f00d";
 	unless (-e $path) {
 		open FILE, ">$path" or die ("couldn't open dummy file for writing");
 		for (my $i=0; $i<1024*$size; $i+=length($dummy_data)) {
@@ -85,7 +93,7 @@ sub generate_dummy_file($) {
 }
 
 
-# SUB: allocate_s3 -- allocates and S3 object 
+# SUB: allocate_s3 -- allocates an S3 object 
 # Takes a username, EC2_ACCESS_KEY, EC2_SECRET_KEY, S3_URL, sizeKb
 #    sizeKb is the size of the data to upload to the s3 object
 sub allocate_s3($$$$$) {
@@ -101,6 +109,7 @@ sub allocate_s3($$$$$) {
 # Takes a username and returns EC2_ACCESS_KEY and EC2_SECRET_KEY
 sub switch_to_user($) {
 	print " switching to user:$_[0]\n";
+	system("su - $user") or die ("Couldn't switch to user $user");
 	return ("ec2-access-key","ec2-secret-key");
 }
 
