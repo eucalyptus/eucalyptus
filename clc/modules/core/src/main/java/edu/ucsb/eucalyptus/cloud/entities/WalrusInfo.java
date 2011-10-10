@@ -103,14 +103,14 @@ public class WalrusInfo extends AbstractPersistent {
 
 	public WalrusInfo(final String name, 
 			final String storageDir,
-			final Integer storageMaxBucketsPerUser,
+			final Integer storageMaxBucketsPerAccount,
 			final Integer storageMaxBucketSizeInMB,
 			final Integer storageMaxCacheSizeInMB,
 			final Integer storageMaxTotalSnapshotSizeInGb)
 	{
 		this.name = name;
 		this.storageDir = storageDir;
-		this.storageMaxBucketsPerAccount = storageMaxBucketsPerUser;
+		this.storageMaxBucketsPerAccount = storageMaxBucketsPerAccount;
 		this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
 		this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
 		this.storageMaxTotalSnapshotSizeInGb = storageMaxTotalSnapshotSizeInGb;
