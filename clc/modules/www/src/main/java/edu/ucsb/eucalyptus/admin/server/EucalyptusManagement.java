@@ -107,6 +107,8 @@ import edu.ucsb.eucalyptus.admin.client.ImageInfoWeb;
 import edu.ucsb.eucalyptus.admin.client.SystemConfigWeb;
 import edu.ucsb.eucalyptus.admin.client.UserInfoWeb;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import com.google.gwt.safehtml.shared.SafeHtmlBuilder;                                                                                  
+import com.google.gwt.safehtml.shared.SafeHtmlUtils; 
 
 public class EucalyptusManagement {
 
@@ -117,7 +119,11 @@ public class EucalyptusManagement {
 	
 	public static String getError( String message )
 	{
-		return "<html><title>HTTP/1.0 403 Forbidden</title><body><div align=\"center\"><p><h1>403: Forbidden</h1></p><p><img src=\"themes/active/logo.png\" /></p><p><h3 style=\"font-color: red;\">" + message + "</h3></p></div></body></html>";
+		SafeHtmlBuilder builder = new SafeHtmlBuilder();
+		builder.append(SafeHtmlUtils.fromTrustedString("<html><title>HTTP/1.0 403 Forbidden</title><body><div align=\"center\"><p><h1>403: Forbidden</h1></p><p><img src=\"themes/active/logo.png\" /></p><p><h3 style=\"font-color: red;\">"));
+		builder.appendEscaped(message);
+		builder.append(SafeHtmlUtils.fromTrustedString("</h3></p></div></body></html>"));
+		return builder.toSafeHtml().asString();
 	}
 
 	/* TODO: for now 'pattern' is ignored and all users are returned */

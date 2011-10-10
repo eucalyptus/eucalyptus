@@ -6,6 +6,7 @@ import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.resources.client.CssResource;
+import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.uibinder.client.UiBinder;
 import com.google.gwt.uibinder.client.UiField;
 import com.google.gwt.uibinder.client.UiHandler;
@@ -72,8 +73,8 @@ public class ConfirmationViewImpl extends DialogBox implements ConfirmationView 
       for ( SearchResultRow rowData : list ) {
         int col = 0;
         for ( Integer field : fields ) {
-          String html = rowData.getField( field );
-          grid.setHTML( row, col++, html == null ? "" : html );
+          String text = rowData.getField( field );
+          grid.setText( row, col++, text == null ? "" : text );
         }
         row++;
       }
@@ -84,7 +85,7 @@ public class ConfirmationViewImpl extends DialogBox implements ConfirmationView 
   }
 
   @Override
-  public void display( String caption, String subject, String html ) {
+  public void display( String caption, String subject, SafeHtml html ) {
     this.setText( caption );
     contentPanel.clear( );
     this.subject.setText( subject );
