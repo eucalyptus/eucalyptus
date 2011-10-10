@@ -361,7 +361,7 @@ public class WalrusManager {
 			BucketInfo searchBucket = new BucketInfo();
 			searchBucket.setOwnerId(account.getAccountNumber());
 			List<BucketInfo> bucketList = db.query(searchBucket);
-			if (bucketList.size() >= WalrusInfo.getWalrusInfo().getStorageMaxBucketsPerUser()) {
+			if (bucketList.size() >= WalrusInfo.getWalrusInfo().getStorageMaxBucketsPerAccount()) {
 				db.rollback();
 				throw new TooManyBucketsException(bucketName);
 			}
