@@ -86,8 +86,8 @@ public class WalrusInfo extends AbstractPersistent {
 	@ConfigurableField( description = "Path to buckets storage", displayName = "Buckets Path" )
 	@Column( name = "storage_dir" )
 	private String storageDir;
-	@ConfigurableField( description = "Maximum number of buckets per user", displayName = "Maximum buckets per user" )
-	@Column( name = "storage_max_buckets_per_account" )
+	@ConfigurableField( description = "Maximum number of buckets per account", displayName = "Maximum buckets per account" )
+	@Column( name = "storage_max_buckets_per_user" )
 	private Integer storageMaxBucketsPerAccount;
 	@ConfigurableField( description = "Maximum size per bucket", displayName = "Maximum bucket size (MB)" )
 	@Column( name = "storage_max_bucket_size_mb" )
@@ -132,12 +132,12 @@ public class WalrusInfo extends AbstractPersistent {
 		this.storageDir = storageDir;
 	}
 
-	public Integer getStorageMaxBucketsPerUser() {
+	public Integer getStorageMaxBucketsPerAccount() {
 		return storageMaxBucketsPerAccount;
 	}
 
-	public void setStorageMaxBucketsPerUser( final Integer storageMaxBucketsPerUser ) {
-		this.storageMaxBucketsPerAccount = storageMaxBucketsPerUser;
+	public void setStorageMaxBucketsPerAccount( final Integer storageMaxBucketsPerAccount ) {
+		this.storageMaxBucketsPerAccount = storageMaxBucketsPerAccount;
 	}
 
 	public Integer getStorageMaxBucketSizeInMB() {
