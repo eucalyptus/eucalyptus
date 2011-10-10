@@ -209,7 +209,8 @@ check_hypervisor_conn()
 {
 
     sem_p (hyp_sem);
-	if (nc_state.conn == NULL || virConnectGetURI(nc_state.conn) == NULL) {
+    char * uri = NULL;
+	if (nc_state.conn == NULL || (uri = virConnectGetURI(nc_state.conn)) == NULL) {
 		nc_state.conn = virConnectOpen (nc_state.uri);
 		if (nc_state.conn == NULL) {
 			logprintfl (EUCAFATAL, "Failed to connect to %s\n", nc_state.uri);
@@ -217,6 +218,8 @@ check_hypervisor_conn()
 			return NULL;
 		}
 	}
+    if (uri!=NULL)
+        free (uri);
     sem_v (hyp_sem);
 	return &(nc_state.conn);
 }

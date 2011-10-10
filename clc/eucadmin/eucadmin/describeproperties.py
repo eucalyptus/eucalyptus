@@ -33,6 +33,7 @@ import eucadmin.describerequest
 class DescribeProperties(eucadmin.describerequest.DescribeRequest):
 
     ServiceName = 'Property'
+    Description = 'List properties.'
     
     def __init__(self, **args):
         eucadmin.describerequest.DescribeRequest.__init__(self, **args)

@@ -970,8 +970,8 @@ public class WalrusManager {
 									throw ex;
 								}
 							} while(!success && (retryCount < 5));
-							if (!Permissions.canAllocate(PolicySpec.S3_RESOURCE_BUCKET,
-									PolicySpec.VENDOR_S3,
+							if (!Permissions.canAllocate(PolicySpec.VENDOR_S3,
+									PolicySpec.S3_RESOURCE_OBJECT,
 									bucketName,
 									PolicySpec.S3_PUTOBJECT,
 									ctx.getUser(),
@@ -1289,7 +1289,7 @@ public class WalrusManager {
 					} while(!success && (retryCount < 5));
 
 					if (Permissions.canAllocate(PolicySpec.VENDOR_S3,
-							PolicySpec.S3_RESOURCE_BUCKET,
+							PolicySpec.S3_RESOURCE_OBJECT,
 							bucketName,
 							PolicySpec.S3_PUTOBJECT,
 							ctx.getUser(),

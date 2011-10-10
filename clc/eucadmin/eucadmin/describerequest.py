@@ -38,7 +38,6 @@ class DescribeRequest(AWSQueryRequest):
     ServiceName = ''
     ServicePath = '/services/Configuration'
     ServiceClass = eucadmin.EucAdmin
-    Description = 'List %s services' % ServiceName
 
     def __init__(self, **args):
         AWSQueryRequest.__init__(self, **args)

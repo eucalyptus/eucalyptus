@@ -503,22 +503,27 @@ public class VmControl {
     reply.set_return( true );
     final Context ctx = Contexts.lookup( );
     try {
-      final VmInstance v = VmInstances.lookupByBundleId( request.getBundleId( ) );
-      if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-        v.getRuntimeState( ).updateBundleTaskState( BundleState.canceling );
-        LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, ctx.getUserFullName( ).toString( ),
-                                    v.getRuntimeState( ).getBundleTask( ).getBundleId( ),
-                                    v.getInstanceId( ) ) );
-        
-        final Cluster cluster = Clusters.lookup( v.lookupPartition( ) );
-        
-        request.setInstanceId( v.getInstanceId( ) );
-        reply.setTask( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
-        AsyncRequests.newRequest( Bundles.cancelCallback( request ) ).dispatch( cluster.getConfiguration( ) );
+    	final VmInstance v = VmInstances.lookupByBundleId( request.getBundleId( ) );        
+    	BundleState bundleState = v.getRuntimeState().getBundleTaskState();
+    	if(!(bundleState == BundleState.pending || bundleState == BundleState.storing))
+    		throw new EucalyptusCloudException( "Can't cancel bundle task when the bundle task is "+bundleState);
+    	    		
+    	if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) 
+    	{
+	        v.getRuntimeState( ).updateBundleTaskState( BundleState.canceling );
+	        LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, ctx.getUserFullName( ).toString( ),
+	                                    v.getRuntimeState( ).getBundleTask( ).getBundleId( ),
+	                                    v.getInstanceId( ) ) );
+	        
+	        final Cluster cluster = Clusters.lookup( v.lookupPartition( ) );
+	        
+	        request.setInstanceId( v.getInstanceId( ) );
+	        reply.setTask( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
+	        AsyncRequests.newRequest( Bundles.cancelCallback( request ) ).dispatch( cluster.getConfiguration( ) );
         return reply;
-      } else {
-        throw new EucalyptusCloudException( "Failed to find bundle task: " + request.getBundleId( ) );
-      }
+    	} else {
+    		throw new EucalyptusCloudException( "Failed to find bundle task: " + request.getBundleId( ) );
+    	}
     } catch ( final NoSuchElementException e ) {
       throw new EucalyptusCloudException( "Failed to find bundle task: " + request.getBundleId( ) );
     }

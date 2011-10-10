@@ -33,4 +33,5 @@ import eucadmin.registerrequest
 class RegisterVMwareBroker(eucadmin.registerrequest.RegisterRequest):
 
     ServiceName = 'VMwareBroker'
+    Description = 'Register a VMwareBroker service.'
     

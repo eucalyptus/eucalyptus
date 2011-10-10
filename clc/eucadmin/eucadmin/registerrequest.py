@@ -37,33 +37,33 @@ class RegisterRequest(AWSQueryRequest):
     ServiceName = ''
     ServicePath = '/services/Configuration'
     ServiceClass = eucadmin.EucAdmin
-    Description = 'Register a %s' % ServiceName
+
     Params = [
               Param(name='Partition',
                     short_name='P',
                     long_name='partition',
                     ptype='string',
                     optional=False,
-                    doc='Partition for the %s' % ServiceName),
+                    doc='Partition name for the service'),
               Param(name='Host',
                     short_name='H',
                     long_name='host',
                     ptype='string',
                     optional=False,
-                    doc='Hostname of the %s' % ServiceName),
+                    doc='Hostname of the service'),
               Param(name='Port',
                     short_name='p',
                     long_name='port',
                     ptype='integer',
                     default=8773,
                     optional=True,
-                    doc='Port for the %s' % ServiceName)
+                    doc='Port for the service')
               ]
     Args = [Param(name='Name',
                   long_name='name',
                   ptype='string',
                   optional=False,
-                  doc='The %s name' % ServiceName)]
+                  doc='The name of the service')]
 
     def get_connection(self, **args):
         if self.connection is None:

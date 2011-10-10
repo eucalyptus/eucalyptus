@@ -68,6 +68,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
@@ -108,12 +109,12 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
   private Integer                        tag;
   
   @NotFound( action = NotFoundAction.IGNORE )
-  @OneToMany
+  @OneToMany( fetch = FetchType.EAGER )
   @JoinColumn( name = "metadata_extant_network_index_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final Set<PrivateNetworkIndex> indexes          = new HashSet<PrivateNetworkIndex>( );
   
-  @OneToOne
+  @OneToOne( fetch = FetchType.EAGER )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private NetworkGroup                   networkGroup;
   

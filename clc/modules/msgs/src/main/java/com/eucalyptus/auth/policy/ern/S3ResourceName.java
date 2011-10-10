@@ -10,13 +10,14 @@ public class S3ResourceName extends Ern {
   public S3ResourceName( String bucket, String object ) {
     this.bucket = bucket;
     this.object = object;
+    this.vendor = PolicySpec.VENDOR_S3;
   }
   
   public boolean isBucket( ) {
     if ( this.object == null || "".equals( this.object ) ) {
-      return false;
+      return true;
     }
-    return true;
+    return false;
   }
   
   @Override
