@@ -32,7 +32,7 @@ import os
 
 def chown_recursive(path, uid, gid):
     os.chown(path, uid, gid)
-    for dirpath, dirs, files in os.walk(path, followlinks=True):
+    for dirpath, dirs, files in os.walk(path):
         for d in dirs:
             os.chown(os.path.join(dirpath, d), uid, gid)
         for f in files:
@@ -40,7 +40,7 @@ def chown_recursive(path, uid, gid):
 
 def chmod_recursive(path, mod):
     os.chmod(path, mod)
-    for dirpath, dirs, files in os.walk(path, followlinks=True):
+    for dirpath, dirs, files in os.walk(path):
         for d in dirs:
             os.chmod(os.path.join(dirpath, d), mod)
         for f in files:
