@@ -45,7 +45,9 @@ CloudPKFile = '%s/var/lib/eucalyptus/keys/cloud-pk.pem'
 class GetCredentials(AWSQueryRequest):
     
     ServiceClass = eucadmin.EucAdmin
-    Description = 'Get credentials zip file.'
+    Description = """Download credentials to <zipfile>.  Each time this is \
+called, new X.509 certificates will be created for the specified user."""
+
     Params = [Param(name='euca_home',
                     short_name='e', long_name='euca-home',
                     ptype='string', optional=True,

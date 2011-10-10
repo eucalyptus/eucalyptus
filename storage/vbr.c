@@ -965,7 +965,10 @@ static int art_add_dep (artifact * a, artifact * dep)
 
 void art_free (artifact * a) // frees the artifact and all its dependencies
 {
-    if ((--a->refs)==0) { // if this is the last reference
+    if (a->refs > 0)
+        a->refs--; // this free reduces reference count, if positive, by 1
+
+    if (a->refs == 0) { // if this is the last reference
 
         // try freeing dependents recursively
         for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
@@ -1145,16 +1148,25 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean do_make_work_c
     case NC_LOCATION_WALRUS: {
         // get the digest for size and signature
         char * blob_sig = walrus_get_digest (vbr->preparedResourceLocation);
-        if (blob_sig==NULL) goto w_out;
+        if (blob_sig==NULL) {
+            logprintfl (EUCAERROR, "[%s] error: failed to obtain image digest from  Walrus\n", current_instanceId);
+            goto w_out;
+        }
 
         // extract size from the digest
         long long bb_size_bytes = str2longlong (blob_sig, "<size>", "</size>"); // pull size from the digest
-        if (bb_size_bytes < 1) goto w_out;
+        if (bb_size_bytes < 1) {
+            logprintfl (EUCAERROR, "[%s] error: incorrect image digest or error returned from Walrus\n", current_instanceId);
+            goto w_out;
+        }
         vbr->size = bb_size_bytes; // record size in VBR now that we know it
 
         // generate ID of the artifact (append -##### hash of sig)
         char art_id [48];
-        if (art_gen_id (art_id, sizeof(art_id), vbr->id, blob_sig) != OK) goto w_out;
+        if (art_gen_id (art_id, sizeof(art_id), vbr->id, blob_sig) != OK) {
+            logprintfl (EUCAERROR, "[%s] error: failed to generate artifact id\n", current_instanceId);
+            goto w_out;
+        }
 
         // allocate artifact struct
         a = art_alloc (art_id, blob_sig, bb_size_bytes, TRUE, must_be_file, walrus_creator, vbr);
@@ -1518,6 +1530,7 @@ vbr_alloc_tree ( // creates a tree of artifacts for a given VBR (caller must fre
     
  free:
     art_free (root);
+    root = NULL;
 
  out:
     return root;
