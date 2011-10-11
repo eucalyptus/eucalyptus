@@ -152,7 +152,7 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
       if ( !vm.getPartition( ).equals( this.address.getPartition( ) ) ) {
         Partition partition = Partitions.lookupByName( vm.getPartition( ) );
         ServiceConfiguration config = Partitions.lookupService( ClusterController.class, partition );
-        AssignAddressType request = new AssignAddressType( this.address.getNaturalId( ), this.address.getDisplayName( ), vm.getPrivateAddress( ), vm.getDisplayName( ) );
+        AssignAddressType request = new AssignAddressType( this.address.getStateUuid( ), this.address.getDisplayName( ), vm.getPrivateAddress( ), vm.getDisplayName( ) );
         try {
           AsyncRequests.sendSync( config, request );
         } catch ( Exception ex ) {
