@@ -67,14 +67,21 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 import com.eucalyptus.address.Address.Transition;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmNetworkConfig;
+import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
+import edu.ucsb.eucalyptus.msgs.AssignAddressType;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressType;
 
@@ -124,6 +131,7 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   
   @Override
   public void fire( UnassignAddressResponseType reply ) {
+    this.sendSecondaryUnassign( );
     this.clearVmAddress( );
     if ( reply.get_return( ) ) {
       EventRecord.here( UnassignAddressCallback.class, EventType.ADDRESS_UNASSIGN, address.toString( ) ).info( );
@@ -148,6 +156,26 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
           }
         }
       }
+    }
+  }
+
+  private void sendSecondaryUnassign( ) {
+    try {
+      VmInstance vm = VmInstances.lookupByPrivateIp( super.getRequest( ).getDestination( ) );
+      if ( !vm.getPartition( ).equals( this.address.getPartition( ) ) ) {
+        Partition partition = Partitions.lookupByName( vm.getPartition( ) );
+        ServiceConfiguration config = Partitions.lookupService( ClusterController.class, partition );
+        UnassignAddressType request = new UnassignAddressType( this.address.getDisplayName( ), this.address.getInstanceAddress( ) );
+        try {
+          AsyncRequests.sendSync( config, request );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+    } catch ( TerminatedInstanceException ex ) {
+      LOG.error( ex, ex );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex, ex );
     }
   }
   

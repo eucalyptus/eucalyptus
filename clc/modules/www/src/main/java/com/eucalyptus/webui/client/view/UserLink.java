@@ -33,7 +33,7 @@ public class UserLink extends Composite implements HasClickHandlers {
   }
   
   public void setUser( String user ) {
-    this.userAnchor.setHTML( user );
+    this.userAnchor.setText( user );
   }
   
 }
