@@ -122,28 +122,38 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       throw new EucalyptusClusterException( "Failed to run instance: " + this.getRequest( ).getInstanceId( ) );
     }
     Logs.extreme( ).error( reply );
-    Predicate<VmRunResponseType> redeemToken = new Predicate<VmRunResponseType>() { 
+    Predicate<VmRunResponseType> redeemToken = new Predicate<VmRunResponseType>( ) {
       @Override
       public boolean apply( final VmRunResponseType reply ) {
-      EntityTransaction db = Entities.get( VmInstance.class );
-      try {
-        VmRunCallback.this.token.redeem( );
-        for ( final VmInfo vmInfo : reply.getVms( ) ) {
-          final VmInstance vm = VmInstances.lookup( vmInfo.getInstanceId( ) );
-          vm.updateAddresses( vmInfo.getNetParams( ).getIpAddress( ), vmInfo.getNetParams( ).getIgnoredPublicIp( ) );
+        EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          try {
+            VmRunCallback.this.token.redeem( );
+          } catch ( Exception ex ) {
+            Logs.extreme( ).error( ex , ex );
+          }
+          for ( final VmInfo vmInfo : reply.getVms( ) ) {
+            final VmInstance vm = VmInstances.lookup( vmInfo.getInstanceId( ) );
+            vm.updateAddresses( vmInfo.getNetParams( ).getIpAddress( ), vmInfo.getNetParams( ).getIgnoredPublicIp( ) );
+          }
+          db.commit( );
+          return true;
+        } catch ( RuntimeException ex ) {
+          Logs.exhaust( ).error( ex, ex );
+          db.rollback( );
+          throw ex;
+        } catch ( Exception ex ) {
+          Logs.exhaust( ).error( ex, ex );
+          db.rollback( );
+          throw new EucalyptusClusterException( "Failed to run instance: " + VmRunCallback.this.getRequest( ).getInstanceId( ) + " because of: "
+                                                + ex.getMessage( ), ex );
         }
-        db.commit( );
-        return true;
-      } catch ( Exception ex ) {
-        Logs.exhaust( ).error( ex, ex );
-        db.rollback( );
-        throw new EucalyptusClusterException( "Failed to run instance: " + VmRunCallback.this.getRequest( ).getInstanceId( ) + " because of: " + ex.getMessage( ), ex );
       }
-    }};
+    };
     try {
       Entities.retry( reply, redeemToken );
     } catch ( RuntimeException ex ) {
-      LOG.error( ex , ex );
+      LOG.error( ex, ex );
       throw ex;
     }
   }
