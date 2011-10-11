@@ -138,28 +138,31 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
   private void updateState( ) {
     if ( !this.checkVmState( ) ) {
       this.address.clearPending( );
-      try {
-        VmInstance vm = VmInstances.lookup( super.getRequest( ).getInstanceId( ) );
-        if ( !vm.getPartition( ).equals( address.getPartition( ) ) ) {
-          Partition partition = Partitions.lookupByName( vm.getPartition( ) );
-          ServiceConfiguration config = Partitions.lookupService( ClusterController.class, partition );
-          AssignAddressType request = new AssignAddressType( address.getNaturalId( ), address.getDisplayName( ), vm.getPrivateAddress( ), vm.getDisplayName( ) );
-          try {
-            AsyncRequests.sendSync( config, request );
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
-          }
-        }
-      } catch ( TerminatedInstanceException ex ) {
-        LOG.error( ex, ex );
-      } catch ( NoSuchElementException ex ) {
-        LOG.error( ex, ex );
-      }
-      
       throw new IllegalStateException( "Failed to find the vm for this assignment: " + this.getRequest( ) );
     } else {
       EventRecord.here( AssignAddressCallback.class, EventType.ADDRESS_ASSIGNED, Address.State.assigned.toString( ), LogUtil.dumpObject( address ) ).info( );
+      this.sendSecondaryAssign( );
       this.address.clearPending( );
+    }
+  }
+
+  private void sendSecondaryAssign( ) {
+    try {
+      VmInstance vm = VmInstances.lookup( super.getRequest( ).getInstanceId( ) );
+      if ( !vm.getPartition( ).equals( this.address.getPartition( ) ) ) {
+        Partition partition = Partitions.lookupByName( vm.getPartition( ) );
+        ServiceConfiguration config = Partitions.lookupService( ClusterController.class, partition );
+        AssignAddressType request = new AssignAddressType( this.address.getNaturalId( ), this.address.getDisplayName( ), vm.getPrivateAddress( ), vm.getDisplayName( ) );
+        try {
+          AsyncRequests.sendSync( config, request );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+    } catch ( TerminatedInstanceException ex ) {
+      LOG.error( ex, ex );
+    } catch ( NoSuchElementException ex ) {
+      LOG.error( ex, ex );
     }
   }
   
