@@ -129,8 +129,8 @@ struct eucalyptus_opts
   unsigned int jvm_args_min; /**< @brief Arguments to pass to the JVM.'s minimum occurreces */
   unsigned int jvm_args_max; /**< @brief Arguments to pass to the JVM.'s maximum occurreces */
   const char *jvm_args_help; /**< @brief Arguments to pass to the JVM. help description.  */
-  int jmx_flag;	/**< @brief Launch with JMX enabled. (default=on).  */
-  const char *jmx_help; /**< @brief Launch with JMX enabled. help description.  */
+  int no_jmx_flag;	/**< @brief Launch without JMX enabled. (default=on).  */
+  const char *no_jmx_help; /**< @brief Launch without JMX enabled. help description.  */
   int debug_flag;	/**< @brief Launch with debugger enabled. (default=off).  */
   const char *debug_help; /**< @brief Launch with debugger enabled. help description.  */
   int verbose_flag;	/**< @brief Launch the JVM w/ verbose output flags. (default=off).  */
@@ -185,7 +185,7 @@ struct eucalyptus_opts
   unsigned int java_home_given ;	/**< @brief Whether java-home was given.  */
   unsigned int jvm_name_given ;	/**< @brief Whether jvm-name was given.  */
   unsigned int jvm_args_given ;	/**< @brief Whether jvm-args was given.  */
-  unsigned int jmx_given ;	/**< @brief Whether jmx was given.  */
+  unsigned int no_jmx_given ;	/**< @brief Whether no-jmx was given.  */
   unsigned int debug_given ;	/**< @brief Whether debug was given.  */
   unsigned int verbose_given ;	/**< @brief Whether verbose was given.  */
   unsigned int debug_port_given ;	/**< @brief Whether debug-port was given.  */
