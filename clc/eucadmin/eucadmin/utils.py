@@ -30,19 +30,42 @@
 
 import os
 
-def chown_recursive(path, uid, gid):
-    os.chown(path, uid, gid)
-    for dirpath, dirs, files in os.walk(path):
-        for d in dirs:
-            os.chown(os.path.join(dirpath, d), uid, gid)
-        for f in files:
-            os.chown(os.path.join(dirpath, f), uid, gid)
+def _chown_recursive(paths, uid, gid):
+    symlinks = []
+    for path in paths:
+        os.chown(path, uid, gid)
+        for dirpath, dirs, files in os.walk(path):
+            for d in dirs:
+                fullpath = os.path.join(dirpath, d)
+                if os.path.islink(fullpath):
+                    symlinks.append(fullpath)
+                else:
+                    os.chown(fullpath, uid, gid)
+            for f in files:
+                os.chown(os.path.join(dirpath, f), uid, gid)
+    return symlinks
 
-def chmod_recursive(path, mod):
-    os.chmod(path, mod)
-    for dirpath, dirs, files in os.walk(path):
-        for d in dirs:
-            os.chmod(os.path.join(dirpath, d), mod)
-        for f in files:
-            os.chmod(os.path.join(dirpath, f), mod)
+def chown_recursive(path, uid, gid):
+    path = [path]
+    while path:
+        path = _chown_recursive(path, uid, gid)
+
+def _chmod_recursive(paths, mod):
+    symlinks = []
+    for path in paths:
+        os.chmod(path, mod)
+        for dirpath, dirs, files in os.walk(path):
+            for d in dirs:
+                fullpath = os.path.join(dirpath, d)
+                if os.path.islink(fullpath):
+                    symlinks.append(fullpath)
+                else:
+                    os.chmod(os.path.join(dirpath, d), mod)
+            for f in files:
+                os.chmod(os.path.join(dirpath, f), mod)
+
+def chmod_recursive(path, uid, gid):
+    path = [path]
+    while path:
+        path = _chmod_recursive(path, uid, gid)
 
