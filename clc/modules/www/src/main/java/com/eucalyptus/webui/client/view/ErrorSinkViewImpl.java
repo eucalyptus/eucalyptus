@@ -23,7 +23,7 @@ public class ErrorSinkViewImpl extends Composite implements ErrorSinkView {
 
   @Override
   public void setMessage( String message ) {
-    this.message.setInnerHTML( message );
+    this.message.setInnerText( message );
   }
   
 }
