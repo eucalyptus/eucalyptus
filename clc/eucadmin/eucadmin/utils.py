@@ -30,19 +30,29 @@
 
 import os
 
-def chown_recursive(path, uid, gid):
-    os.chown(path, uid, gid)
-    for dirpath, dirs, files in os.walk(path):
-        for d in dirs:
-            os.chown(os.path.join(dirpath, d), uid, gid)
-        for f in files:
-            os.chown(os.path.join(dirpath, f), uid, gid)
+def _walk_recursive(paths, fn, *params):
+    symlinks = []
+    for path in paths:
+        fn(path, *params)
+        for dirpath, dirs, files in os.walk(path):
+            for d in dirs:
+                fullpath = os.path.join(dirpath, d)
+                if os.path.islink(fullpath):
+                    symlinks.append(fullpath)
+                else:
+                    fn(fullpath, *params)
+            for f in files:
+                fn(os.path.join(dirpath, f), *params)
+    return symlinks
 
-def chmod_recursive(path, mod):
-    os.chmod(path, mod)
-    for dirpath, dirs, files in os.walk(path):
-        for d in dirs:
-            os.chmod(os.path.join(dirpath, d), mod)
-        for f in files:
-            os.chmod(os.path.join(dirpath, f), mod)
+def chown_recursive(path, uid, gid):
+    path = [path]
+    while path:
+        path = _walk_recursive(path, os.chown, uid, gid)
+
+def chmod_recursive(path, mode):
+    path = [path]
+    while path:
+        path = _walk_recursive(path, os.chmod, mode)
+        
 
