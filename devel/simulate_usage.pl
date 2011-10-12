@@ -3,38 +3,30 @@
 #
 # This script simulates usage of instances, storage, and s3. It starts
 # instances, allocates storage, and allocates s3 objects, as different
-# users. It then continues running instances, and it allocates additional s3
-# objects and storage every INTERVAL, until DURATION is reached, at which
-# point it terminates every instance it started and stops running.
+# users, concurrently. It then continues running instances, and it allocates
+# additional s3 objects and storage every INTERVAL, until DURATION is reached,
+# at which point it terminates every instance it started and stops running.
 #
 # The purpose of this is to verify that reporting events are sent to the
-# reporting system properly when usage occurs, as part of a test.
+# reporting system properly when usage occurs.
 #
-# Usage: simulate_usage.pl interval duration s3_url kernel_image ramdisk_image (username/image)+
+# Usage: simulate_usage.pl interval_secs duration_secs num_instances_per_user kernel_image ramdisk_image (username image)+
+# Example: simulate_usage.pl 10 100 2 eki-111 eri-111 usera emi-for-usera userb emi-for-userb ...
 #
-# Example: simulate_usage.pl 100 10000 kernel_image ramdisk_image s3_url usera/imagea userb/imageb userc/imagec
-#  This example will simluate usage for 10,000 seconds, creating new s3 objects
-#  and storage every 100 seconds for users usera,userb,userc. It will also
-#  start three instances as three users: imagea as usera, imageb as userb,
-#  and imagec as userc, all using the kernel and ramdisk paths specified,
-#  and run them for DURATION. It will do all these things simultaneously.
-#
-# NOTE!! This script has many external dependencies which must be satisfied
-#   for it to run. As follows: 1) A CLC must be running locally; 2) A
-#   Walrus must be running; 3) You must have created and uploaded all the
-#   images, ramdisk images, and kernel images which you pass in; 4) The
-#   s3curl.pl script must be present in this directory; 5) we must have write
-#   access to /tmp in order to generate dummy files for upload to s3.
-#
-# NOTE!! You must already have set up all the users which you pass in, by
-#   performing the following steps: 1) create the users using /usr/sbin/useradd;
-#   2) create corresponding users in Eucalyptus; 3) accept and confirm those
-#   Eucalyptus users using the web ui; 4) download credentials of the users;
-#   5) change their bashrc files to source eucarc's automatically. In other
-#   words, all users must already have been set up so you can log in to a
-#   shell as those users, and can perform eucalyptus operations using the
-#   command line as those users.
-#
+# This script relies upon many run-time dependencies. Before executing it, you
+# must:
+#  1. Run a CLC on the local machine.
+#  2. Register and run a Walrus.
+#  3. For each user you pass in, you must:
+#    a. Add the user the the Eucalyptus UI, then approve and confirm him
+#    b. Add the user to the OS using /usr/sbin/useradd
+#    c. Download credentials and put them in his home dir
+#    d. Source eucarc automatically by adding a line to his .bashrc
+#    e. Add s3curl.pl to his path by adding a line to his .bashrc
+#    f. Bundle, upload, and register the associated image
+#  4. Bundle and upload the kernel and ramdisk images
+#  5. Run this script as root. This script must run as root because it sudo's
+#       and changes users.
 #
 # (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
 # author: tom.werges
@@ -43,128 +35,24 @@
 use strict;
 use warnings;
 
-
-#
-# SUBROUTINES
-#
-
-
-# SUB: run_instance
-# Takes an image, a kernel image, and a ramdisk image; returns an instance id
-sub run_instance($$$) {
-	my ($image,$kernel,$ramdisk) = ($_[0],$_[1],$_[2]);
-	print "run_instance image:$image kernel:$kernel ramdisk:$ramdisk\n";
-	#$output = `euca-run-instances --kernel $kernel --ramdisk $ramdisk $image` or die("starting instance failed");
-	my $time = time();
-	return "fakeInstance-$_[0]-$time";
-}
-
-
-# SUB: terminate_instance
-# Takes an instance id
-sub terminate_instance($) {
-	print "terminate_instance:$_[0]\n";
-	#system("euca-terminate-instance $_[0]") or die("starting instance failed");
-}
-
-
-# SUB: allocate_storage -- creates an EBS volume
-# 
-sub allocate_storage() {
-	print "  allocate_storage:$_[0]\n";
-	#system("euca-create-volume --size 1 --zone myPartition") or die("creating volume failed");
-}
-
-
-# SUB: generate_dummy_file -- Returns a path to a dummy-data file of n kilobytes; creates if necessary
-# Takes a size (in KB) of dummy data, and returns a path to the resultant file
-sub generate_dummy_file($) {
-	my $size=$_[0];
-	my $path = "/tmp/dummy-$size-kilobyte.txt";
-	my $dummy_data = "f00d";
-	unless (-e $path) {
-		open FILE, ">$path" or die ("couldn't open dummy file for writing");
-		for (my $i=0; $i<1024*$size; $i+=length($dummy_data)) {
-			print FILE $dummy_data;
-		}
-		close FILE or die ("couldn't close dummy file");
-	}
-	return $path;
-}
-
-
-# SUB: allocate_s3 -- allocates an S3 object 
-# Takes a username, EC2_ACCESS_KEY, EC2_SECRET_KEY, S3_URL, sizeKb
-#    sizeKb is the size of the data to upload to the s3 object
-sub allocate_s3($$$$$) {
-	print "  allocate_s3:$_[0]\n";
-	my $time = time();
-	my ($user,$access_key,$secret_key,$url,$sizeKb) = ($_[0],$_[1],$_[2],$_[3],$_[4]);
-	my $dummy_data_path = generate_dummy_file($sizeKb);
-	#system("./s3curl.pl --id $access_key --key $secret_key --put /dev/null -- -s -v $url/mybucket-$user") or die("creating bucket failed");
-	#system("./s3curl.pl --id $access_key --key $secret_key --put $dummy_data_path -- -s -v $url/mybucket/obj-$user-$time") or die("creating s3 obj failed");
-}
-
-# SUB: switch_to_user  -- switches to a user
-# Takes a username and returns EC2_ACCESS_KEY and EC2_SECRET_KEY
-sub switch_to_user($) {
-	print " switching to user:$_[0]\n";
-	system("su - $user") or die ("Couldn't switch to user $user");
-	return ("ec2-access-key","ec2-secret-key");
-}
-
-
-#
-# MAIN LOGIC
-#
-
-if ($#ARGV+1 < 6) {
-	print "Usage: simulate_usage.pl interval duration s3_url kernel_image ramdisk_image (username/image)+\n";
+if ($#ARGV+1 < 5) {
+	print "Usage: simulate_usage.pl interval_secs duration_secs num_instances_per_user kernel_image ramdisk_image (username image)+\n";
 }
 
 my $interval = shift;
 my $duration = shift;
-my $s3_url = shift;
+my $num_instances_per_user = shift;
 my $kernel_image = shift;
 my $ramdisk_image = shift;
-my @users = ();
-my %user_instance_id_hash = ();
 
-print "interval:$interval duration:$duration s3_url:$s3_url kernel:$kernel_image ramdisk:$ramdisk_image\n";
-
-# Parse users into separate list
-foreach my $item (@ARGV) {
-	(my $user,my $image)=split("/",$item);
-	push(@users,$user);
+my $user_num = 1;
+while ($#ARGV>0) {
+	my $user = shift;
+	my $image = shift;
+	system("sudo - $user -c ./simulate_one_user.pl $num_instances_per_user $interval $duration $user_num $kernel_image $ramdisk_imager $image &")
+		or die("couldn't execute simulate_one_user for user: $user\n");
+	$user_num++;
 }
 
-
-# Run all instances as users, and retain instance ids for termination
-foreach my $item (@ARGV) {
-	(my $user,my $image)=split("/",$item);
-	switch_to_user($user);
-	my $instance_id = run_instance($image,$kernel_image,$ramdisk_image);
-	$user_instance_id_hash{$user}=$instance_id;
-}
-
-
-# Allocate storage and s3 for each user, every INTERVAL, sleeping between
-for (my $i=0; $i < $duration; $i++) {
-	print "iter:$i\n";
-	my $usernum = 0;
-	foreach my $user (@users) {
-		my ($ec2_access_key, $ec2_secret_key) = switch_to_user($user);
-		allocate_storage();
-		allocate_s3($user,$ec2_access_key,$ec2_secret_key,$s3_url,$usernum); # allocate usernum kilobytes; different sizes for each user
-		$usernum++;
-	}
-	sleep $interval;
-}
-
-
-# Terminate all instances
-while (my ($user, $instance_id) = each(%user_instance_id_hash)) {
-	switch_to_user($user);
-	terminate_instance($instance_id);
-}
+sleep $duration + 10;
 
