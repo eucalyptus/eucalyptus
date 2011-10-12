@@ -117,6 +117,7 @@ public class AccountActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to modify account", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to modify account " + accountId  + ": " + caught.getMessage( ) );
       }
@@ -248,6 +249,7 @@ public class AccountActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to delete accounts", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to delete accounts " + ids + ": " + caught.getMessage( ) );
       }
@@ -282,6 +284,7 @@ public class AccountActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to create account", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Creating account " + name + " failed: " + caught.getMessage( ) );
       }
@@ -352,6 +355,7 @@ public class AccountActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to create users", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Creating users " + names + "for account " + accountId + " failed: " + caught.getMessage( ) );
       }
@@ -427,6 +431,7 @@ public class AccountActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to create groups", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Creating groups " + names + " for account " + accountId + " failed: " + caught.getMessage( ) );
       }
@@ -502,6 +507,7 @@ public class AccountActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to add policy", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to add policy " + name + ": " + caught.getMessage( ) );
       }
@@ -543,6 +549,7 @@ public class AccountActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to approve accounts", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to approve accounts " + ids + ": " + caught.getMessage( ) );
       }
@@ -584,6 +591,7 @@ public class AccountActivity extends AbstractSearchActivity
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to reject accounts", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to reject accounts " + ids + ": " + caught.getMessage( ) );
       }

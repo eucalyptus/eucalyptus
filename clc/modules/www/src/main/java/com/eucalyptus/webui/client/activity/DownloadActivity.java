@@ -34,6 +34,7 @@ public class DownloadActivity extends AbstractActivity {
 
       @Override
       public void onFailure( Throwable arg0 ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         LOG.log( Level.INFO, "Failed to get image downloads" );
       }
 
@@ -50,6 +51,7 @@ public class DownloadActivity extends AbstractActivity {
 
       @Override
       public void onFailure( Throwable arg0 ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         LOG.log( Level.INFO, "Failed to get image downloads" );
       }
 

@@ -42,6 +42,7 @@ public class KeyActivity extends AbstractSearchActivity implements KeyView.Prese
       
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         LOG.log( Level.WARNING, "Search failed: " + caught );
         displayData( null );
       }
@@ -83,6 +84,7 @@ public class KeyActivity extends AbstractSearchActivity implements KeyView.Prese
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to modify key", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to modify key " + keyId  + ": " + caught.getMessage( ) );
       }
@@ -133,6 +135,7 @@ public class KeyActivity extends AbstractSearchActivity implements KeyView.Prese
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to delete key", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to delete key " + keyId + ": " + caught.getMessage( ) );
       }

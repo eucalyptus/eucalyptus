@@ -33,6 +33,7 @@ public class ImageActivity extends AbstractSearchActivity implements ImageView.P
       
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         LOG.log( Level.WARNING, "Search failed: " + caught );
         displayData( null );
       }

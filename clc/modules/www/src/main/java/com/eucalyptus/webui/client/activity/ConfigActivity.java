@@ -47,6 +47,7 @@ public class ConfigActivity extends AbstractSearchActivity implements ConfigView
 
       @Override
       public void onFailure( Throwable cause ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, cause );
         LOG.log( Level.WARNING, "Failed to get configurations: " + cause );
         displayData( null );
       }
@@ -89,6 +90,7 @@ public class ConfigActivity extends AbstractSearchActivity implements ConfigView
 
       @Override
       public void onFailure( Throwable cause ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, cause );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to change service configuration", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to change service configuration: " + result );
       }
