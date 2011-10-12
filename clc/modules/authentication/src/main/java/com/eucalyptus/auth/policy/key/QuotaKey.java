@@ -9,6 +9,8 @@ import com.eucalyptus.auth.principal.Account;
 
 public abstract class QuotaKey implements Key {
 
+  public static final String NOT_SUPPORTED = "Not supported";
+  
   public static enum Scope {
     ACCOUNT,
     GROUP,
