@@ -6,7 +6,7 @@
 # objects and storage every INTERVAL, until DURATION is reached, at which
 # point it terminates every instance it started and stops running.
 #
-# Usage: simulate_one_user.pl num_instances interval duration kernel_image ramdisk_image image
+# Usage: simulate_one_user.pl num_instances interval duration storage_usage_mb kernel_image ramdisk_image image
 #
 # Example: simulate_one_user.pl 2 100 10000 kernel_image ramdisk_image image
 #  This example will start 2 instances, then run for 10,000 seconds,
@@ -18,7 +18,7 @@
 #   must be running; 3) You must have created and uploaded all the images,
 #   ramdisk images, and kernel images which you pass in; 4) eucarc must
 #   be sourced; 5) A Eucalyptus user corresponding to the credentials
-#   must have been created, accepted, and confirmed; 6) S3curl.pl must be in
+#   must have been created, accepted, and confirmed; 6) s3curl.pl must be in
 #   the user's path.
 #
 # (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
@@ -29,20 +29,20 @@ use strict;
 use warnings;
 
 if ($#ARGV+1 < 6) {
-	print "Usage: simulate_one_user.pl num_instances interval duration kernel_image ramdisk_image image\n";
+	print "Usage: simulate_one_user.pl num_instances interval duration storage_usage_mb kernel_image ramdisk_image image\n";
 }
 
 open LOG, ">~/log.out" or die ("Couldn't open log file");
 
-# SUB: generate_dummy_file -- Returns a path to a dummy-data file of n kilobytes; creates if necessary
-# Takes a size (in KB) of dummy data, and returns a path to the resultant file
+# SUB: generate_dummy_file -- Returns a path to a dummy-data file of n megabytes; creates if necessary
+# Takes a size (in MB) of dummy data, and returns a path to the resultant file
 sub generate_dummy_file($) {
 	my $size=$_[0];
-	my $path = "~/dummy-$size-kilobyte.txt";
+	my $path = "~/dummy-$size-megabyte.txt";
 	my $dummy_data = "f00d";
 	unless (-e $path) {
 		open FILE, ">$path" or die ("couldn't open dummy file for writing");
-		for (my $i=0; $i<1024*$size; $i+=length($dummy_data)) {
+		for (my $i=0; $i<<20*$size; $i+=length($dummy_data)) {
 			print FILE $dummy_data;
 		}
 		close FILE or die ("couldn't close dummy file");
@@ -58,6 +58,7 @@ sub generate_dummy_file($) {
 my $num_instances = shift;
 my $interval = shift;
 my $duration = shift;
+my $storage_usage_mb = shift;
 my $kernel_image = shift;
 my $ramdisk_image = shift;
 my $image = shift;
@@ -71,7 +72,8 @@ print LOG "num_instances:$num_instances interval:$interval duration:$duration ke
 
 # Run instance
 $output = `euca-run-instances -n $num_instances --kernel $kernel --ramdisk $ramdisk $image` or die("starting instance failed");
-print LOG "Ran instances\n";
+print "Ran instances:$output\n";
+print LOG "Ran instances:$output\n";
 
 # Parse output and gather instance ids
 foreach my $line (split("\n", $output)) {
@@ -84,10 +86,9 @@ foreach my $line (split("\n", $output)) {
 # Allocate storage and s3 for each user, every INTERVAL, sleeping between
 for (my $i=0; $i < $duration; $i++) {
 	print "iter:$i\n";
-	system("euca-create-volume --size 1 --zone myPartition") or die("creating volume failed");
-	system("euca-attach-volume") or die ("Couldn't attach volume");
+	system("euca-create-volume --size $storage_usage_mb --zone myPartition") or die("creating volume failed");
 	my $time = time();
-	my $dummy_data_path = generate_dummy_file($sizeKb);
+	my $dummy_data_path = generate_dummy_file($storage_usage_mb);
 	system("s3curl.pl --id $access_key --key $secret_key --put /dev/null -- -s -v $url/mybucket-$user") or die("creating bucket failed");
 	system("s3curl.pl --id $access_key --key $secret_key --put $dummy_data_path -- -s -v $url/mybucket/obj-$user-$time") or die("creating s3 obj failed");
 	sleep $interval;
@@ -99,5 +100,5 @@ foreach my $instance_id (@instance_ids) {
 	system("euca-terminate-instance $instance_id") or die ("Couldn't terminate instance");
 }
 
-close log or die ("couldn't close log");
+close LOG or die ("couldn't close log");
 
