@@ -39,4 +39,7 @@ public class AuthenticationProperties {
     
   }
   
+  @ConfigurableField( description = "Web session lifetime in minutes", initial = "1440", displayName = "sessionlife" )
+  public static Long SESSION_LIFE_IN_MINUTES = 24 * 60L;// 24 hours in minutes
+  
 }
