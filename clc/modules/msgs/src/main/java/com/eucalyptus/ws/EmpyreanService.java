@@ -71,10 +71,12 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ComponentService;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.ServiceOperation;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
@@ -99,11 +101,87 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 
+@ComponentService( Empyrean.class )
 public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
   
   private enum TransitionName {
     START, STOP, ENABLE, DISABLE, RESTART
+  }
+  
+  @ServiceOperation
+  public enum ModifyService implements Function<ModifyServiceType, ModifyServiceResponseType> {
+    INSTANCE;
+    
+    @Override
+    public ModifyServiceResponseType apply( ModifyServiceType input ) {
+      try {
+        return EmpyreanService.modifyService( input );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+    
+  }
+  
+  @ServiceOperation
+  public enum StartService implements Function<StartServiceType, StartServiceResponseType> {
+    INSTANCE;
+    
+    @Override
+    public StartServiceResponseType apply( StartServiceType input ) {
+      try {
+        return EmpyreanService.startService( input );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+    
+  }
+  
+  @ServiceOperation
+  public enum StopService implements Function<StopServiceType, StopServiceResponseType> {
+    INSTANCE;
+    
+    @Override
+    public StopServiceResponseType apply( StopServiceType input ) {
+      try {
+        return EmpyreanService.stopService( input );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+    
+  }
+  
+  @ServiceOperation
+  public enum EnableService implements Function<EnableServiceType, EnableServiceResponseType> {
+    INSTANCE;
+    
+    @Override
+    public EnableServiceResponseType apply( EnableServiceType input ) {
+      try {
+        return EmpyreanService.enableService( input );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+    
+  }
+  
+  @ServiceOperation
+  public enum DisableService implements Function<DisableServiceType, DisableServiceResponseType> {
+    INSTANCE;
+    
+    @Override
+    public DisableServiceResponseType apply( DisableServiceType input ) {
+      try {
+        return EmpyreanService.disableService( input );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+    
   }
   
   public static ModifyServiceResponseType modifyService( ModifyServiceType request ) throws Exception {
@@ -123,7 +201,7 @@ public class EmpyreanService {
           case DISABLE:
             switch ( a.lookupState( ) ) {
               case ENABLED:
-                Topology.getInstance( ).disable( a ).get();
+                Topology.getInstance( ).disable( a ).get( );
                 break;
               default:
                 return reply;
@@ -138,7 +216,7 @@ public class EmpyreanService {
               case STOPPED:
               case DISABLED:
               case NOTREADY:
-                Topology.getInstance( ).enable( a ).get();
+                Topology.getInstance( ).enable( a ).get( );
                 break;
               case ENABLED:
               default:
@@ -148,7 +226,7 @@ public class EmpyreanService {
           case STOP:
             switch ( a.lookupState( ) ) {
               case ENABLED:
-                Topology.getInstance( ).disable( a ).get();
+                Topology.getInstance( ).disable( a ).get( );
               case INITIALIZED:
               case PRIMORDIAL:
               case BROKEN:
@@ -156,7 +234,7 @@ public class EmpyreanService {
               case LOADED:
               case DISABLED:
               case NOTREADY:
-                Topology.getInstance( ).stop( a ).get();
+                Topology.getInstance( ).stop( a ).get( );
                 break;
               default:
                 return reply;
@@ -171,7 +249,7 @@ public class EmpyreanService {
               case LOADED:
               case DISABLED:
               case NOTREADY:
-                Topology.getInstance( ).start( a ).get();
+                Topology.getInstance( ).start( a ).get( );
                 break;
               case ENABLED:
               default:
@@ -181,16 +259,16 @@ public class EmpyreanService {
           case RESTART:
             switch ( a.lookupState( ) ) {
               case ENABLED:
-                Topology.getInstance( ).disable( a ).get();
+                Topology.getInstance( ).disable( a ).get( );
               case DISABLED:
               case NOTREADY:
-                Topology.getInstance( ).stop( a ).get();
+                Topology.getInstance( ).stop( a ).get( );
               case INITIALIZED:
               case PRIMORDIAL:
               case BROKEN:
               case LOADED:
               default:
-                Topology.getInstance( ).start( a ).get();
+                Topology.getInstance( ).start( a ).get( );
                 break;
             }
             break;
@@ -394,6 +472,20 @@ public class EmpyreanService {
         }
       };
     }
+  }
+  
+  public enum DescribeService implements Function<DescribeServicesType, DescribeServicesResponseType> {
+    INSTANCE;
+    
+    @Override
+    public DescribeServicesResponseType apply( DescribeServicesType input ) {
+      try {
+        return EmpyreanService.describeService( input );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+    
   }
   
   public static DescribeServicesResponseType describeService( final DescribeServicesType request ) {
