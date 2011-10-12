@@ -3036,7 +3036,7 @@ int init_pthreads() {
 }
 
 int init_localstate(void) {
-  int rc, loglevel, ret;
+  int rc, loglevel, logrollnumber, ret;
   char *tmpstr=NULL, logFile[MAX_PATH], configFiles[2][MAX_PATH], home[MAX_PATH], vfile[MAX_PATH];
 
   ret=0;
@@ -3071,8 +3071,17 @@ int init_localstate(void) {
       else {loglevel=EUCADEBUG;}
     }
     if (tmpstr) free(tmpstr);
+
+    tmpstr = getConfString(configFiles, 2, "LOGROLLNUMBER");
+    if (!tmpstr) {
+      logrollnumber = 4;
+    } else {
+      logrollnumber = atoi(tmpstr);
+    }
+    if (tmpstr) free(tmpstr);
+
     // set up logfile
-    logfile(logFile, loglevel);
+    logfile(logFile, loglevel, logrollnumber);
     
     local_init=1;
   }

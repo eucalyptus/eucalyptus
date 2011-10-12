@@ -771,7 +771,7 @@ void adopt_instances()
 static int init (void)
 {
 	static int initialized = 0;
-	int do_warn = 0, i;
+	int do_warn = 0, i, j;
 	char configFiles[2][MAX_PATH],
 		log[MAX_PATH],
 		*bridge,
@@ -804,7 +804,7 @@ static int init (void)
 
 	/* set the minimum log for now */
 	snprintf(log, MAX_PATH, "%s/var/log/eucalyptus/nc.log", nc_state.home);
-	logfile(log, EUCADEBUG);
+	logfile(log, EUCADEBUG, 4);
         logprintfl (EUCAINFO, "Eucalyptus node controller initializing %s\n", compile_timestamp_str);
 
 	if (do_warn) 
@@ -831,7 +831,13 @@ static int init (void)
         else if (!strcmp(tmp,"DEBUG2")) {i=EUCADEBUG2;}
 		free(tmp);
 	}
-	logfile(log, i);
+	tmp = getConfString(configFiles, 2, "LOGROLLNUMBER");
+	j = 4;
+	if (tmp) {
+        j = atoi(tmp);
+		free(tmp);
+	}
+	logfile(log, i, j);
 
     { // initialize hooks if their directory looks ok
         char dir [MAX_PATH];
