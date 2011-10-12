@@ -16,7 +16,7 @@ import edu.ucsb.eucalyptus.admin.server.ServletUtils;
 @ConfigurableClass( root = "websession", description = "Parameters for Web UI sessions." )
 public class WebSessionManager {
 
-  @ConfigurableField( description = "LDAP integration configuration, in JSON", initial = "1440", displayName = "lic" )
+  @ConfigurableField( description = "Web session lifetime in minutes", initial = "1440", displayName = "sessionlife" )
   public static Long SESSION_LIFE_IN_MINUTES = 24 * 60L;// 24 hours in minutes
   
   private static WebSessionManager instance = null;
