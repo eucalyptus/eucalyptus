@@ -1,6 +1,7 @@
 package com.eucalyptus.webui.server;
 
 import java.util.Map;
+import com.eucalyptus.auth.AuthenticationProperties;
 import com.eucalyptus.auth.AuthenticationProperties.LicChangeListener;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -13,11 +14,7 @@ import edu.ucsb.eucalyptus.admin.server.ServletUtils;
  * @author Ye Wen (wenye@eucalyptus.com)
  *
  */
-@ConfigurableClass( root = "websession", description = "Parameters for Web UI sessions." )
 public class WebSessionManager {
-
-  @ConfigurableField( description = "Web session lifetime in minutes", initial = "1440", displayName = "sessionlife" )
-  public static Long SESSION_LIFE_IN_MINUTES = 24 * 60L;// 24 hours in minutes
   
   private static WebSessionManager instance = null;
   
@@ -58,7 +55,7 @@ public class WebSessionManager {
   public synchronized WebSession getSession( String id ) {
     WebSession session = sessions.get( id );
     if ( session != null ) {
-      if ( System.currentTimeMillis( ) - session.getCreationTime( ) > SESSION_LIFE_IN_MINUTES * 60 * 1000 ) {
+      if ( System.currentTimeMillis( ) - session.getCreationTime( ) > AuthenticationProperties.WEBSESSION_LIFE_IN_MINUTES * 60 * 1000 ) {
         sessions.remove( id );
         session = null;
       }
@@ -76,7 +73,7 @@ public class WebSessionManager {
   public synchronized WebSession getSession( String userName, String accountName ) {
 	for ( WebSession session : sessions.values( ) ) {
 	  if ( session != null && session.getUserName( ).equals( userName ) && session.getAccountName( ).equals( accountName ) ) {
-	    if ( System.currentTimeMillis( ) - session.getCreationTime( ) > SESSION_LIFE_IN_MINUTES * 60 * 1000 ) {
+	    if ( System.currentTimeMillis( ) - session.getCreationTime( ) > AuthenticationProperties.WEBSESSION_LIFE_IN_MINUTES * 60 * 1000 ) {
 	      sessions.remove( session.getId( ) );
 	      return null;
 	    }
