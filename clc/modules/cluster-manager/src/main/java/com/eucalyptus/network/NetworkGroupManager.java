@@ -61,7 +61,7 @@ public class NetworkGroupManager {
   public DeleteSecurityGroupResponseType delete( final DeleteSecurityGroupType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
     final DeleteSecurityGroupResponseType reply = ( DeleteSecurityGroupResponseType ) request.getReply( );
-    if ( !RestrictedTypes.filterPrivileged( ).apply( NetworkGroups.lookup( request.getGroupName( ) ) ) ) {
+    if ( !RestrictedTypes.filterPrivileged( ).apply( NetworkGroups.lookup( ctx.getUserFullName( ).asAccountFullName( ), request.getGroupName( ) ) ) ) {
       throw new EucalyptusCloudException( "Not authorized to delete network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
     }
     NetworkGroups.delete( ctx.getUserFullName( ), request.getGroupName( ) );
