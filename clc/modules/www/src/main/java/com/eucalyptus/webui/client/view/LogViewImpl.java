@@ -58,9 +58,9 @@ public class LogViewImpl extends Composite implements LogView {
     this.currentGrid.addStyleName( gridStyle.grid( ) );
     this.currentGrid.getColumnFormatter( ).setWidth( 0, TIME_COL_WIDTH );
     this.currentGrid.getColumnFormatter( ).setWidth( 1, ICON_COL_WIDTH );
-    this.currentGrid.setHTML( 0, 0, getTimeString( new Date( ) ) );
+    this.currentGrid.setText( 0, 0, getTimeString( new Date( ) ) );
     this.currentGrid.setWidget( 0, 1, getLogIcon( LogType.INFO ) );
-    this.currentGrid.setHTML( 0, 2, "Main screen loaded" );
+    this.currentGrid.setText( 0, 2, "Main screen loaded" );
   }
   
   private String getTimeString( Date date ) {
@@ -79,9 +79,9 @@ public class LogViewImpl extends Composite implements LogView {
   @Override
   public void log( LogType type, String content ) {
     this.currentGrid.insertRow( 0 );
-    this.currentGrid.setHTML( 0, 0, getTimeString( new Date( ) ) );
+    this.currentGrid.setText( 0, 0, getTimeString( new Date( ) ) );
     this.currentGrid.setWidget( 0, 1, getLogIcon( type ) );
-    this.currentGrid.setHTML( 0, 2, content != null ? content : "" );
+    this.currentGrid.setText( 0, 2, content != null ? content : "" );
     truncateLog( );
   }
 

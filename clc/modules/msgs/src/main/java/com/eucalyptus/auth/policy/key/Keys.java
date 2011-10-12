@@ -13,6 +13,7 @@ public class Keys {
 
   // Keys
   public static final String AWS_CURRENTTIME = "aws:currenttime";
+  public static final String AWS_SOURCEIP = "aws:sourceip";
   
   public static final String S3_MAX_KEYS = "s3:max-keys";
   
