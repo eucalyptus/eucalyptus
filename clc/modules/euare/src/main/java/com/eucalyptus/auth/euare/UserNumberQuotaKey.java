@@ -33,9 +33,9 @@ public class UserNumberQuotaKey extends QuotaKey {
       case ACCOUNT:
         return Long.toString( EuareQuotaUtil.countUserByAccount( id ) + quantity );
       case GROUP:
-        throw new AuthException( "Group level quota not supported" );
+        return NOT_SUPPORTED;
       case USER:
-        throw new AuthException( "User level quota not supported" );
+        return NOT_SUPPORTED;
     }
     throw new AuthException( "Invalid scope" );
   }

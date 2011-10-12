@@ -325,10 +325,11 @@ public class PolicyEngineImpl implements PolicyEngine {
     NumericGreaterThan ngt = new NumericGreaterThan( );
     for ( Authorization auth : quotas ) {
       if ( !matchActions( auth, action ) ) {
+        LOG.debug( "Action " + action + " not matching" );
         continue;
       }
       if ( !matchResources( auth, resourceName ) ) {
-        LOG.debug( " YE " + "resource " + resourceName + " not matching" );
+        LOG.debug( "Resource " + resourceName + " not matching" );
         continue;
       }
       QuotaKey.Scope scope = getAuthorizationScope( auth );
@@ -336,15 +337,19 @@ public class PolicyEngineImpl implements PolicyEngine {
       for ( Condition cond : auth.getConditions( ) ) {
         Key key = Keys.getKeyInstance( Keys.getKeyClass( cond.getKey( ) ) );
         if ( !( key instanceof QuotaKey ) ) {
-          LOG.debug( " YE " + "not quota key" );
+          LOG.debug( "Key " + cond.getKey( ) + " is not a quota" );
           continue;
         }
         QuotaKey quotaKey = ( QuotaKey ) key;
         if ( !key.canApply( action, resourceType ) ) {
-          LOG.debug( " YE " + "can not apply key" );
+          LOG.debug( "Key " + cond.getKey( ) + " can not apply for action=" + action + ", resourceType=" + resourceType );
           continue;
         }
         String usageValue = quotaKey.value( scope, principalId, resourceName, quantity );
+        if ( QuotaKey.NOT_SUPPORTED.equals( usageValue ) ) {
+          LOG.debug( "Key " + cond.getKey( ) + " is not supported for scope=" + scope );
+          continue;
+        }
         String quotaValue = cond.getValues( ).toArray( new String[0] )[0];
         if ( ngt.check( usageValue, quotaValue ) ) {
           LOG.error( "Quota " + key.getClass( ).getName( ) + " is exceeded: quota=" + quotaValue + ", usage=" + usageValue );
