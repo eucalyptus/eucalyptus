@@ -42,7 +42,7 @@ public class VmInstanceNumberQuotaKey extends QuotaKey {
       case ACCOUNT:
         return Long.toString( RestrictedTypes.quantityMetricFunction( VmInstanceMetadata.class ).apply( AccountFullName.getInstance( id ) ) + 1 );
       case GROUP:
-        throw new AuthException( "Group level quota not supported" );
+        return NOT_SUPPORTED;
       case USER:
         return Long.toString( RestrictedTypes.quantityMetricFunction( VmInstanceMetadata.class ).apply( UserFullName.getInstance( id ) ) + 1 );
     }
