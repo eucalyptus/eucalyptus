@@ -76,8 +76,8 @@ print "Ran instances:$output\n";
 print LOG "Ran instances:$output\n";
 
 # Parse output and gather instance ids
-foreach my $line (split("\n", $output)) {
-	my @fields = split("\w+", $line);
+foreach (split("\n", $output)) {
+	my @fields = split("\w+");
 	push(@instance_ids, $fields[2]);
 	print LOG "Ran instance id:$fields[2]\n";
 }
