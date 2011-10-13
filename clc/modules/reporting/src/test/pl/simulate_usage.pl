@@ -71,6 +71,7 @@ while ($#ARGV>0) {
 	# fork and run each simulation as a separate user
 	my $pid = fork();
 	if ($pid==0) {
+		# We must execute this as a separate user so must call to cmd line
 		exec("su - $user -c \"./simulate_one_user.pl $num_instances_per_user $interval $duration $user_num $kernel_image $ramdisk_image $image > log\"")
 			or die ("couldn't exec");
 	}
