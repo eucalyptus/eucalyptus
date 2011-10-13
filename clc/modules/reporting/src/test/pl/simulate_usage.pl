@@ -82,6 +82,7 @@ while ($#ARGV>0) {
 
 print "Done forking.\n";
 
+# Wait until all forked processes terminate
 for (my @running_pids=are_any_running(@pids); $#running_pids+1>0 ; @running_pids=are_any_running(@pids)) {
 	print "Still running: " . join(",",@running_pids) . "\n";
 	sleep 3;
