@@ -19,7 +19,8 @@
 #   ramdisk images, and kernel images which you pass in; 4) eucarc must
 #   be sourced; 5) A Eucalyptus user corresponding to the credentials
 #   must have been created, accepted, and confirmed; 6) s3curl.pl must be in
-#   the user's path.
+#   the user's path7; 7) Perl must have the Digest/HMAC-SHA1.pm module
+#   installed so s3curl.pl can run.
 #
 # (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
 # author: tom.werges
@@ -29,26 +30,52 @@ use strict;
 use warnings;
 
 if ($#ARGV+1 < 6) {
-	print "Usage: simulate_one_user.pl num_instances interval duration storage_usage_mb kernel_image ramdisk_image image\n";
+	die "Usage: simulate_one_user.pl num_instances interval duration storage_usage_mb kernel_image ramdisk_image image\n";
 }
-
-open LOG, ">~/log.out" or die ("Couldn't open log file");
 
 # SUB: generate_dummy_file -- Returns a path to a dummy-data file of n megabytes; creates if necessary
 # Takes a size (in MB) of dummy data, and returns a path to the resultant file
 sub generate_dummy_file($) {
 	my $size=$_[0];
-	my $path = "~/dummy-$size-megabyte.txt";
+	my $path = "dummy-$size-megabyte.txt";
 	my $dummy_data = "f00d";
 	unless (-e $path) {
 		open FILE, ">$path" or die ("couldn't open dummy file for writing");
-		for (my $i=0; $i<<20*$size; $i+=length($dummy_data)) {
+		for (my $i=0; $i < $size<<20; $i+=length($dummy_data)) {
 			print FILE $dummy_data;
 		}
 		close FILE or die ("couldn't close dummy file");
 	}
 	return $path;
 }
+
+# SUB: parse_instance_ids -- parse the output of euca-run-instances or euca-describe-instances
+#        and return a hash of instance_id => status
+sub parse_instance_ids($) {
+	my %instances = ();
+	foreach (split("\n", $_[0])) {
+		my @fields = split("\\s+");
+		if ($fields[0] =~ /^INSTANCE/) {
+			$instances{$fields[1]}=$fields[5];
+		}
+	}
+	return %instances;
+}
+
+# SUB: parse_avail_zones -- parse the output of euca-describe-availability_zones
+#        and return a list of availability zones
+sub parse_avail_zones($) {
+	my @zones = ();
+	foreach (split("\n", $_[0])) {
+		my @fields = split("\\s+");
+		if ($fields[0] =~ /^AVAILABILITYZONE/) {
+			push(@zones,$fields[1]);
+		}
+	}
+	return @zones;
+}
+
+
 
 
 #
@@ -63,42 +90,61 @@ my $kernel_image = shift;
 my $ramdisk_image = shift;
 my $image = shift;
 
-my @instance_ids = ();
+my %instance_data = ();  # instance_id => status
 my $access_key = $ENV{"EC2_ACCESS_KEY"};
 my $secret_key = $ENV{"EC2_SECRET_KEY"};
 my $s3_url = $ENV{"S3_URL"};
 
-print LOG "num_instances:$num_instances interval:$interval duration:$duration kernel:$kernel_image ramdisk:$ramdisk_image s3_url:$s3_url image:$image\n";
+print "num_instances:$num_instances interval:$interval duration:$duration kernel:$kernel_image ramdisk:$ramdisk_image s3_url:$s3_url image:$image\n";
 
-# Run instance
-$output = `euca-run-instances -n $num_instances --kernel $kernel --ramdisk $ramdisk $image` or die("starting instance failed");
-print "Ran instances:$output\n";
-print LOG "Ran instances:$output\n";
-
-# Parse output and gather instance ids
-foreach (split("\n", $output)) {
-	my @fields = split("\w+");
-	push(@instance_ids, $fields[2]);
-	print LOG "Ran instance id:$fields[2]\n";
+# Run instances
+my $output = `euca-run-instances -n $num_instances --kernel $kernel_image --ramdisk $ramdisk_image $image` or die("starting instance failed");
+%instance_data = parse_instance_ids($output);
+foreach (keys %instance_data) {
+	print "Started instance id:$_\n";
+}
+if ($num_instances != keys(%instance_data)) {
+	die "Incorrect number of instances started\n";
 }
 
+# Sleep to give instances time to start
+my $sleep_duration = 120;
+print "Sleeping for $sleep_duration secs so instances can start up...\n";
+sleep $sleep_duration;
+
+# Verify that instances are running
+$output = `euca-describe-instances` or die("couldn't euca-describe-instances");
+my %instances = parse_instance_ids($output);
+foreach (keys %instance_data) {
+	if ($instances{$_} eq "running") {
+		print "Instance $_ is running\n";
+	} else {
+		die ("Instance $_ not running:$instances{$_}");
+	}
+}
+
+# Get an availability zone
+$output = `euca-describe-availability-zones` or die("couldn't euca-describe-availability-zones");
+my @zones = parse_avail_zones($output);
+print "Using zone:$zones[0]\n";
 
 # Allocate storage and s3 for each user, every INTERVAL, sleeping between
-for (my $i=0; $i < $duration; $i++) {
+for (my $i=0; ($i*$interval) < $duration; $i++) {
 	print "iter:$i\n";
-	system("euca-create-volume --size $storage_usage_mb --zone myPartition") or die("creating volume failed");
+	system("euca-create-volume --size $storage_usage_mb --zone $zones[0]") and die("creating volume failed");
+	print "$i: Created volume\n";
 	my $time = time();
 	my $dummy_data_path = generate_dummy_file($storage_usage_mb);
-	system("s3curl.pl --id $access_key --key $secret_key --put /dev/null -- -s -v $url/mybucket-$user") or die("creating bucket failed");
-	system("s3curl.pl --id $access_key --key $secret_key --put $dummy_data_path -- -s -v $url/mybucket/obj-$user-$time") or die("creating s3 obj failed");
+	system("s3curl.pl --id $access_key --key $secret_key --put /dev/null -- -s -v $url/mybucket-$user") and die("creating bucket failed");
+	print "$i: Created bucket\n";
+	system("s3curl.pl --id $access_key --key $secret_key --put $dummy_data_path -- -s -v $url/mybucket/obj-$user-$time") and die("creating s3 obj failed");
+	print "$i: Created object\n";
 	sleep $interval;
 }
 
-
 # Terminate instances
-foreach my $instance_id (@instance_ids) {
-	system("euca-terminate-instance $instance_id") or die ("Couldn't terminate instance");
+foreach (keys %instance_data) {
+	system("euca-terminate-instances $_") and die ("Couldn't terminate instance:$_");
+	print "Terminated instance:$_\n";
 }
-
-close LOG or die ("couldn't close log");
 
