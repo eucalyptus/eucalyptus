@@ -143,11 +143,15 @@ public class EuareService {
       account.setAccountId( newAccount.getAccountNumber( ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      if ( e instanceof AuthException && AuthException.ACCOUNT_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Account " + request.getAccountName( ) + " already exists." );
-      } else {
-        throw new EucalyptusCloudException( e );
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCOUNT_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Account " + request.getAccountName( ) + " already exists." );
+        }
+        if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid account name " + request.getAccountName( ) );
+        }
       }
+      throw new EucalyptusCloudException( e );
     }
     return reply;
   }
@@ -436,6 +440,11 @@ public class EuareService {
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ), e );
     } catch ( Exception e ) {
       LOG.debug( e, e );
+      if ( e instanceof AuthException ) {
+        if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy name " + request.getPolicyName( ) );
+        }
+      }
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -574,6 +583,17 @@ public class EuareService {
       }
     } catch ( Exception e ) {
       LOG.debug( e, e );
+      if ( e instanceof AuthException ) {
+        if ( AuthException.GROUP_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User name " + request.getNewUserName( ) + " already exists." );
+        }
+        if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid new name " + request.getNewUserName( ) );
+        }
+        if ( AuthException.INVALID_PATH.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Invalid new path " + request.getNewPath( ) );
+        }        
+      }      
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -746,6 +766,17 @@ public class EuareService {
       }
     } catch ( Exception e ) {
       LOG.debug( e, e );
+      if ( e instanceof AuthException ) {
+        if ( AuthException.GROUP_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Group name " + request.getNewGroupName( ) + " already exists." );
+        }
+        if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid new name " + request.getNewGroupName( ) );
+        }
+        if ( AuthException.INVALID_PATH.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Invalid new path " + request.getNewPath( ) );
+        }        
+      }      
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -786,6 +817,11 @@ public class EuareService {
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ), e );
     } catch ( Exception e ) {
       LOG.debug( e, e );
+      if ( e instanceof AuthException ) {
+        if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy name " + request.getPolicyName( ) );
+        }
+      }
       throw new EucalyptusCloudException( e );
     }
     return reply;
@@ -810,11 +846,18 @@ public class EuareService {
       fillUserResult( u, newUser, account );
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      if ( e instanceof AuthException && AuthException.USER_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User " + request.getUserName( ) + " already exists." );
-      } else {
-        throw new EucalyptusCloudException( e );
+      if ( e instanceof AuthException ) {
+        if ( AuthException.GROUP_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User " + request.getUserName( ) + " already exists." );
+        }
+        if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid user name " + request.getUserName( ) );
+        }
+        if ( AuthException.INVALID_PATH.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Invalid user path " + request.getPath( ) );
+        }        
       }
+      throw new EucalyptusCloudException( e );
     }
     return reply;
   }
@@ -1035,11 +1078,18 @@ public class EuareService {
       fillGroupResult( g, newGroup, account );
     } catch ( Exception e ) {
       LOG.debug( e, e );
-      if ( e instanceof AuthException && AuthException.GROUP_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
-        throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Group " + request.getGroupName( ) + " already exists." );
-      } else {
-        throw new EucalyptusCloudException( e );
+      if ( e instanceof AuthException ) {
+        if ( AuthException.GROUP_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Group " + request.getGroupName( ) + " already exists." );
+        }
+        if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid group name " + request.getGroupName( ) );
+        }
+        if ( AuthException.INVALID_PATH.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Invalid group path " + request.getPath( ) );
+        }        
       }
+      throw new EucalyptusCloudException( e );
     }
     return reply;
   }
@@ -1524,6 +1574,14 @@ public class EuareService {
         return reply;
       } catch ( Exception e ) {
         LOG.debug( e, e );
+        if ( e instanceof AuthException ) {
+          if ( AuthException.ACCOUNT_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
+            throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Account alias " + request.getAccountAlias( ) + " already exists." );
+          }
+          if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
+            throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid account alias " + request.getAccountAlias( ) );
+          }
+        }        
         throw new EucalyptusCloudException( e );
       }
     }
@@ -1770,6 +1828,11 @@ public class EuareService {
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ), e );
     } catch ( Exception e ) {
       LOG.debug( e, e );
+      if ( e instanceof AuthException ) {
+        if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy name " + request.getPolicyName( ) );
+        }
+      }
       throw new EucalyptusCloudException( e );
     }
     return reply;

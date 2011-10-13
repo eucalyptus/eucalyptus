@@ -110,7 +110,7 @@ public class DatabaseUserProxy implements User {
       return;
     }
     // found
-    throw new AuthException( "Can not change to a name already in use: " + name );
+    throw new AuthException( AuthException.USER_ALREADY_EXISTS );
   }
 
   @Override

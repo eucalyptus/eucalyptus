@@ -89,7 +89,7 @@ public class DatabaseGroupProxy implements Group {
       return;
     }
     // found
-    throw new AuthException( "Can not change to a name already in use: " + name );
+    throw new AuthException( AuthException.GROUP_ALREADY_EXISTS );
   }
 
   @Override
