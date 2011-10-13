@@ -42,6 +42,7 @@ public class CertActivity extends AbstractSearchActivity implements CertView.Pre
       
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         LOG.log( Level.WARNING, "Search failed: " + caught );
         displayData( null );
       }
@@ -83,6 +84,7 @@ public class CertActivity extends AbstractSearchActivity implements CertView.Pre
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to modify certificate", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to modify certificate " + certId  + ": " + caught.getMessage( ) );
       }
@@ -133,6 +135,7 @@ public class CertActivity extends AbstractSearchActivity implements CertView.Pre
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.ERROR, "Failed to delete certificate", FooterView.DEFAULT_STATUS_CLEAR_DELAY );
         clientFactory.getShellView( ).getLogView( ).log( LogType.ERROR, "Failed to delete certificate " + certId + ": " + caught.getMessage( ) );
       }

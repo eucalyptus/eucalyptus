@@ -91,6 +91,7 @@ public class RightScaleActivity extends AbstractActivity implements RightScaleVi
 
       @Override
       public void onFailure( Throwable caught ) {
+        ActivityUtil.logoutForInvalidSession( clientFactory, caught );
         LOG.log( Level.WARNING, "Failed to load cloud info", caught );
       }
 
