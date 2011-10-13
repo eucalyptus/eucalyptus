@@ -39,25 +39,51 @@ if ($#ARGV+1 < 5) {
 	die "Usage: simulate_usage.pl num_instances_per_user interval_secs duration_secs kernel_image ramdisk_image (username image)+\n";
 }
 
+# Returns a list of pids still running among those passed, or an empty list
+#  if none. Does not return zombie processes.
+sub are_any_running(@) {
+	my @result_pids=();
+	my $cmd = "ps o pid,stat " . join(" ",@_);
+	my $output = `$cmd` or die("couldn't ps");
+	my @lines = split("\n",$output);
+	shift @lines; # get rid of ps header line
+	foreach (@lines) {
+		s/^\s*//; # stupid ps output sometimes contains leading spaces
+		my @fields = split("\\s+");
+		push (@result_pids,$fields[0]) if (!($fields[1] =~ /^Z.*/));
+	}
+	return @result_pids;
+}
+
 my $num_instances_per_user = shift;
 my $interval = shift;
 my $duration = shift;
 my $kernel_image = shift;
 my $ramdisk_image = shift;
 
+my @pids = ();
+
 my $user_num = 1;
 while ($#ARGV>0) {
 	my $user = shift;
 	my $image = shift;
-	system("su - $user -c \"./simulate_one_user.pl $num_instances_per_user $interval $duration $user_num $kernel_image $ramdisk_image $image > log\" &")
-		and die("couldn't execute simulate_one_user for user: $user\n");
+
+	my $pid = fork();
+	if ($pid==0) {
+		exec("su - $user -c \"./simulate_one_user.pl $num_instances_per_user $interval $duration $user_num $kernel_image $ramdisk_image $image > log\"")
+			or die ("couldn't exec");
+	}
+	push(@pids, $pid);
+	print "Started pid:$pid\n";
 	$user_num++;
 }
 
-print "Done executing as users.\n";
+print "Done forking.\n";
 
-# Allow enough delay for all background processes to exit.
-#  Duration plus 120 secs for starting instances, 4 secs for each allocation
-#  of s3 and vols, and additional 120 secs as buffer
-sleep $duration + ($interval * 4) + 240;
+for (my @running_pids=are_any_running(@pids); $#running_pids+1>0 ; @running_pids=are_any_running(@pids)) {
+	print "Still running: " . join(",",@running_pids) . "\n";
+	sleep 3;
+}
+
+print "Done.\n";
 
