@@ -2,6 +2,8 @@ package com.eucalyptus.webui.client.activity;
 
 import java.util.logging.Logger;
 import com.eucalyptus.webui.client.ClientFactory;
+import com.eucalyptus.webui.client.place.LogoutPlace;
+import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.QuickLink;
 import com.google.gwt.http.client.URL;
 
@@ -31,4 +33,16 @@ public class ActivityUtil {
   public static String getCurrentSearch( ClientFactory clientFactory ) {
     return URL.decode( clientFactory.getMainHistorian( ).getToken( ) );
   }
+  
+  /**
+   * Log out if 
+   * @param clientFactory
+   */
+  public static void logoutForInvalidSession( ClientFactory clientFactory, Throwable exception ) {
+    if ( EucalyptusServiceException.INVALID_SESSION.equals( exception.getMessage( ) ) ) {
+      clientFactory.getLocalSession( ).clearSession( );
+      clientFactory.getMainPlaceController( ).goTo( new LogoutPlace( ) );
+    }
+  }
+  
 }
