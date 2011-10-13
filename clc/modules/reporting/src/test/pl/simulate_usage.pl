@@ -50,7 +50,7 @@ sub are_any_running(@) {
 	foreach (@lines) {
 		s/^\s*//; # stupid ps output sometimes contains leading spaces
 		my @fields = split("\\s+");
-		push (@result_pids,$fields[0]) if (!($fields[1] =~ /^Z.*/));
+		push (@result_pids,$fields[0]) if (!($fields[1] =~ /^Z.*/)); #avoid zombie procs
 	}
 	return @result_pids;
 }
