@@ -25,7 +25,7 @@
 #    e. Add s3curl.pl to his path by adding a line to his .bashrc
 #    f. Bundle, upload, and register the associated image
 #  4. Bundle and upload the kernel and ramdisk images
-#  5. Run this script as root. This script must run as root because it sudo's
+#  5. Run this script as root. This script must run as root because it su's
 #       and changes users.
 #
 # (c)2011, Eucalyptus Systems, Inc. All Rights Reserved.
@@ -36,12 +36,12 @@ use strict;
 use warnings;
 
 if ($#ARGV+1 < 5) {
-	print "Usage: simulate_usage.pl interval_secs duration_secs num_instances_per_user kernel_image ramdisk_image (username image)+\n";
+	die "Usage: simulate_usage.pl num_instances_per_user interval_secs duration_secs kernel_image ramdisk_image (username image)+\n";
 }
 
+my $num_instances_per_user = shift;
 my $interval = shift;
 my $duration = shift;
-my $num_instances_per_user = shift;
 my $kernel_image = shift;
 my $ramdisk_image = shift;
 
@@ -49,10 +49,15 @@ my $user_num = 1;
 while ($#ARGV>0) {
 	my $user = shift;
 	my $image = shift;
-	system("sudo - $user -c ./simulate_one_user.pl $num_instances_per_user $interval $duration $user_num $kernel_image $ramdisk_imager $image &")
-		or die("couldn't execute simulate_one_user for user: $user\n");
+	system("su - $user -c \"./simulate_one_user.pl $num_instances_per_user $interval $duration $user_num $kernel_image $ramdisk_image $image > log\" &")
+		and die("couldn't execute simulate_one_user for user: $user\n");
 	$user_num++;
 }
 
-sleep $duration + 10;
+print "Done executing as users.\n";
+
+# Allow enough delay for all background processes to exit.
+#  Duration plus 120 secs for starting instances, 4 secs for each allocation
+#  of s3 and vols, and additional 120 secs as buffer
+sleep $duration + ($interval * 4) + 240;
 
