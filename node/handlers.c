@@ -212,15 +212,14 @@ check_hypervisor_conn()
     char * uri = NULL;
 	if (nc_state.conn == NULL || (uri = virConnectGetURI(nc_state.conn)) == NULL) {
 		nc_state.conn = virConnectOpen (nc_state.uri);
-		if (nc_state.conn == NULL) {
-			logprintfl (EUCAFATAL, "Failed to connect to %s\n", nc_state.uri);
-            sem_v (hyp_sem);
-			return NULL;
-		}
 	}
     if (uri!=NULL)
         free (uri);
     sem_v (hyp_sem);
+    if (nc_state.conn == NULL) {
+        logprintfl (EUCAFATAL, "Failed to connect to %s\n", nc_state.uri);
+        return NULL;
+    }
 	return &(nc_state.conn);
 }
 
@@ -783,7 +782,7 @@ static int init (void)
 	struct handlers ** h; 
 	long long fs_free_blocks = 0;
 	long long fs_block_size  = 0;
-	long long instances_bytes = 0; // TODO: get this value from instace backing code
+	long long instances_bytes = 0; // TODO: get this value from instance backing code
 	pthread_t tcb;
 
 	if (initialized>0) /* 0 => hasn't run, -1 => failed, 1 => ok */

@@ -361,7 +361,7 @@ public class WalrusManager {
 			BucketInfo searchBucket = new BucketInfo();
 			searchBucket.setOwnerId(account.getAccountNumber());
 			List<BucketInfo> bucketList = db.query(searchBucket);
-			if (bucketList.size() >= WalrusInfo.getWalrusInfo().getStorageMaxBucketsPerUser()) {
+			if (bucketList.size() >= WalrusInfo.getWalrusInfo().getStorageMaxBucketsPerAccount()) {
 				db.rollback();
 				throw new TooManyBucketsException(bucketName);
 			}
@@ -381,17 +381,17 @@ public class WalrusManager {
 			throw new BucketAlreadyExistsException(bucketName);
 		} else if (ctx.hasAdministrativePrivileges() || (
 				Permissions.isAuthorized(PolicySpec.VENDOR_S3,
-						PolicySpec.S3_RESOURCE_BUCKET,
-						"",
-						ctx.getAccount(),
-						PolicySpec.S3_CREATEBUCKET,
-						ctx.getUser()) &&
-						Permissions.canAllocate(PolicySpec.VENDOR_S3,
-								PolicySpec.S3_RESOURCE_BUCKET,
-								"",
-								PolicySpec.S3_CREATEBUCKET,
-								ctx.getUser(),
-								1L))){
+				                         PolicySpec.S3_RESOURCE_BUCKET,
+				                         "",
+				                         ctx.getAccount(),
+				                         PolicySpec.S3_CREATEBUCKET,
+				                         ctx.getUser()) &&
+				Permissions.canAllocate(PolicySpec.VENDOR_S3,
+				                        PolicySpec.S3_RESOURCE_BUCKET,
+				                        "",
+				                        PolicySpec.S3_CREATEBUCKET,
+				                        ctx.getUser(),
+				                        1L))){
 			// create bucket and set its acl
 			BucketInfo bucket = new BucketInfo(account.getAccountNumber(), ctx.getUser( ).getUserId( ), bucketName, new Date());
 			ArrayList<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
@@ -949,6 +949,17 @@ public class WalrusManager {
 								//no delete marker found.
 								LOG.trace("No delete marker found for: " + bucketName + "/" + objectKey);
 							}
+							if (!ctx.hasAdministrativePrivileges() &&
+							    !Permissions.canAllocate(PolicySpec.VENDOR_S3,
+							                             PolicySpec.S3_RESOURCE_OBJECT,
+							                             bucketName,
+							                             PolicySpec.S3_PUTOBJECT,
+							                             ctx.getUser(),
+							                             oldBucketSize + size)) {
+							  dbObject.rollback();
+							  LOG.error("Quota exceeded for Walrus putObject");
+							  throw new EntityTooLargeException("Key", objectKey);
+							}							
 							boolean success = false;
 							int retryCount = 0;
 							do {
@@ -970,17 +981,6 @@ public class WalrusManager {
 									throw ex;
 								}
 							} while(!success && (retryCount < 5));
-							if (!Permissions.canAllocate(PolicySpec.VENDOR_S3,
-									PolicySpec.S3_RESOURCE_OBJECT,
-									bucketName,
-									PolicySpec.S3_PUTOBJECT,
-									ctx.getUser(),
-									size) && 
-									!ctx.hasAdministrativePrivileges()) {
-								dbObject.rollback();
-								LOG.error("Quota exceeded for Walrus putObject");
-								throw new EntityTooLargeException("Key", objectKey);
-							}
 							if (WalrusProperties.trackUsageStatistics) {
 								walrusStatistics.updateBytesIn(size);
 								walrusStatistics.updateSpaceUsed(size);
@@ -1266,7 +1266,17 @@ public class WalrusManager {
 					foundObject.setEtag(md5);
 					Long size = (long) base64Data.length;
 					foundObject.setSize(size);
-
+	        if (!ctx.hasAdministrativePrivileges() &&
+	            !Permissions.canAllocate(PolicySpec.VENDOR_S3,
+	                                    PolicySpec.S3_RESOURCE_OBJECT,
+	                                    bucketName,
+	                                    PolicySpec.S3_PUTOBJECT,
+	                                    ctx.getUser(),
+	                                    oldBucketSize + size)) {
+	          db.rollback();
+	          LOG.error("Quota exceeded in Walrus putObject");
+	          throw new EntityTooLargeException("Key", objectKey, logData);
+	        }
 					boolean success = false;
 					int retryCount = 0;
 					do {
@@ -1287,18 +1297,6 @@ public class WalrusManager {
 							throw ex;
 						}
 					} while(!success && (retryCount < 5));
-
-					if (Permissions.canAllocate(PolicySpec.VENDOR_S3,
-							PolicySpec.S3_RESOURCE_OBJECT,
-							bucketName,
-							PolicySpec.S3_PUTOBJECT,
-							ctx.getUser(),
-							size) &&
-							!ctx.hasAdministrativePrivileges()) {
-						db.rollback();
-						LOG.error("Quota exceeded in Walrus putObject");
-						throw new EntityTooLargeException("Key", objectKey, logData);
-					}
 					if (WalrusProperties.trackUsageStatistics) {
 						walrusStatistics.updateBytesIn(size);
 						walrusStatistics.updateSpaceUsed(size);
@@ -2730,18 +2728,18 @@ public class WalrusManager {
 							if (destinationObjectInfo == null) {
 								// not found. create a new one
 								if (ctx.hasAdministrativePrivileges() || (
-										Permissions.isAuthorized(PolicySpec.VENDOR_S3,
-												PolicySpec.S3_RESOURCE_OBJECT,
-												sourceBucket,
-												ctx.getAccount(),
-												PolicySpec.S3_PUTOBJECT,
-												ctx.getUser()) &&
-												Permissions.canAllocate(PolicySpec.VENDOR_S3,
-														PolicySpec.S3_RESOURCE_OBJECT,
-														sourceBucket,
-														PolicySpec.S3_PUTOBJECT,
-														ctx.getUser(),
-														sourceObjectInfo.getSize()))) {
+										  Permissions.isAuthorized(PolicySpec.VENDOR_S3,
+										                           PolicySpec.S3_RESOURCE_OBJECT,
+										                           sourceBucket,
+										                           ctx.getAccount(),
+										                           PolicySpec.S3_PUTOBJECT,
+										                           ctx.getUser()) &&
+                      Permissions.canAllocate(PolicySpec.VENDOR_S3,
+                                              PolicySpec.S3_RESOURCE_OBJECT,
+                                              sourceBucket,
+                                              PolicySpec.S3_PUTOBJECT,
+                                              ctx.getUser(),
+                                              sourceObjectInfo.getSize()))) {
 									addNew = true;
 									destinationObjectInfo = new ObjectInfo();
 									List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
