@@ -50,6 +50,19 @@ sub generate_dummy_file($) {
 	return $path;
 }
 
+# SUB: parse_instance_ids -- parse the output of euca-run-instances or euca-describe-instances
+#        and return a hash of instance_id => status
+sub parse_instance_ids($) {
+	my %instances = ();
+	foreach (split("\n", $_[0])) {
+		my @fields = split("\\s+");
+		if ($fields[0] =~ /^INSTANCE/) {
+			$instances{$fields[1]}=$fields[5];
+		}
+	}
+	return $instances;
+}
+
 
 #
 # MAIN LOGIC
@@ -63,25 +76,34 @@ my $kernel_image = shift;
 my $ramdisk_image = shift;
 my $image = shift;
 
-my @instance_ids = ();
+my %instance_data = ();  # instance_id => status
 my $access_key = $ENV{"EC2_ACCESS_KEY"};
 my $secret_key = $ENV{"EC2_SECRET_KEY"};
 my $s3_url = $ENV{"S3_URL"};
 
 print LOG "num_instances:$num_instances interval:$interval duration:$duration kernel:$kernel_image ramdisk:$ramdisk_image s3_url:$s3_url image:$image\n";
 
-# Run instance
-$output = `euca-run-instances -n $num_instances --kernel $kernel --ramdisk $ramdisk $image` or die("starting instance failed");
-print "Ran instances:$output\n";
-print LOG "Ran instances:$output\n";
-
-# Parse output and gather instance ids
-foreach (split("\n", $output)) {
-	my @fields = split("\w+");
-	push(@instance_ids, $fields[2]);
-	print LOG "Ran instance id:$fields[2]\n";
+# Run instances
+my $output = `euca-run-instances -n $num_instances --kernel $kernel --ramdisk $ramdisk $image` or die("starting instance failed");
+%instance_data = parse_instance_ids($output);
+foreach (keys %instance_data) {
+	print LOG "Ran instance id:$_\n";
 }
 
+# Sleep for 30 secs to give instances time to start
+print "Sleeping for 30 secs...\n";
+sleep 30
+
+# Verify that instances are running
+$output = `euca-describe-instances` or die("couldn't euca-describe-instances");
+my %instances = parse_instance_ids($output);
+foreach (keys %instance_data) {
+	if ($instances{$_} eq "running") {
+		print LOG "Instance $_ still running\n";
+	} else {
+		die ("Instance $_ not running:$instances{$_}");
+	}
+}
 
 # Allocate storage and s3 for each user, every INTERVAL, sleeping between
 for (my $i=0; $i < $duration; $i++) {
@@ -97,7 +119,8 @@ for (my $i=0; $i < $duration; $i++) {
 
 # Terminate instances
 foreach my $instance_id (@instance_ids) {
-	system("euca-terminate-instance $instance_id") or die ("Couldn't terminate instance");
+	system("euca-terminate-instances $instance_id") or die ("Couldn't terminate instance");
+	print LOG "Terminated instance:$instance_id\n";
 }
 
 close LOG or die ("couldn't close log");
