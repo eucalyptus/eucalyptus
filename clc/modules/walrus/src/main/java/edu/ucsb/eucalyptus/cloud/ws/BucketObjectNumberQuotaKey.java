@@ -34,7 +34,7 @@ public class BucketObjectNumberQuotaKey extends QuotaKey {
       case ACCOUNT:
         return Long.toString( WalrusUtil.countBucketObjectNumber( resource ) + 1 );
       case GROUP:
-        throw new AuthException( "Group level quota not supported" );
+        return NOT_SUPPORTED;
       case USER:
         return Long.toString( WalrusUtil.countBucketObjectNumber( resource ) + 1 );
     }
