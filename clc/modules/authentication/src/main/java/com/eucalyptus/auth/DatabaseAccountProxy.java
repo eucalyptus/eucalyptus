@@ -7,6 +7,9 @@ import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
+import com.eucalyptus.auth.checker.InvalidValueException;
+import com.eucalyptus.auth.checker.ValueChecker;
+import com.eucalyptus.auth.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.GroupEntity;
@@ -29,7 +32,11 @@ public class DatabaseAccountProxy implements Account {
   private static final long serialVersionUID = 1L;
 
   private static Logger LOG = Logger.getLogger( DatabaseAccountProxy.class );
-  
+
+  private static final ValueChecker ACCOUNT_NAME_CHECKER = ValueCheckerFactory.createAccountNameChecker( );
+  private static final ValueChecker USER_GROUP_NAME_CHECKER = ValueCheckerFactory.createUserAndGroupNameChecker( );
+  private static final ValueChecker PATH_CHECKER = ValueCheckerFactory.createPathChecker( );
+
   private AccountEntity delegate;
   
   public DatabaseAccountProxy( AccountEntity delegate ) {
@@ -53,6 +60,12 @@ public class DatabaseAccountProxy implements Account {
 
   @Override
   public void setName( final String name ) throws AuthException {
+    try {
+      ACCOUNT_NAME_CHECKER.check( name );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid account name " + name );
+      throw new AuthException( AuthException.INVALID_NAME, e );
+    }
     try {
       // try finding the account with the same name to change to
       ( new DatabaseAuthProvider( ) ).lookupAccountByName( name );
@@ -125,8 +138,18 @@ public class DatabaseAccountProxy implements Account {
   
   @Override
   public User addUser( String userName, String path, boolean skipRegistration, boolean enabled, Map<String, String> info ) throws AuthException {
-    DatabaseAuthUtils.checkUserName( userName );
-    DatabaseAuthUtils.checkPath( path );
+    try {
+      USER_GROUP_NAME_CHECKER.check( userName );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid user name " + userName );
+      throw new AuthException( AuthException.INVALID_NAME, e );
+    }
+    try {
+      PATH_CHECKER.check( path );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid path " + path );
+      throw new AuthException( AuthException.INVALID_PATH, e );
+    }
     if ( DatabaseAuthUtils.checkUserExists( userName, this.delegate.getName( ) ) ) {
       throw new AuthException( AuthException.USER_ALREADY_EXISTS );
     }
@@ -214,10 +237,18 @@ public class DatabaseAccountProxy implements Account {
   
   @Override
   public Group addGroup( String groupName, String path ) throws AuthException {
-    if ( groupName == null ) {
-      throw new AuthException( AuthException.EMPTY_GROUP_NAME );
+    try {
+      USER_GROUP_NAME_CHECKER.check( groupName );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid group name " + groupName );
+      throw new AuthException( AuthException.INVALID_NAME, e );
     }
-    DatabaseAuthUtils.checkPath( path );
+    try {
+      PATH_CHECKER.check( path );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid path " + path );
+      throw new AuthException( AuthException.INVALID_PATH, e );
+    }
     if ( DatabaseAuthUtils.checkGroupExists( groupName, this.delegate.getName( ) ) ) {
       throw new AuthException( AuthException.GROUP_ALREADY_EXISTS );
     }

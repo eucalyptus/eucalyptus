@@ -100,9 +100,6 @@ import com.eucalyptus.auth.euare.UploadServerCertificateResponseType;
 import com.eucalyptus.auth.euare.UploadServerCertificateType;
 import com.eucalyptus.auth.euare.UploadSigningCertificateResponseType;
 import com.eucalyptus.auth.euare.UploadSigningCertificateType;
-import com.eucalyptus.auth.euare.checker.InvalidValueException;
-import com.eucalyptus.auth.euare.checker.ValueChecker;
-import com.eucalyptus.auth.euare.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PatternUtils;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -126,21 +123,11 @@ public class EuareService {
   
   private static final Logger LOG = Logger.getLogger( EuareService.class );
   
-  private static final ValueChecker ACCOUNT_NAME_CHECKER = ValueCheckerFactory.createAccountNameChecker( );
-  private static final ValueChecker USER_AND_GROUP_NAME_CHECKER = ValueCheckerFactory.createUserAndGroupNameChecker( );
-  private static final ValueChecker PATH_CHECKER = ValueCheckerFactory.createPathChecker( );
-  private static final ValueChecker POLICY_NAME_CHECKER = ValueCheckerFactory.createPolicyNameChecker( );
-  
   public CreateAccountResponseType createAccount(CreateAccountType request) throws EucalyptusCloudException {
     CreateAccountResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
-    try {
-      ACCOUNT_NAME_CHECKER.check( request.getAccountName( ) );
-    } catch ( InvalidValueException e ) {
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Account name: " + request.getAccountName( ) + " is invalid." );
-    }
     if ( !ctx.hasAdministrativePrivileges( ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
                                 "Not authorized to create account by " + requestUser.getName( ) );
@@ -425,11 +412,6 @@ public class EuareService {
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
     try {
-      POLICY_NAME_CHECKER.check( request.getPolicyName( ) );
-    } catch ( InvalidValueException e ) {
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Policy name: " + request.getPolicyName( ) + " is invalid." );
-    }
-    try {
       userFound = account.lookupUserByName( request.getUserName( ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
@@ -565,20 +547,6 @@ public class EuareService {
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = null;
-    if ( Strings.isNullOrEmpty( request.getNewUserName( ) ) ) {
-      try {
-        USER_AND_GROUP_NAME_CHECKER.check( request.getNewUserName( ) );
-      } catch ( InvalidValueException e ) {
-        throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "New group name: " + request.getNewUserName( ) + " is invalid." );
-      }      
-    }
-    if ( Strings.isNullOrEmpty( request.getNewPath( ) ) ) {
-      try {
-        PATH_CHECKER.check( request.getNewPath( ) );
-      } catch ( InvalidValueException e ) {
-        throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "New path: " + request.getNewPath( ) + " is invalid." );
-      }
-    }
     try {
       userFound = account.lookupUserByName( request.getUserName( ) );
       if ( userFound.isSystemAdmin( ) && userFound.isAccountAdmin( ) ) {
@@ -755,20 +723,6 @@ public class EuareService {
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = null;
-    if ( Strings.isNullOrEmpty( request.getNewGroupName( ) ) ) {
-      try {
-        USER_AND_GROUP_NAME_CHECKER.check( request.getNewGroupName( ) );
-      } catch ( InvalidValueException e ) {
-        throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "New group name: " + request.getNewGroupName( ) + " is invalid." );
-      }      
-    }
-    if ( Strings.isNullOrEmpty( request.getNewPath( ) ) ) {
-      try {
-        PATH_CHECKER.check( request.getNewPath( ) );
-      } catch ( InvalidValueException e ) {
-        throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "New path: " + request.getNewPath( ) + " is invalid." );
-      }
-    }
     try {
       groupFound = account.lookupGroupByName( request.getGroupName( ) );
     } catch ( Exception e ) {
@@ -812,11 +766,6 @@ public class EuareService {
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = null;
     try {
-      POLICY_NAME_CHECKER.check( request.getPolicyName( ) );
-    } catch ( InvalidValueException e ) {
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Policy name: " + request.getPolicyName( ) + " is invalid." );
-    }
-    try {
       groupFound = account.lookupGroupByName( request.getGroupName( ) );
     } catch ( Exception e ) {
       LOG.debug( e, e );
@@ -849,16 +798,6 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    try {
-      USER_AND_GROUP_NAME_CHECKER.check( request.getUserName( ) );
-    } catch ( InvalidValueException e ) {
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "User name: " + request.getUserName( ) + " is invalid." );
-    }
-    try {
-      PATH_CHECKER.check( request.getPath( ) );
-    } catch ( InvalidValueException e ) {
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Path: " + request.getPath( ) + " is invalid." );
-    }
     if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, "", account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create user by " + requestUser.getName( ) );
     }
@@ -1084,16 +1023,6 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    try {
-      USER_AND_GROUP_NAME_CHECKER.check( request.getGroupName( ) );
-    } catch ( InvalidValueException e ) {
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Group name: " + request.getGroupName( ) + " is invalid." );
-    }
-    try {
-      PATH_CHECKER.check( request.getPath( ) );
-    } catch ( InvalidValueException e ) {
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Path: " + request.getPath( ) + " is invalid." );
-    }
     if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, "", account, action, requestUser ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create group by " + requestUser.getName( ) );
     }
@@ -1585,11 +1514,6 @@ public class EuareService {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Can not modify system account alias or name" );
     }
     try {
-      ACCOUNT_NAME_CHECKER.check( request.getAccountAlias( ) );
-    } catch ( InvalidValueException e ) {
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Account alias: " + request.getAccountAlias( ) + " is invalid." );
-    }
-    try {
       Accounts.lookupAccountByName( request.getAccountAlias( ) );
     } catch ( AuthException ae ) {
       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.ALL_RESOURCE, PolicySpec.ALL_RESOURCE, account, action, requestUser ) ) {
@@ -1824,11 +1748,6 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     Account accountFound = null;
-    try {
-      POLICY_NAME_CHECKER.check( request.getPolicyName( ) );
-    } catch ( InvalidValueException e ) {
-      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Policy name: " + request.getPolicyName( ) + " is invalid." );
-    }
     try {
       accountFound = Accounts.lookupAccountByName( request.getAccountName( ) );
     } catch ( Exception e ) {

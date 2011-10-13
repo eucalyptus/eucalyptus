@@ -6,6 +6,9 @@ import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
+import com.eucalyptus.auth.checker.InvalidValueException;
+import com.eucalyptus.auth.checker.ValueChecker;
+import com.eucalyptus.auth.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.ConditionEntity;
@@ -27,6 +30,10 @@ import com.google.common.collect.Lists;
 public class DatabaseGroupProxy implements Group {
   
   private static final long serialVersionUID = 1L;
+
+  private static final ValueChecker NAME_CHECKER = ValueCheckerFactory.createUserAndGroupNameChecker( );
+  private static final ValueChecker PATH_CHECKER = ValueCheckerFactory.createPathChecker( );
+  private static final ValueChecker POLICY_NAME_CHECKER = ValueCheckerFactory.createPolicyNameChecker( );
 
   private static Logger LOG = Logger.getLogger( DatabaseGroupProxy.class );
   
@@ -59,6 +66,12 @@ public class DatabaseGroupProxy implements Group {
   @Override
   public void setName( final String name ) throws AuthException {
     try {
+      NAME_CHECKER.check( name );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid group name " + name );
+      throw new AuthException( AuthException.INVALID_NAME, e );
+    }
+    try {
       // try looking up the group with the same name first
       this.getAccount( ).lookupGroupByName( name );
     } catch ( AuthException ae ) {
@@ -86,6 +99,12 @@ public class DatabaseGroupProxy implements Group {
 
   @Override
   public void setPath( final String path ) throws AuthException {
+    try {
+      PATH_CHECKER.check( path );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid path " + path );
+      throw new AuthException( AuthException.INVALID_PATH, e );
+    }    
     try {
       Transactions.one( GroupEntity.newInstanceWithGroupId( this.delegate.getGroupId() ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) {
@@ -187,6 +206,12 @@ public class DatabaseGroupProxy implements Group {
 
   @Override
   public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException {
+    try {
+      POLICY_NAME_CHECKER.check( name );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid policy name " + name );
+      throw new AuthException( AuthException.INVALID_NAME, e );
+    }
     PolicyEntity parsedPolicy = PolicyParser.getInstance( ).parse( policy );
     parsedPolicy.setName( name );
     EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
