@@ -105,28 +105,32 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {
   
   @Override
   public void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) throws Exception {
-    if ( !Bootstrap.isFinished( ) ) {
-      throw new ServiceNotReadyException( "System has not yet completed booting." );
-    } else if ( this.first ) {
-      lookupPipeline( ctx, e );
-    } else if ( e.getMessage( ) instanceof MappingHttpRequest ) {
-      MappingHttpRequest httpRequest = ( MappingHttpRequest ) e.getMessage( );
-      if ( httpRequest.getProtocolVersion( ).equals( HttpVersion.HTTP_1_1 )
-           || ( httpRequest.getProtocolVersion( ).equals( HttpVersion.HTTP_1_0 ) && HttpHeaders.Values.KEEP_ALIVE
-                                                                                                                 .equalsIgnoreCase( httpRequest
-                                                                                                                                               .getHeader( HttpHeaders.Names.CONNECTION ) ) ) ) {
-        ChannelHandler p;
-        while ( ( p = ctx.getPipeline( ).getLast( ) ) != this ) {
-          ctx.getPipeline( ).remove( p );
-        }
+    try {
+      if ( !Bootstrap.isFinished( ) ) {
+        throw new ServiceNotReadyException( "System has not yet completed booting." );
+      } else if ( this.first ) {
         lookupPipeline( ctx, e );
-      } else {
-        LOG.warn( "Hard close the socket on an attempt to do a second request." );
-        ctx.getChannel( ).close( );
-        return;
+      } else if ( e.getMessage( ) instanceof MappingHttpRequest ) {
+        MappingHttpRequest httpRequest = ( MappingHttpRequest ) e.getMessage( );
+        if ( httpRequest.getProtocolVersion( ).equals( HttpVersion.HTTP_1_1 )
+             || ( httpRequest.getProtocolVersion( ).equals( HttpVersion.HTTP_1_0 ) && HttpHeaders.Values.KEEP_ALIVE
+                                                                                                                   .equalsIgnoreCase( httpRequest
+                                                                                                                                                 .getHeader( HttpHeaders.Names.CONNECTION ) ) ) ) {
+          ChannelHandler p;
+          while ( ( p = ctx.getPipeline( ).getLast( ) ) != this ) {
+            ctx.getPipeline( ).remove( p );
+          }
+          lookupPipeline( ctx, e );
+        } else {
+          LOG.warn( "Hard close the socket on an attempt to do a second request." );
+          ctx.getChannel( ).close( );
+          return;
+        }
       }
+      ctx.sendUpstream( e );
+    } catch ( Exception ex ) {
+      this.sendError( ctx, HttpResponseStatus.NOT_FOUND, ex );
     }
-    ctx.sendUpstream( e );
   }
   
   private void lookupPipeline( final ChannelHandlerContext ctx, final MessageEvent e ) throws DuplicatePipelineException, NoAcceptingPipelineException {

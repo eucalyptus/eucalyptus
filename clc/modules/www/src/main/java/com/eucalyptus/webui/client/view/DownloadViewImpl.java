@@ -71,7 +71,7 @@ public class DownloadViewImpl extends Composite implements DownloadView {
       for ( DownloadInfo item : downloads ) {
         grid.setWidget( row, 0, new Image( resources.download( ) ) );
         grid.setWidget( row, 1, new Anchor( item.getName( ), item.getUrl( ) ) );
-        grid.setHTML( row, 2, item.getDescription( ) );
+        grid.setText( row, 2, item.getDescription( ) );
         row++;
       }
       container.setWidget( grid );

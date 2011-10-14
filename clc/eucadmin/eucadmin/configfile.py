@@ -104,6 +104,14 @@ class ConfigFile(dict):
             self._read_config_data(oldconfig)
             if not self.has_key('DISABLE_ISCSI'):
                 self['DISABLE_ISCSI'] = 'Y'
+
+            deprecatedopts = [ '--walrus-host', '--cloud-host',
+                               '--remote-storage', '--remote-walrus',
+                               '--remote-cloud', '--disable-cloud',
+                               '--disable-dns', '--disable-walrus',
+                               '--disable-storage', '--disable-vmwarebroker']
+            self['CLOUD_OPTS'] = " ".join([ x for x in self['CLOUD_OPTS'].split()
+                                            if x not in deprecatedopts ])
         else:
             self._read_config_data(oldconfig)
 

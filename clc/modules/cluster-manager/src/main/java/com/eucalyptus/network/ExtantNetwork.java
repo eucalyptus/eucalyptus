@@ -109,12 +109,12 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
   private Integer                        tag;
   
   @NotFound( action = NotFoundAction.IGNORE )
-  @OneToMany( fetch = FetchType.LAZY )
+  @OneToMany( fetch = FetchType.EAGER )
   @JoinColumn( name = "metadata_extant_network_index_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final Set<PrivateNetworkIndex> indexes          = new HashSet<PrivateNetworkIndex>( );
   
-  @OneToOne( fetch = FetchType.LAZY )
+  @OneToOne( fetch = FetchType.EAGER )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private NetworkGroup                   networkGroup;
   

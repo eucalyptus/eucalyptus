@@ -165,7 +165,12 @@ fi
 
 # we need JAVA_HOME
 if test -z "$JAVA_HOME" ; then
-        AC_MSG_ERROR([JAVA_HOME is not defined!])
+        AC_PATH_PROG([JAVAC], javac,, $PATH)
+        if test -z "$JAVAC" ; then
+                AC_MSG_ERROR([JAVA_HOME is not defined and javac was not found in PATH])
+        else
+                JAVA_HOME=$( readlink -f ${JAVAC} | rev | cut -d/ -f3- | rev )
+        fi
 fi
 
 AC_PATH_PROG([ANT], ant,,$ANT_HOME/bin:$PATH)
