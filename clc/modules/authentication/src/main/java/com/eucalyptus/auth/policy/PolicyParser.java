@@ -226,7 +226,7 @@ public class PolicyParser {
     List<ConditionEntity> results = Lists.newArrayList( );
     if ( condsObj != null ) {    
       for ( Object t : condsObj.keySet( ) ) {
-        String type = normalize( ( String ) t );
+        String type = ( String ) t;
         Class<? extends ConditionOp> typeClass = checkConditionType( type );
         JSONObject paramsObj = JsonUtils.getByType( JSONObject.class, condsObj, type );
         for ( Object k : paramsObj.keySet( ) ) {
