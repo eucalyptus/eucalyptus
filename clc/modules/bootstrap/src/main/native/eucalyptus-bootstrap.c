@@ -773,7 +773,7 @@ int java_init(euca_opts *args, java_home_t *data) {
 	}
 	if (!args->no_jmx_flag) {
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote");//TODO:GRZE:wrapup jmx stuff here.
-	//		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.port=8772");
+		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.port=8772");
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.authenticate=false");//TODO:GRZE:RELEASE FIXME to use ssl
 		JVM_ARG(opt[++x], "-Dcom.sun.management.jmxremote.ssl=false");
 	}
