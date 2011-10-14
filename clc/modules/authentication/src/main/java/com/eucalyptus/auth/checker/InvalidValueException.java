@@ -1,4 +1,4 @@
-package com.eucalyptus.auth.euare.checker;
+package com.eucalyptus.auth.checker;
 
 public class InvalidValueException extends Exception {
 
