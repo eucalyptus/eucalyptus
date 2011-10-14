@@ -72,7 +72,7 @@ const char *eucalyptus_opts_full_help[] = {
   "  -j, --java-home=DIRECTORY     Alternative way to specify JAVA_HOME.  \n                                  (default=`/bzr/packages/jdk1.6.0_26/')",
   "      --jvm-name=JVMNAME        Which JVM type to run (see jvm.cfg).  \n                                  (default=`-server')",
   "  -X, --jvm-args=STRING         Arguments to pass to the JVM.",
-  "      --no-jmx                  Launch without JMX enabled.  (default=on)",
+  "      --jmx                     Launch with JMX enabled.  (default=on)",
   "  -d, --debug                   Launch with debugger enabled.  (default=off)",
   "  -v, --verbose                 Launch the JVM w/ verbose output flags.  \n                                  (default=off)",
   "      --debug-port=INT          Set the port to use for the debugger.  \n                                  (default=`5005')",
@@ -186,7 +186,7 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->java_home_given = 0 ;
   args_info->jvm_name_given = 0 ;
   args_info->jvm_args_given = 0 ;
-  args_info->no_jmx_given = 0 ;
+  args_info->jmx_given = 0 ;
   args_info->debug_given = 0 ;
   args_info->verbose_given = 0 ;
   args_info->debug_port_given = 0 ;
@@ -246,7 +246,7 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->jvm_name_orig = NULL;
   args_info->jvm_args_arg = NULL;
   args_info->jvm_args_orig = NULL;
-  args_info->no_jmx_flag = 1;
+  args_info->jmx_flag = 1;
   args_info->debug_flag = 0;
   args_info->verbose_flag = 0;
   args_info->debug_port_arg = 5005;
@@ -311,7 +311,7 @@ void init_args_info(struct eucalyptus_opts *args_info)
   args_info->jvm_args_help = eucalyptus_opts_full_help[39] ;
   args_info->jvm_args_min = 0;
   args_info->jvm_args_max = 0;
-  args_info->no_jmx_help = eucalyptus_opts_full_help[40] ;
+  args_info->jmx_help = eucalyptus_opts_full_help[40] ;
   args_info->debug_help = eucalyptus_opts_full_help[41] ;
   args_info->verbose_help = eucalyptus_opts_full_help[42] ;
   args_info->debug_port_help = eucalyptus_opts_full_help[43] ;
@@ -584,8 +584,8 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
   if (args_info->jvm_name_given)
     write_into_file(outfile, "jvm-name", args_info->jvm_name_orig, 0);
   write_multiple_into_file(outfile, args_info->jvm_args_given, "jvm-args", args_info->jvm_args_orig, 0);
-  if (args_info->no_jmx_given)
-    write_into_file(outfile, "no-jmx", 0, 0 );
+  if (args_info->jmx_given)
+    write_into_file(outfile, "jmx", 0, 0 );
   if (args_info->debug_given)
     write_into_file(outfile, "debug", 0, 0 );
   if (args_info->verbose_given)
@@ -1219,7 +1219,7 @@ arguments_internal (
         { "java-home",	1, NULL, 'j' },
         { "jvm-name",	1, NULL, 0 },
         { "jvm-args",	1, NULL, 'X' },
-        { "no-jmx",	0, NULL, 0 },
+        { "jmx",	0, NULL, 0 },
         { "debug",	0, NULL, 'd' },
         { "verbose",	0, NULL, 'v' },
         { "debug-port",	1, NULL, 0 },
@@ -1654,14 +1654,14 @@ arguments_internal (
               goto failure;
           
           }
-          /* Launch without JMX enabled..  */
-          else if (strcmp (long_options[option_index].name, "no-jmx") == 0)
+          /* Launch with JMX enabled..  */
+          else if (strcmp (long_options[option_index].name, "jmx") == 0)
           {
           
           
-            if (update_arg((void *)&(args_info->no_jmx_flag), 0, &(args_info->no_jmx_given),
-                &(local_args_info.no_jmx_given), optarg, 0, 0, ARG_FLAG,
-                check_ambiguity, override, 1, 0, "no-jmx", '-',
+            if (update_arg((void *)&(args_info->jmx_flag), 0, &(args_info->jmx_given),
+                &(local_args_info.jmx_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "jmx", '-',
                 additional_error))
               goto failure;
           
