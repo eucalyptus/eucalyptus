@@ -65,6 +65,7 @@ package com.eucalyptus.component;
 
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapArgs;
@@ -74,6 +75,7 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
+import com.eucalyptus.configurable.StaticPropertyEntry;
 import com.eucalyptus.context.ServiceContextManager;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
@@ -104,6 +106,7 @@ import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.ws.server.Pipelines;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 public class ServiceTransitions {
   static Logger LOG = Logger.getLogger( ServiceTransitions.class );
@@ -687,6 +690,21 @@ public class ServiceTransitions {
           }
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
+        }
+        for ( Entry<String, ConfigurableProperty> entry : PropertyDirectory.getPendingPropertyEntries( ) ) {
+          try {
+            ConfigurableProperty prop = entry.getValue( );
+            if ( prop instanceof StaticPropertyEntry ) {
+              PropertyDirectory.addProperty( prop );
+              try {
+                prop.getValue( );
+              } catch ( Exception ex ) {
+                Logs.extreme( ).error( ex, ex );
+              }
+            }
+          } catch ( Exception ex ) {
+            Logs.extreme( ).error( ex, ex );
+          }
         }
       }
     },
