@@ -575,10 +575,10 @@ public class EuareService {
       }
     }
     try {
-      if ( Strings.isNullOrEmpty( request.getNewUserName( ) ) ) {
+      if ( !Strings.isNullOrEmpty( request.getNewUserName( ) ) ) {
         userFound.setName( request.getNewUserName( ) );
       }
-      if ( Strings.isNullOrEmpty( request.getNewPath( ) ) ) {
+      if ( !Strings.isNullOrEmpty( request.getNewPath( ) ) ) {
         userFound.setPath( sanitizePath( request.getNewPath( ) ) );
       }
     } catch ( Exception e ) {
@@ -758,10 +758,10 @@ public class EuareService {
                                 "Not authorized to update group " + groupFound.getName( ) + " by " + requestUser.getName( ) );
     }
     try {
-      if ( Strings.isNullOrEmpty( request.getNewGroupName( ) ) ) {
+      if ( !Strings.isNullOrEmpty( request.getNewGroupName( ) ) ) {
         groupFound.setName( request.getNewGroupName( ) );
       }
-      if ( Strings.isNullOrEmpty( request.getNewPath( ) ) ) {
+      if ( !Strings.isNullOrEmpty( request.getNewPath( ) ) ) {
         groupFound.setPath( sanitizePath( request.getNewPath( ) ) );
       }
     } catch ( Exception e ) {
