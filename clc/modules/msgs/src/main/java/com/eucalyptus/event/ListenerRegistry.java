@@ -57,9 +57,9 @@ public class ListenerRegistry {
                                                               ? type.getClass( ).getCanonicalName( )
                                                               : "null" ) ) );
     } else {
-      Class<?> key = ( type instanceof Class ? type : type.getClass( ) );
+      Class<?> key = ( type instanceof Class ? ( Class ) type : type.getClass( ) );
       if ( Event.class.isAssignableFrom( key ) ) {
-        this.eventMap.register( ( Class ) type, listener );
+        this.eventMap.register( key, listener );
       } else {
         if ( !this.registryMap.containsKey( key ) ) {
           this.registryMap.put( key, new ReentrantListenerRegistry( ) );
