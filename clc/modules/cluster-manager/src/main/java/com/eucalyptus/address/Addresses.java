@@ -191,9 +191,6 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     @Override
     public Address apply( String input ) {
       Address address = Addresses.getInstance( ).lookup( input );
-      if ( address.isSystemOwned( ) ) {
-        throw new NoSuchElementException( "Non admin user cannot manipulate system owned address " + input );
-      }
       return address;
     }
     
