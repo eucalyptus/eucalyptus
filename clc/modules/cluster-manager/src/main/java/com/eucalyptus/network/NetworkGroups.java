@@ -79,6 +79,7 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
+import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
@@ -93,6 +94,7 @@ import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
@@ -110,18 +112,20 @@ import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 
 @ConfigurableClass( root = "cloud.network", description = "Default values used to bootstrap networking state discovery." )
 public class NetworkGroups {
-  private static final String DEFAULT_NETWORK_NAME     = "default";
-  private static Logger       LOG                      = Logger.getLogger( NetworkGroups.class );
-  private static String       NETWORK_DEFAULT_NAME     = "default";
+  private static final String DEFAULT_NETWORK_NAME          = "default";
+  private static Logger       LOG                           = Logger.getLogger( NetworkGroups.class );
+  private static String       NETWORK_DEFAULT_NAME          = "default";
   
   @ConfigurableField( initial = "4096", description = "Default max network index." )
-  public static Long          GLOBAL_MAX_NETWORK_INDEX = 4096l;
+  public static Long          GLOBAL_MAX_NETWORK_INDEX      = 4096l;
   @ConfigurableField( initial = "1", description = "Default min network index." )
-  public static Long          GLOBAL_MIN_NETWORK_INDEX = 2l;
+  public static Long          GLOBAL_MIN_NETWORK_INDEX      = 2l;
   @ConfigurableField( initial = "" + 4096, description = "Default max vlan tag." )
-  public static Integer       GLOBAL_MAX_NETWORK_TAG   = 4096;
+  public static Integer       GLOBAL_MAX_NETWORK_TAG        = 4096;
   @ConfigurableField( initial = "1", description = "Default min vlan tag." )
-  public static Integer       GLOBAL_MIN_NETWORK_TAG   = 1;
+  public static Integer       GLOBAL_MIN_NETWORK_TAG        = 1;
+  @ConfigurableField( initial = "5", description = "Minutes before a pending index allocation timesout and is released." )
+  public static Integer       NETWORK_INDEX_PENDING_TIMEOUT = 5;
   
   public static class NetworkRangeConfiguration {
     private Boolean useNetworkTags  = Boolean.TRUE;
@@ -243,6 +247,11 @@ public class NetworkGroups {
       Entities.delete( ret );
       db.commit( );
       return ret;
+    } catch ( final ConstraintViolationException ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new IllegalMetadataAccessException( "Failed to delete security group: " + groupName + " for " + ownerFullName + " because of: "
+                                                + Exceptions.causeString( ex ), ex );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
@@ -335,7 +344,7 @@ public class NetworkGroups {
         } );
         userFullName = UserFullName.getInstance( admin );
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
         throw new NoSuchMetadataException( "Failed to create group because owning user could not be identified.", ex );
       }
     }

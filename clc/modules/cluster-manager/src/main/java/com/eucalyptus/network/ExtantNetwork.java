@@ -296,4 +296,43 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
                           .relativeId( "security-group", this.getNetworkGroup( ).getDisplayName( ),
                                        "tag", this.getTag( ).toString( ) );
   }
+  
+  boolean teardown( ) {
+    if ( !this.indexes.isEmpty( ) ) {
+      for ( PrivateNetworkIndex index : this.indexes ) {
+        switch ( index.getState( ) ) {
+          case PENDING:
+            if ( System.currentTimeMillis( ) - index.lastUpdateMillis( ) < 60L * 1000 * NetworkGroups.NETWORK_INDEX_PENDING_TIMEOUT ) {
+              LOG.warn( "Failing teardown of extant network " + this + ": Found pending index " + index + " which is within the timeout window." );
+              return false;
+            } else {
+              this.indexes.remove( index );
+              try {
+                index.release( );
+                index.teardown( );
+              } catch ( ResourceAllocationException ex ) {
+                LOG.error( ex, ex );
+              }
+              break;
+            }
+          case EXTANT:
+            LOG.warn( "Failing teardown of extant network " + this + ": Found pending index " + index + " which is within the timeout window." );
+            return false;
+          case UNKNOWN:
+          case FREE:
+          case RELEASING:
+            this.indexes.remove( index );
+            try {
+              index.release( );
+              index.teardown( );
+            } catch ( ResourceAllocationException ex ) {
+              LOG.error( ex, ex );
+            }
+            break;
+        }
+      }
+    }
+    this.indexes.clear( );
+    return true;
+  }
 }
