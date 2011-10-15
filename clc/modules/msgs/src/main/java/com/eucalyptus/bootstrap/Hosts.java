@@ -67,15 +67,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Vector;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
 import org.jgroups.View;
 import org.jgroups.blocks.ReplicatedHashMap;
 import com.eucalyptus.bootstrap.Host.DbFilter;
-import com.eucalyptus.bootstrap.Host.NonLocalFilter;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.empyrean.Empyrean;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -83,8 +83,11 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
+@ConfigurableClass( root = "bootstrap.hosts", description = "Properties controlling the handling of remote host bootstrapping" )
 public class Hosts {
-  private static final Logger                     LOG = Logger.getLogger( Hosts.class );
+  @ConfigurableField( description = "Timeout for state transfers (in msec).", readonly = true )
+  public static final Long                        STATE_TRANSFER_TIMEOUT = 10000L;
+  private static final Logger                     LOG                    = Logger.getLogger( Hosts.class );
   private static ReplicatedHashMap<Address, Host> hostMap;
   private static Host                             localHost;
   
@@ -136,7 +139,10 @@ public class Hosts {
         HostManager.getInstance( );
         LOG.info( "Started membership channel " + HostManager.getMembershipGroupName( ) );
         hostMap = new ReplicatedHashMap<Address, Host>( HostManager.getInstance( ).getMembershipChannel( ) );
+        hostMap.setDeadlockDetection( true );
+        hostMap.setBlockingUpdates( true );
         hostMap.addNotifier( HostMapStateListener.INSTANCE );
+        hostMap.start( STATE_TRANSFER_TIMEOUT );
         localHost = new Host( HostManager.getInstance( ).getMembershipChannel( ).getAddress( ) );
         LOG.info( "Setup localhost state: " + localHost );
         hostMap.put( localHost.getGroupsId( ), localHost );
@@ -158,7 +164,6 @@ public class Hosts {
         return false;
       }
     }
-    
   }
   
   public static List<Host> list( ) {
