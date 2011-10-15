@@ -122,7 +122,7 @@ public class Hosts {
     }
   }
   
-  enum HostMapStateListener implements ReplicatedHashMap.Notification<Address, Host> {
+  enum HostMapStateListener implements ReplicatedHashMap.Notification<String, Host> {
     INSTANCE;
     
     private String printMap( ) {
@@ -135,18 +135,18 @@ public class Hosts {
     }
     
     @Override
-    public void contentsSet( Map<Address, Host> arg0 ) {
+    public void contentsSet( Map<String, Host> arg0 ) {
       LOG.info( "Hosts.contentsSet(): " + printMap( ) );
     }
     
     @Override
-    public void entryRemoved( Address arg0 ) {
+    public void entryRemoved( String arg0 ) {
       LOG.info( "Hosts.entryRemoved(): " + arg0 );
       LOG.info( "Hosts.entryRemoved(): " + printMap( ) );
     }
     
     @Override
-    public void entrySet( Address arg0, Host arg1 ) {
+    public void entrySet( String arg0, Host arg1 ) {
       LOG.info( "Hosts.entryAdded(): " + arg0 + " => " + arg1 );
       LOG.info( "Hosts.entryAdded(): " + printMap( ) );
     }
