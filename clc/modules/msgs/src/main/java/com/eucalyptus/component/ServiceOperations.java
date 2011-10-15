@@ -127,7 +127,7 @@ public class ServiceOperations {
     public boolean processClass( final Class candidate ) throws Exception {
       if ( Ats.from( candidate ).has( ServiceOperation.class ) && Function.class.isAssignableFrom( candidate ) ) {
         final ServiceOperation opInfo = Ats.from( candidate ).get( ServiceOperation.class );
-        final Function<?, ?> op = Classes.newInstance( candidate );
+        final Function<?, ?> op = ( Function<?, ?> ) Classes.newInstance( candidate );
         final List<Class<?>> msgTypes = Classes.genericsToClasses( candidate );
         LOG.info( "Registered @ServiceOperation:       " + msgTypes.get( 0 ).getSimpleName( ) + "," + msgTypes.get( 1 ).getSimpleName( ) + " => " + candidate );
         serviceOperations.put( msgTypes.get( 0 ), op );
@@ -144,29 +144,34 @@ public class ServiceOperations {
     
   }
   
-  public static <I extends BaseMessage, O extends BaseMessage> boolean dispatch( final I request ) throws NoSuchContextException {
+  public static <I extends BaseMessage, O extends BaseMessage> boolean dispatch( final I request ) {
     if ( !serviceOperations.containsKey( request.getClass( ) ) ) {
       return false;
     } else {
-      final Context ctx = Contexts.lookup( request.getCorrelationId( ) );
-      final Function<I, O> op = ( Function<I, O> ) serviceOperations.get( request.getClass( ) );
-      workQueue.submit( new Runnable( ) {
-        
-        @Override
-        public void run( ) {
-          Contexts.threadLocal( ctx );
-          try {
-            O reply = op.apply( request );
-            ServiceContext.response( request );
-          } catch ( Exception ex ) {
-            Logs.extreme( ).error( ex, ex );
-            ServiceContext.responseError( request.getCorrelationId( ), ex );
-          } finally {
-            Contexts.removeThreadLocal( );
+      try {
+        final Context ctx = Contexts.lookup( request.getCorrelationId( ) );
+        final Function<I, O> op = ( Function<I, O> ) serviceOperations.get( request.getClass( ) );
+        workQueue.submit( new Runnable( ) {
+          
+          @Override
+          public void run( ) {
+            Contexts.threadLocal( ctx );
+            try {
+              final O reply = op.apply( request );
+              ServiceContext.response( request );
+            } catch ( final Exception ex ) {
+              Logs.extreme( ).error( ex, ex );
+              ServiceContext.responseError( request.getCorrelationId( ), ex );
+            } finally {
+              Contexts.removeThreadLocal( );
+            }
           }
-        }
-      } );
-      return true;
+        } );
+        return true;
+      } catch ( Exception ex ) {
+        Logs.extreme( ).error( ex, ex );
+        return false;
+      }
     }
   }
   
