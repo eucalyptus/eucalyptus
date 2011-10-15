@@ -57,7 +57,7 @@ public class ListenerRegistry {
                                                               ? type.getClass( ).getCanonicalName( )
                                                               : "null" ) ) );
     } else {
-      Class key = ( type instanceof Class ? ( Class ) type : type.getClass( ) );
+      Class key = ( type == null ? lookupTypes.get( 0 ) : ( type instanceof Class ? ( Class ) type : type.getClass( ) ) );
       if ( Event.class.isAssignableFrom( key ) ) {
         this.eventMap.register( key, listener );
       } else {
