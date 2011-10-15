@@ -40,12 +40,12 @@ public class ListenerRegistry {
   @SuppressWarnings( "unchecked" )
   public void register( final Object type, final EventListener listener ) {
     Class<?> eventDecl = Classes.findAncestor( listener, EventListener.class );
-    final List<Class<?>> interfaceDecl = Classes.interfaceAncestors( eventDecl );
-    if ( interfaceDecl.isEmpty( ) ) {
+//    final List<Class<?>> interfaceDecl = Classes.interfaceAncestors( listener );
+    if ( eventDecl == null ) {
       throw Exceptions.fatal( new IllegalArgumentException( "Failed to register listener " + listener.getClass( ).getCanonicalName( ) 
                                                             + " because of a bug in looking up the interface declaration." ) );
     }
-    final List<Class<?>> lookupTypes = Classes.genericsToClasses( interfaceDecl.get( 0 ) );
+    final List<Class<?>> lookupTypes = Classes.genericsToClasses( eventDecl );
     /** GRZE: event type is not specified by the generic type of listeners EventListener decl. **/
     boolean illegal = ( type == null && lookupTypes.isEmpty( ) );
     /** GRZE: explicit event type does conform to generic type **/

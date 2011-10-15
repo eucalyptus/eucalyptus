@@ -185,7 +185,7 @@ public class Classes {
     public List<Class<?>> apply( final Object input ) {
       final List<Class<?>> ret = Lists.newArrayList( );
       final Class<?> type = WhateverAsClass.INSTANCE.apply( input );
-      if ( type == Object.class ) {
+      if ( type == Object.class || type == null ) {
         return ret;
       } else if ( type.isInterface( ) ) {
         return ret;
@@ -230,7 +230,7 @@ public class Classes {
     public List<Class<?>> apply( final Object input ) {
       final List<Class<?>> ret = Lists.newArrayList( );
       final Class<?> type = WhateverAsClass.INSTANCE.apply( input );
-      if ( type == Object.class ) {
+      if ( type == Object.class || type == null ) {
         return ret;
       } else if ( type.isInterface( ) ) {
         return ret;
