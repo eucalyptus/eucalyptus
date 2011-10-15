@@ -178,7 +178,9 @@ public class Allocations {
     
     public void commit( ) throws Exception {
       try {
-        Iterables.transform( this.getAllocationTokens( ), VmInstance.Create.INSTANCE );
+        for ( ResourceToken t : this.getAllocationTokens( ) ) {
+          VmInstance.Create.INSTANCE.apply( t );
+        }
       } catch ( Exception ex ) {
         this.abort( );
         throw ex;
