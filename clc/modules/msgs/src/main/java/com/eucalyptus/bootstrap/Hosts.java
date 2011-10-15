@@ -100,6 +100,7 @@ public class Hosts {
     @Override
     public void fireEvent( Hertz event ) {
       if ( Hosts.localHost.isDirty( ) ) {
+        LOG.info( "Updating local host information: " + Hosts.localHost );
         hostMap.replace( Hosts.localHost.getGroupsId( ), localHost );
       }
     }
