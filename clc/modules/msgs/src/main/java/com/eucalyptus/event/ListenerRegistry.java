@@ -40,7 +40,7 @@ public class ListenerRegistry {
   @SuppressWarnings( "unchecked" )
   public void register( final Object type, final EventListener listener ) {
     Class<?> eventDecl = Classes.findAncestor( listener, EventListener.class );
-    final List<Class<?>> interfaceDecl = Classes.Classes.interfaceAncestors( eventDecl );
+    final List<Class<?>> interfaceDecl = Classes.interfaceAncestors( eventDecl );
     if ( interfaceDecl.isEmpty( ) ) {
       throw Exceptions.fatal( new IllegalArgumentException( "Failed to register listener " + listener.getClass( ).getCanonicalName( ) 
                                                             + " because of a bug in looking up the interface declaration." ) );

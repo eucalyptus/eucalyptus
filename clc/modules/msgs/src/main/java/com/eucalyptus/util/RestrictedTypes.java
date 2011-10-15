@@ -420,9 +420,9 @@ public class RestrictedTypes {
         return true;
       } else if ( Ats.from( candidate ).has( Resolver.class ) && Function.class.isAssignableFrom( candidate ) ) {
         Resolver resolver = Ats.from( candidate ).get( Resolver.class );
-        Class<?> resolverFunction = resolver.value( );
-        LOG.info( "Registered @Resolver:              " + measuredType.getClass().getSimpleName() + " => " + candidate );
-        RestrictedTypes.resourceResolvers.put( resolverFunction, ( Function<String, RestrictedType<?>> ) Classes.newInstance( candidate ) );
+        Class<?> resolverFunctionType = resolver.value( );
+        LOG.info( "Registered @Resolver:              " + resolverFunctionType.getClass().getSimpleName() + " => " + candidate );
+        RestrictedTypes.resourceResolvers.put( resolverFunctionType, ( Function<String, RestrictedType<?>> ) Classes.newInstance( candidate ) );
         return true;
       } else {
         return false;
