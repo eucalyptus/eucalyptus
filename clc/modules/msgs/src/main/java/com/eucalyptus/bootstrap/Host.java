@@ -107,7 +107,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   private Integer                    epoch;
   
   Host( ) {
-    this.groupsId = HostManager.getInstance( ).getMembershipChannel( ).getAddress( );
+    this.groupsId = Hosts.getLocalGroupAddress( );
     this.bindAddress = Internets.localHostInetAddress( );
     this.epoch = Topology.epoch( );
     this.lastTime = this.timestamp.getAndSet( System.currentTimeMillis( ) );

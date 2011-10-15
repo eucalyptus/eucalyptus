@@ -63,28 +63,45 @@
 
 package com.eucalyptus.bootstrap;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Vector;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
+import org.jgroups.ChannelException;
+import org.jgroups.Global;
+import org.jgroups.Header;
+import org.jgroups.JChannel;
+import org.jgroups.PhysicalAddress;
 import org.jgroups.View;
 import org.jgroups.blocks.ReplicatedHashMap;
+import org.jgroups.conf.ClassConfigurator;
+import org.jgroups.stack.Protocol;
+import org.jgroups.stack.ProtocolStack;
 import com.eucalyptus.bootstrap.Host.DbFilter;
+import com.eucalyptus.bootstrap.HostManager.EpochHeader;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.util.Internets;
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
 
 @ConfigurableClass( root = "bootstrap.hosts", description = "Properties controlling the handling of remote host bootstrapping" )
 public class Hosts {
@@ -146,6 +163,130 @@ public class Hosts {
     
   }
   
+  public static Address getLocalGroupAddress( ) {
+    return HostManager.getInstance( ).getMembershipChannel( ).getAddress( );
+  }
+  
+  static class HostManager {
+    private final JChannel             membershipChannel;
+    private final PhysicalAddress      physicalAddress;
+    private static HostManager         singleton;
+    private static final AtomicInteger epochSeen             = new AtomicInteger( 0 );
+    private static final long          HOST_ADVERTISE_REMOTE = 15;
+    private static final long          HOST_ADVERTISE_CLOUD  = 8;
+    public static short                PROTOCOL_ID           = 513;
+    public static short                HEADER_ID             = 1025;
+    
+    private HostManager( ) {
+      this.membershipChannel = HostManager.buildChannel( );
+      //TODO:GRZE:set socket factory for crypto
+      try {
+        LOG.info( "Starting membership channel... " );
+        this.membershipChannel.connect( SystemIds.membershipGroupName( ) );
+        HostManager.registerHeader( EpochHeader.class );
+        this.physicalAddress = ( PhysicalAddress ) this.membershipChannel.downcall( new org.jgroups.Event( org.jgroups.Event.GET_PHYSICAL_ADDRESS,
+                                                                                                           this.membershipChannel.getAddress( ) ) );
+        LOG.info( "Started membership channel: " + SystemIds.membershipGroupName( ) );
+      } catch ( ChannelException ex ) {
+        LOG.fatal( ex, ex );
+        throw BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
+      }
+    }
+    
+    public static short lookupRegisteredId( Class c ) {
+      return ClassConfigurator.getMagicNumber( c );
+    }
+    
+    private static synchronized <T extends Header> String registerHeader( Class<T> h ) {
+      if ( ClassConfigurator.getMagicNumber( h ) == -1 ) {
+        ClassConfigurator.add( ++HEADER_ID, h );
+      }
+      return "euca-" + ( h.isAnonymousClass( )
+        ? h.getSuperclass( ).getSimpleName( ).toLowerCase( )
+        : h.getSimpleName( ).toLowerCase( ) ) + "-header";
+    }
+    
+    private static synchronized String registerProtocol( Protocol p ) {
+      if ( ClassConfigurator.getProtocolId( p.getClass( ) ) == 0 ) {
+        ClassConfigurator.addProtocol( ++PROTOCOL_ID, p.getClass( ) );
+      }
+      return "euca-" + ( p.getClass( ).isAnonymousClass( )
+        ? p.getClass( ).getSuperclass( ).getSimpleName( ).toLowerCase( )
+        : p.getClass( ).getSimpleName( ).toLowerCase( ) ) + "-protocol";
+    }
+    
+    private static List<Protocol> getMembershipProtocolStack( ) {
+      return Groovyness.run( "setup_membership.groovy" );
+    }
+    
+    private static HostManager getInstance( ) {
+      if ( singleton != null ) {
+        return singleton;
+      } else {
+        synchronized ( HostManager.class ) {
+          if ( singleton != null ) {
+            return singleton;
+          } else {
+            singleton = new HostManager( );
+            return singleton;
+          }
+        }
+      }
+    }
+    
+    private static JChannel buildChannel( ) {
+      try {
+        final JChannel channel = new JChannel( false );
+        channel.setName( Internets.localHostIdentifier( ) );
+        ProtocolStack stack = new ProtocolStack( );
+        channel.setProtocolStack( stack );
+        stack.addProtocols( HostManager.getMembershipProtocolStack( ) );
+        stack.init( );
+        return channel;
+      } catch ( Exception ex ) {
+        LOG.fatal( ex, ex );
+        throw new RuntimeException( ex );
+      }
+    }
+    
+    public static JChannel getMembershipChannel( ) {
+      return getInstance( ).membershipChannel;
+    }
+    
+    public static class EpochHeader extends Header {
+      private Integer value;
+      
+      public EpochHeader( ) {
+        super( );
+      }
+      
+      public EpochHeader( Integer value ) {
+        super( );
+        this.value = value;
+      }
+      
+      @Override
+      public void writeTo( DataOutputStream out ) throws IOException {
+        out.writeInt( this.value );
+      }
+      
+      @Override
+      public void readFrom( DataInputStream in ) throws IOException, IllegalAccessException, InstantiationException {
+        this.value = in.readInt( );
+      }
+      
+      @Override
+      public int size( ) {
+        return Global.INT_SIZE;
+      }
+      
+      public Integer getValue( ) {
+        return this.value;
+      }
+    }
+    
+  }
+  
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.RemoteConfiguration )
   public static class HostMembershipBootstrapper extends Bootstrapper.Simple {
@@ -154,7 +295,7 @@ public class Hosts {
     public boolean load( ) throws Exception {
       try {
         HostManager.getInstance( );
-        LOG.info( "Started membership channel " + HostManager.getMembershipGroupName( ) );
+        LOG.info( "Started membership channel " + SystemIds.membershipGroupName( ) );
         hostMap = new ReplicatedHashMap<Address, Host>( HostManager.getInstance( ).getMembershipChannel( ) );
         hostMap.setDeadlockDetection( true );
         hostMap.setBlockingUpdates( true );
@@ -182,6 +323,16 @@ public class Hosts {
         return false;
       }
     }
+  }
+  
+  public static int maxEpoch( ) {
+    return Collections.max( Collections2.transform( hostMap.values( ), new Function<Host, Integer>( ) {
+      
+      @Override
+      public Integer apply( Host arg0 ) {
+        return arg0.getEpoch( );
+      }
+    } ) );
   }
   
   public static List<Host> list( ) {

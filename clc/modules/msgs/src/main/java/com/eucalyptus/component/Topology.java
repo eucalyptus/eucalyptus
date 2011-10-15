@@ -77,6 +77,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.HostManager;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.TopologyChanges.CloudTopologyCallables;
 import com.eucalyptus.component.TopologyChanges.RemoteTopologyCallables;
 import com.eucalyptus.empyrean.Empyrean;
@@ -140,7 +141,7 @@ public class Topology implements EventListener<Event> {
         if ( singleton != null ) {
           return singleton;
         } else {
-          return ( singleton = new Topology( HostManager.getMaxSeenEpoch( ) ) );
+          return ( singleton = new Topology( Hosts.maxEpoch( ) ) );
         }
       }
     }
