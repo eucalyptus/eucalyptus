@@ -61,7 +61,7 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component;
+package com.eucalyptus.bootstrap;
 
 import java.net.InetAddress;
 import java.util.Date;
@@ -69,11 +69,10 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
-import org.jgroups.ViewId;
-import com.eucalyptus.bootstrap.BootstrapArgs;
-import com.eucalyptus.bootstrap.HostManager;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Internets;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 
@@ -191,4 +190,21 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     this.epoch = epoch;
   }
   
+  public enum DbFilter implements Predicate<Host> {
+    INSTANCE;
+    @Override
+    public boolean apply( Host arg0 ) {
+      return arg0.hasDatabase( );
+    }
+    
+  }
+  
+  public enum NonLocalFilter implements Predicate<Host> {
+    INSTANCE;
+    @Override
+    public boolean apply( Host arg0 ) {
+      return !arg0.isLocalHost( );
+    }
+    
+  }
 }

@@ -61,59 +61,116 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component;
+package com.eucalyptus.bootstrap;
 
-import java.net.InetAddress;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Vector;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.BootstrapArgs;
-import com.eucalyptus.bootstrap.HostManager;
+import org.jgroups.View;
+import org.jgroups.blocks.ReplicatedHashMap;
+import com.eucalyptus.bootstrap.Host.DbFilter;
+import com.eucalyptus.bootstrap.Host.NonLocalFilter;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.Mbeans;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class Hosts {
-  enum DbFilter implements Predicate<Host> {
+  private static final Logger                 LOG = Logger.getLogger( Hosts.class );
+  private static ConcurrentMap<Address, Host> hostMap;
+  private static Host                         localHost;
+  
+  enum HostMapStateListener implements ReplicatedHashMap.Notification<Address, Host> {
     INSTANCE;
+    
+    private String printMap( ) {
+      return "\n" + Joiner.on( "\n=> " ).join( hostMap.values( ) );
+    }
+    
     @Override
-    public boolean apply( Host arg0 ) {
-      return arg0.hasDatabase( );
+    public void contentsCleared( ) {
+      LOG.info( "Hosts.contentsCleared(): " + printMap( ) );
+    }
+    
+    @Override
+    public void contentsSet( Map<Address, Host> arg0 ) {
+      LOG.info( "Hosts.contentsSet(): " + printMap( ) );
+    }
+    
+    @Override
+    public void entryRemoved( Address arg0 ) {
+      LOG.info( "Hosts.entryRemoved(): " + arg0 );
+      LOG.info( "Hosts.entryRemoved(): " + printMap( ) );
+    }
+    
+    @Override
+    public void entrySet( Address arg0, Host arg1 ) {
+      LOG.info( "Hosts.entryAdded(): " + arg0 + " => " + arg1 );
+      LOG.info( "Hosts.entryAdded(): " + printMap( ) );
+    }
+    
+    @Override
+    public void viewChange( View arg0, Vector<Address> arg1, Vector<Address> arg2 ) {
+      LOG.info( "Hosts.viewChange(): new view => " + Joiner.on( ", " ).join( arg0.getMembers( ) ) );
+      LOG.info( "Hosts.viewChange(): joined   => " + Joiner.on( ", " ).join( arg1 ) );
+      LOG.info( "Hosts.viewChange(): parted   => " + Joiner.on( ", " ).join( arg2 ) );
     }
     
   }
   
-  enum NonLocalDbFilter implements Predicate<Host> {
-    INSTANCE;
+  @Provides( Empyrean.class )
+  @RunDuring( Bootstrap.Stage.RemoteConfiguration )
+  public static class HostMembershipBootstrapper extends Bootstrapper.Simple {
+    
     @Override
-    public boolean apply( Host arg0 ) {
-      return !arg0.isLocalHost( ) && DbFilter.INSTANCE.apply( arg0 );
+    public boolean load( ) throws Exception {
+      try {
+        HostManager.getInstance( );
+        LOG.info( "Started membership channel " + HostManager.getMembershipGroupName( ) );
+        hostMap = new ReplicatedHashMap<Address, Host>( HostManager.getInstance( ).getMembershipChannel( ) );
+        localHost = new Host( HostManager.getInstance( ).getMembershipChannel( ).getAddress( ) );
+        LOG.info( "Setup localhost state: " + localHost );
+        hostMap.put( localHost.getGroupsId( ), localHost );
+        LOG.info( "Added localhost to system state: " + localHost );
+        LOG.info( "System view:\n" + Joiner.on( "\n=> " ).join( hostMap.values( ) ) );
+        if ( !BootstrapArgs.isCloudController( ) ) {
+          while ( Hosts.listDatabases( ).isEmpty( ) ) {
+            TimeUnit.SECONDS.sleep( 5 );
+            LOG.info( "Waiting for system view with database..." );
+          }
+        } else {
+          //TODO:GRZE:handle check and merge of db here!!!!
+        }
+        LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
+        return true;
+      } catch ( final Exception ex ) {
+        LOG.fatal( ex, ex );
+        BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
+        return false;
+      }
     }
     
   }
-  
-  private static final Logger                       LOG     = Logger.getLogger( Hosts.class );
-  private static final ConcurrentMap<Address, Host> hostMap = new ConcurrentHashMap<Address, Host>( );
   
   public static List<Host> list( ) {
-    return Lists.newArrayList( hostMap.values( ) );
+    Predicate<Host> trueFilter = Predicates.alwaysTrue( );
+    return Hosts.list( trueFilter );
+  }
+  
+  public static List<Host> list( Predicate<Host> filter ) {
+    return Lists.newArrayList( Iterables.filter( hostMap.values( ), filter ) );
   }
   
   public static List<Host> listDatabases( ) {
     return Lists.newArrayList( Iterables.filter( Hosts.list( ), DbFilter.INSTANCE ) );
-  }
-  
-  public static List<Host> listRemoteDatabases( ) {
-    return Lists.newArrayList( Iterables.filter( Hosts.list( ), NonLocalDbFilter.INSTANCE ) );
   }
   
   public static boolean contains( Address jgroupsId ) {
@@ -131,26 +188,7 @@ public class Hosts {
   }
   
   public static Host localHost( ) {
-    return localHost( HostManager.getInstance( ).getMembershipChannel( ).getAddress( ) );
-  }
-  
-  public static Host localHost( Address localJgroupsId ) {
-    Host ret = null;
-    if ( !hostMap.containsKey( localJgroupsId ) ) {
-      Host newRef = new Host( localJgroupsId );
-      Host oldRef = hostMap.putIfAbsent( newRef.getGroupsId( ), newRef );
-      if ( oldRef == null ) {
-        Host local = hostMap.get( localJgroupsId );
-        Mbeans.register( local );
-        ret = local;
-      } else {
-        ret = oldRef;
-      }
-    } else {
-      ret = hostMap.get( localJgroupsId );
-    }
-    ret.update( Topology.epoch( ), BootstrapArgs.isCloudController( ), Bootstrap.isFinished( ), Internets.getAllInetAddresses( ) );
-    return ret;
+    return localHost;
   }
   
   public static List<Host> change( List<Address> currentMembers ) {
@@ -177,39 +215,6 @@ public class Hosts {
       Empyrean.teardownServiceDependencies( host.getBindAddress( ) );
     }
     return removedHosts;
-  }
-  
-  public static Host update( Host updatedHost ) {
-    if ( Internets.testLocal( updatedHost.getBindAddress( ) ) ) {
-      return Hosts.localHost( );
-    }
-    synchronized ( Hosts.class ) {
-      Host entry = null;
-      if ( hostMap.containsKey( updatedHost.getGroupsId( ) ) ) {
-        entry = hostMap.get( updatedHost.getGroupsId( ) );
-        entry.update( updatedHost.getEpoch( ), updatedHost.hasDatabase( ), updatedHost.hasBootstrapped( ), updatedHost.getHostAddresses( ) );
-      } else {
-        Component empyrean = Components.lookup( Empyrean.class );
-        ComponentId empyreanId = empyrean.getComponentId( );
-        InetAddress addr = updatedHost.getBindAddress( );
-        ServiceConfiguration ephemeralConfig = ServiceConfigurations.createEphemeral( empyrean, addr );
-        if ( !empyrean.hasService( ephemeralConfig ) ) {
-          Empyrean.setupServiceDependencies( addr );
-          entry = new Host( updatedHost.getGroupsId( ), updatedHost.getBindAddress( ), updatedHost.getEpoch( ),
-                            updatedHost.hasDatabase( ),
-                            updatedHost.hasBootstrapped( ),
-                            updatedHost.getHostAddresses( ) );
-          Host temp = hostMap.putIfAbsent( entry.getGroupsId( ), entry );
-          if ( temp == null ) {
-            Mbeans.register( entry );
-          } else {
-            entry = temp;
-          }
-        }
-      }
-      return entry;
-    }
-    
   }
   
 }

@@ -72,11 +72,11 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.HostManager;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Hosts;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
@@ -153,31 +153,6 @@ public class Empyrean extends ComponentId.Unpartioned {
     public boolean load( ) throws Exception {
       Groovyness.run( "setup_dbpool.groovy" );
       return true;
-    }
-    
-  }
-  
-  @Provides( Empyrean.class )
-  @RunDuring( Bootstrap.Stage.RemoteConfiguration )
-  public static class HostMembershipBootstrapper extends Bootstrapper.Simple {
-    
-    @Override
-    public boolean load( ) throws Exception {
-      try {
-        HostManager.getInstance( );
-        LOG.info( "Started membership channel " + HostManager.getMembershipGroupName( ) );
-        while ( !HostManager.isReady( ) ) {
-          TimeUnit.SECONDS.sleep( 5 );
-          LOG.info( "Waiting for system view with database..." );
-//          HostManager.broadcastHost( );
-        }
-        LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
-        return true;
-      } catch ( final Exception ex ) {
-        LOG.fatal( ex, ex );
-        BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
-        return false;
-      }
     }
     
   }
