@@ -93,6 +93,7 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.Threads;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -168,87 +169,149 @@ public class RestrictedTypes {
     throw new NoSuchElementException( "Failed to lookup function (@" + Threads.currentStackFrame( 1 ).getMethodName( ) + ") for type: " + type );
   }
   
-  @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> T doAllocation( Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
-    return doAllocations( "", 1L, allocator ).get( 0 );
-  }
-  
-  @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> List<T> doAllocations( Integer quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
-    return doAllocations( (long) quantity, allocator );
-  }
-  
-  @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> List<T> doAllocations( Long quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
-    return doAllocations( "", quantity, allocator );
-  }
-  
-  @SuppressWarnings( { "cast", "unchecked" } )
-  public static <T extends RestrictedType> List<T> doAllocations( String identifier, Long quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
-    Context ctx = Contexts.lookup( );
-    if ( ctx.hasAdministrativePrivileges( ) ) {
-      return runAllocator( quantity, allocator );
-    } else {
-      Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
-      List<Class<?>> lookupTypes = Classes.genericsToClasses( allocator );
-      if ( lookupTypes.isEmpty( ) ) {
-        throw new IllegalArgumentException( "Failed to find required generic type for lookup " + allocator.getClass( )
-                                            + " so the policy type for looking up " + allocator + " cannot be determined." );
-      } else {
-        Class<?> rscType;
+  /**
+   * Allocate {@code quantity} unitless resources, correctly rolling their allocation back in the
+   * case of partial failures.
+   */
+  private static <T> List<T> runAllocator( int quantity, Supplier<T> allocator, Predicate<T> rollback ) {
+    List<T> res = Lists.newArrayList( );
+    try {
+      for ( int i = 0; i < quantity; i++ ) {
+        res.add( allocator.get( ) );
+      }
+    } catch ( Exception ex ) {
+      for ( T rsc : res ) {
         try {
-          rscType = Iterables.find( lookupTypes, new Predicate<Class<?>>( ) {
-            
-            @Override
-            public boolean apply( Class<?> arg0 ) {
-              return RestrictedType.class.isAssignableFrom( arg0 );
-            }
-          } );
-        } catch ( NoSuchElementException ex1 ) {
-          LOG.error( ex1, ex1 );
-          throw ex1;
-        }
-        Ats ats = Ats.inClassHierarchy( rscType );
-        Ats msgAts = Ats.inClassHierarchy( msgType );
-        if ( !ats.has( PolicyVendor.class ) && !msgAts.has( PolicyVendor.class ) ) {
-          throw new IllegalArgumentException( "Failed to determine policy for allocating type instance " + rscType.getCanonicalName( )
-                                              + ": required @PolicyVendor missing in resource type hierarchy " + rscType.getCanonicalName( )
-                                              + " and request type hierarchy " + msgType.getCanonicalName( ) );
-        } else if ( !ats.has( PolicyResourceType.class ) && !msgAts.has( PolicyResourceType.class ) ) {
-          throw new IllegalArgumentException( "Failed to determine policy for looking up type instance " + rscType.getCanonicalName( )
-                                              + ": required @PolicyResourceType missing in resource type hierarchy " + rscType.getCanonicalName( )
-                                              + " and request type hierarchy " + msgType.getCanonicalName( ) );
-        } else {
-          PolicyVendor vendor = ats.get( PolicyVendor.class );
-          PolicyResourceType type = ats.get( PolicyResourceType.class );
-          String action = PolicySpec.requestToAction( ctx.getRequest( ) );
-          if ( action == null ) {
-            action = getIamActionByMessageType( ctx.getRequest( ) );
-          }
-          User requestUser = ctx.getUser( );
-          try {
-            if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, requestUser ) ) {
-              throw new AuthException( "Not authorized to create: " + type + " by user: " + ctx.getUserFullName( ) );
-            } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), quantity ) ) {
-              throw new AuthException( "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
-            } else {
-              return runAllocator( quantity, allocator );
-            }
-          } catch ( AuthException ex ) {
-            throw ex;
-          }
+          rollback.apply( rsc );
+        } catch ( Exception ex1 ) {
+          LOG.trace( ex1, ex1 );
         }
       }
-      
+    }
+    return res;
+  }
+  
+  /**
+   * Special case of allocating a single countable resource.
+   * 
+   * {@inheritDoc RestrictedTypes#allocateCountableResources(Integer, Supplier)}
+   * 
+   * @see RestrictedTypes#allocateUnitlessResources(Integer, Supplier)
+   */
+  @SuppressWarnings( { "cast", "unchecked" } )
+  public static <T extends RestrictedType> T allocateUnitlessResource( Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return allocateUnitlessResources( 1, allocator ).get( 0 );
+  }
+  
+  /**
+   * Allocation of a dimension-less type; i.e. only the quantity matters and the characteristics of
+   * the allocated resource cannot be parameterized in any way.
+   * 
+   * @param <T> type to be allocated
+   * @param quantity quantity to be allocated
+   * @param allocator Supplier which performs allocation of a single unit.
+   * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
+   */
+  @SuppressWarnings( { "cast", "unchecked" } )
+  public static <T extends RestrictedType> List<T> allocateUnitlessResources( Integer quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    String identifier = "";
+    Context ctx = Contexts.lookup( );
+    Class<?> rscType = findResourceClass( allocator );
+    if ( !ctx.hasAdministrativePrivileges( ) ) {
+      Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
+      Ats ats = findPolicyAnnotations( rscType, msgType );
+      PolicyVendor vendor = ats.get( PolicyVendor.class );
+      PolicyResourceType type = ats.get( PolicyResourceType.class );
+      String action = getIamActionByMessageType( );
+      User requestUser = ctx.getUser( );
+      if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, requestUser ) ) {
+        throw new AuthException( "Not authorized to create: " + type + " by user: " + ctx.getUserFullName( ) );
+      } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), ( long ) quantity ) ) {
+        throw new AuthException( "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
+      }
+    }
+    return runAllocator( quantity, allocator, (Predicate) Predicates.alwaysTrue( ) );
+  }
+  
+  /**
+   * Allocate a resource and subsequently verify naming restrictions.
+   * 
+   * @see RestrictedTypes#allocateUnitlessResources(Integer, Supplier)
+   */
+  public static <T extends RestrictedType> List<T> allocateNamedUnitlessResources( Integer quantity, Supplier<T> allocator, Predicate<T> rollback ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    Context ctx = Contexts.lookup( );
+    Class<?> rscType = findResourceClass( allocator );
+    if ( ctx.hasAdministrativePrivileges( ) ) {
+      return runAllocator( quantity, allocator, rollback );
+    } else {
+      Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
+      Ats ats = findPolicyAnnotations( rscType, msgType );
+      PolicyVendor vendor = ats.get( PolicyVendor.class );
+      PolicyResourceType type = ats.get( PolicyResourceType.class );
+      String action = getIamActionByMessageType( );
+      User requestUser = ctx.getUser( );
+      List<T> res = Lists.newArrayList( );
+      for ( int i = 0; i < quantity; i++ ) {
+        T rsc = null;
+        try {
+          rsc = allocator.get( );
+        } catch ( RuntimeException ex1 ) {
+          if ( rsc != null ) {
+            rollback.apply( rsc );
+          }
+          throw ex1;
+        }
+        if ( rsc == null ) {
+          throw new NoSuchElementException( "Attempt to allocate " + quantity + " " + type + " failed." );
+        }
+        try {
+          String identifier = rsc.getDisplayName( );
+          if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, requestUser ) ) {
+            throw new AuthException( "Not authorized to create: " + type + " by user: " + ctx.getUserFullName( ) );
+          } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), ( long ) quantity ) ) {
+            throw new AuthException( "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
+          }
+        } catch ( AuthException ex ) {
+          throw ex;
+        }
+        res.add( rsc );
+      }
+      return res;
     }
   }
   
-  private static <T> List<T> runAllocator( Long quantity, Supplier<T> allocator ) {
-    List<T> res = Lists.newArrayList( );
-    for ( int i = 0; i < quantity; i++ ) {
-      res.add( allocator.get( ) );
+  /**
+   * Allocation of a type which requires dimensional parameters (e.g., size of a volume) where
+   * {@code amount} indicates the desired value for the measured dimensional parameter.
+   * 
+   * @param <T> type to be allocated
+   * @param amount amount to be allocated
+   * @param allocator Supplier which performs allocation of a single unit.
+   * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
+   */
+  @SuppressWarnings( { "cast", "unchecked" } )
+  public static <T extends RestrictedType> T allocateMeasurableResource( Long amount, Function<Long, T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    String identifier = "";
+    Context ctx = Contexts.lookup( );
+    if ( !ctx.hasAdministrativePrivileges( ) ) {
+      Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
+      Class<?> rscType = findResourceClass( allocator );
+      Ats ats = findPolicyAnnotations( rscType, msgType );
+      PolicyVendor vendor = ats.get( PolicyVendor.class );
+      PolicyResourceType type = ats.get( PolicyResourceType.class );
+      String action = getIamActionByMessageType( );
+      User requestUser = ctx.getUser( );
+      try {
+        if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, requestUser ) ) {
+          throw new AuthException( "Not authorized to create: " + type + " by user: " + ctx.getUserFullName( ) );
+        } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), amount ) ) {
+          throw new AuthException( "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
+        }
+      } catch ( AuthException ex ) {
+        throw ex;
+      }
     }
-    return res;
+    return allocator.apply( amount );
   }
   
   @SuppressWarnings( { "cast", "unchecked" } )
@@ -285,77 +348,44 @@ public class RestrictedTypes {
       Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
       LOG.debug( "Attempting to lookup " + identifier + " using lookup: " + resolverFunction.getClass( ) + " typed as "
                  + Classes.genericsToClasses( resolverFunction ) );
-      List<Class<?>> lookupTypes = Classes.genericsToClasses( resolverFunction );
-      if ( lookupTypes.isEmpty( ) ) {
-        throw new IllegalArgumentException( "Failed to find required generic type for lookup " + resolverFunction.getClass( )
-                                            + " so the policy type for looking up " + identifier + " cannot be determined." );
-      } else {
-        Class<?> rscType;
-        try {
-          rscType = Iterables.find( lookupTypes, new Predicate<Class<?>>( ) {
-            
-            @Override
-            public boolean apply( Class<?> arg0 ) {
-              return RestrictedType.class.isAssignableFrom( arg0 );
-            }
-          } );
-        } catch ( NoSuchElementException ex1 ) {
-          LOG.error( ex1, ex1 );
-          throw ex1;
+      Class<?> rscType = findResourceClass( resolverFunction );
+      Ats ats = findPolicyAnnotations( rscType, msgType );
+      PolicyVendor vendor = ats.get( PolicyVendor.class );
+      PolicyResourceType type = ats.get( PolicyResourceType.class );
+      String action = getIamActionByMessageType( );
+      User requestUser = ctx.getUser( );
+      T requestedObject;
+      try {
+        requestedObject = resolverFunction.apply( identifier );
+        if ( requestedObject == null ) {
+          throw new NoSuchElementException( "Failed to lookup requested " + rscType.getCanonicalName( ) + " with id " + identifier + " using "
+                                            + resolverFunction.getClass( ) );
         }
-        Ats ats = Ats.inClassHierarchy( rscType );
-        Ats msgAts = Ats.inClassHierarchy( msgType );
-        if ( !ats.has( PolicyVendor.class ) && !msgAts.has( PolicyVendor.class ) ) {
-          throw new IllegalArgumentException( "Failed to determine policy for looking up identifier " + identifier
-                                              + ": required @PolicyVendor missing in resource type hierarchy " + rscType.getCanonicalName( )
-                                              + " and request type hierarchy " + msgType.getCanonicalName( ) );
-        } else if ( !ats.has( PolicyResourceType.class ) && !msgAts.has( PolicyResourceType.class ) ) {
-          throw new IllegalArgumentException( "Failed to determine policy for looking up identifier " + identifier
-                                              + ": required @PolicyResourceType missing in resource type hierarchy " + rscType.getCanonicalName( )
-                                              + " and request type hierarchy " + msgType.getCanonicalName( ) );
-        } else {
-          PolicyVendor vendor = ats.get( PolicyVendor.class );
-          PolicyResourceType type = ats.get( PolicyResourceType.class );
-          String action = PolicySpec.requestToAction( ctx.getRequest( ) );
-          if ( action == null ) {
-            action = getIamActionByMessageType( ctx.getRequest( ) );
-          }
-          
-          User requestUser = ctx.getUser( );
-          T requestedObject;
-          try {
-            requestedObject = resolverFunction.apply( identifier );
-            if ( requestedObject == null ) {
-              throw new NoSuchElementException( "Failed to lookup requested " + rscType.getCanonicalName( ) + " with id " + identifier + " using "
-                                                + resolverFunction.getClass( ) );
-            }
-          } catch ( NoSuchElementException ex ) {
-            throw ex;
-          } catch ( PersistenceException ex ) {
-            Logs.extreme( ).error( ex, ex );
-            LOG.error( ex );
-            throw ex;
-          } catch ( Exception ex ) {
-            Logs.extreme( ).error( ex, ex );
-            LOG.error( ex );
-            throw new PersistenceException( "Error occurred while attempting to lookup " + identifier + " using lookup: " + resolverFunction.getClass( )
-                                            + " typed as "
-                                            + rscType, ex );
-          }
-          
-          Account owningAccount = null;
-          if ( !ignoreOwningAccount ) {
-            owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( requestedObject.getOwner( ).getAccountNumber( ) )
-              ? null
-              : Accounts.lookupAccountByName( requestedObject.getOwner( ).getAccountName( ) );
-          }
-          if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, owningAccount, action, requestUser ) ) {
-            throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user "
-                                     + UserFullName.getInstance( requestUser ) );
-          }
-          return requestedObject;
-        }
+      } catch ( NoSuchElementException ex ) {
+        throw ex;
+      } catch ( PersistenceException ex ) {
+        Logs.extreme( ).error( ex, ex );
+        LOG.error( ex );
+        throw ex;
+      } catch ( Exception ex ) {
+        Logs.extreme( ).error( ex, ex );
+        LOG.error( ex );
+        throw new PersistenceException( "Error occurred while attempting to lookup " + identifier + " using lookup: " + resolverFunction.getClass( )
+                                        + " typed as "
+                                        + rscType, ex );
       }
+      
+      Account owningAccount = null;
+      if ( !ignoreOwningAccount ) {
+        owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( requestedObject.getOwner( ).getAccountNumber( ) )
+          ? null
+          : Accounts.lookupAccountByName( requestedObject.getOwner( ).getAccountName( ) );
+      }
+      if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, owningAccount, action, requestUser ) ) {
+        throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user "
+                                 + UserFullName.getInstance( requestUser ) );
+      }
+      return requestedObject;
     }
   }
   
@@ -373,42 +403,27 @@ public class RestrictedTypes {
       @Override
       public boolean apply( T arg0 ) {
         Context ctx = Contexts.lookup( );
-        if ( ctx.hasAdministrativePrivileges( ) ) {
-          return true;
-        } else {
+        if ( !ctx.hasAdministrativePrivileges( ) ) {
           Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
           Class<?> rscType = arg0.getClass( );
-          Ats ats = Ats.inClassHierarchy( rscType );
-          Ats msgAts = Ats.inClassHierarchy( msgType );
-          if ( !ats.has( PolicyVendor.class ) && !msgAts.has( PolicyVendor.class ) ) {
-            throw new IllegalArgumentException( "Failed to determine policy for looking up type instance " + arg0.toString( )
-                                                + ": required @PolicyVendor missing in resource type hierarchy " + rscType.getCanonicalName( )
-                                                + " and request type hierarchy " + msgType.getCanonicalName( ) );
-          } else if ( !ats.has( PolicyResourceType.class ) && !msgAts.has( PolicyResourceType.class ) ) {
-            throw new IllegalArgumentException( "Failed to determine policy for looking up type instance " + arg0.toString( )
-                                                + ": required @PolicyResourceType missing in resource type hierarchy " + rscType.getCanonicalName( )
-                                                + " and request type hierarchy " + msgType.getCanonicalName( ) );
-          } else {
-            PolicyVendor vendor = ats.get( PolicyVendor.class );
-            PolicyResourceType type = ats.get( PolicyResourceType.class );
-            String action = PolicySpec.requestToAction( ctx.getRequest( ) );
-            if ( action == null ) {
-              action = getIamActionByMessageType( ctx.getRequest( ) );
+          Ats ats = findPolicyAnnotations( rscType, msgType );
+          PolicyVendor vendor = ats.get( PolicyVendor.class );
+          PolicyResourceType type = ats.get( PolicyResourceType.class );
+          String action = getIamActionByMessageType( );
+          User requestUser = ctx.getUser( );
+          try {
+            Account owningAccount = null;
+            if ( !ignoreOwningAccount ) {
+              owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( arg0.getOwner( ).getAccountNumber( ) )
+                ? null
+                : Accounts.lookupAccountByName( arg0.getOwner( ).getAccountName( ) );
             }
-            User requestUser = ctx.getUser( );
-            try {
-              Account owningAccount = null;
-              if ( !ignoreOwningAccount ) {
-                owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( arg0.getOwner( ).getAccountNumber( ) )
-                  ? null
-                  : Accounts.lookupAccountByName( arg0.getOwner( ).getAccountName( ) );
-              }
-              return Permissions.isAuthorized( vendor.value( ), type.value( ), arg0.getDisplayName( ), owningAccount, action, requestUser );
-            } catch ( AuthException ex ) {
-              return false;
-            }
+            return Permissions.isAuthorized( vendor.value( ), type.value( ), arg0.getDisplayName( ), owningAccount, action, requestUser );
+          } catch ( AuthException ex ) {
+            return false;
           }
         }
+        return true;
       }
       
     };
@@ -453,15 +468,55 @@ public class RestrictedTypes {
     
   }
   
-  public static <T> Function<String, T> listAll( Class<T> type ) {
-    //TODO:GRZE:WTF FINISH THIS SHIT.
-    return null;
+  public static String getIamActionByMessageType( ) {
+    BaseMessage request = Contexts.lookup( ).getRequest( );
+    String action = PolicySpec.requestToAction( request );
+    if ( action == null ) {
+      if ( request != null ) {
+        return request.getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
+      } else {
+        return null;
+      }
+    } else {
+      return action;
+    }
   }
   
-  public static String getIamActionByMessageType( BaseMessage request ) {
-    if ( request != null ) {
-      return request.getClass( ).getSimpleName( ).replaceAll( "(ResponseType|Type)$", "" ).toLowerCase( );
+  private static Class<?> findResourceClass( Object allocator ) throws IllegalArgumentException, NoSuchElementException {
+    List<Class<?>> lookupTypes = Classes.genericsToClasses( allocator );
+    if ( lookupTypes.isEmpty( ) ) {
+      throw new IllegalArgumentException( "Failed to find required generic type for lookup " + allocator.getClass( )
+                                          + " so the policy type for looking up " + allocator + " cannot be determined." );
     }
-    return null;
+    Class<?> rscType;
+    try {
+      rscType = Iterables.find( lookupTypes, new Predicate<Class<?>>( ) {
+        
+        @Override
+        public boolean apply( Class<?> arg0 ) {
+          return RestrictedType.class.isAssignableFrom( arg0 );
+        }
+      } );
+    } catch ( NoSuchElementException ex1 ) {
+      LOG.error( ex1, ex1 );
+      throw ex1;
+    }
+    return rscType;
   }
+  
+  private static Ats findPolicyAnnotations( Class<?> rscType, Class<? extends BaseMessage> msgType ) throws IllegalArgumentException {
+    Ats ats = Ats.inClassHierarchy( rscType );
+    Ats msgAts = Ats.inClassHierarchy( msgType );
+    if ( !ats.has( PolicyVendor.class ) && !msgAts.has( PolicyVendor.class ) ) {
+      throw new IllegalArgumentException( "Failed to determine policy for allocating type instance " + rscType.getCanonicalName( )
+                                          + ": required @PolicyVendor missing in resource type hierarchy " + rscType.getCanonicalName( )
+                                          + " and request type hierarchy " + msgType.getCanonicalName( ) );
+    } else if ( !ats.has( PolicyResourceType.class ) && !msgAts.has( PolicyResourceType.class ) ) {
+      throw new IllegalArgumentException( "Failed to determine policy for looking up type instance " + rscType.getCanonicalName( )
+                                          + ": required @PolicyResourceType missing in resource type hierarchy " + rscType.getCanonicalName( )
+                                          + " and request type hierarchy " + msgType.getCanonicalName( ) );
+    }
+    return ats;
+  }
+  
 }

@@ -56,7 +56,7 @@ public class Contexts {
     }
   }
   
-  public static Context lookup( ) throws IllegalContextAccessException {
+  public static final Context lookup( ) throws IllegalContextAccessException {
     BaseMessage parent = null;
     MuleMessage muleMsg = null;
     if ( RequestContext.getEvent( ) != null && RequestContext.getEvent( ).getMessage( ) != null ) {

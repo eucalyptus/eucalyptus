@@ -451,11 +451,12 @@ public class VmControl {
             Predicates.and( VerifyMetadata.get( ), AdmissionControl.get( ), ClusterAllocator.get( ) ).apply( allocInfo );
           } catch ( Exception ex1 ) {
             LOG.trace( ex1, ex1 );
+            allocInfo.abort( );
           }
           final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
           final String oldState = vm.getState( ).getName( ), newState = VmState.PENDING.getName( );
           reply.getInstancesSet( ).add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
-        } catch ( MetadataException ex1 ) {
+        } catch ( Exception ex1 ) {
           LOG.error( ex1, ex1 );
         }
         db.commit( );

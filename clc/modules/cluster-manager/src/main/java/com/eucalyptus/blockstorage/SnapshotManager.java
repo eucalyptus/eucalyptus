@@ -133,7 +133,7 @@ public class SnapshotManager {
         }
       }
     };
-    Snapshot snap = RestrictedTypes.doAllocation( allocator );
+    Snapshot snap = RestrictedTypes.allocateUnitlessResource( allocator );
     snap = Snapshots.startCreateSnapshot( volReady, snap );
     
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );

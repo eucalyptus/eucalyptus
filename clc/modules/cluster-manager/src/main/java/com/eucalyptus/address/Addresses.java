@@ -214,7 +214,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     return address;
   }
   
-  public enum Allocator implements Supplier<Address> {
+  public enum Allocator implements Supplier<Address>, Predicate<Address> {
     INSTANCE;
     @Override
     public Address get( ) {
@@ -224,6 +224,15 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       } catch ( Exception ex ) {
         throw Exceptions.toUndeclared( ex );
       }
+    }
+    @Override
+    public boolean apply( Address input ) {
+      try {
+        input.release( );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
+      return true;
     }
   };
   

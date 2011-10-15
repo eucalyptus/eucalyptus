@@ -101,6 +101,7 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -190,10 +191,12 @@ public class AdmissionControl {
   enum VmTypePrivAllocator implements ResourceAllocator {
     INSTANCE;
     
+    @SuppressWarnings( "unchecked" )
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
-      final String vmType = allocInfo.getVmType( ).getName( );
-      RestrictedTypes.doAllocations( vmType, Long.valueOf( allocInfo.getAllocationTokens( ).size( ) ), allocInfo.getVmType( ).allocator( ) );
+      RestrictedTypes.allocateNamedUnitlessResources( allocInfo.getAllocationTokens( ).size( ),
+                                                      allocInfo.getVmType( ).allocator( ),
+                                                      ( Predicate ) Predicates.alwaysTrue( ) );
     }
     
     @Override
@@ -216,7 +219,7 @@ public class AdmissionControl {
           return this.iter.next( );
         }
       };
-      List<ResourceToken> pendingTokens = RestrictedTypes.doAllocations( tokens.size( ), allocator );
+      List<ResourceToken> pendingTokens = RestrictedTypes.allocateUnitlessResources( tokens.size( ), allocator );
       
       allocInfo.getAllocationTokens( ).addAll( pendingTokens );
       return pendingTokens;

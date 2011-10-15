@@ -51,7 +51,7 @@ public class NetworkGroupManager {
           }
         }
       };
-      RestrictedTypes.doAllocation( allocator );
+      RestrictedTypes.allocateUnitlessResource( allocator );
       return reply;
     } catch ( final Exception ex ) {
       throw new EucalyptusCloudException( "CreateSecurityGroup failed because: " + Exceptions.causeString( ex ), ex );

@@ -99,7 +99,7 @@ public class AddressManager {
   
   public AllocateAddressResponseType allocate( final AllocateAddressType request ) throws Exception {
     AllocateAddressResponseType reply = ( AllocateAddressResponseType ) request.getReply( );
-    Address address = RestrictedTypes.doAllocation( Addresses.Allocator.INSTANCE );
+    Address address = RestrictedTypes.allocateNamedUnitlessResources( 1, Addresses.Allocator.INSTANCE, Addresses.Allocator.INSTANCE ).get( 0 );
     reply.setPublicIp( address.getName( ) );
     return reply;
   }
