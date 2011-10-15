@@ -84,9 +84,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class Hosts {
-  private static final Logger                 LOG = Logger.getLogger( Hosts.class );
-  private static ConcurrentMap<Address, Host> hostMap;
-  private static Host                         localHost;
+  private static final Logger                     LOG = Logger.getLogger( Hosts.class );
+  private static ReplicatedHashMap<Address, Host> hostMap;
+  private static Host                             localHost;
   
   enum HostMapStateListener implements ReplicatedHashMap.Notification<Address, Host> {
     INSTANCE;
@@ -136,6 +136,7 @@ public class Hosts {
         HostManager.getInstance( );
         LOG.info( "Started membership channel " + HostManager.getMembershipGroupName( ) );
         hostMap = new ReplicatedHashMap<Address, Host>( HostManager.getInstance( ).getMembershipChannel( ) );
+        hostMap.addNotifier( HostMapStateListener.INSTANCE );
         localHost = new Host( HostManager.getInstance( ).getMembershipChannel( ).getAddress( ) );
         LOG.info( "Setup localhost state: " + localHost );
         hostMap.put( localHost.getGroupsId( ), localHost );
