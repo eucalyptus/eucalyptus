@@ -79,6 +79,7 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.IdleStateEvent;
+import com.eucalyptus.component.ServiceOperations;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
@@ -147,9 +148,8 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
         reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( BaseMessage ) request.getMessage( ), "Received a NULL reply" );
       }
       Long currTime = System.currentTimeMillis( );
-      Logs.exhaust( ).debug( EventRecord.here( reply.getClass( ), EventClass.MESSAGE, EventType.MSG_SERVICED,
-                                               //                          "rtt-ms", Long.toString( currTime - this.openTime.get( ctx.getChannel( ) ) ),
-                                               "request-ms", Long.toString( currTime - this.startTime.get( ctx.getChannel( ) ) ) ) );
+      EventRecord.here( reply.getClass( ), EventClass.MESSAGE, EventType.MSG_SERVICED, "request-ms",
+                        Long.toString( currTime - this.startTime.get( ctx.getChannel( ) ) ) ).debug( );
       final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
       final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
       response.setMessage( reply );
@@ -209,7 +209,9 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
     this.startTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
     this.messageType.set( ctx.getChannel( ), msg );
     EventRecord.here( ServiceContextHandler.class, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ).trace( );
-    ServiceContext.dispatch( RequestQueue.ENDPOINT, msg );
+    if ( !ServiceOperations.dispatch( msg ) ) {
+      ServiceContext.dispatch( RequestQueue.ENDPOINT, msg );
+    }
   }
   
   private void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent evt ) {

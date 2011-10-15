@@ -29,26 +29,28 @@ import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Context {
-  private static Logger            LOG           = Logger.getLogger( Context.class );
-  private final String             correlationId;
-  private Long                     creationTime;
-  private BaseMessage              request       = null;
-  private final MappingHttpRequest httpRequest;
-  private final Channel            channel;
-  private WeakReference<MuleEvent> muleEvent     = new WeakReference<MuleEvent>( null );
-  private User                     user          = null;
-  private Subject                  subject       = null;
-  private Map<Contract.Type, Contract>    contracts     = Maps.newHashMap( );
+  private static Logger                LOG       = Logger.getLogger( Context.class );
+  private final String                 correlationId;
+  private Long                         creationTime;
+  private BaseMessage                  request   = null;
+  private final MappingHttpRequest     httpRequest;
+  private final Channel                channel;
+  private WeakReference<MuleEvent>     muleEvent = new WeakReference<MuleEvent>( null );
+  private User                         user      = null;
+  private Subject                      subject   = null;
+  private Map<Contract.Type, Contract> contracts = Maps.newHashMap( );
   
   protected Context( String dest, final BaseMessage msg ) {
     this.correlationId = msg.getCorrelationId( );
     this.creationTime = System.nanoTime( );
-    this.httpRequest = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.GET, dest ) {{
-      this.setCorrelationId( msg.getCorrelationId( ) );
-      this.message = msg;
-    }};
+    this.httpRequest = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.GET, dest ) {
+      {
+        this.setCorrelationId( msg.getCorrelationId( ) );
+        this.message = msg;
+      }
+    };
     this.channel = new DefaultLocalClientChannelFactory( ).newChannel( Channels.pipeline( ) );
-    this.user = Principals.systemUser();
+    this.user = Principals.systemUser( );
     EventRecord.caller( Context.class, EventType.CONTEXT_CREATE, this.correlationId, this.channel.toString( ) ).debug( );
   }
   
@@ -67,8 +69,8 @@ public class Context {
   
   public InetAddress getRemoteAddress( ) {
     if ( this.getChannel( ) != null ) {
-      if( this.getChannel( ).getRemoteAddress( ) instanceof InetSocketAddress ) {
-        return ((InetSocketAddress) this.getChannel( ).getRemoteAddress( )).getAddress( );
+      if ( this.getChannel( ).getRemoteAddress( ) instanceof InetSocketAddress ) {
+        return ( ( InetSocketAddress ) this.getChannel( ).getRemoteAddress( ) ).getAddress( );
       }
     }
     throw new IllegalContextAccessException( "Attempt to access socket address information when no associated socket exists." );
@@ -113,11 +115,11 @@ public class Context {
   
   public OwnerFullName getEffectiveUserFullName( ) {
     String effectiveUserId = this.getRequest( ).getEffectiveUserId( );
-    if ( this.getRequest( ) != null && Principals.systemFullName().getUserName( ).equals( effectiveUserId ) ) {
-      return Principals.systemFullName();
+    if ( this.getRequest( ) != null && Principals.systemFullName( ).getUserName( ).equals( effectiveUserId ) ) {
+      return Principals.systemFullName( );
       /** system **/
     } else if ( this.getRequest( ) == null || effectiveUserId == null ) {
-      return Principals.nobodyFullName();
+      return Principals.nobodyFullName( );
       /** unset **/
     } else if ( !effectiveUserId.equals( this.getUserFullName( ).getUserName( ) ) ) {
       try {
@@ -126,7 +128,7 @@ public class Context {
         LOG.error( ex );
         return UserFullName.getInstance( this.getUser( ) );
       } catch ( AuthException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
         return UserFullName.getInstance( this.getUser( ) );
       }
     } else {
@@ -135,7 +137,7 @@ public class Context {
   }
   
   public boolean hasAdministrativePrivileges( ) {
-    return this.getUser( ).isSystemInternal( ) || Principals.systemFullName().equals( this.getEffectiveUserFullName( ) ) || this.getUser( ).isSystemAdmin( );
+    return this.getUser( ).isSystemInternal( ) || Principals.systemFullName( ).equals( this.getEffectiveUserFullName( ) ) || this.getUser( ).isSystemAdmin( );
   }
   
   public User getUser( ) {
@@ -171,9 +173,9 @@ public class Context {
   
   void clear( ) {
     EventRecord.caller( Context.class, EventType.CONTEXT_CLEAR, this.correlationId, this.channel.toString( ) ).debug( );
-    if ( this.muleEvent != null ) { 
-        this.muleEvent.clear( );
-        this.muleEvent = null;
+    if ( this.muleEvent != null ) {
+      this.muleEvent.clear( );
+      this.muleEvent = null;
     }
     this.contracts.clear( );
   }

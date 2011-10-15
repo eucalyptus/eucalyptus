@@ -168,8 +168,12 @@ public class ServiceContext {
   }
   
   public static void responseError( Throwable cause ) {
+    responseError( Contexts.lookup( ).getCorrelationId( ), cause );
+  }
+  
+  public static void responseError( String corrId, Throwable cause ) {
     try {
-      Context ctx = Contexts.lookup( );
+      Context ctx = Contexts.lookup( corrId );
       EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, cause.getClass( ).getCanonicalName( ), cause.getMessage( ),
                         String.format( "%.3f ms", ( System.nanoTime( ) - ctx.getCreationTime( ) ) / 1000000.0 ) ).debug( );
       Channels.fireExceptionCaught( ctx.getChannel( ), cause );

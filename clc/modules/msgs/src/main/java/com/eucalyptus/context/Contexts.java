@@ -26,7 +26,7 @@ public class Contexts {
   public static Context create( MappingHttpRequest request, Channel channel ) {
     Context ctx = new Context( request, channel );
     request.setCorrelationId( ctx.getCorrelationId( ) );
-    uuidContexts.put( ctx.getCorrelationId( ), ctx );    
+    uuidContexts.put( ctx.getCorrelationId( ), ctx );
     channelContexts.put( channel, ctx );
     return ctx;
   }
@@ -45,6 +45,16 @@ public class Contexts {
     return correlationId != null && uuidContexts.containsKey( correlationId );
   }
   
+  private static ThreadLocal<Context> tlContext = new ThreadLocal<Context>( );
+  
+  public static void threadLocal( Context ctx ) {//GRZE: really unhappy these are public.
+    tlContext.set( ctx );
+  }
+  
+  public static void removeThreadLocal( ) {//GRZE: really unhappy these are public.
+    tlContext.remove( );
+  }
+  
   public static Context lookup( String correlationId ) throws NoSuchContextException {
     Assertions.assertNotNull( correlationId );
     if ( !uuidContexts.containsKey( correlationId ) ) {
@@ -57,6 +67,10 @@ public class Contexts {
   }
   
   public static final Context lookup( ) throws IllegalContextAccessException {
+    Context ctx;
+    if ( ( ctx = tlContext.get( ) ) != null ) {
+      return ctx;
+    }
     BaseMessage parent = null;
     MuleMessage muleMsg = null;
     if ( RequestContext.getEvent( ) != null && RequestContext.getEvent( ).getMessage( ) != null ) {
@@ -75,12 +89,12 @@ public class Contexts {
         throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request.", e );
       }
     } else if ( o != null && o instanceof HasRequest ) {
-        try {
-          return Contexts.lookup( ( ( HasRequest ) o ).getRequest( ).getCorrelationId( ) );
-        } catch ( NoSuchContextException e ) {
-          LOG.error( e, e );
-          throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request.", e );
-        }
+      try {
+        return Contexts.lookup( ( ( HasRequest ) o ).getRequest( ).getCorrelationId( ) );
+      } catch ( NoSuchContextException e ) {
+        LOG.error( e, e );
+        throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request.", e );
+      }
     } else {
       throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request." );
     }
@@ -99,19 +113,19 @@ public class Contexts {
       ctx.clear( );
     }
   }
-
+  
   public static void clear( Context context ) {
-    if( context != null ) {
+    if ( context != null ) {
       clear( context.getCorrelationId( ) );
     }
   }
-
+  
   public static Context createWrapped( String dest, final BaseMessage msg ) {
-    if( uuidContexts.containsKey( msg.getCorrelationId( ) ) ) {
+    if ( uuidContexts.containsKey( msg.getCorrelationId( ) ) ) {
       return null;
     } else {
       Context ctx = new Context( dest, msg );
-      uuidContexts.put( ctx.getCorrelationId( ), ctx );    
+      uuidContexts.put( ctx.getCorrelationId( ), ctx );
       return ctx;
     }
   }
