@@ -1,4 +1,4 @@
-package com.eucalyptus.auth.euare.checker;
+package com.eucalyptus.auth.checker;
 
 import java.util.Arrays;
 import java.util.HashSet;
