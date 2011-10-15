@@ -170,7 +170,7 @@ public class VmControl {
   public static RunInstancesResponseType runInstances( RunInstancesType request ) throws MetadataException, AuthException {
     Allocation allocInfo = Allocations.begin( request );
     try {
-      Predicates.and( VerifyMetadata.get( ), AdmissionControl.get( ), ClusterAllocator.get( ) ).apply( allocInfo );
+      Predicates.and( VerifyMetadata.get( ), AdmissionControl.get( ) ).apply( allocInfo );
     } catch ( Exception ex1 ) {
       LOG.trace( ex1, ex1 );
     }
@@ -192,6 +192,7 @@ public class VmControl {
         reservation.getInstancesSet( ).add( VmInstances.transform( entity ) );
       }
       db.commit( );
+      ClusterAllocator.get( ).apply( allocInfo );
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
