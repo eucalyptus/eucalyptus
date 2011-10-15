@@ -43,6 +43,9 @@ public class ListenerRegistry {
     lookupTypes.remove( Event.class );
     /** GRZE: event type is not specified by the generic type of listeners EventListener decl or is <Event> **/
     boolean illegal = ( type == null && lookupTypes.isEmpty( ) );
+    if ( type == null && !lookupTypes.isEmpty( ) ) {
+      type = lookupTypes.get( 0 );
+    }
     /** GRZE: explicit event type does conform to generic type **/
     for ( Class<?> c : lookupTypes ) {
       if( type != null && c.isAssignableFrom( ( type instanceof Class ) ? ( Class ) type : type.getClass( ) ) ) {
