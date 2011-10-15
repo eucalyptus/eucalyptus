@@ -187,6 +187,7 @@ public class VmControl {
                                                                Lists.newArrayList( networkNames ) );
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
+      allocInfo.commit( );
       for ( ResourceToken allocToken : allocInfo.getAllocationTokens( ) ) {
         VmInstance entity = Entities.merge( allocToken.getVmInstance( ) );
         reservation.getInstancesSet( ).add( VmInstances.transform( entity ) );
