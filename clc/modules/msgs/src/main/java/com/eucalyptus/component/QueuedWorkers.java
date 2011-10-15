@@ -135,8 +135,8 @@ public class QueuedWorkers {
         } catch ( final Throwable e ) {
           LOG.error( e, e );
         }
-        LOG.debug( "Shutting down worker: " + this.owner.getSimpleName( ) + " in thread " + Thread.currentThread( ).getName( ) );
       }
+      LOG.debug( "Shutting down worker: " + this.owner.getSimpleName( ) + " in thread " + Thread.currentThread( ).getName( ) );
     }
     
     @Override
