@@ -131,12 +131,23 @@ upgrade_keys() {
 }
 
 upgrade_db() {
-  if ! (ls ${OLD_EUCA}/${DBDIR}/* >/dev/null 2>&1); then 
-    log "Cannot locate previous database files in ${OLD_EUCA}/${DBDIR}! Skipping DB upgrade.";    
-    exit 1; 
+  # Ensure that this system had CLC enabled in the previous version
+  if [ -f "${OLD_EUCA}/var/lib/eucalyptus/services" ]; then
+      if ! grep -q cloud ${OLD_EUCA}/var/lib/eucalyptus/services; then
+          log "CLC is disabled.  Skipping DB upgrade."
+          return
+      fi
+  elif ! (ls ${OLD_EUCA}/${DBDIR}/* >/dev/null 2>&1); then 
+      if [ "${OLD_EUCA_VERSION:0:3}" == "3.0" ]; then
+          log "This is not a CLC.  Skipping DB upgrade."
+          return
+      else 
+          log "Cannot locate previous database files in ${OLD_EUCA}/${DBDIR}! Skipping DB upgrade.";    
+          exit 1; 
+      fi
   fi
   
-  if [ -n "${SAME_VERSION}" ]; then
+  if [ -n "${SAME_VERSION}" -o "${OLD_EUCA_VERSION:0:3}" == "3.0" ]; then
     for x in $(\ls -ad ${OLD_EUCA}/${DBDIR}/* 2>&1 | grep eucalyptus) ; do
       cp -a --preserve $x ${NEW_EUCA}/${DBDIR}/
     done

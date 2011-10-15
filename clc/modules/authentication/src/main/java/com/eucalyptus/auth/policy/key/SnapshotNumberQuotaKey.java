@@ -40,7 +40,7 @@ public class SnapshotNumberQuotaKey extends QuotaKey {
       case ACCOUNT:
         return Long.toString( RestrictedTypes.quantityMetricFunction( SnapshotMetadata.class ).apply( AccountFullName.getInstance( id ) ) + quantity );
       case GROUP:
-        throw new AuthException( "Group level quota not supported" );
+        return NOT_SUPPORTED;
       case USER:
         return Long.toString( RestrictedTypes.quantityMetricFunction( SnapshotMetadata.class ).apply( UserFullName.getInstance( id ) ) + quantity );
     }

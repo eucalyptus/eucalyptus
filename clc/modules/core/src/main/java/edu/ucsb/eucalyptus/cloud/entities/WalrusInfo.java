@@ -86,9 +86,9 @@ public class WalrusInfo extends AbstractPersistent {
 	@ConfigurableField( description = "Path to buckets storage", displayName = "Buckets Path" )
 	@Column( name = "storage_dir" )
 	private String storageDir;
-	@ConfigurableField( description = "Maximum number of buckets per user", displayName = "Maximum buckets per user" )
+	@ConfigurableField( description = "Maximum number of buckets per account", displayName = "Maximum buckets per account" )
 	@Column( name = "storage_max_buckets_per_user" )
-	private Integer storageMaxBucketsPerUser;
+	private Integer storageMaxBucketsPerAccount;
 	@ConfigurableField( description = "Maximum size per bucket", displayName = "Maximum bucket size (MB)" )
 	@Column( name = "storage_max_bucket_size_mb" )
 	private Integer storageMaxBucketSizeInMB;
@@ -103,14 +103,14 @@ public class WalrusInfo extends AbstractPersistent {
 
 	public WalrusInfo(final String name, 
 			final String storageDir,
-			final Integer storageMaxBucketsPerUser,
+			final Integer storageMaxBucketsPerAccount,
 			final Integer storageMaxBucketSizeInMB,
 			final Integer storageMaxCacheSizeInMB,
 			final Integer storageMaxTotalSnapshotSizeInGb)
 	{
 		this.name = name;
 		this.storageDir = storageDir;
-		this.storageMaxBucketsPerUser = storageMaxBucketsPerUser;
+		this.storageMaxBucketsPerAccount = storageMaxBucketsPerAccount;
 		this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
 		this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
 		this.storageMaxTotalSnapshotSizeInGb = storageMaxTotalSnapshotSizeInGb;
@@ -132,12 +132,12 @@ public class WalrusInfo extends AbstractPersistent {
 		this.storageDir = storageDir;
 	}
 
-	public Integer getStorageMaxBucketsPerUser() {
-		return storageMaxBucketsPerUser;
+	public Integer getStorageMaxBucketsPerAccount() {
+		return storageMaxBucketsPerAccount;
 	}
 
-	public void setStorageMaxBucketsPerUser( final Integer storageMaxBucketsPerUser ) {
-		this.storageMaxBucketsPerUser = storageMaxBucketsPerUser;
+	public void setStorageMaxBucketsPerAccount( final Integer storageMaxBucketsPerAccount ) {
+		this.storageMaxBucketsPerAccount = storageMaxBucketsPerAccount;
 	}
 
 	public Integer getStorageMaxBucketSizeInMB() {
@@ -197,7 +197,7 @@ public class WalrusInfo extends AbstractPersistent {
 		} catch(Exception ex) {
 			walrusInfo = new WalrusInfo(WalrusProperties.NAME, 
 					WalrusProperties.bucketRootDirectory, 
-					WalrusProperties.MAX_BUCKETS_PER_USER, 
+					WalrusProperties.MAX_BUCKETS_PER_ACCOUNT, 
 					(int)(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M),
 					(int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M),
 					WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE);

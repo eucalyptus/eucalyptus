@@ -31,11 +31,11 @@ public class BucketTotalSizeQoutaKey extends QuotaKey {
   public String value( Scope scope, String id, String resource, Long quantity ) throws AuthException {
     switch ( scope ) {
       case ACCOUNT:
-        return Long.toString( WalrusUtil.countTotalObjectSizeByAccount( id ) + quantity );
+        return Long.toString( toMb( WalrusUtil.countTotalObjectSizeByAccount( id ) + quantity ) );
       case GROUP:
-        throw new AuthException( "Group level quota not supported" );
+        return NOT_SUPPORTED;
       case USER:
-        return Long.toString( WalrusUtil.countTotalObjectSizeByUser( id ) + quantity );
+        return Long.toString( toMb( WalrusUtil.countTotalObjectSizeByUser( id ) + quantity ) );
     }
     throw new AuthException( "Invalid scope" );
   }
