@@ -104,10 +104,10 @@ import com.google.common.collect.Lists;
 @ConfigurableClass( root = "bootstrap.hosts", description = "Properties controlling the handling of remote host bootstrapping" )
 public class Hosts {
   @ConfigurableField( description = "Timeout for state transfers (in msec).", readonly = true )
-  public static final Long                        STATE_TRANSFER_TIMEOUT = 10000L;
-  private static final Logger                     LOG                    = Logger.getLogger( Hosts.class );
-  private static ReplicatedHashMap<Address, Host> hostMap;
-  private static Host                             localHostSingleton;
+  public static final Long                       STATE_TRANSFER_TIMEOUT = 10000L;
+  private static final Logger                    LOG                    = Logger.getLogger( Hosts.class );
+  private static ReplicatedHashMap<String, Host> hostMap;
+  private static Host                            localHostSingleton;
   
   enum HostBootstrapEventListener implements EventListener<Hertz> {
     INSTANCE;
@@ -115,10 +115,9 @@ public class Hosts {
     @Override
     public void fireEvent( Hertz event ) {
       Host maybeDirty = Hosts.localHost( ).checkDirty( );
-      if ( Hosts.localHost( ).getTimestamp( ).before( maybeDirty.getTimestamp( ) ) ) {
-        Hosts.localHost( maybeDirty );
-        LOG.info( "Updating local host information: " + Hosts.localHost( ) );
-        hostMap.replace( Hosts.localHost( ).getGroupsId( ), Hosts.localHost( ) );
+      if ( Hosts.localHost( ).getTimestamp( ).equals( maybeDirty.getLastTime( ) ) ) {
+        hostMap.replace( maybeDirty.getDisplayName( ), maybeDirty );
+        LOG.info( "Updated local host information: " + localHost( ) );
       }
     }
   }
@@ -154,11 +153,14 @@ public class Hosts {
     
     @Override
     public void viewChange( View currentView, Vector<Address> joinMembers, Vector<Address> partMembers ) {
-      LOG.info( "Hosts.viewChange(): new view => " + Joiner.on( ", " ).join( currentView.getMembers( ) ) );
-      LOG.info( "Hosts.viewChange(): joined   => " + Joiner.on( ", " ).join( joinMembers ) );
-      LOG.info( "Hosts.viewChange(): parted   => " + Joiner.on( ", " ).join( partMembers ) );
-      for ( Address a : partMembers ) {
-        hostMap.remove( a );
+      LOG.trace( "Hosts.viewChange(): new view => " + Joiner.on( ", " ).join( currentView.getMembers( ) ) );
+      if ( !joinMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): joined   => " + Joiner.on( ", " ).join( joinMembers ) );
+      if ( !partMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): parted   => " + Joiner.on( ", " ).join( partMembers ) );
+      for ( Host h : Hosts.list( ) ) {
+        if ( Iterables.contains( partMembers, h.getGroupsId( ) ) ) {
+          hostMap.remove( h.getDisplayName( ) );
+          LOG.info( "Hosts.viewChange(): -> removed  => " + h );
+        }
       }
     }
     
@@ -297,17 +299,16 @@ public class Hosts {
       try {
         HostManager.getInstance( );
         LOG.info( "Started membership channel " + SystemIds.membershipGroupName( ) );
-        hostMap = new ReplicatedHashMap<Address, Host>( HostManager.getInstance( ).getMembershipChannel( ) );
+        hostMap = new ReplicatedHashMap<String, Host>( HostManager.getInstance( ).getMembershipChannel( ) );
         hostMap.setDeadlockDetection( true );
         hostMap.setBlockingUpdates( true );
         hostMap.addNotifier( HostMapStateListener.INSTANCE );
         hostMap.start( STATE_TRANSFER_TIMEOUT );
-        localHost( new Host( ) );
-        LOG.info( "Setup localhost state: " + localHost( ) );
-        hostMap.put( localHost( ).getGroupsId( ), localHost( ) );
         Listeners.register( HostBootstrapEventListener.INSTANCE );
+        Host local = new Host( );
+        hostMap.put( local.getDisplayName( ), local );
         LOG.info( "Added localhost to system state: " + localHost( ) );
-        LOG.info( "System view:\n" + Joiner.on( "\n=> " ).join( hostMap.values( ) ) );
+        LOG.info( "System view:\n" + HostMapStateListener.INSTANCE.printMap( ) );
         if ( !BootstrapArgs.isCloudController( ) ) {
           while ( Hosts.listDatabases( ).isEmpty( ) ) {
             TimeUnit.SECONDS.sleep( 5 );
@@ -354,7 +355,7 @@ public class Hosts {
   }
   
   private static Host localHost( ) {
-    return localHostSingleton;
+    return hostMap.get( Internets.localHostIdentifier( ) );
   }
   
   private static Host localHost( Host newLocalHost ) {

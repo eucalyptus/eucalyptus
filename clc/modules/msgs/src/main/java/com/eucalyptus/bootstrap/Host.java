@@ -97,6 +97,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   
   private static final long          serialVersionUID = 1;
   private static Logger              LOG              = Logger.getLogger( Host.class );
+  private final String               displayName;
   private final Address              groupsId;
   private final InetAddress          bindAddress;
   private ImmutableList<InetAddress> hostAddresses;
@@ -107,6 +108,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   private Integer                    epoch;
   
   Host( ) {
+    this.displayName = Internets.localHostIdentifier( );
     this.groupsId = Hosts.getLocalGroupAddress( );
     this.bindAddress = Internets.localHostInetAddress( );
     this.epoch = Topology.epoch( );
@@ -141,9 +143,9 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.groupsId == null )
+    result = prime * result + ( ( this.displayName == null )
       ? 0
-      : this.groupsId.hashCode( ) );
+      : this.displayName.hashCode( ) );
     return result;
   }
   
@@ -159,11 +161,11 @@ public class Host implements java.io.Serializable, Comparable<Host> {
       return false;
     }
     Host other = ( Host ) obj;
-    if ( this.groupsId == null ) {
-      if ( other.groupsId != null ) {
+    if ( this.displayName == null ) {
+      if ( other.displayName != null ) {
         return false;
       }
-    } else if ( this.groupsId.toString( ).equals( other.groupsId.toString( ) ) ) {
+    } else if ( this.displayName.toString( ).equals( other.displayName.toString( ) ) ) {
       return false;
     }
     return true;
@@ -171,7 +173,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   
   @Override
   public int compareTo( Host that ) {
-    return this.getGroupsId( ).compareTo( that.getGroupsId( ) );
+    return this.getDisplayName( ).compareTo( that.getDisplayName( ) );
   }
   
   /**
@@ -190,6 +192,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
       that.timestamp.set( System.currentTimeMillis( ) );
       return that;
     } else {
+      that.timestamp.set( that.lastTime = System.currentTimeMillis( ) );
       return this;
     }
   }
@@ -216,21 +219,25 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     builder.append( "Host:" );
     if ( this.groupsId != null ) builder.append( " " ).append( this.groupsId ).append( ":" );
     if ( this.epoch != null ) builder.append( "epoch=" ).append( this.epoch ).append( " " );
-    if ( this.bindAddress != null ) builder.append( "bind=" ).append( this.bindAddress ).append( " " );
+    if ( this.bindAddress != null ) builder.append( this.bindAddress ).append( " " );
     if ( this.hasDatabase != null ) builder.append( "db=" ).append( this.hasDatabase ).append( " " );
-    if ( this.hasBootstrapped != null ) builder.append( "booted=" ).append( this.hasBootstrapped ).append( " " );
-    if ( this.timestamp != null ) builder.append( "\nupdated=" ).append( new Date( this.timestamp.get( ) ) ).append( " " );
-    if ( this.lastTime != null ) builder.append( "previous-update=" ).append( new Date( this.lastTime ) ).append( " " );
-    if ( this.hostAddresses != null ) builder.append( "\nhostAddresses=" ).append( this.hostAddresses );
+    if ( this.hasBootstrapped != null ) builder.append( "up=" ).append( this.hasBootstrapped ).append( " " );
+    if ( this.timestamp != null ) builder.append( "ats=" ).append( new Date( this.timestamp.get( ) ) ).append( " " );
+    if ( this.lastTime != null ) builder.append( "mts=" ).append( new Date( this.lastTime ) ).append( " " );
+    if ( this.hostAddresses != null ) builder.append( this.hostAddresses );
     return builder.toString( );
   }
-
+  
   public Date getTimestamp( ) {
     return new Date( this.timestamp.get( ) );
   }
-
-  private Long getLastTime( ) {
+  
+  public Long getLastTime( ) {
     return this.lastTime;
+  }
+  
+  public String getDisplayName( ) {
+    return this.displayName;
   }
   
 }

@@ -177,7 +177,7 @@ public class RestrictedTypes {
   public static <T extends RestrictedType> List<T> doAllocations( Integer quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     return doAllocations( (long) quantity, allocator );
   }
-  }
+  
   @SuppressWarnings( { "cast", "unchecked" } )
   public static <T extends RestrictedType> List<T> doAllocations( Long quantity, Supplier<T> allocator ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     return doAllocations( "", quantity, allocator );

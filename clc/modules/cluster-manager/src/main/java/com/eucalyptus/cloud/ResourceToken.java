@@ -77,12 +77,13 @@ import com.eucalyptus.cluster.NoSuchTokenException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.VmInstance.Transitions;
+import edu.ucsb.eucalyptus.msgs.StartInstancesType;
 
 public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceToken> {
   private static Logger       LOG    = Logger.getLogger( ResourceToken.class );
@@ -105,7 +106,15 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   public ResourceToken( final Allocation allocInfo, final int resourceAllocationSequenceNumber, final int launchIndex ) {
     this.allocation = allocInfo;
     this.launchIndex = launchIndex;
-    this.instanceId = VmInstances.getId( allocInfo.getReservationIndex( ), launchIndex );
+    String tempVmId = VmInstances.getId( allocInfo.getReservationIndex( ), launchIndex );
+    try {//GRZE:ugly hack.
+      if ( Contexts.lookup( ).getRequest( ) instanceof StartInstancesType ) {
+        tempVmId = ( ( StartInstancesType ) Contexts.lookup( ).getRequest( ) ).getInstancesSet( ).get( launchIndex );
+      }
+    } catch ( Exception ex ) {
+      LOG.error( ex , ex );
+    }
+    this.instanceId = tempVmId;
     this.instanceUuid = UUID.randomUUID( ).toString( );
     this.resourceAllocationSequenceNumber = resourceAllocationSequenceNumber;
     this.creationTime = Calendar.getInstance( ).getTime( );

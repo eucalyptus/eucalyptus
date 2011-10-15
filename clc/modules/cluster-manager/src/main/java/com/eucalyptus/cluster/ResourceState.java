@@ -75,7 +75,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
-import com.eucalyptus.cluster.VmTypeAvailability.ZeroTypeAvailability;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;

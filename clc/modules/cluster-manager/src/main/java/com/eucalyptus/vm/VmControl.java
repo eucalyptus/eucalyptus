@@ -436,7 +436,22 @@ public class VmControl {
       try {
         final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
         try {
-          VmInstances.start( vm );
+          RunInstancesType runRequest = new RunInstancesType( ) {
+            {
+              this.setMinCount( 1 );
+              this.setMaxCount( 1 );
+              this.setImageId( vm.getImageId( ) );
+              this.setAvailabilityZone( vm.getPartition( ) );
+              this.getGroupSet( ).addAll( vm.getNetworkNames( ) );
+              this.setInstanceType( vm.getVmType( ).getName( ) );
+            }
+          };
+          Allocation allocInfo = Allocations.begin( runRequest );
+          try {
+            Predicates.and( VerifyMetadata.get( ), AdmissionControl.get( ), ClusterAllocator.get( ) ).apply( allocInfo );
+          } catch ( Exception ex1 ) {
+            LOG.trace( ex1, ex1 );
+          }
           final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
           final String oldState = vm.getState( ).getName( ), newState = VmState.PENDING.getName( );
           reply.getInstancesSet( ).add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
