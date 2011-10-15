@@ -45,7 +45,7 @@ public class ListenerRegistry {
     boolean illegal = ( type == null && lookupTypes.isEmpty( ) );
     /** GRZE: explicit event type does conform to generic type **/
     for ( Class<?> c : lookupTypes ) {
-      if( type != null && c.isAssignableFrom( ( type instanceof Class ) ? type : type.getClass( ) ) ) {
+      if( type != null && c.isAssignableFrom( ( type instanceof Class ) ? ( Class ) type : type.getClass( ) ) ) {
         illegal = false;
         break; 
       }
