@@ -409,19 +409,19 @@ public class RestrictedTypes {
       if ( Ats.from( candidate ).has( UsageMetricFunction.class ) && Function.class.isAssignableFrom( candidate ) ) {
         UsageMetricFunction measures = Ats.from( candidate ).get( UsageMetricFunction.class );
         Class<?> measuredType = measures.value( );
-        LOG.info( "Registered UsageMetricFunction:    " + measuredType.getClass().getSimpleName() + " => " + candidate );
+        LOG.info( "Registered UsageMetricFunction:    " + measuredType.getSimpleName() + " => " + candidate );
         RestrictedTypes.usageMetricFunctions.put( measuredType, ( Function<OwnerFullName, Long> ) Classes.newInstance( candidate ) );
         return true;
       } else if ( Ats.from( candidate ).has( QuantityMetricFunction.class ) && Function.class.isAssignableFrom( candidate ) ) {
         QuantityMetricFunction measures = Ats.from( candidate ).get( QuantityMetricFunction.class );
         Class<?> measuredType = measures.value( );
-        LOG.info( "Registered QuantityMetricFunction: " + measuredType.getClass().getSimpleName() + " => " + candidate );
+        LOG.info( "Registered QuantityMetricFunction: " + measuredType.getSimpleName() + " => " + candidate );
         RestrictedTypes.quantityMetricFunctions.put( measuredType, ( Function<OwnerFullName, Long> ) Classes.newInstance( candidate ) );
         return true;
       } else if ( Ats.from( candidate ).has( Resolver.class ) && Function.class.isAssignableFrom( candidate ) ) {
         Resolver resolver = Ats.from( candidate ).get( Resolver.class );
         Class<?> resolverFunctionType = resolver.value( );
-        LOG.info( "Registered @Resolver:              " + resolverFunctionType.getClass().getSimpleName() + " => " + candidate );
+        LOG.info( "Registered @Resolver:              " + resolverFunctionType.getSimpleName() + " => " + candidate );
         RestrictedTypes.resourceResolvers.put( resolverFunctionType, ( Function<String, RestrictedType<?>> ) Classes.newInstance( candidate ) );
         return true;
       } else {
