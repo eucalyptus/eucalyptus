@@ -335,10 +335,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       } else {
         final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) );
         final List<NetworkGroup> networks = Lists.newArrayList( );
+        
+        EntityTransaction tx1 = Entities.get( NetworkGroup.class );
         try {
           networks.addAll( Lists.transform( input.getGroupNames( ), transformNetworkNames( userFullName ) ) );
-        } catch ( final Exception ex ) {
-          LOG.error( ex, ex );
+          tx1.commit( );
+        } catch ( Exception ex ) {
+          tx1.rollback( );
+          throw Exceptions.toUndeclared( ex );
         }
         
         PrivateNetworkIndex index = null;
