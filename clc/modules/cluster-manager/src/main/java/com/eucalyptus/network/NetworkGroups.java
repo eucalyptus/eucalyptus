@@ -488,21 +488,4 @@ public class NetworkGroups {
     return ruleList;
   }
   
-  public static PrivateNetworkIndex reclaimIndex( NetworkGroup group, Integer tag, Long idx ) throws Exception {
-    PrivateNetworkIndex index = null;
-    if ( group != null ) {
-      ExtantNetwork exNet;
-      if ( !group.hasExtantNetwork( ) ) {
-        exNet = group.reclaim( tag );
-      } else {
-        exNet = group.extantNetwork( );
-        if ( !exNet.getTag( ).equals( tag ) ) {
-          exNet = null;
-        } else {
-          index = exNet.reclaimNetworkIndex( idx );
-        }
-      }
-    }
-    return index;
-  }
 }

@@ -81,6 +81,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
+import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.cloud.AccountMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.util.Reference;
@@ -163,7 +164,7 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
     this.tag = tag;
   }
   
-  public PrivateNetworkIndex reclaimNetworkIndex( final Long idx ) throws TransactionException {
+  public PrivateNetworkIndex reclaimNetworkIndex( final Long idx ) throws Exception {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       try {
         return PrivateNetworkIndex.bogus( ).allocate( );
@@ -173,33 +174,10 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
     } else if ( !Entities.isPersistent( this ) ) {
       throw new TransientEntityException( this.toString( ) );
     } else {
-      final EntityTransaction db = Entities.get( PrivateNetworkIndex.class );
       try {
-        try {
-          final PrivateNetworkIndex netIdx = Entities.uniqueResult( PrivateNetworkIndex.named( this, idx ) );
-          if ( Reference.State.FREE.equals( netIdx.getState( ) ) ) {
-            final PrivateNetworkIndex ref = netIdx.allocate( );
-            db.commit( );
-            return ref;
-          } else {
-            try {
-              netIdx.teardown( );
-            } catch ( final Exception ex ) {
-              LOG.error( ex, ex );
-            }
-            final PrivateNetworkIndex ref = Entities.persist( PrivateNetworkIndex.create( this, idx ) ).allocate( );
-            db.commit( );
-            return ref;
-          }
-        } catch ( final Exception ex ) {
-          final PrivateNetworkIndex ref = Entities.persist( PrivateNetworkIndex.create( this, idx ) ).allocate( );
-          db.commit( );
-          return ref;
-        }
+        return Entities.uniqueResult( PrivateNetworkIndex.named( this, idx ) );
       } catch ( final Exception ex ) {
-        Logs.exhaust( ).error( ex, ex );
-        db.rollback( );
-        throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName, ex );
+        return Entities.persist( PrivateNetworkIndex.create( this, idx ) ).allocate( );
       }
     }
   }

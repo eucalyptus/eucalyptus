@@ -145,7 +145,7 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
    */
   @Override
   public final T reclaim( final R referer ) throws ResourceAllocationException {
-    final T ret = PersistentReference.this.doSetReferer( referer, Reference.State.FREE, Reference.State.EXTANT );
+    final T ret = PersistentReference.this.doSetReferer( referer, null, Reference.State.EXTANT );
     return ret;
   }
   
