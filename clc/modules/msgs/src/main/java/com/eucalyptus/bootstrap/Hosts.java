@@ -153,10 +153,13 @@ public class Hosts {
     }
     
     @Override
-    public void viewChange( View arg0, Vector<Address> arg1, Vector<Address> arg2 ) {
-      LOG.info( "Hosts.viewChange(): new view => " + Joiner.on( ", " ).join( arg0.getMembers( ) ) );
-      LOG.info( "Hosts.viewChange(): joined   => " + Joiner.on( ", " ).join( arg1 ) );
-      LOG.info( "Hosts.viewChange(): parted   => " + Joiner.on( ", " ).join( arg2 ) );
+    public void viewChange( View currentView, Vector<Address> joinMembers, Vector<Address> partMembers ) {
+      LOG.info( "Hosts.viewChange(): new view => " + Joiner.on( ", " ).join( currentView.getMembers( ) ) );
+      LOG.info( "Hosts.viewChange(): joined   => " + Joiner.on( ", " ).join( joinMembers ) );
+      LOG.info( "Hosts.viewChange(): parted   => " + Joiner.on( ", " ).join( partMembers ) );
+      for ( Address a : partMembers ) {
+        hostMap.remove( a );
+      }
     }
     
   }
