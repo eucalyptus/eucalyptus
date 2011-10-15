@@ -44,9 +44,12 @@ public class ListenerRegistry {
     /** GRZE: event type is not specified by the generic type of listeners EventListener decl or is <Event> **/
     boolean illegal = ( type == null && lookupTypes.isEmpty( ) );
     /** GRZE: explicit event type does conform to generic type **/
-    illegal |= ( type != null
-                 && !lookupTypes.contains( Event.class )
-                 && !lookupTypes.get( 0 ).isAssignableFrom( Classes.typeOf( type ) ) );
+    for ( Class<?> c : lookupTypes ) {
+      if( type != null && c.isAssignableFrom( ( type instanceof Class ) ? type : type.getClass( ) ) ) {
+        illegal = false;
+        break; 
+      }
+    }
     if ( illegal ) {
       throw Exceptions.fatal( new IllegalArgumentException( "Failed to register listener " + listener.getClass( ).getCanonicalName( )
                                                             + " because the declared generic type " + lookupTypes
