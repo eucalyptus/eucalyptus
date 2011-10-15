@@ -85,6 +85,7 @@ import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Counters;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
@@ -186,7 +187,15 @@ public class Allocations {
     
     public void abort( ) {
       for ( ResourceToken token : this.allocationTokens ) {
-        token.abort( );
+        EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          token.abort( );
+          db.commit( );
+        } catch ( Exception ex ) {
+          LOG.warn( ex.getMessage( ) );
+          Logs.exhaust( ).error( ex, ex );
+          db.rollback( );
+        }
       }
     }
     
