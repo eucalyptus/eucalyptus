@@ -127,7 +127,7 @@ public class ServiceOperations {
     public boolean processClass( final Class candidate ) throws Exception {
       if ( Ats.from( candidate ).has( ServiceOperation.class ) && Function.class.isAssignableFrom( candidate ) ) {
         final ServiceOperation opInfo = Ats.from( candidate ).get( ServiceOperation.class );
-        final Function op = Classes.newInstance( candidate );
+        final Function<?, ?> op = Classes.newInstance( candidate );
         final List<Class<?>> msgTypes = Classes.genericsToClasses( candidate );
         LOG.info( "Registered @ServiceOperation:       " + msgTypes.get( 0 ).getSimpleName( ) + "," + msgTypes.get( 1 ).getSimpleName( ) + " => " + candidate );
         serviceOperations.put( msgTypes.get( 0 ), op );
