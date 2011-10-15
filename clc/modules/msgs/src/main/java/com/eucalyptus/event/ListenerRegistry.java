@@ -40,7 +40,12 @@ public class ListenerRegistry {
   @SuppressWarnings( "unchecked" )
   public void register( final Object type, final EventListener listener ) {
     Class<?> eventDecl = Classes.findAncestor( listener, EventListener.class );
-    final List<Class<?>> lookupTypes = Classes.interfaceAncestors( listener );
+    final List<Class<?>> interfaceDecl = Classes.Classes.interfaceAncestors( eventDecl );
+    if ( interfaceDecl.isEmpty( ) ) {
+      throw Exceptions.fatal( new IllegalArgumentException( "Failed to register listener " + listener.getClass( ).getCanonicalName( ) 
+                                                            + " because of a bug in looking up the interface declaration." ) );
+    }
+    final List<Class<?>> lookupTypes = Classes.genericsToClasses( interfaceDecl.get( 0 ) );
     /** GRZE: event type is not specified by the generic type of listeners EventListener decl. **/
     boolean illegal = ( type == null && lookupTypes.isEmpty( ) );
     /** GRZE: explicit event type does conform to generic type **/
@@ -49,7 +54,7 @@ public class ListenerRegistry {
                  && !lookupTypes.get( 0 ).isAssignableFrom( Classes.typeOf( type ) ) );
     if ( illegal ) {
       throw Exceptions.fatal( new IllegalArgumentException( "Failed to register listener " + listener.getClass( ).getCanonicalName( )
-                                                            + "because the declared generic type " + lookupTypes
+                                                            + " because the declared generic type " + lookupTypes
                                                             + " is not assignable from the provided event type: " + ( type != null
                                                               ? type.getClass( ).getCanonicalName( )
                                                               : "null" ) ) );
