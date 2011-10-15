@@ -107,8 +107,8 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   
   public static void handleReportedState( final VmInfo runVm ) {
     final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
-    EntityTransaction db = Entities.get( VmInstance.class );
     try {
+      EntityTransaction db = Entities.get( VmInstance.class );
       try {
         VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
         if ( VmState.SHUTTING_DOWN.equals( runVmState ) ) {

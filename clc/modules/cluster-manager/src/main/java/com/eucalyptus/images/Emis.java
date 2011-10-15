@@ -383,7 +383,7 @@ public class Emis {
   
   public static <T extends ImageInfo> T resolveDiskImage( String imageId, Function<String, T> resolver ) throws IllegalMetadataAccessException {
     T img = resolver.apply( imageId );
-    Predicate<T> filter = Predicates.and( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivileged( true/*ignoreOwningAccount*/) );
+    Predicate<T> filter = Predicates.and( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivilegedWithoutOwner( ) );
     if ( filter.apply( img ) ) {
       return img;
     } else {
@@ -395,7 +395,7 @@ public class Emis {
     String kernelId = determineKernelId( bootSet );
     LOG.debug( "Determined the appropriate kernelId to be " + kernelId + " for " + bootSet.toString( ) );
     try {
-      KernelImageInfo kernel = RestrictedTypes.doPrivileged( kernelId, LookupKernel.INSTANCE, true );
+      KernelImageInfo kernel = RestrictedTypes.doPrivilegedWithoutOwner( kernelId, LookupKernel.INSTANCE );
       return new NoRamdiskBootableSet( bootSet.getMachine( ), kernel );
     } catch ( Exception ex ) {
       throw new NoSuchMetadataException( "Failed to lookup kernel image information: " + kernelId + " because of: " + ex.getMessage( ), ex );
@@ -409,7 +409,7 @@ public class Emis {
       return bootSet;
     } else {
       try {
-        RamdiskImageInfo ramdisk = RestrictedTypes.doPrivileged( ramdiskId, LookupRamdisk.INSTANCE, true );
+        RamdiskImageInfo ramdisk = RestrictedTypes.doPrivilegedWithoutOwner( ramdiskId, LookupRamdisk.INSTANCE );
         return new TrifectaBootableSet( bootSet.getMachine( ), bootSet.getKernel( ), ramdisk );
       } catch ( Exception ex ) {
         throw new NoSuchMetadataException( "Failed to lookup ramdisk image information: " + ramdiskId + " because of: " + ex.getMessage( ), ex );

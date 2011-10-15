@@ -101,6 +101,7 @@ import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ComponentIds;
@@ -112,6 +113,7 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.event.EventFailedException;
@@ -331,10 +333,39 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       if ( !VmStateSet.RUN.contains( inputState ) ) {
         return false;
       } else {
+        final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) );
+        final List<NetworkGroup> networks = Lists.newArrayList( );
+        try {
+          networks.addAll( Lists.transform( input.getGroupNames( ), transformNetworkNames( userFullName ) ) );
+        } catch ( final Exception ex ) {
+          LOG.error( ex, ex );
+        }
+        
+        PrivateNetworkIndex index = null;
+        ExtantNetwork exNet;
+        final NetworkGroup network = ( !networks.isEmpty( )
+          ? networks.get( 0 )
+          : null );
+        try {
+          if ( network != null ) {
+            if ( !network.hasExtantNetwork( ) ) {
+              exNet = network.reclaim( input.getNetParams( ).getVlan( ) );
+            } else {
+              exNet = network.extantNetwork( );
+              if ( !exNet.getTag( ).equals( input.getNetParams( ).getVlan( ) ) ) {
+                exNet = null;
+              } else {
+                index = exNet.reclaimNetworkIndex( input.getNetParams( ).getNetworkIndex( ) );
+              }
+            }
+          }
+        } catch ( Exception ex ) {
+          throw Exceptions.toUndeclared( ex );
+        }
+
         final EntityTransaction db = Entities.get( VmInstance.class );
         try {
           final VmType vmType = VmTypes.getVmType( input.getInstanceType( ).getName( ) );
-          final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) );
           Partition partition;
           try {
             partition = Partitions.lookupByName( input.getPlacement( ) );
@@ -387,30 +418,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             userData = new byte[0];
           }
           
-          final List<NetworkGroup> networks = Lists.newArrayList( );
-          try {
-            networks.addAll( Lists.transform( input.getGroupNames( ), transformNetworkNames( userFullName ) ) );
-          } catch ( final Exception ex ) {
-            LOG.error( ex, ex );
-          }
-          
-          PrivateNetworkIndex index = null;
-          ExtantNetwork exNet;
-          final NetworkGroup network = ( !networks.isEmpty( )
-            ? networks.get( 0 )
-            : null );
-          if ( network != null ) {
-            if ( !network.hasExtantNetwork( ) ) {
-              exNet = network.reclaim( input.getNetParams( ).getVlan( ) );
-            } else {
-              exNet = network.extantNetwork( );
-              if ( !exNet.getTag( ).equals( input.getNetParams( ).getVlan( ) ) ) {
-                exNet = null;
-              } else {
-                index = exNet.reclaimNetworkIndex( input.getNetParams( ).getNetworkIndex( ) );
-              }
-            }
-          }
           final VmInstance vmInst = new VmInstance.Builder( ).owner( userFullName )
                                                              .withIds( input.getInstanceId( ), input.getReservationId( ) )
                                                              .bootRecord( bootSet,

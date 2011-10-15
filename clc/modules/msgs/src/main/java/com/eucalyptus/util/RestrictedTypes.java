@@ -230,7 +230,7 @@ public class RestrictedTypes {
         throw new AuthException( "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
       }
     }
-    return runAllocator( quantity, allocator, (Predicate) Predicates.alwaysTrue( ) );
+    return runAllocator( quantity, allocator, ( Predicate ) Predicates.alwaysTrue( ) );
   }
   
   /**
@@ -324,6 +324,10 @@ public class RestrictedTypes {
     return doPrivileged( identifier, resolverFunction, false );
   }
   
+  @SuppressWarnings( "rawtypes" )
+  public static <T extends RestrictedType> T doPrivilegedWithoutOwner( String identifier, Function<String, T> resolverFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return doPrivileged( identifier, resolverFunction, true );
+  }
   /**
    * Uses the provided {@code lookupFunction} to resolve the {@code identifier} to the underlying
    * object {@code T} with privileges determined by the current messaging context.
@@ -339,7 +343,7 @@ public class RestrictedTypes {
    * @throws IllegalContextAccessException if the current request context cannot be determined.
    */
   @SuppressWarnings( "rawtypes" )
-  public static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> resolverFunction, boolean ignoreOwningAccount ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  private static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> resolverFunction, boolean ignoreOwningAccount ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     assertThat( "Resolver function must be not null: " + identifier, resolverFunction, notNullValue( ) );
     Context ctx = Contexts.lookup( );
     if ( ctx.hasAdministrativePrivileges( ) ) {
@@ -393,11 +397,15 @@ public class RestrictedTypes {
     return filterPrivileged( false );
   }
   
+  public static <T extends RestrictedType> Predicate<T> filterPrivilegedWithoutOwner( ) {
+    return filterPrivileged( true );
+  }
+  
   /*
    * Please, ignoreOwningAccount here is necessary. Consult me first before making any changes.
    *  -- Ye Wen (wenye@eucalyptus.com)
    */
-  public static <T extends RestrictedType> Predicate<T> filterPrivileged( final boolean ignoreOwningAccount ) {
+  private static <T extends RestrictedType> Predicate<T> filterPrivileged( final boolean ignoreOwningAccount ) {
     return new Predicate<T>( ) {
       
       @Override
