@@ -146,7 +146,7 @@ public class Classes {
         return ret;
       } else {
         for ( final Class<?> t : types ) {
-          if ( t == null || t instanceof Object ) {
+          if ( t == null || t == Object.class ) {
             continue;
           } else if ( t.isInterface( ) ) {
             ret.add( t );
