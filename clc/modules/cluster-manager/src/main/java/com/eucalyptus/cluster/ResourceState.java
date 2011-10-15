@@ -75,6 +75,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
+import com.eucalyptus.cluster.VmTypeAvailability.ZeroTypeAvailability;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
@@ -85,8 +86,8 @@ import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.ResourceType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
-public class ClusterNodeState {
-  private static Logger                                      LOG = Logger.getLogger( ClusterNodeState.class );
+public class ResourceState {
+  private static Logger                                      LOG = Logger.getLogger( ResourceState.class );
   private ConcurrentNavigableMap<String, VmTypeAvailability> typeMap;
   private NavigableSet<ResourceToken>                        pendingTokens;
   private NavigableSet<ResourceToken>                        submittedTokens;
@@ -94,7 +95,7 @@ public class ClusterNodeState {
   private int                                                virtualTimer;
   private String                                             clusterName;
   
-  public ClusterNodeState( String clusterName ) {
+  public ResourceState( String clusterName ) {
     this.clusterName = clusterName;
     this.typeMap = new ConcurrentSkipListMap<String, VmTypeAvailability>( );
     
@@ -107,14 +108,14 @@ public class ClusterNodeState {
   }
   
   public synchronized List<ResourceToken> requestResourceAllocation( Allocation allocInfo, int minAmount, int maxAmount ) throws NotEnoughResourcesException {
-    VmTypeAvailability vmType = this.typeMap.get( allocInfo.getVmType( ).getName( ) );
-    Integer available = vmType.getAvailable( );
+    VmTypeAvailability vmTypeStatus = this.typeMap.get( allocInfo.getVmType( ).getName( ) );
+    Integer available = vmTypeStatus.getAvailable( );
     NavigableSet<VmTypeAvailability> sorted = this.sorted( );
     LOG.debug( LogUtil.header( "BEFORE ALLOCATE" ) );
     LOG.debug( sorted );
     //:: if not enough, then bail out :://
     Integer quantity = minAmount;
-    if ( vmType.getAvailable( ) < minAmount ) {
+    if ( vmTypeStatus.getAvailable( ) < minAmount ) {
       throw new NotEnoughResourcesException( "Not enough resources (" + available + " < " + minAmount + ": vm instances." );
     } else {
       quantity = ( maxAmount < available
@@ -122,8 +123,8 @@ public class ClusterNodeState {
         : available );
     }
     
-    Set<VmTypeAvailability> tailSet = sorted.tailSet( vmType );
-    Set<VmTypeAvailability> headSet = sorted.headSet( vmType );
+    Set<VmTypeAvailability> tailSet = sorted.tailSet( vmTypeStatus );
+    Set<VmTypeAvailability> headSet = sorted.headSet( vmTypeStatus );
     LOG.debug( LogUtil.header( "DURING ALLOCATE" ) );
     LOG.debug( LogUtil.subheader( "TAILSET: \n" + tailSet ) );
     LOG.debug( LogUtil.subheader( "HEADSET: \n" + headSet ) );
@@ -131,7 +132,7 @@ public class ClusterNodeState {
     for ( VmTypeAvailability v : tailSet )
       v.decrement( quantity );
     for ( VmTypeAvailability v : headSet )
-      v.setAvailable( vmType.getAvailable( ) );
+      v.setAvailable( vmTypeStatus.getAvailable( ) );
     LOG.debug( LogUtil.header( "AFTER ALLOCATE" ) );
     LOG.debug( sorted );
     int seqNumber = this.virtualTimer++;
@@ -145,7 +146,6 @@ public class ClusterNodeState {
     return tokenList;
   }
   
-
   public synchronized void releaseToken( ResourceToken token ) {
     EventRecord.caller( ResourceToken.class, EventType.TOKEN_RETURNED, token.toString( ) ).info( );
     this.pendingTokens.remove( token );
@@ -168,7 +168,9 @@ public class ClusterNodeState {
     if ( this.submittedTokens.remove( token ) || this.pendingTokens.remove( token ) ) {
       this.redeemedTokens.add( token );
     } else {
-      LOG.error( "Failed to find token: " + token + "\n" + Joiner.on("\n" ).join( "pending", this.pendingTokens, "submitted", this.submittedTokens, "redeemed", this.redeemedTokens ), new NoSuchTokenException( ) );
+      LOG.error( "Failed to find token: " + token + "\n"
+                     + Joiner.on( "\n" ).join( "pending", this.pendingTokens, "submitted", this.submittedTokens, "redeemed", this.redeemedTokens ),
+                 new NoSuchTokenException( ) );
     }
   }
   
@@ -182,7 +184,7 @@ public class ClusterNodeState {
     for ( ResourceToken t : this.redeemedTokens )
       redeemed += t.getAmount( );
     outstandingCount = pending + submitted;
-    EventRecord.here( ClusterNodeState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName,
+    EventRecord.here( ResourceState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName,
                       String.format( "outstanding=%d:pending=%d:submitted=%d:redeemed=%d", outstandingCount, pending, submitted, redeemed ) ).info( );
     this.redeemedTokens.clear( );
     
@@ -197,8 +199,8 @@ public class ClusterNodeState {
       vmAvailable.setMax( rsc.getMaxInstances( ) );
       after.append( String.format( ":%s:%d/%d", vmAvailable.getType( ).getName( ), vmAvailable.getAvailable( ), vmAvailable.getMax( ) ) );
     }
-    EventRecord.here( ClusterNodeState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, "ANTE" + before.toString( ) ).info( );
-    EventRecord.here( ClusterNodeState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, "POST" + after.toString( ) ).info( );
+    EventRecord.here( ResourceState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, "ANTE" + before.toString( ) ).info( );
+    EventRecord.here( ResourceState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, "POST" + after.toString( ) ).info( );
   }
   
   private NavigableSet<VmTypeAvailability> sorted( ) {
@@ -218,7 +220,7 @@ public class ClusterNodeState {
     return new ResourceComparator( vmTypeInfo );
   }
   
-  public static class ResourceComparator implements Comparator<ClusterNodeState> {
+  public static class ResourceComparator implements Comparator<ResourceState> {
     
     private VmTypeInfo vmTypeInfo;
     
@@ -226,7 +228,7 @@ public class ClusterNodeState {
       this.vmTypeInfo = vmTypeInfo;
     }
     
-    public int compare( final ClusterNodeState o1, final ClusterNodeState o2 ) {
+    public int compare( final ResourceState o1, final ResourceState o2 ) {
       return o1.getAvailability( this.vmTypeInfo.getName( ) ).getAvailable( ) - o2.getAvailability( this.vmTypeInfo.getName( ) ).getAvailable( );
     }
   }
@@ -235,6 +237,107 @@ public class ClusterNodeState {
   public String toString( ) {
     return String.format( "ClusterNodeState pending=%s redeemed=%s submitted=%s",
                           this.pendingTokens, this.redeemedTokens, this.submittedTokens );
+  }
+  
+  public static class VmTypeAvailability implements Comparable {
+    private VmType type;
+    private int    max;
+    private int    available;
+    
+    public VmTypeAvailability( final VmType type, final int max, final int available ) {
+      this.type = type;
+      this.max = max;
+      this.available = available;
+    }
+    
+    public VmType getType( ) {
+      return type;
+    }
+    
+    public void decrement( int quantity ) {
+      this.available -= quantity;
+      this.available = ( this.available < 0 )
+        ? 0
+        : this.available;
+    }
+    
+    public int getMax( ) {
+      return max;
+    }
+    
+    public void setMax( final int max ) {
+      this.max = max;
+    }
+    
+    public int getAvailable( ) {
+      return available;
+    }
+    
+    public void setAvailable( final int available ) {
+      this.available = available;
+    }
+    
+    @Override
+    public boolean equals( final Object o ) {
+      if ( this == o ) return true;
+      if ( !( o instanceof VmTypeAvailability ) ) return false;
+      
+      VmTypeAvailability that = ( VmTypeAvailability ) o;
+      
+      if ( !type.equals( that.type ) ) return false;
+      
+      return true;
+    }
+    
+    @Override
+    public int hashCode( ) {
+      return type.hashCode( );
+    }
+    
+    public int compareTo( final Object o ) {
+      VmTypeAvailability v = ( VmTypeAvailability ) o;
+      if ( v.getAvailable( ) == this.getAvailable( ) ) return this.type.compareTo( v.getType( ) );
+      return v.getAvailable( ) - this.getAvailable( );
+    }
+    
+    @Override
+    public String toString( ) {
+      return "VmTypeAvailability " +
+             " " + type +
+             " " + available +
+             " / " + max;
+    }
+    
+    public static VmTypeAvailability ZERO = new ZeroTypeAvailability( );
+    
+    static class ZeroTypeAvailability extends VmTypeAvailability {
+      ZeroTypeAvailability( ) {
+        super( new VmType( "ZERO", -1, -1, -1 ), 0, 0 );
+      }
+      
+      @Override
+      public int compareTo( final Object o ) {
+        VmTypeAvailability v = ( VmTypeAvailability ) o;
+        if ( v == ZERO ) return 0;
+        if ( v.getAvailable( ) > 0 )
+          return 1;
+        else return -1;
+      }
+      
+      @Override
+      public void setAvailable( final int available ) {}
+      
+      @Override
+      public void decrement( final int quantity ) {}
+      
+      @Override
+      public boolean equals( final Object o ) {
+        if ( this == o ) return true;
+        return false;
+      }
+      
+    }
+    
   }
   
 }

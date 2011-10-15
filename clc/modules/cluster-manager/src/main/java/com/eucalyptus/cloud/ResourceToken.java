@@ -69,6 +69,7 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
+import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
@@ -78,10 +79,12 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.PrivateNetworkIndex;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmInstance.Transitions;
 
-public class ResourceToken implements Comparable<ResourceToken> {
+public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceToken> {
   private static Logger       LOG    = Logger.getLogger( ResourceToken.class );
   private final Allocation    allocation;
   private final Integer       launchIndex;
@@ -171,6 +174,13 @@ public class ResourceToken implements Comparable<ResourceToken> {
         this.address.release( );
       } catch ( Exception ex ) {
         LOG.error( ex, ex );
+      }
+    }
+    if ( this.vmInst != null ) {
+      try {
+        this.vmInst.release( );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
       }
     }
   }
@@ -272,6 +282,16 @@ public class ResourceToken implements Comparable<ResourceToken> {
   
   public VmInstance getVmInstance( ) {
     return this.vmInst;
+  }
+  
+  @Override
+  public String getDisplayName( ) {
+    return this.getInstanceId( );
+  }
+  
+  @Override
+  public OwnerFullName getOwner( ) {
+    return this.allocation.getOwnerFullName( );
   }
   
 }

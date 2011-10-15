@@ -160,7 +160,7 @@ public class VolumeManager {
               throw new RuntimeException( ex );
             }
           }};
-        Volume newVol = RestrictedTypes.allocate( Long.valueOf( newSize ), allocator );
+        Volume newVol = RestrictedTypes.doAllocations( Long.valueOf( newSize ), allocator );
         CreateVolumeResponseType reply = request.getReply( );
         reply.setVolume( newVol.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) ) );
         return reply;

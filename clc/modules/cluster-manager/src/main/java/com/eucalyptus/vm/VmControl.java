@@ -78,6 +78,11 @@ import org.mule.RequestContext;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.cloud.ResourceToken;
+import com.eucalyptus.cloud.run.AdmissionControl;
+import com.eucalyptus.cloud.run.Allocations;
+import com.eucalyptus.cloud.run.ClusterAllocator;
+import com.eucalyptus.cloud.run.VerifyMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cluster.Cluster;
@@ -91,10 +96,12 @@ import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -105,6 +112,7 @@ import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
@@ -142,6 +150,8 @@ import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeType;
+import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.StartInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.StartInstancesType;
@@ -157,6 +167,40 @@ public class VmControl {
   
   private static Logger LOG = Logger.getLogger( VmControl.class );
   
+  public static RunInstancesResponseType runInstances( RunInstancesType request ) throws MetadataException, AuthException {
+    Allocation allocInfo = Allocations.begin( request );
+    try {
+      Predicates.and( VerifyMetadata.get( ), AdmissionControl.get( ), ClusterAllocator.get( ) ).apply( allocInfo );
+    } catch ( Exception ex1 ) {
+      LOG.trace( ex1, ex1 );
+    }
+    RunInstancesResponseType reply = allocInfo.getRequest( ).getReply( );
+    List<String> networkNames = Lists.transform( allocInfo.getNetworkGroups( ), new Function<NetworkGroup, String>( ) {
+      
+      @Override
+      public String apply( NetworkGroup arg0 ) {
+        return arg0.getDisplayName( );
+      }
+    } );
+    ReservationInfoType reservation = new ReservationInfoType( allocInfo.getReservationId( ),
+                                                               allocInfo.getOwnerFullName( ).getAccountNumber( ),
+                                                               Lists.newArrayList( networkNames ) );
+    EntityTransaction db = Entities.get( VmInstance.class );
+    try {
+      for ( ResourceToken allocToken : allocInfo.getAllocationTokens( ) ) {
+        VmInstance entity = Entities.merge( allocToken.getVmInstance( ) );
+        reservation.getInstancesSet( ).add( VmInstances.transform( entity ) );
+      }
+      db.commit( );
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw Exceptions.toUndeclared( ex );
+    }
+    reply.setRsvInfo( reservation );
+    return reply;
+  }
+  
   public Allocation allocate( final Allocation allocInfo ) throws EucalyptusCloudException {
     return allocInfo;
   }
@@ -166,14 +210,14 @@ public class VmControl {
     final ArrayList<String> instancesSet = msg.getInstancesSet( );
     
     final Multimap<String, RunningInstancesItemType> instanceMap = TreeMultimap.create( );
-    final Map<String,ReservationInfoType> reservations = Maps.newHashMap( );
+    final Map<String, ReservationInfoType> reservations = Maps.newHashMap( );
     Predicate<VmInstance> filter = CloudMetadatas.filterPrivilegesById( msg.getInstancesSet( ) );
     Context ctx = Contexts.lookup( );
     OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( )
       ? null
       : ctx.getUserFullName( ).asAccountFullName( );
     try {
-      for ( final VmInstance vm :  VmInstances.list( ownerFullName, filter ) ) {
+      for ( final VmInstance vm : VmInstances.list( ownerFullName, filter ) ) {
         if ( !instancesSet.isEmpty( ) && !instancesSet.contains( vm.getInstanceId( ) ) ) {
           continue;
         }
@@ -193,7 +237,8 @@ public class VmControl {
                 RunningInstancesItemType ret = VmInstances.transform( vm );
                 if ( ret != null && vm.getReservationId( ) != null ) {
                   if ( instanceMap.put( vm.getReservationId( ), VmInstances.transform( vm ) ) && !reservations.containsKey( vm.getReservationId( ) ) ) {
-                    reservations.put( vm.getReservationId( ), new ReservationInfoType( vm.getReservationId( ), vm.getOwner( ).getAccountNumber( ), vm.getNetworkNames( ) ) );
+                    reservations.put( vm.getReservationId( ),
+                                      new ReservationInfoType( vm.getReservationId( ), vm.getOwner( ).getAccountNumber( ), vm.getNetworkNames( ) ) );
                   }
                 }
               } catch ( Exception ex1 ) {
@@ -259,20 +304,20 @@ public class VmControl {
                 oldState = newState = VmState.TERMINATED.getName( );
                 VmInstances.delete( instanceId );
               } catch ( final NoSuchElementException e ) {
-              }
-              results.add( new TerminateInstancesItemType( instanceId, oldCode, oldState, newCode, newState ) );
-              db.commit( );
-            } catch ( final TransactionException e ) {
-              db.rollback( );
-            } catch ( final NoSuchElementException e ) {
-              db.rollback( );
-            }
-          } catch ( Exception ex ) {
-            Logs.exhaust( ).error( ex, ex );
-            db.rollback( );
-          }
-          return true;
-        }
+                     }
+                   results.add( new TerminateInstancesItemType( instanceId, oldCode, oldState, newCode, newState ) );
+                   db.commit( );
+                 } catch ( final TransactionException e ) {
+                   db.rollback( );
+                 } catch ( final NoSuchElementException e ) {
+                   db.rollback( );
+                 }
+               } catch ( Exception ex ) {
+                 Logs.exhaust( ).error( ex, ex );
+                 db.rollback( );
+               }
+               return true;
+             }
       } );
       reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
       return reply;
@@ -503,27 +548,26 @@ public class VmControl {
     reply.set_return( true );
     final Context ctx = Contexts.lookup( );
     try {
-    	final VmInstance v = VmInstances.lookupByBundleId( request.getBundleId( ) );        
-    	BundleState bundleState = v.getRuntimeState().getBundleTaskState();
-    	if(!(bundleState == BundleState.pending || bundleState == BundleState.storing))
-    		throw new EucalyptusCloudException( "Can't cancel bundle task when the bundle task is "+bundleState);
-    	    		
-    	if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) 
-    	{
-	        v.getRuntimeState( ).updateBundleTaskState( BundleState.canceling );
-	        LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, ctx.getUserFullName( ).toString( ),
-	                                    v.getRuntimeState( ).getBundleTask( ).getBundleId( ),
-	                                    v.getInstanceId( ) ) );
-	        
-	        final Cluster cluster = Clusters.lookup( v.lookupPartition( ) );
-	        
-	        request.setInstanceId( v.getInstanceId( ) );
-	        reply.setTask( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
-	        AsyncRequests.newRequest( Bundles.cancelCallback( request ) ).dispatch( cluster.getConfiguration( ) );
+      final VmInstance v = VmInstances.lookupByBundleId( request.getBundleId( ) );
+      BundleState bundleState = v.getRuntimeState( ).getBundleTaskState( );
+      if ( !( bundleState == BundleState.pending || bundleState == BundleState.storing ) )
+        throw new EucalyptusCloudException( "Can't cancel bundle task when the bundle task is " + bundleState );
+      
+      if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
+        v.getRuntimeState( ).updateBundleTaskState( BundleState.canceling );
+        LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, ctx.getUserFullName( ).toString( ),
+                                      v.getRuntimeState( ).getBundleTask( ).getBundleId( ),
+                                      v.getInstanceId( ) ) );
+        
+        final Cluster cluster = Clusters.lookup( v.lookupPartition( ) );
+        
+        request.setInstanceId( v.getInstanceId( ) );
+        reply.setTask( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
+        AsyncRequests.newRequest( Bundles.cancelCallback( request ) ).dispatch( cluster.getConfiguration( ) );
         return reply;
-    	} else {
-    		throw new EucalyptusCloudException( "Failed to find bundle task: " + request.getBundleId( ) );
-    	}
+      } else {
+        throw new EucalyptusCloudException( "Failed to find bundle task: " + request.getBundleId( ) );
+      }
     } catch ( final NoSuchElementException e ) {
       throw new EucalyptusCloudException( "Failed to find bundle task: " + request.getBundleId( ) );
     }

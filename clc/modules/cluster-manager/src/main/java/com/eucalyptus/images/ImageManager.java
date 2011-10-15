@@ -168,7 +168,7 @@ public class ImageManager {
           }
         }
       };
-      imageInfo = RestrictedTypes.allocate( allocator );
+      imageInfo = RestrictedTypes.doAllocation( allocator );
       imageInfo.getDeviceMappings( ).addAll( vbr );
     } else if ( rootDevName != null && Iterables.any( request.getBlockDeviceMappings( ), Images.findEbsRoot( rootDevName ) ) ) {
       Supplier<ImageInfo> allocator = new Supplier<ImageInfo>( ) {
@@ -184,7 +184,7 @@ public class ImageManager {
           }
         }
       };
-      imageInfo = RestrictedTypes.allocate( allocator );
+      imageInfo = RestrictedTypes.doAllocation( allocator );
     } else {
       throw new EucalyptusCloudException( "Malformed registration. A request must specify either " +
                                           "a manifest path or a snapshot to use for BFE. Provided values are: imageLocation="

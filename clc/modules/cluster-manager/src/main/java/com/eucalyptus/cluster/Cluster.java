@@ -80,6 +80,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cloud.CloudMetadata.AvailabilityZoneMetadata;
+import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.cluster.callback.ClusterCertsCallback;
 import com.eucalyptus.cluster.callback.DisableServiceCallback;
 import com.eucalyptus.cluster.callback.EnableServiceCallback;
@@ -162,7 +163,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   private final ConcurrentNavigableMap<String, NodeInfo> nodeMap;
   private final BlockingQueue<Throwable>                 pendingErrors                = new LinkedBlockingDeque<Throwable>( );
   private final ClusterState                             state;
-  private final ClusterNodeState                         nodeState;
+  private final ResourceState                         nodeState;
   private NodeLogInfo                                    lastLog                      = new NodeLogInfo( );
   private boolean                                        hasClusterCert               = false;
   private boolean                                        hasNodeCert                  = false;
@@ -338,7 +339,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     this.configuration = configuration;
     this.fullName = configuration.getFullName( );
     this.state = new ClusterState( configuration.getName( ) );
-    this.nodeState = new ClusterNodeState( configuration.getName( ) );
+    this.nodeState = new ResourceState( configuration.getName( ) );
     this.nodeMap = new ConcurrentSkipListMap<String, NodeInfo>( );
     this.stateMachine = new StateMachineBuilder<Cluster, State, Transition>( this, State.PENDING ) {
       {
@@ -553,7 +554,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     return this.state;
   }
   
-  public ClusterNodeState getNodeState( ) {
+  public ResourceState getNodeState( ) {
     return this.nodeState;
   }
   

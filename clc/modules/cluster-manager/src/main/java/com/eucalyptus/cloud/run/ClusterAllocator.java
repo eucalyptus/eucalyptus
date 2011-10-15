@@ -82,7 +82,7 @@ import com.eucalyptus.cluster.callback.VmRunCallback;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
@@ -96,18 +96,20 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Callback.Success;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.util.async.StatefulMessageSet;
 import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import edu.emory.mathcs.backport.java.util.concurrent.TimeUnit;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
-import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
@@ -115,8 +117,6 @@ import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
-import edu.ucsb.eucalyptus.msgs.StartNetworkResponseType;
-import edu.ucsb.eucalyptus.msgs.StartNetworkType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class ClusterAllocator implements Runnable {
@@ -131,8 +131,25 @@ public class ClusterAllocator implements Runnable {
   private final Allocation          allocInfo;
   private Cluster                   cluster;
   
-  public static void create( final Allocation allocInfo ) {
-    Threads.lookup( ClusterController.class, ClusterAllocator.class ).submit( new ClusterAllocator( allocInfo ) );
+  enum SubmitAllocation implements Predicate<Allocation> {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( Allocation allocInfo ) {
+      try {
+        EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, LogUtil.dumpObject( allocInfo ) ).trace( );
+        Threads.lookup( Eucalyptus.class, ClusterAllocator.class ).submit( new ClusterAllocator( allocInfo ) );
+        return true;
+      } catch ( Exception ex ) {
+        allocInfo.abort( );
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+    
+  };
+  
+  public static Predicate<Allocation> get( ) {
+    return SubmitAllocation.INSTANCE;
   }
   
   private ClusterAllocator( final Allocation allocInfo ) {

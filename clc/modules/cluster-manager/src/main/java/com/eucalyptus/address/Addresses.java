@@ -62,7 +62,6 @@
  */
 package com.eucalyptus.address;
 
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -79,6 +78,7 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.RestrictedTypes;
@@ -90,6 +90,7 @@ import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -184,10 +185,11 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     }
     
   }
-  @Resolver(Address.class)
-  public enum Lookup implements Function<String,Address> {
+  
+  @Resolver( Address.class )
+  public enum Lookup implements Function<String, Address> {
     INSTANCE;
-
+    
     @Override
     public Address apply( String input ) {
       Address address = Addresses.getInstance( ).lookup( input );
@@ -212,10 +214,18 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     return address;
   }
   
-  public static Address allocate( BaseMessage request ) throws EucalyptusCloudException, NotEnoughResourcesException {
-    Context ctx = Contexts.lookup( );
-    return Addresses.getAddressManager( ).allocateNext( ctx.getUserFullName( ) );
-  }
+  public enum Allocator implements Supplier<Address> {
+    INSTANCE;
+    @Override
+    public Address get( ) {
+      Context ctx = Contexts.lookup( );
+      try {
+        return Addresses.getAddressManager( ).allocateNext( ctx.getUserFullName( ) );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+  };
   
   public static void system( VmInstance vm ) {
     try {

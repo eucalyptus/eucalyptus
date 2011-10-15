@@ -1579,4 +1579,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   void setNetworkConfig( VmNetworkConfig networkConfig ) {
     this.networkConfig = networkConfig;
   }
+
+  public void release( ) {
+    try {
+      Transitions.DELETE.apply( this );
+    } catch ( Exception ex ) {
+    }
+  }
 }
