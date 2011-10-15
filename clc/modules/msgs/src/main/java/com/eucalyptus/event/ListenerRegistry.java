@@ -38,7 +38,7 @@ public class ListenerRegistry {
   }
   
   @SuppressWarnings( "unchecked" )
-  public void register( final Object type, final EventListener listener ) {
+  public void register( Object type, final EventListener listener ) {
     final List<Class<?>> lookupTypes = Classes.genericsToClasses( listener );
     lookupTypes.remove( Event.class );
     /** GRZE: event type is not specified by the generic type of listeners EventListener decl or is <Event> **/
@@ -57,15 +57,14 @@ public class ListenerRegistry {
                                                               ? type.getClass( ).getCanonicalName( )
                                                               : "null" ) ) );
     } else {
-      if ( type == null && !lookupTypes.isEmpty( ) ) {
-        this.eventMap.register( lookupTypes.get( 0 ), listener );
-      } else if ( ( type instanceof Class ) && Event.class.isAssignableFrom( ( Class ) type ) ) {
+      Class<?> key = ( type instanceof Class ? type : type.getClass( ) );
+      if ( Event.class.isAssignableFrom( key ) ) {
         this.eventMap.register( ( Class ) type, listener );
       } else {
-        if ( !this.registryMap.containsKey( type.getClass( ) ) ) {
-          this.registryMap.put( type.getClass( ), new ReentrantListenerRegistry( ) );
+        if ( !this.registryMap.containsKey( key ) ) {
+          this.registryMap.put( key, new ReentrantListenerRegistry( ) );
         }
-        this.registryMap.get( type.getClass( ) ).register( type, listener );
+        this.registryMap.get( key ).register( type, listener );
       }
     }
   }
