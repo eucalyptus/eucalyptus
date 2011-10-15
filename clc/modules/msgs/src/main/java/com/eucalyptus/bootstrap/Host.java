@@ -77,6 +77,24 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 
 public class Host implements java.io.Serializable, Comparable<Host> {
+  public enum DbFilter implements Predicate<Host> {
+    INSTANCE;
+    @Override
+    public boolean apply( Host arg0 ) {
+      return arg0.hasDatabase( );
+    }
+    
+  }
+  
+  public enum NonLocalFilter implements Predicate<Host> {
+    INSTANCE;
+    @Override
+    public boolean apply( Host arg0 ) {
+      return !arg0.isLocalHost( );
+    }
+    
+  }
+  
   private static final long          serialVersionUID = 1;
   private static Logger              LOG              = Logger.getLogger( Host.class );
   private final Address              groupsId;
@@ -88,28 +106,20 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   private Long                       lastTime         = 0l;
   private Integer                    epoch;
   
-  Host( Address jgroupsId, InetAddress bindAddress, Integer epoch, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> hostAddresses ) {
-    this.groupsId = jgroupsId;
-    this.bindAddress = bindAddress;
-    this.update( epoch, hasDb, hasBootstrapped, hostAddresses );
-  }
-  
   Host( Address jgroupsId ) {
     this.groupsId = HostManager.getInstance( ).getMembershipChannel( ).getAddress( );
     this.bindAddress = Internets.localHostInetAddress( );
-    this.update( Topology.epoch( ), BootstrapArgs.isCloudController( ), false, Internets.getAllInetAddresses( ) );
-  }
-  
-  synchronized void update( Integer epoch, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> addresses ) {
-    this.epoch = epoch;
+    this.epoch = Topology.epoch( );
     this.lastTime = this.timestamp.getAndSet( System.currentTimeMillis( ) );
     Logs.exhaust( ).debug( "Applying update for host: " + this );
-    ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( addresses ) );
-    this.hasBootstrapped = hasBootstrapped;
-    this.hasDatabase = hasDb;
+    ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( Internets.getAllInetAddresses( ) ) );
+    this.hasBootstrapped = Bootstrap.isFinished( );
+    this.hasDatabase = BootstrapArgs.isCloudController( );
     this.hostAddresses = newAddrs;
     LOG.trace( "Updated host: " + this );
   }
+  
+  synchronized void update( Integer epoch, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> addresses ) {}
   
   public Address getGroupsId( ) {
     return this.groupsId;
@@ -164,10 +174,18 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     return this.getGroupsId( ).compareTo( that.getGroupsId( ) );
   }
   
-  @Override
-  public String toString( ) {
-    return String.format( "Host:id=%s:bindAddr=%s:allAddrs=%s:db=%s:booted=%s:lastTime=%s", this.groupsId, this.bindAddress, this.hostAddresses,
-                          this.hasDatabase, this.hasBootstrapped, new Date( this.lastTime ) );
+  boolean isDirty( ) {
+    Host that = new Host( this.groupsId );
+    boolean result = false;
+    result |= !this.hasBootstrapped.equals( that.hasBootstrapped );
+    result |= !this.hasDatabase.equals( that.hasDatabase );
+    result |= !this.epoch.equals( that.epoch );
+    result |= !this.hostAddresses.equals( that.hostAddresses );
+    if ( result ) {
+      this.lastTime = this.timestamp.get( );
+      this.timestamp.set( System.currentTimeMillis( ) );
+    }
+    return result;
   }
   
   public boolean isLocalHost( ) {
@@ -178,7 +196,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     return this.hasBootstrapped;
   }
   
-  public void markBootstrapped( ) {
+  void markBootstrapped( ) {
     this.hasBootstrapped = true;
   }
   
@@ -186,25 +204,4 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     return this.epoch;
   }
   
-  public void setEpoch( Integer epoch ) {
-    this.epoch = epoch;
-  }
-  
-  public enum DbFilter implements Predicate<Host> {
-    INSTANCE;
-    @Override
-    public boolean apply( Host arg0 ) {
-      return arg0.hasDatabase( );
-    }
-    
-  }
-  
-  public enum NonLocalFilter implements Predicate<Host> {
-    INSTANCE;
-    @Override
-    public boolean apply( Host arg0 ) {
-      return !arg0.isLocalHost( );
-    }
-    
-  }
 }

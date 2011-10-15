@@ -73,10 +73,13 @@ import org.jgroups.Address;
 import org.jgroups.View;
 import org.jgroups.blocks.ReplicatedHashMap;
 import com.eucalyptus.bootstrap.Host.DbFilter;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.event.Event;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Hertz;
+import com.eucalyptus.event.Listeners;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -90,6 +93,17 @@ public class Hosts {
   private static final Logger                     LOG                    = Logger.getLogger( Hosts.class );
   private static ReplicatedHashMap<Address, Host> hostMap;
   private static Host                             localHost;
+  
+  enum HostBootstrapEventListener implements EventListener<Hertz> {
+    INSTANCE;
+    
+    @Override
+    public void fireEvent( Hertz event ) {
+      if ( Hosts.localHost.isDirty( ) ) {
+        hostMap.replace( Hosts.localHost.getGroupsId( ), localHost );
+      }
+    }
+  }
   
   enum HostMapStateListener implements ReplicatedHashMap.Notification<Address, Host> {
     INSTANCE;
@@ -146,6 +160,7 @@ public class Hosts {
         localHost = new Host( HostManager.getInstance( ).getMembershipChannel( ).getAddress( ) );
         LOG.info( "Setup localhost state: " + localHost );
         hostMap.put( localHost.getGroupsId( ), localHost );
+        Listeners.register( HostBootstrapEventListener.INSTANCE );
         LOG.info( "Added localhost to system state: " + localHost );
         LOG.info( "System view:\n" + Joiner.on( "\n=> " ).join( hostMap.values( ) ) );
         if ( !BootstrapArgs.isCloudController( ) ) {
@@ -195,32 +210,6 @@ public class Hosts {
   
   public static Host localHost( ) {
     return localHost;
-  }
-  
-  public static List<Host> change( List<Address> currentMembers ) {
-    /** determine hosts to remove in this view **/
-    List<Address> removeMembers = Lists.newArrayList( hostMap.keySet( ) );
-    List<Host> removedHosts = Lists.newArrayList( );
-    if ( removeMembers.removeAll( currentMembers ) ) {
-      for ( Address addr : removeMembers ) {
-        Host removedHost = hostMap.remove( addr );
-        removedHosts.add( removedHost );
-        LOG.warn( "Failure detected for host: " + removedHost );//TODO:GRZE: review.
-      }
-    }
-    LOG.debug( "Current host entries: " );
-    for ( Host host : hostMap.values( ) ) {
-      LOG.debug( "-> " + host );
-    }
-    LOG.debug( "Removed host entries: " );
-    for ( Host host : removedHosts ) {
-      LOG.debug( "-> " + host );
-      if ( host.hasDatabase( ) ) {
-        Eucalyptus.teardownServiceDependencies( host.getBindAddress( ) );
-      }
-      Empyrean.teardownServiceDependencies( host.getBindAddress( ) );
-    }
-    return removedHosts;
   }
   
 }

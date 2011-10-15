@@ -1,20 +1,22 @@
 package com.eucalyptus.event;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Classes;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Maps;
 
 public class ListenerRegistry {
-  private static Logger                                     LOG       = Logger.getLogger( ListenerRegistry.class );
-  private static ListenerRegistry                           singleton = getInstance( );
-  private Map<Class, ReentrantListenerRegistry>             registryMap;
-  private ReentrantListenerRegistry<Class<? extends Event>> eventMap;
+  private static Logger                                           LOG       = Logger.getLogger( ListenerRegistry.class );
+  private static ListenerRegistry                                 singleton = getInstance( );
+  private final Map<Class, ReentrantListenerRegistry>             registryMap;
+  private final ReentrantListenerRegistry<Class<? extends Event>> eventMap;
   
   public static ListenerRegistry getInstance( ) {
     synchronized ( ListenerRegistry.class ) {
@@ -33,20 +35,25 @@ public class ListenerRegistry {
   }
   
   @SuppressWarnings( "unchecked" )
-  public void register( Object type, EventListener listener ) {
-    if ( type instanceof Class && Event.class.isAssignableFrom( ( Class ) type ) ) {
-      this.eventMap.register( ( Class ) type, listener );
-    } else {
-      if ( !this.registryMap.containsKey( type.getClass( ) ) ) {
-        this.registryMap.put( type.getClass( ), new ReentrantListenerRegistry( ) );
+  public void register( final Object type, final EventListener listener ) {
+    final List<Class<?>> lookupTypes = Classes.genericsToClasses( listener );
+    if ( lookupTypes.isEmpty( ) || lookupTypes.contains( Event.class ) || lookupTypes.get( 0 ).isAssignableFrom( Classes.typeOf( type ) ) ) {
+      if ( ( type instanceof Class ) && Event.class.isAssignableFrom( ( Class ) type ) ) {
+        this.eventMap.register( ( Class ) type, listener );
+      } else {
+        if ( !this.registryMap.containsKey( type.getClass( ) ) ) {
+          this.registryMap.put( type.getClass( ), new ReentrantListenerRegistry( ) );
+        }
+        this.registryMap.get( type.getClass( ) ).register( type, listener );
       }
-      this.registryMap.get( type.getClass( ) ).register( type, listener );
+    } else {
+      throw Exceptions.fatal( new IllegalArgumentException( "Failed to register listener " + listener.getClass( ).getCanonicalName( ) + "because the declared generic type " + lookupTypes + " is not assignable from the provided event type: " + type.getClass( ).getCanonicalName( ) ) );
     }
   }
   
   @SuppressWarnings( "unchecked" )
-  public void deregister( Object type, EventListener listener ) {
-    if ( type instanceof Class && Event.class.isAssignableFrom( ( Class ) type ) ) {
+  public void deregister( final Object type, final EventListener listener ) {
+    if ( ( type instanceof Class ) && Event.class.isAssignableFrom( ( Class ) type ) ) {
       this.eventMap.deregister( ( Class ) type, listener );
     } else {
       if ( !this.registryMap.containsKey( type.getClass( ) ) ) {
@@ -57,8 +64,8 @@ public class ListenerRegistry {
   }
   
   @SuppressWarnings( "unchecked" )
-  public void destroy( Object type ) {
-    if ( type instanceof Class && Event.class.isAssignableFrom( ( Class ) type ) ) {
+  public void destroy( final Object type ) {
+    if ( ( type instanceof Class ) && Event.class.isAssignableFrom( ( Class ) type ) ) {
       this.eventMap.destroy( ( Class ) type );
     } else {
       if ( !this.registryMap.containsKey( type.getClass( ) ) ) {
@@ -68,12 +75,12 @@ public class ListenerRegistry {
     }
   }
   
-  public void fireEvent( Event e ) throws EventFailedException {
+  public void fireEvent( final Event e ) throws EventFailedException {
     this.eventMap.fireEvent( e.getClass( ), e );
   }
   
   @SuppressWarnings( "unchecked" )
-  public void fireEvent( Object type, Event e ) throws EventFailedException {
+  public void fireEvent( final Object type, final Event e ) throws EventFailedException {
     if ( !this.registryMap.containsKey( type.getClass( ) ) ) {
       this.registryMap.put( type.getClass( ), new ReentrantListenerRegistry( ) );
     }
@@ -86,9 +93,9 @@ public class ListenerRegistry {
       @Override
       public Throwable call( ) throws Exception {
         try {
-          fireEvent( type, e );
+          ListenerRegistry.this.fireEvent( type, e );
           return null;
-        } catch ( Exception ex ) {
+        } catch ( final Exception ex ) {
           LOG.error( ex );
           return ex;
         }

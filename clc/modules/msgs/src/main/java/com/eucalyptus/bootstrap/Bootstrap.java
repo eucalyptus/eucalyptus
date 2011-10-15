@@ -417,7 +417,6 @@ public class Bootstrap {
           loading = true;
           starting = true;
           finished = true;
-          Hosts.localHost( ).markBootstrapped( );
         }
         return currentStage;
       }

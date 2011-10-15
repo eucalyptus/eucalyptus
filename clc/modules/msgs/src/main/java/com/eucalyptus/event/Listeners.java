@@ -63,9 +63,22 @@
 
 package com.eucalyptus.event;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.not;
+import java.util.List;
 import java.util.concurrent.Future;
+import com.eucalyptus.util.Classes;
 
 public class Listeners {
+  
+  @SuppressWarnings( { "unchecked", "rawtypes" } )
+  public static void register( EventListener listener ) {
+    final List lookupTypes = Classes.genericsToClasses( listener );
+    assertThat( ( List<Object> ) lookupTypes, not( empty( ) ) );
+    register( lookupTypes.get( 0 ), listener );
+  }
+  
   public static void register( Object type, EventListener listener ) {
     ListenerRegistry.getInstance( ).register( type, listener );
   }
