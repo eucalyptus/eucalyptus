@@ -174,7 +174,8 @@ public class Classes {
         return ret;
       } else if ( type.isInterface( ) ) {
         ret.add( type );
-        ret.addAll( type.getInterfaces( ) );
+        final List<Class<?>> superInterfaces = TransitiveClosureImplementedInterfaces.INSTANCE.apply( new Class[] { type } );
+        ret.addAll( superInterfaces );
         return ret;
       } else {
         ret.add( type );
