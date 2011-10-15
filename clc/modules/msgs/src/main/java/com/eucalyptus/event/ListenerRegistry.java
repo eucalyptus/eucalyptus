@@ -58,8 +58,7 @@ public class ListenerRegistry {
                                                               : "null" ) ) );
     } else {
       if ( type == null && !lookupTypes.isEmpty( ) ) {
-        type = lookupTypes.get( 0 );
-        this.eventMap.register( ( Class ) type, listener );
+        this.eventMap.register( lookupTypes.get( 0 ), listener );
       } else if ( ( type instanceof Class ) && Event.class.isAssignableFrom( ( Class ) type ) ) {
         this.eventMap.register( ( Class ) type, listener );
       } else {
