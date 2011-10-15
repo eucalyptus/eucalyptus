@@ -76,7 +76,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.ServiceOperation;
+import com.eucalyptus.component.ServiceOperations.ServiceOperation;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;

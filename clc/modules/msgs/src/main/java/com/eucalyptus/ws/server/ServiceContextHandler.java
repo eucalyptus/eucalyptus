@@ -110,8 +110,6 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
                                                   }
                                                 };
   
-  private NioMessageReceiver        msgReceiver;
-  
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {//FIXME:GRZE: handle exceptions cleanly. convert to msg type and write.
     LOG.debug( ctx.getChannel( ), e.getCause( ) );
   }
