@@ -694,7 +694,7 @@ public class ServiceTransitions {
         for ( Entry<String, ConfigurableProperty> entry : PropertyDirectory.getPendingPropertyEntries( ) ) {
           try {
             ConfigurableProperty prop = entry.getValue( );
-            if ( prop instanceof StaticPropertyEntry && PropertyDirectory.addProperty( prop ) ) {
+            if ( prop instanceof StaticPropertyEntry && ( PropertyDirectory.addProperty( prop ) || !BootstrapArgs.isCloudController( ) ) ) {
               try {
                 prop.getValue( );
               } catch ( Exception ex ) {
