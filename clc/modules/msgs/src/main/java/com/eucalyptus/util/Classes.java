@@ -68,6 +68,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.event.EventListener;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -80,7 +81,7 @@ public class Classes {
     @Override
     public String apply( Object arg0 ) {
       return WhateverAsClass.INSTANCE.apply( arg0 ).getSimpleName( );
-    }    
+    }
   }
   
   enum ClassNameToCanonicalName implements Function<Object, String> {
@@ -88,7 +89,7 @@ public class Classes {
     @Override
     public String apply( Object arg0 ) {
       return WhateverAsClass.INSTANCE.apply( arg0 ).getCanonicalName( );
-    }    
+    }
   }
   
   public static Function<Object, String> simpleNameFunction( ) {
@@ -98,7 +99,18 @@ public class Classes {
   public static Function<Object, String> canonicalNameFunction( ) {
     return ClassNameToCanonicalName.INSTANCE;
   }
-
+  
+  @SuppressWarnings( "unchecked" )
+  public static <T> Class<T> findAncestor( final Object o, final Class<T> ancestorType ) {
+    return ( Class<T> ) findAncestor( o, new Predicate<Class<?>>( ) {
+      
+      @Override
+      public boolean apply( Class<?> arg0 ) {
+        return ancestorType.equals( arg0 );
+      }
+    } );
+  }
+  
   public static Class<?> findAncestor( final Object o, final Predicate<Class<?>> condition ) {
     return Iterables.find( ancestors( o ), condition );
   }
@@ -126,7 +138,9 @@ public class Classes {
     public Class<?> apply( final Object o ) {
       return ( o instanceof Class
           ? ( Class<?> ) o
-          : ( o != null ? o.getClass( ) : null ) );
+          : ( o != null
+            ? o.getClass( )
+            : null ) );
     }
   }
   

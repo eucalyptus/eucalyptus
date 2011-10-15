@@ -1,5 +1,8 @@
 package com.eucalyptus.event;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.not;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -36,8 +39,21 @@ public class ListenerRegistry {
   
   @SuppressWarnings( "unchecked" )
   public void register( final Object type, final EventListener listener ) {
-    final List<Class<?>> lookupTypes = Classes.genericsToClasses( listener );
-    if ( lookupTypes.isEmpty( ) || lookupTypes.contains( Event.class ) || lookupTypes.get( 0 ).isAssignableFrom( Classes.typeOf( type ) ) ) {
+    Class<?> eventDecl = Classes.findAncestor( listener, EventListener.class );
+    final List<Class<?>> lookupTypes = Classes.interfaceAncestors( listener );
+    /** GRZE: event type is not specified by the generic type of listeners EventListener decl. **/
+    boolean illegal = ( type == null && lookupTypes.isEmpty( ) );
+    /** GRZE: explicit event type does conform to generic type **/
+    illegal |= ( type != null
+                 && !lookupTypes.contains( Event.class )
+                 && !lookupTypes.get( 0 ).isAssignableFrom( Classes.typeOf( type ) ) );
+    if ( illegal ) {
+      throw Exceptions.fatal( new IllegalArgumentException( "Failed to register listener " + listener.getClass( ).getCanonicalName( )
+                                                            + "because the declared generic type " + lookupTypes
+                                                            + " is not assignable from the provided event type: " + ( type != null
+                                                              ? type.getClass( ).getCanonicalName( )
+                                                              : "null" ) ) );
+    } else {
       if ( ( type instanceof Class ) && Event.class.isAssignableFrom( ( Class ) type ) ) {
         this.eventMap.register( ( Class ) type, listener );
       } else {
@@ -46,8 +62,6 @@ public class ListenerRegistry {
         }
         this.registryMap.get( type.getClass( ) ).register( type, listener );
       }
-    } else {
-      throw Exceptions.fatal( new IllegalArgumentException( "Failed to register listener " + listener.getClass( ).getCanonicalName( ) + "because the declared generic type " + lookupTypes + " is not assignable from the provided event type: " + type.getClass( ).getCanonicalName( ) ) );
     }
   }
   

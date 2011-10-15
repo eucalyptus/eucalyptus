@@ -74,9 +74,7 @@ public class Listeners {
   
   @SuppressWarnings( { "unchecked", "rawtypes" } )
   public static void register( EventListener listener ) {
-    final List lookupTypes = Classes.genericsToClasses( listener );
-    assertThat( ( List<Object> ) lookupTypes, not( empty( ) ) );
-    register( lookupTypes.get( 0 ), listener );
+    register( null, listener );
   }
   
   public static void register( Object type, EventListener listener ) {

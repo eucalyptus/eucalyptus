@@ -57,13 +57,11 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
+ *******************************************************************************
+ * @author: chris grzegorczyk <grze@eucalyptus.com>
+ */
 package com.eucalyptus.address;
 
-/*
- *
- * Author: chris grzegorczyk <grze@eucalyptus.com>
- */
 
 import java.util.HashMap;
 import java.util.Map;

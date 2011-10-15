@@ -92,16 +92,18 @@ public class Hosts {
   public static final Long                        STATE_TRANSFER_TIMEOUT = 10000L;
   private static final Logger                     LOG                    = Logger.getLogger( Hosts.class );
   private static ReplicatedHashMap<Address, Host> hostMap;
-  private static Host                             localHost;
+  private static Host                             localHostSingleton;
   
   enum HostBootstrapEventListener implements EventListener<Hertz> {
     INSTANCE;
     
     @Override
     public void fireEvent( Hertz event ) {
-      if ( Hosts.localHost.isDirty( ) ) {
-        LOG.info( "Updating local host information: " + Hosts.localHost );
-        hostMap.replace( Hosts.localHost.getGroupsId( ), localHost );
+      Host maybeDirty = Hosts.localHost( ).checkDirty( );
+      if ( Hosts.localHost( ).getTimestamp( ).before( maybeDirty.getTimestamp( ) ) ) {
+        Hosts.localHost( maybeDirty );
+        LOG.info( "Updating local host information: " + Hosts.localHost( ) );
+        hostMap.replace( Hosts.localHost( ).getGroupsId( ), Hosts.localHost( ) );
       }
     }
   }
@@ -158,11 +160,11 @@ public class Hosts {
         hostMap.setBlockingUpdates( true );
         hostMap.addNotifier( HostMapStateListener.INSTANCE );
         hostMap.start( STATE_TRANSFER_TIMEOUT );
-        localHost = new Host( HostManager.getInstance( ).getMembershipChannel( ).getAddress( ) );
-        LOG.info( "Setup localhost state: " + localHost );
-        hostMap.put( localHost.getGroupsId( ), localHost );
+        localHost( new Host( ) );
+        LOG.info( "Setup localhost state: " + localHost( ) );
+        hostMap.put( localHost( ).getGroupsId( ), localHost( ) );
         Listeners.register( HostBootstrapEventListener.INSTANCE );
-        LOG.info( "Added localhost to system state: " + localHost );
+        LOG.info( "Added localhost to system state: " + localHost( ) );
         LOG.info( "System view:\n" + Joiner.on( "\n=> " ).join( hostMap.values( ) ) );
         if ( !BootstrapArgs.isCloudController( ) ) {
           while ( Hosts.listDatabases( ).isEmpty( ) ) {
@@ -195,22 +197,12 @@ public class Hosts {
     return Lists.newArrayList( Iterables.filter( Hosts.list( ), DbFilter.INSTANCE ) );
   }
   
-  public static boolean contains( Address jgroupsId ) {
-    return hostMap.containsKey( jgroupsId );
+  private static Host localHost( ) {
+    return localHostSingleton;
   }
   
-  public static Host lookup( Address jgroupsId ) {
-    Host h = hostMap.get( jgroupsId );
-    if ( h == null ) {
-      throw new NoSuchElementException( "Failed to lookup host for jgroups address: " + jgroupsId );
-    } else {
-      LOG.debug( "Current host info: " + h );
-      return h;
-    }
-  }
-  
-  public static Host localHost( ) {
-    return localHost;
+  private static Host localHost( Host newLocalHost ) {
+    return localHostSingleton = newLocalHost;
   }
   
 }

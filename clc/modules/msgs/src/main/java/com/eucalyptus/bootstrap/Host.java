@@ -106,7 +106,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   private Long                       lastTime         = 0l;
   private Integer                    epoch;
   
-  Host( Address jgroupsId ) {
+  Host( ) {
     this.groupsId = HostManager.getInstance( ).getMembershipChannel( ).getAddress( );
     this.bindAddress = Internets.localHostInetAddress( );
     this.epoch = Topology.epoch( );
@@ -174,18 +174,24 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     return this.getGroupsId( ).compareTo( that.getGroupsId( ) );
   }
   
-  boolean isDirty( ) {
-    Host that = new Host( this.groupsId );
+  /**
+   * @return new updated instance of this Host if the object is dirty
+   *         return this otherwise
+   */
+  Host checkDirty( ) {
+    Host that = new Host( );
     boolean result = false;
     result |= !this.hasBootstrapped.equals( that.hasBootstrapped );
     result |= !this.hasDatabase.equals( that.hasDatabase );
     result |= !this.epoch.equals( that.epoch );
     result |= !this.hostAddresses.equals( that.hostAddresses );
     if ( result ) {
-      this.lastTime = this.timestamp.get( );
-      this.timestamp.set( System.currentTimeMillis( ) );
+      that.lastTime = this.timestamp.get( );
+      that.timestamp.set( System.currentTimeMillis( ) );
+      return that;
+    } else {
+      return this;
     }
-    return result;
   }
   
   public boolean isLocalHost( ) {
@@ -217,6 +223,14 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     if ( this.lastTime != null ) builder.append( "previous-update=" ).append( new Date( this.lastTime ) ).append( " " );
     if ( this.hostAddresses != null ) builder.append( "\nhostAddresses=" ).append( this.hostAddresses );
     return builder.toString( );
+  }
+
+  public Date getTimestamp( ) {
+    return new Date( this.timestamp.get( ) );
+  }
+
+  private Long getLastTime( ) {
+    return this.lastTime;
   }
   
 }
