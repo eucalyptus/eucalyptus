@@ -134,7 +134,7 @@ public class ImageManager {
     Predicate<ImageInfo> rangeFilter = Predicates.and( CloudMetadatas.filterById( request.getImagesSet( ) ),
                                                        CloudMetadatas.filterByOwningAccount( request.getOwnersSet( ) ),
                                                        Images.filterExecutableBy( ownersSet ) );
-    Predicate<ImageInfo> privilegesFilter = Predicates.and( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivileged( true/*ignoreOwningAccount*/ ) );
+    Predicate<ImageInfo> privilegesFilter = Predicates.and( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivileged( true/*ignoreOwningAccount*/) );
     Predicate<ImageInfo> filter = Predicates.and( privilegesFilter, rangeFilter );
     List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), filter, Images.TO_IMAGE_DETAILS );
     reply.getImagesSet( ).addAll( imageDetailsList );
@@ -151,14 +151,24 @@ public class ImageManager {
     final String eki = request.getKernelId( );
     final String eri = request.getRamdiskId( );
     if ( request.getImageLocation( ) != null ) {
-      ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
+      final ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
       LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
       List<DeviceMapping> vbr = Lists.transform( request.getBlockDeviceMappings( ), Images.deviceMappingGenerator( imageInfo ) );
-      ImageMetadata.Architecture arch = ( request.getArchitecture( ) == null
+      final ImageMetadata.Architecture arch = ( request.getArchitecture( ) == null
         ? null
         : ImageMetadata.Architecture.valueOf( request.getArchitecture( ) ) );
-      imageInfo = Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, null, eki, eri,
-                                             manifest );
+      Supplier<ImageInfo> allocator = new Supplier<ImageInfo>( ) {
+        
+        @Override
+        public ImageInfo get( ) {
+          try {
+            return Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, eki, eri, manifest );
+          } catch ( EucalyptusCloudException ex ) {
+            throw new RuntimeException( ex );
+          }
+        }
+      };
+      imageInfo = RestrictedTypes.allocate( allocator );
       imageInfo.getDeviceMappings( ).addAll( vbr );
     } else if ( rootDevName != null && Iterables.any( request.getBlockDeviceMappings( ), Images.findEbsRoot( rootDevName ) ) ) {
       Supplier<ImageInfo> allocator = new Supplier<ImageInfo>( ) {

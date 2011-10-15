@@ -83,6 +83,7 @@ import com.eucalyptus.auth.policy.PolicyVendor;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -334,7 +335,7 @@ public class RestrictedTypes {
               : Accounts.lookupAccountByName( requestedObject.getOwner( ).getAccountName( ) );
           }
           if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, owningAccount, action, requestUser ) ) {
-            throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user " + requestUser.getName( ) );
+            throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user " + UserFullName.getInstance( requestUser ) );
           }
           return requestedObject;
         }
