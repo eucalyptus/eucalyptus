@@ -204,4 +204,19 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     return this.epoch;
   }
   
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "Host:" );
+    if ( this.groupsId != null ) builder.append( " " ).append( this.groupsId ).append( ":" );
+    if ( this.epoch != null ) builder.append( "epoch=" ).append( this.epoch ).append( " " );
+    if ( this.bindAddress != null ) builder.append( "bind=" ).append( this.bindAddress ).append( " " );
+    if ( this.hasDatabase != null ) builder.append( "db=" ).append( this.hasDatabase ).append( " " );
+    if ( this.hasBootstrapped != null ) builder.append( "booted=" ).append( this.hasBootstrapped ).append( " " );
+    if ( this.timestamp != null ) builder.append( "\nupdated=" ).append( new Date( this.timestamp.get( ) ) ).append( " " );
+    if ( this.lastTime != null ) builder.append( "previous-update=" ).append( new Date( this.lastTime ) ).append( " " );
+    if ( this.hostAddresses != null ) builder.append( "\nhostAddresses=" ).append( this.hostAddresses );
+    return builder.toString( );
+  }
+  
 }
