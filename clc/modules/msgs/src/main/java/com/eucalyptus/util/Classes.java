@@ -100,21 +100,6 @@ public class Classes {
     return ClassNameToCanonicalName.INSTANCE;
   }
   
-  @SuppressWarnings( "unchecked" )
-  public static <T> Class<T> findAncestor( final Object o, final Class<T> ancestorType ) {
-    return ( Class<T> ) findAncestor( o, new Predicate<Class<?>>( ) {
-      
-      @Override
-      public boolean apply( Class<?> arg0 ) {
-        return ancestorType.equals( arg0 );
-      }
-    } );
-  }
-  
-  public static Class<?> findAncestor( final Object o, final Predicate<Class<?>> condition ) {
-    return Iterables.find( ancestors( o ), condition );
-  }
-  
   public static <T> T newInstance( final Class<T> type ) {
     if ( !Modifier.isPublic( type.getModifiers( ) ) ) {//TODO:GRZE: see if we can relax this restriction
       throw new InstantiationError( "Attempt to instantiate a class which is not public: " + type.getCanonicalName( ) );
@@ -188,6 +173,8 @@ public class Classes {
       if ( type == Object.class || type == null ) {
         return ret;
       } else if ( type.isInterface( ) ) {
+        ret.add( type );
+        ret.addAll( type.getInterfaces( ) );
         return ret;
       } else {
         ret.add( type );

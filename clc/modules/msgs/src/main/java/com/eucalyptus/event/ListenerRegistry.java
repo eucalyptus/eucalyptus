@@ -39,7 +39,7 @@ public class ListenerRegistry {
   
   @SuppressWarnings( "unchecked" )
   public void register( final Object type, final EventListener listener ) {
-    Class<?> eventDecl = Classes.findAncestor( listener, EventListener.class );
+    Class<?> eventDecl = Classes.ncestor( listener, EventListener.class );
 //    final List<Class<?>> interfaceDecl = Classes.interfaceAncestors( listener );
     if ( eventDecl == null ) {
       throw Exceptions.fatal( new IllegalArgumentException( "Failed to register listener " + listener.getClass( ).getCanonicalName( ) 
