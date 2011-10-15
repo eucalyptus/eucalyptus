@@ -324,13 +324,17 @@ public class Hosts {
   }
   
   public static int maxEpoch( ) {
-    return Collections.max( Collections2.transform( hostMap.values( ), new Function<Host, Integer>( ) {
-      
-      @Override
-      public Integer apply( Host arg0 ) {
-        return arg0.getEpoch( );
-      }
-    } ) );
+    try {
+      return Collections.max( Collections2.transform( hostMap.values( ), new Function<Host, Integer>( ) {
+        
+        @Override
+        public Integer apply( Host arg0 ) {
+          return arg0.getEpoch( );
+        }
+      } ) );
+    } catch ( Exception ex ) {
+      return 0;
+    }
   }
   
   public static List<Host> list( ) {
