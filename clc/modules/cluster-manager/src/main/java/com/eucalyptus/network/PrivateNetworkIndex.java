@@ -79,6 +79,7 @@ import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.cloud.AccountMetadata;
 import com.eucalyptus.cloud.util.PersistentReference;
 import com.eucalyptus.cloud.util.Reference;
+import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.FullName;
@@ -265,6 +266,12 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
                           .relativeId( "security-group", this.getExtantNetwork( ).getNetworkGroup( ).getDisplayName( ),
                                        "tag", this.getExtantNetwork( ).getTag( ).toString( ),
                                        "index", this.getIndex( ).toString( ) );
+  }
+  
+  @Override
+  public PrivateNetworkIndex release( ) throws ResourceAllocationException {
+    this.extantNetwork = null;
+    return super.release( );
   }
   
 }

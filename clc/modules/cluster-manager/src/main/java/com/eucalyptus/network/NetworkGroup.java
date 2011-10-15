@@ -169,8 +169,8 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   
   @PreRemove
   private void preRemove( ) {
-    if ( this.extantNetwork != null ) {
-      this.extantNetwork.teardown( );
+    if ( this.extantNetwork != null && this.extantNetwork.teardown( ) ) {
+      Entities.delete( this.extantNetwork );
       this.extantNetwork = null;
     }
   }
