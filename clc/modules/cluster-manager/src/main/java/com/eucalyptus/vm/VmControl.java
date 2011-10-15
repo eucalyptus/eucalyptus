@@ -192,12 +192,13 @@ public class VmControl {
         reservation.getInstancesSet( ).add( VmInstances.transform( entity ) );
       }
       db.commit( );
-      ClusterAllocator.get( ).apply( allocInfo );
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
+      allocInfo.abort( );
       throw Exceptions.toUndeclared( ex );
     }
+    ClusterAllocator.get( ).apply( allocInfo );
     reply.setRsvInfo( reservation );
     return reply;
   }
