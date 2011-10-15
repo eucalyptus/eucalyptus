@@ -215,13 +215,19 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
   }
   
   private void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent evt ) {
+    if ( Contexts.exists( ctx.getChannel( ) ) ) {
+      try {
+        Contexts.clear( Contexts.lookup( ctx.getChannel( ) ) );
+      } catch ( NoSuchContextException ex ) {
+        Logs.exhaust( ).debug( "Failed to remove the channel context on connection close.", ex );
+      }
+    }
     try {
-      Contexts.clear( Contexts.lookup( ctx.getChannel( ) ) );
       EventRecord.here( this.messageType.getClass( ),
                         EventClass.MESSAGE, EventType.MSG_SERVICED, "rtt-ms",
                         Long.toString( System.currentTimeMillis( ) - this.openTime.get( ctx.getChannel( ) ) ) ).debug( );
-    } catch ( Exception e1 ) {
-      LOG.warn( "Failed to remove the channel context on connection close.", e1 );
+    } catch ( Exception ex ) {
+      LOG.trace( ex, ex );
     }
   }
   

@@ -31,6 +31,10 @@ public class Contexts {
     return ctx;
   }
   
+  public static boolean exists( Channel channel ) {
+    return channelContexts.containsKey( channel );
+  }
+  
   public static Context lookup( Channel channel ) throws NoSuchContextException {
     if ( !channelContexts.containsKey( channel ) ) {
       throw new NoSuchContextException( "Found channel context " + channel + " but no corresponding context." );
