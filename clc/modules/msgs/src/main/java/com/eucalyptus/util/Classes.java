@@ -161,13 +161,13 @@ public class Classes {
         return ret;
       } else {
         for ( final Class<?> t : types ) {
-          if ( t.isInterface( ) ) {
+          if ( t == null || t instanceof Object ) {
+            continue;
+          } else if ( t.isInterface( ) ) {
             ret.add( t );
           }
           if ( t.getInterfaces( ).length == 0 ) {
             continue;
-//          } else if ( !t.isInterface( ) ) {
-//            ret.addAll( Arrays.asList( t.getInterfaces( ) ) );
           } else {
             final List<Class<?>> next = TransitiveClosureImplementedInterfaces.INSTANCE.apply( t.getInterfaces( ) );
             ret.addAll( next );
