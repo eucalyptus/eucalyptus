@@ -76,10 +76,6 @@ import com.google.common.collect.Lists;
 
 public class Classes {
 
-  public static Predicate<Class<?>> assignableFrom( Class<?> parent ) {
-    return new Predicate<Class<?>>() { public boolean apply( Class<?> input ) { return parent.isAssignableFrom( input ); } };
-  }
-  
   enum ClassNameToSimpleName implements Function<Object, String> {
     INSTANCE;
     @Override
