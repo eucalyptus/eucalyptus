@@ -64,6 +64,7 @@
 package com.eucalyptus.ws.server;
 
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -98,11 +99,18 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 
 @ChannelPipelineCoverage( "one" )
 public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
-  private static Logger      LOG       = Logger.getLogger( ServiceContextHandler.class );
-  private ChannelLocal<Long>         startTime = new ChannelLocal<Long>( );
-//  private ChannelLocal<Long>         openTime = new ChannelLocal<Long>( );
+  private static Logger             LOG         = Logger.getLogger( ServiceContextHandler.class );
+  private ChannelLocal<Long>        startTime   = new ChannelLocal<Long>( );
+  private ChannelLocal<Long>        openTime    = new ChannelLocal<Long>( );
+  private ChannelLocal<BaseMessage> messageType = new ChannelLocal<BaseMessage>( ) {
+                                                  
+                                                  @Override
+                                                  protected BaseMessage initialValue( Channel channel ) {
+                                                    return new BaseMessage( );
+                                                  }
+                                                };
   
-  private NioMessageReceiver msgReceiver;
+  private NioMessageReceiver        msgReceiver;
   
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {//FIXME:GRZE: handle exceptions cleanly. convert to msg type and write.
     LOG.debug( ctx.getChannel( ), e.getCause( ) );
@@ -111,13 +119,13 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
   @SuppressWarnings( "unchecked" )
   @Override
   public void handleDownstream( final ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    if ( Logs.isExtrrreeeme() ) LOG.trace( this.getClass( ).getSimpleName( ) + "[outgoing]: " + e.getClass( ) );
+    if ( Logs.isExtrrreeeme( ) ) LOG.trace( this.getClass( ).getSimpleName( ) + "[outgoing]: " + e.getClass( ) );
     BaseMessage reply = BaseMessage.extractMessage( e );
-    if( reply instanceof BaseMessage ) {
+    if ( reply instanceof BaseMessage ) {
       MessageEvent newEvent = makeDownstreamNewEvent( ctx, e, reply );
       ctx.sendDownstream( newEvent );
-    } else if (e instanceof ExceptionEvent) {
-      exceptionCaught(ctx, (ExceptionEvent) e);
+    } else if ( e instanceof ExceptionEvent ) {
+      exceptionCaught( ctx, ( ExceptionEvent ) e );
       ctx.sendDownstream( e );
     } else {
       ctx.sendDownstream( e );
@@ -141,18 +149,20 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
         reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( BaseMessage ) request.getMessage( ), "Received a NULL reply" );
       }
       Long currTime = System.currentTimeMillis( );
-      Logs.exhaust( ).debug( EventRecord.here( reply.getClass( ), EventClass.MESSAGE, EventType.MSG_SERVICED, 
-//                          "rtt-ms", Long.toString( currTime - this.openTime.get( ctx.getChannel( ) ) ),
-                        "request-ms", Long.toString( currTime - this.startTime.get( ctx.getChannel( ) ) ) ) );
+      Logs.exhaust( ).debug( EventRecord.here( reply.getClass( ), EventClass.MESSAGE, EventType.MSG_SERVICED,
+                                               //                          "rtt-ms", Long.toString( currTime - this.openTime.get( ctx.getChannel( ) ) ),
+                                               "request-ms", Long.toString( currTime - this.startTime.get( ctx.getChannel( ) ) ) ) );
       final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
       final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
       response.setMessage( reply );
       return newEvent;
 //      Contexts.clear( reqCtx );
     } else {
-      final MappingHttpResponse response = new MappingHttpResponse( HttpVersion.HTTP_1_1 ) {{
-        setMessage( new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), "Received a NULL reply" ) );
-      }};
+      final MappingHttpResponse response = new MappingHttpResponse( HttpVersion.HTTP_1_1 ) {
+        {
+          setMessage( new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), "Received a NULL reply" ) );
+        }
+      };
       final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
       return newEvent;
     }
@@ -162,42 +172,61 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
   public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
     final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
     final BaseMessage msg = BaseMessage.extractMessage( e );
-    if ( Logs.isExtrrreeeme() ) LOG.trace( this.getClass( ).getSimpleName( ) + "[incoming]:" + (msg!=null?msg.getClass().getSimpleName( ):"")+ " "  + e );
-
-    if( e instanceof ChannelStateEvent ) {
-      this.channelOpened( ctx, (ChannelStateEvent) e );
-      ctx.sendUpstream(e);
+    if ( Logs.isExtrrreeeme( ) ) LOG.trace( this.getClass( ).getSimpleName( ) + "[incoming]:" + ( msg != null
+      ? msg.getClass( ).getSimpleName( )
+      : "" ) + " " + e );
+    
+    if ( e instanceof ChannelStateEvent ) {
+      ChannelStateEvent evt = ( ChannelStateEvent ) e;
+      switch ( evt.getState( ) ) {
+        case OPEN:
+          if ( Boolean.TRUE.equals( evt.getValue( ) ) ) {
+            this.channelOpened( ctx, evt );
+          } else {
+            this.channelClosed( ctx, evt );
+          }
+        case BOUND:
+        case CONNECTED:
+        case INTEREST_OPS:
+        default:
+          LOG.trace( "Channel event: " + evt );
+          ctx.sendUpstream( e );
+      }
     } else if ( e instanceof IdleStateEvent ) {
       LOG.warn( "Closing idle connection: " + e );
       e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
       ctx.sendUpstream( e );
-    } else if ( request != null && msg != null ) {      
+    } else if ( request != null && msg != null ) {
       this.messageReceived( ctx, msg );
       ctx.sendUpstream( e );
-    } else if (e instanceof ExceptionEvent) {
-      this.exceptionCaught(ctx, (ExceptionEvent) e);
+    } else if ( e instanceof ExceptionEvent ) {
+      this.exceptionCaught( ctx, ( ExceptionEvent ) e );
       ctx.sendUpstream( e );
     } else {
       ctx.sendUpstream( e );
     }
   }
-
+  
   private void messageReceived( final ChannelHandlerContext ctx, final BaseMessage msg ) throws ServiceInitializationException, ServiceDispatchException, ServiceStateException {
     this.startTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
+    this.messageType.set( ctx.getChannel( ), msg );
     EventRecord.here( ServiceContextHandler.class, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ).trace( );
     ServiceContext.dispatch( RequestQueue.ENDPOINT, msg );
   }
-
-  private void channelOpened( final ChannelHandlerContext ctx, ChannelStateEvent evt ) {
-    if (evt.getState().equals(ChannelState.CONNECTED) && Boolean.TRUE.equals(evt.getValue())) {
-//      this.openTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
-    } else if (evt.getState().equals(ChannelState.CONNECTED) && Boolean.FALSE.equals(evt.getValue())) {
-      try {
-        Contexts.clear( Contexts.lookup( ctx.getChannel( ) ) );
-      } catch ( Exception e1 ) {
-        LOG.warn( "Failed to remove the channel context on connection close.", e1 );
-      }
+  
+  private void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent evt ) {
+    try {
+      Contexts.clear( Contexts.lookup( ctx.getChannel( ) ) );
+      EventRecord.here( this.messageType.getClass( ),
+                        EventClass.MESSAGE, EventType.MSG_SERVICED, "rtt-ms",
+                        Long.toString( System.currentTimeMillis( ) - this.openTime.get( ctx.getChannel( ) ) ) ).debug( );
+    } catch ( Exception e1 ) {
+      LOG.warn( "Failed to remove the channel context on connection close.", e1 );
     }
+  }
+  
+  private void channelOpened( final ChannelHandlerContext ctx, ChannelStateEvent evt ) {
+    this.openTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
   }
   
 }
