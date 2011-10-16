@@ -66,6 +66,7 @@ package com.eucalyptus.network;
 import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
@@ -110,7 +111,7 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
   private Integer                        tag;
   
   @NotFound( action = NotFoundAction.IGNORE )
-  @OneToMany( fetch = FetchType.EAGER )
+  @OneToMany( fetch = FetchType.EAGER, orphanRemoval = true, cascade = CascadeType.ALL )
   @JoinColumn( name = "metadata_extant_network_index_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final Set<PrivateNetworkIndex> indexes          = new HashSet<PrivateNetworkIndex>( );
