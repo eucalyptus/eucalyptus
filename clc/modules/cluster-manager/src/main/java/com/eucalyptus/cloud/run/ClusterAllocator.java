@@ -82,6 +82,7 @@ import com.eucalyptus.cluster.callback.VmRunCallback;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.Entities;
@@ -138,10 +139,9 @@ public class ClusterAllocator implements Runnable {
     public boolean apply( Allocation allocInfo ) {
       try {
         EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, LogUtil.dumpObject( allocInfo ) ).trace( );
-        Threads.lookup( Eucalyptus.class, ClusterAllocator.class ).submit( new ClusterAllocator( allocInfo ) );
+        Threads.enqueue( ServiceConfigurations.createEphemeral( Eucalyptus.INSTANCE ), new ClusterAllocator( allocInfo ) );
         return true;
       } catch ( Exception ex ) {
-        allocInfo.abort( );
         throw Exceptions.toUndeclared( ex );
       }
     }

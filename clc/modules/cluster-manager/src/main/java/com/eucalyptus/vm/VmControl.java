@@ -167,45 +167,31 @@ public class VmControl {
   
   private static Logger LOG = Logger.getLogger( VmControl.class );
   
-  public static RunInstancesResponseType runInstances( RunInstancesType request ) throws MetadataException, AuthException {
+  public static RunInstancesResponseType runInstances( RunInstancesType request ) throws Exception {
+    RunInstancesResponseType reply = request.getReply( );
     Allocation allocInfo = Allocations.begin( request );
-    try {
-      Predicates.and( VerifyMetadata.get( ), AdmissionControl.get( ) ).apply( allocInfo );
-    } catch ( Exception ex1 ) {
-      LOG.trace( ex1, ex1 );
-    }
-    RunInstancesResponseType reply = allocInfo.getRequest( ).getReply( );
-    List<String> networkNames = Lists.transform( allocInfo.getNetworkGroups( ), new Function<NetworkGroup, String>( ) {
-      
-      @Override
-      public String apply( NetworkGroup arg0 ) {
-        return arg0.getDisplayName( );
-      }
-    } );
-    ReservationInfoType reservation = new ReservationInfoType( allocInfo.getReservationId( ),
-                                                               allocInfo.getOwnerFullName( ).getAccountNumber( ),
-                                                               Lists.newArrayList( networkNames ) );
     EntityTransaction db = Entities.get( VmInstance.class );
     try {
+      Predicates.and( VerifyMetadata.get( ), AdmissionControl.get( ) ).apply( allocInfo );
       allocInfo.commit( );
+      
+      ReservationInfoType reservation = new ReservationInfoType( allocInfo.getReservationId( ),
+                                                                 allocInfo.getOwnerFullName( ).getAccountNumber( ),
+                                                                 Lists.transform( allocInfo.getNetworkGroups( ), CloudMetadatas.toDisplayName( ) ) );
+      reply.setRsvInfo( reservation );
       for ( ResourceToken allocToken : allocInfo.getAllocationTokens( ) ) {
         VmInstance entity = Entities.merge( allocToken.getVmInstance( ) );
         reservation.getInstancesSet( ).add( VmInstances.transform( entity ) );
       }
       db.commit( );
     } catch ( Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
+      LOG.trace( ex, ex );
       db.rollback( );
       allocInfo.abort( );
-      throw Exceptions.toUndeclared( ex );
+      throw ex;
     }
     ClusterAllocator.get( ).apply( allocInfo );
-    reply.setRsvInfo( reservation );
     return reply;
-  }
-  
-  public Allocation allocate( final Allocation allocInfo ) throws EucalyptusCloudException {
-    return allocInfo;
   }
   
   public DescribeInstancesResponseType describeInstances( final DescribeInstancesType msg ) throws EucalyptusCloudException {
@@ -436,36 +422,35 @@ public class VmControl {
     final StartInstancesResponseType reply = request.getReply( );
     for ( String instanceId : request.getInstancesSet( ) ) {
       EntityTransaction db = Entities.get( VmInstance.class );
-      try {
+      try {//scope for transaction
         final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
-        try {
-          RunInstancesType runRequest = new RunInstancesType( ) {
-            {
-              this.setMinCount( 1 );
-              this.setMaxCount( 1 );
-              this.setImageId( vm.getImageId( ) );
-              this.setAvailabilityZone( vm.getPartition( ) );
-              this.getGroupSet( ).addAll( vm.getNetworkNames( ) );
-              this.setInstanceType( vm.getVmType( ).getName( ) );
-            }
-          };
-          Allocation allocInfo = Allocations.begin( runRequest );
-          try {
-            Predicates.and( VerifyMetadata.get( ), AdmissionControl.get( ), ClusterAllocator.get( ) ).apply( allocInfo );
-          } catch ( Exception ex1 ) {
-            LOG.trace( ex1, ex1 );
-            allocInfo.abort( );
+        RunInstancesType runRequest = new RunInstancesType( ) {
+          {
+            this.setMinCount( 1 );
+            this.setMaxCount( 1 );
+            this.setImageId( vm.getImageId( ) );
+            this.setAvailabilityZone( vm.getPartition( ) );
+            this.getGroupSet( ).addAll( vm.getNetworkNames( ) );
+            this.setInstanceType( vm.getVmType( ).getName( ) );
           }
+        };
+        Allocation allocInfo = Allocations.begin( runRequest );
+        try {//scope for allocInfo
+          Predicates.and( VerifyMetadata.get( ), AdmissionControl.get( ) ).apply( allocInfo );
+          ClusterAllocator.get( ).apply( allocInfo );
           final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
           final String oldState = vm.getState( ).getName( ), newState = VmState.PENDING.getName( );
           reply.getInstancesSet( ).add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
-        } catch ( Exception ex1 ) {
-          LOG.error( ex1, ex1 );
+          db.commit( );
+        } catch ( Exception ex ) {
+          db.rollback( );
+          allocInfo.abort( );
+          throw ex;
         }
-        db.commit( );
-      } catch ( Exception ex ) {
-        Logs.exhaust( ).error( ex, ex );
+      } catch ( Exception ex1 ) {
+        LOG.trace( ex1, ex1 );
         db.rollback( );
+        throw ex1;
       }
     }
     return reply;

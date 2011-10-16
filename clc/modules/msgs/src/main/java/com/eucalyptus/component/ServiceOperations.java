@@ -75,34 +75,26 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
-import com.eucalyptus.component.QueuedWorkers.QueuedWorker;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Classes;
 import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class ServiceOperations {
-  private static Integer                          TEMP_NUM_WORKERS  = Runtime.getRuntime( ).availableProcessors( ); //TODO:GRZE: discover on per-service basis.
   private static Logger                           LOG               = Logger.getLogger( ServiceOperations.class );
   private static final Map<Class, Function<?, ?>> serviceOperations = Maps.newHashMap( );
-  
-  private static QueuedWorker                     workQueue;
   
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.UnprivilegedConfiguration )
   public static class ServiceOperationBootstrapper extends Bootstrapper.Simple {
-    
-    @Override
-    public boolean load( ) throws Exception {
-      return ( workQueue = QueuedWorkers.newInstance( ServiceOperations.class, TEMP_NUM_WORKERS ) ) != null;
-    }
+    //GRZE: had something here, but need to come back to it later.
   }
   
   @Target( { ElementType.TYPE, ElementType.METHOD } )
@@ -151,7 +143,7 @@ public class ServiceOperations {
       try {
         final Context ctx = Contexts.lookup( request.getCorrelationId( ) );
         final Function<I, O> op = ( Function<I, O> ) serviceOperations.get( request.getClass( ) );
-        workQueue.submit( new Runnable( ) {
+        Threads.enqueue( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE ), new Runnable( ) {
           
           @Override
           public void run( ) {
