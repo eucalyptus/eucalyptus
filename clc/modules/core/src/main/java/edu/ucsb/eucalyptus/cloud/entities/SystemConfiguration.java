@@ -66,6 +66,7 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import java.net.InetAddress;
 import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.PersistenceContext;
@@ -77,6 +78,7 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -200,16 +202,6 @@ public class SystemConfiguration extends AbstractPersistent {
     }
   }
 
-  public static String getInternalIpAddress ()
-  {
-    String ipAddr = null;
-    for( String addr : Internets.getAllAddresses( ) ) {//TODO:GRZE:FIXTHISDFSDFSDF
-      ipAddr = addr;
-      break;
-    }
-    return ipAddr == null ? "127.0.0.1" : ipAddr;
-  }
-
   private static SystemConfiguration validateSystemConfiguration(SystemConfiguration s) {
     SystemConfiguration sysConf = s != null ? s : new SystemConfiguration(); 
     if( sysConf.getRegistrationId() == null ) {
@@ -227,4 +219,12 @@ public class SystemConfiguration extends AbstractPersistent {
     return sysConf;
   }
 
+  public static InetAddress getCloudAddress() throws EucalyptusCloudException {
+	Component cloud = Components.lookup( Eucalyptus.class );
+	if( cloud.hasEnabledService( ) ) {
+	  ServiceConfiguration cloudConfig = Components.lookup( Eucalyptus.class ).enabledServices( ).first( );
+	  return Internets.toAddress (cloudConfig.getHostName());
+	}
+	return null;
+  }
 }
