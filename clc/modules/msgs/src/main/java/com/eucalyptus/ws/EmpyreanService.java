@@ -76,7 +76,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.ServiceOperation;
+import com.eucalyptus.component.ServiceOperations.ServiceOperation;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
@@ -94,6 +94,8 @@ import com.eucalyptus.empyrean.StartServiceResponseType;
 import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.empyrean.StopServiceResponseType;
 import com.eucalyptus.empyrean.StopServiceType;
+import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMappers;
@@ -186,6 +188,7 @@ public class EmpyreanService {
   
   public static ModifyServiceResponseType modifyService( ModifyServiceType request ) throws Exception {
     ModifyServiceResponseType reply = request.getReply( );
+    temporaryDebug( request );
     TransitionName transition = TransitionName.valueOf( request.getState( ).toUpperCase( ) );
     for ( Component comp : Components.list( ) ) {
       ServiceConfiguration a;
@@ -282,6 +285,21 @@ public class EmpyreanService {
       }
     }
     return reply;
+  }
+
+  public static void temporaryDebug( ModifyServiceType request ) throws RuntimeException, ScriptExecutionFailedException {
+    if ( request.getName( ).equals( "run" ) ) {
+      String result = "Running request: %s" +
+                      "\n=======================\n" +
+                      "%s" +
+                      "\n= %7.7s ==================\n";
+      String scriptResult = "";
+      try {
+        throw Exceptions.trace( String.format( result, request.getState( ), Groovyness.eval( request.getState( ) ), "WINNING" ) );
+      } catch ( Exception ex ) {
+        throw Exceptions.trace( String.format( result, request.getState( ), Groovyness.eval( request.getState( ) ), "FAILED" ) + Exceptions.causeString( ex ) );
+      }
+    }
   }
   
   public static StartServiceResponseType startService( StartServiceType request ) throws Exception {

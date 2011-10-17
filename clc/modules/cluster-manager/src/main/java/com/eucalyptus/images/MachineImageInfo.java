@@ -72,11 +72,16 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ImageMetadata;
 
-@Entity @javax.persistence.Entity
+@Entity
+@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "machine" )
 public class MachineImageInfo extends PutGetImageInfo implements BootableImageInfo {
+  /**
+   * 
+   */
+  private static final long serialVersionUID = 1L;
   @Column( name = "metadata_image_kernel_id" )
   private String kernelId;
   @Column( name = "metadata_image_ramdisk_id" )
@@ -85,23 +90,24 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
   public MachineImageInfo( ) {
     super( ImageMetadata.Type.machine );
   }
-
+  
   public MachineImageInfo( final String imageId ) {
     super( ImageMetadata.Type.machine, imageId );
   }
-
-  public MachineImageInfo( final UserFullName userFullName, final String imageId, 
-                           final String imageName, final String imageDescription, final Long imageSizeBytes, final Architecture arch, final Platform platform, 
+  
+  public MachineImageInfo( final UserFullName userFullName, final String imageId,
+                           final String imageName, final String imageDescription, final Long imageSizeBytes, final Architecture arch, final Platform platform,
                            final String imageLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType,
                            final String kernelId, final String ramdiskId ) {
-    super( userFullName, imageId, ImageMetadata.Type.machine, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum, imageChecksumType );
+    super( userFullName, imageId, ImageMetadata.Type.machine, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes,
+           imageChecksum, imageChecksumType );
     this.kernelId = kernelId;
     this.ramdiskId = ramdiskId;
   }
-
+  
   @Override
   public String getKernelId( ) {
-    return kernelId;
+    return this.kernelId;
   }
   
   public void setKernelId( final String kernelId ) {
@@ -110,7 +116,7 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
   
   @Override
   public String getRamdiskId( ) {
-    return ramdiskId;
+    return this.ramdiskId;
   }
   
   public void setRamdiskId( final String ramdiskId ) {
@@ -121,12 +127,12 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
   public boolean hasKernel( ) {
     return this.getKernelId( ) != null;
   }
-
+  
   @Override
   public boolean hasRamdisk( ) {
     return this.getRamdiskId( ) != null;
   }
-
+  
   @Override
   public String getManifestLocation( ) {
     return super.getManifestLocation( );

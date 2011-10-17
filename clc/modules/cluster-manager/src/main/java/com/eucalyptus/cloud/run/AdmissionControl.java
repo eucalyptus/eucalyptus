@@ -57,27 +57,26 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author: chris grzegorczyk <grze@eucalyptus.com>
  */
 package com.eucalyptus.cloud.run;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.ClusterNodeState;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.VmTypeAvailability;
+import com.eucalyptus.cluster.ResourceState;
+import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -97,9 +96,13 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
@@ -107,44 +110,38 @@ import com.google.common.collect.TreeMultimap;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class AdmissionControl {
-  static Logger LOG = Logger.getLogger( AdmissionControl.class );
+  private static Logger LOG = Logger.getLogger( AdmissionControl.class );
   
-  public interface ResourceAllocator {
-    public void allocate( Allocation allocInfo ) throws Exception;
-    
-    public void fail( Allocation allocInfo, Throwable t );
-    
+  public static Predicate<Allocation> get( ) {
+    return RunAdmissionControl.INSTANCE;
   }
   
-  private static final List<ResourceAllocator> pending = new ArrayList<ResourceAllocator>( ) {
-                                                         {
-                                                           this.add( NodeResourceAllocator.INSTANCE );
-                                                           this.add( PublicAddressAllocator.INSTANCE );
-                                                           this.add( PrivateNetworkAllocator.INSTANCE );
-                                                           this.add( SubnetIndexAllocator.INSTANCE );
-                                                         }
-                                                       };
-  
-  public static Allocation handle( Allocation allocInfo ) throws Exception {
-    EventRecord.here( AdmissionControl.class, EventType.VM_RESERVED, LogUtil.dumpObject( allocInfo ) ).trace( );
-    List<ResourceAllocator> finished = Lists.newArrayList( );
-    EntityTransaction db = Entities.get( NetworkGroup.class );
-    try {
-      for ( ResourceAllocator allocator : pending ) {
-        runAllocatorSafely( allocInfo, allocator );
-        finished.add( allocator );
+  enum RunAdmissionControl implements Predicate<Allocation> {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( Allocation allocInfo ) {
+      EventRecord.here( AdmissionControl.class, EventType.VM_RESERVED, LogUtil.dumpObject( allocInfo ) ).trace( );
+      List<ResourceAllocator> finished = Lists.newArrayList( );
+      EntityTransaction db = Entities.get( NetworkGroup.class );
+      try {
+        for ( ResourceAllocator allocator : pending ) {
+          runAllocatorSafely( allocInfo, allocator );
+          finished.add( allocator );
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        rollbackAllocations( allocInfo, finished, ex );
+        db.rollback( );
+        throw Exceptions.toUndeclared( new NotEnoughResourcesException( ex.getMessage( ), ex ) );
       }
-      db.commit( );
-    } catch ( Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
-      rollbackAllocations( allocInfo, finished, ex );
-      db.rollback( );
-      throw new NotEnoughResourcesException( ex.getMessage( ), ex );
     }
-    return allocInfo;
+    
   }
   
-  public static void rollbackAllocations( Allocation allocInfo, List<ResourceAllocator> finished, Exception e ) {
+  private static void rollbackAllocations( Allocation allocInfo, List<ResourceAllocator> finished, Exception e ) {
     for ( ResourceAllocator rollback : Iterables.reverse( finished ) ) {
       try {
         rollback.fail( allocInfo, e );
@@ -154,7 +151,7 @@ public class AdmissionControl {
     }
   }
   
-  public static void runAllocatorSafely( Allocation allocInfo, ResourceAllocator allocator ) throws Exception {
+  private static void runAllocatorSafely( Allocation allocInfo, ResourceAllocator allocator ) throws Exception {
     try {
       allocator.allocate( allocInfo );
     } catch ( ScriptExecutionFailedException e ) {
@@ -174,15 +171,58 @@ public class AdmissionControl {
     }
   }
   
+  private interface ResourceAllocator {
+    public void allocate( Allocation allocInfo ) throws Exception;
+    
+    public void fail( Allocation allocInfo, Throwable t );
+    
+  }
+  
+  private static final List<ResourceAllocator> pending = new ArrayList<ResourceAllocator>( ) {
+                                                         {
+                                                           this.add( NodeResourceAllocator.INSTANCE );
+                                                           this.add( VmTypePrivAllocator.INSTANCE );
+                                                           this.add( PublicAddressAllocator.INSTANCE );
+                                                           this.add( PrivateNetworkAllocator.INSTANCE );
+                                                           this.add( SubnetIndexAllocator.INSTANCE );
+                                                         }
+                                                       };
+  
+  enum VmTypePrivAllocator implements ResourceAllocator {
+    INSTANCE;
+    
+    @SuppressWarnings( "unchecked" )
+    @Override
+    public void allocate( Allocation allocInfo ) throws Exception {
+      RestrictedTypes.allocateNamedUnitlessResources( allocInfo.getAllocationTokens( ).size( ),
+                                                      allocInfo.getVmType( ).allocator( ),
+                                                      ( Predicate ) Predicates.alwaysTrue( ) );
+    }
+    
+    @Override
+    public void fail( Allocation allocInfo, Throwable t ) {}
+    
+  }
+  
   enum NodeResourceAllocator implements ResourceAllocator {
     INSTANCE;
-    private List<ResourceToken> requestResourceToken( Allocation allocInfo, int tryAmount, int maxAmount ) throws NotEnoughResourcesException {
+    private List<ResourceToken> requestResourceToken( final Allocation allocInfo, final int tryAmount, final int maxAmount ) throws Exception {
       ServiceConfiguration config = Partitions.lookupService( ClusterController.class, allocInfo.getPartition( ) );
       Cluster cluster = Clusters.lookup( config );
-      ClusterNodeState state = cluster.getNodeState( );
-      List<ResourceToken> rscToken = state.requestResourceAllocation( allocInfo, tryAmount, maxAmount );
-      allocInfo.getAllocationTokens( ).addAll( rscToken );
-      return rscToken;
+      final ResourceState state = cluster.getNodeState( );
+      final List<ResourceToken> tokens = state.requestResourceAllocation( allocInfo, tryAmount, maxAmount );
+      final Supplier<ResourceToken> allocator = new Supplier<ResourceToken>( ) {
+        Iterator<ResourceToken> iter = tokens.iterator( );
+        
+        @Override
+        public ResourceToken get( ) {
+          return this.iter.next( );
+        }
+      };
+      List<ResourceToken> pendingTokens = RestrictedTypes.allocateUnitlessResources( tokens.size( ), allocator );
+      
+      allocInfo.getAllocationTokens( ).addAll( pendingTokens );
+      return pendingTokens;
     }
     
     @Override
@@ -212,7 +252,7 @@ public class AdmissionControl {
           if ( remaining <= 0 ) {
             break;
           } else {
-            ClusterNodeState state = cluster.getNodeState( );
+            ResourceState state = cluster.getNodeState( );
             Partition partition = cluster.getConfiguration( ).lookupPartition( );
             if ( allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {
               try {

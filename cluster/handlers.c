@@ -2996,7 +2996,7 @@ void *monitor_thread(void *in) {
 
     shawn();
     
-    logprintfl(EUCADEBUG, "monitor_thread(): done\n");
+    logprintfl(EUCADEBUG, "monitor_thread(localState=%s): done\n", config->ccStatus.localState);
     //sleep(config->ncPollingFrequency);
     ncRefresh = clcRefresh = 0;
     sleep(1);

@@ -89,15 +89,11 @@
       <bridge-component/>
       <outbound>
         <filtering-router>
-          <outbound-endpoint ref="StartVerifyWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.RunInstancesType" />
-        </filtering-router>
-        <filtering-router>
           <outbound-endpoint ref="VmControlWS" />
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmControlMessage" />
         </filtering-router>
         <filtering-router>
-          <outbound-endpoint ref="VmControlWS" />
+          <outbound-endpoint ref="VmControlWS" /><!-- GRZE: should be different dest service -->
           <payload-type-filter expectedType="com.eucalyptus.vm.VmBundleMessage" />
         </filtering-router>
         <filtering-router>

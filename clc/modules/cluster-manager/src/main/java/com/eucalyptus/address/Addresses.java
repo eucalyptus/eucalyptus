@@ -57,13 +57,10 @@
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-package com.eucalyptus.address;
-
-/*
- *
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author: chris grzegorczyk <grze@eucalyptus.com>
  */
+package com.eucalyptus.address;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -81,6 +78,7 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.RestrictedTypes;
@@ -92,6 +90,7 @@ import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -186,16 +185,14 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     }
     
   }
-  @Resolver(Address.class)
-  public enum Lookup implements Function<String,Address> {
+  
+  @Resolver( Address.class )
+  public enum Lookup implements Function<String, Address> {
     INSTANCE;
-
+    
     @Override
     public Address apply( String input ) {
       Address address = Addresses.getInstance( ).lookup( input );
-      if ( address.isSystemOwned( ) ) {
-        throw new NoSuchElementException( "Non admin user cannot manipulate system owned address " + input );
-      }
       return address;
     }
     
@@ -217,10 +214,27 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     return address;
   }
   
-  public static Address allocate( BaseMessage request ) throws EucalyptusCloudException, NotEnoughResourcesException {
-    Context ctx = Contexts.lookup( );
-    return Addresses.getAddressManager( ).allocateNext( ctx.getUserFullName( ) );
-  }
+  public enum Allocator implements Supplier<Address>, Predicate<Address> {
+    INSTANCE;
+    @Override
+    public Address get( ) {
+      Context ctx = Contexts.lookup( );
+      try {
+        return Addresses.getAddressManager( ).allocateNext( ctx.getUserFullName( ) );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+    @Override
+    public boolean apply( Address input ) {
+      try {
+        input.release( );
+      } catch ( Exception ex ) {
+        LOG.error( ex , ex );
+      }
+      return true;
+    }
+  };
   
   public static void system( VmInstance vm ) {
     try {

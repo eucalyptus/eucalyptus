@@ -72,6 +72,7 @@ import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Topology.ServiceKey;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.google.common.base.Function;
 
@@ -328,7 +329,7 @@ public class TopologyChanges {
           } catch ( UndeclaredThrowableException ex ) {
             throw ex;
           } catch ( Exception ex ) {
-            LOG.warn( this.toString( ) + " failed for: " + config.getFullName( ) + " trying " + initialState + "->" + nextState + " because of: " + ex.getMessage( ), ex );
+            Logs.extreme( ).warn( this.toString( ) + " failed for: " + config.getFullName( ) + " trying " + initialState + "->" + nextState + " because of: " + Exceptions.causeString( ex ) );
             throw new UndeclaredThrowableException( ex );
           }
         }
