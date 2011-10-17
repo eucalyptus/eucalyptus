@@ -108,7 +108,6 @@ import com.eucalyptus.ws.protocol.BaseQueryBinding;
 import com.eucalyptus.ws.protocol.OperationParameter;
 import com.eucalyptus.ws.protocol.SoapHandler;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Table;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Pipelines {

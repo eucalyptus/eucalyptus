@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ * Copyright (c) 2009  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,49 +53,47 @@
  *    SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
  *    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
  *    BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- *    THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *    THE REGENTS’ DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
  *    OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
  *    WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
  *    ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * Author: chris grzegorczyk <grze@eucalyptus.com>
+ *******************************************************************************
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-package com.eucalyptus.cloud.run;
 
+package com.eucalyptus.event;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.not;
 import java.util.List;
-import org.apache.log4j.Logger;
-import com.eucalyptus.cloud.ResourceToken;
-import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.util.RestrictedTypes;
-import com.eucalyptus.vm.VmInstance;
-import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
+import java.util.concurrent.Future;
+import com.eucalyptus.util.Classes;
 
-public class CreateVmInstances {
-  private static Logger LOG = Logger.getLogger( CreateVmInstances.class );
+public class Listeners {
   
-  public Allocation allocate( final Allocation allocInfo ) throws Exception {
-    final String vmType = allocInfo.getVmType( ).getName( );
-    RestrictedTypes.allocate( vmType, Long.valueOf( allocInfo.getAllocationTokens( ).size( ) ), allocInfo.getVmType( ).allocator( ) );
-    List<VmInstance> vms = Lists.newArrayList( );
-    for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-      Supplier<VmInstance> allocator = new Supplier<VmInstance>( ) {
-        
-        @Override
-        public VmInstance get( ) {
-          try {
-            return VmInstance.Create.INSTANCE.apply( token );
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
-            throw new RuntimeException( ex );
-          }
-        }
-      };
-      VmInstance vmInst = RestrictedTypes.allocate( allocator );
-      token.setVmInstance( vmInst );
-    }
-    return allocInfo;
+  @SuppressWarnings( { "unchecked", "rawtypes" } )
+  public static void register( EventListener listener ) {
+    register( null, listener );
   }
   
+  public static void register( Object type, EventListener listener ) {
+    ListenerRegistry.getInstance( ).register( type, listener );
+  }
+  
+  public static void deregister( Object type, EventListener listener ) {
+    ListenerRegistry.getInstance( ).deregister( type, listener );
+  }
+  
+  public void fireEvent( Event e ) throws EventFailedException {
+    ListenerRegistry.getInstance( ).fireEvent( e );
+  }
+  
+  public void fireEvent( Object type, Event e ) throws EventFailedException {
+    ListenerRegistry.getInstance( ).fireEvent( type, e );
+  }
+  
+  public Future<Throwable> fireEventAsync( final Object type, final Event e ) {
+    return ListenerRegistry.getInstance( ).fireEventAsync( type, e );
+  }
 }

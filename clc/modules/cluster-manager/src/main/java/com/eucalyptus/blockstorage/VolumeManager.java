@@ -97,11 +97,12 @@ import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.ws.client.ServiceDispatcher;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
@@ -150,17 +151,17 @@ public class VolumeManager {
       try {
         final ServiceConfiguration sc = Partitions.lookupService( Storage.class, partition );
         final UserFullName owner = ctx.getUserFullName( );
-        Supplier<Volume> allocator = new Supplier<Volume>() {
+        Function<Long,Volume> allocator = new Function<Long,Volume>() {
 
           @Override
-          public Volume get( ) {
+          public Volume apply( Long size ) {
             try {
-              return Volumes.createStorageVolume( sc, owner, snapId, newSize, request );
+              return Volumes.createStorageVolume( sc, owner, snapId, Ints.checkedCast( size ), request );
             } catch ( ExecutionException ex ) {
               throw new RuntimeException( ex );
             }
           }};
-        Volume newVol = RestrictedTypes.allocate( Long.valueOf( newSize ), allocator );
+        Volume newVol = RestrictedTypes.allocateMeasurableResource( newSize.longValue( ), allocator );
         CreateVolumeResponseType reply = request.getReply( );
         reply.setVolume( newVol.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) ) );
         return reply;

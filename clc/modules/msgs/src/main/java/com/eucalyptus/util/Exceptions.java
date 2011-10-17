@@ -189,14 +189,18 @@ public class Exceptions {
     return fatal( message, null );
   }
   
+  public static RuntimeException fatal( Throwable t ) {
+    return fatal( null, t );
+  }
+  
   public static RuntimeException fatal( String message, Throwable t ) {
     StackTraceElement ste = Thread.currentThread( ).getStackTrace( )[t == null
       ? 3
       : 2];
     Logger.getLogger( ste.getClassName( ) ).error( "Fatal error occured: " + ste.getClassName( ) + "." + ste.getMethodName( ) + ":" + ste.getLineNumber( ), t );
     RuntimeException ex = ( t == null
-      ? new RuntimeException( "Terminating Eucalyptus: " + message )
-      : new RuntimeException( "Terminating Eucalyptus: " + t.getMessage( ), t ) );
+      ? new RuntimeException( message )
+      : new RuntimeException( t.getMessage( ), t ) );
     ex.fillInStackTrace( );
     LOG.fatal( t != null
       ? t

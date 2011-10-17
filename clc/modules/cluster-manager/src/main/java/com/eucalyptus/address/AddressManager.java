@@ -64,8 +64,6 @@
  */
 package com.eucalyptus.address;
 
-import java.util.NoSuchElementException;
-import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -73,10 +71,8 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
@@ -84,7 +80,6 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
-import com.google.common.base.Supplier;
 import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressType;
@@ -102,26 +97,9 @@ public class AddressManager {
   
   public static Logger LOG = Logger.getLogger( AddressManager.class );
   
-  public AllocateAddressResponseType allocate( final AllocateAddressType request ) throws EucalyptusCloudException {
+  public AllocateAddressResponseType allocate( final AllocateAddressType request ) throws Exception {
     AllocateAddressResponseType reply = ( AllocateAddressResponseType ) request.getReply( );
-    Address address;
-    try {
-      Supplier<Address> allocator = new Supplier<Address>( ) {
-        
-        @Override
-        public Address get( ) {
-          try {
-            return Addresses.allocate( request );
-          } catch ( Exception ex ) {
-            throw new RuntimeException( ex );
-          }
-        }
-      };
-      address = RestrictedTypes.allocate( allocator );
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-      throw new EucalyptusCloudException( e );
-    }
+    Address address = RestrictedTypes.allocateNamedUnitlessResources( 1, Addresses.Allocator.INSTANCE, Addresses.Allocator.INSTANCE ).get( 0 );
     reply.setPublicIp( address.getName( ) );
     return reply;
   }

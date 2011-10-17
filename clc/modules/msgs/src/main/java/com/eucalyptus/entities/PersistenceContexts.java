@@ -24,7 +24,7 @@ import com.eucalyptus.records.EventRecord;
 
 @SuppressWarnings( "unchecked" )
 public class PersistenceContexts {
-  public static int                                     MAX_FAIL        = 5;
+  private static int                                     MAX_FAIL        = 5;
   private static AtomicInteger                          failCount       = new AtomicInteger( 0 );
   private static Logger                                 LOG             = Logger.getLogger( PersistenceContexts.class );
   private static final ArrayListMultimap<String, Class> entities        = ArrayListMultimap.create( );

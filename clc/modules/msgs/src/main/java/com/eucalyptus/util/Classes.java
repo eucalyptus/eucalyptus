@@ -68,19 +68,20 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.event.EventListener;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class Classes {
-  
+
   enum ClassNameToSimpleName implements Function<Object, String> {
     INSTANCE;
     @Override
     public String apply( Object arg0 ) {
       return WhateverAsClass.INSTANCE.apply( arg0 ).getSimpleName( );
-    }    
+    }
   }
   
   enum ClassNameToCanonicalName implements Function<Object, String> {
@@ -88,7 +89,7 @@ public class Classes {
     @Override
     public String apply( Object arg0 ) {
       return WhateverAsClass.INSTANCE.apply( arg0 ).getCanonicalName( );
-    }    
+    }
   }
   
   public static Function<Object, String> simpleNameFunction( ) {
@@ -97,10 +98,6 @@ public class Classes {
   
   public static Function<Object, String> canonicalNameFunction( ) {
     return ClassNameToCanonicalName.INSTANCE;
-  }
-
-  public static Class<?> findAncestor( final Object o, final Predicate<Class<?>> condition ) {
-    return Iterables.find( ancestors( o ), condition );
   }
   
   public static <T> T newInstance( final Class<T> type ) {
@@ -126,7 +123,9 @@ public class Classes {
     public Class<?> apply( final Object o ) {
       return ( o instanceof Class
           ? ( Class<?> ) o
-          : ( o != null ? o.getClass( ) : null ) );
+          : ( o != null
+            ? o.getClass( )
+            : null ) );
     }
   }
   
@@ -147,13 +146,13 @@ public class Classes {
         return ret;
       } else {
         for ( final Class<?> t : types ) {
-          if ( t.isInterface( ) ) {
+          if ( t == null || t == Object.class ) {
+            continue;
+          } else if ( t.isInterface( ) ) {
             ret.add( t );
           }
           if ( t.getInterfaces( ).length == 0 ) {
             continue;
-//          } else if ( !t.isInterface( ) ) {
-//            ret.addAll( Arrays.asList( t.getInterfaces( ) ) );
           } else {
             final List<Class<?>> next = TransitiveClosureImplementedInterfaces.INSTANCE.apply( t.getInterfaces( ) );
             ret.addAll( next );
@@ -171,9 +170,12 @@ public class Classes {
     public List<Class<?>> apply( final Object input ) {
       final List<Class<?>> ret = Lists.newArrayList( );
       final Class<?> type = WhateverAsClass.INSTANCE.apply( input );
-      if ( type == Object.class ) {
+      if ( type == Object.class || type == null ) {
         return ret;
       } else if ( type.isInterface( ) ) {
+        ret.add( type );
+        final List<Class<?>> superInterfaces = TransitiveClosureImplementedInterfaces.INSTANCE.apply( new Class[] { type } );
+        ret.addAll( superInterfaces );
         return ret;
       } else {
         ret.add( type );
@@ -216,7 +218,7 @@ public class Classes {
     public List<Class<?>> apply( final Object input ) {
       final List<Class<?>> ret = Lists.newArrayList( );
       final Class<?> type = WhateverAsClass.INSTANCE.apply( input );
-      if ( type == Object.class ) {
+      if ( type == Object.class || type == null ) {
         return ret;
       } else if ( type.isInterface( ) ) {
         return ret;
@@ -260,7 +262,7 @@ public class Classes {
     public List<Class<?>> apply( final Object input ) {
       final List<Class<?>> ret = Lists.newArrayList( );
       final Class<?> type = WhateverAsClass.INSTANCE.apply( input );
-      if ( type == Object.class ) {
+      if ( type == Object.class || type == null ) {
         return ret;
       } else {
         final List<Class<?>> superInterfaces = TransitiveClosureImplementedInterfaces.INSTANCE.apply( new Class[] { type } );

@@ -70,23 +70,15 @@ import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.log4j.Logger;
-import org.mule.RequestContext;
 import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Startable;
-import com.eucalyptus.address.Address;
-import com.eucalyptus.address.Addresses;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.cloud.ResourceToken;
-import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.run.ClusterAllocator;
+import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
@@ -126,11 +118,6 @@ public class ClusterEndpoint implements Startable {
   
   public void start( ) throws MuleException {
     Clusters.getInstance( );
-  }
-  
-  public void enqueue( Allocation allocInfo ) {
-    ClusterAllocator.create( allocInfo );
-    RequestContext.getEventContext( ).setStopFurtherProcessing( true );
   }
   
   public DescribeAvailabilityZonesResponseType DescribeAvailabilityZones( DescribeAvailabilityZonesType request ) {
