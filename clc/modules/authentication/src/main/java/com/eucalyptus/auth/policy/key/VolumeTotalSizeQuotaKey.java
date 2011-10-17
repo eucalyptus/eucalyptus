@@ -38,11 +38,11 @@ public class VolumeTotalSizeQuotaKey extends QuotaKey {
   public String value( Scope scope, String id, String resource, Long quantity ) throws AuthException {
     switch ( scope ) {
       case ACCOUNT:
-        return Long.toString( toMb( RestrictedTypes.quantityMetricFunction( VolumeMetadata.class ).apply( AccountFullName.getInstance( id ) ) + quantity ) );
+        return Long.toString( toMb( RestrictedTypes.usageMetricFunction( VolumeMetadata.class ).apply( AccountFullName.getInstance( id ) ) + quantity ) );
       case GROUP:
         return NOT_SUPPORTED;
       case USER:
-        return Long.toString( toMb( RestrictedTypes.quantityMetricFunction( VolumeMetadata.class ).apply( UserFullName.getInstance( id ) ) + quantity ) );
+        return Long.toString( toMb( RestrictedTypes.usageMetricFunction( VolumeMetadata.class ).apply( UserFullName.getInstance( id ) ) + quantity ) );
     }
     throw new AuthException( "Invalid scope" );
   }

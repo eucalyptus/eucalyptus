@@ -87,6 +87,7 @@ import org.jboss.cache.commands.tx.RollbackCommand;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.xbill.DNS.Name;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -421,7 +422,7 @@ public class WalrusManager {
 			}
 		}
 
-		if(WalrusProperties.enableVirtualHosting) {
+		if(false) { //WalrusProperties.enableVirtualHosting) {
 			if(checkDNSNaming(bucketName)) {
 				UpdateARecordType updateARecord = new UpdateARecordType();
 				updateARecord.setUserId(account.getAccountNumber());
@@ -549,7 +550,7 @@ public class WalrusManager {
 								LOG.error(ex);
 							}
 
-							if (WalrusProperties.enableVirtualHosting) {
+							if (false) { //WalrusProperties.enableVirtualHosting) {
 								URI walrusUri;
 								String address;
 								RemoveARecordType removeARecordType = new RemoveARecordType();
@@ -3338,5 +3339,18 @@ public class WalrusManager {
 		}
 		db.commit();
 		return reply;
+	}
+
+	public static InetAddress getBucketIp(String bucket) throws EucalyptusCloudException {
+		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
+		try {
+			BucketInfo searchBucket = new BucketInfo(bucket);
+			db.getUnique(searchBucket);
+			return WalrusProperties.getWalrusAddress();
+		} catch (EucalyptusCloudException ex) {
+			throw ex;
+		} finally {
+			db.rollback();
+		}
 	}
 }
