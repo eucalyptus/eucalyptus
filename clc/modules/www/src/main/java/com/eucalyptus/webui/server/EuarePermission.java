@@ -110,9 +110,8 @@ public class EuarePermission {
   public static void authorizeCreateUser( User requestUser, Account account ) throws AuthException {
     boolean allowed = requestUser.isSystemAdmin( ) ||
                       ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && 
-                        ( requestUser.isAccountAdmin( ) ||
-                          ( Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, "", account, PolicySpec.IAM_CREATEUSER, requestUser ) &&
-                            Permissions.canAllocate( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, "", PolicySpec.IAM_CREATEUSER, requestUser, 1L ) ) ) );
+                        ( Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, "", account, PolicySpec.IAM_CREATEUSER, requestUser ) &&
+                          Permissions.canAllocate( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, "", PolicySpec.IAM_CREATEUSER, requestUser, 1L ) ) );
     if ( !allowed ) {
       throw new AuthException( "Failed to authorize user creation" );
     }
@@ -121,9 +120,8 @@ public class EuarePermission {
   public static void authorizeCreateGroup( User requestUser, Account account ) throws AuthException {
     boolean allowed = requestUser.isSystemAdmin( ) ||
                       ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && 
-                        ( requestUser.isAccountAdmin( ) ||
-                          ( Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, "", account, PolicySpec.IAM_CREATEGROUP, requestUser ) &&
-                            Permissions.canAllocate( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, "", PolicySpec.IAM_CREATEGROUP, requestUser, 1L ) ) ) );
+                        ( Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, "", account, PolicySpec.IAM_CREATEGROUP, requestUser ) &&
+                          Permissions.canAllocate( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, "", PolicySpec.IAM_CREATEGROUP, requestUser, 1L ) ) );
     if ( !allowed ) {
       throw new AuthException( "Failed to authorize group creation" );
     }
