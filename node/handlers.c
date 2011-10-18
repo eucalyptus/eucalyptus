@@ -705,10 +705,12 @@ void *startup_thread (void * arg)
         change_state (instance, BOOTING);
     }
     sem_v (inst_sem);
-    shutoff:
+    goto free;
+
+ shutoff: // escape point for error conditions
     change_state (instance, SHUTOFF);
- free:
     
+ free:
     if (xml) free (xml);
     if (brname) free (brname);
     return NULL;
