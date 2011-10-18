@@ -143,7 +143,7 @@ public class Entities {
   
   public static boolean hasTransaction( final Object obj ) {
     final String ctx = lookatPersistenceContext( obj );
-    CascadingTx tx = txStateThreadLocal.get( ).get( ctx );
+    final CascadingTx tx = txStateThreadLocal.get( ).get( ctx );
     if ( tx == null ) {
       return false;
     } else if ( tx.isActive( ) ) {
@@ -162,12 +162,12 @@ public class Entities {
     }
   }
   
-  public static void removeTransaction( CascadingTx tx ) {
-    String txId = makeTxRootName( tx );
+  public static void removeTransaction( final CascadingTx tx ) {
+    final String txId = makeTxRootName( tx );
     txLog.remove( txStateThreadLocal.toString( ) + tx.getRecord( ).getPersistenceContext( ) );
     txStateThreadLocal.get( ).remove( tx.getRecord( ).getPersistenceContext( ) );
     if ( txId.equals( txStateThreadLocal.get( ) ) ) {
-      for ( Entry<String, CascadingTx> e : txStateThreadLocal.get( ).entrySet( ) ) {
+      for ( final Entry<String, CascadingTx> e : txStateThreadLocal.get( ).entrySet( ) ) {
         cleanStrandedTx( e.getValue( ) );
       }
       txStateThreadLocal.get( ).clear( );
@@ -175,16 +175,16 @@ public class Entities {
     }
   }
   
-  private static void cleanStrandedTx( CascadingTx txValue ) {
+  private static void cleanStrandedTx( final CascadingTx txValue ) {
     LOG.error( "Found stranded transaction: " + txValue.getRecord( ).getPersistenceContext( ) + " started at: " + txValue.getRecord( ).getStack( ) );
     try {
       txValue.rollback( );
-    } catch ( Exception ex ) {
+    } catch ( final Exception ex ) {
       LOG.trace( ex, ex );
     }
   }
   
-  private static String makeTxRootName( CascadingTx tx ) {
+  private static String makeTxRootName( final CascadingTx tx ) {
     return txStateThreadLocal.toString( ) + tx.getRecord( ).getPersistenceContext( );
   }
   
@@ -193,7 +193,7 @@ public class Entities {
     final CascadingTx ret = new CascadingTx( ctx );
     ret.begin( );
     if ( txRootThreadLocal.get( ) == null ) {
-      String txId = makeTxRootName( ret );
+      final String txId = makeTxRootName( ret );
       LOG.trace( "Creating root entry for transaction tree: " + txId + " at: \n" + Threads.currentStackString( ) );
       txRootThreadLocal.set( txId );
     }
@@ -211,7 +211,7 @@ public class Entities {
     }
   }
   
-  public static <T> void flush( T object ) {
+  public static <T> void flush( final T object ) {
     getTransaction( object ).txState.getEntityManager( ).flush( );
   }
   
@@ -220,7 +220,7 @@ public class Entities {
   }
   
   @SuppressWarnings( { "unchecked", "cast" } )
-  public static <T> List<T> query( final T example, boolean readOnly ) {
+  public static <T> List<T> query( final T example, final boolean readOnly ) {
     final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
     final List<T> resultList = ( List<T> ) getTransaction( example ).getTxState( ).getSession( )
                                                                     .createCriteria( example.getClass( ) )
@@ -391,12 +391,12 @@ public class Entities {
     if ( !isPersistent( newObject ) ) {
       try {
         return uniqueResult( newObject );
-      } catch ( Exception ex ) {
+      } catch ( final Exception ex ) {
         return persist( newObject );
       }
     } else {
       try {
-        T persistedObject = getTransaction( newObject ).getTxState( ).getEntityManager( ).merge( newObject );
+        final T persistedObject = getTransaction( newObject ).getTxState( ).getEntityManager( ).merge( newObject );
         return persistedObject == newObject
           ? newObject
           : persistedObject;
@@ -419,7 +419,7 @@ public class Entities {
     try {
       ret = uniqueResult( example );
       db.commit( );
-    } catch ( TransactionException ex ) {
+    } catch ( final TransactionException ex ) {
       db.rollback( );
       throw new NoSuchElementException( ex.getMessage( ) );
     }
@@ -430,7 +430,7 @@ public class Entities {
     return new Function<T, T>( ) {
       
       @Override
-      public T apply( T arg0 ) {
+      public T apply( final T arg0 ) {
         return Entities.merge( arg0 );
       }
     };
@@ -460,7 +460,7 @@ public class Entities {
    * @param obj
    * @return
    */
-  public static boolean isPersistent( Object obj ) {
+  public static boolean isPersistent( final Object obj ) {
     if ( !hasTransaction( ) ) {
       return false;
     } else {
@@ -573,9 +573,9 @@ public class Entities {
     public void begin( ) throws RecoverablePersistenceException {
       try {
         this.txState.begin( );
-      } catch ( RecoverablePersistenceException ex ) {
+      } catch ( final RecoverablePersistenceException ex ) {
         removeTransaction( this );
-      } catch ( RuntimeException ex ) {
+      } catch ( final RuntimeException ex ) {
         removeTransaction( this );
         throw ex;
       }
@@ -843,54 +843,77 @@ public class Entities {
     
   }
   
-  private interface TransactionalFunction<D, R> extends Function<D, R> {}
-  
-  public static <T, R> Function<T, R> asTransaction( final Function<T, R> function ) {
-    return asTransaction( function, CONCURRENT_UPDATE_RETRIES );
+  private static class TransactionalFunction<E, D, R> implements Function<D, R> {
+    private Class<E>       entityType;
+    private Function<D, R> function;
+    private Integer        retries = CONCURRENT_UPDATE_RETRIES;
+    
+    TransactionalFunction( Class<E> entityType, Function<D, R> function, Integer retries ) {
+      this.entityType = entityType;
+      this.function = function;
+      this.retries = retries;
+    }
+    
+    @Override
+    public R apply( final D input ) {
+      if ( Entities.hasTransaction( ) ) {
+        throw new RuntimeException( "Failed to execute retryable transaction because of a nested transaction: "
+                                    + Entities.getTransaction( input.getClass( ) ).getRecord( ).stack );
+      } else {
+        RuntimeException rootCause = null;
+        for ( int i = 0; i < retries; i++ ) {
+          EntityTransaction db = Entities.get( entityType );
+          try {
+            R ret = this.function.apply( input );
+            db.commit( );
+            return ret;
+          } catch ( RuntimeException ex ) {
+            db.rollback( );
+            if ( Exceptions.isCausedBy( ex, OptimisticLockException.class ) ) {
+              rootCause = Exceptions.causedBy( ex, OptimisticLockException.class );
+              continue;
+            } else {
+              rootCause = ex;
+              Logs.extreme( ).error( ex, ex );
+              throw ex;
+            }
+          }
+        }
+        throw ( rootCause != null
+                ? rootCause
+                : new NullPointerException( "BUG: Transaction retry failed but root cause exception is unknown!" ) );
+      }
+    }
+    
   }
   
-  public static <T, R> Function<T, R> asTransaction( final Function<T, R> function, final int retries ) {
+  public static <T, R> Function<T, R> asTransaction( final Function<T, R> function ) {
     if ( function instanceof TransactionalFunction ) {
       return function;
     } else {
-      List<Class<?>> generics = Classes.genericsToClasses( function );
-      if ( generics.isEmpty( ) ) {
-        throw new IllegalArgumentException( "Failed to find generics for provided function, cannot make into transaction: " + Threads.currentStackString( ) );
-      }
-      final Class<?> type = generics.get( 0 );
-      return new TransactionalFunction<T, R>( ) {
-        
-        @Override
-        public R apply( T input ) {
-          if ( Entities.hasTransaction( ) ) {
-            throw new RuntimeException( "Failed to execute retryable transaction because of a nested transaction: "
-                                        + Entities.getTransaction( input.getClass( ) ).getRecord( ).stack );
-          } else {
-            RuntimeException rootCause = null;
-            for ( int i = 0; i < retries; i++ ) {
-              EntityTransaction db = Entities.get( type );
-              try {
-                R ret = function.apply( input );
-                db.commit( );
-                return ret;
-              } catch ( RuntimeException ex ) {
-                db.rollback( );
-                if ( Exceptions.isCausedBy( ex, OptimisticLockException.class ) ) {
-                  rootCause = Exceptions.causedBy( ex, OptimisticLockException.class );
-                  continue;
-                } else {
-                  rootCause = ex;
-                  Logs.extreme( ).error( ex, ex );
-                  throw ex;
-                }
-              }
-            }
-            throw ( rootCause != null
-                    ? rootCause
-                    : new NullPointerException( "BUG: Transaction retry failed but root cause exception is unknown!" ) );
-          }
+      final List<Class<?>> generics = Classes.genericsToClasses( function );
+      for ( final Class<?> type : generics ) {
+        if ( PersistenceContexts.isPersistentClass( type ) ) {
+          return asTransaction( type, function );
         }
-      };
+      }
+      throw new IllegalArgumentException( "Failed to find generics for provided function, cannot make into transaction: " + Threads.currentStackString( ) );
+    }
+  }
+  
+  public static <E, T, R> Function<T, R> asTransaction( final Class<E> type, final Function<T, R> function ) {
+    if ( function instanceof TransactionalFunction ) {
+      return function;
+    } else {
+      return asTransaction( type, function, CONCURRENT_UPDATE_RETRIES );
+    }
+  }
+  
+  public static <E, T, R> Function<T, R> asTransaction( final Class<E> type, final Function<T, R> function, final int retries ) {
+    if ( function instanceof TransactionalFunction ) {
+      return function;
+    } else {
+      return new TransactionalFunction<E, T, R>( type, function, retries );
     }
   }
   

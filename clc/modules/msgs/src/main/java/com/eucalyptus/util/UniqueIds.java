@@ -153,13 +153,13 @@ public class UniqueIds implements Serializable {
     
     @Override
     public Long nextIndex( ) {
-      return Entities.asTransaction( Transaction.NEXT_ID ).apply( this );
+      return Entities.asTransaction( PersistedCounter.class, Transaction.NEXT_ID ).apply( this );
     }
     
     @Override
     public Long nextIndex( final Long extent ) {
       Long ret = nextIndex( );
-      Entities.asTransaction( new Function<PersistedCounter, Long>( ) {
+      Entities.asTransaction( PersistedCounter.class, new Function<PersistedCounter, Long>( ) {
         
         @Override
         public Long apply( PersistedCounter input ) {

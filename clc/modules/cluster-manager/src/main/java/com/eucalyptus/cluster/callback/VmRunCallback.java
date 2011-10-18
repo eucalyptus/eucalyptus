@@ -141,7 +141,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       }
     };
     try {
-      Entities.asTransaction( redeemToken ).apply( reply );
+      Entities.asTransaction( VmInstance.class, redeemToken ).apply( reply );
     } catch ( RuntimeException ex ) {
       LOG.error( ex, ex );
       throw ex;
@@ -183,7 +183,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       }
     };
     try {
-      Entities.asTransaction( Functions.forPredicate( Predicates.and( rollbackToken, rollbackAddr ) ) ).apply( e );
+      Entities.asTransaction( VmInstance.class, Functions.forPredicate( Predicates.and( rollbackToken, rollbackAddr ) ) ).apply( e );
     } catch ( Exception ex ) {
       Logs.extreme( ).error( ex, ex );
     }
