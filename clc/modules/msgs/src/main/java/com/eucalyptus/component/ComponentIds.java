@@ -63,64 +63,38 @@
 
 package com.eucalyptus.component;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.BootstrapArgs;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.util.Classes;
+import com.google.common.base.Predicates;
+import com.google.common.collect.ClassToInstanceMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.MutableClassToInstanceMap;
 
 public class ComponentIds {
-  private static Logger                        LOG       = Logger.getLogger( ComponentIds.class );
-  private static final Map<Class, ComponentId> compIdMap = new HashMap<Class, ComponentId>( );
+  private static Logger                                          LOG        = Logger.getLogger( ComponentIds.class );
+  private static final ClassToInstanceMap<ComponentId>           compIdMap  = MutableClassToInstanceMap.create( );
+  private static final Map<String, Class<? extends ComponentId>> compIdName = Maps.newHashMap( );
   
-  public static boolean shouldBootstrapLocally( ComponentId c ) {
-    boolean cloudLocal = BootstrapArgs.isCloudController( ) && c.isCloudLocal( ) && !c.isRegisterable( );
-    boolean isCloudItself = BootstrapArgs.isCloudController( ) && Eucalyptus.class.equals( c.getClass( ) );
-    boolean alwaysLocal = c.isAlwaysLocal( );
-    boolean isBootrapperItself = Empyrean.class.equals( c.getClass( ) );
-    return cloudLocal || alwaysLocal || isBootrapperItself || isCloudItself;
-  }
-  
-  public static List<ComponentId> listLocallyRynning( ) {//TODO:GRZE:FIXME: isRunningLocally check shoudl be sufficient... replace with Component.
-    List<ComponentId> components = Lists.newArrayList( );
-    for ( Component comp : Components.list( ) ) {
-      if ( ComponentIds.lookup( Eucalyptus.class ).isAvailableLocally( ) && comp.getComponentId( ).isCloudLocal( ) ) {
-        components.add( comp.getComponentId( ) );
-      } else if ( comp.getComponentId( ).isAlwaysLocal( ) ) {
-        components.add( comp.getComponentId( ) );
-      } else if ( comp.isEnabledLocally( ) ) {
-        components.add( comp.getComponentId( ) );
-      }
-    }
-    LOG.trace( "Found the following running components: " + components );
-    return components;
+  public static List<ComponentId> list( ) {
+    return Lists.newArrayList( compIdMap.values( ) );
   }
   
   @SuppressWarnings( "unchecked" )
-  public static List<ComponentId> list( ) {
-    return new ArrayList( Components.lookupMap( ComponentId.class ).values( ) );
-  }
-  
-  public final static ComponentId lookup( final Class compIdClass ) {
+  public final static <T extends ComponentId> T lookup( final Class<T> compIdClass ) {
     if ( !compIdMap.containsKey( compIdClass ) ) {
-      try {
-        if ( ComponentId.class.isAssignableFrom( compIdClass ) ) {
-          ComponentIds.register( ( ComponentId ) compIdClass.newInstance( ) );
-          return compIdMap.get( compIdClass );
-        }
-      } catch ( InstantiationException ex ) {
-        LOG.error( ex, ex );
-      } catch ( IllegalAccessException ex ) {
-        LOG.error( ex, ex );
-      }
-      throw new NoSuchElementException( "No ComponentId with name: " + compIdClass );
+      T newInstance = Classes.newInstance( compIdClass );
+      compIdMap.putInstance( compIdClass, newInstance );
+      compIdName.put( newInstance.name( ), compIdClass );
+      LOG.debug( "Registered ComponentId: " + compIdClass.getCanonicalName( ) );
+      return newInstance;
     } else {
-      return compIdMap.get( compIdClass );
+      return ( T ) compIdMap.get( compIdClass );
     }
   }
   
@@ -133,18 +107,11 @@ public class ComponentIds {
    * @return
    */
   public final static ComponentId lookup( final String name ) {
-    String realName = name.toLowerCase( );
-    Map<String, ComponentId> map = Components.lookupMap( ComponentId.class );
-    if ( !map.containsKey( realName ) ) {
-      throw new NoSuchElementException( "No ComponentId with name: " + realName );
+    if ( !compIdName.containsKey( name.toLowerCase( ) ) ) {
+      throw new NoSuchElementException( "No ComponentId with name: " + name.toLowerCase( ) );
     } else {
-      return map.get( realName );
+      return compIdMap.get( compIdName.get( name.toLowerCase( ) ) );
     }
   }
   
-  public final static void register( final ComponentId componentId ) {
-    Map<String, ComponentId> map = Components.lookupMap( ComponentId.class );
-    map.put( componentId.getName( ), componentId );
-    compIdMap.put( componentId.getClass( ), componentId );
-  }
 }

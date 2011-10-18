@@ -85,7 +85,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 public class StackConfiguration extends AbstractPersistent {
   
   @ConfigurableField( initial = "500", description = "Channel connect timeout (ms)." )
-  public static Integer CHANNEL_CONNECT_TIMEOUT           = 500;
+  public static Integer       CHANNEL_CONNECT_TIMEOUT           = 500;
   @ConfigurableField( initial = "3", changeListener = TimeChangeListener.class,
       description = "Time interval duration (in seconds) during which duplicate signatures will be accepted to accomodate collisions for legitimate requests inherent in Query/REST signing protocol." )
   public static Integer       REPLAY_SKEW_WINDOW_SEC            = 3;
@@ -101,42 +101,42 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( initial = "128", description = "Server worker thread pool max." )
   public static Integer       SERVER_POOL_MAX_THREADS           = 128;
   @ConfigurableField( initial = "0", description = "Server max worker memory per connection." )
-  public static Long          SERVER_POOL_MAX_MEM_PER_CONN      = 0l;
+  public static Long          SERVER_POOL_MAX_MEM_PER_CONN      = 0L;
   @ConfigurableField( initial = "0", description = "Server max worker memory total." )
-  public static Long          SERVER_POOL_TOTAL_MEM             = 0l;
+  public static Long          SERVER_POOL_TOTAL_MEM             = 0L;
   
   @ConfigurableField( initial = "500", description = "Service socket select timeout (ms)." )
-  public static Long          SERVER_POOL_TIMEOUT_MILLIS        = 500l;
+  public static Long          SERVER_POOL_TIMEOUT_MILLIS        = 500L;
   
   @ConfigurableField( initial = "128", description = "Server selector thread pool max." )
   public static Integer       SERVER_BOSS_POOL_MAX_THREADS      = 128;
   
   @ConfigurableField( initial = "0", description = "Server max selector memory per connection." )
-  public static Long          SERVER_BOSS_POOL_MAX_MEM_PER_CONN = 0l;
+  public static Long          SERVER_BOSS_POOL_MAX_MEM_PER_CONN = 0L;
   
   @ConfigurableField( initial = "0", description = "Server worker thread pool max." )
-  public static Long          SERVER_BOSS_POOL_TOTAL_MEM        = 0l;
+  public static Long          SERVER_BOSS_POOL_TOTAL_MEM        = 0L;
   
   @ConfigurableField( initial = "500", description = "Service socket select timeout (ms)." )
-  public static Long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500l;
+  public static Long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500L;
   
   @ConfigurableField( initial = "8773", description = "Web services port." )
   public static final Integer PORT                              = 8773;
   
   @ConfigurableField( initial = "240", description = "Client idle timeout (secs)." )
-  public static Long          CLIENT_IDLE_TIMEOUT_SECS          = 240l;
+  public static Long          CLIENT_IDLE_TIMEOUT_SECS          = 240L;
   
   @ConfigurableField( initial = "240", description = "Cluster client idle timeout (secs)." )
-  public static Long          CLUSTER_IDLE_TIMEOUT_SECS         = 240l;
+  public static Long          CLUSTER_IDLE_TIMEOUT_SECS         = 240L;
   
   @ConfigurableField( initial = "2000", description = "Cluster connect timeout (ms)." )
-  public static Long          CLUSTER_CONNECT_TIMEOUT_MILLIS    = 2000l;
+  public static Long          CLUSTER_CONNECT_TIMEOUT_MILLIS    = 2000L;
   
   @ConfigurableField( initial = "20", description = "Server socket read time-out." )
-  public static Long          PIPELINE_READ_TIMEOUT_SECONDS     = 20l;
+  public static Long          PIPELINE_READ_TIMEOUT_SECONDS     = 20L;
   
   @ConfigurableField( initial = "20", description = "Server socket write time-out." )
-  public static Long          PIPELINE_WRITE_TIMEOUT_SECONDS    = 20l;
+  public static Long          PIPELINE_WRITE_TIMEOUT_SECONDS    = 20L;
   
   @ConfigurableField( initial = "1048576000", description = "Server http chunk max." )
   public static Integer       CLIENT_HTTP_CHUNK_BUFFER_MAX      = 1048576000;
@@ -145,26 +145,32 @@ public class StackConfiguration extends AbstractPersistent {
   public static Integer       CLIENT_POOL_MAX_THREADS           = 40;
   
   @ConfigurableField( initial = "0", description = "Server worker thread pool max." )
-  public static Long          CLIENT_POOL_MAX_MEM_PER_CONN      = 0l;
+  public static Long          CLIENT_POOL_MAX_MEM_PER_CONN      = 0L;
   
   @ConfigurableField( initial = "0", description = "Server worker thread pool max." )
-  public static Long          CLIENT_POOL_TOTAL_MEM             = 0l;
+  public static Long          CLIENT_POOL_TOTAL_MEM             = 0L;
   
   @ConfigurableField( initial = "500", description = "Client socket select timeout (ms)." )
-  public static Long          CLIENT_POOL_TIMEOUT_MILLIS        = 500l;
-
+  public static Long          CLIENT_POOL_TIMEOUT_MILLIS        = 500L;
+  
+  @ConfigurableField( initial = "102400", description = "Maximum HTTP chunk size (bytes)." )
+  public static Integer       HTTP_MAX_CHUNK_BYTES              = 10 * 10 * 1024;
+  @ConfigurableField( initial = "4096", description = "Maximum HTTP initial line size (bytes)." )
+  public static Integer       HTTP_MAX_INITIAL_LINE_BYTES       = 4 * 1024;
+  @ConfigurableField( initial = "8192", description = "Maximum HTTP headers size (bytes)." )
+  public static Integer       HTTP_MAX_HEADER_BYTES             = 8 * 1024;
+  
   @ConfigurableField( initial = "http", description = "Default scheme for EC2_URL in eucarc.", changeListener = UriChangeListener.class )
-  public static String        DEFAULT_EC2_URI_SCHEME        = "http";
-
+  public static String        DEFAULT_EC2_URI_SCHEME            = "http";
+  
   @ConfigurableField( initial = "http", description = "Default scheme for S3_URL in eucarc.", changeListener = UriChangeListener.class )
-  public static String        DEFAULT_S3_URI_SCHEME        = "http";
-
+  public static String        DEFAULT_S3_URI_SCHEME             = "http";
+  
   @ConfigurableField( initial = "http", description = "Default scheme for AWS_SNS_URL in eucarc.", changeListener = UriChangeListener.class )
   public static String        DEFAULT_AWS_SNS_URI_SCHEME        = "http";
-
+  
   @ConfigurableField( initial = "http", description = "Default scheme for EUARE_URL in eucarc.", changeListener = UriChangeListener.class )
-  public static String        DEFAULT_EUARE_URI_SCHEME        = "http";
-
+  public static String        DEFAULT_EUARE_URI_SCHEME          = "http";
   
   private static Logger       LOG                               = Logger.getLogger( StackConfiguration.class );
   
@@ -191,8 +197,8 @@ public class StackConfiguration extends AbstractPersistent {
       
     }
   }
-
-    public static class UriChangeListener implements PropertyChangeListener {
+  
+  public static class UriChangeListener implements PropertyChangeListener {
     /**
      * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
      *      java.lang.Object)
@@ -203,18 +209,15 @@ public class StackConfiguration extends AbstractPersistent {
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
       
       String prefix = null;
-
+      
       if ( newValue instanceof String ) {
-          prefix = ( String ) newValue;
-	  if( "http".equals(prefix) || "https".equals(prefix) )
-	      return;
+        prefix = ( String ) newValue;
+        if ( "http".equals( prefix ) || "https".equals( prefix ) )
+          return;
       }
-      throw new ConfigurablePropertyException( "URL prefix for " + t.getFieldName( ) + " has to be 'http' or 'https'");
+      throw new ConfigurablePropertyException( "URL prefix for " + t.getFieldName( ) + " has to be 'http' or 'https'" );
       
     }
   }
-
-}
-
-
   
+}

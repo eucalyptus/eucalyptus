@@ -170,8 +170,7 @@ public class ServiceContextManager {
   }
   
   private List<ComponentId> shouldReload( ) {
-    List<Component> components = Components.whichAreEnabledLocally( );
-    List<ComponentId> currentComponentIds = Components.toIds( components );
+    List<ComponentId> currentComponentIds = Components.toIds( Components.whichAreEnabledLocally( ) );
     if ( this.context == null ) {
       return currentComponentIds;
     } else if ( !this.enabledCompIds.equals( currentComponentIds ) ) {

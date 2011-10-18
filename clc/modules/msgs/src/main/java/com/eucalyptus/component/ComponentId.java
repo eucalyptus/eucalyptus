@@ -59,16 +59,37 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   private final String        entryPoint;
   private final Integer       port;
   private final String        modelContent;
+  private Transport           insecureTransport;
+  private Transport           secureTransport;
   private String              uriPattern;
   private String              externalUriPattern;
   private String              uriLocal;
   
-  protected ComponentId( String name ) {
-    this.capitalizedName = name;
+  enum Transport {
+    HTTP {
+      @Override
+      public String getScheme( ) {
+        return "http";
+      }
+    }, HTTPS {
+      @Override
+      public String getScheme( ) {
+        return "https";
+      }
+    };
+    public abstract String getScheme( );
+  }
+  
+  protected ComponentId( String... name ) {
+    this.capitalizedName = ( name == null || name.length == 0
+      ? this.getClass( ).getSimpleName( )
+      : name[0] );
     this.name = this.capitalizedName.toLowerCase( );
     this.entryPoint = this.capitalizedName + "RequestQueueEndpoint";
     this.port = 8773;
-    this.uriPattern = "http://%s:%d/internal/%s";
+    this.insecurePrefix =
+                          this.uriPattern = "http://%s:%d/internal/%s";
+    
     // NOTE: this pattern is overwritten by some subclasses in getExternalUriPattern()
     this.externalUriPattern = "%s://%s:%d/services/" + this.capitalizedName;
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
@@ -86,7 +107,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     this.uriLocal = String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
     this.modelContent = loadModel( );
   }
-
+  
   public String getVendorName( ) {
     return "euca";
   }
@@ -148,7 +169,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public FullName makeFullName( ServiceConfiguration config, String... parts ) {
     return new ComponentFullName( config, parts );
   }
-
+  
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
     return Lists.newArrayList( );
   }
@@ -276,33 +297,32 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   
   /**
    * Create URI for external endpoint
+   * 
    * @param scheme URI scheme to be used, see StackConfiguration fields for configurable properties
    */
   public final URI makeExternalRemoteUri( String hostName, Integer port, String scheme ) {
     String uri;
     URI u = null;
     String pattern;
-
+    
     port = ( port == -1 )
       ? this.getPort( )
       : port;
     hostName = ( port == -1 )
       ? Internets.localHostAddress( )
       : hostName;
-    pattern = this.getExternalUriPattern();
-
+    pattern = this.getExternalUriPattern( );
+    
     try {
-      if(pattern.startsWith("%s"))
-	    uri = String.format( this.getExternalUriPattern( ), scheme, hostName, port );
-      else
-	    uri = String.format( this.getExternalUriPattern( ), hostName, port );
+      if ( pattern.startsWith( "%s" ) )
+        uri = String.format( this.getExternalUriPattern( ), scheme, hostName, port );
+      else uri = String.format( this.getExternalUriPattern( ), hostName, port );
       u = new URI( uri );
       u.parseServerAuthority( );
     } catch ( URISyntaxException e ) {
-        if(pattern.startsWith("%s"))
-	    uri = String.format( this.getExternalUriPattern( ), scheme, Internets.localHostAddress( ), this.getPort( ) );
-	else
-	    uri = String.format( this.getExternalUriPattern( ), Internets.localHostAddress( ), this.getPort( ) );
+      if ( pattern.startsWith( "%s" ) )
+        uri = String.format( this.getExternalUriPattern( ), scheme, Internets.localHostAddress( ), this.getPort( ) );
+      else uri = String.format( this.getExternalUriPattern( ), Internets.localHostAddress( ), this.getPort( ) );
       try {
         u = new URI( uri );
         u.parseServerAuthority( );
@@ -310,10 +330,9 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
         u = URI.create( uri );
       }
     } catch ( MissingFormatArgumentException e ) {
-	if(pattern.startsWith("%s"))
-	    uri = String.format( this.getExternalUriPattern( ), scheme, hostName, port, this.getCapitalizedName( ) );
-	else 
-	    uri = String.format( this.getExternalUriPattern( ), hostName, port, this.getCapitalizedName( ) );
+      if ( pattern.startsWith( "%s" ) )
+        uri = String.format( this.getExternalUriPattern( ), scheme, hostName, port, this.getCapitalizedName( ) );
+      else uri = String.format( this.getExternalUriPattern( ), hostName, port, this.getCapitalizedName( ) );
       try {
         u = new URI( uri );
         u.parseServerAuthority( );
@@ -432,7 +451,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public boolean isRegisterable( ) {
     return !( ServiceBuilders.lookup( this ) instanceof DummyServiceBuilder );
   }
-
+  
   /**
    * Can the component be run locally (i.e., is the needed code available)
    * 
@@ -442,7 +461,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public Boolean isAvailableLocally( ) {
     return this.isAlwaysLocal( ) || ( this.isCloudLocal( ) && BootstrapArgs.isCloudController( ) );
   }
-
+  
   protected static ServiceConfiguration setupServiceState( InetAddress addr, ComponentId compId ) throws ServiceRegistrationException, ExecutionException {
     try {
       Component comp = Components.lookup( compId );

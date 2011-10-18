@@ -381,10 +381,14 @@ public class Component implements HasName<Component> {
    */
   @Override
   public String toString( ) {
-    return String.format( "Component %s available=%s local-service=%s\n",
-                          this.identity.name( ), this.identity.isAvailableLocally( ), this.serviceRegistry.hasLocalService( )
+    return String.format( "Component %s =%s service=%s\n",
+                          this.identity.name( ),
+                          ( this.identity.isAvailableLocally( )
+                            ? ""
+                            : "not" ) + "available",
+                          ( this.serviceRegistry.hasLocalService( )
                             ? this.serviceRegistry.getLocalService( )
-                            : "none" );
+                            : "not-local" ) );
   }
   
   /**

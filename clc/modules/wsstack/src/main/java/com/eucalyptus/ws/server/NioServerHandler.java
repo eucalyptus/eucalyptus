@@ -99,7 +99,7 @@ import com.eucalyptus.ws.ServiceNotReadyException;
 import com.eucalyptus.ws.WebServicesException;
 
 @ChannelPipelineCoverage( "one" )
-public class NioServerHandler extends SimpleChannelUpstreamHandler {
+public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE: this needs to move up dependency tree.
   private static Logger LOG   = Logger.getLogger( NioServerHandler.class );
   private boolean       first = true;
   

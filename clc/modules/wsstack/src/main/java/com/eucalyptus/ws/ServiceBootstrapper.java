@@ -164,7 +164,7 @@ public class ServiceBootstrapper extends Bootstrapper {
           config.error( ex );
           return false;
         } catch ( Exception ex ) {
-          Exceptions.trace( "load(): Building service failed: " + Components.Functions.componentToString( ).apply( comp ), ex );
+          Exceptions.trace( "load(): Building service failed: " + Components.describe( comp ), ex );
           config.error( ex );
           return false;
         }

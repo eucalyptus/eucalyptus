@@ -159,8 +159,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     @Column( name = "config_cluster_startup_sync_retries", nullable = false )
     private Integer startupSyncRetries = 10;
     
-    Configuration( ) {
-      super( );
+    public Configuration( ) {
     }
     
     public Integer getRequestWorkers( ) {

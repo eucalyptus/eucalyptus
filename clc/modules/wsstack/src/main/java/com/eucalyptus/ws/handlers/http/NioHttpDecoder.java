@@ -67,6 +67,7 @@ import org.mortbay.log.Log;
 
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.util.HttpUtils;
 
 public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
@@ -95,7 +96,7 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
   }
 
   public NioHttpDecoder( ) {
-    this( 4096, 8192, 102400 );
+    this( StackConfiguration.HTTP_MAX_INITIAL_LINE_BYTES, StackConfiguration.HTTP_MAX_HEADER_BYTES, StackConfiguration.HTTP_MAX_CHUNK_BYTES );
   }
 
   protected NioHttpDecoder( int maxInitialLineLength, int maxHeaderSize, int maxChunkSize ) {
