@@ -105,7 +105,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       
       @Override
       public boolean apply( ComponentId input ) {
-        return ComponentId.this.equals( input ) || ComponentId.this.serviceDependencies( ).contains( input );
+        return ComponentId.this.equals( input ) || input.serviceDependencies( ).contains( ComponentId.this.getClass( ) );
       }
     };
   }
