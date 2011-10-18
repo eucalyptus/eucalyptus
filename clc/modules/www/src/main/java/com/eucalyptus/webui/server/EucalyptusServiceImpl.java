@@ -300,7 +300,10 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     ArrayList<String> users = Lists.newArrayList( );
     for ( String name : names.split( WHITESPACE_PATTERN ) ) {
       if ( !Strings.isNullOrEmpty( name ) ) {
-        users.add( EuareWebBackend.createUser( requestUser, accountId, name, path ) );
+        String created = EuareWebBackend.createUser( requestUser, accountId, name, path );
+        if ( created != null ) {
+          users.add( created );
+        }
       }
     }
     return users;
@@ -315,7 +318,10 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     ArrayList<String> groups = Lists.newArrayList( );
     for ( String name : names.split( WHITESPACE_PATTERN ) ) {
       if ( !Strings.isNullOrEmpty( name ) ) {
-        groups.add( EuareWebBackend.createGroup( requestUser, accountId, name, path ) );
+        String created = EuareWebBackend.createGroup( requestUser, accountId, name, path );
+        if ( created != null ) {
+          groups.add( created );
+        }
       }
     }
     return groups;    

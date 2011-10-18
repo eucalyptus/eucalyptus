@@ -62,14 +62,8 @@
  */
 package com.eucalyptus.bootstrap;
 
-import org.apache.log4j.Logger;
-
 import com.eucalyptus.component.ComponentId;
 
-
-/**
- * Executes shutdown hooks in order
- */
 public class ShutdownHook implements Comparable<ShutdownHook>{
 
 	private Runnable runnable;
