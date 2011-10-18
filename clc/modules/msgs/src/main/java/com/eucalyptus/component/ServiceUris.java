@@ -115,7 +115,7 @@ public class ServiceUris {
           return SLASH.format( ) + args[0];
         }
       },
-      ARGS {
+      QUERY {
         Function<Map.Entry<String, String>, String> transform = new Function<Map.Entry<String, String>, String>( ) {
                                                                 
                                                                 @Override
@@ -205,8 +205,8 @@ public class ServiceUris {
     
     public UriParserBuilder path( String... path ) {
       this.path = ( path != null && path.length > 0
-        ? Joiner.on( Lexemes.SLASH.format( ) ).join( path )
-        : "" );
+        ? Lexemes.SLASH.format( ) + Joiner.on( Lexemes.SLASH.format( ) ).join( path )
+        : Lexemes.SLASH.format( ) );
       return this;
     }
     
@@ -237,7 +237,7 @@ public class ServiceUris {
         ? this.scheme.getSecureScheme( )
         : this.scheme.getScheme( );
       try {
-        URI u = new URI( schemeString, null, this.address.getCanonicalHostName( ), this.port, this.path, Lexemes.ARGS.format( this.query ), this.fragment );
+        URI u = new URI( schemeString, null, this.address.getCanonicalHostName( ), this.port, this.path, Lexemes.QUERY.format( this.query ), this.fragment );
         u.parseServerAuthority( );
         return u;
       } catch ( URISyntaxException e ) {
