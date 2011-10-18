@@ -642,6 +642,22 @@ void *startup_thread (void * arg)
         sem_p (hyp_sem);
         sem_p (loop_sem);
 
+        // We have seen virDomainCreateLinux() on occasion block indefinitely,
+        // which freezes all activity on the NC since hyp_sem and loop_sem are
+        // being held by the thread. (This is on Lucid with AppArmor enabled.)
+        // To protect against that, we invoke the function in a process and 
+        // terminate it after CREATE_TIMEOUT_SEC seconds.
+        //
+        // #0  0x00007f359f0b1f93 in poll () from /lib/libc.so.6
+        // #1  0x00007f359a9a44e2 in ?? () from /usr/lib/libvirt.so.0
+        // #2  0x00007f359a9a5060 in ?? () from /usr/lib/libvirt.so.0
+        // #3  0x00007f359a9ac159 in ?? () from /usr/lib/libvirt.so.0
+        // #4  0x00007f359a98d65b in virDomainCreateXML () from /usr/lib/libvirt.so.0
+        // #5  0x00007f359b053c8e in startup_thread (arg=0x7f358813bf40) at handlers.c:644
+        // #6  0x00007f359f3619ca in start_thread () from /lib/libpthread.so.0
+        // #7  0x00007f359f0be70d in clone () from /lib/libc.so.6
+        // #8  0x0000000000000000 in ?? ()
+
         pid_t cpid = fork(); 
         if (cpid<0) { // fork error
             logprintfl (EUCAERROR, "[%s] failed to fork to start instance\n", instance->instanceId);
