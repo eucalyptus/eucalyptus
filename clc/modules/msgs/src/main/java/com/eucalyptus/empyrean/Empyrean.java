@@ -73,6 +73,7 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -135,17 +136,6 @@ public class Empyrean extends ComponentId.Unpartioned {
     @Override
     public boolean load( ) throws Exception {
       Groovyness.run( "setup_persistence.groovy" );
-      if ( Iterables.any( ServiceConfigurations.list( Eucalyptus.class ), ShouldInitialize.INST ) ) {
-        try {
-          ProxoolFacade.shutdown( );
-          Bootstrap.initializeSystem( );
-          System.exit( 123 );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          System.exit( 123 );
-        }
-      }
-      UniqueIds.nextId( Empyrean.class );
       return true;
     }
   }

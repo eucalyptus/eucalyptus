@@ -87,11 +87,13 @@ import org.jgroups.blocks.ReplicatedHashMap;
 import org.jgroups.conf.ClassConfigurator;
 import org.jgroups.stack.Protocol;
 import org.jgroups.stack.ProtocolStack;
+import org.logicalcobwebs.proxool.ProxoolFacade;
 import com.eucalyptus.bootstrap.Host.DbFilter;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
@@ -120,6 +122,14 @@ public class Hosts {
   public static final Long                       STATE_TRANSFER_TIMEOUT = 10000L;
   private static final Logger                    LOG                    = Logger.getLogger( Hosts.class );
   private static ReplicatedHashMap<String, Host> hostMap;
+  
+  enum ShouldInitialize implements Predicate<ServiceConfiguration> {
+    INSTANCE;
+    @Override
+    public boolean apply( ServiceConfiguration input ) {
+      return !BootstrapArgs.isCloudController( ) && Internets.testLocal( input.getInetAddress( ) );
+    }
+  }
   
   enum HostBootstrapEventListener implements EventListener<Hertz> {
     INSTANCE;
@@ -165,6 +175,24 @@ public class Hosts {
         setup( Empyrean.class, arg1.getBindAddress( ) );
         if ( arg1.hasDatabase( ) ) {
           setup( Eucalyptus.class, arg1.getBindAddress( ) );
+        } else {
+          try {
+            ServiceConfiguration maybeConfig = ServiceConfigurations.lookupByHost( Eucalyptus.class, arg1.getBindAddress( ).getCanonicalHostName( ) );
+            if ( ShouldInitialize.INSTANCE.apply( maybeConfig ) ) {
+              arg1.markDatabase( );
+              hostMap.replace( arg1.getDisplayName( ), arg1 );
+              LOG.info( "Hosts.entryAdded(): Marked as database => " + arg1 );
+            }
+          } catch ( Exception ex ) {
+            LOG.error( ex , ex );
+          }
+        }
+      } else if ( arg1.hasDatabase( ) && !BootstrapArgs.isCloudController( ) ) {
+        try {
+          Bootstrap.initializeSystem( );
+          System.exit( 123 );
+        } catch ( Exception ex ) {
+          System.exit( 123 );
         }
       }
     }

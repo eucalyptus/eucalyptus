@@ -319,7 +319,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 		Connection conn = null;
 
 		try {
-      String url = String.format( "jdbc:%s?createDatabaseIfNotExist=true", ServiceUris.remote( Database.class, InetAddress.getLocalHost( ), context ) );
+      String url = String.format( "jdbc:%s?createDatabaseIfNotExist=true", ServiceUris.remote( Database.class, Internets.localHostAddress( ), context ) );
 
 			LOG.debug("connecting url : " + url);
 

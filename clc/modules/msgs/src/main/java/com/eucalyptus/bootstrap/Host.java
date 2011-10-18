@@ -213,6 +213,10 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     this.hasBootstrapped = true;
   }
   
+  void markDatabase( ) {
+    this.hasDatabase = true;
+  }
+  
   public Integer getEpoch( ) {
     return this.epoch;
   }
