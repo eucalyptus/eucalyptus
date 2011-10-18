@@ -98,7 +98,7 @@ public class Eucalyptus extends ComponentId.Unpartioned {
       
       @Override
       public boolean apply( ComponentId input ) {
-        return !input.isRegisterable( );
+        return Eucalyptus.this.equals( input ) || !input.isRegisterable( );
       }
     } );
   }

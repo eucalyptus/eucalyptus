@@ -74,7 +74,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   
   @Override
   public String getPartition( ) {
-    return ( this.isPartitioned( ) /**&& !this.isRegisterable( )**/
+    return ( this.isPartitioned( )
+      /** && !this.isRegisterable( ) **/
       ? Eucalyptus.INSTANCE.name( )
       : ( ( Unpartioned ) this ).getPartition( ) );
   }
@@ -104,8 +105,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       
       @Override
       public boolean apply( ComponentId input ) {
-        return ( ComponentId.this.serviceDependencies( ).contains( input ) )
-               || ComponentId.this.getClass( ).equals( input.getClass( ) );
+        return ComponentId.this.equals( input ) || ComponentId.this.serviceDependencies( ).contains( input );
       }
     };
   }
