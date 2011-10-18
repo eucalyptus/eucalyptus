@@ -101,7 +101,7 @@ negackBroadcast.setGcLag( 20 );
 UNICAST reliableUnicast = new UNICAST( );
 
 STABLE stableBroadcast = new STABLE( );
-stableBroadcast.setDesiredAverageGossip( 50000 );
+//stableBroadcast.setDesiredAverageGossip( 20000 );
 stableBroadcast.setMaxBytes( 400000 );
 
 GMS groupMembership = new GMS( );

@@ -121,9 +121,11 @@ import com.google.common.collect.Lists;
 @ConfigurableClass( root = "bootstrap.hosts", description = "Properties controlling the handling of remote host bootstrapping" )
 public class Hosts {
   @ConfigurableField( description = "Timeout for state transfers (in msec).", readonly = true )
-  public static final Long                       STATE_TRANSFER_TIMEOUT = 10000L;
-  private static final Logger                    LOG                    = Logger.getLogger( Hosts.class );
-  private static final AtomicBoolean             initialized            = new AtomicBoolean( false );
+  public static final Long                       STATE_TRANSFER_TIMEOUT   = 10000L;
+  @ConfigurableField( description = "Timeout for state initialization (in msec).", readonly = true )
+  public static final Long                       STATE_INITIALIZE_TIMEOUT = 30000L;
+  private static final Logger                    LOG                      = Logger.getLogger( Hosts.class );
+  private static final AtomicBoolean             initialized              = new AtomicBoolean( false );
   private static ReplicatedHashMap<String, Host> hostMap;
   
   enum ShouldInitialize implements Predicate<ServiceConfiguration> {
