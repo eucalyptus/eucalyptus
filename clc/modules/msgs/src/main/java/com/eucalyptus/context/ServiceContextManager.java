@@ -299,7 +299,7 @@ public class ServiceContextManager {
   public String loadModel( ComponentId componentId ) {
     try {
       return Resources.toString( Resources.getResource( componentId.getServiceModelFileName( ) ), Charset.defaultCharset( ) );
-    } catch ( IOException ex ) {
+    } catch ( Exception ex ) {
       Logs.extreme( ).error( ex );
       return EMPTY_MODEL;
     }
