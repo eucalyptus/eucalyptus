@@ -117,6 +117,9 @@ import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * TODO:GRZE: wrong package should be .util
+ */
 public class Threads {
   private static Logger                                  LOG               = Logger.getLogger( Threads.class );
   private final static String                            PREFIX            = "Eucalyptus.";
@@ -661,5 +664,10 @@ public class Threads {
   @SuppressWarnings( "unchecked" )
   public static <C> Future<C> enqueue( final ServiceConfiguration config, final Callable<?> callable ) {
     return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, NUM_QUEUE_WORKERS ).submit( callable );
+  }
+  
+  @SuppressWarnings( "unchecked" )
+  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Integer workers, final Callable<?> callable ) {
+    return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, workers ).submit( callable );
   }
 }

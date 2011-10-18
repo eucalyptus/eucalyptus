@@ -66,7 +66,7 @@ package com.eucalyptus.config;
 import java.util.ArrayList;
 import java.util.List;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.empyrean.Empyrean;
 
 public class PropertiesService extends ComponentId.Unpartioned {
   
@@ -83,7 +83,7 @@ public class PropertiesService extends ComponentId.Unpartioned {
   public List<Class<? extends ComponentId>> serviceDependencies( ) {
     return new ArrayList<Class<? extends ComponentId>>( ) {
       {
-        this.add( Eucalyptus.class );
+        this.add( Empyrean.class );
       }
     };
   }

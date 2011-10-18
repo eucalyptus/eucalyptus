@@ -184,7 +184,7 @@ public class RemoteInfoHandler {
     List<StorageInfoWeb> storageList = new ArrayList<StorageInfoWeb>( );
     for ( final ServiceConfiguration cc : ServiceConfigurations.list( ClusterController.class ) ) {
       try {
-        if ( Internets.testLocal( cc.getHostName( ) ) && !Components.lookup( "storage" ).isEnabledLocally( ) ) {
+        if ( Internets.testLocal( cc.getHostName( ) ) && !Components.lookup( Storage.class ).isEnabledLocally( ) ) {
           storageList.add( StorageInfoWeb.DEFAULT_SC );
           continue;
         }
@@ -233,7 +233,7 @@ public class RemoteInfoHandler {
       UpdateWalrusConfigurationType updateWalrusConfiguration = new UpdateWalrusConfigurationType( );
       updateWalrusConfiguration.setName( WalrusProperties.NAME );
       updateWalrusConfiguration.setProperties( convertProps( walrusInfoWeb.getProperties( ) ) );
-      Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) );
+      Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Components.lookup( Walrus.class ) );
       scDispatch.send( updateWalrusConfiguration );
     }
   }
@@ -243,7 +243,7 @@ public class RemoteInfoHandler {
     try {
       for ( ServiceConfiguration c : ServiceConfigurations.list( Walrus.class ) ) {
         GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType( WalrusProperties.NAME );
-        Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Components.lookup( "walrus" ) );
+        Dispatcher scDispatch = ServiceDispatcher.lookupSingle( Components.lookup( Walrus.class ) );
         GetWalrusConfigurationResponseType getWalrusConfigResponse = scDispatch.send( getWalrusConfiguration );
         walrusList.add( new WalrusInfoWeb( c.getName( ),
                                            c.getHostName( ),

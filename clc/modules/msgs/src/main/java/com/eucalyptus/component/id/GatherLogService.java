@@ -67,6 +67,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.util.Internets;
 
 public class GatherLogService extends ComponentId {
@@ -74,7 +75,7 @@ public class GatherLogService extends ComponentId {
   public GatherLogService( ) {
     super( "gatherlog" );
   }
-
+  
   @Override
   public Integer getPort( ) {
     return 8774;
@@ -82,12 +83,17 @@ public class GatherLogService extends ComponentId {
   
   @Override
   public String getLocalEndpointName( ) {
-    return String.format( getUriPattern(), Internets.localHostAddress( ), this.getPort( ) );
+    return ServiceUris.remote( this, Internets.localHostInetAddress( ), this.getPort( ) ).toASCIIString( );
   }
-
+  
   @Override
-  public String getUriPattern( ) {
-    return "http://%s:%d/axis2/services/EucalyptusGL";
+  public String getServicePath( String... pathParts ) {
+    return "/axis2/services/EucalyptusGL";
+  }
+  
+  @Override
+  public String getInternalServicePath( String... pathParts ) {
+    return this.getServicePath( pathParts );
   }
   
   @Override
@@ -98,7 +104,9 @@ public class GatherLogService extends ComponentId {
       }
     };
   }
+  
   private static ChannelPipelineFactory logPipeline;
+  
   /**
    * This was born under a bad sign. No touching.
    * 
@@ -109,5 +117,5 @@ public class GatherLogService extends ComponentId {
       ? logPipeline
       : helpGetClientPipeline( "com.eucalyptus.ws.client.pipeline.GatherLogClientPipeline" ) ) );
   }
-
+  
 }

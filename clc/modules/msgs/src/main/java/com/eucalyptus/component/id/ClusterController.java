@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.util.Internets;
 
 public class ClusterController extends ComponentId {
@@ -19,17 +20,7 @@ public class ClusterController extends ComponentId {
   
   @Override
   public String getLocalEndpointName( ) {
-    return String.format( getUriPattern( ), Internets.localHostAddress( ), this.getPort( ) );
-  }
-  
-  @Override
-  public String getUriPattern( ) {
-    return "http://%s:%d/axis2/services/EucalyptusCC";
-  }
-  
-  @Override
-  public String getExternalUriPattern( ) {
-    return "http://%s:%d/axis2/services/EucalyptusCC";
+    return ServiceUris.remote( this, Internets.localHostInetAddress( ), this.getPort( ) ).toASCIIString( );
   }
   
   private static ChannelPipelineFactory clusterPipeline;
@@ -48,6 +39,16 @@ public class ClusterController extends ComponentId {
         add( Eucalyptus.class );
       }
     };
+  }
+
+  @Override
+  public String getServicePath( String... pathParts ) {
+    return "/axis2/services/EucalyptusCC";
+  }
+
+  @Override
+  public String getInternalServicePath( String... pathParts ) {
+    return this.getServicePath( pathParts );
   }
   
 }

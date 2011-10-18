@@ -210,6 +210,7 @@ import edu.ucsb.eucalyptus.util.WalrusDataQueue;
 import edu.ucsb.eucalyptus.util.WalrusMonitor;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Walrus;
 
 public class WalrusManager {
@@ -440,7 +441,7 @@ public class WalrusManager {
 				updateARecord.setTtl(604800);
 				updateARecord.setZone(zone);
 				try {
-					ServiceDispatcher.lookupSingle(Components.lookup("dns")).send(updateARecord);
+					ServiceDispatcher.lookupSingle(Components.lookup(Dns.class)).send(updateARecord);
 					LOG.info("Mapping " + updateARecord.getName() + " to " + address);
 				} catch(Exception ex) {
 					LOG.error("Could not update DNS record", ex);
@@ -567,7 +568,7 @@ public class WalrusManager {
 								}
 								removeARecordType.setAddress(address);
 								try {
-									ServiceDispatcher.lookupSingle(Components.lookup("dns")).send(
+									ServiceDispatcher.lookupSingle(Components.lookup(Dns.class)).send(
 											removeARecordType);
 									LOG.info("Removing mapping for "
 											+ removeARecordType.getName());

@@ -66,6 +66,7 @@ package com.eucalyptus.util.async;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -84,13 +85,17 @@ public class AsyncRequests {
           LOG.debug( msg.toSimpleString( ) );
         }
       } ).sendSync( config );
-    } catch ( ExecutionException ex ) {
-      LOG.error( ex.getMessage( ) );
-      LOG.error( ex.getCause( ), ex.getCause( ) );
-      throw Exceptions.toCatchable( ex.getCause( ) );
     } catch ( InterruptedException ex ) {
       Thread.currentThread( ).interrupt( );
       throw ex;
+    } catch ( ExecutionException ex ) {
+      LOG.warn( ex.getMessage( ) );
+      Logs.exhaust( ).error( ex.getCause( ), ex.getCause( ) );
+      throw Exceptions.toCatchable( ex.getCause( ) );
+    } catch ( Exception ex ) {
+      LOG.warn( ex.getMessage( ) );
+      Logs.exhaust( ).error( ex.getCause( ), ex.getCause( ) );
+      throw Exceptions.toCatchable( ex.getCause( ) );
     }
   }
   

@@ -83,6 +83,7 @@ public class NioHttpConnector extends AbstractConnector implements Initialisable
 
   public void doConnect( ) throws MuleException {
     this.server.compareAndSet( null, new NioServer( ) );
+    this.server.get( ).start( );
   }
 
   public String getProtocol( ) {
@@ -95,7 +96,6 @@ public class NioHttpConnector extends AbstractConnector implements Initialisable
   @Override
   public void doStart( ) throws MuleException {
     this.doConnect( );
-    this.server.get( ).start( );
   }
 
   @Override

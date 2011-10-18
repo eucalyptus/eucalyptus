@@ -132,7 +132,7 @@ public class Pipelines {
       throw new NoAcceptingPipelineException( );
     }
     if ( Logs.isExtrrreeeme( ) ) {
-      EventRecord.here( Pipelines.class, EventType.PIPELINE_UNROLL, candidate.toString( ) ).debug( );
+      EventRecord.here( Pipelines.class, EventType.PIPELINE_UNROLL, candidate.toString( ) ).extreme( );
     }
     return candidate;
   }
@@ -205,14 +205,15 @@ public class Pipelines {
     
     public InternalSoapPipeline( final ComponentId componentId ) {
       super( componentId );
-      this.servicePath = componentId.makeExternalRemoteUri( "127.0.0.1", 8773, "http" ).getPath( );
-      this.internalServicePath = componentId.makeInternalRemoteUri( "127.0.0.1", 8773 ).getPath( );
+      this.servicePath = componentId.getServicePath( );
+      this.internalServicePath = componentId.getInternalServicePath( );
       this.serviceName = componentId.getFullName( ).toString( );
     }
     
     @Override
     public boolean checkAccepts( final HttpRequest message ) {
-      return ( message.getUri( ).endsWith( this.servicePath ) || message.getUri( ).endsWith( this.internalServicePath ) ) && message.getHeaderNames( ).contains( "SOAPAction" );
+      return ( message.getUri( ).endsWith( this.servicePath ) || message.getUri( ).endsWith( this.internalServicePath ) )
+             && message.getHeaderNames( ).contains( "SOAPAction" );
     }
     
     @Override
@@ -253,8 +254,8 @@ public class Pipelines {
     
     public InternalQueryPipeline( final ComponentId componentId ) {
       super( componentId );
-      this.servicePath = componentId.makeExternalRemoteUri( "127.0.0.1", 8773, "http" ).getPath( );
-      this.internalServicePath = componentId.makeInternalRemoteUri( "127.0.0.1", 8773 ).getPath( );
+      this.servicePath = componentId.getServicePath( );
+      this.internalServicePath = componentId.getInternalServicePath( );
       this.serviceName = componentId.getFullName( ).toString( );
     }
     
