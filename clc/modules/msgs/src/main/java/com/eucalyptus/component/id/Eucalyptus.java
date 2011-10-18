@@ -92,15 +92,15 @@ public class Eucalyptus extends ComponentId.Unpartioned {
     return true;
   }
   
-  @Override
-  public Predicate<ComponentId> isRelated( ) {
-    return Predicates.and( super.isRelated( ), new Predicate<ComponentId>( ) {
-      
-      @Override
-      public boolean apply( ComponentId input ) {
-        return Eucalyptus.this.equals( input ) || !input.isRegisterable( );
-      }
-    } );
-  }
+//  @Override
+//  public Predicate<ComponentId> isRelated( ) {
+//    return Predicates.and( super.isRelated( ), new Predicate<ComponentId>( ) {
+//      
+//      @Override
+//      public boolean apply( ComponentId input ) {
+//        return Eucalyptus.this.equals( input ) || !input.isRegisterable( );
+//      }
+//    } );
+//  }
   
 }
