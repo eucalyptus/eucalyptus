@@ -26,9 +26,12 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class ComponentId implements HasName<ComponentId>, HasFullName<ComponentId>, Serializable {
@@ -289,10 +292,17 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     pattern = this.getExternalUriPattern();
 
     try {
-      if(pattern.startsWith("%s"))
-	    uri = String.format( this.getExternalUriPattern( ), scheme, hostName, port );
-      else
-	    uri = String.format( this.getExternalUriPattern( ), hostName, port );
+      if(StackConfiguration.USE_DNS_DELEGATION) {
+        if(pattern.startsWith("%s"))
+      	  uri = String.format( this.getExternalUriPattern( ), scheme, this.getName() + "." + SystemConfiguration.getSystemConfiguration().getDnsDomain(), port );
+        else
+      	  uri = String.format( this.getExternalUriPattern( ), this.getName() + "." + SystemConfiguration.getSystemConfiguration().getDnsDomain(), port );
+      } else {
+        if(pattern.startsWith("%s"))
+	      uri = String.format( this.getExternalUriPattern( ), scheme, hostName, port );
+        else
+	      uri = String.format( this.getExternalUriPattern( ), hostName, port );
+      }
       u = new URI( uri );
       u.parseServerAuthority( );
     } catch ( URISyntaxException e ) {
