@@ -165,6 +165,8 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( initial = "http", description = "Default scheme for EUARE_URL in eucarc.", changeListener = UriChangeListener.class )
   public static String        DEFAULT_EUARE_URI_SCHEME        = "http";
 
+  @ConfigurableField( description = "Use DNS delegation for eucarc." )
+  public static Boolean        USE_DNS_DELEGATION        = Boolean.FALSE;
   
   private static Logger       LOG                               = Logger.getLogger( StackConfiguration.class );
   
