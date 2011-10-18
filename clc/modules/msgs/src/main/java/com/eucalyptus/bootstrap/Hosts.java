@@ -175,7 +175,7 @@ public class Hosts {
         setup( Empyrean.class, arg1.getBindAddress( ) );
         if ( arg1.hasDatabase( ) ) {
           setup( Eucalyptus.class, arg1.getBindAddress( ) );
-        } else {
+        } else if ( Bootstrap.isFinished( ) ) {
           try {
             ServiceConfiguration maybeConfig = ServiceConfigurations.lookupByHost( Eucalyptus.class, arg1.getBindAddress( ).getCanonicalHostName( ) );
             if ( ShouldInitialize.INSTANCE.apply( maybeConfig ) ) {
