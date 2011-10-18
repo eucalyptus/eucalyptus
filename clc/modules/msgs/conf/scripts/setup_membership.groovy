@@ -105,9 +105,9 @@ STABLE stableBroadcast = new STABLE( );
 stableBroadcast.setMaxBytes( 400000 );
 
 GMS groupMembership = new GMS( );
-if( !BootstrapArgs.isCloudController( ) ) {
-  groupMembership.setValue( "disable_initial_coord", true );
-}
+//if( !BootstrapArgs.isCloudController( ) ) {
+//  groupMembership.setValue( "disable_initial_coord", true );
+//}
 groupMembership.setPrintLocalAddress( true );
 groupMembership.setJoinTimeout( 3000 );
 groupMembership.setShun( false );
