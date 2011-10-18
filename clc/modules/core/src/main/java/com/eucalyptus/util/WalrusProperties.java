@@ -71,6 +71,10 @@ import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.config.Configuration;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.BaseDirectory;
@@ -228,7 +232,7 @@ public class WalrusProperties {
 
 	public enum ServiceParameter {
 	}
-	
+
 	public enum BucketParameter {
 		acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions;
 	}
@@ -255,5 +259,14 @@ public class WalrusProperties {
 			LOG.error(e);
 		}
 		return TRACKER_URL;
+	}
+
+	public static InetAddress getWalrusAddress() throws EucalyptusCloudException {
+		Component walrus = Components.lookup( Walrus.class );
+		if( walrus.hasEnabledService( ) ) {
+			ServiceConfiguration walrusConfig = Components.lookup( Walrus.class ).enabledServices( ).first( );
+			return Internets.toAddress(walrusConfig.getHostName());
+		} 
+		return null;	    
 	}
 }
