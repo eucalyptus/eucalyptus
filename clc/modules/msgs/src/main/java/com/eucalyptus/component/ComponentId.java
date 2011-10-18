@@ -99,12 +99,12 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return Empyrean.INSTANCE.isRelated( ).apply( this );
   }
   
-  public final Predicate<ComponentId> isRelated( ) {
+  public Predicate<ComponentId> isRelated( ) {
     return new Predicate<ComponentId>( ) {
       
       @Override
       public boolean apply( ComponentId input ) {
-        return ( ComponentId.this.serviceDependencies( ).contains( input ) && !input.isRegisterable( ) )
+        return ( ComponentId.this.serviceDependencies( ).contains( input ) )
                || ComponentId.this.getClass( ).equals( input.getClass( ) );
       }
     };
