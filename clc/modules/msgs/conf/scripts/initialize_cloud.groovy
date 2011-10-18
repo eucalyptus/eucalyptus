@@ -21,6 +21,7 @@ import com.eucalyptus.util.Internets
 
 
 Logger LOG = Logger.getLogger( Bootstrap.class );
+System.setProperty("euca.bind.addr.1", "127.0.0.1" );
 if( BootstrapArgs.isInitializeSystem( ) ) {
   new DirectoryBootstrapper( ).load( );
   ServiceJarDiscovery.doSingleDiscovery(  new ComponentDiscovery( ) );
