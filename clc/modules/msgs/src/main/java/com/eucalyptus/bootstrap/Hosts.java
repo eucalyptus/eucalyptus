@@ -235,7 +235,7 @@ public class Hosts {
     } else {
       try {
         setupServiceState( compClass, addr );
-        for ( ComponentId c : Iterables.filter( ComponentIds.list( ), ComponentIds.lookup( compClass ).isRelated( ) ) ) {
+        for ( ComponentId c : Iterables.filter( ComponentIds.list( ), ShouldLoadRemote.INSTANCE ) ) {
           try {
             setupServiceState( c.getClass( ), addr );
           } catch ( Exception ex ) {
@@ -256,7 +256,7 @@ public class Hosts {
       return false;
     } else {
       try {
-        for ( ComponentId c : Iterables.filter( ComponentIds.list( ), ComponentIds.lookup( compClass ).isRelated( ) ) ) {
+        for ( ComponentId c : Iterables.filter( ComponentIds.list( ), ShouldLoadRemote.INSTANCE ) ) {
           try {
             final ServiceConfiguration dependsConfig = ServiceConfigurations.lookupByName( compClass, addr.getHostAddress( ) );
             Topology.stop( dependsConfig );

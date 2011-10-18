@@ -665,4 +665,9 @@ public class Threads {
   public static <C> Future<C> enqueue( final ServiceConfiguration config, final Callable<?> callable ) {
     return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, NUM_QUEUE_WORKERS ).submit( callable );
   }
+  
+  @SuppressWarnings( "unchecked" )
+  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Integer workers, final Callable<?> callable ) {
+    return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, workers ).submit( callable );
+  }
 }

@@ -178,7 +178,7 @@ public class ComponentRegistrationHandler {
           } catch ( Exception ex ) {
             LOG.error( ex, ex );
           }
-          Topology.getInstance( ).enable( newComponent );//.get()
+          Topology.getInstance( ).disable( newComponent );
         } catch ( ServiceRegistrationException ex1 ) {
           LOG.error( ex1, ex1 );
         } catch ( IllegalStateException ex1 ) {

@@ -106,10 +106,16 @@ public class Topology implements EventListener<Event> {
   private Integer                                               currentEpoch = 0;                                                                      //TODO:GRZE: get the right initial epoch value from membership bootstrap
   private TransitionGuard                                       guard;
   private final ConcurrentMap<ServiceKey, ServiceConfiguration> services     = new ConcurrentSkipListMap<Topology.ServiceKey, ServiceConfiguration>( );
+  private final ServiceConfiguration                            internalQueue;
+  private final ServiceConfiguration                            externalQueue;
   
   private Topology( int i ) {
     super( );
     this.currentEpoch = i;
+    this.internalQueue = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, Topology.class.getSimpleName( ), "internal",
+                                                                ServiceUris.internal( Empyrean.INSTANCE ) );
+    this.externalQueue = ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, Topology.class.getSimpleName( ), "external",
+                                                                ServiceUris.internal( Empyrean.INSTANCE ) );
     ListenerRegistry.getInstance( ).register( Hertz.class, this );
   }
   
@@ -230,7 +236,7 @@ public class Topology implements EventListener<Event> {
           }
         }
       } catch ( Exception ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
       }
       return true;
     } else {
@@ -238,27 +244,24 @@ public class Topology implements EventListener<Event> {
     }
   }
   
-
   private Future<ServiceConfiguration> submitExternal( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
-    Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.ENQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) ) );
     final Long queueStart = System.currentTimeMillis( );
-    return Threads.lookup( Empyrean.class, Topology.class, "submitExternal" ).submit( new Callable<ServiceConfiguration>( ) {
+    final String functionName = function.getClass( ).toString( ).replaceAll( "^.*\\.", "" );
+    return Threads.enqueue( this.externalQueue, new Callable<ServiceConfiguration>( ) {
       
       @Override
       public ServiceConfiguration call( ) throws Exception {
         if ( Bootstrap.isShuttingDown( ) ) {
-          return null;
+          return config;
         } else {
           Bootstrap.awaitFinished( );
           Long serviceStart = System.currentTimeMillis( );
-          Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
-                                            .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) ) );
+          LOG.trace( EventRecord.here( Topology.class, EventType.DEQUEUE, functionName, config.getFullName( ).toString( ),
+                                       Long.toString( serviceStart - queueStart ), "ms" ) );
           try {
             ServiceConfiguration result = function.apply( config );
-            
-            Long finish = System.currentTimeMillis( );
-            Logs.exhaust( ).debug( EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
-                                              .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) ) );
+            LOG.trace( EventRecord.here( Topology.class, EventType.QUEUE, functionName, config.getFullName( ).toString( ),
+                                         Long.toString( System.currentTimeMillis( ) - serviceStart ), "ms" ) );
             return result;
           } catch ( Exception ex ) {
             Logs.exhaust( ).error( ex, ex );
@@ -271,30 +274,25 @@ public class Topology implements EventListener<Event> {
   }
   
   private Future<ServiceConfiguration> submit( final ServiceConfiguration config, final Function<ServiceConfiguration, ServiceConfiguration> function ) {
-    EventRecord.here( Topology.class, EventType.ENQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) ).info( );
     final Long queueStart = System.currentTimeMillis( );
+    final String functionName = function.getClass( ).toString( ).replaceAll( "^.*\\.", "" );
     
-    return this.getWorker( ).submit( new Callable<ServiceConfiguration>( ) {
+    return Threads.enqueue( this.externalQueue, 1, new Callable<ServiceConfiguration>( ) {
       
       @Override
       public ServiceConfiguration call( ) throws Exception {
         if ( Bootstrap.isShuttingDown( ) ) {
-          return null;
+          return config;
         } else {
           Bootstrap.awaitFinished( );
           Long serviceStart = System.currentTimeMillis( );
-          EventRecord.here( Topology.class, EventType.DEQUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
-                     .append( EventType.QUEUE_TIME.name( ), Long.toString( serviceStart - queueStart ) )
-                     .info( );
+          LOG.trace( EventRecord.here( Topology.class, EventType.DEQUEUE, functionName, config.getFullName( ).toString( ),
+                                       Long.toString( serviceStart - queueStart ), "ms" ) );
           
           try {
             ServiceConfiguration result = function.apply( config );
-            
-            Long finish = System.currentTimeMillis( );
-            EventRecord.here( Topology.class, EventType.QUEUE, Topology.this.toString( ), function.toString( ), config.toString( ) )
-                       .append( EventType.SERVICE_TIME.name( ), Long.toString( finish - serviceStart ) )
-                       .info( );
-            
+            LOG.trace( EventRecord.here( Topology.class, EventType.QUEUE, functionName, config.getFullName( ).toString( ),
+                                         Long.toString( System.currentTimeMillis( ) - serviceStart ), "ms" ) );
             return result;
           } catch ( Exception ex ) {
             Logs.exhaust( ).error( ex, ex );
@@ -313,7 +311,7 @@ public class Topology implements EventListener<Event> {
       return Topology.getInstance( ).submitExternal( config, RemoteTopologyCallables.STOP );
     }
   }
-
+  
   public static Future<ServiceConfiguration> start( final ServiceConfiguration config ) throws ServiceRegistrationException {
     if ( checkPrimary( ) ) {
       return Topology.getInstance( ).submitExternal( config, CloudTopologyCallables.START );
