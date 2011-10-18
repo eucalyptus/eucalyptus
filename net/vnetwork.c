@@ -288,6 +288,10 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 
 	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
+	snprintf(cmd, 256, "-A POSTROUTING -d %s/%d -j MASQUERADE", network, slashnet);
+
+	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
+
 	//	rc = vnetSetMetadataRedirect(vnetconfig);
 
 	unm = 0xFFFFFFFF - numaddrs;
@@ -2394,8 +2398,8 @@ int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
 
     slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1);
     network = hex2dot(vnetconfig->nw);
-    //    snprintf(cmd, 255, "-I POSTROUTING -s %s -d ! %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
-    snprintf(cmd, MAX_PATH, "-I POSTROUTING -s %s -j SNAT --to-source %s", dst, src);
+    snprintf(cmd, 255, "-I POSTROUTING -s %s -d ! %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
+    //    snprintf(cmd, MAX_PATH, "-I POSTROUTING -s %s -j SNAT --to-source %s", dst, src);
     if (network) free(network);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
     if (rc) {
@@ -2552,8 +2556,8 @@ int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
 
     slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1);
     network = hex2dot(vnetconfig->nw);
-    //    snprintf(cmd, 255, "-D POSTROUTING -s %s -d ! %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
-    snprintf(cmd, MAX_PATH, "-D POSTROUTING -s %s -j SNAT --to-source %s", dst, src);
+    snprintf(cmd, 255, "-D POSTROUTING -s %s -d ! %s/%d -j SNAT --to-source %s", dst, network, slashnet, src);
+    //    snprintf(cmd, MAX_PATH, "-D POSTROUTING -s %s -j SNAT --to-source %s", dst, src);
     if (network) free(network);
     rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
     count=0;

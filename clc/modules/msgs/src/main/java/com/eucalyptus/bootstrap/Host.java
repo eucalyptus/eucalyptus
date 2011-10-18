@@ -61,7 +61,7 @@
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 
-package com.eucalyptus.component;
+package com.eucalyptus.bootstrap;
 
 import java.net.InetAddress;
 import java.util.Date;
@@ -69,17 +69,35 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
-import org.jgroups.ViewId;
-import com.eucalyptus.bootstrap.BootstrapArgs;
-import com.eucalyptus.bootstrap.HostManager;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Internets;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 
 public class Host implements java.io.Serializable, Comparable<Host> {
+  public enum DbFilter implements Predicate<Host> {
+    INSTANCE;
+    @Override
+    public boolean apply( Host arg0 ) {
+      return arg0.hasDatabase( );
+    }
+    
+  }
+  
+  public enum NonLocalFilter implements Predicate<Host> {
+    INSTANCE;
+    @Override
+    public boolean apply( Host arg0 ) {
+      return !arg0.isLocalHost( );
+    }
+    
+  }
+  
   private static final long          serialVersionUID = 1;
   private static Logger              LOG              = Logger.getLogger( Host.class );
+  private final String               displayName;
   private final Address              groupsId;
   private final InetAddress          bindAddress;
   private ImmutableList<InetAddress> hostAddresses;
@@ -89,28 +107,21 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   private Long                       lastTime         = 0l;
   private Integer                    epoch;
   
-  Host( Address jgroupsId, InetAddress bindAddress, Integer epoch, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> hostAddresses ) {
-    this.groupsId = jgroupsId;
-    this.bindAddress = bindAddress;
-    this.update( epoch, hasDb, hasBootstrapped, hostAddresses );
-  }
-  
-  Host( Address jgroupsId ) {
-    this.groupsId = HostManager.getInstance( ).getMembershipChannel( ).getAddress( );
+  Host( ) {
+    this.displayName = Internets.localHostIdentifier( );
+    this.groupsId = Hosts.getLocalGroupAddress( );
     this.bindAddress = Internets.localHostInetAddress( );
-    this.update( Topology.epoch( ), BootstrapArgs.isCloudController( ), false, Internets.getAllInetAddresses( ) );
-  }
-  
-  synchronized void update( Integer epoch, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> addresses ) {
-    this.epoch = epoch;
+    this.epoch = Topology.epoch( );
     this.lastTime = this.timestamp.getAndSet( System.currentTimeMillis( ) );
     Logs.exhaust( ).debug( "Applying update for host: " + this );
-    ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( addresses ) );
-    this.hasBootstrapped = hasBootstrapped;
-    this.hasDatabase = hasDb;
+    ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( Internets.getAllInetAddresses( ) ) );
+    this.hasBootstrapped = Bootstrap.isFinished( );
+    this.hasDatabase = BootstrapArgs.isCloudController( );
     this.hostAddresses = newAddrs;
     LOG.trace( "Updated host: " + this );
   }
+  
+  synchronized void update( Integer epoch, Boolean hasDb, Boolean hasBootstrapped, List<InetAddress> addresses ) {}
   
   public Address getGroupsId( ) {
     return this.groupsId;
@@ -132,9 +143,9 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.groupsId == null )
+    result = prime * result + ( ( this.displayName == null )
       ? 0
-      : this.groupsId.hashCode( ) );
+      : this.displayName.hashCode( ) );
     return result;
   }
   
@@ -150,11 +161,11 @@ public class Host implements java.io.Serializable, Comparable<Host> {
       return false;
     }
     Host other = ( Host ) obj;
-    if ( this.groupsId == null ) {
-      if ( other.groupsId != null ) {
+    if ( this.displayName == null ) {
+      if ( other.displayName != null ) {
         return false;
       }
-    } else if ( this.groupsId.toString( ).equals( other.groupsId.toString( ) ) ) {
+    } else if ( this.displayName.toString( ).equals( other.displayName.toString( ) ) ) {
       return false;
     }
     return true;
@@ -162,13 +173,28 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   
   @Override
   public int compareTo( Host that ) {
-    return this.getGroupsId( ).compareTo( that.getGroupsId( ) );
+    return this.getDisplayName( ).compareTo( that.getDisplayName( ) );
   }
   
-  @Override
-  public String toString( ) {
-    return String.format( "Host:id=%s:bindAddr=%s:allAddrs=%s:db=%s:booted=%s:lastTime=%s", this.groupsId, this.bindAddress, this.hostAddresses,
-                          this.hasDatabase, this.hasBootstrapped, new Date( this.lastTime ) );
+  /**
+   * @return new updated instance of this Host if the object is dirty
+   *         return this otherwise
+   */
+  Host checkDirty( ) {
+    Host that = new Host( );
+    boolean result = false;
+    result |= !this.hasBootstrapped.equals( that.hasBootstrapped );
+    result |= !this.hasDatabase.equals( that.hasDatabase );
+    result |= !this.epoch.equals( that.epoch );
+    result |= !this.hostAddresses.equals( that.hostAddresses );
+    if ( result ) {
+      that.lastTime = this.timestamp.get( );
+      that.timestamp.set( System.currentTimeMillis( ) );
+      return that;
+    } else {
+      that.timestamp.set( that.lastTime = System.currentTimeMillis( ) );
+      return this;
+    }
   }
   
   public boolean isLocalHost( ) {
@@ -179,7 +205,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     return this.hasBootstrapped;
   }
   
-  public void markBootstrapped( ) {
+  void markBootstrapped( ) {
     this.hasBootstrapped = true;
   }
   
@@ -187,8 +213,31 @@ public class Host implements java.io.Serializable, Comparable<Host> {
     return this.epoch;
   }
   
-  public void setEpoch( Integer epoch ) {
-    this.epoch = epoch;
+  @Override
+  public String toString( ) {
+    StringBuilder builder = new StringBuilder( );
+    builder.append( "Host:" );
+    if ( this.groupsId != null ) builder.append( " " ).append( this.groupsId ).append( ":" );
+    if ( this.epoch != null ) builder.append( "epoch=" ).append( this.epoch ).append( " " );
+    if ( this.bindAddress != null ) builder.append( this.bindAddress ).append( " " );
+    if ( this.hasDatabase != null ) builder.append( "db=" ).append( this.hasDatabase ).append( " " );
+    if ( this.hasBootstrapped != null ) builder.append( "up=" ).append( this.hasBootstrapped ).append( " " );
+    if ( this.timestamp != null ) builder.append( "ats=" ).append( new Date( this.timestamp.get( ) ) ).append( " " );
+    if ( this.lastTime != null ) builder.append( "mts=" ).append( new Date( this.lastTime ) ).append( " " );
+    if ( this.hostAddresses != null ) builder.append( this.hostAddresses );
+    return builder.toString( );
+  }
+  
+  public Date getTimestamp( ) {
+    return new Date( this.timestamp.get( ) );
+  }
+  
+  public Long getLastTime( ) {
+    return this.lastTime;
+  }
+  
+  public String getDisplayName( ) {
+    return this.displayName;
   }
   
 }

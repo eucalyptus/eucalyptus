@@ -76,7 +76,7 @@ import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
-import com.eucalyptus.bootstrap.HostManager;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.TopologyChanges.CloudTopologyCallables;
 import com.eucalyptus.component.TopologyChanges.RemoteTopologyCallables;
 import com.eucalyptus.empyrean.Empyrean;
@@ -91,7 +91,6 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.Threads.ThreadPool;
-import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -140,7 +139,7 @@ public class Topology implements EventListener<Event> {
         if ( singleton != null ) {
           return singleton;
         } else {
-          return ( singleton = new Topology( HostManager.getMaxSeenEpoch( ) ) );
+          return ( singleton = new Topology( Hosts.maxEpoch( ) ) );
         }
       }
     }

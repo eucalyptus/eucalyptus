@@ -45,6 +45,7 @@ import java.util.Arrays;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.RejectedExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.empyrean.Empyrean;
@@ -54,6 +55,10 @@ import com.eucalyptus.util.concurrent.ListenableFuture;
 
 public class Futures {
   private static Logger LOG = Logger.getLogger( Futures.class );
+  
+  public static <T> Future<T> resultOf( Callable<T> call ) {
+    return new FutureTask<T>( call );
+  }
   
   public static <T> CheckedListenableFuture<T> newGenericeFuture( ) {
     return new GenericCheckedListenableFuture<T>( );

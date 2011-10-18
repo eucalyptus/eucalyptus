@@ -257,6 +257,10 @@ public class ServiceConfigurations {
     return new EphemeralConfiguration( compId, partition, name, remoteUri );
   }
   
+  public static ServiceConfiguration createEphemeral( final ComponentId compId ) {
+    return createEphemeral( compId, Internets.localHostInetAddress( ) );
+  }
+  
   public static ServiceConfiguration createEphemeral( final ComponentId compId, final InetAddress host ) {
     return new EphemeralConfiguration( compId, compId.getPartition( ), host.getHostAddress( ), compId.makeInternalRemoteUri( host.getHostAddress( ),
                                                                                                                              compId.getPort( ) ) );
@@ -305,7 +309,6 @@ public class ServiceConfigurations {
     return list( example );
   }
   
-
   public static <T extends ServiceConfiguration, C extends ComponentId> T lookupByName( final Class<C> type, final String name ) {
     if ( !ComponentId.class.isAssignableFrom( type ) ) {
       throw new PersistenceException( "Unknown configuration type passed: " + type.getCanonicalName( ) );
@@ -332,7 +335,7 @@ public class ServiceConfigurations {
     example.setSourceHostName( host );
     return lookup( example );
   }
-
+  
   public static <T extends ServiceConfiguration> List<T> list( final T type ) {
     return getProvider( ).list( type );
   }

@@ -128,7 +128,7 @@ public class Entities {
     final Ats ats = Ats.inClassHierarchy( type );
     PersistenceContext persistenceContext = null;
     if ( !ats.has( PersistenceContext.class ) ) {
-      throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + type.getCanonicalName( )
+      throw new RuntimeException( "Attempting to create an entity wrapper instance for non persistent type: " + type
                                   + ".  Class hierarchy contains: \n" + ats.toString( ) );
     } else {
       persistenceContext = ats.get( PersistenceContext.class );

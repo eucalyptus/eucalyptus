@@ -17,6 +17,8 @@ public class EuareException extends EucalyptusCloudException {
   public static final String MALFORMED_POLICY_DOCUMENT = "MalformedPolicyDocument";
   public static final String DUPLICATE_CERTIFICATE = "DuplicateCertificate";
   public static final String INVALID_CERTIFICATE = "InvalidCertificate";
+  public static final String INVALID_NAME = "InvalidName";
+  public static final String INVALID_PATH = "InvalidPath";
   
   private HttpResponseStatus status;
   private String error;

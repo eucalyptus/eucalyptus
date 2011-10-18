@@ -22,7 +22,7 @@ import org.jgroups.protocols.pbcast.NAKACK
 import org.jgroups.protocols.pbcast.STABLE
 import org.jgroups.protocols.pbcast.STATE_TRANSFER
 import com.eucalyptus.bootstrap.BootstrapArgs
-import com.eucalyptus.bootstrap.HostManager
+import com.eucalyptus.bootstrap.Hosts
 import com.eucalyptus.bootstrap.SystemIds
 import com.eucalyptus.empyrean.Empyrean
 import com.eucalyptus.system.Threads
@@ -43,9 +43,9 @@ Integer       oobThreadPoolMaxThreads    = 25;
 Integer       oobThreadPoolMinThreads    = 2;
 Integer       oobThreadPoolKeepAliveTime = 5000;
 
-defaultThreads = Threads.lookup( Empyrean.class, HostManager.class );
-normalThreads = Threads.lookup( Empyrean.class, HostManager.class, "normal-pool" );
-oobThreads = Threads.lookup( Empyrean.class, HostManager.class, "oob-pool" );
+defaultThreads = Threads.lookup( Empyrean.class, Hosts.class );
+normalThreads = Threads.lookup( Empyrean.class, Hosts.class, "normal-pool" );
+oobThreads = Threads.lookup( Empyrean.class, Hosts.class, "oob-pool" );
 
 
 UDP udp = new UDP( );

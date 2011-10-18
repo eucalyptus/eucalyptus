@@ -66,12 +66,24 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import javax.persistence.Column;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import org.apache.log4j.Logger;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.AbstractNamedRegistry;
+import com.eucalyptus.records.Logs;
 import com.google.common.collect.Lists;
 
 public class Clusters extends AbstractNamedRegistry<Cluster> {
@@ -105,4 +117,97 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     }
   }
   
+  public static Configuration getConfiguration( ) {
+    Configuration ret = null;
+    try {
+      ret = Transactions.find( new Configuration( ) );
+    } catch ( Exception ex1 ) {
+      try {
+        ret = Transactions.save( new Configuration( ) );
+      } catch ( final Exception ex ) {
+        Logs.extreme( ).error( ex, ex );
+        ret = new Configuration( );
+      }
+    }
+    return ret;
+  }
+  
+  @Entity
+  @javax.persistence.Entity
+  @PersistenceContext( name = "eucalyptus_cloud" )
+  @Table( name = "cloud_cluster_configuration" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  @ConfigurableClass( root = "cloud.cluster", description = "Configuration options controlling interactions with Cluster Controllers." )
+  static class Configuration extends AbstractPersistent {
+    @ConfigurableField( description = "The number of concurrent requests which will be sent to a single Cluster Controller." )
+    @Column( name = "config_cluster_workers", nullable = false )
+    private Integer requestWorkers     = 8;
+    @ConfigurableField( description = "The time period between service state checks for a Cluster Controller which is PENDING." )
+    @Column( name = "config_cluster_interval_pending", nullable = false )
+    private Long    pendingInterval    = 3l;
+    @ConfigurableField( description = "The time period between service state checks for a Cluster Controller which is NOTREADY." )
+    @Column( name = "config_cluster_interval_notready", nullable = false )
+    private Long    notreadyInterval   = 10l;
+    @ConfigurableField( description = "The time period between service state checks for a Cluster Controller which is DISABLED." )
+    @Column( name = "config_cluster_interval_disabled", nullable = false )
+    private Long    disabledInterval   = 15l;
+    @ConfigurableField( description = "The time period between service state checks for a Cluster Controller which is ENABLED." )
+    @Column( name = "config_cluster_interval_enabled", nullable = false )
+    private Long    enabledInterval    = 15l;
+    @ConfigurableField( description = "The number of times a request will be retried while bootstrapping a Cluster Controller." )
+    @Column( name = "config_cluster_startup_sync_retries", nullable = false )
+    private Integer startupSyncRetries = 10;
+    
+    Configuration( ) {
+      super( );
+    }
+    
+    public Integer getRequestWorkers( ) {
+      return this.requestWorkers;
+    }
+    
+    private void setRequestWorkers( Integer requestWorkers ) {
+      this.requestWorkers = requestWorkers;
+    }
+    
+    public void setStartupSyncRetries( Integer startupSyncRetries ) {
+      this.startupSyncRetries = startupSyncRetries;
+    }
+    
+    public Integer getStartupSyncRetries( ) {
+      return startupSyncRetries;
+    }
+    
+    private void setEnabledInterval( Long enabledInterval ) {
+      this.enabledInterval = enabledInterval;
+    }
+    
+    public Long getEnabledInterval( ) {
+      return enabledInterval;
+    }
+    
+    private void setDisabledInterval( Long disabledInterval ) {
+      this.disabledInterval = disabledInterval;
+    }
+    
+    public Long getDisabledInterval( ) {
+      return disabledInterval;
+    }
+    
+    private void setNotreadyInterval( Long notreadyInterval ) {
+      this.notreadyInterval = notreadyInterval;
+    }
+    
+    public Long getNotreadyInterval( ) {
+      return notreadyInterval;
+    }
+    
+    private void setPendingInterval( Long pendingInterval ) {
+      this.pendingInterval = pendingInterval;
+    }
+    
+    public Long getPendingInterval( ) {
+      return pendingInterval;
+    }
+  }
 }

@@ -85,10 +85,13 @@ import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Counters;
+import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
@@ -143,7 +146,7 @@ public class Allocations {
         try {
           this.request.setUserData( new String( Base64.encode( tmpData ) ) );
         } catch ( Exception ex ) {
-          LOG.error( ex , ex );
+          LOG.error( ex, ex );
         }
       }
     }
@@ -155,7 +158,7 @@ public class Allocations {
     public NetworkGroup getPrimaryNetwork( ) {
       return this.primaryNetwork;
     }
-
+    
     public ExtantNetwork getExtantNetwork( ) {
       EntityTransaction db = Entities.get( ExtantNetwork.class );
       try {
@@ -164,7 +167,7 @@ public class Allocations {
         db.commit( );
         return ex;
       } catch ( TransientEntityException ex ) {
-        LOG.error( ex , ex );
+        LOG.error( ex, ex );
         db.rollback( );
         throw new RuntimeException( ex );
       } catch ( NotEnoughResourcesException ex ) {
@@ -172,9 +175,29 @@ public class Allocations {
         return ExtantNetwork.bogus( this.getPrimaryNetwork( ) );
       }
     }
+    
+    public void commit( ) throws Exception {
+      try {
+        for ( ResourceToken t : this.getAllocationTokens( ) ) {
+          VmInstance.Create.INSTANCE.apply( t );
+        }
+      } catch ( Exception ex ) {
+        this.abort( );
+        throw ex;
+      }
+    }
+    
     public void abort( ) {
       for ( ResourceToken token : this.allocationTokens ) {
-        token.abort( );
+        EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          token.abort( );
+          db.commit( );
+        } catch ( Exception ex ) {
+          LOG.warn( ex.getMessage( ) );
+          Logs.exhaust( ).error( ex, ex );
+          db.rollback( );
+        }
       }
     }
     

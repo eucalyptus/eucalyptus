@@ -243,7 +243,7 @@ public abstract class AbstractSystemAddressManager {
     }
     
     private static void ensureAllocated( final Address addr, final VmInstance vm ) {
-      if ( !addr.isAllocated( ) && !addr.isPending( ) ) {
+      if ( !addr.isAllocated( ) && !addr.isPending( ) && addr.lastUpdateMillis( ) > 60L * 1000 * AddressingConfiguration.getInstance( ).getOrphanGrace( )) {
         try {
           if ( !addr.isAssigned( ) && !addr.isPending( ) ) {
             addr.pendingAssignment( );

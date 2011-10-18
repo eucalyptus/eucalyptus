@@ -110,7 +110,12 @@ public class AddressingConfiguration extends AbstractPersistent {
                       description = "Number of times an orphaned address is reported by a cluster before it is reclaimed by the system." )
   @Column( name = "config_addr_orphan_ticks" )
   private Integer           maxKillOrphans      = 10;
-  
+
+  @ConfigurableField( displayName = "address_orphan_grace", changeListener = PropertyChangeListeners.IsPositiveInteger.class,
+                      description = "Time after the last recorded state change where an orphaned address will not be modified by the system (minutes)." )
+  @Column( name = "config_addr_orphan_grace" )
+  private Integer           orphanGrace      = 10;
+
   public AddressingConfiguration( ) {
     super( );
   }
@@ -173,5 +178,13 @@ public class AddressingConfiguration extends AbstractPersistent {
   
   public void setMaxKillOrphans( Integer maxKillOrphans ) {
     this.maxKillOrphans = maxKillOrphans;
+  }
+
+  public Integer getOrphanGrace( ) {
+    return this.orphanGrace;
+  }
+
+  public void setOrphanGrace( Integer orphanGrace ) {
+    this.orphanGrace = orphanGrace;
   }
 }

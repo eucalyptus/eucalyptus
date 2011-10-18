@@ -83,6 +83,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.AbstractExecutorService;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -90,30 +91,38 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
 import org.jgroups.util.ThreadFactory;
-
 import com.eucalyptus.bootstrap.OrderedShutdown;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.HasFullName;
+import com.eucalyptus.util.concurrent.GenericCheckedListenableFuture;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicBoolean;
 
 public class Threads {
-  private static Logger                                  LOG          = Logger.getLogger( Threads.class );
-  private final static String                            PREFIX       = "Eucalyptus.";
-  private final static AtomicInteger                     threadIndex  = new AtomicInteger( 0 );
-  private final static ConcurrentMap<String, ThreadPool> execServices = new ConcurrentHashMap<String, ThreadPool>( );
+  private static Logger                                  LOG               = Logger.getLogger( Threads.class );
+  private final static String                            PREFIX            = "Eucalyptus.";
+  private final static Integer                           NUM_QUEUE_WORKERS = Runtime.getRuntime( ).availableProcessors( ); //TODO:GRZE: discover on per-service basis.;
+  private final static AtomicInteger                     threadIndex       = new AtomicInteger( 0 );
+  private final static ConcurrentMap<String, ThreadPool> execServices      = new ConcurrentHashMap<String, ThreadPool>( );
   
   public static ThreadPool lookup( final Class<? extends ComponentId> group, final Class owningClass ) {
     return lookup( ComponentIds.lookup( group ).name( ) + "." + owningClass.getSimpleName( ) );
@@ -173,15 +182,15 @@ public class Threads {
       this.name = groupPrefix;
       this.group = new ThreadGroup( this.name );
       this.pool = Executors.newCachedThreadPool( this );
-      OrderedShutdown.register(Eucalyptus.class, new Runnable () {
-    	  @Override
-          public void run( ) {
-            LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " Stopping thread pool..." );
-            if ( ThreadPool.this.pool != null ) {
-              ThreadPool.this.free( );
-            }
-          } 
-      });      
+      OrderedShutdown.register( Eucalyptus.class, new Runnable( ) {
+        @Override
+        public void run( ) {
+          LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " Stopping thread pool..." );
+          if ( ThreadPool.this.pool != null ) {
+            ThreadPool.this.free( );
+          }
+        }
+      } );
     }
     
     public ThreadPool limitTo( final Integer numThreads ) {
@@ -240,7 +249,7 @@ public class Threads {
         LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Pending task: " + r.getClass( ) + " [" + r.toString( ) + "]" );
       }
       try {
-        for ( int i = 0; i < 10 && !this.pool.awaitTermination( 1, TimeUnit.SECONDS ); i++ ) {
+        for ( int i = 0; ( i < 10 ) && !this.pool.awaitTermination( 1, TimeUnit.SECONDS ); i++ ) {
           LOG.warn( "SHUTDOWN:" + ThreadPool.this.name + " - Waiting for pool to shutdown." );
           if ( i > 2 ) {
             LOG.warn( Joiner.on( "\n\t\t" ).join( this.creationPoint ) );
@@ -477,17 +486,17 @@ public class Threads {
     };
   }
   
-  public static StackTraceElement currentStackFrame( int offset ) {
-    return Thread.currentThread( ).getStackTrace( )[2+offset];
+  public static StackTraceElement currentStackFrame( final int offset ) {
+    return Thread.currentThread( ).getStackTrace( )[2 + offset];
   }
-
+  
   public static StackTraceElement currentStackFrame( ) {
     return Thread.currentThread( ).getStackTrace( )[2];
   }
   
   public static String currentStackRange( int start, int end ) {
-    StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
-    int len = stack.length;
+    final StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
+    final int len = stack.length;
     start = Ints.min( Ints.max( 1, start ), len - 1 );
     end = Ints.min( Ints.max( 1, end ), len - 1 );
     return Joiner.on( "\t\n" ).join( Arrays.copyOfRange( stack, start, end ) );
@@ -497,4 +506,160 @@ public class Threads {
     return currentStackRange( 0, Integer.MAX_VALUE );
   }
   
+  private static final ConcurrentMap<String, Queue<?>> workers = Maps.newConcurrentMap( );
+  private static final AtomicLong                      currId  = new AtomicLong( 0 );
+  
+  static class Queue<T extends HasFullName<T>> implements Runnable {
+    private final AtomicBoolean                running  = new AtomicBoolean( true );
+    private final BlockingQueue<FutureTask<?>> msgQueue = new LinkedBlockingQueue<FutureTask<?>>( );
+    private final T                            owner;
+    private final Class<?>                     ownerType;
+    private final int                          numWorkers;
+    private final String                       creationStack;
+    private final Class<? extends ComponentId> componentId;
+    private final String                       name;
+    
+    Queue( final Class<? extends ComponentId> componentId, final T owner, final int numWorkers ) {
+      this.componentId = componentId;
+      this.owner = owner;
+      this.ownerType = owner.getClass( );
+      this.name = owner.getFullName( ).toString( );
+      this.numWorkers = numWorkers;
+      this.creationStack = Threads.currentStackString( );
+    }
+    
+    private boolean start( ) {
+      this.threadPool( ).limitTo( this.numWorkers );
+      if ( workers.putIfAbsent( this.key( ), this ) != null ) {
+        this.stop( );
+        return false;
+      } else {
+        for ( int i = 0; i < this.numWorkers; i++ ) {
+          this.threadPool( ).submit( this );
+        }
+        return true;
+      }
+    }
+    
+    private String key( ) {
+      return this.componentId.getSimpleName( ) + ":" + this.ownerType.getSimpleName( ) + ":" + this.owner;
+    }
+    
+    private void stop( ) {
+      this.running.set( false );
+      this.threadPool( ).free( );
+    }
+    
+    private ThreadPool threadPool( ) {
+      return Threads.lookup( this.componentId, this.owner.getClass( ), this.name );
+    }
+    
+    private <C> Future<C> submit( final Runnable run ) {
+      final GenericCheckedListenableFuture<C> f = new GenericCheckedListenableFuture<C>( );
+      final Callable<C> call = new Callable<C>( ) {
+        
+        @Override
+        public C call( ) throws Exception {
+          run.run( );
+          f.set( null );
+          return null;
+        }
+      };
+      return submit( call );
+    }
+    
+    private <C> Future<C> submit( final Callable<C> call ) {
+      FutureTask<C> f = new FutureTask<C>( call );
+      this.msgQueue.add( f );
+      return f;
+    }
+    
+    @Override
+    public void run( ) {
+      do {
+        try {
+          final FutureTask<?> task = this.msgQueue.poll( 50, TimeUnit.MILLISECONDS );
+          if ( task != null ) {
+            try {
+              task.run( );
+            } catch ( final Exception ex ) {
+              Logs.extreme( ).error( ex, ex );
+            }
+          }
+        } catch ( final InterruptedException e ) {
+          Thread.currentThread( ).interrupt( );
+        }
+      } while ( !this.msgQueue.isEmpty( ) || this.running.get( ) );
+      LOG.debug( "Shutting down worker: " + this.owner + ":" + this.name + " in thread " + Thread.currentThread( ).getName( ) );
+    }
+    
+    private Object getOwner( ) {
+      return this.owner;
+    }
+    
+    private String getCreationStack( ) {
+      return this.creationStack;
+    }
+    
+    private AtomicBoolean getRunning( ) {
+      return this.running;
+    }
+    
+    private int getNumWorkers( ) {
+      return this.numWorkers;
+    }
+    
+    private Class<? extends ComponentId> getComponentId( ) {
+      return this.componentId;
+    }
+    
+    private String getName( ) {
+      return this.name;
+    }
+    
+    @Override
+    public String toString( ) {
+      final StringBuilder builder = new StringBuilder( );
+      builder.append( "QueuedWorker " );
+      if ( this.componentId != null ) builder.append( this.componentId.getSimpleName( ) ).append( " " );
+      if ( this.name != null ) builder.append( " " ).append( this.name ).append( ":" );
+      builder.append( this.numWorkers ).append( ":" );
+      if ( this.running != null ) builder.append( this.running.get( )
+        ? "RUNNING"
+        : "STOPPED" );
+      if ( this.msgQueue != null ) builder.append( ":[" ).append( this.msgQueue.size( ) ).append( "]" );
+      return builder.toString( );
+    }
+  }
+  
+  static String key( final Class<? extends ComponentId> compId, final Object o ) {
+    return ( o instanceof HasFullName
+      ? o.getClass( ).toString( ) + ":" + ( ( HasFullName ) o ).getFullName( ).toString( )
+      : ( o instanceof Class
+        ? ( ( Class ) o ).getCanonicalName( )
+        : o.toString( ) ) );
+  }
+  
+  private static <T extends HasFullName<T>> Queue<T> queue( final Class<? extends ComponentId> componentId, final T owner, final int numWorkers ) {
+    final Queue<T> worker = new Queue<T>( componentId, owner, numWorkers );
+    if ( workers.containsKey( worker.key( ) ) ) {
+      return ( Queue<T> ) workers.get( worker.key( ) );
+    } else {
+      if ( !worker.start( ) && workers.containsKey( worker.key( ) ) ) {
+        return ( Queue<T> ) workers.get( worker.key( ) );
+      } else {
+        workers.put( worker.key( ), worker );
+        return worker;
+      }
+    }
+  }
+  
+  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Runnable runnable ) {
+    return queue( config.getComponentId( ).getClass( ), config, NUM_QUEUE_WORKERS ).submit( runnable );
+  }
+  
+  @SuppressWarnings( "unchecked" )
+  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Callable<?> callable ) {
+    return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, NUM_QUEUE_WORKERS ).submit( callable );
+  }
 }
