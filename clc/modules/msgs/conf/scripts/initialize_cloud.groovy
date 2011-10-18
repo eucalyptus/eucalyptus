@@ -21,7 +21,7 @@ import com.eucalyptus.util.Internets
 
 
 Logger LOG = Logger.getLogger( Bootstrap.class );
-System.setProperty("euca.bind.addr.1", "127.0.0.1" );
+
 if( BootstrapArgs.isInitializeSystem( ) ) {
   new DirectoryBootstrapper( ).load( );
   ServiceJarDiscovery.doSingleDiscovery(  new ComponentDiscovery( ) );
@@ -59,7 +59,7 @@ try {
     for ( String ctx : PersistenceContexts.list( ) ) {
       Properties p = new Properties( );
       p.putAll( props );
-      String ctxUrl = "jdbc:${ServiceUris.remote(Database.class,Internets.localHostInetAddress( ),ctx)}?createDatabaseIfNotExist=true";
+      String ctxUrl = "jdbc:${ServiceUris.remote(Database.class,Internets.loopback( ),ctx)}?createDatabaseIfNotExist=true";
       p.put( "hibernate.connection.url", ctxUrl );
       p.put("hibernate.cache.region_prefix", "eucalyptus_" + ctx + "_cache" );
       Ejb3Configuration config = new Ejb3Configuration( );
