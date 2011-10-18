@@ -98,21 +98,21 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
   }
   
   public List<String> getClusterAddresses( ) {
-    SortedSet<String> hostOrdered = new TreeSet<String>( );
-    for ( Cluster c : this.listValues( ) ) {
+    final SortedSet<String> hostOrdered = new TreeSet<String>( );
+    for ( final Cluster c : this.listValues( ) ) {
       hostOrdered.add( c.getConfiguration( ).getHostName( ) );
     }
     return Lists.newArrayList( hostOrdered );
   }
   
-  public static Cluster lookup( Partition partition ) {
+  public static Cluster lookup( final Partition partition ) {
     return Clusters.lookup( Partitions.lookupService( ClusterController.class, partition ) );
   }
   
-  public static Cluster lookup( ServiceConfiguration clusterConfig ) {
+  public static Cluster lookup( final ServiceConfiguration clusterConfig ) {
     try {
       return Clusters.getInstance( ).lookup( clusterConfig.getName( ) );
-    } catch ( NoSuchElementException ex ) {
+    } catch ( final NoSuchElementException ex ) {
       return Clusters.getInstance( ).lookupDisabled( clusterConfig.getName( ) );
     }
   }
@@ -121,7 +121,7 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
     Configuration ret = null;
     try {
       ret = Transactions.find( new Configuration( ) );
-    } catch ( Exception ex1 ) {
+    } catch ( final Exception ex1 ) {
       try {
         ret = Transactions.save( new Configuration( ) );
       } catch ( final Exception ex ) {
@@ -139,9 +139,10 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   @ConfigurableClass( root = "cloud.cluster", description = "Configuration options controlling interactions with Cluster Controllers." )
   static class Configuration extends AbstractPersistent {
+    private static final long serialVersionUID = 1L;
     @ConfigurableField( description = "The number of concurrent requests which will be sent to a single Cluster Controller." )
     @Column( name = "config_cluster_workers", nullable = false )
-    private Integer requestWorkers     = 8;
+    private Integer requestWorkers     = 16;
     @ConfigurableField( description = "The time period between service state checks for a Cluster Controller which is PENDING." )
     @Column( name = "config_cluster_interval_pending", nullable = false )
     private Long    pendingInterval    = 3l;
@@ -166,48 +167,48 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
       return this.requestWorkers;
     }
     
-    private void setRequestWorkers( Integer requestWorkers ) {
+    private void setRequestWorkers( final Integer requestWorkers ) {
       this.requestWorkers = requestWorkers;
     }
     
-    public void setStartupSyncRetries( Integer startupSyncRetries ) {
+    public void setStartupSyncRetries( final Integer startupSyncRetries ) {
       this.startupSyncRetries = startupSyncRetries;
     }
     
     public Integer getStartupSyncRetries( ) {
-      return startupSyncRetries;
+      return this.startupSyncRetries;
     }
     
-    private void setEnabledInterval( Long enabledInterval ) {
+    private void setEnabledInterval( final Long enabledInterval ) {
       this.enabledInterval = enabledInterval;
     }
     
     public Long getEnabledInterval( ) {
-      return enabledInterval;
+      return this.enabledInterval;
     }
     
-    private void setDisabledInterval( Long disabledInterval ) {
+    private void setDisabledInterval( final Long disabledInterval ) {
       this.disabledInterval = disabledInterval;
     }
     
     public Long getDisabledInterval( ) {
-      return disabledInterval;
+      return this.disabledInterval;
     }
     
-    private void setNotreadyInterval( Long notreadyInterval ) {
+    private void setNotreadyInterval( final Long notreadyInterval ) {
       this.notreadyInterval = notreadyInterval;
     }
     
     public Long getNotreadyInterval( ) {
-      return notreadyInterval;
+      return this.notreadyInterval;
     }
     
-    private void setPendingInterval( Long pendingInterval ) {
+    private void setPendingInterval( final Long pendingInterval ) {
       this.pendingInterval = pendingInterval;
     }
     
     public Long getPendingInterval( ) {
-      return pendingInterval;
+      return this.pendingInterval;
     }
   }
 }
