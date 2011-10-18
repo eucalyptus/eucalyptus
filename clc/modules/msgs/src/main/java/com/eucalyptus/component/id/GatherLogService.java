@@ -88,7 +88,7 @@ public class GatherLogService extends ComponentId {
   
   @Override
   public String getServicePath( String... pathParts ) {
-    return "/services/EucalyptusGL";
+    return "/axis2/services/EucalyptusGL";
   }
   
   @Override
