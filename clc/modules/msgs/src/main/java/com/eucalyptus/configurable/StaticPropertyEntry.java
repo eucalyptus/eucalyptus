@@ -107,7 +107,7 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
       if ( this.lastLoad != null && this.lastLoad.before( dbEntry.getLastUpdateTimestamp( ) ) ) {
         Object o = super.getTypeParser( ).apply( dbEntry.getValue( ) );
         if ( !Modifier.isFinal( this.field.getModifiers( ) ) ) {
-          this.field.set( null, o );
+          this.setValue( dbEntry.getValue( ) );
           Logs.extreme( ).debug( "Loaded static propery entry value: " + this.getDisplayName( ) + " = " + o );
         }
         this.lastLoad = new Date( );

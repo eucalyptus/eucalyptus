@@ -487,7 +487,7 @@ public class EmpyreanService {
   
   public static DescribeServicesResponseType describeService( final DescribeServicesType request ) {
     final DescribeServicesResponseType reply = request.getReply( );
-    
+    Topology.touch( request );
     ComponentId compId = ( request.getByServiceType( ) != null )
       ? ComponentIds.lookup( request.getByServiceType( ).toLowerCase( ) )
       : Empyrean.INSTANCE;

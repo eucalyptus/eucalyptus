@@ -98,6 +98,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Ints;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Topology implements EventListener<Event> {
@@ -121,18 +122,13 @@ public class Topology implements EventListener<Event> {
   
   public static void touch( ServiceTransitionType msg ) {
     if ( !checkPrimary( ) && msg.get_epoch( ) != null ) {
-      Integer msgEpoch = msg.get_epoch( );
-      Topology.getInstance( ).currentEpoch = ( Topology.getInstance( ).currentEpoch > msgEpoch )
-        ? Topology.getInstance( ).currentEpoch
-        : msgEpoch;
+      Topology.getInstance( ).currentEpoch = Ints.max( Topology.getInstance( ).currentEpoch, msg.get_epoch( ) );
     }
   }
   
   public static boolean check( BaseMessage msg ) {
     if ( !checkPrimary( ) && msg.get_epoch( ) != null ) {
-      Integer msgEpoch = msg.get_epoch( );
-      boolean rightEpoch = Topology.getInstance( ).epoch( ) <= msgEpoch;
-      return rightEpoch;
+      return Topology.getInstance( ).epoch( ) <= msg.get_epoch( );
     } else {
       return true;
     }
