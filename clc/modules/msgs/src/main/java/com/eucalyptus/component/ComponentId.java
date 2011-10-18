@@ -82,7 +82,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   
   @Override
   public String getPartition( ) {
-    return ( this.isPartitioned( ) && !this.isRegisterable( )
+    return ( this.isPartitioned( ) /**&& !this.isRegisterable( )**/
       ? Eucalyptus.INSTANCE.name( )
       : ( ( Unpartioned ) this ).getPartition( ) );
   }
