@@ -131,6 +131,14 @@ public class Hosts {
     }
   }
   
+  enum ShouldLoadRemote implements Predicate<ComponentId> {
+    INSTANCE;
+    @Override
+    public boolean apply( ComponentId input ) {
+      return Eucalyptus.INSTANCE.isCloudLocal( ) && !input.isRegisterable( );
+    }
+  };
+  
   enum HostBootstrapEventListener implements EventListener<Hertz> {
     INSTANCE;
     
@@ -184,7 +192,7 @@ public class Hosts {
               LOG.info( "Hosts.entryAdded(): Marked as database => " + arg1 );
             }
           } catch ( Exception ex ) {
-            LOG.error( ex , ex );
+            LOG.error( ex, ex );
           }
         }
       } else if ( arg1.hasDatabase( ) && !BootstrapArgs.isCloudController( ) ) {

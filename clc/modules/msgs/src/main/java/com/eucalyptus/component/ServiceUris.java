@@ -211,7 +211,7 @@ public class ServiceUris {
     public UriParserBuilder path( String... path ) {
       this.path = ( path != null && path.length > 0
         ? Lexemes.SLASH.format( ) + Joiner.on( Lexemes.SLASH.format( ) ).join( path )
-        : Lexemes.SLASH.format( ) );
+        : Lexemes.SLASH.format( ) ).replaceAll( "^/", "" );
       return this;
     }
     
