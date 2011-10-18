@@ -191,15 +191,15 @@ public class ServiceBootstrapper extends Bootstrapper {
             Bootstrap.awaitFinished( );
             try {
               ServiceTransitions.pathTo( config, Component.State.NOTREADY ).get( );
-//              try {
-//                ServiceTransitions.pathTo( config, Component.State.ENABLED ).get( );
-//              } catch ( IllegalStateException ex ) {
-//                LOG.error( ex, ex );
-//              } catch ( InterruptedException ex ) {
-//                LOG.error( ex, ex );
-//              } catch ( ExecutionException ex ) {
-//                LOG.error( ex, ex );
-//              }
+              try {
+                ServiceTransitions.pathTo( config, Component.State.ENABLED ).get( );
+              } catch ( IllegalStateException ex ) {
+                LOG.error( ex, ex );
+              } catch ( InterruptedException ex ) {
+                LOG.error( ex, ex );
+              } catch ( ExecutionException ex ) {
+                LOG.error( ex, ex );
+              }
             } catch ( Exception ex ) {
               LOG.error( ex, ex );
             }
