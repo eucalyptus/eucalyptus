@@ -132,7 +132,7 @@ public class Pipelines {
       throw new NoAcceptingPipelineException( );
     }
     if ( Logs.isExtrrreeeme( ) ) {
-      EventRecord.here( Pipelines.class, EventType.PIPELINE_UNROLL, candidate.toString( ) ).debug( );
+      EventRecord.here( Pipelines.class, EventType.PIPELINE_UNROLL, candidate.toString( ) ).extreme( );
     }
     return candidate;
   }
