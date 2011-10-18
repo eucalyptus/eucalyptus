@@ -147,7 +147,10 @@ public class Hosts {
       Host maybeDirty = Hosts.localHost( ).checkDirty( );
       if ( Hosts.localHost( ).getTimestamp( ).before( new Date( maybeDirty.getLastTime( ) ) ) ) {
         hostMap.replace( maybeDirty.getDisplayName( ), maybeDirty );
-        LOG.info( "Updated local host information: " + localHost( ) );
+        LOG.info( "Updated local host information:   " + localHost( ) );
+      } else {
+        hostMap.replace( Hosts.localHost( ).getDisplayName( ), Hosts.localHost( ) );
+        LOG.info( "Replacing local host information: " + localHost( ) );
       }
     }
   }
