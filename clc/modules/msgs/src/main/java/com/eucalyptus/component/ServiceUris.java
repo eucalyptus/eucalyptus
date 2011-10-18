@@ -249,7 +249,7 @@ public class ServiceUris {
     public String toString( ) {
       StringBuilder builder = new StringBuilder( );
       builder.append( "UriParserBuilder:" );
-      if ( this.componentId != null ) builder.append( "componentId=" ).append( this.componentId ).append( ":" );
+      if ( this.componentId != null ) builder.append( "componentId=" ).append( this.componentId.name( ) ).append( ":" );
       if ( this.scheme != null ) builder.append( "scheme=" ).append( this.scheme ).append( ":" );
       if ( this.address != null ) builder.append( "address=" ).append( this.address ).append( ":" );
       if ( this.port != null ) builder.append( "port=" ).append( this.port ).append( ":" );
