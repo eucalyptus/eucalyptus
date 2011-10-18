@@ -107,6 +107,7 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.GatherLogService;
 import com.eucalyptus.config.RegisterClusterType;
+import com.eucalyptus.config.Configuration.ComponentInfoMapper;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.event.ClockTick;
@@ -291,8 +292,22 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     /** Component.State.DISABLED -> Component.State.ENABLED **/
     ENABLING, ENABLING_RESOURCES, ENABLING_NET, ENABLING_VMS, ENABLING_ADDRS, ENABLING_VMS_PASS_TWO, ENABLING_ADDRS_PASS_TWO,
     /** Component.State.ENABLED -> Component.State.ENABLED **/
-    ENABLED, ENABLED_ADDRS, ENABLED_RSC, ENABLED_NET, ENABLED_VMS, ENABLED_SERVICE_CHECK,
-    
+    ENABLED, ENABLED_ADDRS, ENABLED_RSC, ENABLED_NET, ENABLED_VMS, ENABLED_SERVICE_CHECK;
+    public Component.State proxyState( ) {
+      try {
+        return Component.State.valueOf( this.name( ) );
+      } catch ( Exception ex ) {
+        if ( this.name( ).startsWith( "ENABL" ) ) {
+          return Component.State.DISABLED;
+        } else if ( this.ordinal( ) < DISABLED.ordinal( ) ) {
+          return Component.State.NOTREADY;
+        } else if ( this.ordinal( ) > ENABLED.ordinal( ) ) {
+          return Component.State.ENABLED;
+        } else {
+          return Component.State.INITIALIZED;
+        }
+      }
+    }
   }
   
   public enum Transition implements Automata.Transition<Transition> {

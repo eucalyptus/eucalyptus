@@ -13,7 +13,9 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.ServiceStatusType;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.async.SubjectMessageCallback;
+import com.eucalyptus.util.fsm.Automata;
 
 public class ServiceStateCallback extends SubjectMessageCallback<Cluster, DescribeServicesType, DescribeServicesResponseType> {
   private static Logger LOG = Logger.getLogger( ServiceStateCallback.class );
@@ -34,6 +36,7 @@ public class ServiceStateCallback extends SubjectMessageCallback<Cluster, Descri
           LOG.debug( "Found service info: " + status );
           Component.State serviceState = Component.State.valueOf( status.getLocalState( ) );
           Component.State localState = this.getSubject( ).getConfiguration( ).lookupState( );
+          Component.State proxyState = this.getSubject( ).getStateMachine( ).getState( ).proxyState( );
           CheckException ex = ServiceChecks.chainCheckExceptions( ServiceChecks.Functions.statusToCheckExceptions( this.getRequest( ).getCorrelationId( ) ).apply( status ) );
           if ( Component.State.NOTREADY.equals( serviceState ) ) {
             throw new IllegalStateException( ex );
@@ -41,6 +44,11 @@ public class ServiceStateCallback extends SubjectMessageCallback<Cluster, Descri
                       && Component.State.NOTREADY.ordinal( ) < serviceState.ordinal( ) ) {
             LifecycleEvents.fireExceptionEvent( this.getSubject( ).getConfiguration( ), ServiceChecks.Severity.DEBUG, ex );
             this.getSubject( ).clearExceptions( );
+          } else if ( proxyState.ordinal( ) > serviceState.ordinal( ) || localState.ordinal( ) > serviceState.ordinal( ) ) {
+            Threads.enqueue( this.getSubject( ).getConfiguration( ),
+                             Automata.sequenceTransitions( this.getSubject( ),
+                                                           Cluster.State.ENABLED,
+                                                           Cluster.State.DISABLED ) );
           } else {
             LifecycleEvents.fireExceptionEvent( this.getSubject( ).getConfiguration( ), ServiceChecks.Severity.INFO, ex );
           }
