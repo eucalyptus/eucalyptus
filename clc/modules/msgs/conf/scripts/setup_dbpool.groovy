@@ -133,7 +133,7 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
             Hosts.listDatabases( ).each{ Host host ->
               database(id:host.getBindAddress().getHostAddress( ),local:host.isLocalHost( )) {
                 driver(real_jdbc_driver)
-                url("jdbc:${ServiceUris.remote(Database.class,host.getBindAddress( ).getHostAddress( ), 8777, context_pool_alias ).toASCIIString( )}")
+                url("jdbc:${ServiceUris.remote(Database.class,host.getBindAddress( ), 8777, context_pool_alias ).toASCIIString( )}")
                 user('eucalyptus')
                 password(db_pass)
               }
