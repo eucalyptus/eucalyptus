@@ -181,29 +181,30 @@ public class Hosts {
     public void entrySet( String arg0, Host arg1 ) {
       LOG.info( "Hosts.entryAdded(): " + arg0 + " => " + arg1 );
       LOG.info( "Hosts.entryAdded(): " + hostMap.keySet( ) );
-      if ( !arg1.isLocalHost( ) ) {
+      if ( !BootstrapArgs.isCloudController( ) && !arg1.isLocalHost( ) ) {
         setup( Empyrean.class, arg1.getBindAddress( ) );
         if ( arg1.hasDatabase( ) ) {
           setup( Eucalyptus.class, arg1.getBindAddress( ) );
-        } else if ( Bootstrap.isFinished( ) ) {
-          try {
-            ServiceConfiguration maybeConfig = ServiceConfigurations.lookupByHost( Eucalyptus.class, arg1.getBindAddress( ).getCanonicalHostName( ) );
-            if ( ShouldInitialize.INSTANCE.apply( maybeConfig ) ) {
-              arg1.markDatabase( );
-              hostMap.replace( arg1.getDisplayName( ), arg1 );
-              LOG.info( "Hosts.entryAdded(): Marked as database => " + arg1 );
-            }
-          } catch ( NoSuchElementException ex ) {
-          } catch ( Exception ex ) {
-            LOG.error( ex, ex );
-          }
         }
-      } else if ( arg1.hasDatabase( ) && !BootstrapArgs.isCloudController( ) ) {
+      } else if ( !BootstrapArgs.isCloudController( ) && arg1.isLocalHost( ) && arg1.hasDatabase( ) ) {
         try {
           Bootstrap.initializeSystem( );
           System.exit( 123 );
         } catch ( Exception ex ) {
           System.exit( 123 );
+        }
+      } else if ( BootstrapArgs.isCloudController( ) && Bootstrap.isFinished( ) ) {
+        try {
+          ServiceConfiguration maybeConfig = ServiceConfigurations.lookupByHost( Eucalyptus.class, arg1.getBindAddress( ).getCanonicalHostName( ) );
+          if ( ShouldInitialize.INSTANCE.apply( maybeConfig ) ) {
+            arg1.markDatabase( );
+            hostMap.replace( arg1.getDisplayName( ), arg1 );
+            LOG.info( "Hosts.entryAdded(): Marked as database => " + arg1 );
+          }
+        } catch ( NoSuchElementException ex ) {
+          //not a clc, carry on.
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
         }
       }
     }
