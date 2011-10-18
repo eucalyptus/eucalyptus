@@ -200,7 +200,12 @@ public class ComponentBootstrapper {
     this.doTransition( EventType.BOOTSTRAPPER_STOP, new CheckedFunction<Bootstrapper, Boolean>( ) {
       @Override
       public Boolean apply( Bootstrapper arg0 ) throws Exception {
-        return arg0.stop( );
+        try {
+          arg0.stop( );
+        } catch ( Exception ex ) {
+          LOG.error( ex , ex );
+        }
+        return true;
       }
     } );
     return true;
