@@ -145,7 +145,7 @@ public class Hosts {
     @Override
     public void fireEvent( Hertz event ) {
       Host maybeDirty = Hosts.localHost( ).checkDirty( );
-      if ( Hosts.localHost( ).getTimestamp( ).before( new Date( maybeDirty.getLastTime( ) ) ) ) {
+      if ( !Hosts.localHost( ).getTimestamp( ).equals( maybeDirty.getLastTime( ) ) ) {
         hostMap.replace( maybeDirty.getDisplayName( ), maybeDirty );
         LOG.info( "Updated local host information: " + localHost( ) );
       }
