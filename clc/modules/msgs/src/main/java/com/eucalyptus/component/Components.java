@@ -216,7 +216,12 @@ public class Components {
     @Override
     public Component apply( final ComponentId input ) {
       if ( !components.containsKey( input.getClass( ) ) ) {
-        throw new NoSuchElementException( "Failed to lookup component with id type: " + input.getClass( ) );
+        try {
+          Components.create( input );
+          return Components.lookup( input );
+        } catch ( ServiceRegistrationException ex ) {
+          throw new NoSuchElementException( "Missing entry for component '" + input );
+        }
       } else {
         return components.get( input.getClass( ) );
       }

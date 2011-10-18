@@ -295,7 +295,16 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
    * @return true if the component could be run locally.
    */
   public Boolean isAvailableLocally( ) {
-    return this.isAlwaysLocal( ) || ( this.isCloudLocal( ) && BootstrapArgs.isCloudController( ) );
+    return this.isAlwaysLocal( ) || ( this.isCloudLocal( ) && BootstrapArgs.isCloudController( ) ) || this.checkComponentParts( );
+  }
+  
+  private boolean checkComponentParts( ) {
+    return true;//TODO:GRZE:add checks to ensure full component state is present
+//  try {
+//    return ComponentMessages.lookup( this.getComponentId( ).getClass( ) ) != null;
+//  } catch ( NoSuchElementException ex ) {
+//    return false;
+//  }
   }
   
 }

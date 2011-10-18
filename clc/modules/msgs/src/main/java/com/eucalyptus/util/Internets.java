@@ -175,6 +175,19 @@ public class Internets {
     return laddr;
   }
   
+  public static InetAddress loopback( ) {
+    try {
+      return InetAddress.getByName( "127.0.0.1" );
+    } catch ( UnknownHostException ex ) {
+      for ( InetAddress i : getAllInetAddresses( ) ) {
+        if ( i.isLoopbackAddress( ) ) {
+          return i;
+        }
+      }
+      return localHostInetAddress( );
+    }
+  }
+  
   public static InetAddress localHostInetAddress( ) {
     return localHostAddr;
   }
