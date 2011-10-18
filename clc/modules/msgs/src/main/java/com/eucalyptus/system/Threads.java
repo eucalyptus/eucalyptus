@@ -579,10 +579,12 @@ public class Threads {
       do {
         try {
           final FutureTask<?> task = this.msgQueue.poll( 50, TimeUnit.MILLISECONDS );
-          try {
-            task.run( );
-          } catch ( final Exception ex ) {
-            Logs.extreme( ).error( ex, ex );
+          if ( task != null ) {
+            try {
+              task.run( );
+            } catch ( final Exception ex ) {
+              Logs.extreme( ).error( ex, ex );
+            }
           }
         } catch ( final InterruptedException e ) {
           Thread.currentThread( ).interrupt( );

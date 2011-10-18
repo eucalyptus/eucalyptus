@@ -697,7 +697,7 @@ public class ServiceTransitions {
             if ( prop instanceof StaticPropertyEntry ) {
               PropertyDirectory.addProperty( prop );
               try {
-                LOG.debug( "Loaded static propery entry value: " + prop.getValue( ) );
+                prop.getValue( );
               } catch ( Exception ex ) {
                 Logs.extreme( ).error( ex, ex );
               }
