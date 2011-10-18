@@ -114,7 +114,7 @@ public class BootstrapArgs {
   }
   
   public static boolean isInitializeSystem( ) {
-    return System.getProperty( "euca.initialize" ) != null;
+    return initSystem;
   }
   
   public static List<String> parseBootstrapHosts( ) {
