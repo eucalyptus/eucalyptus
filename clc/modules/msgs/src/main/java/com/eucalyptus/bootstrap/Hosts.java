@@ -71,6 +71,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Vector;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -87,13 +88,11 @@ import org.jgroups.blocks.ReplicatedHashMap;
 import org.jgroups.conf.ClassConfigurator;
 import org.jgroups.stack.Protocol;
 import org.jgroups.stack.ProtocolStack;
-import org.logicalcobwebs.proxool.ProxoolFacade;
 import com.eucalyptus.bootstrap.Host.DbFilter;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
@@ -194,6 +193,7 @@ public class Hosts {
               hostMap.replace( arg1.getDisplayName( ), arg1 );
               LOG.info( "Hosts.entryAdded(): Marked as database => " + arg1 );
             }
+          } catch ( NoSuchElementException ex ) {
           } catch ( Exception ex ) {
             LOG.error( ex, ex );
           }
