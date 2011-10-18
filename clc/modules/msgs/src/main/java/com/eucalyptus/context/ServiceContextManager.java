@@ -66,6 +66,8 @@ package com.eucalyptus.context;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
@@ -99,6 +101,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Templates;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.io.Resources;
 
 public class ServiceContextManager {
   private static Logger                                CONFIG_LOG        = Logger.getLogger( "Configs" );
@@ -233,6 +236,25 @@ public class ServiceContextManager {
     }
   }
   
+  private static final String EMPTY_MODEL = "  <mule xmlns=\"http://www.mulesource.org/schema/mule/core/2.0\"\n"
+                                            +
+                                            "      xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+                                            +
+                                            "      xmlns:spring=\"http://www.springframework.org/schema/beans\"\n"
+                                            +
+                                            "      xmlns:vm=\"http://www.mulesource.org/schema/mule/vm/2.0\"\n"
+                                            +
+                                            "      xmlns:euca=\"http://www.eucalyptus.com/schema/cloud/1.6\"\n"
+                                            +
+                                            "      xsi:schemaLocation=\"\n"
+                                            +
+                                            "       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd\n"
+                                            +
+                                            "       http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd\n" +
+                                            "       http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd\n" +
+                                            "       http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd\">\n" +
+                                            "</mule>\n";
+  
   private MuleContext createContext( List<ComponentId> currentComponentIds ) throws ServiceInitializationException {
     this.canHasWrite.lock( );
     try {
@@ -247,10 +269,11 @@ public class ServiceContextManager {
         }
         LOG.info( "-> Rendering configuration for " + componentId.name( ) );
         try {
+          String serviceModel = loadModel( componentId );
           String outString = Templates.prepare( componentId.getServiceModelFileName( ) )
                                       .withProperty( "components", currentComponentIds )
                                       .withProperty( "thisComponent", componentId )
-                                      .evaluate( componentId.getServiceModel( ) );
+                                      .evaluate( serviceModel );
           ConfigResource configRsc = createConfigResource( componentId, outString );
           configs.add( configRsc );
         } catch ( Exception ex ) {
@@ -270,6 +293,15 @@ public class ServiceContextManager {
       return muleCtx;
     } finally {
       this.canHasWrite.unlock( );
+    }
+  }
+
+  public String loadModel( ComponentId componentId ) {
+    try {
+      return Resources.toString( Resources.getResource( componentId.getServiceModelFileName( ) ), Charset.defaultCharset( ) );
+    } catch ( IOException ex ) {
+      Logs.extreme( ).error( ex );
+      return EMPTY_MODEL;
     }
   }
   

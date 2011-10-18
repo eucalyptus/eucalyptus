@@ -78,6 +78,7 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -195,10 +196,10 @@ public class SystemConfiguration extends AbstractPersistent {
     Component walrus = Components.lookup( Walrus.class );
     if( walrus.hasEnabledService( ) ) {
       ServiceConfiguration walrusConfig = Components.lookup( Walrus.class ).enabledServices( ).first( );
-      return walrusConfig.getUri( ).toASCIIString( );
+      return ServiceUris.remote( walrusConfig ).toASCIIString( );
     } else {
       LOG.error( "BUG BUG: Deprecated method called. No walrus service is registered.  Using local address for walrus URL." );
-      return walrus.getComponentId( ).makeExternalRemoteUri( Internets.localHostInetAddress( ).getCanonicalHostName( ), 8773, "http" ).toASCIIString( );
+      return ServiceUris.remote( Walrus.class, Internets.localHostInetAddress( ) ).toASCIIString( );
     }
   }
 

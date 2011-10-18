@@ -24,7 +24,6 @@ import org.jboss.netty.handler.timeout.IdleStateHandler;
 import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
-import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.LogUtil;
@@ -32,7 +31,6 @@ import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.handlers.ChannelStateMonitor;
 import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
-import com.eucalyptus.ws.handlers.http.NioSslHandler;
 import com.eucalyptus.ws.server.NioServerHandler;
 
 public class ChannelUtil {

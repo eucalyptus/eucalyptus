@@ -1,3 +1,5 @@
+import com.eucalyptus.component.ServiceUris;
+
 import java.util.Properties
 import org.apache.log4j.Logger
 import org.hibernate.ejb.Ejb3Configuration
@@ -60,7 +62,7 @@ try {
     for ( String ctx : PersistenceContexts.list( ) ) {
       Properties p = new Properties( );
       p.putAll( props );
-      String ctxUrl = String.format( "jdbc:%s_%s?createDatabaseIfNotExist=true", dbComp.getUri( ).toString( ), ctx.replaceAll( "eucalyptus_", "" ) );
+      String ctxUrl = "jdbc:${ServiceUris.remote(dbComp,ctx)}?createDatabaseIfNotExist=true";
       p.put( "hibernate.connection.url", ctxUrl );
       p.put("hibernate.cache.region_prefix", "eucalyptus_" + ctx + "_cache" );
       Ejb3Configuration config = new Ejb3Configuration( );

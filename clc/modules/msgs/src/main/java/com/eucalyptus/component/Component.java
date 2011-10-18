@@ -188,25 +188,6 @@ public class Component implements HasName<Component> {
     return this.serviceRegistry.getServices( );
   }
   
-  public URI getUri( ) {
-    NavigableSet<ServiceConfiguration> services = this.serviceRegistry.getServices( );
-    if ( this.getComponentId( ).isCloudLocal( ) && services.size( ) != 1 && !"db".equals( this.getName( ) ) ) {
-      throw new RuntimeException( "Cloud local component has " + services.size( ) + " registered services (Should be exactly 1): " + this + " "
-                                  + services.toString( ) );
-    } else if ( this.getComponentId( ).isCloudLocal( ) && services.size( ) != 1 && "db".equals( this.getName( ) ) ) {
-      return this.getComponentId( ).getLocalEndpointUri( );
-    } else if ( this.getComponentId( ).isCloudLocal( ) && services.size( ) == 1 ) {
-      return services.first( ).getUri( );
-    } else {
-      for ( ServiceConfiguration s : services ) {
-        if ( s.isVmLocal( ) ) {
-          return s.getUri( );
-        }
-      }
-      throw new RuntimeException( "Attempting to get the URI for a service which is either not a singleton or has no locally defined service endpoint." );
-    }
-  }
-  
   public Boolean hasLocalService( ) {
     return this.serviceRegistry.hasLocalService( );
   }
@@ -334,7 +315,7 @@ public class Component implements HasName<Component> {
       }
       try {
         EventRecord.caller( Component.class, EventType.COMPONENT_SERVICE_DESTROY, this.getName( ), configuration.getFullName( ),
-                            configuration.getUri( ).toString( ) ).info( );
+                            ServiceUris.remote( configuration ).toASCIIString( ) ).info( );
         this.serviceRegistry.deregister( configuration );
       } catch ( Exception ex ) {
         throw new ServiceRegistrationException( "Failed to destroy service: " + configuration + " because of: " + ex.getMessage( ), ex );

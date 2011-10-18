@@ -176,9 +176,9 @@ public class Topology implements EventListener<Event> {
             setName( input.getName( ) );
             setType( input.getComponentId( ).name( ) );
             if ( input.isVmLocal( ) ) {
-	      getUris( ).add( input.getComponentId( ).makeExternalRemoteUri( localhostAddr, input.getComponentId( ).getPort( ), "http" ).toASCIIString( ) );
+              getUris( ).add( ServiceUris.remote( input.getComponentId( ), localAddr ).toASCIIString( ) );
             } else {
-              getUris( ).add( input.getUri( ).toASCIIString( ) );
+              getUris( ).add( ServiceUris.remote( input ).toASCIIString( ) );
             }
           }
         };

@@ -85,6 +85,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentMessage;
 import com.eucalyptus.component.ComponentMessages;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.empyrean.ServiceTransitionType;
 import com.eucalyptus.http.MappingHttpMessage;
@@ -157,7 +158,7 @@ public enum SystemChecksHandler implements ChannelUpstreamHandler {
     HttpResponse response = null;
     if ( !comp.enabledServices( ).isEmpty( ) ) {
       response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.MOVED_PERMANENTLY );
-      URI serviceUri = comp.enabledServices( ).first( ).getUri( );
+      URI serviceUri = ServiceUris.remote( comp.enabledServices( ).first( ) );
       String redirectUri = serviceUri.toASCIIString( ) + originalPath.replace( serviceUri.getPath( ), "" );
       response.setHeader( HttpHeaders.Names.LOCATION, redirectUri );
     } else {

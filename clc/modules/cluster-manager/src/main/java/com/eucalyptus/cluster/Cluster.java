@@ -99,6 +99,7 @@ import com.eucalyptus.component.LifecycleEvent;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceChecks;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.ServiceChecks.CheckException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
@@ -537,15 +538,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     return this.configuration;
   }
   
-  public RegisterClusterType getWeb( ) {
-    String host = this.getConfiguration( ).getHostName( );
-    int port = 0;
-    final URI uri = this.getConfiguration( ).getUri( );
-    host = uri.getHost( );
-    port = uri.getPort( );
-    return new RegisterClusterType( this.getConfiguration( ).getPartition( ), this.getName( ), host, port );
-  }
-  
   public ClusterState getState( ) {
     return this.state;
   }
@@ -687,7 +679,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   }
   
   public URI getUri( ) {
-    return this.configuration.getUri( );
+    return ServiceUris.remote( this.configuration );
   }
   
   public String getHostName( ) {
@@ -850,8 +842,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   protected ServiceConfiguration getLogServiceConfiguration( ) {
     final ComponentId glId = ComponentIds.lookup( GatherLogService.class );
     final ServiceConfiguration conf = this.getConfiguration( );
-    return ServiceConfigurations.createEphemeral( glId, conf.getPartition( ), conf.getName( ),
-                                                  glId.makeInternalRemoteUri( conf.getHostName( ), conf.getPort( ) ) );
+    URI glUri = ServiceUris.remote( GatherLogService.class, conf.getInetAddress( ) );
+    return ServiceConfigurations.createEphemeral( glId, conf.getPartition( ), conf.getName( ), glUri );
   }
   
   @Override

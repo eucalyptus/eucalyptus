@@ -69,6 +69,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -160,6 +161,9 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( initial = "8192", description = "Maximum HTTP headers size (bytes)." )
   public static Integer       HTTP_MAX_HEADER_BYTES             = 8 * 1024;
   
+  @ConfigurableField( initial = "false", description = "Default scheme prefix in eucarc.", changeListener = TemporarySchemeUpdater.class )
+  public static Boolean       DEFAULT_HTTPS_ENABLED             = Boolean.FALSE;
+  
   @ConfigurableField( initial = "http", description = "Default scheme for EC2_URL in eucarc.", changeListener = UriChangeListener.class )
   public static String        DEFAULT_EC2_URI_SCHEME            = "http";
   
@@ -173,6 +177,47 @@ public class StackConfiguration extends AbstractPersistent {
   public static String        DEFAULT_EUARE_URI_SCHEME          = "http";
   
   private static Logger       LOG                               = Logger.getLogger( StackConfiguration.class );
+  
+  public enum Transport {
+    HTTP {
+      @Override
+      public String getScheme( ) {
+        return "http";
+      }
+      
+      @Override
+      public String getSecureScheme( ) {
+        return "https";
+      }
+    },
+    JMX {
+      @Override
+      public String getSecureScheme( ) {
+        return getScheme( );
+      }
+      
+      @Override
+      public String getScheme( ) {
+        return "service:jmx:rmi:///jndi/rmi://";
+      }
+    },
+    JDBC {
+      
+      @Override
+      public String getSecureScheme( ) {
+        return getScheme( );
+      }
+      
+      @Override
+      public String getScheme( ) {
+        return Databases.getBootstrapper( ).getJdbcScheme( );
+      }
+      
+    };
+    public abstract String getScheme( );
+    
+    public abstract String getSecureScheme( );
+  }
   
   public static class TimeChangeListener implements PropertyChangeListener {
     /**
@@ -195,6 +240,16 @@ public class StackConfiguration extends AbstractPersistent {
       if ( time < 0 )
         throw new ConfigurablePropertyException( "An integer >= 0 is expected for " + t.getFieldName( ) );
       
+    }
+  }
+  
+  public static class TemporarySchemeUpdater implements PropertyChangeListener {
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+      String scheme = Boolean.TRUE.equals( "" + newValue )
+        ? "https"
+        : "http";
+      DEFAULT_AWS_SNS_URI_SCHEME = DEFAULT_EC2_URI_SCHEME = DEFAULT_EUARE_URI_SCHEME = DEFAULT_S3_URI_SCHEME = scheme;
     }
   }
   

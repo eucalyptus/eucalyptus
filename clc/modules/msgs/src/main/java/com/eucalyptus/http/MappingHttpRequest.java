@@ -76,6 +76,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceUris;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class MappingHttpRequest extends MappingHttpMessage implements HttpRequest {
@@ -125,7 +126,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
   public MappingHttpRequest( final HttpVersion httpVersion, final HttpMethod method, final ServiceConfiguration serviceConfiguration, final Object source ) {
     super( httpVersion );
     this.method = method;
-    URI fullUri = serviceConfiguration.getUri( );
+    URI fullUri = ServiceUris.remote( serviceConfiguration );
     this.uri = fullUri.toString( );
     this.servicePath = fullUri.getPath( );
     this.query = null;

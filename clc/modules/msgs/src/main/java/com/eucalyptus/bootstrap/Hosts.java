@@ -66,10 +66,12 @@ package com.eucalyptus.bootstrap;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.log4j.Logger;
@@ -85,6 +87,16 @@ import org.jgroups.conf.ClassConfigurator;
 import org.jgroups.stack.Protocol;
 import org.jgroups.stack.ProtocolStack;
 import com.eucalyptus.bootstrap.Host.DbFilter;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.ServiceRegistrationException;
+import com.eucalyptus.component.ServiceTransitions;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.empyrean.Empyrean;
@@ -142,13 +154,17 @@ public class Hosts {
     @Override
     public void entryRemoved( String arg0 ) {
       LOG.info( "Hosts.entryRemoved(): " + arg0 );
-      LOG.info( "Hosts.entryRemoved(): " + printMap( ) );
+      LOG.info( "Hosts.entryRemoved(): " + hostMap.keySet( ) );
     }
     
     @Override
     public void entrySet( String arg0, Host arg1 ) {
       LOG.info( "Hosts.entryAdded(): " + arg0 + " => " + arg1 );
-      LOG.info( "Hosts.entryAdded(): " + printMap( ) );
+      LOG.info( "Hosts.entryAdded(): " + hostMap.keySet( ) );
+      setup( Empyrean.class, arg1.getBindAddress( ) );
+      if ( arg1.hasDatabase( ) ) {
+        setup( Eucalyptus.class, arg1.getBindAddress( ) );
+      }
     }
     
     @Override
@@ -159,6 +175,10 @@ public class Hosts {
       for ( Host h : Hosts.list( ) ) {
         if ( Iterables.contains( partMembers, h.getGroupsId( ) ) ) {
           hostMap.remove( h.getDisplayName( ) );
+          teardown( Empyrean.class, h.getBindAddress( ) );
+          if ( h.hasDatabase( ) ) {
+            teardown( Eucalyptus.class, h.getBindAddress( ) );
+          }
           LOG.info( "Hosts.viewChange(): -> removed  => " + h );
         }
       }
@@ -168,6 +188,65 @@ public class Hosts {
   
   public static Address getLocalGroupAddress( ) {
     return HostManager.getInstance( ).getMembershipChannel( ).getAddress( );
+  }
+  
+  private static boolean setup( Class<? extends ComponentId> compClass, InetAddress addr ) {
+    if ( !Internets.testLocal( addr ) && !Internets.testReachability( addr ) ) {
+      LOG.warn( "Failed to reach host for cloud controller: " + addr );
+      return false;
+    } else {
+      try {
+        setupServiceState( compClass, addr );
+        for ( ComponentId c : Iterables.filter( ComponentIds.list( ), ComponentIds.lookup( compClass ).isRelated( ) ) ) {
+          try {
+            setupServiceState( c.getClass( ), addr );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        return false;
+      }
+      return true;
+    }
+  }
+  
+  private static boolean teardown( Class<? extends ComponentId> compClass, InetAddress addr ) {
+    if ( !Internets.testLocal( addr ) && !Internets.testReachability( addr ) ) {
+      LOG.warn( "Failed to reach host for cloud controller: " + addr );
+      return false;
+    } else {
+      try {
+        for ( ComponentId c : Iterables.filter( ComponentIds.list( ), ComponentIds.lookup( compClass ).isRelated( ) ) ) {
+          try {
+            final ServiceConfiguration dependsConfig = ServiceConfigurations.lookupByName( compClass, addr.getHostAddress( ) );
+            Topology.stop( dependsConfig );
+          } catch ( Exception ex ) {
+            LOG.error( ex, ex );
+          }
+        }
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        return false;
+      }
+      return true;
+    }
+  }
+  
+  private static void setupServiceState( Class<? extends ComponentId> compClass, InetAddress addr ) throws ServiceRegistrationException, ExecutionException {
+    try {
+      Component comp = Components.lookup( compClass );
+      ServiceConfiguration config = ( Internets.testLocal( addr ) )
+        ? comp.initRemoteService( addr )
+        : comp.initRemoteService( addr );//TODO:GRZE:REVIEW: use of initRemote
+      if ( Component.State.INITIALIZED.ordinal( ) >= config.lookupState( ).ordinal( ) ) {
+        ServiceTransitions.pathTo( config, Component.State.DISABLED ).get( );
+      }
+      Topology.enable( config );
+    } catch ( InterruptedException ex ) {
+      Thread.currentThread( ).interrupt( );
+    }
   }
   
   static class HostManager {

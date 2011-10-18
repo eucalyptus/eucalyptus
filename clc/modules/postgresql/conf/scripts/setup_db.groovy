@@ -487,9 +487,16 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
 		return "net.sf.hajdbc.dialect.PostgreSQLDialect";
 	}
 
-	@Override
-	public String getUriPattern() {
-		return "postgresql://%s:%d/eucalyptus";
-	}
+
+  @Override
+  public String getServicePath( String... pathParts ) {
+    return pathParts != null && pathParts.length > 0 ? Joiner.on("/").join(pathParts) : "eucalyptus";
+  }  
+
+  @Override
+  public String getJdbcScheme( ) {
+    return "postgresql";
+  }  
+
 }
 

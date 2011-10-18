@@ -239,7 +239,7 @@ public class Components {
       buf.append( LogUtil.subheader( comp.getName( ) + " services" ) ).append( "\n" );
       for ( final ServiceConfiguration s : comp.lookupServiceConfigurations( ) ) {
         try {
-          buf.append( "->  Service:          " ).append( s.getFullName( ) ).append( " " ).append( s.getUri( ) ).append( "\n" );
+          buf.append( "->  Service:          " ).append( s.getFullName( ) ).append( " " ).append( ServiceUris.remote( s ) ).append( "\n" );
           buf.append( "|-> Service config:   " ).append( s ).append( "\n" );
         } catch ( final Exception ex ) {
           LOG.error( ex, ex );
