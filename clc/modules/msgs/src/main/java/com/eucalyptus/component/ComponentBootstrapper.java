@@ -215,7 +215,11 @@ public class ComponentBootstrapper {
     this.doTransition( EventType.BOOTSTRAPPER_DESTROY, new CheckedFunction<Bootstrapper, Boolean>( ) {
       @Override
       public Boolean apply( Bootstrapper arg0 ) throws Exception {
-        arg0.destroy( );
+        try {
+          arg0.destroy( );
+        } catch ( Exception ex ) {
+          LOG.error( ex , ex );
+        }
         return true;
       }
     } );
