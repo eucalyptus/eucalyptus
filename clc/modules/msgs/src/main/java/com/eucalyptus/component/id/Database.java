@@ -69,6 +69,7 @@ import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.ws.StackConfiguration.Transport;
 
 public class Database extends ComponentId.Unpartioned {
   
@@ -108,6 +109,11 @@ public class Database extends ComponentId.Unpartioned {
   @Override
   public String getInternalServicePath( String... pathParts ) {
     return this.getServicePath( pathParts );
+  }
+
+  @Override
+  public Transport getTransport( ) {
+    return Transport.JDBC;
   }
   
 }
