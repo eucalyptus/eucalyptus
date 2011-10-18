@@ -44,11 +44,8 @@ public class ServiceStateCallback extends SubjectMessageCallback<Cluster, Descri
                       && Component.State.NOTREADY.ordinal( ) < serviceState.ordinal( ) ) {
             LifecycleEvents.fireExceptionEvent( this.getSubject( ).getConfiguration( ), ServiceChecks.Severity.DEBUG, ex );
             this.getSubject( ).clearExceptions( );
-          } else if ( proxyState.ordinal( ) > serviceState.ordinal( ) || localState.ordinal( ) > serviceState.ordinal( ) ) {
-            Threads.enqueue( this.getSubject( ).getConfiguration( ),
-                             Automata.sequenceTransitions( this.getSubject( ),
-                                                           Cluster.State.ENABLED,
-                                                           Cluster.State.DISABLED ) );
+          } else if ( Component.State.ENABLED.equals( serviceState ) && Component.State.DISABLED.equals( proxyState ) ) {
+            throw new IllegalStateException( ex );
           } else {
             LifecycleEvents.fireExceptionEvent( this.getSubject( ).getConfiguration( ), ServiceChecks.Severity.INFO, ex );
           }
